@@ -85,7 +85,7 @@ describe("species page hierarchy", () => {
     // Antibiotic, drug class, isolates, resistant, best random score, lineages held out.
     const cells = (antibiotic: string) =>
       [...host.querySelectorAll("#sp-datasets tbody tr")].find((tr) => tr.querySelector("td")?.textContent?.trim() === capitalize(antibiotic))!.querySelectorAll("td");
-    expect(cells(none!.antibiotic)[4]!.textContent).toBe("No learner calls every isolate");
+    expect(cells(none!.antibiotic)[4]!.textContent).toBe("No learner is scored on every isolate");
     expect(cells(kept!.antibiotic)[4]!.textContent).toBe(pct(kept!.best_random));
     expect(cells(kept!.antibiotic)[3]!.textContent).toBe(int(kept!.n_resistant));
   });

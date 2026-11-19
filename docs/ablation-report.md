@@ -74,7 +74,8 @@ A `called` row must have `score >= 0.5`. A no-call row, whose score is the train
 - a sample has one label and one cluster in its dataset;
 - a sample has one fold per (dataset, split, repeat), across arms and learners;
 - there is one `fold_plan_sha256` per (dataset, split, repeat), identical across arms and learners;
-- with a manifest, every row belongs to an `ok` run, `repeat` is less than the run's `repeats`, and the row's plan is the run's plan for that repeat.
+- with a manifest, every row belongs to an `ok` run, `repeat` is less than the run's `repeats`, and the row's plan is the run's plan for that repeat;
+- with a manifest, a run with a `pairing` scores, in every repeat, the samples of its reference arm's run (same dataset, learner and split) under `same_plan` and `k31_groups`, or a subset of them under the subset rules ([Pairing rules](#pairing-rules)).
 
 **In the build (I4).** With `prediction_root`, `build_report` reads every `ok` run's `predictions` file (JSON Lines, a path relative to the root) and checks:
 
@@ -153,6 +154,7 @@ L's synthetic noise block (§8) has:
 - `fit_count`: integer ≥ 0
 - `seconds`: number ≥ 0
 - `predictions`: a path, or null
+- `pairing` (optional): `{rule, reference_arm, arm_plan_sha256}` for an arm paired to a reference arm by a rule of [Pairing rules](#pairing-rules). `rule` is one of `schema.PAIRINGS`; `reference_arm` is another arm with a run of the same dataset, learner and split, itself without `pairing`; `arm_plan_sha256` is the arm's own `CohortPlan` hash per repeat, set on an `ok` run exactly when the rule is a subset rule (`common_outer_test_set_balanced` or `common_outer_test_set`). A run without `pairing` pairs by `same_plan`.
 
 An `ok` run:
 
@@ -175,7 +177,7 @@ An `unavailable` run must give its reason.
 
 ## Contrast record (§1)
 
-J emits it and K validates it. It has these 24 fields, closed:
+J emits it and K validates it. It has these 27 fields, closed (`pairing` was added for DECISIONS V-1, and `auroc_delta` and `auroc_ci` for main's ruling on the null study; the other 24 are the contract's):
 
 | Field | Type |
 |---|---|
@@ -199,6 +201,8 @@ J emits it and K validates it. It has these 24 fields, closed:
 | `undefined_resamples` | integer ≥ 0 |
 | `undefined_reason` | non-empty string, or null when defined |
 | `interval_label` | non-empty string |
+| `pairing` | the rule J's `pair_arms` checked: `same_plan`, `k31_groups`, `common_outer_test_set_balanced` or `common_outer_test_set` |
+| `auroc_delta`, `auroc_ci` | on a `log_loss` record: J's treatment-minus-baseline AUROC and its 95% cluster jackknife-t interval, descriptive only (no p, no decision), both null when undefined; null on every other endpoint. K checks that both are null or both set and that the interval contains the delta. The markdown prints them beside the decision, and reading rule 8 says a log-loss `improves` can come from calibration or overfitting, not only discrimination |
 
 **`ci_method` (§10 and §12, closes the re-check's L3).** The method is checked by equality against the closed set `schema.CI_METHODS`, which is exactly `cluster_jackknife_t` and `none`, never by a substring test. `none` is allowed only on an undefined record. A new method needs calibration evidence and a contract bump.
 
@@ -233,6 +237,28 @@ Family D has no p-value, so its decision is always `inconclusive`.
 **No `equivalent` (§15).** J's re-check measured P(`equivalent` | true difference = margin) above 0.05 at every cluster floor it tried, so `equivalent` is withdrawn. `schema.DECISIONS` is `improves`, `worse` and `inconclusive`, and a record that says `equivalent` is refused on validation and on reload. `ci_tost` stays required with its §1 meaning; it decides nothing and feeds only the descriptive within-margin note below. The §12 floors (`MIN_EQUIVALENCE_UNITS`) are gone from K and from J. Restoring an equivalence decision needs a contract bump backed by a calibration study.
 
 The suite also checks K's mirrored constants against J's `scripts/ablation/stats.py`, or against the copy `GRM_TASK_J_STATS` names: the decision set, the few-clusters and undefined-share constants, the method set, families, adjustments, primary endpoints and record keys, and that `expected_decision` and J's `decide` agree over a grid of intervals and adjusted p-values. It also checks that J no longer has `MIN_EQUIVALENCE_UNITS`.
+
+## Pairing rules
+
+Main decided these for the full-pipeline input comparison on 5 Nov 2026, under Layth's delegation (DECISIONS V-1; [input-comparison-runner.md](input-comparison-runner.md)). J's `stats.PAIRINGS` and K's `schema.PAIRINGS` hold the same three, and the suite checks they agree.
+
+| Rule | Samples | Fold plan | Used for |
+|---|---|---|---|
+| `same_plan` | equal | equal in every repeat | feature-block and budget arms; every ablation before V-1 |
+| `k31_groups` | equal | equal: the treatment, counted at another k, uses the baseline's plans drawn on the k = 31 lineages and duplicate groups | k arms |
+| `common_outer_test_set_balanced` | the treatment's are a subset of the baseline's (a class-balanced subsample of the common genomes, drawn by `grm arm`), and J restricts the baseline to them | equal: rows carry the baseline's plan, and each common sample keeps its fold, label and cluster | cap and selection arms (the rulings after lane INPUT) |
+| `common_outer_test_set` | as above, without the balanced subsample; kept so older records validate, no longer used by the runner | equal: rows carry the baseline's plan, and each common sample keeps its fold, label and cluster | cap and selection arms |
+
+Under both subset rules both arms trained on samples outside the paired set, so J doesn't recompute a no-call row's training prevalence from the paired rows; it still requires a called row to have score ≥ 0.5. Everything else J checks under `same_plan` it checks under all three. J refuses any other pairing with `PairingError`, such as different samples under `same_plan` or `k31_groups`, a treatment sample the baseline lacks, or another plan hash, fold, label or cluster for a common sample.
+
+## Descriptive splits and sentinels
+
+Main's ruling after the input comparison's calibration study (5 Nov 2026) adds two derived parts to the report.
+
+- **Descriptive splits.** `schema.DESCRIPTIVE_SPLITS` is `("random",)`. A family D contrast on such a split is printed under "Random split: descriptive only" with `report.RANDOM_SPLIT_SENTENCE`. Its record is an ordinary family D record: estimate, intervals and AUROC delta, with no p and the fixed `inconclusive`.
+- **Sentinels.** The manifest's optional `sentinel_arms` names arms exchangeable with their baseline; each must have a run. The report's `unreliable` lists each (species, learner) whose sentinel lineage-split `log_loss` contrast (`schema.SENTINEL_SPLIT`) is not `inconclusive` or was not produced, as `{species, learner, sentinel, reason, contrasts}`. `contrasts` holds every contrast of that learner on that species. The markdown lists them under "Unreliable learners" and ends each flagged contrast line with "Unreliable (rule 10)." The section is derived, so reload rebuilds and compares it.
+- **Base rates.** The manifest's optional `base_rates` holds one record per arm: `{arm, kind?, rate, ci95, seeds, source}`. `rate`, `ci95` and `seeds` are null together when the arm's kind has no measured rate; a rate needs its seeds. The markdown ends each contrast line of the arm with "No-signal base rate for this arm type (kind): ...", or "... not measured."
+- **Reading rules 9 and 10** state both, with the calibration numbers.
 
 ## Pooled record (§2)
 
@@ -325,6 +351,7 @@ It returns:
 - `undefined_contrasts`: each undefined record and its reason;
 - `unavailable_runs` and `unavailable_blocks`, each with its reason;
 - `exclusions`: every pooled exclusion, with its reason;
+- `unreliable`: each (species, learner) a sentinel flags ([Descriptive splits and sentinels](#descriptive-splits-and-sentinels));
 - the `contrasts`, `pooled` and `features` records.
 
 With `out_dir`, it also writes the JSON and Markdown files, as `report.py` does: any earlier report there is moved to backup names first and restored byte for byte if writing fails, and the backups are deleted on success. A write failure raises `SchemaError` with one `<path>: <message>` entry, leaving no new file or temporary file; a backup is left only when restoring it failed, and the message names it. `build_report` and `validate_report` check the depth of every argument's dicts, lists and tuples, dict keys included, before copying or walking it (`build_report: <argument> nested too deeply`, `report: nested too deeply`). A deep object built from another container, such as a `deque`, a `frozenset` or a `UserList`, is refused by `build_report`'s deep copy instead (`build_report: input nested too deeply`). A non-string key in an object is named in short form (`reprlib`), and its value isn't checked. Either way a deep Python object raises `SchemaError`, never `RecursionError`, from `build_report`, `validate_report` (`predictions_sha256` included) and `load_report`.
@@ -346,7 +373,7 @@ Reload reads only the JSON; it doesn't compare the Markdown file with `render_ma
   - Planned pooled keys are unique, family A, B or D, and A and B use `r2_ll`.
   - Each pooled record's key must be in `planned_pooled`.
   - Each planned pooled key without a record needs a `not_produced` reason. With none, the build is refused.
-- **Contrasts:** ids are unique, each dataset is in the manifest, and both arms need an `ok` run with the contrast's learner and split.
+- **Contrasts:** ids are unique, each dataset is in the manifest, and both arms need an `ok` run with the contrast's learner and split. The contrast's `pairing` is its treatment run's rule (`same_plan` when the run has no `pairing`); a paired treatment's `reference_arm` is the contrast's baseline; and a baseline run with a `pairing` is refused, so two arms that are each paired to a reference never pair with each other.
 - **Pooled records:**
   - There is one pooled record per key, and its comparison must have planned per-dataset contrasts.
   - `n_datasets` equals the planned datasets of the comparison, and every excluded dataset is one of them.

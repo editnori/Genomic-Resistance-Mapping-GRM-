@@ -1,0 +1,12 @@
+dataset	labelled_resistant	labelled_susceptible	excluded_no_sequence	excluded_species_check_failed	excluded_not_counted	scored_resistant	scored_susceptible	scored_borderline	reportable	lasso_complete	known_gene	top_study_resistant	top_study_resistant_count	top_study_resistant_share	top_study_susceptible	top_study_susceptible_count	top_study_susceptible_share	studies	loso_folds_reportable	top_study_resistant_fold_reportable	top_study_susceptible_fold_reportable	studies_not_left_out	scored_no_bioproject	top_study_resistant_tied	top_study_susceptible_tied
+mycobacterium_tuberculosis__amikacin	185	828	0	0	0	185	828	1	yes	no	scored	PRJEB48275	176	0.951351	PRJEB48275	679	0.820048	6	5	no	no	PRJEB48275	0		
+mycobacterium_tuberculosis__capreomycin	49	807	0	0	0	49	807	1	yes	no	no rule published	PRJEB48275	25	0.510204	PRJEB48275	612	0.758364	7	6	no	no	PRJEB48275	0		
+mycobacterium_tuberculosis__ethambutol	344	445	0	0	0	344	445	1	yes	yes	no rule published	PRJEB48275	268	0.779070	PRJEB48275	364	0.817978	6	6	yes	yes		0		
+mycobacterium_tuberculosis__isoniazid	993	157	0	0	0	993	157	1	yes	no	no rule published	PRJEB48275	772	0.777442	PRJEB48275	86	0.547771	7	7	yes	yes		0		
+mycobacterium_tuberculosis__kanamycin	338	681	0	0	0	338	681	1	yes	no	scored	PRJEB48275	314	0.928994	PRJEB48275	541	0.794420	4	3	no	no	PRJEB48275	0		
+mycobacterium_tuberculosis__levofloxacin	122	645	0	0	0	122	645	0	yes	no	scored	PRJEB48275	108	0.885246	PRJEB48275	598	0.927132	5	4	no	no	PRJEB48275	0		
+mycobacterium_tuberculosis__moxifloxacin	232	783	0	0	0	232	783	1	yes	yes	scored	PRJEB48275	208	0.896552	PRJEB48275	649	0.828863	6	5	no	no	PRJEB48275	0		
+mycobacterium_tuberculosis__prothionamide	29	32	0	0	0	29	32	0	yes	yes	no rule published	PRJEB38780	23	0.793103	PRJEB38780	26	0.812500	4	3	no	no	PRJEB38780	0		
+mycobacterium_tuberculosis__pyrazinamide	442	408	0	0	0	442	408	1	yes	no	no rule published	PRJEB48275	325	0.735294	PRJEB48275	279	0.683824	7	7	yes	yes		0		
+mycobacterium_tuberculosis__rifampin	945	204	0	0	0	945	204	1	yes	yes	no rule published	PRJEB48275	747	0.790476	PRJEB48275	111	0.544118	7	7	yes	yes		0		
+mycobacterium_tuberculosis__streptomycin	157	80	0	0	0	157	80	1	yes	no	scored	PRJNA1044389	79	0.503185	PRJEB26996	62	0.775000	4	3	yes	no	PRJEB26996	0		

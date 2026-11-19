@@ -1,0 +1,22 @@
+dataset	labelled_resistant	labelled_susceptible	excluded_no_sequence	excluded_species_check_failed	excluded_not_counted	scored_resistant	scored_susceptible	scored_borderline	reportable	lasso_complete	known_gene	top_study_resistant	top_study_resistant_count	top_study_resistant_share	top_study_susceptible	top_study_susceptible_count	top_study_susceptible_share	studies	loso_folds_reportable	top_study_resistant_fold_reportable	top_study_susceptible_fold_reportable	studies_not_left_out	scored_no_bioproject	top_study_resistant_tied	top_study_susceptible_tied
+klebsiella_pneumoniae__amikacin	861	873	0	0	0	861	873	0	yes	no	scored	PRJEB29742	232	0.269454	PRJEB80567	266	0.304696	11	11	yes	yes		0		
+klebsiella_pneumoniae__amoxicillin_clavulanate	546	111	0	0	0	546	111	0	yes	no	scored	PRJEB66182	297	0.543956	PRJNA1054115	61	0.549550	3	3	yes	yes		0		
+klebsiella_pneumoniae__ampicillin_sulbactam	218	228	0	0	0	218	228	0	yes	no	scored	PRJEB80567	200	0.917431	PRJEB80567	117	0.513158	4	3	no	no	PRJEB80567	0		
+klebsiella_pneumoniae__aztreonam	434	141	0	0	0	434	141	0	yes	no	scored	PRJEB29742	393	0.905530	PRJNA1054115	122	0.865248	5	4	yes	no	PRJNA1054115	0		
+klebsiella_pneumoniae__cefepime	840	494	0	0	0	840	494	0	yes	no	scored	PRJEB29742	384	0.457143	PRJEB80567	229	0.463563	7	7	yes	yes		0		
+klebsiella_pneumoniae__cefoxitin	778	345	0	0	0	778	345	0	yes	no	scored	PRJEB29742	340	0.437018	PRJEB80567	200	0.579710	6	6	yes	yes		0		
+klebsiella_pneumoniae__ceftazidime	984	340	0	0	0	984	340	0	yes	no	scored	PRJEB29742	386	0.392276	PRJEB80567	176	0.517647	8	8	yes	yes		0		
+klebsiella_pneumoniae__ceftazidime_avibactam	31	28	0	0	0	31	28	0	yes	yes	scored	PRJEB66182	31	1.000000	PRJEB66182	25	0.892857	2	1	no	no	PRJEB66182	0		
+klebsiella_pneumoniae__ceftriaxone	926	363	0	0	0	926	363	0	yes	no	scored	PRJEB66182	344	0.371490	PRJEB80567	152	0.418733	7	7	yes	yes		0		
+klebsiella_pneumoniae__cefuroxime	102	149	0	0	0	102	149	0	yes	yes	scored	PRJEB29739	89	0.872549	PRJNA1054115	114	0.765101	2	1	no	yes	PRJEB29739	0		
+klebsiella_pneumoniae__ciprofloxacin	1479	437	0	0	0	1479	437	0	yes	no	scored	PRJEB29742	355	0.240027	PRJEB80567	181	0.414188	12	12	yes	yes		0		
+klebsiella_pneumoniae__colistin	108	59	0	0	0	108	59	0	yes	yes	scored	PRJEB36683	77	0.712963	PRJEB36683	55	0.932203	5	4	no	no	PRJEB36683	0		
+klebsiella_pneumoniae__doripenem	145	175	0	0	0	145	175	0	yes	yes	scored	PRJEB80567	145	1.000000	PRJEB80567	175	1.000000	1	0	no	no	PRJEB80567	0		
+klebsiella_pneumoniae__ertapenem	570	428	0	0	0	570	428	0	yes	no	scored	PRJEB29742	409	0.717544	PRJEB80567	181	0.422897	6	6	yes	yes		0		
+klebsiella_pneumoniae__gentamicin	931	971	0	0	0	931	971	0	yes	no	scored	PRJEB29742	233	0.250269	PRJEB80567	252	0.259526	10	10	yes	yes		0		
+klebsiella_pneumoniae__imipenem	883	512	0	0	0	883	512	0	yes	no	scored	PRJEB29742	361	0.408834	PRJEB80567	195	0.380859	7	7	yes	yes		0		
+klebsiella_pneumoniae__meropenem	1074	565	0	0	0	1074	565	0	yes	no	scored	PRJEB29742	379	0.352886	PRJEB80567	172	0.304425	10	10	yes	yes		0		
+klebsiella_pneumoniae__nitrofurantoin	358	29	0	0	0	358	29	0	yes	no	scored	PRJEB66182	307	0.857542	PRJEB29739	16	0.551724	3	1	no	no	PRJEB29739;PRJEB66182	0		
+klebsiella_pneumoniae__piperacillin_tazobactam	610	229	0	0	0	610	229	0	yes	no	scored	PRJEB66182	325	0.532787	PRJNA1054115	124	0.541485	5	5	yes	yes		0		
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	1240	323	0	0	0	1240	323	0	yes	no	scored	PRJEB29742	347	0.279839	PRJNA1054115	118	0.365325	9	9	yes	yes		0		
+klebsiella_pneumoniae__tigecycline	218	509	0	0	0	218	509	0	yes	no	scored	PRJEB36683	125	0.573394	PRJEB80567	272	0.534381	4	4	yes	yes		0		

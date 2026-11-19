@@ -6,9 +6,13 @@
 //! screening, which is why `screen` takes the mask.
 
 pub mod eval;
+pub mod foldfile;
 pub mod gbt;
 pub mod lasso;
+pub mod null_refit;
+pub mod planned;
 pub mod scm;
+pub mod tie;
 pub mod tree;
 
 use crate::bits::{self, BitMatrix, Bits};
@@ -42,8 +46,13 @@ pub struct BinaryMetrics {
     pub auprc: Option<f64>,
 }
 
-/// Samples that received no call, by reported class. Metrics beside it
-/// cover only the called samples, so called plus uncalled is every sample.
+/// Samples without a fitted model's call, by reported class. On a probe
+/// panel these are the isolates the probes give no call for, and the
+/// metrics beside it cover the rest. On a learner row they are the samples
+/// of folds whose fit was null; from evaluation revision 14 those samples
+/// are scored at their fold's training prevalence and counted in the
+/// metrics (`called_metrics` keeps the figure over the rest), while earlier
+/// rows left them out of the metrics.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct NoCall {
     pub resistant: usize,
@@ -295,6 +304,13 @@ pub fn fold_masks(folds: &[usize], k: usize) -> Vec<(Bits, Bits)> {
         .collect()
 }
 
+/// The resistant share of `train`: the score of a null fit, which predicts
+/// its training prevalence for every sample. The evaluation's pooled scores
+/// and the input comparison's prediction rows both use this one definition.
+pub fn train_prevalence(y: &Bits, train: &Bits) -> f64 {
+    train.and(y).count() as f64 / train.count() as f64
+}
+
 /// Build inner folds from training samples only. Outside samples receive a
 /// sentinel and cannot change the shuffle, class balance, or group allocation.
 pub fn training_folds(
@@ -452,6 +468,18 @@ pub fn training_candidates(x: &BitMatrix, train: &Bits, min_support: u32) -> (Bi
         rows.push(f as u32);
     }
     (sub, rows)
+}
+
+/// Whether `training_candidates` keeps any row of `x` for `train`: some
+/// row's support among training samples lies in
+/// [min_support, |train| - min_support].
+pub fn any_training_candidate(x: &BitMatrix, train: &Bits, min_support: u32) -> bool {
+    assert_eq!(x.cols, train.len());
+    let max = train.count().saturating_sub(min_support);
+    (0..x.rows).any(|f| {
+        let s = bits::and_count(x.row(f), train.words());
+        s >= min_support && s <= max
+    })
 }
 
 /// Ranks features by the chi-square statistic of the 2x2 presence-by-class

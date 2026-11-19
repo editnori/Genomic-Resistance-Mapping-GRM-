@@ -13,13 +13,13 @@
 // click, tap, keyboard or a touch hold, and names its whole text to a
 // resting pointer in a native tooltip.
 
-import { Fragment, useState, type ReactNode } from "react";
+import { Fragment, useMemo, useState, type ReactNode } from "react";
 import { Search } from "lucide-react";
 import type { CatalogRow, Learner, LearnerLite, Manifest } from "../data/schema";
-import { capitalize, int, LEARNER_LABEL, LEARNER_NAME, pct, speciesShort } from "../data/format";
+import { capitalize, hasEverydayName, int, LEARNER_LABEL, LEARNER_NAME, pct, speciesName, speciesOption, speciesShort } from "../data/format";
 import { applyAxes, countBy, memberTest, rowsWithout, type Axis } from "../data/facets";
-import { BARS, verdictOf } from "../data/metrics";
-import { BEST_LEARNER_WORDS, NO_BEST_LEARNER, ruleSummary, splitReasonShort } from "../data/derive/dataset";
+import { BARS, BARS_SOURCE, verdictOf } from "../data/metrics";
+import { BEST_LEARNER_WORDS, familiesNamed, NO_BEST_LEARNER, ruleSummary, SEVERAL_FAMILIES_NOTE, splitReasonShort } from "../data/derive/dataset";
 import { CATALOG_CUTOFF, catalogDiff } from "../data/derive/overview";
 import { auditOf, manifestAudit } from "../data/derive/evaluation";
 import { useKeptState, type Navigator } from "../app/router";
@@ -28,11 +28,14 @@ import { ViewHeader } from "../ui/ViewHeader";
 import { Dropdown } from "../ui/Dropdown";
 import { DataTable, type Column, type SortState } from "../ui/DataTable";
 import { FilterRail, FiltersButton, railGrid, RailCheck, RailChecks, RailControl, RailField, RailGroup, useRailState } from "../ui/FilterRail";
-import { FOCUS_RING, GhostButton, MeetsMark, VIEW_SHELL } from "../ui/primitives";
+import { BarValue, FOCUS_RING, GhostButton, MeetsMark, VIEW_SHELL } from "../ui/primitives";
+import { useMicBaselines } from "../data/load";
+import { micConstants, type MicConstant } from "../data/baselines";
 import { useClipped } from "../ui/useClipped";
 import { HOLD_TARGET, useHold } from "../ui/useHold";
 import { useCountUp } from "../ui/useCountUp";
 import { byFamily, ClassGlyph, ClassKey, ClassName } from "../ui/drugClass";
+import { ClindamycinMark } from "./inspector/ClindamycinNote";
 
 const MIN_N = [
   { id: "0", label: "Any size" },
@@ -66,7 +69,8 @@ export const catalogClose = (r: CatalogRow): boolean => {
 
 const meets = (value: number | null | undefined, bar: (typeof BARS)[keyof typeof BARS]): boolean => value !== null && value !== undefined && verdictOf(value, bar) === "meets";
 
-const searchText = (r: CatalogRow): string => [r.antibiotic, r.species, r.drug_class, bestName(r), ...r.scm_rules].join(" ").toLowerCase();
+// The everyday name goes last, so "antibiotic species" still matches as one run.
+const searchText = (r: CatalogRow): string => [r.antibiotic, r.species, r.drug_class, bestName(r), ...r.scm_rules, speciesName(r.species)].join(" ").toLowerCase();
 
 interface Filters {
   species: Set<string>;
@@ -156,6 +160,16 @@ const RULE_TOGGLE = `ui-control-target ui-target-24 inline-flex items-center jus
  *  None of it opens the row. */
 const RuleCell = ({ rules }: { rules: readonly string[] }) => {
   const [open, setOpen] = useState(false);
+  // Under a rule that names several catalog families: what the list is not.
+  // `whole` prints it in full. Cut to one line, it is whole in a tooltip, and
+  // that is done only where something in the cell opens it: a tooltip alone
+  // reaches no touch screen and no keyboard.
+  const note = (rule: string, whole: boolean) =>
+    familiesNamed(rule) === null ? null : (
+      <span data-rule-note="" title={whole ? undefined : SEVERAL_FAMILIES_NOTE} className={`block text-tiny font-normal text-muted-text ${whole ? "whitespace-normal break-words" : "truncate"}`}>
+        {SEVERAL_FAMILIES_NOTE}
+      </span>
+    );
   // Read only while the rule is cut to one line: shown whole it no longer
   // measures as clipped, and the button must stay to close it.
   const [textRef, clipped] = useClipped<HTMLSpanElement>(open);
@@ -175,17 +189,23 @@ const RuleCell = ({ rules }: { rules: readonly string[] }) => {
     </span>
   );
   if (s.more === 0) {
-    return open || clipped ? (
-      <button
-        type="button"
-        aria-expanded={open}
-        {...toggle}
-        className={`${HOLD_TARGET} ui-control-target block w-full rounded-sm text-left transition-colors duration-fast ease-out hover:text-blue ${FOCUS_RING}`}
-      >
-        {line}
-      </button>
-    ) : (
-      line
+    return (
+      <>
+        {open || clipped ? (
+          <button
+            type="button"
+            aria-expanded={open}
+            {...toggle}
+            className={`${HOLD_TARGET} ui-control-target block w-full rounded-sm text-left transition-colors duration-fast ease-out hover:text-blue ${FOCUS_RING}`}
+          >
+            {line}
+          </button>
+        ) : (
+          line
+        )}
+        {/* A lone rule that fits has no button, so nothing would open the note: it wraps. */}
+        {note(s.first, open || !clipped)}
+      </>
     );
   }
   return (
@@ -195,6 +215,7 @@ const RuleCell = ({ rules }: { rules: readonly string[] }) => {
           {rules.map((rule, i) => (
             <li key={`${i}-${rule}`} className="break-words">
               {rule}
+              {note(rule, true)}
             </li>
           ))}
         </ol>
@@ -203,6 +224,7 @@ const RuleCell = ({ rules }: { rules: readonly string[] }) => {
         // the count is the way in by keyboard.
         <span data-row-ignore="" className={`${HOLD_TARGET} min-w-0 cursor-pointer`} {...show}>
           {line}
+          {note(s.first, false)}
         </span>
       )}
       <button type="button" aria-expanded={open} aria-label={open ? undefined : `Show all ${rules.length} rules`} onClick={() => setOpen(!open)} className={RULE_TOGGLE}>
@@ -215,26 +237,51 @@ const RuleCell = ({ rules }: { rules: readonly string[] }) => {
 /** Rows carry a provisional marker only when the report mixes audit states;
  *  when every row shares one, the status line says it once. Header hints
  *  are optional; the key over the table prints what each mark means. */
-export const datasetColumns = (markProvisional: boolean, current: number | undefined): Column<CatalogRow>[] => [
+/** The MIC column's cell: the model's agreement against the 90% screen,
+ *  and beneath it, with a baselines file, the constant's on the same exact
+ *  MICs, marked † when the held-out predictions do not confirm the folds. */
+const MicCell = ({ r, constant }: { r: CatalogRow; constant: MicConstant | undefined }) => {
+  if (r.mic_essential_agreement === null) return <Muted>No MIC</Muted>;
+  const value = <BarValue value={r.mic_essential_agreement} bar={BARS.mic} />;
+  if (constant === undefined) return value;
+  return (
+    <Two
+      top={value}
+      below={
+        <span data-baseline="mic-constant">
+          <span className="sr-only">constant MIC </span>
+          {pct(constant.constant)}
+          <span aria-hidden="true">{constant.confirmed ? " c" : " c†"}</span>
+          {constant.confirmed ? null : <span className="sr-only">, folds not confirmed by the held-out predictions</span>}
+        </span>
+      }
+    />
+  );
+};
+
+export const datasetColumns = (markProvisional: boolean, current: number | undefined, constants?: ReadonlyMap<string, MicConstant>): Column<CatalogRow>[] => [
   {
     id: "dataset",
     header: "Dataset",
     width: DATASET_WIDTHS.dataset,
+    tip: [{ term: "Dataset", text: "One species of bacteria tested against one antibiotic. The antibiotic is the title, and the line beneath names the species and the drug class." }],
     sortValue: (r) => `${r.antibiotic} ${r.species}`,
     firstDir: "asc",
     cell: (r) => (
       <span className="block">
-        <span className="flex items-baseline gap-x-2">
+        <span className="flex flex-wrap items-baseline gap-x-2">
           <span className="min-w-0">
             <DrugName name={r.antibiotic} />
           </span>
           {markProvisional && !auditOf(r, current).valid ? <strong className="shrink-0 text-tiny font-semibold text-coral-text">Provisional</strong> : null}
+          <ClindamycinMark row={r} />
         </span>
         {/* Species and class wrap to two lines at most; the class, last, is
-            what an ellipsis cuts, and the separator stays with the species. */}
+            what an ellipsis cuts, and the separator stays with the species.
+            An everyday name is no binomial, so it isn't set in italics. */}
         <span className="dataset-sub text-tiny font-normal text-muted-text">
           <span className="whitespace-nowrap">
-            <i>{speciesShort(r.species)}</i> ·
+            {hasEverydayName(r.species) ? speciesName(r.species) : <i>{speciesShort(r.species)}</i>} ·
           </span>{" "}
           <ClassName drugClass={r.drug_class} />
         </span>
@@ -245,7 +292,12 @@ export const datasetColumns = (markProvisional: boolean, current: number | undef
     id: "random",
     header: "Random",
     width: DATASET_WIDTHS.random,
-    tip: [{ term: "Random split", text: `Balanced accuracy, the mean of sensitivity and specificity, of ${BEST_LEARNER_WORDS}, stratified 5-fold. That learner is named beneath.` }],
+    tip: [
+      {
+        term: "Random split",
+        text: `Balanced accuracy: the average of sensitivity (resistant genomes called resistant) and specificity (susceptible called susceptible), testing on genomes picked at random, 5 stratified folds. For ${BEST_LEARNER_WORDS}, named beneath.`,
+      },
+    ],
     align: "right",
     sortValue: (r) => r.best_random,
     cell: (r) =>
@@ -266,7 +318,7 @@ export const datasetColumns = (markProvisional: boolean, current: number | undef
     id: "lineage",
     header: "Lineage",
     width: DATASET_WIDTHS.lineage,
-    tip: [{ term: "Lineages held out", text: "The same learner with whole lineages held out together, so no test genome has a near-identical relative in training. A missing split names its reason." }],
+    tip: [{ term: "Lineages held out", text: "The same learner tested on whole lineages, groups of closely related genomes, that it never saw in training. A missing split names its reason." }],
     align: "right",
     sortValue: (r) => r.best_lineage,
     cell: (r) => {
@@ -281,7 +333,7 @@ export const datasetColumns = (markProvisional: boolean, current: number | undef
     header: "Gap",
     unit: "points",
     width: DATASET_WIDTHS.gap,
-    tip: [{ term: "Gap", text: "Random minus lineage-held-out balanced accuracy, in points: how much of the random-split score may lean on near-identical relatives in training." }],
+    tip: [{ term: "Gap", text: "Random minus Lineage, in percentage points. A large gap means the random-split score may lean on close relatives of the test genomes in training." }],
     align: "right",
     sortValue: gap,
     cell: (r) => {
@@ -302,7 +354,7 @@ export const datasetColumns = (markProvisional: boolean, current: number | undef
     id: "n",
     header: "Isolates",
     width: DATASET_WIDTHS.n,
-    tip: [{ term: "Isolates", text: "Genomes with a reported resistant or susceptible call, and how many are resistant." }],
+    tip: [{ term: "Isolates", text: "Bacterial samples, each with a sequenced genome and a reported lab call of resistant or susceptible. The line beneath counts the resistant ones (R)." }],
     align: "right",
     sortValue: (r) => r.n,
     cell: (r) => <Two top={int(r.n)} below={`${int(r.n_resistant)} R`} />,
@@ -312,7 +364,7 @@ export const datasetColumns = (markProvisional: boolean, current: number | undef
     header: "VME",
     unit: "≤1.5%",
     width: DATASET_WIDTHS.vme,
-    tip: [{ term: "Very major error", text: "Resistant isolates called susceptible, over all resistant isolates; best learner, random split. The bar is FDA-style, not a regulatory claim." }],
+    tip: [{ term: "Very major error (VME)", text: `The share of resistant isolates the best learner calls susceptible, on the random split. ${BARS_SOURCE}` }],
     align: "right",
     sortValue: (r) => bestLite(r)?.vme ?? null,
     firstDir: "asc",
@@ -327,7 +379,7 @@ export const datasetColumns = (markProvisional: boolean, current: number | undef
     header: "ME",
     unit: "≤3%",
     width: DATASET_WIDTHS.me,
-    tip: [{ term: "Major error", text: "Susceptible isolates called resistant, over all susceptible isolates; best learner, random split. The bar is FDA-style, not a regulatory claim." }],
+    tip: [{ term: "Major error (ME)", text: `The share of susceptible isolates the best learner calls resistant, on the random split. ${BARS_SOURCE}` }],
     align: "right",
     sortValue: (r) => bestLite(r)?.me ?? null,
     firstDir: "asc",
@@ -341,7 +393,12 @@ export const datasetColumns = (markProvisional: boolean, current: number | undef
     id: "catalog",
     header: "Catalog",
     width: DATASET_WIDTHS.catalog,
-    tip: [{ term: "Known-gene catalog", text: "Balanced accuracy of the catalog rule alone: AMRFinderPlus genes found by k-mer containment, with a fixed rule per drug. It does not train, so one number serves both splits." }],
+    tip: [
+      {
+        term: "Known-gene catalog",
+        text: "A fixed rule's balanced accuracy: resistant when the genome carries a known resistance gene for the drug. GRM finds AMRFinderPlus database genes by k-mer containment; the AMRFinderPlus program is not run. Untrained, so one number serves both splits.",
+      },
+    ],
     align: "right",
     sortValue: (r) => r.catalog?.balanced_accuracy ?? null,
     cell: (r) => {
@@ -362,21 +419,44 @@ export const datasetColumns = (markProvisional: boolean, current: number | undef
     header: "MIC",
     unit: "≥90%",
     width: DATASET_WIDTHS.mic,
-    tip: [{ term: "MIC essential agreement", text: "Share of isolates with an exact MIC whose predicted MIC is within one doubling dilution. A model needs at least 100 isolates with an MIC, 50 of them exact." }],
+    tip: [
+      {
+        term: "MIC essential agreement",
+        text: `Share of exact MICs (the lowest drug level that stops growth) predicted within one doubling dilution. Needs 100 isolates with an MIC, 50 exact. ${BARS_SOURCE}`,
+      },
+      ...(constants === undefined || constants.size === 0
+        ? []
+        : [
+            {
+              term: "Constant MIC (c)",
+              text: "The line beneath: a constant MIC taken from each training fold, the lower median of its exact MICs, scored on the same exact MICs and folds as the model. † marks a dataset whose held-out predictions do not confirm the rebuilt folds.",
+            },
+          ]),
+    ],
     align: "right",
     sortValue: (r) => r.mic_essential_agreement,
-    status: (r) => (r.mic_essential_agreement === null ? null : { value: r.mic_essential_agreement, bar: BARS.mic }),
-    cell: () => <Muted>No MIC</Muted>,
+    cell: (r) => <MicCell r={r} constant={constants?.get(r.id)} />,
   },
   {
     id: "rule",
     header: "Rule",
     unit: "set covering machine",
     minWidth: DATASET_WIDTHS.ruleFloor,
-    tip: [{ term: "Set covering machine", text: "The interpretable model's first rule and how many more. A clipped rule opens in place; the inspector places each rule's k-mers." }],
+    tip: [{ term: "Set covering machine", text: "The learner a person can read: a short list of rules on pieces of DNA. The first rule shows here with how many more; a clipped rule opens in place, and the inspector places each rule's k-mers." }],
     cell: (r) => <RuleCell rules={r.scm_rules} />,
   },
 ];
+
+/** What the main columns measure, in plain words, once under the view's
+ *  header, so the rail and the table below shift together; each header's
+ *  hint carries the detail. */
+const ReadingNote = () => (
+  <p className="type-note mt-4 max-w-[72ch]">
+    GRM trains several kinds of model (learners) on each dataset, and each row shows the one that scores best. Random and Lineage are its balanced accuracy: the average of the
+    share of resistant and the share of susceptible genomes it calls right, where 50% is a coin toss. Random tests it on genomes picked at random, most with close relatives in
+    training. Lineage tests it on whole lineages, groups of close relatives it never saw. VME is resistant genomes called susceptible; ME is the reverse.
+  </p>
+);
 
 /** What the table's marks mean, printed once over it. Each mark is shown
  *  as it appears in the cells, then said in words. The drug-class key
@@ -408,6 +488,9 @@ export const DatasetsView = ({ manifest, nav }: { manifest: Manifest; nav: Navig
   const [all, setAll] = useKeptState("datasets.all", false);
   const rows = manifest.datasets;
   const audit = manifestAudit(manifest);
+  // Optional: with no baselines files the MIC column shows the model alone.
+  const files = useMicBaselines(manifest);
+  const constants = useMemo(() => (files.status === "ready" ? micConstants(rows, files.data, manifest.evaluation_revision) : undefined), [files, rows, manifest.evaluation_revision]);
 
   const q = query.trim().toLowerCase();
   const axes = axesFor(f, q);
@@ -439,7 +522,7 @@ export const DatasetsView = ({ manifest, nav }: { manifest: Manifest; nav: Navig
           <Dropdown
             ariaLabel="Species"
             rest="All species"
-            options={speciesNames.map((s) => ({ id: s, label: s, count: speciesCounts.get(s) ?? 0 }))}
+            options={speciesNames.map((s) => ({ id: s, label: speciesOption(s), count: speciesCounts.get(s) ?? 0 }))}
             mode={{ kind: "many", value: f.species, onChange: (species) => setF({ ...f, species }) }}
           />
         </RailControl>
@@ -462,7 +545,7 @@ export const DatasetsView = ({ manifest, nav }: { manifest: Manifest; nav: Navig
             mode={{ kind: "one", value: f.minN, onSelect: (minN) => setF({ ...f, minN }) }}
           />
         </RailField>
-        <RailCheck label="Has MIC regression" checked={f.mic} onChange={(mic) => setF({ ...f, mic })} count={checkCount(rows, axes, "mic", (r) => r.mic_essential_agreement !== null)} />
+        <RailCheck label="Has MIC prediction" checked={f.mic} onChange={(mic) => setF({ ...f, mic })} count={checkCount(rows, axes, "mic", (r) => r.mic_essential_agreement !== null)} />
       </RailGroup>
       <RailGroup label="Best learner" active={f.learners.size > 0}>
         <RailControl>
@@ -483,7 +566,12 @@ export const DatasetsView = ({ manifest, nav }: { manifest: Manifest; nav: Navig
 
   return (
     <div className={`${VIEW_SHELL} pb-16 pt-8`}>
-      <ViewHeader title="Datasets" status={<ReportStatus manifest={manifest} />} />
+      <ViewHeader
+        title="Datasets"
+        purpose="Each row is one species of bacteria tested against one antibiotic, and how well its genomes predict the lab's resistant or susceptible call."
+        status={<ReportStatus manifest={manifest} />}
+      />
+      {rows.length > 0 ? <ReadingNote /> : null}
 
       <div className={`mt-7 ${railGrid(rail)}`}>
         {rail.inline ? filterRail : null}
@@ -498,7 +586,7 @@ export const DatasetsView = ({ manifest, nav }: { manifest: Manifest; nav: Navig
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search antibiotic, species, drug class, or gene"
+                placeholder="Search drug, species, class or gene"
                 className={`ui-control-target h-10 w-full rounded-md border border-hair bg-paper-pure pl-10 pr-4 text-body text-ink placeholder:text-muted-text transition-colors duration-fast ease-out hover:border-blue/40 ${FOCUS_RING}`}
               />
             </label>
@@ -517,7 +605,7 @@ export const DatasetsView = ({ manifest, nav }: { manifest: Manifest; nav: Navig
             <DataTable
               label="Datasets"
               rows={shown}
-              columns={datasetColumns(audit.invalid > 0 && audit.invalid < audit.total, manifest.evaluation_revision)}
+              columns={datasetColumns(audit.invalid > 0 && audit.invalid < audit.total, manifest.evaluation_revision, constants)}
               rowKey={(r) => r.id}
               onOpen={(r) => nav.openDataset(r.id)}
               initialSort={sort}

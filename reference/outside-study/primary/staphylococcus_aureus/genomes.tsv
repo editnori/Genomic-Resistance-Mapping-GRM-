@@ -1,0 +1,804 @@
+genome_id	bioproject	country	mlst	mlst_in_cohort	fasta	species_check	borderline	scored	exclusion	exclusion_detail
+1280.4313	PRJNA1050907	Saudi Arabia	MLST.saureus.239	yes	yes	pass	no	yes		
+1280.14691	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.28508	PRJNA1050907	Saudi Arabia	MLST.saureus.398	yes	yes	pass	no	yes		
+1280.30742	PRJNA1050907	Saudi Arabia	MLST.saureus.772	yes	yes	pass	no	yes		
+1280.30743	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.30749	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.34294	PRJNA1050907	Saudi Arabia	MLST.saureus.398	yes	yes	pass	no	yes		
+1280.34297	PRJNA1050907	Saudi Arabia	MLST.saureus.97	yes	yes	pass	no	yes		
+1280.34314	PRJNA1050907	Saudi Arabia	MLST.saureus.398	yes	yes	pass	no	yes		
+1280.38989	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.38991	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.38992	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.43483	PRJNA819273	Kenya	MLST.saureus.2073	no	yes	pass	no	yes		
+1280.43484	PRJNA819273	Kenya	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.43485	PRJNA819273	Kenya	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.43486	PRJNA819273	Kenya	MLST.saureus.2073	no	yes	pass	no	yes		
+1280.43487	PRJNA819273	Kenya	MLST.saureus.2957	no	yes	pass	no	yes		
+1280.43488	PRJNA819273	Kenya	MLST.saureus.2957	no	yes	pass	no	yes		
+1280.43489	PRJNA819273	Kenya	MLST.saureus.3573	no	yes	pass	no	yes		
+1280.43490	PRJNA819273	Kenya	MLST.saureus.1765	no	yes	pass	no	yes		
+1280.43491	PRJNA819273	Kenya	MLST.saureus.7620	no	yes	pass	no	yes		
+1280.43492	PRJNA819273	Kenya	MLST.saureus.3667	no	yes	pass	no	yes		
+1280.43493	PRJNA819273	Kenya	MLST.saureus.3575	no	yes	pass	no	yes		
+1280.43494	PRJNA819273	Kenya	MLST.saureus.3581	no	yes	pass	no	yes		
+1280.43495	PRJNA819273	Somalia	MLST.saureus.2957	no	yes	pass	no	yes		
+1280.43496	PRJNA819273	Kenya	MLST.saureus.3581	no	yes	pass	no	yes		
+1280.43497	PRJNA819273	Kenya	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.43498	PRJNA819273	Kenya	MLST.saureus.2073	no	yes	pass	no	yes		
+1280.43499	PRJNA819273	Somalia	MLST.saureus.3583	no	yes	pass	no	yes		
+1280.43500	PRJNA819273	Kenya	MLST.saureus.3581	no	yes	pass	no	yes		
+1280.43501	PRJNA819273	Kenya	MLST.saureus.3573	no	yes	pass	no	yes		
+1280.43502	PRJNA819273	Kenya	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.43503	PRJNA819273	Kenya	MLST.saureus.3582	no	yes	pass	no	yes		
+1280.43504	PRJNA819273	Kenya	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.43505	PRJNA819273	Kenya	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.43506	PRJNA819273	Somalia	MLST.saureus.2073	no	yes	pass	no	yes		
+1280.43507	PRJNA819273	Kenya	MLST.saureus.2073	no	yes	pass	no	yes		
+1280.43508	PRJNA819273	Kenya	MLST.saureus.2957	no	yes	pass	no	yes		
+1280.43509	PRJNA819273	Somalia	MLST.saureus.3583	no	yes	pass	no	yes		
+1280.43510	PRJNA819273	Kenya	MLST.saureus.3583	no	yes	pass	no	yes		
+1280.43511	PRJNA819273	Kenya	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.43512	PRJNA819273	Somalia	MLST.saureus.3576	no	yes	pass	no	yes		
+1280.43513	PRJNA819273	Kenya	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.43514	PRJNA819273	Kenya	MLST.saureus.3602	no	yes	pass	no	yes		
+1280.43515	PRJNA819273	Kenya	MLST.saureus.7619	no	yes	pass	no	yes		
+1280.48783	PRJNA1050907	Saudi Arabia	MLST.saureus.100	no	yes	pass	no	yes		
+1280.49454	PRJNA1050907	Saudi Arabia		no ST	yes	pass	no	yes		
+1280.49455	PRJNA1050907	Saudi Arabia	MLST.saureus.672	yes	yes	pass	no	yes		
+1280.49456	PRJNA1050907	Saudi Arabia	MLST.saureus.97	yes	yes	pass	no	yes		
+1280.49457	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.49458	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.49459	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.49460	PRJNA1050907	Saudi Arabia	MLST.saureus.1930	no	yes	pass	no	yes		
+1280.49461	PRJNA1050907	Saudi Arabia	MLST.saureus.97	yes	yes	pass	no	yes		
+1280.49705	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.49706	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.49707	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.49708	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.49710	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.49711	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.49712	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.49713	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.49716	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.49717	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.49718	PRJNA1050907	Saudi Arabia	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.49719	PRJNA1050907	Saudi Arabia	MLST.saureus.22	yes	yes	pass	no	yes		
+1280.49720	PRJNA1050907	Saudi Arabia	MLST.saureus.22	yes	yes	pass	no	yes		
+1280.49722	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.49723	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.49724	PRJNA1050907	Saudi Arabia		no ST	yes	pass	no	yes		
+1280.49725	PRJNA1050907	Saudi Arabia		no ST	yes	pass	no	yes		
+1280.49726	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.49727	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.49728	PRJNA1050907	Saudi Arabia	MLST.saureus.1930	no	yes	pass	no	yes		
+1280.49729	PRJNA1050907	Saudi Arabia	MLST.saureus.22	yes	yes	pass	no	yes		
+1280.49730	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.49731	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.49732	PRJNA1050907	Saudi Arabia	MLST.saureus.672	yes	yes	pass	no	yes		
+1280.49733	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.49734	PRJNA1050907	Saudi Arabia		no ST	yes	pass	no	yes		
+1280.49735	PRJNA1050907	Saudi Arabia		no ST	yes	pass	no	yes		
+1280.49736	PRJNA1050907	Saudi Arabia		no ST	yes	pass	no	yes		
+1280.49737	PRJNA1050907	Saudi Arabia	MLST.saureus.1	yes	yes	pass	no	yes		
+1280.49738	PRJNA1050907	Saudi Arabia	MLST.saureus.97	yes	yes	pass	no	yes		
+1280.49739	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.49740	PRJNA1050907	Saudi Arabia	MLST.saureus.672	yes	yes	pass	no	yes		
+1280.49742	PRJNA1050907	Saudi Arabia	MLST.saureus.97	yes	yes	pass	no	yes		
+1280.49743	PRJNA1050907	Saudi Arabia	MLST.saureus.22	yes	yes	pass	no	yes		
+1280.49744	PRJNA1050907	Saudi Arabia		no ST	yes	pass	no	yes		
+1280.49745	PRJNA1050907	Saudi Arabia	MLST.saureus.97	yes	yes	pass	no	yes		
+1280.49746	PRJNA1050907	Saudi Arabia	MLST.saureus.97	yes	yes	pass	no	yes		
+1280.49747	PRJNA1050907	Saudi Arabia		no ST	yes	pass	no	yes		
+1280.49748	PRJNA1050907	Saudi Arabia		no ST	yes	pass	no	yes		
+1280.49749	PRJNA1050907	Saudi Arabia	MLST.saureus.2867	no	yes	pass	no	yes		
+1280.49750	PRJNA1050907	Saudi Arabia	MLST.saureus.97	yes	yes	pass	no	yes		
+1280.49751	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.49752	PRJNA1050907	Saudi Arabia	MLST.saureus.97	yes	yes	pass	no	yes		
+1280.49753	PRJNA1050907	Saudi Arabia	MLST.saureus.7119	no	yes	pass	no	yes		
+1280.49754	PRJNA1050907	Saudi Arabia	MLST.saureus.672	yes	yes	pass	no	yes		
+1280.49755	PRJNA1050907	Saudi Arabia		no ST	yes	pass	no	yes		
+1280.49756	PRJNA1050907	Saudi Arabia	MLST.saureus.80	yes	yes	pass	no	yes		
+1280.49757	PRJNA1050907	Saudi Arabia	MLST.saureus.672	yes	yes	pass	no	yes		
+1280.49758	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.62831	PRJNA1050907	Saudi Arabia	MLST.saureus.398	yes	yes	pass	no	yes		
+1280.62846	PRJNA1050907	Saudi Arabia	MLST.saureus.398	yes	yes	pass	no	yes		
+1280.63662	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.64355	PRJNA1050907	Saudi Arabia	MLST.saureus.59	yes	yes	pass	no	yes		
+1280.65124	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65125	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65126	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65127	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65128	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65129	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65130	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65131	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65132	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65133	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65134	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65135	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65136	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65137	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65138	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65139	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65140	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65141	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65142	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65143	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65144	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65145	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65146	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65147	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65148	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65149	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65150	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65151	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65152	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65153	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65154	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65155	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65156	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65157	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65158	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65159	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65160	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65161	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65162	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65163	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65164	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65165	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65166	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65167	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65168	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65169	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65170	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65171	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65172	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65173	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65174	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65175	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65176	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65177	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65178	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65179	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65180	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65181	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65182	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65183	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65184	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65185	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65186	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65189	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65190	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65191	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65192	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65193	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65194	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65195	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65196	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65197	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65198	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65199	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65200	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65201	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65202	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65203	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65204	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65205	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65206	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65207	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65208	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65209	PRJEB24782	Argentina	MLST.saureus.6078	no	yes	pass	no	yes		
+1280.65210	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65211	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65212	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65213	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65214	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65215	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65216	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65217	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65218	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65219	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65220	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65221	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65222	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65223	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65224	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65225	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65226	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65227	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65228	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65229	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65230	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65231	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65232	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65233	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65234	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65235	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65236	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65237	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65238	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65239	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65240	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65241	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65242	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65243	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65244	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65245	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65246	PRJEB24782	Argentina	MLST.saureus.5999	no	yes	pass	no	yes		
+1280.65247	PRJEB24782	Argentina	MLST.saureus.5999	no	yes	pass	no	yes		
+1280.65248	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65249	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65250	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65251	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65267	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65269	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65270	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65271	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65272	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65273	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65274	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65275	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65276	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65277	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65278	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65279	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65280	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65281	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65282	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65283	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65284	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65285	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65286	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65287	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65288	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65289	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65290	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65291	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65292	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65293	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65294	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65295	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65296	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65297	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65298	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65299	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65300	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65301	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65302	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65303	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65304	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65305	PRJEB24782	Argentina	MLST.saureus.6000	no	yes	pass	no	yes		
+1280.65306	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65307	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65308	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65309	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65310	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65311	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65312	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.65313	PRJEB24782	Argentina	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.68989	PRJNA1050907	Saudi Arabia	MLST.saureus.121	yes	yes	pass	no	yes		
+1280.68990	PRJNA1050907	Saudi Arabia	MLST.saureus.672	yes	yes	pass	no	yes		
+1280.68991	PRJNA1050907	Saudi Arabia	MLST.saureus.22	yes	yes	pass	no	yes		
+1280.68992	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.68993	PRJNA1050907	Saudi Arabia	MLST.saureus.672	yes	yes	pass	no	yes		
+1280.68994	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.68995	PRJNA1050907	Saudi Arabia	MLST.saureus.672	yes	yes	pass	no	yes		
+1280.68996	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.68998	PRJNA1050907	Saudi Arabia	MLST.saureus.672	yes	yes	pass	no	yes		
+1280.68999	PRJNA1050907	Saudi Arabia	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.69000	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69001	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69002	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.69003	PRJNA1050907	Saudi Arabia	MLST.saureus.22	yes	yes	pass	no	yes		
+1280.69004	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69005	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69006	PRJNA1050907	Saudi Arabia	MLST.saureus.672	yes	yes	pass	no	yes		
+1280.69007	PRJNA1050907	Saudi Arabia	MLST.saureus.97	yes	yes	pass	no	yes		
+1280.69008	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.69009	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.69010	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69011	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69012	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69013	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69014	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.69015	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.69016	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69017	PRJNA1050907	Saudi Arabia	MLST.saureus.80	yes	yes	pass	no	yes		
+1280.69018	PRJNA1050907	Saudi Arabia	MLST.saureus.80	yes	yes	pass	no	yes		
+1280.69019	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69020	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69021	PRJNA1050907	Saudi Arabia	MLST.saureus.97	yes	yes	pass	no	yes		
+1280.69022	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69023	PRJNA1050907	Saudi Arabia	MLST.saureus.1930	no	yes	pass	no	yes		
+1280.69024	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.69025	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.69026	PRJNA1050907	Saudi Arabia	MLST.saureus.672	yes	yes	pass	no	yes		
+1280.69027	PRJNA1050907	Saudi Arabia	MLST.saureus.672	yes	yes	pass	no	yes		
+1280.69028	PRJNA1050907	Saudi Arabia	MLST.saureus.672	yes	yes	pass	no	yes		
+1280.69029	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.69030	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69031	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69032	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69033	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69034	PRJNA1050907	Saudi Arabia	MLST.saureus.97	yes	yes	pass	no	yes		
+1280.69035	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69036	PRJNA1050907	Saudi Arabia	MLST.saureus.-	no ST	yes	pass	no	yes		
+1280.69037	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69038	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69039	PRJNA1050907	Saudi Arabia	MLST.saureus.672	yes	yes	pass	no	yes		
+1280.69040	PRJNA1050907	Saudi Arabia	MLST.saureus.672	yes	yes	pass	no	yes		
+1280.69042	PRJNA1050907	Saudi Arabia	MLST.saureus.22	yes	yes	pass	no	yes		
+1280.69043	PRJNA1050907	Saudi Arabia	MLST.saureus.672	yes	yes	pass	no	yes		
+1280.69044	PRJNA1050907	Saudi Arabia	MLST.saureus.239	yes	yes	pass	no	yes		
+1280.69045	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.69046	PRJNA1050907	Saudi Arabia	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.69048	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69049	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69050	PRJNA1050907	Saudi Arabia	MLST.saureus.97	yes	yes	pass	no	yes		
+1280.69051	PRJNA1050907	Saudi Arabia	MLST.saureus.80	yes	yes	pass	no	yes		
+1280.69053	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69054	PRJNA1050907	Saudi Arabia	MLST.saureus.97	yes	yes	pass	no	yes		
+1280.69056	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69057	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69058	PRJNA1050907	Saudi Arabia	MLST.saureus.97	yes	yes	pass	no	yes		
+1280.69059	PRJNA1050907	Saudi Arabia	MLST.saureus.1535	yes	yes	pass	no	yes		
+1280.69060	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.69061	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.69062	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.69063	PRJNA1050907	Saudi Arabia	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.69064	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.69065	PRJNA1050907	Saudi Arabia	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.69066	PRJNA1050907	Saudi Arabia	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.69067	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.69068	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69069	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69070	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69071	PRJNA1050907	Saudi Arabia	MLST.saureus.97	yes	yes	pass	no	yes		
+1280.69072	PRJNA1050907	Saudi Arabia	MLST.saureus.97	yes	yes	pass	no	yes		
+1280.69073	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69074	PRJNA1050907	Saudi Arabia	MLST.saureus.152	yes	yes	pass	no	yes		
+1280.69075	PRJNA1050907	Saudi Arabia	MLST.saureus.2867	no	yes	pass	no	yes		
+1280.69076	PRJNA1050907	Saudi Arabia	MLST.saureus.672	yes	yes	pass	no	yes		
+1280.69077	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69078	PRJNA1050907	Saudi Arabia	MLST.saureus.1290	yes	yes	pass	no	yes		
+1280.69079	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.69080	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.69081	PRJNA1050907	Saudi Arabia	MLST.saureus.-	no ST	yes	pass	no	yes		
+1280.69082	PRJNA1050907	Saudi Arabia	MLST.saureus.1153	yes	yes	pass	no	yes		
+1280.69083	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69084	PRJNA1050907	Saudi Arabia	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.69085	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69086	PRJNA1050907	Saudi Arabia	MLST.saureus.1535	yes	yes	pass	no	yes		
+1280.69087	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.69088	PRJNA1050907	Saudi Arabia	MLST.saureus.789	yes	yes	pass	no	yes		
+1280.69089	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69090	PRJNA1050907	Saudi Arabia	MLST.saureus.121	yes	yes	pass	no	yes		
+1280.69091	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69092	PRJNA1050907	Saudi Arabia	MLST.saureus.1	yes	yes	pass	no	yes		
+1280.69093	PRJNA1050907	Saudi Arabia	MLST.saureus.121	yes	yes	pass	no	yes		
+1280.69094	PRJNA1050907	Saudi Arabia	MLST.saureus.1153	yes	yes	pass	no	yes		
+1280.69095	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69096	PRJNA1050907	Saudi Arabia	MLST.saureus.152	yes	yes	pass	no	yes		
+1280.69097	PRJNA1050907	Saudi Arabia	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.69098	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69099	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.69100	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.69101	PRJNA1050907	Saudi Arabia	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.69102	PRJNA1050907	Saudi Arabia	MLST.saureus.1	yes	yes	pass	no	yes		
+1280.69103	PRJNA1050907	Saudi Arabia	MLST.saureus.1535	yes	yes	pass	no	yes		
+1280.69104	PRJNA1050907	Saudi Arabia	MLST.saureus.1153	yes	yes	pass	no	yes		
+1280.69105	PRJNA1050907	Saudi Arabia	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.69106	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69107	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.69108	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.69109	PRJNA1050907	Saudi Arabia	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.69110	PRJNA1050907	Saudi Arabia	MLST.saureus.152	yes	yes	pass	no	yes		
+1280.69111	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69112	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.69113	PRJNA1050907	Saudi Arabia	MLST.saureus.2371	yes	yes	pass	no	yes		
+1280.69114	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69115	PRJNA1050907	Saudi Arabia	MLST.saureus.80	yes	yes	pass	no	yes		
+1280.69116	PRJNA1050907	Saudi Arabia	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.69117	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.69118	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69119	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69120	PRJNA1050907	Saudi Arabia	MLST.saureus.291	yes	yes	pass	no	yes		
+1280.69121	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69123	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.69124	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.69125	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.69126	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69127	PRJNA1050907	Saudi Arabia	MLST.saureus.672	yes	yes	pass	no	yes		
+1280.69128	PRJNA1050907	Saudi Arabia	MLST.saureus.672	yes	yes	pass	no	yes		
+1280.69129	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69130	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.69131	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69132	PRJNA1050907	Saudi Arabia	MLST.saureus.152	yes	yes	pass	no	yes		
+1280.69133	PRJNA1050907	Saudi Arabia	MLST.saureus.1	yes	yes	pass	no	yes		
+1280.69134	PRJNA1050907	Saudi Arabia	MLST.saureus.97	yes	yes	pass	no	yes		
+1280.69135	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.69136	PRJNA1050907	Saudi Arabia	MLST.saureus.672	yes	yes	pass	no	yes		
+1280.69137	PRJNA1050907	Saudi Arabia	MLST.saureus.-	no ST	yes	pass	no	yes		
+1280.69138	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69139	PRJNA1050907	Saudi Arabia	MLST.saureus.1535	yes	yes	pass	no	yes		
+1280.69140	PRJNA1050907	Saudi Arabia	MLST.saureus.97	yes	yes	pass	no	yes		
+1280.69141	PRJNA1050907	Saudi Arabia	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.69142	PRJNA1050907	Saudi Arabia	MLST.saureus.672	yes	yes	pass	no	yes		
+1280.69143	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69144	PRJNA1050907	Saudi Arabia	MLST.saureus.5164	no	yes	pass	no	yes		
+1280.69145	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69146	PRJNA1050907	Saudi Arabia	MLST.saureus.-	no ST	yes	pass	no	yes		
+1280.69147	PRJNA1050907	Saudi Arabia	MLST.saureus.239	yes	yes	pass	no	yes		
+1280.69148	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.69149	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69150	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.69151	PRJNA1050907	Saudi Arabia	MLST.saureus.-	no ST	yes	pass	no	yes		
+1280.69152	PRJNA1050907	Saudi Arabia	MLST.saureus.997	no	yes	pass	no	yes		
+1280.69153	PRJNA1050907	Saudi Arabia	MLST.saureus.672	yes	yes	pass	no	yes		
+1280.69154	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.69155	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69156	PRJNA1050907	Saudi Arabia	MLST.saureus.1	yes	yes	pass	no	yes		
+1280.69157	PRJNA1050907	Saudi Arabia	MLST.saureus.97	yes	yes	pass	no	yes		
+1280.69158	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.69159	PRJNA1050907	Saudi Arabia	MLST.saureus.97	yes	yes	pass	no	yes		
+1280.69160	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69161	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69162	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.69163	PRJNA1050907	Saudi Arabia	MLST.saureus.80	yes	yes	pass	no	yes		
+1280.69164	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69165	PRJNA1050907	Saudi Arabia	MLST.saureus.80	yes	yes	pass	no	yes		
+1280.69166	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.69167	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69168	PRJNA1050907	Saudi Arabia	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.69169	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69170	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69171	PRJNA1050907	Saudi Arabia	MLST.saureus.-	no ST	yes	pass	no	yes		
+1280.69172	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69173	PRJNA1050907	Saudi Arabia	MLST.saureus.152	yes	yes	pass	no	yes		
+1280.69174	PRJNA1050907	Saudi Arabia	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.69175	PRJNA1050907	Saudi Arabia	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.69176	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69177	PRJNA1050907	Saudi Arabia	MLST.saureus.1153	yes	yes	pass	no	yes		
+1280.69178	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.69179	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69180	PRJNA1050907	Saudi Arabia	MLST.saureus.22	yes	yes	pass	no	yes		
+1280.69181	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69182	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.69183	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69184	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69185	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69186	PRJNA1050907	Saudi Arabia	MLST.saureus.97	yes	yes	pass	no	yes		
+1280.69187	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69188	PRJNA1050907	Saudi Arabia	MLST.saureus.1535	yes	yes	pass	no	yes		
+1280.69189	PRJNA1050907	Saudi Arabia	MLST.saureus.80	yes	yes	pass	no	yes		
+1280.69190	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69191	PRJNA1050907	Saudi Arabia	MLST.saureus.22	yes	yes	pass	no	yes		
+1280.69192	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.69193	PRJNA1050907	Saudi Arabia	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.69194	PRJNA1050907	Saudi Arabia	MLST.saureus.1153	yes	yes	pass	no	yes		
+1280.69195	PRJNA1050907	Saudi Arabia	MLST.saureus.2371	yes	yes	pass	no	yes		
+1280.69196	PRJNA1050907	Saudi Arabia	MLST.saureus.239	yes	yes	pass	no	yes		
+1280.69197	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69198	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.69199	PRJNA1050907	Saudi Arabia	MLST.saureus.239	yes	yes	pass	no	yes		
+1280.69200	PRJNA1050907	Saudi Arabia	MLST.saureus.80	yes	yes	pass	no	yes		
+1280.69201	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.69202	PRJNA1050907	Saudi Arabia	MLST.saureus.7565	no	yes	pass	no	yes		
+1280.69203	PRJNA1050907	Saudi Arabia	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.69204	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69205	PRJNA1050907	Saudi Arabia	MLST.saureus.22	yes	yes	pass	no	yes		
+1280.69206	PRJNA1050907	Saudi Arabia	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.69208	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69209	PRJNA1050907	Saudi Arabia	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.69210	PRJNA1050907	Saudi Arabia	MLST.saureus.22	yes	yes	pass	no	yes		
+1280.69211	PRJNA1050907	Saudi Arabia	MLST.saureus.152	yes	yes	pass	no	yes		
+1280.69212	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.69213	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.69214	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.69215	PRJNA1050907	Saudi Arabia	MLST.saureus.22	yes	yes	pass	no	yes		
+1280.69216	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69217	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69218	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.69219	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69220	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69221	PRJNA1050907	Saudi Arabia	MLST.saureus.1153	yes	yes	pass	no	yes		
+1280.69222	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69223	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69224	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69225	PRJNA1050907	Saudi Arabia	MLST.saureus.22	yes	yes	pass	no	yes		
+1280.69226	PRJNA1050907	Saudi Arabia	MLST.saureus.-	no ST	yes	pass	no	yes		
+1280.69227	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69228	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69229	PRJNA1050907	Saudi Arabia	MLST.saureus.672	yes	yes	pass	no	yes		
+1280.69230	PRJNA1050907	Saudi Arabia	MLST.saureus.1482	no	yes	pass	no	yes		
+1280.69231	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69232	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69233	PRJNA1050907	Saudi Arabia	MLST.saureus.152	yes	yes	pass	no	yes		
+1280.69234	PRJNA1050907	Saudi Arabia	MLST.saureus.508	yes	yes	pass	no	yes		
+1280.69235	PRJNA1050907	Saudi Arabia	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.69236	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69237	PRJNA1050907	Saudi Arabia	MLST.saureus.97	yes	yes	pass	no	yes		
+1280.69238	PRJNA1050907	Saudi Arabia	MLST.saureus.22	yes	yes	pass	no	yes		
+1280.69239	PRJNA1050907	Saudi Arabia	MLST.saureus.152	yes	yes	pass	no	yes		
+1280.69240	PRJNA1050907	Saudi Arabia	MLST.saureus.121	yes	yes	pass	no	yes		
+1280.69241	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69242	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.69243	PRJNA1050907	Saudi Arabia	MLST.saureus.152	yes	yes	pass	no	yes		
+1280.69244	PRJNA1050907	Saudi Arabia	MLST.saureus.672	yes	yes	pass	no	yes		
+1280.69245	PRJNA1050907	Saudi Arabia	MLST.saureus.1	yes	yes	pass	no	yes		
+1280.69246	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69247	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.69248	PRJNA1050907	Saudi Arabia	MLST.saureus.672	yes	yes	pass	no	yes		
+1280.69249	PRJNA1050907	Saudi Arabia	MLST.saureus.97	yes	yes	pass	no	yes		
+1280.69250	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69251	PRJNA1050907	Saudi Arabia	MLST.saureus.2867	no	yes	pass	no	yes		
+1280.69252	PRJNA1050907	Saudi Arabia	MLST.saureus.97	yes	yes	pass	no	yes		
+1280.69253	PRJNA1050907	Saudi Arabia	MLST.saureus.22	yes	yes	pass	no	yes		
+1280.69254	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69255	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.69256	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.69257	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69258	PRJNA1050907	Saudi Arabia	MLST.saureus.672	yes	yes	pass	no	yes		
+1280.69259	PRJNA1050907	Saudi Arabia	MLST.saureus.152	yes	yes	pass	no	yes		
+1280.69260	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69261	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.69262	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69263	PRJNA1050907	Saudi Arabia	MLST.saureus.672	yes	yes	pass	no	yes		
+1280.69264	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.69265	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.69266	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.69267	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.69268	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69269	PRJNA1050907	Saudi Arabia	MLST.saureus.1	yes	yes	pass	no	yes		
+1280.69270	PRJNA1050907	Saudi Arabia	MLST.saureus.772	yes	yes	pass	no	yes		
+1280.69271	PRJNA1050907	Saudi Arabia	MLST.saureus.2867	no	yes	pass	no	yes		
+1280.69272	PRJNA1050907	Saudi Arabia	MLST.saureus.2371	yes	yes	pass	no	yes		
+1280.69273	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.69274	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69275	PRJNA1050907	Saudi Arabia	MLST.saureus.672	yes	yes	pass	no	yes		
+1280.69276	PRJNA1050907	Saudi Arabia	MLST.saureus.22	yes	yes	pass	no	yes		
+1280.69277	PRJNA1050907	Saudi Arabia	MLST.saureus.80	yes	yes	pass	no	yes		
+1280.69278	PRJNA1050907	Saudi Arabia	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.69279	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.69280	PRJNA1050907	Saudi Arabia	MLST.saureus.5395	no	yes	pass	no	yes		
+1280.69281	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69282	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69283	PRJNA1050907	Saudi Arabia	MLST.saureus.2867	no	yes	pass	no	yes		
+1280.69284	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.69285	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69286	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69287	PRJNA1050907	Saudi Arabia	MLST.saureus.672	yes	yes	pass	no	yes		
+1280.69288	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69289	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69290	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.69291	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69292	PRJNA1050907	Saudi Arabia	MLST.saureus.152	yes	yes	pass	no	yes		
+1280.69293	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.69294	PRJNA1050907	Saudi Arabia	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.69295	PRJNA1050907	Saudi Arabia	MLST.saureus.2867	no	yes	pass	no	yes		
+1280.69296	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69297	PRJNA1050907	Saudi Arabia	MLST.saureus.97	yes	yes	pass	no	yes		
+1280.69298	PRJNA1050907	Saudi Arabia	MLST.saureus.2867	no	yes	pass	no	yes		
+1280.69299	PRJNA1050907	Saudi Arabia	MLST.saureus.772	yes	yes	pass	no	yes		
+1280.69300	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.69301	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69302	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69303	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69304	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.69305	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69306	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69307	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69308	PRJNA1050907	Saudi Arabia	MLST.saureus.152	yes	yes	pass	no	yes		
+1280.69309	PRJNA1050907	Saudi Arabia	MLST.saureus.1153	yes	yes	pass	no	yes		
+1280.69310	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.69311	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.69312	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69313	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.69314	PRJNA1050907	Saudi Arabia	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.69315	PRJNA1050907	Saudi Arabia	MLST.saureus.1153	yes	yes	pass	no	yes		
+1280.69316	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69317	PRJNA1050907	Saudi Arabia	MLST.saureus.672	yes	yes	pass	no	yes		
+1280.69318	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69319	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.69320	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.69321	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69322	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69323	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.69324	PRJNA1050907	Saudi Arabia	MLST.saureus.152	yes	yes	pass	no	yes		
+1280.69325	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69326	PRJNA1050907	Saudi Arabia	MLST.saureus.239	yes	yes	pass	no	yes		
+1280.69327	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.69328	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69329	PRJNA1050907	Saudi Arabia	MLST.saureus.22	yes	yes	pass	no	yes		
+1280.69330	PRJNA1050907	Saudi Arabia	MLST.saureus.2867	no	yes	pass	no	yes		
+1280.69331	PRJNA1050907	Saudi Arabia	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.69332	PRJNA1050907	Saudi Arabia	MLST.saureus.-	no ST	yes	pass	no	yes		
+1280.69333	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69334	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69335	PRJNA1050907	Saudi Arabia	MLST.saureus.152	yes	yes	pass	no	yes		
+1280.69336	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69337	PRJNA1050907	Saudi Arabia	MLST.saureus.1535	yes	yes	pass	no	yes		
+1280.69338	PRJNA1050907	Saudi Arabia	MLST.saureus.97	yes	yes	pass	no	yes		
+1280.69339	PRJNA1050907	Saudi Arabia	MLST.saureus.97	yes	yes	pass	no	yes		
+1280.69340	PRJNA1050907	Saudi Arabia	MLST.saureus.152	yes	yes	pass	no	yes		
+1280.69341	PRJNA1050907	Saudi Arabia	MLST.saureus.239	yes	yes	pass	no	yes		
+1280.69342	PRJNA1050907	Saudi Arabia	MLST.saureus.672	yes	yes	pass	no	yes		
+1280.69343	PRJNA1050907	Saudi Arabia	MLST.saureus.1535	yes	yes	pass	no	yes		
+1280.69344	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69345	PRJNA1050907	Saudi Arabia	MLST.saureus.672	yes	yes	pass	no	yes		
+1280.69346	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69347	PRJNA1050907	Saudi Arabia	MLST.saureus.22	yes	yes	pass	no	yes		
+1280.69348	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69349	PRJNA1050907	Saudi Arabia	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.69350	PRJNA1050907	Saudi Arabia	MLST.saureus.97	yes	yes	pass	no	yes		
+1280.69351	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69352	PRJNA1050907	Saudi Arabia	MLST.saureus.121	yes	yes	pass	no	yes		
+1280.69353	PRJNA1050907	Saudi Arabia	MLST.saureus.152	yes	yes	pass	no	yes		
+1280.69354	PRJNA1050907	Saudi Arabia	MLST.saureus.97	yes	yes	pass	no	yes		
+1280.69355	PRJNA1050907	Saudi Arabia	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.69356	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69357	PRJNA1050907	Saudi Arabia	MLST.saureus.22	yes	yes	pass	no	yes		
+1280.69358	PRJNA1050907	Saudi Arabia	MLST.saureus.672	yes	yes	pass	no	yes		
+1280.69359	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.69360	PRJNA1050907	Saudi Arabia	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.69361	PRJNA1050907	Saudi Arabia	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.69362	PRJNA1050907	Saudi Arabia	MLST.saureus.672	yes	yes	pass	no	yes		
+1280.69363	PRJNA1050907	Saudi Arabia	MLST.saureus.121	yes	yes	pass	no	yes		
+1280.69364	PRJNA1050907	Saudi Arabia	MLST.saureus.1535	yes	yes	pass	no	yes		
+1280.69365	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69366	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.69367	PRJNA1050907	Saudi Arabia	MLST.saureus.22	yes	yes	pass	no	yes		
+1280.69368	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.69369	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.69370	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69371	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.69372	PRJNA1050907	Saudi Arabia	MLST.saureus.1153	yes	yes	pass	no	yes		
+1280.69373	PRJNA1050907	Saudi Arabia	MLST.saureus.152	yes	yes	pass	no	yes		
+1280.69374	PRJNA1050907	Saudi Arabia	MLST.saureus.149	yes	yes	pass	no	yes		
+1280.69375	PRJNA1050907	Saudi Arabia	MLST.saureus.672	yes	yes	pass	no	yes		
+1280.69376	PRJNA1050907	Saudi Arabia	MLST.saureus.97	yes	yes	pass	no	yes		
+1280.69377	PRJNA1050907	Saudi Arabia	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.69378	PRJNA1050907	Saudi Arabia	MLST.saureus.-	no ST	yes	pass	no	yes		
+1280.69379	PRJNA1050907	Saudi Arabia	MLST.saureus.-	no ST	yes	pass	no	yes		
+1280.69380	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.69381	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69382	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.69383	PRJNA1050907	Saudi Arabia	MLST.saureus.22	yes	yes	pass	no	yes		
+1280.69384	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69385	PRJNA1050907	Saudi Arabia	MLST.saureus.22	yes	yes	pass	no	yes		
+1280.69386	PRJNA1050907	Saudi Arabia	MLST.saureus.672	yes	yes	pass	no	yes		
+1280.69387	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69388	PRJNA1050907	Saudi Arabia	MLST.saureus.22	yes	yes	pass	no	yes		
+1280.69389	PRJNA1050907	Saudi Arabia	MLST.saureus.672	yes	yes	pass	no	yes		
+1280.69390	PRJNA1050907	Saudi Arabia	MLST.saureus.672	yes	yes	pass	no	yes		
+1280.69391	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.69392	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.69393	PRJNA1050907	Saudi Arabia	MLST.saureus.1535	yes	yes	pass	no	yes		
+1280.69394	PRJNA1050907	Saudi Arabia	MLST.saureus.152	yes	yes	pass	no	yes		
+1280.69395	PRJNA1050907	Saudi Arabia	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.69396	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69397	PRJNA1050907	Saudi Arabia	MLST.saureus.672	yes	yes	pass	no	yes		
+1280.69398	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69399	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69400	PRJNA1050907	Saudi Arabia	MLST.saureus.97	yes	yes	pass	no	yes		
+1280.69401	PRJNA1050907	Saudi Arabia	MLST.saureus.152	yes	yes	pass	no	yes		
+1280.69402	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.69403	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69404	PRJNA1050907	Saudi Arabia	MLST.saureus.121	yes	yes	pass	no	yes		
+1280.69405	PRJNA1050907	Saudi Arabia	MLST.saureus.672	yes	yes	pass	no	yes		
+1280.69406	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.69407	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69408	PRJNA1050907	Saudi Arabia	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.69409	PRJNA1050907	Saudi Arabia	MLST.saureus.1649	no	yes	pass	no	yes		
+1280.69410	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.69411	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69412	PRJNA1050907	Saudi Arabia	MLST.saureus.152	yes	yes	pass	no	yes		
+1280.69413	PRJNA1050907	Saudi Arabia	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.69414	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69415	PRJNA1050907	Saudi Arabia	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.69416	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69417	PRJNA1050907	Saudi Arabia	MLST.saureus.1535	yes	yes	pass	no	yes		
+1280.69418	PRJNA1050907	Saudi Arabia	MLST.saureus.22	yes	yes	pass	no	yes		
+1280.69419	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.69420	PRJNA1050907	Saudi Arabia	MLST.saureus.121	yes	yes	pass	no	yes		
+1280.69421	PRJNA1050907	Saudi Arabia	MLST.saureus.-	no ST	yes	pass	no	yes		
+1280.69422	PRJNA1050907	Saudi Arabia	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.69423	PRJNA1050907	Saudi Arabia	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.69424	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.69425	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69426	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.69427	PRJNA1050907	Saudi Arabia	MLST.saureus.149	yes	yes	pass	no	yes		
+1280.69428	PRJNA1050907	Saudi Arabia	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.69429	PRJNA1050907	Saudi Arabia	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.69430	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69431	PRJNA1050907	Saudi Arabia	MLST.saureus.1535	yes	yes	pass	no	yes		
+1280.69432	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.69433	PRJNA1050907	Saudi Arabia	MLST.saureus.672	yes	yes	pass	no	yes		
+1280.69434	PRJNA1050907	Saudi Arabia	MLST.saureus.1413	no	yes	pass	no	yes		
+1280.69435	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69436	PRJNA1050907	Saudi Arabia	MLST.saureus.1535	yes	yes	pass	no	yes		
+1280.69437	PRJNA1050907	Saudi Arabia	MLST.saureus.149	yes	yes	pass	no	yes		
+1280.69438	PRJNA1050907	Saudi Arabia	MLST.saureus.152	yes	yes	pass	no	yes		
+1280.69439	PRJNA1050907	Saudi Arabia	MLST.saureus.22	yes	yes	pass	no	yes		
+1280.69440	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69441	PRJNA1050907	Saudi Arabia	MLST.saureus.152	yes	yes	pass	no	yes		
+1280.69442	PRJNA1050907	Saudi Arabia	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.69443	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69444	PRJNA1050907	Saudi Arabia	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.69445	PRJNA1050907	Saudi Arabia	MLST.saureus.672	yes	yes	pass	no	yes		
+1280.69446	PRJNA1050907	Saudi Arabia	MLST.saureus.1	yes	yes	pass	no	yes		
+1280.69447	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69448	PRJNA1050907	Saudi Arabia	MLST.saureus.22	yes	yes	pass	no	yes		
+1280.69449	PRJNA1050907	Saudi Arabia	MLST.saureus.121	yes	yes	pass	no	yes		
+1280.69450	PRJNA1050907	Saudi Arabia	MLST.saureus.291	yes	yes	pass	no	yes		
+1280.69451	PRJNA1050907	Saudi Arabia	MLST.saureus.239	yes	yes	pass	no	yes		
+1280.69452	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69453	PRJNA1050907	Saudi Arabia	MLST.saureus.1153	yes	yes	pass	no	yes		
+1280.69454	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69455	PRJNA1050907	Saudi Arabia	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.69456	PRJNA1050907	Saudi Arabia	MLST.saureus.1	yes	yes	pass	no	yes		
+1280.69457	PRJNA1050907	Saudi Arabia	MLST.saureus.121	yes	yes	pass	no	yes		
+1280.69458	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.69459	PRJNA1050907	Saudi Arabia	MLST.saureus.1930	no	yes	pass	no	yes		
+1280.69460	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69461	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69462	PRJNA1050907	Saudi Arabia	MLST.saureus.121	yes	yes	pass	no	yes		
+1280.69463	PRJNA1050907	Saudi Arabia	MLST.saureus.22	yes	yes	pass	no	yes		
+1280.69464	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69465	PRJNA1050907	Saudi Arabia	MLST.saureus.152	yes	yes	pass	no	yes		
+1280.69466	PRJNA1050907	Saudi Arabia	MLST.saureus.1153	yes	yes	pass	no	yes		
+1280.69467	PRJNA1050907	Saudi Arabia	MLST.saureus.672	yes	yes	pass	no	yes		
+1280.69468	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69469	PRJNA1050907	Saudi Arabia	MLST.saureus.152	yes	yes	pass	no	yes		
+1280.69470	PRJNA1050907	Saudi Arabia	MLST.saureus.45	yes	yes	pass	no	yes		
+1280.69471	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.69472	PRJNA1050907	Saudi Arabia	MLST.saureus.22	yes	yes	pass	no	yes		
+1280.69473	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69474	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69475	PRJNA1050907	Saudi Arabia	MLST.saureus.1	yes	yes	pass	no	yes		
+1280.69476	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.69477	PRJNA1050907	Saudi Arabia	MLST.saureus.6	yes	yes	pass	no	yes		
+1280.69478	PRJNA1050907	Saudi Arabia	MLST.saureus.1	yes	yes	pass	no	yes		
+1280.69479	PRJNA1050907	Saudi Arabia	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.69480	PRJNA1050907	Saudi Arabia	MLST.saureus.149	yes	yes	pass	no	yes		
+1280.69481	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.69482	PRJNA1050907	Saudi Arabia	MLST.saureus.152	yes	yes	pass	no	yes		
+1280.69483	PRJNA1050907	Saudi Arabia	MLST.saureus.-	no ST	yes	pass	no	yes		
+1280.69484	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69485	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69486	PRJNA1050907	Saudi Arabia	MLST.saureus.80	yes	yes	pass	no	yes		
+1280.69487	PRJNA1050907	Saudi Arabia	MLST.saureus.152	yes	yes	pass	no	yes		
+1280.69488	PRJNA1050907	Saudi Arabia	MLST.saureus.1	yes	yes	pass	no	yes		
+1280.69489	PRJNA1050907	Saudi Arabia	MLST.saureus.97	yes	yes	pass	no	yes		
+1280.69490	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.69491	PRJNA1050907	Saudi Arabia	MLST.saureus.-	no ST	yes	pass	no	yes		
+1280.69492	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1280.69493	PRJNA1050907	Saudi Arabia	MLST.saureus.672	yes	yes	pass	no	yes		
+1280.69494	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1280.69495	PRJNA1050907	Saudi Arabia	MLST.saureus.-	no ST	yes	pass	no	yes		
+1280.69496	PRJNA1050907	Saudi Arabia	MLST.saureus.1535	yes	yes	pass	no	yes		
+1280.69497	PRJNA1050907	Saudi Arabia	MLST.saureus.8	yes	yes	pass	no	yes		
+1280.69498	PRJNA1050907	Saudi Arabia	MLST.saureus.997	no	yes	pass	no	yes		
+1280.69499	PRJNA1050907	Saudi Arabia	MLST.saureus.152	yes	yes	pass	no	yes		
+1280.69500	PRJNA1050907	Saudi Arabia	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.69501	PRJNA1050907	Saudi Arabia	MLST.saureus.30	yes	yes	pass	no	yes		
+1280.69502	PRJNA1050907	Saudi Arabia	MLST.saureus.88	yes	yes	pass	no	yes		
+1158470.3	PRJNA1050907	Saudi Arabia	MLST.saureus.105	yes	yes	pass	no	yes		
+1158487.3	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1303786.3	PRJNA1050907	Saudi Arabia	MLST.saureus.248	no	yes	pass	no	yes		
+1392053.3	PRJNA1050907	Saudi Arabia	MLST.saureus.105	yes	yes	pass	no	yes		
+1392085.3	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1402693.3	PRJNA1050907	Saudi Arabia	MLST.saureus.105	yes	yes	pass	no	yes		
+1402707.3	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1402718.3	PRJNA1050907	Saudi Arabia	MLST.saureus.1613	no	yes	pass	no	yes		
+1402737.3	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1402740.3	PRJNA1050907	Saudi Arabia	MLST.saureus.105	yes	yes	pass	no	yes		
+1402755.3	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1402765.3	PRJNA1050907	Saudi Arabia	MLST.saureus.105	yes	yes	pass	no	yes		
+1402783.3	PRJNA1050907	Saudi Arabia	MLST.saureus.105	yes	yes	pass	no	yes		
+1402797.3	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1403843.3	PRJNA1050907	Saudi Arabia	MLST.saureus.105	yes	yes	pass	no	yes		
+1403850.3	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		
+1403876.3	PRJNA1050907	Saudi Arabia	MLST.saureus.5	yes	yes	pass	no	yes		

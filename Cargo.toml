@@ -34,6 +34,11 @@ tempfile = "3"
 name = "lasso-scan"
 path = "scripts/lasso-scan/main.rs"
 
+# The GRM side of the learner cross-check (scripts/learner-crosscheck/README.md).
+[[example]]
+name = "learner-crosscheck"
+path = "scripts/learner-crosscheck/main.rs"
+
 [profile.release]
 opt-level = 3
 lto = "thin"

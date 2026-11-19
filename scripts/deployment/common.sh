@@ -167,12 +167,17 @@ if len(ids) != count or len(set(ids)) != count:
 if sorted(ids) != files:
     problems.append(f"index datasets differ from the {len(files)} files in datasets/")
 if revision >= 8:
+    def audit_only(report):
+        # A report can pass 100 MB and a release holds hundreds, so each one
+        # is dropped as soon as it is read and only its audit is kept.
+        return {"evaluation": report.get("evaluation")} if isinstance(report, dict) else None
+
     stale = {}
     audits = [("with index", d["id"], d) for d in index["datasets"]]
     for name in files:
         try:
             with open(os.path.join(root, "datasets", name + ".json")) as f:
-                audits.append(("whose report has", name, json.load(f)))
+                audits.append(("whose report has", name, audit_only(json.load(f))))
         except (OSError, ValueError):
             stale.setdefault("datasets whose report is not readable JSON", []).append(name)
     for where, name, record in audits:

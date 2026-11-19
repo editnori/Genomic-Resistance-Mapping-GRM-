@@ -71,6 +71,10 @@ const OPTIONAL_COUNTS = ["min_class", "labels_from_mic_excluded"] as const;
 
 const uncalledTotal = (v: unknown): number => (isObj(v) ? (v.resistant as number) + (v.susceptible as number) : 0);
 
+/** Whether an index learner rate covers every isolate: it calls them all,
+ *  or (revision 14) scores its null-fit isolates at their fold's prevalence. */
+const coversEveryIsolate = (v: Obj): boolean => uncalledTotal(v.no_call) === 0 || v.null_fits_scored === true;
+
 /** A learner's index rates on one split: all numbers, or all null for a
  *  learner that called no isolate, which then needs no_call to count them. */
 const checkLearnerLite = (v: unknown, where: string): void => {
@@ -81,6 +85,7 @@ const checkLearnerLite = (v: unknown, where: string): void => {
   need(none || rates.every((r) => typeof r === "number"), `${where}: rates should all be numbers, or all null when no isolate is called`);
   checkNoCall(v.no_call, where);
   need(!none || uncalledTotal(v.no_call) > 0, `${where}: null rates need no_call to count the isolates without a call`);
+  need(v.null_fits_scored === undefined || (v.null_fits_scored === true && !none && uncalledTotal(v.no_call) > 0), `${where}: null_fits_scored is true only on a row with rates and null-fit isolates`);
 };
 
 const checkList = (o: Obj, key: string, spec: Record<string, "string">, where: string): void => {
@@ -125,14 +130,14 @@ export function parseManifest(raw: unknown): Manifest {
       checkLearnerLite(l.lineage, `${where} learners[${j}].lineage`);
     });
     if (d.best_learner !== null) {
-      // The best learner calls every isolate on each split that ran, and
+      // The best learner is scored on every isolate on each split that ran, and
       // best_random is its score. Schema-1 reports may have no lineage split.
       const row = learners.find((l) => isObj(l) && l.learner === d.best_learner) as Obj | undefined;
       const [random, lineage] = [row?.random, row?.lineage];
       const lineageRan = learners.some((l) => isObj(l) && l.lineage !== null && l.lineage !== undefined);
       need(
-        isObj(random) && random.balanced_accuracy === d.best_random && uncalledTotal(random.no_call) === 0 && (!lineageRan || (isObj(lineage) && uncalledTotal(lineage.no_call) === 0)),
-        `${where}: best learner ${String(d.best_learner)} should call every isolate and score best_random on random splits`,
+        isObj(random) && random.balanced_accuracy === d.best_random && coversEveryIsolate(random) && (!lineageRan || (isObj(lineage) && coversEveryIsolate(lineage))),
+        `${where}: best learner ${String(d.best_learner)} should be scored on every isolate and score best_random on random splits`,
       );
     }
     winners.set(d.id, d.best_learner);
@@ -212,6 +217,21 @@ export function parseDataset(raw: unknown): DatasetReport {
       }
       checkNoCall(l.no_call, where);
       const x = l.no_call as Record<string, number>;
+      if (l.called_metrics !== undefined) {
+        // Revision 14: a null fit's isolates are scored at their fold's
+        // training prevalence, so every score is a number and the metrics
+        // cover every isolate; called_metrics covers the others.
+        need(scores.every((v) => v !== null), `${where} scores its null-fit isolates, so no score should be null`);
+        need(x.resistant! + x.susceptible! > 0, `${where} has called_metrics but no null-fit isolate`);
+        const m = l.metrics as Record<string, number> | null;
+        need(m !== null && m.n === n, `${where} scores every isolate, so its metrics should cover all ${n}`);
+        const c = l.called_metrics as Record<string, number> | null;
+        need(
+          c === null ? x.resistant === counts.resistant && x.susceptible === counts.susceptible : isObj(c) && c.n === n - x.resistant! - x.susceptible!,
+          `${where}: called_metrics should cover the ${n - x.resistant! - x.susceptible!} isolates outside null-fit folds`,
+        );
+        return;
+      }
       if (l.metrics === null) {
         // No call at all: no rate, ROC point, or fold balanced accuracy exists.
         need(x.resistant === counts.resistant && x.susceptible === counts.susceptible, `${where} has null metrics but calls some isolates`);

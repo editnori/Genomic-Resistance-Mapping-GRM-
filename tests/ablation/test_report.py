@@ -266,7 +266,7 @@ class BuildCases(unittest.TestCase):
             build(**parts)
 
     def test_attempts(self):
-        self.assertEqual(self.report["attempts"], {"runs": 21, "ok": 19, "unavailable": 2})
+        self.assertEqual(self.report["attempts"], {"runs": 21, "ok": 19, "unavailable": 2, "identical_cohort": 0})
         self.assertIn("21 runs attempted: 19 ok, 2 unavailable.", self.md)
 
     def test_unavailable_runs_and_blocks_are_reported(self):
@@ -664,6 +664,292 @@ class PredictionFileCases(unittest.TestCase):
         bad["predictions_sha256"] = {"x": "zz"}
         with self.assertRaisesRegex(SchemaError, "predictions_sha256.x: must match"):
             rp.validate_report(bad)
+
+
+KPNEU_C, KPNEU_LOBO_C = cid("kpneu__amp"), cid("kpneu__amp", **LOBO)
+UNANSWERED_KPNEU = ("- `kpneu__amp`: can't be tested this way: 2 planned family C contrasts outside the sentinel arms "
+                    "(lineage split), 2 not produced, 0 undefined.")
+
+
+class UnansweredDatasetCases(unittest.TestCase):
+    """Layth's ruling on H-1's pilot (2026-11-09): a confirmatory dataset whose planned family C contrasts outside
+    the sentinel arms all lack a p is listed as one the per-dataset test can't answer. The list is derived from the
+    report's records, so the JSON keys and validate_report don't change."""
+
+    def test_a_confirmatory_dataset_with_no_family_c_p_is_listed(self):
+        # kpneu__amp's two family C contrasts were not produced. spneu__ery and saur__oxa plan no family C (they
+        # feed the pools), and mtb__inh is a development dataset, so neither is listed; the ecoli pair decide.
+        report = build()
+        self.assertEqual(rp.unanswered_datasets(report), [{"dataset": "kpneu__amp", "planned": 2, "not_produced": 2,
+                                                           "undefined": 0, "splits": ["lineage"]}])
+        md = rp.render_markdown(report)
+        section = md.split(rp.UNANSWERED_HEADING + "\n")[1].split("\n## ")[0]
+        self.assertEqual(section, f"\n{rp.UNANSWERED_SENTENCE}\n\n{UNANSWERED_KPNEU}\n")
+        self.assertLess(md.index("## Datasets\n"), md.index(rp.UNANSWERED_HEADING))
+        self.assertLess(md.index(rp.UNANSWERED_HEADING), md.index("## Pooled across species"))
+        # No new JSON key: the loaded report validates and lists the same dataset.
+        self.assertEqual(set(report), set(rp.REPORT_KEYS))
+        loaded = rp.validate_report(json.loads(rp.dumps(report)))
+        self.assertEqual(rp.unanswered_datasets(loaded), rp.unanswered_datasets(report))
+        self.assertIn(UNANSWERED_KPNEU, rp.render_markdown(loaded))
+
+    def test_no_section_when_every_planned_family_c_dataset_decides(self):
+        report = copy.deepcopy(build())
+        report["planned_contrasts"] = [x for x in report["planned_contrasts"] if x not in (KPNEU_C, KPNEU_LOBO_C)]
+        self.assertEqual(rp.unanswered_datasets(report), [])
+        self.assertNotIn(rp.UNANSWERED_HEADING, rp.render_markdown(report))
+
+    def test_undefined_contrasts_count_as_no_answer(self):
+        values = dict(zip(NAMES, good_inputs()))
+        for x in values["contrasts"]:
+            if x["id"] in (FWD_C, LOBO_C):
+                x.update(fx.UNDEFINED)
+        report = build(contrasts=values["contrasts"])
+        cip = [u for u in rp.unanswered_datasets(report) if u["dataset"] == "ecoli__cip"]
+        self.assertEqual(cip, [{"dataset": "ecoli__cip", "planned": 2, "not_produced": 0, "undefined": 2,
+                                "splits": ["lineage"]}])
+        self.assertIn("- `ecoli__cip`: can't be tested this way: 2 planned family C contrasts outside the sentinel "
+                      "arms (lineage split), 0 not produced, 2 undefined.", rp.render_markdown(report))
+
+    def test_a_sentinel_p_does_not_answer_a_dataset(self):
+        # ecoli__cip without its forward contrast keeps LOBO_C's p, whose treatment is K. With K a sentinel,
+        # that p decides nothing and the dataset is listed, with 1 planned contrast outside the sentinels.
+        values = dict(zip(NAMES, good_inputs()))
+        contrasts = [x for x in values["contrasts"] if x["id"] != FWD_C]
+        not_produced = {**values["not_produced"], FWD_C: "dropped (fixture)"}
+        plain = build(contrasts=contrasts, not_produced=not_produced)
+        self.assertNotIn("ecoli__cip", [u["dataset"] for u in rp.unanswered_datasets(plain)])
+        m = good_inputs()[0]
+        m["sentinel_arms"] = ["K"]
+        report = build(manifest=m, contrasts=contrasts, not_produced=not_produced)
+        by_dataset = {u["dataset"]: u for u in rp.unanswered_datasets(report)}
+        self.assertEqual(by_dataset["ecoli__cip"], {"dataset": "ecoli__cip", "planned": 1, "not_produced": 1,
+                                                    "undefined": 0, "splits": ["lineage"]})
+        self.assertEqual(by_dataset["kpneu__amp"]["planned"], 1)
+
+
+class SentinelAndRandomSplitCases(unittest.TestCase):
+    """Main's ruling after the calibration study: random-split contrasts are descriptive, and a sentinel
+    arm (the learner-seed twin) that is not inconclusive marks its learner and species unreliable."""
+
+    def with_sentinel(self, arms):
+        m = good_inputs()[0]
+        m["sentinel_arms"] = arms
+        return build(manifest=m)
+
+    def test_a_sentinel_decision_flags_every_decision_of_that_learner_and_species(self):
+        # K+C stands in for the twin: its lineage-split lasso contrast on ecoli__amp is improves.
+        report = self.with_sentinel(["K+C"])
+        (u,) = [x for x in report["unreliable"] if x["species"] == "Escherichia coli"]
+        self.assertEqual((u["species"], u["learner"], u["sentinel"]), ("Escherichia coli", "lasso", FWD_A))
+        self.assertEqual(u["reason"], "the sentinel contrast is improves")
+        for ident in (FWD_A, FWD_C, RAND_A):
+            self.assertIn(ident, u["contrasts"])
+        self.assertNotIn(RAND_K, u["contrasts"])  # another species
+        # kpneu__amp's sentinel lineage contrast was not produced, which also flags; mtb__inh's is
+        # inconclusive (D_MTB), which doesn't.
+        flagged = {(x["species"], x["learner"]) for x in report["unreliable"]}
+        self.assertEqual(flagged, {("Escherichia coli", "lasso"), ("Klebsiella pneumoniae", "lasso")})
+        md = rp.render_markdown(report)
+        self.assertIn("## Unreliable learners", md)
+        self.assertIn(rp.UNRELIABLE_SENTENCE, md)
+        self.assertTrue(line_for(md, FWD_C).endswith("Unreliable (rule 10)."))
+        self.assertTrue(line_for(md, RAND_K).endswith("Unreliable (rule 10)."))
+        self.assertFalse(line_for(md, D_MTB).endswith("Unreliable (rule 10)."))
+        self.assertEqual(rp.validate_report(json.loads(rp.dumps(report)))["unreliable"], report["unreliable"])
+
+    def test_no_sentinel_flags_nothing_and_a_missing_sentinel_contrast_flags_its_learner(self):
+        self.assertEqual(build()["unreliable"], [])
+        self.assertNotIn("## Unreliable learners", rp.render_markdown(build()))
+        # K is the treatment of kpneu__amp's planned lineage contrast, which was not produced.
+        (u,) = self.with_sentinel(["K"])["unreliable"]
+        self.assertEqual((u["species"], u["learner"]), ("Klebsiella pneumoniae", "lasso"))
+        self.assertTrue(u["reason"].startswith("the sentinel contrast was not produced: "), u["reason"])
+
+    def test_a_sentinel_arm_must_have_runs(self):
+        with self.assertRaises(SchemaError) as e:
+            self.with_sentinel(["no-such-arm"])
+        self.assertIn("sentinel_arms", str(e.exception))
+
+    def unadjusted_inputs(self):
+        """K+C as an unadjusted sentinel (main's ruling 3 after VERIFY-H1STATS): its family C contrasts are
+        judged on their own p (adjust none, p_adj = p), and BH covers the other planned family C contrasts:
+        LOBO_A at 0.30, LOBO_C at 0.50 and kpneu's missing one at 1, giving 0.75, 0.75."""
+        values = dict(zip(NAMES, good_inputs()))
+        values["manifest"].update(sentinel_arms=["K+C"], sentinel_adjust="none")
+        for x in values["contrasts"]:
+            if x["family"] == "C" and x["treatment"] == "K+C":
+                x.update(adjust="none", p_adj=x["p"])
+                x["decision"] = schema.expected_decision(x["ci"], x["p"])
+            elif x["family"] == "C":
+                x["p_adj"] = {LOBO_A: 0.75, LOBO_C: 0.75}[x["id"]]
+        return values
+
+    def test_a_sentinel_outside_bh_is_judged_on_its_own_p(self):
+        values = self.unadjusted_inputs()
+        report = rp.build_report(*(values[n] for n in NAMES))
+        by_id = {x["id"]: x for x in report["contrasts"]}
+        # FWD_C's p 0.03 was inconclusive at p_adj 0.09 under BH; on its own p it is improves.
+        self.assertEqual((by_id[FWD_C]["adjust"], by_id[FWD_C]["p_adj"], by_id[FWD_C]["decision"]),
+                         ("none", 0.03, "improves"))
+        flagged = {(u["species"], u["learner"]) for u in report["unreliable"]}
+        self.assertEqual(flagged, {("Escherichia coli", "lasso"), ("Klebsiella pneumoniae", "lasso")})
+        self.assertEqual(rp.validate_report(json.loads(rp.dumps(report)))["contrasts"], report["contrasts"])
+        # Without the manifest's sentinel_adjust, adjust none on a family C contrast is refused, and so is an
+        # unadjusted contrast whose arm is not a sentinel, or a sentinel left in BH.
+        for change in (lambda v: v["manifest"].pop("sentinel_adjust"),
+                       lambda v: v["manifest"].update(sentinel_arms=["K"]),
+                       lambda v: next(x for x in v["contrasts"] if x["id"] == FWD_A).update(adjust="bh")):
+            values = self.unadjusted_inputs()
+            change(values)
+            with self.assertRaises(SchemaError):
+                rp.build_report(*(values[n] for n in NAMES))
+
+    def test_a_sentinel_judges_only_the_learners_the_manifest_gives_it(self):
+        values = self.unadjusted_inputs()
+        values["manifest"]["sentinel_learners"] = {"K+C": ["rf", "gbt"]}
+        self.assertEqual(rp.build_report(*(values[n] for n in NAMES))["unreliable"], [])
+        values["manifest"]["sentinel_learners"] = {"K+C": ["lasso"]}
+        self.assertEqual(len(rp.build_report(*(values[n] for n in NAMES))["unreliable"]), 2)
+        values["manifest"]["sentinel_learners"] = {"K": ["lasso"]}
+        with self.assertRaises(SchemaError) as e:
+            rp.build_report(*(values[n] for n in NAMES))
+        self.assertIn("sentinel_learners", str(e.exception))
+
+    def test_a_missing_random_split_sentinel_flags_nothing(self):
+        """REVIEW-ICODE-PY L6 (mutant K3): only the lineage split judges; a sentinel whose random-split
+        contrast was not produced, with its lineage contrast inconclusive, flags no learner."""
+        manifest = {"sentinel_arms": ["twin"], "datasets": [{"id": "ds", "species": "S"}]}
+        lineage = "ds/C:gbt:lineage:default->twin:log_loss"
+        random = "ds/D:gbt:random:default->twin:log_loss"
+        contrasts = [{"id": lineage, "decision": "inconclusive", "learner": "gbt", "dataset": "ds"}]
+        missing = [{"id": random, "reason": "the random plan was refused"}]
+        self.assertEqual(rp._unreliable(manifest, contrasts, [lineage, random], missing), [])
+        contrasts[0]["decision"] = "worse"
+        (u,) = rp._unreliable(manifest, contrasts, [lineage, random], missing)
+        self.assertEqual((u["learner"], u["sentinel"]), ("gbt", lineage))
+
+    def test_the_judging_contrasts_are_a_sentinel_s_lineage_log_loss_contrasts_for_its_learners(self):
+        ids = ["ds/C:gbt:lineage:default->twin:log_loss",   # the one that judges
+               "ds/C:rf:lineage:default->twin:log_loss",    # a learner the twin isn't given
+               "ds/D:gbt:random:default->twin:log_loss",    # the random split
+               "ds/D:gbt:lineage:default->twin:auroc",      # a secondary endpoint
+               "ds/C:gbt:lineage:default->cap:log_loss",    # no sentinel
+               "ds/C:gbt:lineage:default->other:log_loss"]  # a sentinel the manifest gives no learner
+        manifest = {"sentinel_arms": ["twin", "other"], "sentinel_learners": {"twin": ["gbt"]}}
+        self.assertEqual([pid for pid, _ in rp.judging_contrasts(manifest, ids)], ids[:1])
+        (_, parts), = rp.judging_contrasts(manifest, ids)
+        self.assertEqual((parts["treatment"], parts["learner"], parts["split"]), ("twin", "gbt", "lineage"))
+        # Without the map, every sentinel judges every learner.
+        del manifest["sentinel_learners"]
+        self.assertEqual([pid for pid, _ in rp.judging_contrasts(manifest, ids)], [ids[0], ids[1], ids[5]])
+        self.assertEqual(rp.judging_contrasts({}, ids), [])
+
+    def test_random_split_contrasts_are_printed_as_descriptive(self):
+        md = rp.render_markdown(build())
+        block = md.split("### Random split: descriptive only")[1]
+        self.assertIn(rp.RANDOM_SPLIT_SENTENCE, block)
+        for ident in (RAND_A, RAND_K):
+            self.assertIn(f"`{ident}`", block)
+        rules = md.split(rp.RULES_HEADING)[1]
+        for phrase in ("Random-split contrasts are descriptive only", "scores the random split once",
+                       "(repeat, outer fold) refit", "26 to 46%", "the retuned twin", "outside the BH family",
+                       "marked unreliable",
+                       # Rule 9 names each learner's test as the records carry it (ci_method).
+                       "a paired t for scm, cart and rf (repeat_fold_t)",
+                       "corrected resampled t for gbt and the lasso (repeat_fold_corrected_t)"):
+            self.assertIn(phrase, rules)
+
+
+class BaseRateCases(unittest.TestCase):
+    def test_a_base_rate_prints_beside_each_contrast_of_its_arm(self):
+        m = good_inputs()[0]
+        m["base_rates"] = [{"arm": "K+C", "rate": 0.3, "ci95": [0.2, 0.4], "seeds": 5, "source": "fixture twin"}]
+        md = rp.render_markdown(build(manifest=m))
+        self.assertIn("No-signal base rate for this arm type: 30.0% of lineage-split contrasts non-inconclusive "
+                      "(95% interval [20.0, 40.0]%) over 5 seeds (fixture twin).", line_for(md, FWD_C))
+        self.assertNotIn("base rate", line_for(md, LOBO_C))
+        m["base_rates"].append(dict(m["base_rates"][0]))
+        with self.assertRaises(SchemaError):
+            build(manifest=m)
+
+    def test_the_synthetic_flag_is_named_in_the_header(self):
+        m = good_inputs()[0]
+        self.assertNotIn("Synthetic run", rp.render_markdown(build(manifest=m)))
+        m["synthetic"] = True
+        self.assertIn("- Synthetic run: yes. The spec says it is synthetic, so the revision-12 gate a real run needs was "
+                      "not required; this manifest doesn't record whether one ran.", rp.render_markdown(build(manifest=m)))
+        # REVIEW-INTEG7 L2: a synthetic spec that also carried the gate says it ran and passed.
+        m["revision12_gate"] = "passed"
+        self.assertIn("- Synthetic run: yes. The spec also carries a revision-12 gate, and it passed.",
+                      rp.render_markdown(build(manifest=m)))
+        m["revision12_gate"] = "not_required"
+        self.assertIn("- Synthetic run: yes, on a synthetic data root. The spec carries no revision-12 gate, so none "
+                      "ran; a real run needs it.", rp.render_markdown(build(manifest=m)))
+        m["synthetic"] = False
+        with self.assertRaises(SchemaError):
+            build(manifest=m)
+        m["revision12_gate"] = "passed"
+        self.assertIn("- Synthetic run: no. The revision-12 gate passed.", rp.render_markdown(build(manifest=m)))
+        m["revision12_gate"] = "skipped"
+        with self.assertRaises(SchemaError):
+            build(manifest=m)
+        m["revision12_gate"] = "passed"
+        m["synthetic"] = "yes"
+        with self.assertRaises(SchemaError):
+            build(manifest=m)
+
+    def test_the_species_pool_is_named_in_the_header(self):
+        m = good_inputs()[0]
+        m["species_pool"] = {"genomes": 2010, "arms": ["default", "cap-1000"], "structure_sha256": "a" * 64}
+        md = rp.render_markdown(build(manifest=m))
+        self.assertIn("- Species pool: the union of the cohorts of this run's 2 arms (2010 genomes; structure "
+                      f"sha256 `{'a' * 64}`). Lineages and the fold keys of units outside the default depend on "
+                      "this union, so adding an arm means rerunning the whole comparison.", md)
+        m["species_pool"]["structure_sha256"] = "not hex"
+        with self.assertRaises(SchemaError):
+            build(manifest=m)
+
+    def test_a_kind_without_a_measured_rate_prints_not_measured(self):
+        m = good_inputs()[0]
+        m["base_rates"] = [{"arm": "K+C", "kind": "cap-down", "rate": None, "ci95": None, "seeds": None,
+                            "source": "not measured"}]
+        md = rp.render_markdown(build(manifest=m))
+        self.assertIn("No-signal base rate for this arm type (cap-down): not measured.", line_for(md, FWD_C))
+        m["base_rates"][0]["kind"] = "cap-up"
+        m["base_rates"][0].update(rate=0.25, ci95=[0.1, 0.4], seeds=5, source="twin")
+        md = rp.render_markdown(build(manifest=m))
+        self.assertIn("No-signal base rate for this arm type (cap-up): 25.0% of lineage-split", line_for(md, FWD_C))
+        for bad in ({"rate": None, "seeds": 5}, {"rate": 0.2, "seeds": None}, {"rate": None, "ci95": [0.0, 0.1]}):
+            m["base_rates"][0].update(rate=None, ci95=None, seeds=None)
+            m["base_rates"][0].update(bad)
+            with self.assertRaises(SchemaError, msg=str(bad)):
+                build(manifest=m)
+
+
+class RuleReferenceCases(unittest.TestCase):
+    """REVIEW-INPUT L2: the rendered reading rules are numbered 1 to n in order, and every "rule N" in
+    the summary points at the rule that says it."""
+
+    def test_rules_are_in_order_and_every_reference_resolves(self):
+        m = good_inputs()[0]
+        m["sentinel_arms"] = ["K+C"]
+        m["runs"].append(fx.good_run(id="r-same", arm="same-set", status="identical_cohort",
+                                     reason="identical_cohort: the fixture's genome set", metrics={},
+                                     fit_count=0, seconds=0, predictions=None))
+        md = rp.render_markdown(build(manifest=m))
+        rules = md.split(rp.RULES_HEADING)[1]
+        numbers = [int(x) for x in re.findall(r"^(\d+)\. ", rules, re.M)]
+        self.assertEqual(numbers, list(range(1, len(numbers) + 1)))
+        text = {n: t for n, t in re.findall(r"^(\d+)\. (.*)$", rules, re.M)}
+        want = {"10": "sentinel", "11": "identical cohort"}
+        refs = re.findall(r"rule (\d+)", md.split(rp.RULES_HEADING)[0])
+        self.assertEqual(set(refs), set(want))
+        for n in refs:
+            self.assertIn(want[n], text[n])
+        self.assertIn("Identical cohorts, not run (rule 11):", md)
+        self.assertIn("rf and gbt", text["10"])
+        self.assertIn("only between arms with equal genome sets", text["10"])
 
 
 class WordingCases(unittest.TestCase):
@@ -1089,7 +1375,7 @@ class RoundTripCases(unittest.TestCase):
         report = json.loads(rp.dumps(self.report))
         report["manifest"]["runs"] = [u for u in report["manifest"]["runs"] if u["id"] != "r-plasmid"]
         report["unavailable_runs"] = [u for u in report["unavailable_runs"] if u["id"] != "r-plasmid"]
-        report["attempts"] = {"runs": 20, "ok": 19, "unavailable": 1}
+        report["attempts"] = {"runs": 20, "ok": 19, "unavailable": 1, "identical_cohort": 0}
         report["inputs_sha256"]["manifest"] = schema.sha256(report["manifest"])
         rp.validate_report(report)
         self.assertNotEqual(report["inputs_sha256"]["manifest"], schema.sha256(good_manifest()))

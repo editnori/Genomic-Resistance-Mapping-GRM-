@@ -59,8 +59,12 @@ export interface LearnerLite {
   vme: number | null;
   me: number | null;
   auroc: number | null;
-  /** Isolates without a call. Absent on rows written before no-calls. */
+  /** Isolates in null-fit folds. Absent on rows written before no-calls. */
   no_call?: NoCall;
+  /** Revision 14 rows with a null-fit fold: those isolates are scored at
+   *  their fold's training prevalence and counted in the rates above, which
+   *  then cover every isolate. Absent otherwise. */
+  null_fits_scored?: boolean;
 }
 
 export interface ConformalPoint {
@@ -75,23 +79,31 @@ export interface ConformalPoint {
 
 export interface LearnerResult {
   learner: Learner;
-  /** Pooled out-of-fold calls; isolates without a call are left out. Null
-   *  when the learner called no isolate. */
+  /** Pooled out-of-fold calls. From revision 14 they cover every isolate,
+   *  a null fit's at its fold's training prevalence; before, isolates without
+   *  a call are left out, and metrics are null when none was called. */
   metrics: BinaryMetrics | null;
-  /** One per outer fold; null for a fold whose fit made no call. */
+  /** Revision 14 rows with a null-fit fold: the metrics over the other
+   *  isolates, the figure revisions 7 to 13 gave as `metrics`; null when
+   *  every fold's fit was null. Absent on every other row. */
+  called_metrics?: BinaryMetrics | null;
+  /** One per outer fold; null for a fold whose fit made no call (before
+   *  revision 14). */
   fold_balanced_accuracy: (number | null)[];
   /** ROC points [fpr, tpr]; empty for 0/1 learners (SCM, catalog). */
   roc: [number, number][];
-  /** Out-of-fold resistant score per sample, in `samples` order; null for
-   *  an isolate without a call. */
+  /** Out-of-fold resistant score per sample, in `samples` order; a null
+   *  fit's isolates carry its training prevalence from revision 14, and are
+   *  null (no call) in revisions 7 to 13. */
   scores: (number | null)[];
   /** Empty while the pipeline fits no separate calibration set. */
   conformal: ConformalPoint[];
   /** Per-fold model size: SCM rules, CART leaves, forest trees, boosted
    *  trees kept by early stopping, or lasso non-zero weights. Zero for
    *  boosting or the lasso is a null fit: rows without `no_call` scored
-   *  that fold 0.5, which the 0.5 cutoff calls resistant; rows with it
-   *  leave the fold uncalled. */
+   *  that fold 0.5, which the 0.5 cutoff calls resistant; rows of revisions
+   *  7 to 13 leave the fold uncalled; revision 14 scores it at its training
+   *  prevalence. */
   fold_complexity: number[];
   seconds: number;
   /** Isolates in folds whose fit was null, by class. Absent on catalog rows
@@ -261,7 +273,8 @@ export interface Locus {
   patric_id: string | null;
   gene_strand: string | null;
   codons: [number, number] | null;
-  /** [gene or product, signed distance in bp] when intergenic. */
+  /** [gene or product, signed distance in bp] when the span lies in no
+   *  protein-coding gene; no other kind of gene is read. */
   nearest: [string, number] | null;
   /** Contig sequence around the span; the span itself is uppercase. */
   context: string;
@@ -310,6 +323,9 @@ export interface DatasetReport {
   schema: number;
   id: string;
   evaluation?: EvaluationAudit;
+  /** A digest of what the fit read: the genomes, labels, catalog and
+   *  settings. Absent in reports written before it was recorded. */
+  input_fingerprint?: string;
   /** Absent in reports written before it was recorded. */
   eval_config?: EvalConfig;
   species: string;
@@ -408,7 +424,8 @@ export interface CatalogRow {
   learners: { learner: Learner; random: LearnerLite | null; lineage: LearnerLite | null }[];
   catalog: Lite | null;
   mic_essential_agreement: number | null;
-  /** Plain-words SCM rules, e.g. "presence of blaKPC". */
+  /** Plain-words SCM rules, e.g. "presence of blaKPC". The wording is
+   *  numbered by the manifest's rule_text_version. */
   scm_rules: string[];
   /** [panel id, metrics] */
   panels: [string, Lite][];
@@ -449,7 +466,17 @@ export interface Manifest {
    *  predates the field, or none is published. Older manifests hard-code 31. */
   k: number | null;
   amr_records: number;
+  /** The version of the AMRFinderPlus reference gene database the catalog
+   *  came from, such as 2026-08-07.1. Not a program version: GRM reads the
+   *  database's sequences itself and does not run the AMRFinderPlus program. */
   amrfinder_version: string;
+  /** Which wording `scm_rules` uses (report.rs's RULE_TEXT_VERSION). Absent
+   *  in an index written before the field: one family per term through
+   *  revision 12, every family from release rev14-274-20261112. From 3 a
+   *  term also says when its k-mers sit outside the named gene, whether a
+   *  named family's gene groups count for the drug's known-gene rule, and
+   *  how many features tie it. */
+  rule_text_version?: number;
   name_vocabulary: string | null;
   funnel: Funnel;
   species: SpeciesRow[];

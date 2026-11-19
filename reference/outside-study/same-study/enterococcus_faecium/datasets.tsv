@@ -1,0 +1,6 @@
+dataset	labelled_resistant	labelled_susceptible	excluded_no_sequence	excluded_species_check_failed	excluded_not_counted	scored_resistant	scored_susceptible	scored_borderline	reportable	lasso_complete	known_gene	top_study_resistant	top_study_resistant_count	top_study_resistant_share	top_study_susceptible	top_study_susceptible_count	top_study_susceptible_share	studies	loso_folds_reportable	top_study_resistant_fold_reportable	top_study_susceptible_fold_reportable	studies_not_left_out	scored_no_bioproject	top_study_resistant_tied	top_study_susceptible_tied
+enterococcus_faecium__ampicillin	323	39	0	0	0	323	39	9	yes	yes	scored	PRJNA771404	323	1.000000	PRJNA771404	39	1.000000	1	0	no	no	PRJNA771404	0		
+enterococcus_faecium__doxycycline	198	103	0	0	0	198	103	9	yes	no	scored	PRJNA771404	198	1.000000	PRJNA771404	103	1.000000	1	0	no	no	PRJNA771404	0		
+enterococcus_faecium__gentamicin	30	324	0	0	0	30	324	10	yes	no	scored	PRJNA771404	30	1.000000	PRJNA771404	324	1.000000	1	0	no	no	PRJNA771404	0		
+enterococcus_faecium__tetracycline	273	83	0	0	0	273	83	9	yes	yes	scored	PRJNA771404	273	1.000000	PRJNA771404	83	1.000000	1	0	no	no	PRJNA771404	0		
+enterococcus_faecium__vancomycin	298	65	0	0	0	298	65	9	yes	no	scored	PRJNA771404	298	1.000000	PRJNA771404	65	1.000000	1	0	no	no	PRJNA771404	0		

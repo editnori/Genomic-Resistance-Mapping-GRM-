@@ -1,0 +1,18 @@
+dataset	labelled_resistant	labelled_susceptible	excluded_no_sequence	excluded_species_check_failed	excluded_not_counted	scored_resistant	scored_susceptible	scored_borderline	reportable	lasso_complete	known_gene	top_study_resistant	top_study_resistant_count	top_study_resistant_share	top_study_susceptible	top_study_susceptible_count	top_study_susceptible_share	studies	loso_folds_reportable	top_study_resistant_fold_reportable	top_study_susceptible_fold_reportable	studies_not_left_out	scored_no_bioproject	top_study_resistant_tied	top_study_susceptible_tied
+salmonella_enterica__ampicillin	489	865	0	0	0	489	865	0	yes	no	scored	PRJEB67737	243	0.496933	PRJEB48506	344	0.397688	18	18	yes	yes		0		
+salmonella_enterica__azithromycin	149	1263	0	0	0	149	1263	0	yes	yes	scored	PRJNA841813	117	0.785235	PRJEB48506	344	0.272367	21	21	yes	yes		0		
+salmonella_enterica__cefazolin	174	29	0	0	0	174	29	0	yes	yes	scored	PRJNA841813	126	0.724138	PRJNA803326	18	0.620690	2	0	no	no	PRJNA803326;PRJNA841813	0		
+salmonella_enterica__cefotaxime	350	123	0	0	0	350	123	0	yes	no	scored	PRJEB67737	226	0.645714	PRJNA803326	67	0.544715	5	5	yes	yes		0		
+salmonella_enterica__ceftazidime	238	277	0	0	0	238	277	0	yes	yes	scored	PRJEB67737	124	0.521008	PRJEB71958	121	0.436823	15	15	yes	yes		0		
+salmonella_enterica__ceftriaxone	120	1199	0	0	0	120	1199	0	yes	no	scored	PRJEB62461	91	0.758333	PRJEB48506	344	0.286906	39	39	yes	yes		0		
+salmonella_enterica__chloramphenicol	245	1066	0	0	0	245	1066	0	yes	no	scored	PRJNA841813	122	0.497959	PRJEB48506	344	0.322702	19	19	yes	yes		0		
+salmonella_enterica__ciprofloxacin	948	484	0	0	0	948	484	0	yes	no	scored	PRJEB48506	339	0.357595	PRJEB14050	155	0.320248	28	28	yes	yes		0		
+salmonella_enterica__gentamicin	176	542	0	0	0	176	542	0	yes	no	scored	PRJNA841813	108	0.613636	PRJEB67737	201	0.370849	21	21	yes	yes		0		
+salmonella_enterica__kanamycin	135	295	0	0	0	135	295	0	yes	no	scored	PRJNA841813	128	0.948148	PRJEB71958	121	0.410169	13	12	no	yes	PRJNA841813	0		
+salmonella_enterica__nalidixic_acid	339	294	0	0	0	339	294	0	yes	no	scored	PRJEB67737	175	0.516224	PRJEB71958	117	0.397959	20	20	yes	yes		0		
+salmonella_enterica__pefloxacin	146	155	0	0	0	146	155	0	yes	no	no rule published	PRJNA564922	129	0.883562	PRJEB14050	152	0.980645	2	0	no	no	PRJEB14050;PRJNA564922	0		
+salmonella_enterica__streptomycin	169	258	0	0	0	169	258	0	yes	no	scored	PRJNA841813	117	0.692308	PRJEB71958	118	0.457364	15	15	yes	yes		0		
+salmonella_enterica__sulfamethoxazole	271	120	0	0	0	271	120	0	yes	yes	scored	PRJEB67737	235	0.867159	PRJNA564922	112	0.933333	3	2	yes	no	PRJNA564922	0		
+salmonella_enterica__sulfamethoxazole_trimethoprim	161	931	0	0	0	161	931	0	yes	no	scored	PRJNA841813	102	0.633540	PRJEB48506	344	0.369495	23	23	yes	yes		0		
+salmonella_enterica__tetracycline	440	393	0	0	0	440	393	0	yes	no	scored	PRJEB67737	243	0.552273	PRJEB71958	120	0.305344	17	17	yes	yes		0		PRJNA564922
+salmonella_enterica__trimethoprim	78	531	0	0	0	78	531	0	yes	no	scored	PRJEB67737	45	0.576923	PRJEB67737	190	0.357815	14	14	yes	yes		0		

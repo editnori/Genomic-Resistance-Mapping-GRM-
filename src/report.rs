@@ -8,6 +8,10 @@
 //!   species/\<slug>.json    genome map, dendrogram, resistance strings per
 //!                           genome, cross-resistance pairs
 //!   datasets/\<id>.json     the per-dataset report as `grm learn` wrote it
+//!
+//! A report of the tie rule experiment (`grm learn --exp-tie-rule exact`,
+//! which records `eval_config.tie_rule`) stops the build: see
+//! `refuse_experiment_report`.
 
 use crate::bvbrc::{self, AmrRecord, GenomeRecord};
 use crate::curate::{Breakpoint, Call, DatasetSpec, Funnel, Phenotype};
@@ -25,6 +29,20 @@ use std::path::Path;
 /// null rates when it called no isolate. A schema-1 reader stops at its
 /// version check instead of reading either as a number.
 pub const SCHEMA: u32 = 2;
+
+/// The wording of the index's `scm_rules`, written as `rule_text_version`. A
+/// count of rule terms by kind that is taken from these strings moves with
+/// the wording alone, so text that gives one names the version it read.
+///
+/// - 1: a term names one catalog family, the first in byte order. Releases
+///   through evaluation revision 12; their index has no version field.
+/// - 2: a term names every catalog family its feature matches, after their
+///   count (commit `3dde728`). Release rev14-274-20261112; no version field.
+/// - 3: a term also says how far its k-mers sit from the protein-coding
+///   gene it is named after when they sit outside it, which of a named
+///   family's gene groups GRM's known-gene rule for this drug uses, and how
+///   many features tie it. Not yet in a release.
+pub const RULE_TEXT_VERSION: u32 = 3;
 
 /// Replace a complete file so a dashboard request cannot read partial JSON.
 pub(crate) fn publish(path: &Path, bytes: &[u8]) -> Result<()> {
@@ -45,10 +63,16 @@ pub struct Lite {
     pub vme: Option<f64>,
     pub me: Option<f64>,
     pub auroc: Option<f64>,
-    /// A learner row's uncalled samples; the rates above cover the rest.
-    /// Absent on panel metrics and on rows written before no-calls.
+    /// A learner row's samples in null-fit folds. Before revision 14 the
+    /// rates above cover the rest; see `null_fits_scored`. Absent on panel
+    /// metrics and on rows written before no-calls.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub no_call: Option<NoCall>,
+    /// True on a revision-14 learner row with a null-fit fold: its `no_call`
+    /// samples are scored at their fold's training prevalence and counted in
+    /// the rates above. Absent (false) on every other row.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub null_fits_scored: bool,
 }
 
 fn lite(m: &Value) -> Lite {
@@ -61,27 +85,37 @@ fn lite(m: &Value) -> Lite {
         me: f("me"),
         auroc: m.get("auroc").and_then(Value::as_f64),
         no_call: None,
+        null_fits_scored: false,
     }
 }
 
-/// A learner row's rates and no-calls. Null metrics mean the learner called
-/// no isolate, so its rates stay None.
+/// A learner row's rates and no-calls. Null metrics mean a row written
+/// before revision 14 called no isolate, so its rates stay None. A row that
+/// carries `called_metrics` (revision 14) scored its null-fit samples.
 fn learner_lite(l: &Value) -> Lite {
     let no_call = NoCall::deserialize(&l["no_call"]).ok();
+    let null_fits_scored = l.get("called_metrics").is_some();
     match &l["metrics"] {
         Value::Null => Lite {
             no_call,
+            null_fits_scored,
             ..Lite::default()
         },
-        m => Lite { no_call, ..lite(m) },
+        m => Lite {
+            no_call,
+            null_fits_scored,
+            ..lite(m)
+        },
     }
 }
 
-/// Whether a learner row has a call for every isolate: it has rates and
-/// leaves no isolate uncalled. Rows written before no-calls scored every
-/// isolate, so they pass.
-fn calls_every_isolate(m: &Lite) -> bool {
-    m.balanced_accuracy.is_some() && m.no_call.is_none_or(|x| x.resistant + x.susceptible == 0)
+/// Whether a learner row's rates cover every isolate. A revision-14 row
+/// always does: a null-fit fold is scored at its training prevalence. A row
+/// of revisions 7 to 13 does only when it left no isolate uncalled. Rows
+/// written before no-calls scored every isolate, so they pass.
+fn scored_on_every_isolate(m: &Lite) -> bool {
+    m.balanced_accuracy.is_some()
+        && (m.null_fits_scored || m.no_call.is_none_or(|x| x.resistant + x.susceptible == 0))
 }
 
 /// Every learner's rates on both splits of one report's `splits`, in
@@ -102,13 +136,15 @@ pub(crate) fn learner_rows(splits: &Value) -> Vec<LearnerRow> {
 }
 
 /// The best learner and its random-split balanced accuracy: the highest
-/// score among learners that call every isolate on every split that ran.
-/// None when no learner does. A tie goes to the later learner.
+/// score among learners whose rates cover every isolate on every split that
+/// ran. From revision 14 every learner's do, so all five compete; in an
+/// older report a learner that left isolates uncalled is passed over. None
+/// when no learner qualifies. A tie goes to the later learner.
 pub(crate) fn best_learner(rows: &[LearnerRow]) -> Option<(&LearnerRow, f64)> {
     rows.iter()
-        .filter(|l| !l.lineage_ran || l.lineage.as_ref().is_some_and(calls_every_isolate))
+        .filter(|l| !l.lineage_ran || l.lineage.as_ref().is_some_and(scored_on_every_isolate))
         .filter_map(|l| {
-            let random = l.random.filter(calls_every_isolate)?;
+            let random = l.random.filter(scored_on_every_isolate)?;
             Some((l, random.balanced_accuracy?))
         })
         .max_by(|a, b| a.1.total_cmp(&b.1))
@@ -229,10 +265,16 @@ pub struct Manifest {
     pub schema: u32,
     pub generated_at: String,
     pub evaluation_revision: u32,
+    /// `RULE_TEXT_VERSION`: which wording the datasets' `scm_rules` use.
+    pub rule_text_version: u32,
     /// The `counts.k` every published dataset report records, or None when
     /// two reports differ, one predates the field, or none is published.
     pub k: Option<usize>,
     pub amr_records: usize,
+    /// The version of the AMRFinderPlus reference gene database the catalog
+    /// was fetched from (its `version.txt`), for example 2026-08-07.1. It is
+    /// not a version of the AMRFinderPlus program, which GRM does not run:
+    /// `catalog.rs` reads the database's sequences itself.
     pub amrfinder_version: String,
     pub name_vocabulary: Option<String>,
     pub funnel: Funnel,
@@ -242,6 +284,162 @@ pub struct Manifest {
     pub unsupported_panels: Vec<UnsupportedPanelRow>,
 }
 
+/// A count with a comma between thousands, as the web app's `int` writes it.
+fn grouped(n: u64) -> String {
+    let digits = n.to_string();
+    let mut out = String::with_capacity(digits.len() + digits.len() / 3);
+    for (i, c) in digits.chars().enumerate() {
+        if i > 0 && (digits.len() - i).is_multiple_of(3) {
+            out.push(',');
+        }
+        out.push(c);
+    }
+    out
+}
+
+/// The words a rule term's feature goes by: its catalog families, else the
+/// annotated gene or product its k-mers lie in, else its number. GRM reads
+/// the reference genome's protein-coding genes only (`bvbrc::fetch_features`
+/// asks for CDS features), so "gene" here never means an rRNA, tRNA or other
+/// RNA gene. When the k-mers lie in no annotated protein-coding gene of the
+/// reference contig, the locus names the nearest one (`Locus::nearest`), and
+/// the words say so with the distance, so the term does not read like one
+/// inside that gene, or like one that lies in no gene of any kind. The web
+/// app builds the same words in `termLabel`.
+fn term_label(card: Option<&Value>, id: u64) -> String {
+    card.and_then(|f| {
+        let families: Vec<&str> = f["catalog_families"]
+            .as_array()
+            .map(|a| a.iter().filter_map(Value::as_str).collect())
+            .unwrap_or_default();
+        crate::annotate::family_label(&families).or_else(|| {
+            let locus = &f["locus"];
+            let name = locus["gene"]
+                .as_str()
+                .or_else(|| locus["product"].as_str())?;
+            Some(match locus["nearest"][1].as_i64() {
+                Some(d) if locus["codons"].is_null() => format!(
+                    "k-mers {} bp from the nearest annotated protein-coding gene, {name}",
+                    grouped(d.unsigned_abs())
+                ),
+                _ => name.to_string(),
+            })
+        })
+    })
+    .unwrap_or_else(|| format!("feature {id}"))
+}
+
+/// What a rule term's ties add to its words, or None when nothing ties it.
+/// `n_equivalent` counts the other rules with the same covered and lost
+/// counts at the term's greedy step (`learn::scm::Step`), so the term is one
+/// of that many and one more. A later term's step counts only the isolates
+/// the earlier terms left undecided. The web app builds the same words in
+/// `tieWords`.
+fn tie_words(n_equivalent: u64, position: usize) -> Option<String> {
+    (n_equivalent > 0).then(|| {
+        format!(
+            "one of {} features that separate {} equally well",
+            grouped(n_equivalent + 1),
+            if position == 0 {
+                "these isolates"
+            } else {
+                "the isolates the earlier rules left undecided"
+            }
+        )
+    })
+}
+
+/// "a", "a and b", "a, b and c", with `last` before the final item ("and",
+/// or "or" after a negative).
+fn list_words<S: AsRef<str>>(items: &[S], last: &str) -> String {
+    match items {
+        [] => String::new(),
+        [one] => one.as_ref().to_string(),
+        [most @ .., end] => format!(
+            "{} {last} {}",
+            most.iter()
+                .map(AsRef::as_ref)
+                .collect::<Vec<_>>()
+                .join(", "),
+            end.as_ref()
+        ),
+    }
+}
+
+/// What GRM's known-gene rule for this drug does with a term's catalog
+/// families, read from the report's own gene-group rows, or None when they
+/// say nothing. A row exists for a gene group that GRM's catalog reader
+/// called in at least one genome of the dataset, and holds whether the rule
+/// uses that group (`analysis::GroupRow::counts_for_rule`).
+///
+/// GRM's rule is the subject of the clause, and the group is its object:
+/// "GRM's known-gene rule for this drug does not use armA". The rule reads
+/// the catalog's class and subclass for the group, so the clause describes
+/// GRM's rule; it is no statement about what the gene does.
+///
+/// A named family with no row is left out: the report does not hold its
+/// class, so nothing is said of it. The groups are named, since one family
+/// can have a group the rule uses and one it does not. When a family has a
+/// group with a subfamily and one without, the second carries the family's
+/// bare name, and is written "the group named X alone" so that one name does
+/// not stand on both sides of the clause. The names are sorted, so the words
+/// do not depend on the order of the report's rows. A report without a
+/// catalog block says nothing: it has one neither when the drug has no rule
+/// nor when its genomes have no gene calls, and the report does not tell the
+/// two apart. The web app builds the same words in `familyRuleWords`.
+fn family_rule_words(families: &[&str], catalog: &Value) -> Option<String> {
+    let (mut uses, mut not): (Vec<&str>, Vec<&str>) = (Vec::new(), Vec::new());
+    for g in catalog["groups"].as_array()? {
+        let (Some(group), Some(for_rule)) = (g["group"].as_str(), g["counts_for_rule"].as_bool())
+        else {
+            continue;
+        };
+        if families.contains(&crate::catalog::family_of_group(group)) {
+            if for_rule { &mut uses } else { &mut not }.push(group);
+        }
+    }
+    uses.sort_unstable();
+    not.sort_unstable();
+    // The families that have a group with a subfamily among these rows.
+    let with_subfamily: Vec<&str> = uses
+        .iter()
+        .chain(&not)
+        .map(|group| (*group, crate::catalog::family_of_group(group)))
+        .filter(|(group, family)| group != family)
+        .map(|(_, family)| family)
+        .collect();
+    let named = |groups: &[&str]| -> Vec<String> {
+        groups
+            .iter()
+            .map(|group| {
+                if with_subfamily.contains(group) {
+                    format!("the group named {group} alone")
+                } else {
+                    group.to_string()
+                }
+            })
+            .collect()
+    };
+    let (uses, not) = (named(&uses), named(&not));
+    const RULE: &str = "GRM's known-gene rule for this drug";
+    match (uses.is_empty(), not.is_empty()) {
+        (true, true) => None,
+        (false, true) => Some(format!("{RULE} uses {}", list_words(&uses, "and"))),
+        (true, false) => Some(format!("{RULE} does not use {}", list_words(&not, "or"))),
+        (false, false) => Some(format!(
+            "{RULE} uses {} but not {}",
+            list_words(&uses, "and"),
+            list_words(&not, "or")
+        )),
+    }
+}
+
+/// Each SCM rule term of a report in words, for the index's `scm_rules`. A
+/// term names a marker: k-mers whose presence or absence goes with the lab
+/// calls in these isolates. The words say where the k-mers sit when that is
+/// outside the protein-coding gene they are named after, which gene groups
+/// of a named catalog family GRM's known-gene rule for this drug uses, and
+/// how many features tie the term. `RULE_TEXT_VERSION` numbers this wording.
 fn rule_text(report: &Value) -> Vec<String> {
     let feats: HashMap<u64, &Value> = report["features"]
         .as_array()
@@ -251,54 +449,73 @@ fn rule_text(report: &Value) -> Vec<String> {
                 .collect()
         })
         .unwrap_or_default();
+    let steps = &report["models"]["scm"]["steps"];
     report["models"]["scm"]["rules"]
         .as_array()
         .map(|rules| {
             rules
                 .iter()
-                .map(|r| {
+                .enumerate()
+                .map(|(i, r)| {
                     let id = r["feature"].as_u64().unwrap_or(0);
                     let presence = r["presence"].as_bool().unwrap_or(true);
-                    let f = feats.get(&id);
-                    let label = f
-                        .and_then(|f| {
-                            f["catalog_families"]
-                                .as_array()
-                                .and_then(|a| a.first())
-                                .and_then(Value::as_str)
-                                .map(String::from)
-                                .or_else(|| {
-                                    let locus = &f["locus"];
-                                    locus["gene"]
-                                        .as_str()
-                                        .map(String::from)
-                                        .or_else(|| locus["product"].as_str().map(String::from))
-                                })
-                        })
-                        .unwrap_or_else(|| format!("feature {id}"));
-                    format!(
-                        "{} {label}",
+                    let card = feats.get(&id).copied();
+                    let families: Vec<&str> = card
+                        .and_then(|f| f["catalog_families"].as_array())
+                        .map(|a| a.iter().filter_map(Value::as_str).collect())
+                        .unwrap_or_default();
+                    let ties = steps[i]["n_equivalent"].as_u64().unwrap_or(0);
+                    let mut words = format!(
+                        "{} {}",
                         if presence {
                             "presence of"
                         } else {
                             "absence of"
-                        }
-                    )
+                        },
+                        term_label(card, id)
+                    );
+                    for clause in [
+                        family_rule_words(&families, &report["catalog"]),
+                        tie_words(ties, i),
+                    ]
+                    .into_iter()
+                    .flatten()
+                    {
+                        words.push_str("; ");
+                        words.push_str(&clause);
+                    }
+                    words
                 })
                 .collect()
         })
         .unwrap_or_default()
 }
 
-fn kover_benchmark(path: &Path) -> HashMap<(String, String), KoverRow> {
-    let Ok(bytes) = std::fs::read(path) else {
-        return HashMap::new();
+/// What a missing Kover file tells `grm report`'s user, who can pass `--kover`.
+pub const REPORT_KOVER_REMEDY: &str = "run grm from the source folder, which holds \
+     reference/kover-summary.json, or give `grm report --kover` the file's path";
+
+/// What it tells `grm pipeline`'s, which reads only the default path.
+pub const PIPELINE_KOVER_REMEDY: &str = "run `grm pipeline` from the source folder, which holds \
+     reference/kover-summary.json; pipeline reads the Kover file only from there";
+
+/// The historical Kover rows `index.json` shows beside each dataset, keyed by
+/// species and canonical antibiotic. A file that is missing or doesn't parse
+/// is an error: the default path is relative to the working folder, and
+/// reading nothing would drop every dataset's `kover` field without a word.
+/// `remedy` is what a missing file tells the user to do.
+pub fn kover_benchmark(path: &Path, remedy: &str) -> Result<HashMap<(String, String), KoverRow>> {
+    let shown = match std::path::absolute(path) {
+        Ok(abs) if abs != path => format!("{} ({})", path.display(), abs.display()),
+        _ => path.display().to_string(),
     };
-    let Ok(rows) = serde_json::from_slice::<Vec<Value>>(&bytes) else {
-        return HashMap::new();
-    };
+    let bytes = std::fs::read(path)
+        .with_context(|| format!("read the Kover comparison {shown}: {remedy}"))?;
+    let rows: Vec<Value> = serde_json::from_slice(&bytes)
+        .with_context(|| format!("parse the Kover comparison {shown}"))?;
     let vocab = drugs::Vocabulary::default();
-    rows.iter()
+    Ok(rows
+        .iter()
         .filter_map(|r| {
             let species = r["species"].as_str()?.to_string();
             let drug = drugs::resolve(r["antibiotic"].as_str()?, &vocab);
@@ -319,7 +536,7 @@ fn kover_benchmark(path: &Path) -> HashMap<(String, String), KoverRow> {
                 )
             })
         })
-        .collect()
+        .collect())
 }
 
 #[derive(Serialize)]
@@ -510,8 +727,26 @@ fn top_counts<'a>(items: impl Iterator<Item = &'a str>, k: usize) -> Vec<(String
     v
 }
 
+/// A report whose `eval_config.tie_rule` is present and is not production's
+/// rule was fitted under the tie rule experiment. Neither the site nor the
+/// index reads that field, so the build stops at the report, before
+/// publishing it or writing `index.json`, and names its file. Production
+/// reports leave the field out.
+fn refuse_experiment_report(report: &Value, src: &Path) -> Result<()> {
+    let production = serde_json::to_value(crate::learn::tie::TieRule::Float)?;
+    match report.get("eval_config").and_then(|c| c.get("tie_rule")) {
+        Some(rule) if *rule != production => anyhow::bail!(
+            "{}: eval_config.tie_rule is {rule}, not production's {production}; a report of the tie rule experiment (grm learn --exp-tie-rule) is never indexed, so move it out of {}",
+            src.display(),
+            src.parent().unwrap_or(src).display()
+        ),
+        _ => Ok(()),
+    }
+}
+
 /// Builds every dashboard file under `<data>/report/` and returns its path.
 pub fn build(layout: &Layout, legacy_kover: &Path) -> Result<std::path::PathBuf> {
+    let kover = kover_benchmark(legacy_kover, REPORT_KOVER_REMEDY)?;
     let out_dir = layout.root.join("report");
     std::fs::create_dir_all(out_dir.join("datasets"))?;
     // `prune` removes every file this build did not publish, including one a
@@ -533,7 +768,6 @@ pub fn build(layout: &Layout, legacy_kover: &Path) -> Result<std::path::PathBuf>
         .map(|g| (g.genome_id.as_str(), g))
         .collect();
     let records: Vec<AmrRecord> = bvbrc::read_jsonl(&layout.amr())?;
-    let kover = kover_benchmark(legacy_kover);
     let amrfinder_version = std::fs::read_to_string(layout.catalog_dir().join("version.txt"))
         .unwrap_or_default()
         .trim()
@@ -575,6 +809,7 @@ pub fn build(layout: &Layout, legacy_kover: &Path) -> Result<std::path::PathBuf>
             };
             let report: Value = serde_json::from_slice(&bytes)
                 .with_context(|| format!("parse {}", src.display()))?;
+            refuse_experiment_report(&report, &src)?;
             let file = format!("{}.json", spec.id);
             publish(&out_dir.join("datasets").join(&file), &bytes)?;
             dataset_files.insert(file);
@@ -701,6 +936,7 @@ pub fn build(layout: &Layout, legacy_kover: &Path) -> Result<std::path::PathBuf>
         schema: SCHEMA,
         generated_at: now_iso(),
         evaluation_revision: crate::analysis::EVALUATION_REVISION,
+        rule_text_version: RULE_TEXT_VERSION,
         k: match report_ks.len() {
             1 => report_ks.pop_first().flatten().map(|k| k as usize),
             _ => None,
@@ -809,7 +1045,7 @@ fn prune(dir: &Path, keep: &BTreeSet<String>) -> Result<()> {
     Ok(())
 }
 
-fn now_iso() -> String {
+pub(crate) fn now_iso() -> String {
     iso_from_secs(
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -882,8 +1118,11 @@ mod tests {
     }
 
     /// Curated E. coli datasets for `reports`' antibiotics, each with its
-    /// report saved, and empty record files.
+    /// report saved, empty record files, and a Kover comparison with no rows
+    /// at `<root>/kover.json`.
     fn write_reports(layout: &Layout, reports: &[(&str, Value)]) {
+        std::fs::create_dir_all(&layout.root).unwrap();
+        std::fs::write(layout.root.join("kover.json"), b"[]").unwrap();
         let species = "Escherichia coli";
         let slug = crate::curate::slug(species);
         let specs: Vec<DatasetSpec> = reports
@@ -901,6 +1140,7 @@ mod tests {
                 n_labels_from_mic: 0,
                 breakpoint: None,
                 min_class: 3,
+                selection: None,
             })
             .collect();
         std::fs::create_dir_all(layout.curated()).unwrap();
@@ -933,6 +1173,71 @@ mod tests {
     }
 
     #[test]
+    fn index_rows_carry_the_kover_row_for_their_species_and_antibiotic() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path());
+        let report = || serde_json::json!({"counts": {"samples": 7, "resistant": 3}});
+        write_reports(&layout, &[("meropenem", report()), ("imipenem", report())]);
+        let kover = dir.path().join("kover.json");
+        std::fs::write(
+            &kover,
+            br#"[{"species":"Escherichia coli","antibiotic":"Meropenem","sensitivity":0.8,
+                 "specificity":0.6,"n_rules":2.0,"ds_n_examples":40.0}]"#,
+        )
+        .unwrap();
+        let out = build(&layout, &kover).unwrap();
+        let index: Value =
+            serde_json::from_slice(&std::fs::read(out.join("index.json")).unwrap()).unwrap();
+        let row = |id: &str| {
+            index["datasets"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|d| d["id"] == id)
+                .unwrap()
+                .clone()
+        };
+        let meropenem = row("escherichia_coli__meropenem");
+        assert_eq!(meropenem["kover"]["sensitivity"], 0.8);
+        assert_eq!(meropenem["kover"]["balanced_accuracy"], 0.7);
+        assert_eq!(meropenem["kover"]["n_examples"], 40.0);
+        assert!(row("escherichia_coli__imipenem")["kover"].is_null());
+    }
+
+    #[test]
+    fn a_missing_or_malformed_kover_comparison_refuses_before_writing() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path());
+        let report = serde_json::json!({"counts": {"samples": 7, "resistant": 3}});
+        write_reports(&layout, &[("meropenem", report)]);
+        let kover = dir.path().join("kover.json");
+        std::fs::remove_file(&kover).unwrap();
+        // Run from a folder without reference/, the default path is missing:
+        // the build names the path it expected and leaves no report behind.
+        let err = format!("{:#}", build(&layout, &kover).unwrap_err());
+        assert!(err.contains(kover.to_str().unwrap()), "{err}");
+        assert!(err.contains("reference/kover-summary.json"), "{err}");
+        assert!(err.contains("--kover"), "{err}");
+        assert!(!layout.root.join("report").exists());
+
+        std::fs::write(&kover, b"{not json").unwrap();
+        let err = format!("{:#}", build(&layout, &kover).unwrap_err());
+        assert!(err.contains("parse the Kover comparison"), "{err}");
+        assert!(err.contains(kover.to_str().unwrap()), "{err}");
+        assert!(!layout.root.join("report").exists());
+
+        // A relative path is shown as given and resolved against the
+        // working folder.
+        let relative = Path::new("no-such-folder-grm-test/kover-summary.json");
+        let err = format!("{:#}", build(&layout, relative).unwrap_err());
+        let abs = std::path::absolute(relative).unwrap();
+        assert!(
+            err.contains(&format!("{} ({})", relative.display(), abs.display())),
+            "{err}"
+        );
+    }
+
+    #[test]
     fn a_rebuild_removes_files_for_datasets_and_species_it_no_longer_publishes() {
         let dir = tempfile::tempdir().unwrap();
         let layout = Layout::new(dir.path());
@@ -962,6 +1267,50 @@ mod tests {
         let index: Value =
             serde_json::from_slice(&std::fs::read(out.join("index.json")).unwrap()).unwrap();
         assert_eq!(index["datasets"].as_array().unwrap().len(), 1);
+    }
+
+    /// A report of the tie rule experiment stops the build by name, before
+    /// it is published or any index is written; production reports, with no
+    /// `tie_rule` or with production's, build as before.
+    #[test]
+    fn an_experiment_report_stops_the_index_and_names_its_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path());
+        let kover = dir.path().join("kover.json");
+        let report = |eval_config: Value| serde_json::json!({"counts": {"samples": 7, "resistant": 3}, "eval_config": eval_config});
+        let exact = report(serde_json::json!({"seed": 42, "tie_rule": "exact"}));
+        write_reports(
+            &layout,
+            &[
+                ("meropenem", report(serde_json::json!({"seed": 42}))),
+                ("imipenem", exact.clone()),
+            ],
+        );
+        let err = format!("{:#}", build(&layout, &kover).unwrap_err());
+        let file = layout
+            .results_dir("escherichia_coli")
+            .join("escherichia_coli__imipenem.json");
+        assert!(err.starts_with(&format!("{}: ", file.display())), "{err}");
+        assert!(err.contains("eval_config.tie_rule is \"exact\""), "{err}");
+        let out = layout.root.join("report");
+        assert!(!out.join("index.json").exists());
+        assert!(
+            !out.join("datasets/escherichia_coli__imipenem.json")
+                .exists()
+        );
+        // Any value other than production's stops it, a malformed one too.
+        for rule in [serde_json::json!("Exact"), serde_json::json!(null)] {
+            let r = report(serde_json::json!({"tie_rule": rule}));
+            std::fs::write(&file, serde_json::to_vec(&r).unwrap()).unwrap();
+            assert!(build(&layout, &kover).is_err(), "{rule}");
+        }
+        // Production's rule, written or left out, builds.
+        let float = report(serde_json::json!({"seed": 42, "tie_rule": "float"}));
+        std::fs::write(&file, serde_json::to_vec(&float).unwrap()).unwrap();
+        build(&layout, &kover).unwrap();
+        let index: Value =
+            serde_json::from_slice(&std::fs::read(out.join("index.json")).unwrap()).unwrap();
+        assert_eq!(index["datasets"].as_array().unwrap().len(), 2);
     }
 
     #[test]
@@ -1079,6 +1428,7 @@ mod tests {
         let learner = |name: &str, scores: &[f64]| LearnerResult {
             learner: name.into(),
             metrics: Some(binary_metrics(&truth, scores, 0.5, false)),
+            called_metrics: None,
             fold_balanced_accuracy: vec![],
             roc: vec![],
             scores: scores.to_vec(),
@@ -1333,6 +1683,71 @@ mod tests {
     }
 
     #[test]
+    fn revision_14_rows_with_null_fits_compete_for_best_learner() {
+        // Boosting had null-fit folds on both splits. In a revision-14 row
+        // those isolates are scored at their fold's training prevalence and
+        // the row keeps the older figure in `called_metrics`, so its rates
+        // cover every isolate and it can be best. The same counts on a row
+        // without `called_metrics` (revisions 7 to 13) cover only the called
+        // isolates, and that row is passed over.
+        let rates = |ba: f64| {
+            serde_json::json!({
+                "n": 7, "tp": 3, "fp": 0, "tn": 4, "fn": 0, "balanced_accuracy": ba,
+                "sensitivity": 1.0, "specificity": 1.0, "vme": 0.0, "me": 0.0, "auroc": null
+            })
+        };
+        let row = |learner: &str, ba: f64, in_null: usize, scored: bool| {
+            let mut r = serde_json::json!({
+                "learner": learner, "metrics": rates(ba),
+                "no_call": {"resistant": in_null, "susceptible": 0}
+            });
+            if scored && in_null > 0 {
+                r["called_metrics"] = rates(ba + 0.05);
+            }
+            r
+        };
+        let report = |scored: bool| {
+            serde_json::json!({
+                "counts": {"samples": 7, "resistant": 3},
+                "splits": [
+                    {"scheme": "random", "learners": [row("rf", 0.8, 0, scored), row("gbt", 0.85, 2, scored)]},
+                    {"scheme": "lineage", "learners": [row("rf", 0.7, 0, scored), row("gbt", 0.6, 3, scored)]},
+                ],
+                "panels": [],
+            })
+        };
+        let index = built_index(&[("meropenem", report(true))]);
+        let row = &index["datasets"][0];
+        assert_eq!(row["best_learner"], "gbt");
+        assert_eq!(row["best_random"], 0.85);
+        assert_eq!(row["best_lineage"], 0.6);
+        let gbt = row["learners"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|l| l["learner"] == "gbt")
+            .unwrap();
+        assert_eq!(gbt["random"]["null_fits_scored"], true);
+        assert_eq!(gbt["random"]["no_call"]["resistant"], 2);
+        let rf = row["learners"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|l| l["learner"] == "rf")
+            .unwrap();
+        assert!(rf["random"].get("null_fits_scored").is_none());
+        let index = built_index(&[("meropenem", report(false))]);
+        assert_eq!(index["datasets"][0]["best_learner"], "rf");
+        assert!(
+            index["datasets"][0]["learners"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .all(|l| l["random"].get("null_fits_scored").is_none())
+        );
+    }
+
+    #[test]
     fn a_missing_lineage_learner_row_is_not_full_coverage() {
         let rates = |ba: f64| {
             serde_json::json!({
@@ -1519,5 +1934,245 @@ mod tests {
             audits,
             vec![(current, true), (current - 1, true), (0, false)]
         );
+    }
+
+    #[test]
+    fn a_rule_term_names_every_catalog_family_its_feature_matches() {
+        let report = serde_json::json!({
+            "features": [
+                {"feature": 1, "catalog_families": ["blaKPC"], "locus": {"gene": "kpc"}},
+                {"feature": 2, "catalog_families": ["blaNDM", "ble", "blaAFM"], "locus": null},
+                {"feature": 3, "catalog_families": [], "locus": {"gene": null, "product": "porin"}},
+                {"feature": 4, "catalog_families": [], "locus": null},
+            ],
+            "models": {"scm": {"rules": [
+                {"feature": 1, "presence": true},
+                {"feature": 2, "presence": true},
+                {"feature": 2, "presence": false},
+                {"feature": 3, "presence": false},
+                {"feature": 4, "presence": true},
+                {"feature": 5, "presence": true},
+            ]}},
+        });
+        assert_eq!(
+            rule_text(&report),
+            [
+                "presence of blaKPC",
+                "presence of k-mers matching 3 catalog families (blaAFM, blaNDM, ble)",
+                "absence of k-mers matching 3 catalog families (blaAFM, blaNDM, ble)",
+                "absence of porin",
+                "presence of feature 4",
+                "presence of feature 5",
+            ]
+        );
+    }
+
+    /// A synthetic case of `tests/data/rule-text-cases.json`: a report cut
+    /// down to the fields the rule words read, and the words its terms must
+    /// take. The web app's suite reads the same file
+    /// (`web/src/data/derive/dataset.test.ts`), so the index and the app's
+    /// copy of its wording cannot drift apart.
+    fn rule_text_case(name: &str) -> (Value, Vec<String>) {
+        let file: Value =
+            serde_json::from_str(include_str!("../tests/data/rule-text-cases.json")).unwrap();
+        let case = &file["cases"][name];
+        let words = case["scm_rules"]
+            .as_array()
+            .unwrap_or_else(|| panic!("no case {name}"))
+            .iter()
+            .map(|w| w.as_str().unwrap().to_string())
+            .collect();
+        (case["report"].clone(), words)
+    }
+
+    #[test]
+    fn a_rule_term_outside_the_named_gene_says_how_far_from_it() {
+        let (report, words) = rule_text_case("outside_the_named_gene");
+        assert_eq!(rule_text(&report), words);
+        // The case holds a term inside its gene, two outside one, a term
+        // with no name and a catalog term that sits outside a gene.
+        assert_eq!(words[0], "presence of mgrB");
+        assert_eq!(
+            words[1],
+            "presence of k-mers 46 bp from the nearest annotated protein-coding gene, mgrB"
+        );
+        assert_eq!(
+            words[2],
+            "absence of k-mers 2,502 bp from the nearest annotated protein-coding gene, hypothetical protein"
+        );
+        assert_eq!(words[3..], ["presence of feature 4", "presence of blaKPC"]);
+        assert_eq!(grouped(0), "0");
+        assert_eq!(grouped(999), "999");
+        assert_eq!(grouped(1000), "1,000");
+        assert_eq!(grouped(1234567), "1,234,567");
+    }
+
+    #[test]
+    fn a_tied_rule_term_says_how_many_features_separate_the_isolates_equally_well() {
+        let (report, words) = rule_text_case("ties");
+        assert_eq!(rule_text(&report), words);
+        // `n_equivalent` counts the other rules: 3 of them make 4 features.
+        assert_eq!(report["models"]["scm"]["steps"][0]["n_equivalent"], 3);
+        assert_eq!(
+            words[0],
+            "presence of blaKPC; one of 4 features that separate these isolates equally well"
+        );
+        assert!(words[2].ends_with(
+            "; one of 21,524 features that separate the isolates the earlier rules left undecided equally well"
+        ));
+        assert_eq!(words[3..], ["presence of gyrA", "absence of gyrA"]);
+        assert_eq!(tie_words(0, 0), None);
+        // A report whose model holds no steps says nothing of ties.
+        let mut stepless = report.clone();
+        stepless["models"]["scm"]
+            .as_object_mut()
+            .unwrap()
+            .remove("steps");
+        assert_eq!(rule_text(&stepless)[0], "presence of blaKPC");
+    }
+
+    #[test]
+    fn a_rule_term_says_which_named_gene_groups_count_for_the_drugs_rule() {
+        let (report, words) = rule_text_case("counts_for_the_drugs_rule");
+        assert_eq!(rule_text(&report), words);
+        assert_eq!(
+            words[3],
+            "presence of k-mers matching 3 catalog families (blaAFM, blaNDM, ble); GRM's known-gene rule for this drug uses blaNDM but not ble"
+        );
+        // tet(A) has no gene-group row, so its term says nothing of the rule.
+        assert_eq!(words[4], "presence of tet(A)");
+        // Without a catalog block the report cannot say, so the terms keep
+        // their names and their ties alone.
+        let (bare, bare_words) = rule_text_case("no_catalog_block");
+        assert!(bare["catalog"].is_null());
+        assert_eq!(rule_text(&bare), bare_words);
+        assert!(bare_words.iter().all(|w| !w.contains("known-gene rule")));
+        // A row that does not say whether it counts is read as no row.
+        let mut silent = report.clone();
+        silent["catalog"]["groups"][1]
+            .as_object_mut()
+            .unwrap()
+            .remove("counts_for_rule");
+        assert_eq!(rule_text(&silent)[0], "presence of blaKPC");
+        // GRM's rule is the subject of every clause, and no clause says a
+        // gene "counts". A group that carries its family's bare name beside
+        // one with a subfamily is written apart from it.
+        let (alone, alone_words) = rule_text_case("a_group_named_alone");
+        assert_eq!(rule_text(&alone), alone_words);
+        assert_eq!(
+            alone_words[0],
+            "presence of aac(6')-Ib; GRM's known-gene rule for this drug uses aac(6')-Ib (AAC(6')-Ib family) but not the group named aac(6')-Ib alone"
+        );
+        assert_eq!(
+            alone_words[2..],
+            [
+                "presence of armA; GRM's known-gene rule for this drug does not use armA",
+                "presence of k-mers matching 2 catalog families (armA, rmtB); GRM's known-gene rule for this drug does not use armA or rmtB"
+            ]
+        );
+        for clause in words
+            .iter()
+            .chain(&alone_words)
+            .filter_map(|w| w.split_once("; "))
+            .map(|(_, rest)| rest)
+            .filter(|rest| rest.contains("known-gene rule"))
+        {
+            assert!(
+                clause.starts_with("GRM's known-gene rule for this drug "),
+                "{clause}"
+            );
+            assert!(!clause.contains("count"), "{clause}");
+        }
+        assert_eq!(list_words::<&str>(&[], "and"), "");
+        assert_eq!(list_words(&["a"], "or"), "a");
+        assert_eq!(list_words(&["a", "b"], "or"), "a or b");
+        assert_eq!(list_words(&["a", "b", "c"], "and"), "a, b and c");
+    }
+
+    #[test]
+    fn a_rule_term_names_its_gene_groups_in_one_order_whatever_the_order_of_the_rows() {
+        // The shared case lists its gene-group rows out of name order on both
+        // sides of the clause. The app's copy sorts the names
+        // (`familyRuleWords`), so a writer here that kept the rows' order
+        // would put other words into the index than the app expects.
+        let (report, words) = rule_text_case("gene_groups_out_of_order");
+        let rows: Vec<&str> = report["catalog"]["groups"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|g| g["group"].as_str().unwrap())
+            .collect();
+        let mut sorted = rows.clone();
+        sorted.sort_unstable();
+        assert_ne!(rows, sorted, "the case must hold its rows out of order");
+        assert_eq!(rule_text(&report), words);
+        assert_eq!(
+            words[0],
+            "presence of blaOXA; GRM's known-gene rule for this drug uses blaOXA (OXA-23 family) and blaOXA (OXA-51 family)"
+        );
+        assert!(words[1].ends_with("uses blaKPC and blaNDM but not qacE or sul1"));
+        assert!(words[2].ends_with("does not use qacE or sul1"));
+        // The rows in any other order give the same words.
+        let mut reversed = report.clone();
+        reversed["catalog"]["groups"]
+            .as_array_mut()
+            .unwrap()
+            .reverse();
+        assert_eq!(rule_text(&reversed), words);
+        // A row that does not say whether the rule uses its group is read as
+        // no row, and never as a group the rule does not use.
+        let (silent, silent_words) = rule_text_case("a_row_without_the_flag");
+        assert!(silent["catalog"]["groups"][0]["counts_for_rule"].is_null());
+        assert_eq!(rule_text(&silent), silent_words);
+        assert_eq!(silent_words[0], "presence of blaKPC");
+        assert!(silent_words[1].ends_with("; GRM's known-gene rule for this drug uses blaNDM"));
+    }
+
+    #[test]
+    fn the_index_numbers_the_wording_of_its_rule_text() {
+        // The wording changed twice before the index held a number for it;
+        // a change to `rule_text`'s words takes a new number.
+        assert_eq!(RULE_TEXT_VERSION, 3);
+        // The case file holds the words of one version, and says which.
+        let cases: Value =
+            serde_json::from_str(include_str!("../tests/data/rule-text-cases.json")).unwrap();
+        assert_eq!(cases["rule_text_version"], RULE_TEXT_VERSION);
+        let index = built_index(&[(
+            "meropenem",
+            serde_json::json!({"counts": {"samples": 7, "resistant": 3}}),
+        )]);
+        assert_eq!(index["rule_text_version"], RULE_TEXT_VERSION);
+    }
+
+    /// Every rule term of the reports in `GRM_REPORT_DIR/datasets`, in the
+    /// words the next index would hold, one line per term on stdout as
+    /// `dataset<TAB>position<TAB>words`. With `GRM_RULE_WORDS_OUT` set, the
+    /// same lines are written to that file, which the web app's
+    /// `realrules.test.ts` reads as `GRM_RULE_WORDS_RUST` and compares with
+    /// its own words for the same reports, term by term. It reads published
+    /// reports, which CI does not hold, so it is ignored there.
+    #[test]
+    #[ignore = "needs published dataset reports in GRM_REPORT_DIR"]
+    fn the_rule_words_of_published_reports() {
+        let dir = std::env::var("GRM_REPORT_DIR").expect("GRM_REPORT_DIR");
+        let mut paths: Vec<_> = std::fs::read_dir(Path::new(&dir).join("datasets"))
+            .unwrap()
+            .map(|e| e.unwrap().path())
+            .filter(|p| p.extension().is_some_and(|x| x == "json"))
+            .collect();
+        paths.sort();
+        assert!(!paths.is_empty(), "no report in {dir}/datasets");
+        let mut lines = String::new();
+        for path in paths {
+            let report: Value = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+            let id = report["id"].as_str().unwrap();
+            for (i, words) in rule_text(&report).iter().enumerate() {
+                lines.push_str(&format!("{id}\t{}\t{words}\n", i + 1));
+            }
+        }
+        print!("{lines}");
+        if let Ok(out) = std::env::var("GRM_RULE_WORDS_OUT") {
+            std::fs::write(&out, &lines).unwrap_or_else(|e| panic!("{out}: {e}"));
+        }
     }
 }

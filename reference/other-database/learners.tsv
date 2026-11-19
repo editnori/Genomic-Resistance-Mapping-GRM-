@@ -1,0 +1,28 @@
+species	learner	part	estimable	holds	recall_below	log_loss_worse	specificity_under_half	lowest_specificity	lowest_specificity_dataset	holds_with_specificity_under_half	rule	margin	L_holds	L_rule	C_holds	C_rule	D_holds	D_rule	T_holds	T_rule	median_bioprojects	share_below_cohort	share_above_cohort	readings_status
+acinetobacter_baumannii	cart	eight	14	9	4	4	0	0.6790	acinetobacter_baumannii__cefepime		meets	2	9	meets	9	meets	10	meets			11.5	12	2	fixed in advance
+acinetobacter_baumannii	lasso	eight	2	1	1	0	0	0.9759	acinetobacter_baumannii__ceftazidime		not assessable		1	not assessable	1	not assessable	1	not assessable			14	2	0	fixed in advance
+acinetobacter_baumannii	scm	eight	14	8	5	5	0	0.5714	acinetobacter_baumannii__sulfamethoxazole_trimethoprim		meets	1	8	meets	9	meets	9	meets			11.5	12	2	fixed in advance
+campylobacter_coli	cart	eight	7	4	3	0	0	0.9720	campylobacter_coli__clindamycin		meets	1	7	meets	4	meets	6	meets			2	7	0	fixed in advance
+campylobacter_coli	lasso	eight	6	2	3	1	0	0.9718	campylobacter_coli__erythromycin		fails	2	5	meets	2	fails	4	meets			3	6	0	fixed in advance
+campylobacter_coli	scm	eight	7	2	3	3	0	0.9666	campylobacter_coli__clindamycin		fails	2	5	meets	4	meets	6	meets			2	7	0	fixed in advance
+campylobacter_jejuni	cart	eight	3	3	0	0	0	0.9970	campylobacter_jejuni__tetracycline		meets	2	3	meets	3	meets	3	meets			5	1	2	fixed in advance
+campylobacter_jejuni	lasso	eight	3	3	0	0	0	0.9970	campylobacter_jejuni__tetracycline		meets	2	3	meets	3	meets	3	meets			5	1	2	fixed in advance
+campylobacter_jejuni	scm	eight	3	3	0	0	0	0.9970	campylobacter_jejuni__tetracycline		meets	2	3	meets	3	meets	3	meets			5	1	2	fixed in advance
+escherichia_coli	cart	pilot	25	12	9	8	3	0.0000	escherichia_coli__cefpodoxime	escherichia_coli__ampicillin_sulbactam	fails	1	15	meets	11	fails	18	meets	13	meets	15	21	4	exploratory
+escherichia_coli	lasso	pilot	4	3	1	0	2	0.0000	escherichia_coli__cefpodoxime	escherichia_coli__cefpodoxime;escherichia_coli__cephalothin	meets	1	4	meets	1	fails	4	meets	3	meets	8	2	2	exploratory
+escherichia_coli	scm	pilot	25	14	10	6	2	0.0000	escherichia_coli__cefpodoxime	escherichia_coli__ampicillin_sulbactam	meets	2	17	meets	14	meets	21	meets	15	meets	15	21	4	exploratory
+klebsiella_pneumoniae	cart	eight	26	12	7	13	2	0.0000	klebsiella_pneumoniae__cefpodoxime	klebsiella_pneumoniae__polymyxin_b	fails	2	14	meets	12	fails	18	meets			16.5	13	13	fixed in advance
+klebsiella_pneumoniae	lasso	eight	6	4	1	2	1	0.0183	klebsiella_pneumoniae__polymyxin_b	klebsiella_pneumoniae__polymyxin_b	meets	1	5	meets	4	meets	5	meets			9.5	3	3	fixed in advance
+klebsiella_pneumoniae	scm	eight	26	14	10	10	2	0.0000	klebsiella_pneumoniae__cefpodoxime	klebsiella_pneumoniae__polymyxin_b	meets	1	16	meets	14	meets	17	meets			16.5	13	13	fixed in advance
+neisseria_gonorrhoeae	cart	eight	3	0	0	3	1	0.4906	neisseria_gonorrhoeae__tetracycline		fails	2	0	fails	0	fails	1	fails			7	1	2	fixed in advance
+neisseria_gonorrhoeae	lasso	eight	0	0	0	0	0				not assessable		0	not assessable	0	not assessable	0	not assessable				0	0	fixed in advance
+neisseria_gonorrhoeae	scm	eight	3	0	0	3	1	0.0000	neisseria_gonorrhoeae__tetracycline		fails	2	0	fails	1	fails	2	meets			7	1	2	fixed in advance
+pseudomonas_aeruginosa	cart	eight	10	7	2	3	2	0.2963	pseudomonas_aeruginosa__imipenem	pseudomonas_aeruginosa__cefepime	meets	2	7	meets	7	meets	9	meets			15	1	9	fixed in advance
+pseudomonas_aeruginosa	lasso	eight	3	3	0	0	0	0.5312	pseudomonas_aeruginosa__piperacillin_tazobactam		meets	2	3	meets	3	meets	3	meets			11	0	3	fixed in advance
+pseudomonas_aeruginosa	scm	eight	10	8	1	1	1	0.3333	pseudomonas_aeruginosa__cefepime	pseudomonas_aeruginosa__cefepime	meets	3	10	meets	9	meets	10	meets			15	1	9	fixed in advance
+salmonella_enterica	cart	eight	12	6	3	3	0	0.7237	salmonella_enterica__nalidixic_acid		fails	1	7	meets	6	fails	7	meets			16.5	12	0	fixed in advance
+salmonella_enterica	lasso	eight	2	2	0	0	0	0.9995	salmonella_enterica__amoxicillin_clavulanate		not assessable		2	not assessable	2	not assessable	2	not assessable			13.5	2	0	fixed in advance
+salmonella_enterica	scm	eight	12	10	1	1	1	0.3783	salmonella_enterica__nalidixic_acid		meets	4	10	meets	10	meets	10	meets			16.5	12	0	fixed in advance
+staphylococcus_aureus	cart	eight	9	9	0	0	0	0.8000	staphylococcus_aureus__penicillin		meets	5	9	meets	9	meets	8	meets			10	8	1	fixed in advance
+staphylococcus_aureus	lasso	eight	2	2	0	0	0	0.9797	staphylococcus_aureus__gentamicin		not assessable		2	not assessable	2	not assessable	2	not assessable			11.5	2	0	fixed in advance
+staphylococcus_aureus	scm	eight	9	7	2	0	0	0.7714	staphylococcus_aureus__penicillin		meets	3	8	meets	7	meets	8	meets			10	8	1	fixed in advance

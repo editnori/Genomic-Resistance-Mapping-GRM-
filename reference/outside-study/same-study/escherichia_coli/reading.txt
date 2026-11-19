@@ -1,0 +1,153 @@
+Outside-study test, escherichia_coli, same-study population
+This is a retrospective test on newly deposited studies from the same database.
+It is not a lockbox: the batch's metadata and label totals were read before the rules were frozen.
+The genomes come from the same database as the cohort.
+
+Frozen genomes: 87. Scored: 87 (8 of them borderline in the species check, kept and flagged).
+Genomes excluded, no sequence: 0.
+Genomes excluded, species check failed: 0.
+Genomes excluded, not counted: 0.
+
+Each model is the report's final model, fitted once on the whole cohort and applied unchanged.
+The report's figures are for models refitted in each cross-validation fold and scored on held-out cohort genomes.
+Calls use the 0.5 cutoff. Intervals are exact Clopper-Pearson 95% intervals.
+A dataset with fewer than 25 resistant or 25 susceptible scored genomes is reported as counts only.
+Sensitivity and specificity are over the genomes a learner called; genomes with no call are counted in their own column.
+The known-gene rule's reference figure is a fixed rule applied to the whole cohort: nothing was fitted, so there is no cross-validation figure for it.
+The datasets share genomes and studies, so they are not independent of each other.
+Precision depends on the share of resistant genomes, which differs between the cohort and the new genomes.
+Scored genomes with the same k-mer set as a cohort genome: 0; as another scored genome: 0 (listed in duplicates.tsv; none is excluded for it).
+Stage attempts: setup 1, fetch 1, species-check 1, count 1, known-gene 1, predict 1.
+
+escherichia_coli__aztreonam: 40 resistant and 45 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA288601 holds 40 of the 40 resistant genomes (100.0%); PRJNA288601 holds 45 of the 45 susceptible genomes (100.0%). Of 1 study, 0 can be left out with 25 of each class remaining.
+  Every scored genome is from one study, so the estimate is that study's and no study-to-study range can be shown.
+  scm: TP 32, FN 8, FP 3, TN 42. Sensitivity 80.0% [64.4%, 90.9%], lineage split 81.3%, random split 86.7%: consistent. Specificity 93.3% [81.7%, 98.6%], lineage split 85.7%, random split 92.6%: consistent.
+    Reference figure: cross-validation, lineage split.
+  cart: TP 26, FN 14, FP 1, TN 44. Sensitivity 65.0% [48.3%, 79.4%], lineage split 82.2%, random split 88.9%: below. Specificity 97.8% [88.2%, 99.9%], lineage split 86.5%, random split 92.0%: above.
+    Reference figure: cross-validation, lineage split.
+  known_gene: TP 39, FN 1, FP 42, TN 3. Sensitivity 97.5% [86.8%, 99.9%], lineage split 99.1%, random split 99.1%: consistent. Specificity 6.7% [1.4%, 18.3%], lineage split 8.9%, random split 8.9%: consistent.
+    Reference figure: fixed rule, whole cohort.
+escherichia_coli__cefazolin: 56 resistant and 25 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA288601 holds 56 of the 56 resistant genomes (100.0%); PRJNA288601 holds 25 of the 25 susceptible genomes (100.0%). Of 1 study, 0 can be left out with 25 of each class remaining.
+  Every scored genome is from one study, so the estimate is that study's and no study-to-study range can be shown.
+  scm: TP 42, FN 14, FP 5, TN 20. Sensitivity 75.0% [61.6%, 85.6%], lineage split 68.0%, random split 85.4%: consistent. Specificity 80.0% [59.3%, 93.2%], lineage split 65.2%, random split 84.8%: consistent.
+    Reference figure: cross-validation, lineage split.
+  cart: TP 45, FN 11, FP 6, TN 19. Sensitivity 80.4% [67.6%, 89.8%], lineage split 70.5%, random split 89.1%: consistent. Specificity 76.0% [54.9%, 90.6%], lineage split 88.0%, random split 75.0%: consistent.
+    Reference figure: cross-validation, lineage split.
+  lasso: TP 40, FN 16, FP 4, TN 21. Sensitivity 71.4% [57.8%, 82.7%], lineage split 74.8%, random split 91.3%: consistent. Specificity 84.0% [63.9%, 95.5%], lineage split 82.6%, random split 81.5%: consistent.
+    Reference figure: cross-validation, lineage split.
+  known_gene: TP 56, FN 0, FP 22, TN 3. Sensitivity 100.0% [93.6%, 100.0%], lineage split 99.7%, random split 99.7%: consistent. Specificity 12.0% [2.5%, 31.2%], lineage split 21.7%, random split 21.7%: consistent.
+    Reference figure: fixed rule, whole cohort.
+escherichia_coli__cefepime: 29 resistant and 58 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA288601 holds 29 of the 29 resistant genomes (100.0%); PRJNA288601 holds 58 of the 58 susceptible genomes (100.0%). Of 1 study, 0 can be left out with 25 of each class remaining.
+  Every scored genome is from one study, so the estimate is that study's and no study-to-study range can be shown.
+  scm: TP 22, FN 7, FP 7, TN 51. Sensitivity 75.9% [56.5%, 89.7%], lineage split 76.8%, random split 83.4%: consistent. Specificity 87.9% [76.7%, 95.0%], lineage split 91.6%, random split 89.7%: consistent.
+    Reference figure: cross-validation, lineage split.
+  cart: TP 17, FN 12, FP 11, TN 47. Sensitivity 58.6% [38.9%, 76.5%], lineage split 81.5%, random split 83.4%: below. Specificity 81.0% [68.6%, 90.1%], lineage split 85.7%, random split 86.3%: consistent.
+    Reference figure: cross-validation, lineage split.
+  known_gene: TP 29, FN 0, FP 55, TN 3. Sensitivity 100.0% [88.1%, 100.0%], lineage split 99.5%, random split 99.5%: consistent. Specificity 5.2% [1.1%, 14.4%], lineage split 14.8%, random split 14.8%: below.
+    Reference figure: fixed rule, whole cohort.
+escherichia_coli__cefotaxime: 45 resistant and 42 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA288601 holds 45 of the 45 resistant genomes (100.0%); PRJNA288601 holds 42 of the 42 susceptible genomes (100.0%). Of 1 study, 0 can be left out with 25 of each class remaining.
+  Every scored genome is from one study, so the estimate is that study's and no study-to-study range can be shown.
+  scm: TP 42, FN 3, FP 1, TN 41. Sensitivity 93.3% [81.7%, 98.6%], lineage split 85.9%, random split 88.3%: consistent. Specificity 97.6% [87.4%, 99.9%], lineage split 97.2%, random split 97.4%: consistent.
+    Reference figure: cross-validation, lineage split.
+  cart: TP 32, FN 13, FP 1, TN 41. Sensitivity 71.1% [55.7%, 83.6%], lineage split 82.3%, random split 87.0%: consistent. Specificity 97.6% [87.4%, 99.9%], lineage split 97.2%, random split 97.4%: consistent.
+    Reference figure: cross-validation, lineage split.
+  known_gene: TP 45, FN 0, FP 39, TN 3. Sensitivity 100.0% [92.1%, 100.0%], lineage split 99.3%, random split 99.3%: consistent. Specificity 7.1% [1.5%, 19.5%], lineage split 14.2%, random split 14.2%: consistent.
+    Reference figure: fixed rule, whole cohort.
+escherichia_coli__cefoxitin: 28 resistant and 54 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA288601 holds 28 of the 28 resistant genomes (100.0%); PRJNA288601 holds 54 of the 54 susceptible genomes (100.0%). Of 1 study, 0 can be left out with 25 of each class remaining.
+  Every scored genome is from one study, so the estimate is that study's and no study-to-study range can be shown.
+  scm: TP 22, FN 6, FP 3, TN 51. Sensitivity 78.6% [59.0%, 91.7%], lineage split 79.7%, random split 80.5%: consistent. Specificity 94.4% [84.6%, 98.8%], lineage split 86.7%, random split 94.0%: consistent.
+    Reference figure: cross-validation, lineage split.
+  cart: TP 22, FN 6, FP 9, TN 45. Sensitivity 78.6% [59.0%, 91.7%], lineage split 77.9%, random split 85.0%: consistent. Specificity 83.3% [70.7%, 92.1%], lineage split 81.4%, random split 88.2%: consistent.
+    Reference figure: cross-validation, lineage split.
+  known_gene: TP 28, FN 0, FP 51, TN 3. Sensitivity 100.0% [87.7%, 100.0%], lineage split 99.5%, random split 99.5%: consistent. Specificity 5.6% [1.2%, 15.4%], lineage split 10.2%, random split 10.2%: consistent.
+    Reference figure: fixed rule, whole cohort.
+escherichia_coli__ceftazidime: 36 resistant and 48 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA288601 holds 36 of the 36 resistant genomes (100.0%); PRJNA288601 holds 48 of the 48 susceptible genomes (100.0%). Of 1 study, 0 can be left out with 25 of each class remaining.
+  Every scored genome is from one study, so the estimate is that study's and no study-to-study range can be shown.
+  scm: TP 29, FN 7, FP 2, TN 46. Sensitivity 80.6% [64.0%, 91.8%], lineage split 87.2%, random split 86.5%: consistent. Specificity 95.8% [85.7%, 99.5%], lineage split 92.1%, random split 94.7%: consistent.
+    Reference figure: cross-validation, lineage split.
+  cart: TP 25, FN 11, FP 5, TN 43. Sensitivity 69.4% [51.9%, 83.7%], lineage split 88.4%, random split 89.2%: below. Specificity 89.6% [77.3%, 96.5%], lineage split 88.4%, random split 91.6%: consistent.
+    Reference figure: cross-validation, lineage split.
+  known_gene: TP 36, FN 0, FP 45, TN 3. Sensitivity 100.0% [90.3%, 100.0%], lineage split 99.5%, random split 99.5%: consistent. Specificity 6.2% [1.3%, 17.2%], lineage split 15.8%, random split 15.8%: consistent.
+    Reference figure: fixed rule, whole cohort.
+escherichia_coli__ceftriaxone: 45 resistant and 42 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA288601 holds 45 of the 45 resistant genomes (100.0%); PRJNA288601 holds 42 of the 42 susceptible genomes (100.0%). Of 1 study, 0 can be left out with 25 of each class remaining.
+  Every scored genome is from one study, so the estimate is that study's and no study-to-study range can be shown.
+  scm: TP 41, FN 4, FP 2, TN 40. Sensitivity 91.1% [78.8%, 97.5%], lineage split 81.5%, random split 93.6%: consistent. Specificity 95.2% [83.8%, 99.4%], lineage split 96.1%, random split 97.1%: consistent.
+    Reference figure: cross-validation, lineage split.
+  cart: TP 41, FN 4, FP 1, TN 41. Sensitivity 91.1% [78.8%, 97.5%], lineage split 89.5%, random split 91.8%: consistent. Specificity 97.6% [87.4%, 99.9%], lineage split 92.4%, random split 95.1%: consistent.
+    Reference figure: cross-validation, lineage split.
+  known_gene: TP 45, FN 0, FP 39, TN 3. Sensitivity 100.0% [92.1%, 100.0%], lineage split 99.8%, random split 99.8%: consistent. Specificity 7.1% [1.5%, 19.5%], lineage split 24.3%, random split 24.3%: below.
+    Reference figure: fixed rule, whole cohort.
+escherichia_coli__ciprofloxacin: 51 resistant and 33 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA288601 holds 51 of the 51 resistant genomes (100.0%); PRJNA288601 holds 33 of the 33 susceptible genomes (100.0%). Of 1 study, 0 can be left out with 25 of each class remaining.
+  Every scored genome is from one study, so the estimate is that study's and no study-to-study range can be shown.
+  scm: TP 49, FN 2, FP 0, TN 33. Sensitivity 96.1% [86.5%, 99.5%], lineage split 93.0%, random split 93.6%: consistent. Specificity 100.0% [89.4%, 100.0%], lineage split 89.1%, random split 98.6%: above.
+    Reference figure: cross-validation, lineage split.
+  cart: TP 50, FN 1, FP 1, TN 32. Sensitivity 98.0% [89.6%, 100.0%], lineage split 94.1%, random split 93.7%: consistent. Specificity 97.0% [84.2%, 99.9%], lineage split 88.0%, random split 96.6%: consistent.
+    Reference figure: cross-validation, lineage split.
+  known_gene: TP 14, FN 37, FP 0, TN 33. Sensitivity 27.5% [15.9%, 41.7%], lineage split 38.7%, random split 38.7%: consistent. Specificity 100.0% [89.4%, 100.0%], lineage split 92.9%, random split 92.9%: consistent.
+    Reference figure: fixed rule, whole cohort.
+escherichia_coli__ertapenem: 31 resistant and 56 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA288601 holds 31 of the 31 resistant genomes (100.0%); PRJNA288601 holds 56 of the 56 susceptible genomes (100.0%). Of 1 study, 0 can be left out with 25 of each class remaining.
+  Every scored genome is from one study, so the estimate is that study's and no study-to-study range can be shown.
+  scm: TP 16, FN 15, FP 0, TN 56. Sensitivity 51.6% [33.1%, 69.8%], lineage split 81.0%, random split 86.3%: below. Specificity 100.0% [93.6%, 100.0%], lineage split 92.5%, random split 96.3%: above.
+    Reference figure: cross-validation, lineage split.
+  cart: TP 20, FN 11, FP 0, TN 56. Sensitivity 64.5% [45.4%, 80.8%], lineage split 80.5%, random split 80.5%: consistent. Specificity 100.0% [93.6%, 100.0%], lineage split 89.6%, random split 92.7%: above.
+    Reference figure: cross-validation, lineage split.
+  known_gene: TP 16, FN 15, FP 0, TN 56. Sensitivity 51.6% [33.1%, 69.8%], lineage split 86.3%, random split 86.3%: below. Specificity 100.0% [93.6%, 100.0%], lineage split 96.6%, random split 96.6%: consistent.
+    Reference figure: fixed rule, whole cohort.
+escherichia_coli__levofloxacin: 50 resistant and 34 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA288601 holds 50 of the 50 resistant genomes (100.0%); PRJNA288601 holds 34 of the 34 susceptible genomes (100.0%). Of 1 study, 0 can be left out with 25 of each class remaining.
+  Every scored genome is from one study, so the estimate is that study's and no study-to-study range can be shown.
+  scm: TP 48, FN 2, FP 0, TN 34. Sensitivity 96.0% [86.3%, 99.5%], lineage split 94.6%, random split 93.9%: consistent. Specificity 100.0% [89.7%, 100.0%], lineage split 79.8%, random split 94.5%: above.
+    Reference figure: cross-validation, lineage split.
+  cart: TP 48, FN 2, FP 0, TN 34. Sensitivity 96.0% [86.3%, 99.5%], lineage split 94.6%, random split 93.5%: consistent. Specificity 100.0% [89.7%, 100.0%], lineage split 80.7%, random split 94.5%: above.
+    Reference figure: cross-validation, lineage split.
+  lasso: TP 48, FN 2, FP 0, TN 34. Sensitivity 96.0% [86.3%, 99.5%], lineage split 94.9%, random split 95.9%: consistent. Specificity 100.0% [89.7%, 100.0%], lineage split 74.3%, random split 93.6%: above.
+    Reference figure: cross-validation, lineage split.
+  known_gene: TP 14, FN 36, FP 0, TN 34. Sensitivity 28.0% [16.2%, 42.5%], lineage split 36.4%, random split 36.4%: consistent. Specificity 100.0% [89.7%, 100.0%], lineage split 83.5%, random split 83.5%: above.
+    Reference figure: fixed rule, whole cohort.
+escherichia_coli__piperacillin_tazobactam: 32 resistant and 52 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA288601 holds 32 of the 32 resistant genomes (100.0%); PRJNA288601 holds 52 of the 52 susceptible genomes (100.0%). Of 1 study, 0 can be left out with 25 of each class remaining.
+  Every scored genome is from one study, so the estimate is that study's and no study-to-study range can be shown.
+  scm: TP 18, FN 14, FP 1, TN 51. Sensitivity 56.2% [37.7%, 73.6%], lineage split 75.3%, random split 77.4%: below. Specificity 98.1% [89.7%, 100.0%], lineage split 100.0%, random split 99.6%: below.
+    Reference figure: cross-validation, lineage split; a reference sensitivity or specificity is exactly 0 or 1.
+  cart: TP 27, FN 5, FP 42, TN 10. Sensitivity 84.4% [67.2%, 94.7%], lineage split 69.2%, random split 75.7%: consistent. Specificity 19.2% [9.6%, 32.5%], lineage split 94.2%, random split 95.2%: below.
+    Reference figure: cross-validation, lineage split.
+  known_gene: TP 32, FN 0, FP 49, TN 3. Sensitivity 100.0% [89.1%, 100.0%], lineage split 99.0%, random split 99.0%: consistent. Specificity 5.8% [1.2%, 15.9%], lineage split 5.1%, random split 5.1%: consistent.
+    Reference figure: fixed rule, whole cohort.
+escherichia_coli__sulfamethoxazole_trimethoprim: 48 resistant and 39 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA288601 holds 48 of the 48 resistant genomes (100.0%); PRJNA288601 holds 39 of the 39 susceptible genomes (100.0%). Of 1 study, 0 can be left out with 25 of each class remaining.
+  Every scored genome is from one study, so the estimate is that study's and no study-to-study range can be shown.
+  scm: TP 46, FN 2, FP 2, TN 37. Sensitivity 95.8% [85.7%, 99.5%], lineage split 89.8%, random split 91.2%: consistent. Specificity 94.9% [82.7%, 99.4%], lineage split 83.5%, random split 84.1%: consistent.
+    Reference figure: cross-validation, lineage split.
+  cart: TP 41, FN 7, FP 4, TN 35. Sensitivity 85.4% [72.2%, 93.9%], lineage split 80.5%, random split 89.1%: consistent. Specificity 89.7% [75.8%, 97.1%], lineage split 88.1%, random split 85.5%: consistent.
+    Reference figure: cross-validation, lineage split.
+  known_gene: TP 42, FN 6, FP 1, TN 38. Sensitivity 87.5% [74.8%, 95.3%], lineage split 94.0%, random split 94.0%: consistent. Specificity 97.4% [86.5%, 99.9%], lineage split 94.5%, random split 94.5%: consistent.
+    Reference figure: fixed rule, whole cohort.
+escherichia_coli__tetracycline: 43 resistant and 40 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA288601 holds 43 of the 43 resistant genomes (100.0%); PRJNA288601 holds 40 of the 40 susceptible genomes (100.0%). Of 1 study, 0 can be left out with 25 of each class remaining.
+  Every scored genome is from one study, so the estimate is that study's and no study-to-study range can be shown.
+  scm: TP 41, FN 2, FP 0, TN 40. Sensitivity 95.3% [84.2%, 99.4%], lineage split 94.2%, random split 94.2%: consistent. Specificity 100.0% [91.2%, 100.0%], lineage split 95.9%, random split 95.6%: consistent.
+    Reference figure: cross-validation, lineage split.
+  cart: TP 41, FN 2, FP 0, TN 40. Sensitivity 95.3% [84.2%, 99.4%], lineage split 85.6%, random split 93.8%: consistent. Specificity 100.0% [91.2%, 100.0%], lineage split 96.2%, random split 95.9%: consistent.
+    Reference figure: cross-validation, lineage split.
+  known_gene: TP 41, FN 2, FP 0, TN 40. Sensitivity 95.3% [84.2%, 99.4%], lineage split 95.0%, random split 95.0%: consistent. Specificity 100.0% [91.2%, 100.0%], lineage split 95.0%, random split 95.0%: consistent.
+    Reference figure: fixed rule, whole cohort.
+
+Readings per learner (each dataset contributes sensitivity and specificity):
+  scm: below 3, consistent 20, above 3, not read 0.
+  cart: below 4, consistent 19, above 3, not read 0.
+  lasso: below 0, consistent 3, above 1, not read 0.
+  known_gene: below 3, consistent 22, above 1, not read 0.
+The reading is descriptive. It has no multiplicity correction and is not a hypothesis test.
+paired.tsv sets each learner beside the known-gene rule on the same genomes (counts only, no test).
+
+Not run here: sequence-distance novelty, partial-feature counts (--matrix), calibration,
+any hypothesis test, forests and boosted trees (not published in full).

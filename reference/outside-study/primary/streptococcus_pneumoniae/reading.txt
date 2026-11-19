@@ -1,0 +1,142 @@
+Outside-study test, streptococcus_pneumoniae, primary population
+This is a retrospective test on newly deposited studies from the same database.
+It is not a lockbox: the batch's metadata and label totals were read before the rules were frozen.
+The genomes come from the same database as the cohort.
+
+Frozen genomes: 503. Scored: 503 (3 of them borderline in the species check, kept and flagged).
+Genomes excluded, no sequence: 0.
+Genomes excluded, species check failed: 0.
+Genomes excluded, not counted: 0.
+
+Each model is the report's final model, fitted once on the whole cohort and applied unchanged.
+The report's figures are for models refitted in each cross-validation fold and scored on held-out cohort genomes.
+Calls use the 0.5 cutoff. Intervals are exact Clopper-Pearson 95% intervals.
+A dataset with fewer than 25 resistant or 25 susceptible scored genomes is reported as counts only.
+Sensitivity and specificity are over the genomes a learner called; genomes with no call are counted in their own column.
+The known-gene rule's reference figure is a fixed rule applied to the whole cohort: nothing was fitted, so there is no cross-validation figure for it.
+The datasets share genomes and studies, so they are not independent of each other.
+Precision depends on the share of resistant genomes, which differs between the cohort and the new genomes.
+Scored genomes with the same k-mer set as a cohort genome: 0; as another scored genome: 2 (listed in duplicates.tsv; none is excluded for it).
+Stage attempts: setup 1, fetch 1, species-check 1, count 1, known-gene 1, predict 1.
+
+streptococcus_pneumoniae__chloramphenicol: 90 resistant and 412 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA1357085 holds 48 of the 90 resistant genomes (53.3%); PRJNA320861 holds 262 of the 412 susceptible genomes (63.6%). Of 3 studies, 3 can be left out with 25 of each class remaining.
+  More than half of the resistant genomes are from PRJNA1357085 and more than half of the susceptible genomes from PRJNA320861, so sensitivity and specificity are measured mostly on different studies.
+  scm: TP 87, FN 3, FP 125, TN 287. Sensitivity 96.7% [90.6%, 99.3%], lineage split 68.7%, random split 86.6%: above. Specificity 69.7% [65.0%, 74.1%], lineage split 97.7%, random split 95.4%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 3 BioProjects left out: sensitivity 93.8% to 100.0%, specificity 17.3% to 85.5% (over 3 estimates).
+  cart: TP 63, FN 27, FP 109, TN 303. Sensitivity 70.0% [59.4%, 79.2%], lineage split 67.2%, random split 88.8%: consistent. Specificity 73.5% [69.0%, 77.7%], lineage split 93.2%, random split 91.9%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 3 BioProjects left out: sensitivity 45.8% to 97.6%, specificity 30.0% to 88.3% (over 3 estimates).
+  lasso: TP 60, FN 30, FP 54, TN 358. Sensitivity 66.7% [55.9%, 76.3%], lineage split 73.1%, random split 88.8%: consistent. Specificity 86.9% [83.2%, 90.0%], lineage split 94.8%, random split 95.5%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 3 BioProjects left out: sensitivity 39.6% to 97.6%, specificity 64.0% to 95.0% (over 3 estimates).
+  known_gene: TP 46, FN 44, FP 2, TN 410. Sensitivity 51.1% [40.3%, 61.8%], lineage split 68.7%, random split 68.7%: below. Specificity 99.5% [98.3%, 99.9%], lineage split 99.9%, random split 99.9%: below.
+    Reference figure: fixed rule, whole cohort.
+    With each of 3 BioProjects left out: sensitivity 10.4% to 97.6%, specificity 98.7% to 100.0% (over 3 estimates).
+streptococcus_pneumoniae__clindamycin: 195 resistant and 306 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJEB82317 holds 105 of the 195 resistant genomes (53.8%); PRJNA320861 holds 258 of the 306 susceptible genomes (84.3%). Of 3 studies, 3 can be left out with 25 of each class remaining.
+  More than half of the resistant genomes are from PRJEB82317 and more than half of the susceptible genomes from PRJNA320861, so sensitivity and specificity are measured mostly on different studies.
+  scm: TP 193, FN 2, FP 16, TN 290. Sensitivity 99.0% [96.3%, 99.9%], lineage split 93.4%, random split 93.4%: above. Specificity 94.8% [91.6%, 97.0%], lineage split 99.4%, random split 99.4%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 3 BioProjects left out: sensitivity 98.2% to 99.5%, specificity 66.7% to 99.7% (over 3 estimates).
+  cart: TP 193, FN 2, FP 16, TN 290. Sensitivity 99.0% [96.3%, 99.9%], lineage split 93.4%, random split 93.4%: above. Specificity 94.8% [91.6%, 97.0%], lineage split 99.4%, random split 99.4%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 3 BioProjects left out: sensitivity 98.2% to 99.5%, specificity 66.7% to 99.7% (over 3 estimates).
+  lasso: TP 193, FN 2, FP 16, TN 290. Sensitivity 99.0% [96.3%, 99.9%], lineage split 90.4%, random split 93.4%: above. Specificity 94.8% [91.6%, 97.0%], lineage split 97.7%, random split 99.3%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 3 BioProjects left out: sensitivity 98.2% to 99.5%, specificity 66.7% to 99.7% (over 3 estimates).
+  known_gene: TP 193, FN 2, FP 16, TN 290. Sensitivity 99.0% [96.3%, 99.9%], lineage split 93.4%, random split 93.4%: above. Specificity 94.8% [91.6%, 97.0%], lineage split 99.4%, random split 99.4%: below.
+    Reference figure: fixed rule, whole cohort.
+    With each of 3 BioProjects left out: sensitivity 98.2% to 100.0%, specificity 66.7% to 99.7% (over 3 estimates).
+streptococcus_pneumoniae__erythromycin: 222 resistant and 279 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJEB82317 holds 124 of the 222 resistant genomes (55.9%); PRJNA320861 holds 259 of the 279 susceptible genomes (92.8%). Of 3 studies, 2 can be left out with 25 of each class remaining.
+  More than half of the resistant genomes are from PRJEB82317 and more than half of the susceptible genomes from PRJNA320861, so sensitivity and specificity are measured mostly on different studies.
+  With PRJNA320861 left out, fewer than 25 resistant or 25 susceptible genomes remain, so no estimate can be shown without that study, and every leave-one-study-out range for this dataset includes it.
+  scm: TP 221, FN 1, FP 6, TN 273. Sensitivity 99.5% [97.5%, 100.0%], lineage split 94.6%, random split 93.9%: above. Specificity 97.8% [95.4%, 99.2%], lineage split 99.1%, random split 99.6%: consistent.
+    Reference figure: cross-validation, lineage split.
+    With each of 3 BioProjects left out: sensitivity 99.0% to 99.2%, specificity 97.7% to 100.0% (over 2 estimates).
+  cart: TP 216, FN 6, FP 11, TN 268. Sensitivity 97.3% [94.2%, 99.0%], lineage split 90.9%, random split 93.0%: above. Specificity 96.1% [93.1%, 98.0%], lineage split 98.3%, random split 98.5%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 3 BioProjects left out: sensitivity 95.9% to 98.4%, specificity 97.7% to 98.2% (over 2 estimates).
+  lasso: TP 221, FN 1, FP 6, TN 273. Sensitivity 99.5% [97.5%, 100.0%], lineage split 93.7%, random split 94.6%: above. Specificity 97.8% [95.4%, 99.2%], lineage split 92.6%, random split 99.5%: above.
+    Reference figure: cross-validation, lineage split.
+    With each of 3 BioProjects left out: sensitivity 99.0% to 99.2%, specificity 97.7% to 100.0% (over 2 estimates).
+  known_gene: TP 221, FN 1, FP 6, TN 273. Sensitivity 99.5% [97.5%, 100.0%], lineage split 94.8%, random split 94.8%: above. Specificity 97.8% [95.4%, 99.2%], lineage split 99.7%, random split 99.7%: below.
+    Reference figure: fixed rule, whole cohort.
+    With each of 3 BioProjects left out: sensitivity 99.2% to 100.0%, specificity 97.7% to 100.0% (over 2 estimates).
+streptococcus_pneumoniae__meropenem: 47 resistant and 302 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJEB82317 holds 28 of the 47 resistant genomes (59.6%); PRJNA320861 holds 190 of the 302 susceptible genomes (62.9%). Of 3 studies, 2 can be left out with 25 of each class remaining.
+  More than half of the resistant genomes are from PRJEB82317 and more than half of the susceptible genomes from PRJNA320861, so sensitivity and specificity are measured mostly on different studies.
+  With PRJEB82317 left out, fewer than 25 resistant or 25 susceptible genomes remain, so no estimate can be shown without that study, and every leave-one-study-out range for this dataset includes it.
+  scm: TP 47, FN 0, FP 50, TN 252. Sensitivity 100.0% [92.5%, 100.0%], lineage split 80.6%, random split 93.1%: above. Specificity 83.4% [78.8%, 87.5%], lineage split 98.6%, random split 98.6%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 3 BioProjects left out: sensitivity 100.0% to 100.0%, specificity 55.4% to 91.2% (over 2 estimates).
+  cart: TP 47, FN 0, FP 43, TN 259. Sensitivity 100.0% [92.5%, 100.0%], lineage split 94.4%, random split 94.4%: consistent. Specificity 85.8% [81.3%, 89.5%], lineage split 95.7%, random split 96.9%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 3 BioProjects left out: sensitivity 100.0% to 100.0%, specificity 61.6% to 93.6% (over 2 estimates).
+  lasso: TP 46, FN 1, FP 36, TN 266. Sensitivity 97.9% [88.7%, 99.9%], lineage split 95.2%, random split 91.7%: consistent. Specificity 88.1% [83.9%, 91.5%], lineage split 98.3%, random split 98.3%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 3 BioProjects left out: sensitivity 96.4% to 97.9%, specificity 67.9% to 92.8% (over 2 estimates).
+  known_gene: TP 0, FN 47, FP 0, TN 302. Sensitivity 0.0% [0.0%, 7.5%], lineage split 0.0%, random split 0.0%: consistent. Specificity 100.0% [98.8%, 100.0%], lineage split 100.0%, random split 100.0%: consistent.
+    Reference figure: fixed rule, whole cohort; a reference sensitivity or specificity is exactly 0 or 1.
+    With each of 3 BioProjects left out: sensitivity 0.0% to 0.0%, specificity 100.0% to 100.0% (over 2 estimates).
+streptococcus_pneumoniae__penicillin: 44 resistant and 308 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJEB82317 holds 44 of the 44 resistant genomes (100.0%); PRJNA320861 holds 185 of the 308 susceptible genomes (60.1%). Of 3 studies, 2 can be left out with 25 of each class remaining.
+  More than half of the resistant genomes are from PRJEB82317 and more than half of the susceptible genomes from PRJNA320861, so sensitivity and specificity are measured mostly on different studies.
+  With PRJEB82317 left out, fewer than 25 resistant or 25 susceptible genomes remain, so no estimate can be shown without that study, and every leave-one-study-out range for this dataset includes it.
+  scm: TP 43, FN 1, FP 74, TN 234. Sensitivity 97.7% [88.0%, 99.9%], lineage split 95.9%, random split 96.4%: consistent. Specificity 76.0% [70.8%, 80.6%], lineage split 92.4%, random split 97.5%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 3 BioProjects left out: sensitivity 97.7% to 97.7%, specificity 39.8% to 98.6% (over 2 estimates).
+  cart: TP 43, FN 1, FP 73, TN 235. Sensitivity 97.7% [88.0%, 99.9%], lineage split 98.5%, random split 97.4%: consistent. Specificity 76.3% [71.1%, 80.9%], lineage split 92.1%, random split 97.0%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 3 BioProjects left out: sensitivity 97.7% to 97.7%, specificity 40.7% to 98.6% (over 2 estimates).
+  lasso: TP 43, FN 1, FP 68, TN 240. Sensitivity 97.7% [88.0%, 99.9%], lineage split 95.4%, random split 96.9%: consistent. Specificity 77.9% [72.9%, 82.4%], lineage split 98.3%, random split 98.8%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 3 BioProjects left out: sensitivity 97.7% to 97.7%, specificity 44.7% to 98.6% (over 2 estimates).
+  known_gene: TP 0, FN 44, FP 0, TN 308. Sensitivity 0.0% [0.0%, 8.0%], lineage split 0.0%, random split 0.0%: consistent. Specificity 100.0% [98.8%, 100.0%], lineage split 99.9%, random split 99.9%: consistent.
+    Reference figure: fixed rule, whole cohort; a reference sensitivity or specificity is exactly 0 or 1.
+    With each of 3 BioProjects left out: sensitivity 0.0% to 0.0%, specificity 100.0% to 100.0% (over 2 estimates).
+streptococcus_pneumoniae__sulfamethoxazole_trimethoprim: 63 resistant and 257 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA1357085 holds 62 of the 63 resistant genomes (98.4%); PRJNA320861 holds 231 of the 257 susceptible genomes (89.9%). Of 2 studies, 1 can be left out with 25 of each class remaining.
+  More than half of the resistant genomes are from PRJNA1357085 and more than half of the susceptible genomes from PRJNA320861, so sensitivity and specificity are measured mostly on different studies.
+  With PRJNA1357085 left out, fewer than 25 resistant or 25 susceptible genomes remain, so no estimate can be shown without that study, and every leave-one-study-out range for this dataset includes it.
+  scm: TP 59, FN 4, FP 10, TN 247. Sensitivity 93.7% [84.5%, 98.2%], lineage split 92.7%, random split 96.8%: consistent. Specificity 96.1% [93.0%, 98.1%], lineage split 98.6%, random split 98.3%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 2 BioProjects left out: sensitivity 93.5% to 93.5%, specificity 61.5% to 61.5% (over 1 estimates).
+  cart: TP 60, FN 3, FP 14, TN 243. Sensitivity 95.2% [86.7%, 99.0%], lineage split 82.2%, random split 97.1%: above. Specificity 94.6% [91.0%, 97.0%], lineage split 82.7%, random split 98.4%: above.
+    Reference figure: cross-validation, lineage split.
+    With each of 2 BioProjects left out: sensitivity 95.2% to 95.2%, specificity 50.0% to 50.0% (over 1 estimates).
+  lasso: TP 59, FN 4, FP 12, TN 245. Sensitivity 93.7% [84.5%, 98.2%], lineage split 95.6%, random split 96.8%: consistent. Specificity 95.3% [92.0%, 97.6%], lineage split 98.7%, random split 99.2%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 2 BioProjects left out: sensitivity 93.5% to 93.5%, specificity 57.7% to 57.7% (over 1 estimates).
+  known_gene: TP 0, FN 63, FP 0, TN 257. Sensitivity 0.0% [0.0%, 5.7%], lineage split 0.0%, random split 0.0%: consistent. Specificity 100.0% [98.6%, 100.0%], lineage split 100.0%, random split 100.0%: consistent.
+    Reference figure: fixed rule, whole cohort; a reference sensitivity or specificity is exactly 0 or 1.
+    With each of 2 BioProjects left out: sensitivity 0.0% to 0.0%, specificity 100.0% to 100.0% (over 1 estimates).
+streptococcus_pneumoniae__tetracycline: 215 resistant and 271 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJEB82317 holds 123 of the 215 resistant genomes (57.2%); PRJNA320861 holds 247 of the 271 susceptible genomes (91.1%). Of 3 studies, 2 can be left out with 25 of each class remaining.
+  More than half of the resistant genomes are from PRJEB82317 and more than half of the susceptible genomes from PRJNA320861, so sensitivity and specificity are measured mostly on different studies.
+  With PRJNA320861 left out, fewer than 25 resistant or 25 susceptible genomes remain, so no estimate can be shown without that study, and every leave-one-study-out range for this dataset includes it.
+  scm: TP 213, FN 2, FP 13, TN 258. Sensitivity 99.1% [96.7%, 99.9%], lineage split 90.4%, random split 93.3%: above. Specificity 95.2% [91.9%, 97.4%], lineage split 98.2%, random split 98.6%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 3 BioProjects left out: sensitivity 98.9% to 99.2%, specificity 96.2% to 98.8% (over 2 estimates).
+  cart: TP 213, FN 2, FP 13, TN 258. Sensitivity 99.1% [96.7%, 99.9%], lineage split 91.1%, random split 93.0%: above. Specificity 95.2% [91.9%, 97.4%], lineage split 98.2%, random split 98.9%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 3 BioProjects left out: sensitivity 98.9% to 99.2%, specificity 96.2% to 98.8% (over 2 estimates).
+  lasso: TP 213, FN 2, FP 13, TN 258. Sensitivity 99.1% [96.7%, 99.9%], lineage split 90.8%, random split 91.1%: above. Specificity 95.2% [91.9%, 97.4%], lineage split 98.2%, random split 98.7%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 3 BioProjects left out: sensitivity 98.9% to 99.2%, specificity 95.8% to 99.2% (over 2 estimates).
+  known_gene: TP 213, FN 2, FP 13, TN 258. Sensitivity 99.1% [96.7%, 99.9%], lineage split 93.9%, random split 93.9%: above. Specificity 95.2% [91.9%, 97.4%], lineage split 98.2%, random split 98.2%: below.
+    Reference figure: fixed rule, whole cohort.
+    With each of 3 BioProjects left out: sensitivity 98.9% to 99.2%, specificity 96.2% to 98.8% (over 2 estimates).
+
+Readings per learner (each dataset contributes sensitivity and specificity):
+  scm: below 6, consistent 3, above 5, not read 0.
+  cart: below 6, consistent 3, above 5, not read 0.
+  lasso: below 6, consistent 4, above 4, not read 0.
+  known_gene: below 5, consistent 6, above 3, not read 0.
+The reading is descriptive. It has no multiplicity correction and is not a hypothesis test.
+paired.tsv sets each learner beside the known-gene rule on the same genomes (counts only, no test).
+
+Not run here: sequence-distance novelty, partial-feature counts (--matrix), calibration,
+any hypothesis test, forests and boosted trees (not published in full).

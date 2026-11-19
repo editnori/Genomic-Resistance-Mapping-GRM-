@@ -44,6 +44,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 /// private functions that skip the check (docs/matrix-scaling.md).
 pub const REVIEWED_COLUMNS: usize = 4096;
 
+/// Refuses more than `max_columns` genomes. `species::build_matrix` calls
+/// it with `REVIEWED_COLUMNS` before it writes any column block.
 pub(crate) fn ensure_reviewed(n: usize, max_columns: usize) -> Result<()> {
     ensure!(
         n <= max_columns,
@@ -258,7 +260,10 @@ fn build_with(
     threads_chunk: usize,
     force: Option<MergeKey>,
 ) -> Result<FeatureMatrix> {
-    let (readers, k) = open_ksets(kset_paths, "merge in column blocks (write_partial)")?;
+    let (readers, k) = open_ksets(
+        kset_paths,
+        "merge in column blocks with grm matrix --column-blocks 64",
+    )?;
     let n = readers.len();
     let natural = merge_key(k, n)?;
     let key = match force {
@@ -3995,11 +4000,11 @@ mod tests {
         let err = build(&paths, 1, 8).err().unwrap();
         let msg = format!("{err:#}");
         assert!(
-            msg.contains("raise the open-file limit (ulimit -n) above 200, or merge in column blocks (write_partial)"),
+            msg.contains("raise the open-file limit (ulimit -n) above 200, or merge in column blocks with grm matrix --column-blocks 64"),
             "{msg}"
         );
         // A block that is itself too wide is told to narrow, not to use
-        // write_partial again.
+        // column blocks again.
         let columns = columns_of(&paths);
         let wide = dir.path().join("wide.kpart");
         let err = write_partial(&paths, &columns, 0, &wide, 8, 0)
@@ -4009,7 +4014,8 @@ mod tests {
         assert!(
             msg.contains(
                 "raise the open-file limit (ulimit -n) above 200, or write narrower blocks"
-            ) && !msg.contains("(write_partial)"),
+            ) && !msg.contains("--column-blocks")
+                && !msg.contains("write_partial"),
             "{msg}"
         );
         assert_nothing_at(&wide);

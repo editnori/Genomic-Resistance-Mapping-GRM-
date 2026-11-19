@@ -43,7 +43,7 @@ describe("dataset catalog", () => {
     const base = manifest.datasets.find((d) => d.best_lineage !== null)!;
     const cells = firstRow(render([{ ...base, best_learner: null, best_random: null, best_lineage: null }]));
     expect(cells).toHaveLength(10);
-    expect(cells[1]).toContain("No eligible learner: No learner calls every isolate");
+    expect(cells[1]).toContain("No eligible learner: No learner is scored on every isolate");
     expect([cells[2], cells[3], cells[5], cells[6]]).toEqual(["–", "–", "–", "–"]);
     const scored = firstRow(render([base]));
     expect(scored[1]).toBe(`${pct(base.best_random)}${LEARNER_LABEL[base.best_learner!]}`);
@@ -120,12 +120,60 @@ describe("dataset catalog", () => {
     }
   });
 
-  it("keeps the species whole with its separator and lets a combination drug break after its slash", () => {
+  it("says the catalog column reads the AMRFinderPlus database with GRM's own matching, and that the program is not run", () => {
+    const tip = datasetColumns(false, undefined).find((c) => c.id === "catalog")!.tip!;
+    expect(tip.map((l) => [l.term, l.text])).toEqual([
+      [
+        "Known-gene catalog",
+        "A fixed rule's balanced accuracy: resistant when the genome carries a known resistance gene for the drug. GRM finds AMRFinderPlus database genes by k-mer containment; the AMRFinderPlus program is not run. Untrained, so one number serves both splits.",
+      ],
+    ]);
+  });
+
+  it("says under a rule that names several catalog families that the list is one pattern, and under no other rule", () => {
     const base = manifest.datasets[0]!;
-    const cell = firstRowHtml(render([{ ...base, antibiotic: "sulfamethoxazole/trimethoprim" }]))[0]!;
-    expect(visible(cell)).toContain(`Sulfamethoxazole/trimethoprim${speciesShort(base.species)} · ${base.drug_class}`);
+    const note = "Not a list of genes an isolate carries: one k-mer pattern matches all of these families.";
+    const several = "presence of k-mers matching 3 catalog families (blaAFM, blaNDM, ble)";
+    const ruleCell = (scm_rules: string[]) => firstRowHtml(render([{ ...base, scm_rules }])).at(-1)!;
+    // One rule, and the first of several: the note sits under the rule.
+    for (const rules of [[several], [several, "absence of blaTEM"]]) {
+      const cell = ruleCell(rules);
+      expect(cell.match(/data-rule-note/g)).toHaveLength(1);
+      expect(text(cell).startsWith(`${several}${note}`)).toBe(true);
+    }
+    // A lone rule that fits has no button, so nothing in the cell would open a note cut to one line:
+    // there the note wraps and has no tooltip. Under the first of several rules "+1" opens it, so it is
+    // cut to one line and whole in a tooltip.
+    const noteOf = (rules: string[]) => /<span data-rule-note=""[^>]*>/.exec(ruleCell(rules))![0];
+    expect(ruleCell([several])).not.toContain("<button");
+    expect(noteOf([several])).toContain("whitespace-normal");
+    expect(noteOf([several])).not.toMatch(/truncate|title=/);
+    expect(ruleCell([several, "absence of blaTEM"])).toContain("<button");
+    expect(noteOf([several, "absence of blaTEM"])).toContain("truncate");
+    expect(noteOf([several, "absence of blaTEM"])).toContain(`title="${note}"`);
+    // The words the next release's index adds after the families keep the note.
+    expect(ruleCell([`${several}; GRM's known-gene rule for this drug uses blaNDM but not ble`])).toContain(note);
+    // A rule that names one family, a gene or a place has none, and neither has an empty model.
+    for (const rules of [["presence of blaKPC"], ["presence of blaKPC", several], ["absence of k-mers 46 bp from the nearest annotated protein-coding gene, mgrB"], []]) {
+      expect(ruleCell(rules)).not.toContain("data-rule-note");
+      expect(ruleCell(rules)).not.toContain(note);
+    }
+  });
+
+  it("keeps the species whole with its separator and lets a combination drug break after its slash", () => {
+    const base = { ...manifest.datasets[0]!, species: "Klebsiella pneumoniae", antibiotic: "sulfamethoxazole/trimethoprim" };
+    const cell = firstRowHtml(render([base]))[0]!;
+    expect(visible(cell)).toBe(`Sulfamethoxazole/trimethoprim${speciesShort(base.species)} · ${base.drug_class}`);
     expect(cell).toContain("/<wbr/>trimethoprim");
     // The separator closes the species' unbreakable run, so no line starts with it.
     expect(cell).toContain(`<i>${speciesShort(base.species)}</i> ·</span>`);
+  });
+
+  it("names a species with an everyday name by that name, out of italics", () => {
+    const base = { ...manifest.datasets[0]!, species: "Staphylococcus aureus", antibiotic: "oxacillin" };
+    const cell = firstRowHtml(render([base]))[0]!;
+    expect(visible(cell)).toBe(`OxacillinStaph · ${base.drug_class}`);
+    expect(cell).toContain("Staph ·</span>");
+    expect(cell).not.toContain("<i>");
   });
 });

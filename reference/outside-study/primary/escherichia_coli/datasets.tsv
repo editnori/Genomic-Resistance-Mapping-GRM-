@@ -1,0 +1,19 @@
+dataset	labelled_resistant	labelled_susceptible	excluded_no_sequence	excluded_species_check_failed	excluded_not_counted	scored_resistant	scored_susceptible	scored_borderline	reportable	lasso_complete	known_gene	top_study_resistant	top_study_resistant_count	top_study_resistant_share	top_study_susceptible	top_study_susceptible_count	top_study_susceptible_share	studies	loso_folds_reportable	top_study_resistant_fold_reportable	top_study_susceptible_fold_reportable	studies_not_left_out	scored_no_bioproject	top_study_resistant_tied	top_study_susceptible_tied
+escherichia_coli__amikacin	64	528	0	0	0	64	528	324	yes	yes	scored	PRJNA841811	58	0.906250	PRJNA841811	356	0.674242	4	3	no	no	PRJNA841811	0		
+escherichia_coli__ampicillin	547	53	0	0	0	547	53	327	yes	no	scored	PRJNA841811	397	0.725777	PRJNA1223317	27	0.509434	4	4	yes	yes		0		
+escherichia_coli__ampicillin_sulbactam	369	78	0	0	0	369	78	245	yes	no	scored	PRJNA841811	299	0.810298	PRJNA841811	37	0.474359	3	3	yes	yes		0		
+escherichia_coli__aztreonam	349	133	0	0	0	349	133	257	yes	no	scored	PRJNA841811	292	0.836676	PRJNA841811	103	0.774436	3	3	yes	yes		0		
+escherichia_coli__cefazolin	451	40	0	0	0	451	40	257	yes	yes	scored	PRJNA841811	370	0.820399	PRJNA841811	33	0.825000	2	1	no	no	PRJNA841811	0		
+escherichia_coli__cefepime	255	155	0	0	0	255	155	215	yes	no	scored	PRJNA841811	209	0.819608	PRJNA841811	122	0.787097	3	3	yes	yes		0		
+escherichia_coli__cefotaxime	438	159	0	0	0	438	159	325	yes	no	scored	PRJNA841811	338	0.771689	PRJNA841811	79	0.496855	4	4	yes	yes		0		
+escherichia_coli__cefoxitin	58	416	0	0	0	58	416	242	yes	no	scored	PRJNA841811	46	0.793103	PRJNA841811	313	0.752404	3	2	no	no	PRJNA841811	0		
+escherichia_coli__ceftazidime	179	349	0	0	0	179	349	292	yes	no	scored	PRJNA841811	147	0.821229	PRJNA841811	217	0.621777	4	4	yes	yes		0		
+escherichia_coli__chloramphenicol	496	87	0	0	0	496	87	313	yes	no	scored	PRJNA841811	378	0.762097	PRJNA841811	35	0.402299	4	4	yes	yes		0		
+escherichia_coli__ciprofloxacin	513	62	0	0	0	513	62	318	yes	no	scored	PRJNA841811	380	0.740741	PRJNA675772	25	0.403226	4	4	yes	yes		0		PRJNA841811
+escherichia_coli__doxycycline	291	39	0	0	0	291	39	165	yes	no	scored	PRJNA841811	227	0.780069	PRJNA841811	32	0.820513	2	1	no	no	PRJNA841811	0		
+escherichia_coli__gentamicin	341	169	0	0	0	341	169	267	yes	no	scored	PRJNA841811	299	0.876833	PRJNA841811	109	0.644970	3	3	yes	yes		0		
+escherichia_coli__levofloxacin	428	46	0	0	0	428	46	254	yes	yes	scored	PRJNA841811	364	0.850467	PRJNA841811	25	0.543478	2	1	no	no	PRJNA841811	0		
+escherichia_coli__nalidixic_acid	484	85	0	0	0	484	85	314	yes	no	scored	PRJNA841811	360	0.743802	PRJNA841811	59	0.694118	3	3	yes	yes		0		
+escherichia_coli__streptomycin	471	98	0	0	0	471	98	312	yes	no	scored	PRJNA841811	370	0.785563	PRJNA841811	49	0.500000	3	3	yes	yes		0		
+escherichia_coli__sulfamethoxazole_trimethoprim	458	117	0	0	0	458	117	319	yes	no	scored	PRJNA841811	328	0.716157	PRJNA841811	90	0.769231	3	3	yes	yes		0		
+escherichia_coli__tetracycline	547	46	0	0	0	547	46	322	yes	no	scored	PRJNA841811	396	0.723949	PRJNA841811	21	0.456522	4	4	yes	yes		0		

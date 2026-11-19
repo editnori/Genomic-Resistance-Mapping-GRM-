@@ -1,0 +1,5 @@
+dataset	labelled_resistant	labelled_susceptible	excluded_no_sequence	excluded_species_check_failed	excluded_not_counted	scored_resistant	scored_susceptible	scored_borderline	reportable	lasso_complete	known_gene	top_study_resistant	top_study_resistant_count	top_study_resistant_share	top_study_susceptible	top_study_susceptible_count	top_study_susceptible_share	studies	loso_folds_reportable	top_study_resistant_fold_reportable	top_study_susceptible_fold_reportable	studies_not_left_out	scored_no_bioproject	top_study_resistant_tied	top_study_susceptible_tied
+streptococcus_pneumoniae__erythromycin	171	243	0	0	0	171	243	0	yes	yes	scored	PRJEB3084	171	1.000000	PRJEB3084	243	1.000000	1	0	no	no	PRJEB3084	0		
+streptococcus_pneumoniae__penicillin	171	239	0	0	0	171	239	0	yes	yes	scored	PRJEB3084	171	1.000000	PRJEB3084	239	1.000000	1	0	no	no	PRJEB3084	0		
+streptococcus_pneumoniae__sulfamethoxazole_trimethoprim	87	111	0	0	0	87	111	0	yes	yes	scored	PRJEB3084	87	1.000000	PRJEB3084	111	1.000000	1	0	no	no	PRJEB3084	0		
+streptococcus_pneumoniae__tetracycline	89	132	0	0	0	89	132	0	yes	yes	scored	PRJEB3084	89	1.000000	PRJEB3084	132	1.000000	1	0	no	no	PRJEB3084	0		

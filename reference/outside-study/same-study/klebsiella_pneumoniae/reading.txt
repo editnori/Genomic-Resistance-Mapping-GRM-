@@ -1,0 +1,191 @@
+Outside-study test, klebsiella_pneumoniae, same-study population
+This is a retrospective test on newly deposited studies from the same database.
+It is not a lockbox: the batch's metadata and label totals were read before the rules were frozen.
+The genomes come from the same database as the cohort.
+
+Frozen genomes: 470. Scored: 459 (0 of them borderline in the species check, kept and flagged).
+Genomes excluded, no sequence: 0.
+Genomes excluded, species check failed: 11.
+Genomes excluded, not counted: 0.
+
+Each model is the report's final model, fitted once on the whole cohort and applied unchanged.
+The report's figures are for models refitted in each cross-validation fold and scored on held-out cohort genomes.
+Calls use the 0.5 cutoff. Intervals are exact Clopper-Pearson 95% intervals.
+A dataset with fewer than 25 resistant or 25 susceptible scored genomes is reported as counts only.
+Sensitivity and specificity are over the genomes a learner called; genomes with no call are counted in their own column.
+The known-gene rule's reference figure is a fixed rule applied to the whole cohort: nothing was fitted, so there is no cross-validation figure for it.
+The datasets share genomes and studies, so they are not independent of each other.
+Precision depends on the share of resistant genomes, which differs between the cohort and the new genomes.
+Scored genomes with the same k-mer set as a cohort genome: 0; as another scored genome: 0 (listed in duplicates.tsv; none is excluded for it).
+Stage attempts: setup 1, fetch 1, species-check 1, count 1, known-gene 1, predict 1.
+
+klebsiella_pneumoniae__aztreonam: 273 resistant and 183 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA288601 holds 273 of the 273 resistant genomes (100.0%); PRJNA288601 holds 183 of the 183 susceptible genomes (100.0%). Of 1 study, 0 can be left out with 25 of each class remaining.
+  Every scored genome is from one study, so the estimate is that study's and no study-to-study range can be shown.
+  scm: TP 267, FN 6, FP 25, TN 158. Sensitivity 97.8% [95.3%, 99.2%], lineage split 91.9%, random split 90.2%: above. Specificity 86.3% [80.5%, 91.0%], lineage split 62.5%, random split 74.2%: above.
+    Reference figure: cross-validation, lineage split.
+  cart: TP 261, FN 12, FP 9, TN 174. Sensitivity 95.6% [92.4%, 97.7%], lineage split 75.0%, random split 83.3%: above. Specificity 95.1% [90.9%, 97.7%], lineage split 75.6%, random split 81.0%: above.
+    Reference figure: cross-validation, lineage split.
+  known_gene: TP 109, FN 164, FP 47, TN 136. Sensitivity 39.9% [34.1%, 46.0%], lineage split 84.4%, random split 84.4%: below. Specificity 74.3% [67.4%, 80.5%], lineage split 52.7%, random split 52.7%: above.
+    Reference figure: fixed rule, whole cohort.
+klebsiella_pneumoniae__cefazolin: 296 resistant and 139 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA288601 holds 296 of the 296 resistant genomes (100.0%); PRJNA288601 holds 139 of the 139 susceptible genomes (100.0%). Of 1 study, 0 can be left out with 25 of each class remaining.
+  Every scored genome is from one study, so the estimate is that study's and no study-to-study range can be shown.
+  scm: TP 275, FN 21, FP 5, TN 134. Sensitivity 92.9% [89.4%, 95.6%], lineage split 92.9%, random split 94.5%: consistent. Specificity 96.4% [91.8%, 98.8%], lineage split 95.0%, random split 94.7%: consistent.
+    Reference figure: cross-validation, lineage split.
+  cart: TP 275, FN 21, FP 6, TN 133. Sensitivity 92.9% [89.4%, 95.6%], lineage split 86.1%, random split 93.1%: above. Specificity 95.7% [90.8%, 98.4%], lineage split 94.4%, random split 91.8%: consistent.
+    Reference figure: cross-validation, lineage split.
+  known_gene: TP 278, FN 18, FP 31, TN 108. Sensitivity 93.9% [90.6%, 96.4%], lineage split 95.3%, random split 95.3%: consistent. Specificity 77.7% [69.9%, 84.3%], lineage split 74.6%, random split 74.6%: consistent.
+    Reference figure: fixed rule, whole cohort.
+klebsiella_pneumoniae__cefepime: 268 resistant and 191 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA288601 holds 268 of the 268 resistant genomes (100.0%); PRJNA288601 holds 191 of the 191 susceptible genomes (100.0%). Of 1 study, 0 can be left out with 25 of each class remaining.
+  Every scored genome is from one study, so the estimate is that study's and no study-to-study range can be shown.
+  scm: TP 238, FN 30, FP 14, TN 177. Sensitivity 88.8% [84.4%, 92.3%], lineage split 86.8%, random split 80.9%: consistent. Specificity 92.7% [88.0%, 95.9%], lineage split 71.2%, random split 84.4%: above.
+    Reference figure: cross-validation, lineage split.
+  cart: TP 249, FN 19, FP 15, TN 176. Sensitivity 92.9% [89.2%, 95.7%], lineage split 80.3%, random split 86.6%: above. Specificity 92.1% [87.4%, 95.5%], lineage split 77.0%, random split 83.9%: above.
+    Reference figure: cross-validation, lineage split.
+  known_gene: TP 262, FN 6, FP 57, TN 134. Sensitivity 97.8% [95.2%, 99.2%], lineage split 99.2%, random split 99.2%: below. Specificity 70.2% [63.1%, 76.5%], lineage split 51.6%, random split 51.6%: above.
+    Reference figure: fixed rule, whole cohort.
+klebsiella_pneumoniae__cefoxitin: 264 resistant and 178 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA288601 holds 264 of the 264 resistant genomes (100.0%); PRJNA288601 holds 178 of the 178 susceptible genomes (100.0%). Of 1 study, 0 can be left out with 25 of each class remaining.
+  Every scored genome is from one study, so the estimate is that study's and no study-to-study range can be shown.
+  scm: TP 231, FN 33, FP 4, TN 174. Sensitivity 87.5% [82.9%, 91.2%], lineage split 62.2%, random split 72.4%: above. Specificity 97.8% [94.3%, 99.4%], lineage split 97.1%, random split 96.0%: consistent.
+    Reference figure: cross-validation, lineage split.
+  cart: TP 238, FN 26, FP 20, TN 158. Sensitivity 90.2% [85.9%, 93.5%], lineage split 73.3%, random split 77.1%: above. Specificity 88.8% [83.2%, 93.0%], lineage split 82.6%, random split 84.2%: above.
+    Reference figure: cross-validation, lineage split.
+  known_gene: TP 250, FN 14, FP 59, TN 119. Sensitivity 94.7% [91.3%, 97.1%], lineage split 96.2%, random split 96.2%: consistent. Specificity 66.9% [59.4%, 73.7%], lineage split 30.6%, random split 30.6%: above.
+    Reference figure: fixed rule, whole cohort.
+klebsiella_pneumoniae__ceftazidime: 280 resistant and 177 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA288601 holds 280 of the 280 resistant genomes (100.0%); PRJNA288601 holds 177 of the 177 susceptible genomes (100.0%). Of 1 study, 0 can be left out with 25 of each class remaining.
+  Every scored genome is from one study, so the estimate is that study's and no study-to-study range can be shown.
+  scm: TP 266, FN 14, FP 6, TN 171. Sensitivity 95.0% [91.8%, 97.2%], lineage split 86.3%, random split 92.1%: above. Specificity 96.6% [92.8%, 98.7%], lineage split 88.2%, random split 86.7%: above.
+    Reference figure: cross-validation, lineage split.
+  cart: TP 254, FN 26, FP 7, TN 170. Sensitivity 90.7% [86.7%, 93.8%], lineage split 82.9%, random split 90.7%: above. Specificity 96.0% [92.0%, 98.4%], lineage split 90.9%, random split 89.6%: above.
+    Reference figure: cross-validation, lineage split.
+  known_gene: TP 271, FN 9, FP 47, TN 130. Sensitivity 96.8% [94.0%, 98.5%], lineage split 96.6%, random split 96.6%: consistent. Specificity 73.4% [66.3%, 79.8%], lineage split 65.1%, random split 65.1%: above.
+    Reference figure: fixed rule, whole cohort.
+klebsiella_pneumoniae__ceftriaxone: 279 resistant and 173 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA288601 holds 279 of the 279 resistant genomes (100.0%); PRJNA288601 holds 173 of the 173 susceptible genomes (100.0%). Of 1 study, 0 can be left out with 25 of each class remaining.
+  Every scored genome is from one study, so the estimate is that study's and no study-to-study range can be shown.
+  scm: TP 269, FN 10, FP 2, TN 171. Sensitivity 96.4% [93.5%, 98.3%], lineage split 95.4%, random split 97.3%: consistent. Specificity 98.8% [95.9%, 99.9%], lineage split 95.9%, random split 96.2%: consistent.
+    Reference figure: cross-validation, lineage split.
+  cart: TP 263, FN 16, FP 9, TN 164. Sensitivity 94.3% [90.9%, 96.7%], lineage split 93.8%, random split 96.7%: consistent. Specificity 94.8% [90.4%, 97.6%], lineage split 95.1%, random split 94.0%: consistent.
+    Reference figure: cross-validation, lineage split.
+  known_gene: TP 273, FN 6, FP 44, TN 129. Sensitivity 97.8% [95.4%, 99.2%], lineage split 97.9%, random split 97.9%: consistent. Specificity 74.6% [67.4%, 80.9%], lineage split 76.7%, random split 76.7%: consistent.
+    Reference figure: fixed rule, whole cohort.
+klebsiella_pneumoniae__ciprofloxacin: 283 resistant and 163 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA288601 holds 283 of the 283 resistant genomes (100.0%); PRJNA288601 holds 163 of the 163 susceptible genomes (100.0%). Of 1 study, 0 can be left out with 25 of each class remaining.
+  Every scored genome is from one study, so the estimate is that study's and no study-to-study range can be shown.
+  scm: TP 257, FN 26, FP 2, TN 161. Sensitivity 90.8% [86.8%, 93.9%], lineage split 88.2%, random split 96.5%: consistent. Specificity 98.8% [95.6%, 99.9%], lineage split 91.1%, random split 88.5%: above.
+    Reference figure: cross-validation, lineage split.
+  cart: TP 266, FN 17, FP 0, TN 163. Sensitivity 94.0% [90.6%, 96.5%], lineage split 86.0%, random split 94.8%: above. Specificity 100.0% [97.8%, 100.0%], lineage split 93.6%, random split 93.4%: above.
+    Reference figure: cross-validation, lineage split.
+  known_gene: TP 268, FN 15, FP 154, TN 9. Sensitivity 94.7% [91.4%, 97.0%], lineage split 98.4%, random split 98.4%: below. Specificity 5.5% [2.6%, 10.2%], lineage split 3.6%, random split 3.6%: consistent.
+    Reference figure: fixed rule, whole cohort.
+klebsiella_pneumoniae__doripenem: 232 resistant and 208 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA288601 holds 232 of the 232 resistant genomes (100.0%); PRJNA288601 holds 208 of the 208 susceptible genomes (100.0%). Of 1 study, 0 can be left out with 25 of each class remaining.
+  Every scored genome is from one study, so the estimate is that study's and no study-to-study range can be shown.
+  scm: TP 222, FN 10, FP 125, TN 83. Sensitivity 95.7% [92.2%, 97.9%], lineage split 73.3%, random split 82.0%: above. Specificity 39.9% [33.2%, 46.9%], lineage split 26.9%, random split 38.5%: above.
+    Reference figure: cross-validation, lineage split.
+  cart: TP 77, FN 155, FP 37, TN 171. Sensitivity 33.2% [27.2%, 39.7%], lineage split 69.6%, random split 81.1%: below. Specificity 82.2% [76.3%, 87.2%], lineage split 38.5%, random split 53.8%: above.
+    Reference figure: cross-validation, lineage split.
+  lasso: TP 216, FN 16, FP 104, TN 104. Sensitivity 93.1% [89.0%, 96.0%], lineage split 94.1%, random split 96.0%: consistent. Specificity 50.0% [43.0%, 57.0%], lineage split 25.0%, random split 14.3%: above.
+    Reference figure: cross-validation, lineage split.
+  known_gene: TP 219, FN 13, FP 1, TN 207. Sensitivity 94.4% [90.6%, 97.0%], lineage split 94.0%, random split 94.0%: consistent. Specificity 99.5% [97.4%, 100.0%], lineage split 73.1%, random split 73.1%: above.
+    Reference figure: fixed rule, whole cohort.
+klebsiella_pneumoniae__ertapenem: 257 resistant and 199 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA288601 holds 257 of the 257 resistant genomes (100.0%); PRJNA288601 holds 199 of the 199 susceptible genomes (100.0%). Of 1 study, 0 can be left out with 25 of each class remaining.
+  Every scored genome is from one study, so the estimate is that study's and no study-to-study range can be shown.
+  scm: TP 233, FN 24, FP 0, TN 199. Sensitivity 90.7% [86.4%, 93.9%], lineage split 95.1%, random split 95.4%: below. Specificity 100.0% [98.2%, 100.0%], lineage split 97.5%, random split 96.4%: above.
+    Reference figure: cross-validation, lineage split.
+  cart: TP 251, FN 6, FP 175, TN 24. Sensitivity 97.7% [95.0%, 99.1%], lineage split 82.9%, random split 94.3%: above. Specificity 12.1% [7.9%, 17.4%], lineage split 89.0%, random split 92.9%: below.
+    Reference figure: cross-validation, lineage split.
+  known_gene: TP 232, FN 25, FP 0, TN 199. Sensitivity 90.3% [86.0%, 93.6%], lineage split 95.7%, random split 95.7%: below. Specificity 100.0% [98.2%, 100.0%], lineage split 97.9%, random split 97.9%: above.
+    Reference figure: fixed rule, whole cohort.
+klebsiella_pneumoniae__gentamicin: 86 resistant and 340 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA288601 holds 86 of the 86 resistant genomes (100.0%); PRJNA288601 holds 340 of the 340 susceptible genomes (100.0%). Of 1 study, 0 can be left out with 25 of each class remaining.
+  Every scored genome is from one study, so the estimate is that study's and no study-to-study range can be shown.
+  scm: TP 71, FN 15, FP 9, TN 331. Sensitivity 82.6% [72.9%, 89.9%], lineage split 82.4%, random split 91.7%: consistent. Specificity 97.4% [95.0%, 98.8%], lineage split 97.6%, random split 97.8%: consistent.
+    Reference figure: cross-validation, lineage split.
+  cart: TP 56, FN 30, FP 5, TN 335. Sensitivity 65.1% [54.1%, 75.1%], lineage split 77.5%, random split 89.8%: below. Specificity 98.5% [96.6%, 99.5%], lineage split 97.6%, random split 97.5%: consistent.
+    Reference figure: cross-validation, lineage split.
+  known_gene: TP 79, FN 7, FP 65, TN 275. Sensitivity 91.9% [83.9%, 96.7%], lineage split 95.6%, random split 95.6%: consistent. Specificity 80.9% [76.3%, 84.9%], lineage split 94.0%, random split 94.0%: below.
+    Reference figure: fixed rule, whole cohort.
+klebsiella_pneumoniae__imipenem: 234 resistant and 207 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA288601 holds 234 of the 234 resistant genomes (100.0%); PRJNA288601 holds 207 of the 207 susceptible genomes (100.0%). Of 1 study, 0 can be left out with 25 of each class remaining.
+  Every scored genome is from one study, so the estimate is that study's and no study-to-study range can be shown.
+  scm: TP 227, FN 7, FP 4, TN 203. Sensitivity 97.0% [93.9%, 98.8%], lineage split 94.0%, random split 95.4%: consistent. Specificity 98.1% [95.1%, 99.5%], lineage split 97.8%, random split 96.5%: consistent.
+    Reference figure: cross-validation, lineage split.
+  cart: TP 224, FN 10, FP 5, TN 202. Sensitivity 95.7% [92.3%, 97.9%], lineage split 92.8%, random split 94.1%: consistent. Specificity 97.6% [94.5%, 99.2%], lineage split 96.1%, random split 97.4%: consistent.
+    Reference figure: cross-validation, lineage split.
+  known_gene: TP 228, FN 6, FP 1, TN 206. Sensitivity 97.4% [94.5%, 99.1%], lineage split 95.8%, random split 95.8%: consistent. Specificity 99.5% [97.3%, 100.0%], lineage split 96.9%, random split 96.9%: above.
+    Reference figure: fixed rule, whole cohort.
+klebsiella_pneumoniae__levofloxacin: 272 resistant and 173 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA288601 holds 272 of the 272 resistant genomes (100.0%); PRJNA288601 holds 173 of the 173 susceptible genomes (100.0%). Of 1 study, 0 can be left out with 25 of each class remaining.
+  Every scored genome is from one study, so the estimate is that study's and no study-to-study range can be shown.
+  scm: TP 253, FN 19, FP 0, TN 173. Sensitivity 93.0% [89.3%, 95.7%], lineage split 90.5%, random split 95.6%: consistent. Specificity 100.0% [97.9%, 100.0%], lineage split 96.3%, random split 95.3%: above.
+    Reference figure: cross-validation, lineage split.
+  cart: TP 253, FN 19, FP 0, TN 173. Sensitivity 93.0% [89.3%, 95.7%], lineage split 96.0%, random split 96.2%: below. Specificity 100.0% [97.9%, 100.0%], lineage split 97.2%, random split 95.3%: above.
+    Reference figure: cross-validation, lineage split.
+  lasso: TP 253, FN 19, FP 0, TN 173. Sensitivity 93.0% [89.3%, 95.7%], lineage split 94.0%, random split 96.9%: consistent. Specificity 100.0% [97.9%, 100.0%], lineage split 96.0%, random split 96.0%: above.
+    Reference figure: cross-validation, lineage split.
+  known_gene: TP 257, FN 15, FP 164, TN 9. Sensitivity 94.5% [91.1%, 96.9%], lineage split 97.1%, random split 97.1%: below. Specificity 5.2% [2.4%, 9.6%], lineage split 2.2%, random split 2.2%: above.
+    Reference figure: fixed rule, whole cohort.
+klebsiella_pneumoniae__meropenem: 240 resistant and 206 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA288601 holds 240 of the 240 resistant genomes (100.0%); PRJNA288601 holds 206 of the 206 susceptible genomes (100.0%). Of 1 study, 0 can be left out with 25 of each class remaining.
+  Every scored genome is from one study, so the estimate is that study's and no study-to-study range can be shown.
+  scm: TP 223, FN 17, FP 5, TN 201. Sensitivity 92.9% [88.9%, 95.8%], lineage split 85.6%, random split 90.9%: above. Specificity 97.6% [94.4%, 99.2%], lineage split 95.7%, random split 97.0%: consistent.
+    Reference figure: cross-validation, lineage split.
+  cart: TP 217, FN 23, FP 6, TN 200. Sensitivity 90.4% [86.0%, 93.8%], lineage split 55.3%, random split 88.7%: above. Specificity 97.1% [93.8%, 98.9%], lineage split 96.8%, random split 96.4%: consistent.
+    Reference figure: cross-validation, lineage split.
+  known_gene: TP 224, FN 16, FP 3, TN 203. Sensitivity 93.3% [89.4%, 96.1%], lineage split 95.0%, random split 95.0%: consistent. Specificity 98.5% [95.8%, 99.7%], lineage split 91.5%, random split 91.5%: above.
+    Reference figure: fixed rule, whole cohort.
+klebsiella_pneumoniae__piperacillin_tazobactam: 263 resistant and 186 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA288601 holds 263 of the 263 resistant genomes (100.0%); PRJNA288601 holds 186 of the 186 susceptible genomes (100.0%). Of 1 study, 0 can be left out with 25 of each class remaining.
+  Every scored genome is from one study, so the estimate is that study's and no study-to-study range can be shown.
+  scm: TP 234, FN 29, FP 0, TN 186. Sensitivity 89.0% [84.5%, 92.5%], lineage split 72.9%, random split 77.9%: above. Specificity 100.0% [98.0%, 100.0%], lineage split 97.9%, random split 96.1%: above.
+    Reference figure: cross-validation, lineage split.
+  cart: TP 250, FN 13, FP 83, TN 103. Sensitivity 95.1% [91.7%, 97.3%], lineage split 45.2%, random split 85.9%: above. Specificity 55.4% [47.9%, 62.7%], lineage split 88.4%, random split 88.7%: below.
+    Reference figure: cross-validation, lineage split.
+  known_gene: TP 254, FN 9, FP 56, TN 130. Sensitivity 96.6% [93.6%, 98.4%], lineage split 97.1%, random split 97.1%: consistent. Specificity 69.9% [62.8%, 76.4%], lineage split 47.6%, random split 47.6%: above.
+    Reference figure: fixed rule, whole cohort.
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim: 282 resistant and 177 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA288601 holds 282 of the 282 resistant genomes (100.0%); PRJNA288601 holds 177 of the 177 susceptible genomes (100.0%). Of 1 study, 0 can be left out with 25 of each class remaining.
+  Every scored genome is from one study, so the estimate is that study's and no study-to-study range can be shown.
+  scm: TP 256, FN 26, FP 5, TN 172. Sensitivity 90.8% [86.8%, 93.9%], lineage split 94.2%, random split 90.5%: below. Specificity 97.2% [93.5%, 99.1%], lineage split 81.7%, random split 87.1%: above.
+    Reference figure: cross-validation, lineage split.
+  cart: TP 239, FN 43, FP 9, TN 168. Sensitivity 84.8% [80.0%, 88.7%], lineage split 96.4%, random split 93.2%: below. Specificity 94.9% [90.6%, 97.6%], lineage split 81.3%, random split 83.7%: above.
+    Reference figure: cross-validation, lineage split.
+  known_gene: TP 237, FN 45, FP 1, TN 176. Sensitivity 84.0% [79.2%, 88.1%], lineage split 89.8%, random split 89.8%: below. Specificity 99.4% [96.9%, 100.0%], lineage split 94.6%, random split 94.6%: above.
+    Reference figure: fixed rule, whole cohort.
+klebsiella_pneumoniae__tetracycline: 95 resistant and 327 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA288601 holds 95 of the 95 resistant genomes (100.0%); PRJNA288601 holds 327 of the 327 susceptible genomes (100.0%). Of 1 study, 0 can be left out with 25 of each class remaining.
+  Every scored genome is from one study, so the estimate is that study's and no study-to-study range can be shown.
+  scm: TP 67, FN 28, FP 114, TN 213. Sensitivity 70.5% [60.3%, 79.4%], lineage split 73.4%, random split 78.3%: consistent. Specificity 65.1% [59.7%, 70.3%], lineage split 94.1%, random split 96.6%: below.
+    Reference figure: cross-validation, lineage split.
+  cart: TP 95, FN 0, FP 304, TN 23. Sensitivity 100.0% [96.2%, 100.0%], lineage split 68.5%, random split 75.7%: above. Specificity 7.0% [4.5%, 10.4%], lineage split 93.8%, random split 96.3%: below.
+    Reference figure: cross-validation, lineage split.
+  lasso: TP 58, FN 37, FP 5, TN 322. Sensitivity 61.1% [50.5%, 70.9%], lineage split 70.8%, random split 78.0%: consistent. Specificity 98.5% [96.5%, 99.5%], lineage split 88.7%, random split 93.5%: above.
+    Reference figure: cross-validation, lineage split.
+  known_gene: TP 84, FN 11, FP 162, TN 165. Sensitivity 88.4% [80.2%, 94.1%], lineage split 82.2%, random split 82.2%: consistent. Specificity 50.5% [44.9%, 56.0%], lineage split 60.2%, random split 60.2%: below.
+    Reference figure: fixed rule, whole cohort.
+klebsiella_pneumoniae__tobramycin: 213 resistant and 198 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA288601 holds 213 of the 213 resistant genomes (100.0%); PRJNA288601 holds 198 of the 198 susceptible genomes (100.0%). Of 1 study, 0 can be left out with 25 of each class remaining.
+  Every scored genome is from one study, so the estimate is that study's and no study-to-study range can be shown.
+  scm: TP 213, FN 0, FP 20, TN 178. Sensitivity 100.0% [98.3%, 100.0%], lineage split 84.9%, random split 93.2%: above. Specificity 89.9% [84.8%, 93.7%], lineage split 92.7%, random split 89.2%: consistent.
+    Reference figure: cross-validation, lineage split.
+  cart: TP 211, FN 2, FP 20, TN 178. Sensitivity 99.1% [96.6%, 99.9%], lineage split 84.8%, random split 91.1%: above. Specificity 89.9% [84.8%, 93.7%], lineage split 92.7%, random split 92.2%: consistent.
+    Reference figure: cross-validation, lineage split.
+  known_gene: TP 162, FN 51, FP 7, TN 191. Sensitivity 76.1% [69.7%, 81.6%], lineage split 87.0%, random split 87.0%: below. Specificity 96.5% [92.9%, 98.6%], lineage split 92.5%, random split 92.5%: above.
+    Reference figure: fixed rule, whole cohort.
+
+Readings per learner (each dataset contributes sensitivity and specificity):
+  scm: below 3, consistent 15, above 16, not read 0.
+  cart: below 7, consistent 8, above 19, not read 0.
+  lasso: below 0, consistent 3, above 3, not read 0.
+  known_gene: below 9, consistent 13, above 12, not read 0.
+The reading is descriptive. It has no multiplicity correction and is not a hypothesis test.
+paired.tsv sets each learner beside the known-gene rule on the same genomes (counts only, no test).
+
+Not run here: sequence-distance novelty, partial-feature counts (--matrix), calibration,
+any hypothesis test, forests and boosted trees (not published in full).

@@ -1,0 +1,23 @@
+experiment	event	source	time
+first	fold_builder	file time in the input set's first/times.tsv	2026-11-15T11:38:56.00Z
+first	design	file time in the input set's first/times.tsv	2026-11-15T11:40:33.00Z
+first	fold_files_first	file time in the input set's first/times.tsv	2026-11-15T11:40:30.00Z
+first	fold_files_last	file time in the input set's first/times.tsv	2026-11-15T11:40:33.00Z
+first	variant_counter	file time in the input set's first/times.tsv	2026-11-15T11:42:13.00Z
+first	variant_table	file time in the input set's first/times.tsv	2026-11-15T11:42:13.00Z
+first	plan	file time in the input set's first/times.tsv	2026-11-15T11:43:28.00Z
+first	plan_hashes	file time in the input set's first/times.tsv	2026-11-15T11:44:32.00Z
+first	hash_time	first line of the input set's first/PLAN.sha256	2026-11-15T11:44:32Z
+second	plan_builder	file time in the input set's second/times.tsv	2026-11-15T17:23:24.89Z
+second	design	file time in the input set's second/times.tsv	2026-11-15T17:23:55.02Z
+second	plan_shapes	file time in the input set's second/times.tsv	2026-11-15T17:23:55.02Z
+second	rule_variation	file time in the input set's second/times.tsv	2026-11-15T17:23:55.01Z
+second	plan	file time in the input set's second/times.tsv	2026-11-15T17:32:42.53Z
+second	plan_hashes	file time in the input set's second/times.tsv	2026-11-15T17:33:00.58Z
+second	hash_time	first line of the input set's second/PLAN.sha256	2026-11-15T17:33:00Z
+first	first_fit_end	the input set's first/run.log	2026-11-15T12:08:36Z
+first	last_fit_end	the input set's first/run.log	2026-11-15T13:03:17Z
+second	fits_start	the input set's second/run.log	2026-11-15T17:44:59Z
+second	first_fit_end	the input set's second/run.log	2026-11-15T17:45:31Z
+second	last_fit_end	the input set's second/run.log	2026-11-15T19:49:03Z
+second	stated_rule_choice	text of the second plan, sha256 d420d1321142fe391fe3e5cd313bffe960eeb2687f6bc7086a5f2427fc23e2ab	2026-11-15T17:23:34Z

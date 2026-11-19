@@ -1,0 +1,203 @@
+dataset	learner	grouping	group	scored_resistant	scored_susceptible	tp	fn	fp	tn	no_call_resistant	no_call_susceptible
+staphylococcus_aureus__ciprofloxacin	scm	bioproject	PRJEB24782	2	133	1	1	0	133	0	0
+staphylococcus_aureus__ciprofloxacin	scm	bioproject	PRJNA1050907	252	343	249	3	19	324	0	0
+staphylococcus_aureus__ciprofloxacin	scm	country	Argentina	2	133	1	1	0	133	0	0
+staphylococcus_aureus__ciprofloxacin	scm	country	Saudi Arabia	252	343	249	3	19	324	0	0
+staphylococcus_aureus__ciprofloxacin	scm	mlst_in_cohort	no	6	22	6	0	1	21	0	0
+staphylococcus_aureus__ciprofloxacin	scm	mlst_in_cohort	no ST	8	16	8	0	0	16	0	0
+staphylococcus_aureus__ciprofloxacin	scm	mlst_in_cohort	yes	240	438	236	4	18	420	0	0
+staphylococcus_aureus__ciprofloxacin	cart	bioproject	PRJEB24782	2	133	1	1	0	133	0	0
+staphylococcus_aureus__ciprofloxacin	cart	bioproject	PRJNA1050907	252	343	249	3	23	320	0	0
+staphylococcus_aureus__ciprofloxacin	cart	country	Argentina	2	133	1	1	0	133	0	0
+staphylococcus_aureus__ciprofloxacin	cart	country	Saudi Arabia	252	343	249	3	23	320	0	0
+staphylococcus_aureus__ciprofloxacin	cart	mlst_in_cohort	no	6	22	6	0	1	21	0	0
+staphylococcus_aureus__ciprofloxacin	cart	mlst_in_cohort	no ST	8	16	8	0	0	16	0	0
+staphylococcus_aureus__ciprofloxacin	cart	mlst_in_cohort	yes	240	438	236	4	22	416	0	0
+staphylococcus_aureus__ciprofloxacin	known_gene	bioproject	PRJEB24782	2	133	0	2	0	133	0	0
+staphylococcus_aureus__ciprofloxacin	known_gene	bioproject	PRJNA1050907	252	343	0	252	0	343	0	0
+staphylococcus_aureus__ciprofloxacin	known_gene	country	Argentina	2	133	0	2	0	133	0	0
+staphylococcus_aureus__ciprofloxacin	known_gene	country	Saudi Arabia	252	343	0	252	0	343	0	0
+staphylococcus_aureus__ciprofloxacin	known_gene	mlst_in_cohort	no	6	22	0	6	0	22	0	0
+staphylococcus_aureus__ciprofloxacin	known_gene	mlst_in_cohort	no ST	8	16	0	8	0	16	0	0
+staphylococcus_aureus__ciprofloxacin	known_gene	mlst_in_cohort	yes	240	438	0	240	0	438	0	0
+staphylococcus_aureus__erythromycin	scm	bioproject	PRJEB24782	14	145	13	1	0	145	0	0
+staphylococcus_aureus__erythromycin	scm	bioproject	PRJNA1050907	195	396	189	6	38	358	0	0
+staphylococcus_aureus__erythromycin	scm	bioproject	PRJNA819273	0	33	0	0	0	33	0	0
+staphylococcus_aureus__erythromycin	scm	country	Argentina	14	145	13	1	0	145	0	0
+staphylococcus_aureus__erythromycin	scm	country	Kenya	0	28	0	0	0	28	0	0
+staphylococcus_aureus__erythromycin	scm	country	Saudi Arabia	195	396	189	6	38	358	0	0
+staphylococcus_aureus__erythromycin	scm	country	Somalia	0	5	0	0	0	5	0	0
+staphylococcus_aureus__erythromycin	scm	mlst_in_cohort	no	13	38	13	0	3	35	0	0
+staphylococcus_aureus__erythromycin	scm	mlst_in_cohort	no ST	11	13	11	0	1	12	0	0
+staphylococcus_aureus__erythromycin	scm	mlst_in_cohort	yes	185	523	178	7	34	489	0	0
+staphylococcus_aureus__erythromycin	cart	bioproject	PRJEB24782	14	145	13	1	1	144	0	0
+staphylococcus_aureus__erythromycin	cart	bioproject	PRJNA1050907	195	396	170	25	249	147	0	0
+staphylococcus_aureus__erythromycin	cart	bioproject	PRJNA819273	0	33	0	0	0	33	0	0
+staphylococcus_aureus__erythromycin	cart	country	Argentina	14	145	13	1	1	144	0	0
+staphylococcus_aureus__erythromycin	cart	country	Kenya	0	28	0	0	0	28	0	0
+staphylococcus_aureus__erythromycin	cart	country	Saudi Arabia	195	396	170	25	249	147	0	0
+staphylococcus_aureus__erythromycin	cart	country	Somalia	0	5	0	0	0	5	0	0
+staphylococcus_aureus__erythromycin	cart	mlst_in_cohort	no	13	38	13	0	6	32	0	0
+staphylococcus_aureus__erythromycin	cart	mlst_in_cohort	no ST	11	13	10	1	7	6	0	0
+staphylococcus_aureus__erythromycin	cart	mlst_in_cohort	yes	185	523	160	25	237	286	0	0
+staphylococcus_aureus__erythromycin	known_gene	bioproject	PRJEB24782	14	145	13	1	0	145	0	0
+staphylococcus_aureus__erythromycin	known_gene	bioproject	PRJNA1050907	195	396	190	5	27	369	0	0
+staphylococcus_aureus__erythromycin	known_gene	bioproject	PRJNA819273	0	33	0	0	0	33	0	0
+staphylococcus_aureus__erythromycin	known_gene	country	Argentina	14	145	13	1	0	145	0	0
+staphylococcus_aureus__erythromycin	known_gene	country	Kenya	0	28	0	0	0	28	0	0
+staphylococcus_aureus__erythromycin	known_gene	country	Saudi Arabia	195	396	190	5	27	369	0	0
+staphylococcus_aureus__erythromycin	known_gene	country	Somalia	0	5	0	0	0	5	0	0
+staphylococcus_aureus__erythromycin	known_gene	mlst_in_cohort	no	13	38	13	0	2	36	0	0
+staphylococcus_aureus__erythromycin	known_gene	mlst_in_cohort	no ST	11	13	11	0	0	13	0	0
+staphylococcus_aureus__erythromycin	known_gene	mlst_in_cohort	yes	185	523	179	6	25	498	0	0
+staphylococcus_aureus__gentamicin	scm	bioproject	PRJEB24782	14	130	13	1	0	130	0	0
+staphylococcus_aureus__gentamicin	scm	bioproject	PRJNA1050907	78	461	71	7	6	455	0	0
+staphylococcus_aureus__gentamicin	scm	bioproject	PRJNA819273	0	33	0	0	0	33	0	0
+staphylococcus_aureus__gentamicin	scm	country	Argentina	14	130	13	1	0	130	0	0
+staphylococcus_aureus__gentamicin	scm	country	Kenya	0	28	0	0	0	28	0	0
+staphylococcus_aureus__gentamicin	scm	country	Saudi Arabia	78	461	71	7	6	455	0	0
+staphylococcus_aureus__gentamicin	scm	country	Somalia	0	5	0	0	0	5	0	0
+staphylococcus_aureus__gentamicin	scm	mlst_in_cohort	no	0	51	0	0	0	51	0	0
+staphylococcus_aureus__gentamicin	scm	mlst_in_cohort	no ST	5	19	5	0	3	16	0	0
+staphylococcus_aureus__gentamicin	scm	mlst_in_cohort	yes	87	554	79	8	3	551	0	0
+staphylococcus_aureus__gentamicin	cart	bioproject	PRJEB24782	14	130	12	2	0	130	0	0
+staphylococcus_aureus__gentamicin	cart	bioproject	PRJNA1050907	78	461	71	7	5	456	0	0
+staphylococcus_aureus__gentamicin	cart	bioproject	PRJNA819273	0	33	0	0	0	33	0	0
+staphylococcus_aureus__gentamicin	cart	country	Argentina	14	130	12	2	0	130	0	0
+staphylococcus_aureus__gentamicin	cart	country	Kenya	0	28	0	0	0	28	0	0
+staphylococcus_aureus__gentamicin	cart	country	Saudi Arabia	78	461	71	7	5	456	0	0
+staphylococcus_aureus__gentamicin	cart	country	Somalia	0	5	0	0	0	5	0	0
+staphylococcus_aureus__gentamicin	cart	mlst_in_cohort	no	0	51	0	0	0	51	0	0
+staphylococcus_aureus__gentamicin	cart	mlst_in_cohort	no ST	5	19	5	0	2	17	0	0
+staphylococcus_aureus__gentamicin	cart	mlst_in_cohort	yes	87	554	78	9	3	551	0	0
+staphylococcus_aureus__gentamicin	lasso	bioproject	PRJEB24782	14	130	13	1	0	130	0	0
+staphylococcus_aureus__gentamicin	lasso	bioproject	PRJNA1050907	78	461	71	7	5	456	0	0
+staphylococcus_aureus__gentamicin	lasso	bioproject	PRJNA819273	0	33	0	0	0	33	0	0
+staphylococcus_aureus__gentamicin	lasso	country	Argentina	14	130	13	1	0	130	0	0
+staphylococcus_aureus__gentamicin	lasso	country	Kenya	0	28	0	0	0	28	0	0
+staphylococcus_aureus__gentamicin	lasso	country	Saudi Arabia	78	461	71	7	5	456	0	0
+staphylococcus_aureus__gentamicin	lasso	country	Somalia	0	5	0	0	0	5	0	0
+staphylococcus_aureus__gentamicin	lasso	mlst_in_cohort	no	0	51	0	0	0	51	0	0
+staphylococcus_aureus__gentamicin	lasso	mlst_in_cohort	no ST	5	19	5	0	2	17	0	0
+staphylococcus_aureus__gentamicin	lasso	mlst_in_cohort	yes	87	554	79	8	3	551	0	0
+staphylococcus_aureus__gentamicin	known_gene	bioproject	PRJEB24782	14	130	13	1	0	130	0	0
+staphylococcus_aureus__gentamicin	known_gene	bioproject	PRJNA1050907	78	461	71	7	6	455	0	0
+staphylococcus_aureus__gentamicin	known_gene	bioproject	PRJNA819273	0	33	0	0	0	33	0	0
+staphylococcus_aureus__gentamicin	known_gene	country	Argentina	14	130	13	1	0	130	0	0
+staphylococcus_aureus__gentamicin	known_gene	country	Kenya	0	28	0	0	0	28	0	0
+staphylococcus_aureus__gentamicin	known_gene	country	Saudi Arabia	78	461	71	7	6	455	0	0
+staphylococcus_aureus__gentamicin	known_gene	country	Somalia	0	5	0	0	0	5	0	0
+staphylococcus_aureus__gentamicin	known_gene	mlst_in_cohort	no	0	51	0	0	0	51	0	0
+staphylococcus_aureus__gentamicin	known_gene	mlst_in_cohort	no ST	5	19	5	0	1	18	0	0
+staphylococcus_aureus__gentamicin	known_gene	mlst_in_cohort	yes	87	554	79	8	5	549	0	0
+staphylococcus_aureus__levofloxacin	scm	bioproject	PRJNA1050907	60	346	60	0	21	325	0	0
+staphylococcus_aureus__levofloxacin	scm	country	Saudi Arabia	60	346	60	0	21	325	0	0
+staphylococcus_aureus__levofloxacin	scm	mlst_in_cohort	no	3	18	3	0	1	17	0	0
+staphylococcus_aureus__levofloxacin	scm	mlst_in_cohort	no ST	1	16	1	0	0	16	0	0
+staphylococcus_aureus__levofloxacin	scm	mlst_in_cohort	yes	56	312	56	0	20	292	0	0
+staphylococcus_aureus__levofloxacin	cart	bioproject	PRJNA1050907	60	346	60	0	83	263	0	0
+staphylococcus_aureus__levofloxacin	cart	country	Saudi Arabia	60	346	60	0	83	263	0	0
+staphylococcus_aureus__levofloxacin	cart	mlst_in_cohort	no	3	18	3	0	1	17	0	0
+staphylococcus_aureus__levofloxacin	cart	mlst_in_cohort	no ST	1	16	1	0	3	13	0	0
+staphylococcus_aureus__levofloxacin	cart	mlst_in_cohort	yes	56	312	56	0	79	233	0	0
+staphylococcus_aureus__levofloxacin	lasso	bioproject	PRJNA1050907	60	346	60	0	22	324	0	0
+staphylococcus_aureus__levofloxacin	lasso	country	Saudi Arabia	60	346	60	0	22	324	0	0
+staphylococcus_aureus__levofloxacin	lasso	mlst_in_cohort	no	3	18	3	0	1	17	0	0
+staphylococcus_aureus__levofloxacin	lasso	mlst_in_cohort	no ST	1	16	1	0	0	16	0	0
+staphylococcus_aureus__levofloxacin	lasso	mlst_in_cohort	yes	56	312	56	0	21	291	0	0
+staphylococcus_aureus__levofloxacin	known_gene	bioproject	PRJNA1050907	60	346	0	60	0	346	0	0
+staphylococcus_aureus__levofloxacin	known_gene	country	Saudi Arabia	60	346	0	60	0	346	0	0
+staphylococcus_aureus__levofloxacin	known_gene	mlst_in_cohort	no	3	18	0	3	0	18	0	0
+staphylococcus_aureus__levofloxacin	known_gene	mlst_in_cohort	no ST	1	16	0	1	0	16	0	0
+staphylococcus_aureus__levofloxacin	known_gene	mlst_in_cohort	yes	56	312	0	56	0	312	0	0
+staphylococcus_aureus__oxacillin	scm	bioproject	PRJEB24782	168	1	168	0	0	1	0	0
+staphylococcus_aureus__oxacillin	scm	bioproject	PRJNA1050907	491	22	484	7	3	19	0	0
+staphylococcus_aureus__oxacillin	scm	bioproject	PRJNA819273	0	33	0	0	0	33	0	0
+staphylococcus_aureus__oxacillin	scm	country	Argentina	168	1	168	0	0	1	0	0
+staphylococcus_aureus__oxacillin	scm	country	Kenya	0	28	0	0	0	28	0	0
+staphylococcus_aureus__oxacillin	scm	country	Saudi Arabia	491	22	484	7	3	19	0	0
+staphylococcus_aureus__oxacillin	scm	country	Somalia	0	5	0	0	0	5	0	0
+staphylococcus_aureus__oxacillin	scm	mlst_in_cohort	no	18	32	17	1	0	32	0	0
+staphylococcus_aureus__oxacillin	scm	mlst_in_cohort	no ST	21	0	20	1	0	0	0	0
+staphylococcus_aureus__oxacillin	scm	mlst_in_cohort	yes	620	24	615	5	3	21	0	0
+staphylococcus_aureus__oxacillin	cart	bioproject	PRJEB24782	168	1	168	0	0	1	0	0
+staphylococcus_aureus__oxacillin	cart	bioproject	PRJNA1050907	491	22	484	7	3	19	0	0
+staphylococcus_aureus__oxacillin	cart	bioproject	PRJNA819273	0	33	0	0	0	33	0	0
+staphylococcus_aureus__oxacillin	cart	country	Argentina	168	1	168	0	0	1	0	0
+staphylococcus_aureus__oxacillin	cart	country	Kenya	0	28	0	0	0	28	0	0
+staphylococcus_aureus__oxacillin	cart	country	Saudi Arabia	491	22	484	7	3	19	0	0
+staphylococcus_aureus__oxacillin	cart	country	Somalia	0	5	0	0	0	5	0	0
+staphylococcus_aureus__oxacillin	cart	mlst_in_cohort	no	18	32	17	1	0	32	0	0
+staphylococcus_aureus__oxacillin	cart	mlst_in_cohort	no ST	21	0	20	1	0	0	0	0
+staphylococcus_aureus__oxacillin	cart	mlst_in_cohort	yes	620	24	615	5	3	21	0	0
+staphylococcus_aureus__oxacillin	lasso	bioproject	PRJEB24782	168	1	168	0	0	1	0	0
+staphylococcus_aureus__oxacillin	lasso	bioproject	PRJNA1050907	491	22	484	7	3	19	0	0
+staphylococcus_aureus__oxacillin	lasso	bioproject	PRJNA819273	0	33	0	0	0	33	0	0
+staphylococcus_aureus__oxacillin	lasso	country	Argentina	168	1	168	0	0	1	0	0
+staphylococcus_aureus__oxacillin	lasso	country	Kenya	0	28	0	0	0	28	0	0
+staphylococcus_aureus__oxacillin	lasso	country	Saudi Arabia	491	22	484	7	3	19	0	0
+staphylococcus_aureus__oxacillin	lasso	country	Somalia	0	5	0	0	0	5	0	0
+staphylococcus_aureus__oxacillin	lasso	mlst_in_cohort	no	18	32	17	1	0	32	0	0
+staphylococcus_aureus__oxacillin	lasso	mlst_in_cohort	no ST	21	0	20	1	0	0	0	0
+staphylococcus_aureus__oxacillin	lasso	mlst_in_cohort	yes	620	24	615	5	3	21	0	0
+staphylococcus_aureus__oxacillin	known_gene	bioproject	PRJEB24782	168	1	168	0	0	1	0	0
+staphylococcus_aureus__oxacillin	known_gene	bioproject	PRJNA1050907	491	22	484	7	3	19	0	0
+staphylococcus_aureus__oxacillin	known_gene	bioproject	PRJNA819273	0	33	0	0	0	33	0	0
+staphylococcus_aureus__oxacillin	known_gene	country	Argentina	168	1	168	0	0	1	0	0
+staphylococcus_aureus__oxacillin	known_gene	country	Kenya	0	28	0	0	0	28	0	0
+staphylococcus_aureus__oxacillin	known_gene	country	Saudi Arabia	491	22	484	7	3	19	0	0
+staphylococcus_aureus__oxacillin	known_gene	country	Somalia	0	5	0	0	0	5	0	0
+staphylococcus_aureus__oxacillin	known_gene	mlst_in_cohort	no	18	32	17	1	0	32	0	0
+staphylococcus_aureus__oxacillin	known_gene	mlst_in_cohort	no ST	21	0	20	1	0	0	0	0
+staphylococcus_aureus__oxacillin	known_gene	mlst_in_cohort	yes	620	24	615	5	3	21	0	0
+staphylococcus_aureus__sulfamethoxazole_trimethoprim	scm	bioproject	PRJEB24782	0	157	0	0	0	157	0	0
+staphylococcus_aureus__sulfamethoxazole_trimethoprim	scm	bioproject	PRJNA1050907	94	504	72	22	4	500	0	0
+staphylococcus_aureus__sulfamethoxazole_trimethoprim	scm	country	Argentina	0	157	0	0	0	157	0	0
+staphylococcus_aureus__sulfamethoxazole_trimethoprim	scm	country	Saudi Arabia	94	504	72	22	4	500	0	0
+staphylococcus_aureus__sulfamethoxazole_trimethoprim	scm	mlst_in_cohort	no	3	25	3	0	1	24	0	0
+staphylococcus_aureus__sulfamethoxazole_trimethoprim	scm	mlst_in_cohort	no ST	3	21	3	0	0	21	0	0
+staphylococcus_aureus__sulfamethoxazole_trimethoprim	scm	mlst_in_cohort	yes	88	615	66	22	3	612	0	0
+staphylococcus_aureus__sulfamethoxazole_trimethoprim	cart	bioproject	PRJEB24782	0	157	0	0	0	157	0	0
+staphylococcus_aureus__sulfamethoxazole_trimethoprim	cart	bioproject	PRJNA1050907	94	504	72	22	5	499	0	0
+staphylococcus_aureus__sulfamethoxazole_trimethoprim	cart	country	Argentina	0	157	0	0	0	157	0	0
+staphylococcus_aureus__sulfamethoxazole_trimethoprim	cart	country	Saudi Arabia	94	504	72	22	5	499	0	0
+staphylococcus_aureus__sulfamethoxazole_trimethoprim	cart	mlst_in_cohort	no	3	25	3	0	0	25	0	0
+staphylococcus_aureus__sulfamethoxazole_trimethoprim	cart	mlst_in_cohort	no ST	3	21	3	0	0	21	0	0
+staphylococcus_aureus__sulfamethoxazole_trimethoprim	cart	mlst_in_cohort	yes	88	615	66	22	5	610	0	0
+staphylococcus_aureus__sulfamethoxazole_trimethoprim	known_gene	bioproject	PRJEB24782	0	157	0	0	0	157	0	0
+staphylococcus_aureus__sulfamethoxazole_trimethoprim	known_gene	bioproject	PRJNA1050907	94	504	0	94	0	504	0	0
+staphylococcus_aureus__sulfamethoxazole_trimethoprim	known_gene	country	Argentina	0	157	0	0	0	157	0	0
+staphylococcus_aureus__sulfamethoxazole_trimethoprim	known_gene	country	Saudi Arabia	94	504	0	94	0	504	0	0
+staphylococcus_aureus__sulfamethoxazole_trimethoprim	known_gene	mlst_in_cohort	no	3	25	0	3	0	25	0	0
+staphylococcus_aureus__sulfamethoxazole_trimethoprim	known_gene	mlst_in_cohort	no ST	3	21	0	3	0	21	0	0
+staphylococcus_aureus__sulfamethoxazole_trimethoprim	known_gene	mlst_in_cohort	yes	88	615	0	88	0	615	0	0
+staphylococcus_aureus__tetracycline	scm	bioproject	PRJEB24782	0	101	0	0	1	100	0	0
+staphylococcus_aureus__tetracycline	scm	bioproject	PRJNA1050907	96	501	85	11	35	466	0	0
+staphylococcus_aureus__tetracycline	scm	bioproject	PRJNA819273	8	25	6	2	1	24	0	0
+staphylococcus_aureus__tetracycline	scm	country	Argentina	0	101	0	0	1	100	0	0
+staphylococcus_aureus__tetracycline	scm	country	Kenya	8	20	6	2	1	19	0	0
+staphylococcus_aureus__tetracycline	scm	country	Saudi Arabia	96	501	85	11	35	466	0	0
+staphylococcus_aureus__tetracycline	scm	country	Somalia	0	5	0	0	0	5	0	0
+staphylococcus_aureus__tetracycline	scm	mlst_in_cohort	no	6	47	5	1	2	45	0	0
+staphylococcus_aureus__tetracycline	scm	mlst_in_cohort	no ST	5	19	4	1	1	18	0	0
+staphylococcus_aureus__tetracycline	scm	mlst_in_cohort	yes	93	561	82	11	34	527	0	0
+staphylococcus_aureus__tetracycline	cart	bioproject	PRJEB24782	0	101	0	0	0	101	0	0
+staphylococcus_aureus__tetracycline	cart	bioproject	PRJNA1050907	96	501	82	14	20	481	0	0
+staphylococcus_aureus__tetracycline	cart	bioproject	PRJNA819273	8	25	6	2	1	24	0	0
+staphylococcus_aureus__tetracycline	cart	country	Argentina	0	101	0	0	0	101	0	0
+staphylococcus_aureus__tetracycline	cart	country	Kenya	8	20	6	2	1	19	0	0
+staphylococcus_aureus__tetracycline	cart	country	Saudi Arabia	96	501	82	14	20	481	0	0
+staphylococcus_aureus__tetracycline	cart	country	Somalia	0	5	0	0	0	5	0	0
+staphylococcus_aureus__tetracycline	cart	mlst_in_cohort	no	6	47	5	1	1	46	0	0
+staphylococcus_aureus__tetracycline	cart	mlst_in_cohort	no ST	5	19	4	1	0	19	0	0
+staphylococcus_aureus__tetracycline	cart	mlst_in_cohort	yes	93	561	79	14	20	541	0	0
+staphylococcus_aureus__tetracycline	known_gene	bioproject	PRJEB24782	0	101	0	0	101	0	0	0
+staphylococcus_aureus__tetracycline	known_gene	bioproject	PRJNA1050907	96	501	96	0	501	0	0	0
+staphylococcus_aureus__tetracycline	known_gene	bioproject	PRJNA819273	8	25	8	0	25	0	0	0
+staphylococcus_aureus__tetracycline	known_gene	country	Argentina	0	101	0	0	101	0	0	0
+staphylococcus_aureus__tetracycline	known_gene	country	Kenya	8	20	8	0	20	0	0	0
+staphylococcus_aureus__tetracycline	known_gene	country	Saudi Arabia	96	501	96	0	501	0	0	0
+staphylococcus_aureus__tetracycline	known_gene	country	Somalia	0	5	0	0	5	0	0	0
+staphylococcus_aureus__tetracycline	known_gene	mlst_in_cohort	no	6	47	6	0	47	0	0	0
+staphylococcus_aureus__tetracycline	known_gene	mlst_in_cohort	no ST	5	19	5	0	19	0	0	0
+staphylococcus_aureus__tetracycline	known_gene	mlst_in_cohort	yes	93	561	93	0	561	0	0	0

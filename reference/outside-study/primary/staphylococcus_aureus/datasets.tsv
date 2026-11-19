@@ -1,0 +1,8 @@
+dataset	labelled_resistant	labelled_susceptible	excluded_no_sequence	excluded_species_check_failed	excluded_not_counted	scored_resistant	scored_susceptible	scored_borderline	reportable	lasso_complete	known_gene	top_study_resistant	top_study_resistant_count	top_study_resistant_share	top_study_susceptible	top_study_susceptible_count	top_study_susceptible_share	studies	loso_folds_reportable	top_study_resistant_fold_reportable	top_study_susceptible_fold_reportable	studies_not_left_out	scored_no_bioproject	top_study_resistant_tied	top_study_susceptible_tied
+staphylococcus_aureus__ciprofloxacin	254	476	0	0	0	254	476	0	yes	no	scored	PRJNA1050907	252	0.992126	PRJNA1050907	343	0.720588	2	1	no	no	PRJNA1050907	0		
+staphylococcus_aureus__erythromycin	209	574	0	0	0	209	574	0	yes	no	scored	PRJNA1050907	195	0.933014	PRJNA1050907	396	0.689895	3	2	no	no	PRJNA1050907	0		
+staphylococcus_aureus__gentamicin	92	624	0	0	0	92	624	0	yes	yes	scored	PRJNA1050907	78	0.847826	PRJNA1050907	461	0.738782	3	2	no	no	PRJNA1050907	0		
+staphylococcus_aureus__levofloxacin	60	346	0	0	0	60	346	0	yes	yes	scored	PRJNA1050907	60	1.000000	PRJNA1050907	346	1.000000	1	0	no	no	PRJNA1050907	0		
+staphylococcus_aureus__oxacillin	659	56	0	0	0	659	56	0	yes	yes	scored	PRJNA1050907	491	0.745068	PRJNA819273	33	0.589286	3	2	yes	no	PRJNA819273	0		
+staphylococcus_aureus__sulfamethoxazole_trimethoprim	94	661	0	0	0	94	661	0	yes	no	scored	PRJNA1050907	94	1.000000	PRJNA1050907	504	0.762481	2	1	no	no	PRJNA1050907	0		
+staphylococcus_aureus__tetracycline	104	627	0	0	0	104	627	0	yes	no	scored	PRJNA1050907	96	0.923077	PRJNA1050907	501	0.799043	3	2	no	no	PRJNA1050907	0		

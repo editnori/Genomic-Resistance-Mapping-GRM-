@@ -1,0 +1,18 @@
+dataset	learner	left_out	scored_resistant	scored_susceptible	reportable	tp	fn	fp	tn	no_call_resistant	no_call_susceptible	sensitivity	specificity	balanced_accuracy
+enterococcus_faecium__ampicillin	scm	PRJNA771404	0	0	no	0	0	0	0	0	0			
+enterococcus_faecium__ampicillin	cart	PRJNA771404	0	0	no	0	0	0	0	0	0			
+enterococcus_faecium__ampicillin	lasso	PRJNA771404	0	0	no	0	0	0	0	0	0			
+enterococcus_faecium__ampicillin	known_gene	PRJNA771404	0	0	no	0	0	0	0	0	0			
+enterococcus_faecium__doxycycline	scm	PRJNA771404	0	0	no	0	0	0	0	0	0			
+enterococcus_faecium__doxycycline	cart	PRJNA771404	0	0	no	0	0	0	0	0	0			
+enterococcus_faecium__doxycycline	known_gene	PRJNA771404	0	0	no	0	0	0	0	0	0			
+enterococcus_faecium__gentamicin	scm	PRJNA771404	0	0	no	0	0	0	0	0	0			
+enterococcus_faecium__gentamicin	cart	PRJNA771404	0	0	no	0	0	0	0	0	0			
+enterococcus_faecium__gentamicin	known_gene	PRJNA771404	0	0	no	0	0	0	0	0	0			
+enterococcus_faecium__tetracycline	scm	PRJNA771404	0	0	no	0	0	0	0	0	0			
+enterococcus_faecium__tetracycline	cart	PRJNA771404	0	0	no	0	0	0	0	0	0			
+enterococcus_faecium__tetracycline	lasso	PRJNA771404	0	0	no	0	0	0	0	0	0			
+enterococcus_faecium__tetracycline	known_gene	PRJNA771404	0	0	no	0	0	0	0	0	0			
+enterococcus_faecium__vancomycin	scm	PRJNA771404	0	0	no	0	0	0	0	0	0			
+enterococcus_faecium__vancomycin	cart	PRJNA771404	0	0	no	0	0	0	0	0	0			
+enterococcus_faecium__vancomycin	known_gene	PRJNA771404	0	0	no	0	0	0	0	0	0			

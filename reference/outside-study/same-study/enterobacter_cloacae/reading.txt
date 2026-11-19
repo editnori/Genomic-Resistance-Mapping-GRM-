@@ -1,0 +1,54 @@
+Outside-study test, enterobacter_cloacae, same-study population
+This is a retrospective test on newly deposited studies from the same database.
+It is not a lockbox: the batch's metadata and label totals were read before the rules were frozen.
+The genomes come from the same database as the cohort.
+
+Frozen genomes: 71. Scored: 71 (25 of them borderline in the species check, kept and flagged).
+Genomes excluded, no sequence: 0.
+Genomes excluded, species check failed: 0.
+Genomes excluded, not counted: 0.
+
+Each model is the report's final model, fitted once on the whole cohort and applied unchanged.
+The report's figures are for models refitted in each cross-validation fold and scored on held-out cohort genomes.
+Calls use the 0.5 cutoff. Intervals are exact Clopper-Pearson 95% intervals.
+A dataset with fewer than 25 resistant or 25 susceptible scored genomes is reported as counts only.
+Sensitivity and specificity are over the genomes a learner called; genomes with no call are counted in their own column.
+The known-gene rule's reference figure is a fixed rule applied to the whole cohort: nothing was fitted, so there is no cross-validation figure for it.
+The datasets share genomes and studies, so they are not independent of each other.
+Precision depends on the share of resistant genomes, which differs between the cohort and the new genomes.
+Scored genomes with the same k-mer set as a cohort genome: 0; as another scored genome: 0 (listed in duplicates.tsv; none is excluded for it).
+Stage attempts: setup 1, fetch 1, species-check 1, count 1, known-gene 1, predict 1.
+
+enterobacter_cloacae__ciprofloxacin: 25 resistant and 46 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA288601 holds 25 of the 25 resistant genomes (100.0%); PRJNA288601 holds 46 of the 46 susceptible genomes (100.0%). Of 1 study, 0 can be left out with 25 of each class remaining.
+  Every scored genome is from one study, so the estimate is that study's and no study-to-study range can be shown.
+  scm: TP 6, FN 19, FP 0, TN 46. Sensitivity 24.0% [9.4%, 45.1%], lineage split 68.7%, random split 77.6%: below. Specificity 100.0% [92.3%, 100.0%], lineage split 86.0%, random split 90.7%: above.
+    Reference figure: cross-validation, lineage split.
+  cart: TP 5, FN 20, FP 0, TN 46. Sensitivity 20.0% [6.8%, 40.7%], lineage split 23.9%, random split 80.6%: consistent. Specificity 100.0% [92.3%, 100.0%], lineage split 93.0%, random split 90.7%: consistent.
+    Reference figure: cross-validation, lineage split.
+  lasso: TP 16, FN 9, FP 0, TN 46. Sensitivity 64.0% [42.5%, 82.0%], lineage split 58.1%, random split 89.6%: consistent. Specificity 100.0% [92.3%, 100.0%], lineage split 88.6%, random split 93.0%: above.
+    Reference figure: cross-validation, lineage split.
+  known_gene: TP 7, FN 18, FP 7, TN 39. Sensitivity 28.0% [12.1%, 49.4%], lineage split 58.2%, random split 58.2%: below. Specificity 84.8% [71.1%, 93.7%], lineage split 76.7%, random split 76.7%: consistent.
+    Reference figure: fixed rule, whole cohort.
+enterobacter_cloacae__sulfamethoxazole_trimethoprim: 27 resistant and 44 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA288601 holds 27 of the 27 resistant genomes (100.0%); PRJNA288601 holds 44 of the 44 susceptible genomes (100.0%). Of 1 study, 0 can be left out with 25 of each class remaining.
+  Every scored genome is from one study, so the estimate is that study's and no study-to-study range can be shown.
+  scm: TP 16, FN 11, FP 4, TN 40. Sensitivity 59.3% [38.8%, 77.6%], lineage split 100.0%, random split 85.4%: below. Specificity 90.9% [78.3%, 97.5%], lineage split 94.9%, random split 92.3%: consistent.
+    Reference figure: cross-validation, lineage split; a reference sensitivity or specificity is exactly 0 or 1.
+  cart: TP 16, FN 11, FP 4, TN 40. Sensitivity 59.3% [38.8%, 77.6%], lineage split 100.0%, random split 90.2%: below. Specificity 90.9% [78.3%, 97.5%], lineage split 94.9%, random split 92.3%: consistent.
+    Reference figure: cross-validation, lineage split; a reference sensitivity or specificity is exactly 0 or 1.
+  lasso: TP 14, FN 13, FP 3, TN 41. Sensitivity 51.9% [31.9%, 71.3%], lineage split 90.2%, random split 87.8%: below. Specificity 93.2% [81.3%, 98.6%], lineage split 94.9%, random split 92.3%: consistent.
+    Reference figure: cross-validation, lineage split.
+  known_gene: TP 17, FN 10, FP 1, TN 43. Sensitivity 63.0% [42.4%, 80.6%], lineage split 95.1%, random split 95.1%: below. Specificity 97.7% [88.0%, 99.9%], lineage split 100.0%, random split 100.0%: below.
+    Reference figure: fixed rule, whole cohort; a reference sensitivity or specificity is exactly 0 or 1.
+
+Readings per learner (each dataset contributes sensitivity and specificity):
+  scm: below 2, consistent 1, above 1, not read 0.
+  cart: below 1, consistent 3, above 0, not read 0.
+  lasso: below 1, consistent 2, above 1, not read 0.
+  known_gene: below 3, consistent 1, above 0, not read 0.
+The reading is descriptive. It has no multiplicity correction and is not a hypothesis test.
+paired.tsv sets each learner beside the known-gene rule on the same genomes (counts only, no test).
+
+Not run here: sequence-distance novelty, partial-feature counts (--matrix), calibration,
+any hypothesis test, forests and boosted trees (not published in full).

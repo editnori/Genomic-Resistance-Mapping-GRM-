@@ -75,13 +75,20 @@ describe("catalog gene groups", () => {
     expect(html).toContain("Counts for the rule says whether the gene");
     expect(html).not.toContain('role="tooltip"');
   });
+
+  it("lets a long class list break after each slash, keeping its text", () => {
+    const group = { ...report.catalog!.groups[0]!, class: "LINCOSAMIDE/OXAZOLIDINONE/PHENICOL", subclass: "CHLORAMPHENICOL/STREPTOGRAMIN B" };
+    const html = render({ ...report, catalog: { ...report.catalog!, groups: [group] } });
+    expect(html).toContain("lincosamide/<wbr/>oxazolidinone/<wbr/>phenicol");
+    expect(html).toContain("chloramphenicol/<wbr/>streptogramin b");
+  });
 });
 
 describe("catalog baseline wording", () => {
   it("names GRM's catalog-containment rule and gives the AMRFinderPlus catalog only as its source", () => {
     const version = report.catalog!.version;
     const html = render(report);
-    expect(html).toContain(`Catalog-containment rule · AMRFinderPlus catalog ${version}`);
+    expect(html).toContain(`Catalog-containment rule · AMRFinderPlus catalog database ${version}`);
     expect(html).not.toContain(`>AMRFinderPlus ${version}<`);
   });
 });

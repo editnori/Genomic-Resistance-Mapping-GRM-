@@ -1,0 +1,41 @@
+dataset	learner	grouping	group	scored_resistant	scored_susceptible	tp	fn	fp	tn	no_call_resistant	no_call_susceptible
+enterobacter_cloacae__ciprofloxacin	scm	bioproject	PRJNA288601	25	46	6	19	0	46	0	0
+enterobacter_cloacae__ciprofloxacin	scm	country	USA	25	46	6	19	0	46	0	0
+enterobacter_cloacae__ciprofloxacin	scm	mlst_in_cohort	no	8	22	1	7	0	22	0	0
+enterobacter_cloacae__ciprofloxacin	scm	mlst_in_cohort	no ST	2	0	0	2	0	0	0	0
+enterobacter_cloacae__ciprofloxacin	scm	mlst_in_cohort	yes	15	24	5	10	0	24	0	0
+enterobacter_cloacae__ciprofloxacin	cart	bioproject	PRJNA288601	25	46	5	20	0	46	0	0
+enterobacter_cloacae__ciprofloxacin	cart	country	USA	25	46	5	20	0	46	0	0
+enterobacter_cloacae__ciprofloxacin	cart	mlst_in_cohort	no	8	22	0	8	0	22	0	0
+enterobacter_cloacae__ciprofloxacin	cart	mlst_in_cohort	no ST	2	0	0	2	0	0	0	0
+enterobacter_cloacae__ciprofloxacin	cart	mlst_in_cohort	yes	15	24	5	10	0	24	0	0
+enterobacter_cloacae__ciprofloxacin	lasso	bioproject	PRJNA288601	25	46	16	9	0	46	0	0
+enterobacter_cloacae__ciprofloxacin	lasso	country	USA	25	46	16	9	0	46	0	0
+enterobacter_cloacae__ciprofloxacin	lasso	mlst_in_cohort	no	8	22	3	5	0	22	0	0
+enterobacter_cloacae__ciprofloxacin	lasso	mlst_in_cohort	no ST	2	0	1	1	0	0	0	0
+enterobacter_cloacae__ciprofloxacin	lasso	mlst_in_cohort	yes	15	24	12	3	0	24	0	0
+enterobacter_cloacae__ciprofloxacin	known_gene	bioproject	PRJNA288601	25	46	7	18	7	39	0	0
+enterobacter_cloacae__ciprofloxacin	known_gene	country	USA	25	46	7	18	7	39	0	0
+enterobacter_cloacae__ciprofloxacin	known_gene	mlst_in_cohort	no	8	22	3	5	5	17	0	0
+enterobacter_cloacae__ciprofloxacin	known_gene	mlst_in_cohort	no ST	2	0	1	1	0	0	0	0
+enterobacter_cloacae__ciprofloxacin	known_gene	mlst_in_cohort	yes	15	24	3	12	2	22	0	0
+enterobacter_cloacae__sulfamethoxazole_trimethoprim	scm	bioproject	PRJNA288601	27	44	16	11	4	40	0	0
+enterobacter_cloacae__sulfamethoxazole_trimethoprim	scm	country	USA	27	44	16	11	4	40	0	0
+enterobacter_cloacae__sulfamethoxazole_trimethoprim	scm	mlst_in_cohort	no	9	21	7	2	2	19	0	0
+enterobacter_cloacae__sulfamethoxazole_trimethoprim	scm	mlst_in_cohort	no ST	1	1	1	0	0	1	0	0
+enterobacter_cloacae__sulfamethoxazole_trimethoprim	scm	mlst_in_cohort	yes	17	22	8	9	2	20	0	0
+enterobacter_cloacae__sulfamethoxazole_trimethoprim	cart	bioproject	PRJNA288601	27	44	16	11	4	40	0	0
+enterobacter_cloacae__sulfamethoxazole_trimethoprim	cart	country	USA	27	44	16	11	4	40	0	0
+enterobacter_cloacae__sulfamethoxazole_trimethoprim	cart	mlst_in_cohort	no	9	21	7	2	2	19	0	0
+enterobacter_cloacae__sulfamethoxazole_trimethoprim	cart	mlst_in_cohort	no ST	1	1	1	0	0	1	0	0
+enterobacter_cloacae__sulfamethoxazole_trimethoprim	cart	mlst_in_cohort	yes	17	22	8	9	2	20	0	0
+enterobacter_cloacae__sulfamethoxazole_trimethoprim	lasso	bioproject	PRJNA288601	27	44	14	13	3	41	0	0
+enterobacter_cloacae__sulfamethoxazole_trimethoprim	lasso	country	USA	27	44	14	13	3	41	0	0
+enterobacter_cloacae__sulfamethoxazole_trimethoprim	lasso	mlst_in_cohort	no	9	21	5	4	0	21	0	0
+enterobacter_cloacae__sulfamethoxazole_trimethoprim	lasso	mlst_in_cohort	no ST	1	1	1	0	0	1	0	0
+enterobacter_cloacae__sulfamethoxazole_trimethoprim	lasso	mlst_in_cohort	yes	17	22	8	9	3	19	0	0
+enterobacter_cloacae__sulfamethoxazole_trimethoprim	known_gene	bioproject	PRJNA288601	27	44	17	10	1	43	0	0
+enterobacter_cloacae__sulfamethoxazole_trimethoprim	known_gene	country	USA	27	44	17	10	1	43	0	0
+enterobacter_cloacae__sulfamethoxazole_trimethoprim	known_gene	mlst_in_cohort	no	9	21	5	4	0	21	0	0
+enterobacter_cloacae__sulfamethoxazole_trimethoprim	known_gene	mlst_in_cohort	no ST	1	1	1	0	0	1	0	0
+enterobacter_cloacae__sulfamethoxazole_trimethoprim	known_gene	mlst_in_cohort	yes	17	22	11	6	1	21	0	0

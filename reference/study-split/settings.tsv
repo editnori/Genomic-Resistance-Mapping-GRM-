@@ -1,0 +1,24 @@
+key	value
+release_revision	14
+release_generated_at	2026-11-12T20:16:29Z
+folds	5
+draws	5
+cutoff	0.5
+clip	0.0001
+first_design_key	studysplit-20261115
+second_design_key	studydraws-20261115
+min_studies	5
+min_study_share	0.8
+max_group_share	0.5
+study_rule	d0:A,d1:B,d2:B,d3:B,d4:B
+study_rule_line	0.10
+threshold_SR	20
+threshold_SM	4
+threshold_MR	20
+experiment_rule_learners	3
+no_study_min	10
+first_loss	log_loss
+second_loss	error_rate for scm, log_loss for the others
+genome_table_sha256_gz	84ae57a777cb234aa0a39102ab7f9ca9448e52d1474654179f26165644c25f64
+interval	exact: every multiset of the species with replacement, low above 1/40, high at 39/40
+first_plan_resamples	10000

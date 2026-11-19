@@ -1,0 +1,5 @@
+dataset	learner	left_out	scored_resistant	scored_susceptible	reportable	tp	fn	fp	tn	no_call_resistant	no_call_susceptible	sensitivity	specificity	balanced_accuracy
+shigella_flexneri__ciprofloxacin	scm	PRJNA1069659	0	0	no	0	0	0	0	0	0			
+shigella_flexneri__ciprofloxacin	cart	PRJNA1069659	0	0	no	0	0	0	0	0	0			
+shigella_flexneri__ciprofloxacin	lasso	PRJNA1069659	0	0	no	0	0	0	0	0	0			
+shigella_flexneri__ciprofloxacin	known_gene	PRJNA1069659	0	0	no	0	0	0	0	0	0			

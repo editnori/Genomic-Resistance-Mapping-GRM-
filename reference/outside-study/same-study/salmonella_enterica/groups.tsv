@@ -1,0 +1,2264 @@
+dataset	learner	grouping	group	scored_resistant	scored_susceptible	tp	fn	fp	tn	no_call_resistant	no_call_susceptible
+salmonella_enterica__amoxicillin_clavulanate	scm	bioproject	PRJNA248792	301	715	0	301	0	715	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	bioproject	PRJNA378379	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	Afghanistan	2	0	0	2	0	0	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	Afghanistan, Pakistan	1	1	0	1	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	Bangladesh	15	44	0	15	0	44	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	Bangladesh, India	1	1	0	1	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	Cambodia, Sri Lanka	1	0	0	1	0	0	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	China	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	China/Nigeria	0	2	0	0	0	2	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	Congo	2	1	0	2	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	Dominican Republic	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	East Timor, Indonesia	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	European cruise - multiple destinations	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	Fiji	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	France	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	Ghana	0	3	0	0	0	3	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	Greece	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	Guatemala	0	2	0	0	0	2	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	India	8	343	0	8	0	343	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	India, Myanmar	0	3	0	0	0	3	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	India, Nepal	0	4	0	0	0	4	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	India, Sri Lanka	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	India, Thailand	0	3	0	0	0	3	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	India, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	Indonesia	0	2	0	0	0	2	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	Iraq	2	1	0	2	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	Kenya	1	0	0	1	0	0	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	Kenya, Somalia	1	0	0	1	0	0	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	Kenya, Tanzania	1	0	0	1	0	0	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	Laos, Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	Mexico	0	8	0	0	0	8	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	Morocco	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	N	2	1	0	2	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	Nepal	0	5	0	0	0	5	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	Nigeria	5	7	0	5	0	7	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	No travel	4	9	0	4	0	9	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	Not Stated	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	Pakistan	215	184	0	215	0	184	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	Philippines	0	3	0	0	0	3	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	Saudi Arabia	1	0	0	1	0	0	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	Saudi arabia	0	2	0	0	0	2	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	Singapore	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	South Africa	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	Spain	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	Sudan	0	2	0	0	0	2	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	Sweden	1	0	0	1	0	0	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	Switzerland	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	Tunisia	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	Turks and Caicos Islands	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	Uganda	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	United Arab Emirates	2	0	0	2	0	0	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	Y	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	Zimbabwe	10	1	0	10	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	india	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	country	nan	26	60	0	26	0	60	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	mlst_in_cohort	no	0	11	0	0	0	11	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	mlst_in_cohort	no ST	2	13	0	2	0	13	0	0
+salmonella_enterica__amoxicillin_clavulanate	scm	mlst_in_cohort	yes	299	692	0	299	0	692	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	bioproject	PRJNA248792	301	715	0	301	0	715	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	bioproject	PRJNA378379	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	Afghanistan	2	0	0	2	0	0	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	Afghanistan, Pakistan	1	1	0	1	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	Bangladesh	15	44	0	15	0	44	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	Bangladesh, India	1	1	0	1	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	Cambodia, Sri Lanka	1	0	0	1	0	0	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	China	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	China/Nigeria	0	2	0	0	0	2	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	Congo	2	1	0	2	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	Dominican Republic	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	East Timor, Indonesia	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	European cruise - multiple destinations	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	Fiji	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	France	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	Ghana	0	3	0	0	0	3	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	Greece	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	Guatemala	0	2	0	0	0	2	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	India	8	343	0	8	0	343	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	India, Myanmar	0	3	0	0	0	3	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	India, Nepal	0	4	0	0	0	4	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	India, Sri Lanka	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	India, Thailand	0	3	0	0	0	3	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	India, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	Indonesia	0	2	0	0	0	2	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	Iraq	2	1	0	2	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	Kenya	1	0	0	1	0	0	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	Kenya, Somalia	1	0	0	1	0	0	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	Kenya, Tanzania	1	0	0	1	0	0	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	Laos, Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	Mexico	0	8	0	0	0	8	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	Morocco	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	N	2	1	0	2	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	Nepal	0	5	0	0	0	5	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	Nigeria	5	7	0	5	0	7	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	No travel	4	9	0	4	0	9	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	Not Stated	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	Pakistan	215	184	0	215	0	184	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	Philippines	0	3	0	0	0	3	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	Saudi Arabia	1	0	0	1	0	0	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	Saudi arabia	0	2	0	0	0	2	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	Singapore	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	South Africa	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	Spain	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	Sudan	0	2	0	0	0	2	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	Sweden	1	0	0	1	0	0	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	Switzerland	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	Tunisia	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	Turks and Caicos Islands	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	Uganda	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	United Arab Emirates	2	0	0	2	0	0	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	Y	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	Zimbabwe	10	1	0	10	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	india	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	country	nan	26	60	0	26	0	60	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	mlst_in_cohort	no	0	11	0	0	0	11	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	mlst_in_cohort	no ST	2	13	0	2	0	13	0	0
+salmonella_enterica__amoxicillin_clavulanate	cart	mlst_in_cohort	yes	299	692	0	299	0	692	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	bioproject	PRJNA248792	301	715	0	301	0	715	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	bioproject	PRJNA378379	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	Afghanistan	2	0	0	2	0	0	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	Afghanistan, Pakistan	1	1	0	1	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	Bangladesh	15	44	0	15	0	44	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	Bangladesh, India	1	1	0	1	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	Cambodia, Sri Lanka	1	0	0	1	0	0	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	China	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	China/Nigeria	0	2	0	0	0	2	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	Congo	2	1	0	2	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	Dominican Republic	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	East Timor, Indonesia	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	European cruise - multiple destinations	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	Fiji	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	France	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	Ghana	0	3	0	0	0	3	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	Greece	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	Guatemala	0	2	0	0	0	2	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	India	8	343	0	8	0	343	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	India, Myanmar	0	3	0	0	0	3	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	India, Nepal	0	4	0	0	0	4	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	India, Sri Lanka	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	India, Thailand	0	3	0	0	0	3	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	India, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	Indonesia	0	2	0	0	0	2	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	Iraq	2	1	0	2	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	Kenya	1	0	0	1	0	0	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	Kenya, Somalia	1	0	0	1	0	0	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	Kenya, Tanzania	1	0	0	1	0	0	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	Laos, Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	Mexico	0	8	0	0	0	8	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	Morocco	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	N	2	1	0	2	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	Nepal	0	5	0	0	0	5	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	Nigeria	5	7	0	5	0	7	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	No travel	4	9	0	4	0	9	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	Not Stated	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	Pakistan	215	184	0	215	0	184	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	Philippines	0	3	0	0	0	3	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	Saudi Arabia	1	0	0	1	0	0	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	Saudi arabia	0	2	0	0	0	2	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	Singapore	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	South Africa	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	Spain	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	Sudan	0	2	0	0	0	2	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	Sweden	1	0	0	1	0	0	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	Switzerland	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	Tunisia	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	Turks and Caicos Islands	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	Uganda	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	United Arab Emirates	2	0	0	2	0	0	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	Y	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	Zimbabwe	10	1	0	10	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	india	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	country	nan	26	60	0	26	0	60	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	mlst_in_cohort	no	0	11	0	0	0	11	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	mlst_in_cohort	no ST	2	13	0	2	0	13	0	0
+salmonella_enterica__amoxicillin_clavulanate	lasso	mlst_in_cohort	yes	299	692	0	299	0	692	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	bioproject	PRJNA248792	301	715	48	253	0	715	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	bioproject	PRJNA378379	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	Afghanistan	2	0	0	2	0	0	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	Afghanistan, Pakistan	1	1	0	1	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	Bangladesh	15	44	0	15	0	44	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	Bangladesh, India	1	1	0	1	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	Cambodia, Sri Lanka	1	0	0	1	0	0	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	China	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	China/Nigeria	0	2	0	0	0	2	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	Congo	2	1	0	2	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	Dominican Republic	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	East Timor, Indonesia	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	European cruise - multiple destinations	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	Fiji	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	France	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	Ghana	0	3	0	0	0	3	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	Greece	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	Guatemala	0	2	0	0	0	2	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	India	8	343	1	7	0	343	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	India, Myanmar	0	3	0	0	0	3	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	India, Nepal	0	4	0	0	0	4	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	India, Sri Lanka	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	India, Thailand	0	3	0	0	0	3	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	India, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	Indonesia	0	2	0	0	0	2	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	Iraq	2	1	0	2	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	Kenya	1	0	0	1	0	0	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	Kenya, Somalia	1	0	0	1	0	0	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	Kenya, Tanzania	1	0	0	1	0	0	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	Laos, Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	Mexico	0	8	0	0	0	8	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	Morocco	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	N	2	1	0	2	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	Nepal	0	5	0	0	0	5	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	Nigeria	5	7	0	5	0	7	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	No travel	4	9	0	4	0	9	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	Not Stated	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	Pakistan	215	184	46	169	0	184	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	Philippines	0	3	0	0	0	3	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	Saudi Arabia	1	0	0	1	0	0	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	Saudi arabia	0	2	0	0	0	2	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	Singapore	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	South Africa	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	Spain	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	Sudan	0	2	0	0	0	2	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	Sweden	1	0	0	1	0	0	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	Switzerland	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	Tunisia	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	Turks and Caicos Islands	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	Uganda	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	United Arab Emirates	2	0	0	2	0	0	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	Y	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	Zimbabwe	10	1	0	10	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	india	0	1	0	0	0	1	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	country	nan	26	60	1	25	0	60	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	mlst_in_cohort	no	0	11	0	0	0	11	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	mlst_in_cohort	no ST	2	13	0	2	0	13	0	0
+salmonella_enterica__amoxicillin_clavulanate	known_gene	mlst_in_cohort	yes	299	692	48	251	0	692	0	0
+salmonella_enterica__ceftazidime	scm	bioproject	PRJNA248792	51	1653	47	4	0	1653	0	0
+salmonella_enterica__ceftazidime	scm	country	Afghanistan	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	scm	country	Afghanistan, Pakistan	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	scm	country	American Samoa	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	scm	country	Argentina	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	scm	country	Argentina, Bolivia, Brazil, Colombia, Chile	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	scm	country	Argentina, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	scm	country	Asian continent	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	scm	country	Bangladesh	1	114	1	0	0	114	0	0
+salmonella_enterica__ceftazidime	scm	country	Bangladesh, India	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	scm	country	Bolivia	0	8	0	0	0	8	0	0
+salmonella_enterica__ceftazidime	scm	country	Bolivia, Brazil, Colombia, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	scm	country	Bolivia, Brazil, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	scm	country	Bolivia, Chile, Peru	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	scm	country	Brazil	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	scm	country	Cambodia	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	scm	country	Cambodia, India, Laos, Thailand, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	scm	country	Cambodia, India, Nepal, Thailand	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	scm	country	Cambodia, Sri Lanka	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	scm	country	Cambodia, Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	scm	country	Cambodia, Thailand, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	scm	country	Cambodia, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	scm	country	Canada	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	scm	country	China	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	scm	country	China/Nigeria	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	scm	country	Colombia	0	5	0	0	0	5	0	0
+salmonella_enterica__ceftazidime	scm	country	Congo	0	3	0	0	0	3	0	0
+salmonella_enterica__ceftazidime	scm	country	Dominican Republic	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	scm	country	East Timor, Indonesia	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	scm	country	European cruise - multiple destinations	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	scm	country	Fiji	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	scm	country	France	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	scm	country	Ghana	0	6	0	0	0	6	0	0
+salmonella_enterica__ceftazidime	scm	country	Greece	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	scm	country	Guatemala	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	scm	country	India	1	614	0	1	0	614	0	0
+salmonella_enterica__ceftazidime	scm	country	India, Indonesia	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	scm	country	India, Indonesia, Philippines, Sri Lanka, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	scm	country	India, Myanmar	0	3	0	0	0	3	0	0
+salmonella_enterica__ceftazidime	scm	country	India, Nepal	0	8	0	0	0	8	0	0
+salmonella_enterica__ceftazidime	scm	country	India, Pakistan	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	scm	country	India, Philippines	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	scm	country	India, Sri Lanka	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	scm	country	India, Thailand	0	5	0	0	0	5	0	0
+salmonella_enterica__ceftazidime	scm	country	India, Turkey	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	scm	country	India, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	scm	country	India, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	scm	country	Indonesia	0	9	0	0	0	9	0	0
+salmonella_enterica__ceftazidime	scm	country	Iraq	2	21	0	2	0	21	0	0
+salmonella_enterica__ceftazidime	scm	country	Japan	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	scm	country	Kenya	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	scm	country	Kenya, Somalia	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	scm	country	Kenya, Tanzania	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	scm	country	Laos, Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	scm	country	Malaysia	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	scm	country	Mexico	0	8	0	0	0	8	0	0
+salmonella_enterica__ceftazidime	scm	country	Morocco	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	scm	country	Myanmar	0	6	0	0	0	6	0	0
+salmonella_enterica__ceftazidime	scm	country	N	0	3	0	0	0	3	0	0
+salmonella_enterica__ceftazidime	scm	country	Nepal	0	6	0	0	0	6	0	0
+salmonella_enterica__ceftazidime	scm	country	Nigeria	0	13	0	0	0	13	0	0
+salmonella_enterica__ceftazidime	scm	country	No travel	0	13	0	0	0	13	0	0
+salmonella_enterica__ceftazidime	scm	country	Not Stated	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	scm	country	Pakistan	46	551	45	1	0	551	0	0
+salmonella_enterica__ceftazidime	scm	country	Pakistan, Saudi Arabia	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	scm	country	Peru	0	9	0	0	0	9	0	0
+salmonella_enterica__ceftazidime	scm	country	Philippines	0	4	0	0	0	4	0	0
+salmonella_enterica__ceftazidime	scm	country	Poland	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	scm	country	Saudi Arabia	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	scm	country	Saudi arabia	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	scm	country	Singapore	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	scm	country	South Africa	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	scm	country	Spain	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	scm	country	Sudan	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	scm	country	Sweden	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	scm	country	Thailand	0	4	0	0	0	4	0	0
+salmonella_enterica__ceftazidime	scm	country	Tunisia	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	scm	country	Turkey	0	3	0	0	0	3	0	0
+salmonella_enterica__ceftazidime	scm	country	Turks and Caicos Islands	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	scm	country	Uganda	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	scm	country	United Arab Emirates	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	scm	country	Vietnam	0	3	0	0	0	3	0	0
+salmonella_enterica__ceftazidime	scm	country	Y	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	scm	country	Yemen	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	scm	country	Zimbabwe	0	11	0	0	0	11	0	0
+salmonella_enterica__ceftazidime	scm	country	india	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	scm	country	nan	1	147	1	0	0	147	0	0
+salmonella_enterica__ceftazidime	scm	mlst_in_cohort	no	0	107	0	0	0	107	0	0
+salmonella_enterica__ceftazidime	scm	mlst_in_cohort	no ST	1	94	1	0	0	94	0	0
+salmonella_enterica__ceftazidime	scm	mlst_in_cohort	yes	50	1452	46	4	0	1452	0	0
+salmonella_enterica__ceftazidime	cart	bioproject	PRJNA248792	51	1653	0	51	91	1562	0	0
+salmonella_enterica__ceftazidime	cart	country	Afghanistan	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	cart	country	Afghanistan, Pakistan	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	cart	country	American Samoa	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	cart	country	Argentina	0	1	0	0	1	0	0	0
+salmonella_enterica__ceftazidime	cart	country	Argentina, Bolivia, Brazil, Colombia, Chile	0	1	0	0	1	0	0	0
+salmonella_enterica__ceftazidime	cart	country	Argentina, Peru	0	1	0	0	1	0	0	0
+salmonella_enterica__ceftazidime	cart	country	Asian continent	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	cart	country	Bangladesh	1	114	0	1	0	114	0	0
+salmonella_enterica__ceftazidime	cart	country	Bangladesh, India	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	cart	country	Bolivia	0	8	0	0	8	0	0	0
+salmonella_enterica__ceftazidime	cart	country	Bolivia, Brazil, Colombia, Peru	0	1	0	0	1	0	0	0
+salmonella_enterica__ceftazidime	cart	country	Bolivia, Brazil, Peru	0	1	0	0	1	0	0	0
+salmonella_enterica__ceftazidime	cart	country	Bolivia, Chile, Peru	0	2	0	0	2	0	0	0
+salmonella_enterica__ceftazidime	cart	country	Brazil	0	2	0	0	2	0	0	0
+salmonella_enterica__ceftazidime	cart	country	Cambodia	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	cart	country	Cambodia, India, Laos, Thailand, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	cart	country	Cambodia, India, Nepal, Thailand	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	cart	country	Cambodia, Sri Lanka	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	cart	country	Cambodia, Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	cart	country	Cambodia, Thailand, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	cart	country	Cambodia, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	cart	country	Canada	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	cart	country	China	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	cart	country	China/Nigeria	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	cart	country	Colombia	0	5	0	0	5	0	0	0
+salmonella_enterica__ceftazidime	cart	country	Congo	0	3	0	0	0	3	0	0
+salmonella_enterica__ceftazidime	cart	country	Dominican Republic	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	cart	country	East Timor, Indonesia	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	cart	country	European cruise - multiple destinations	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	cart	country	Fiji	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	cart	country	France	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	cart	country	Ghana	0	6	0	0	0	6	0	0
+salmonella_enterica__ceftazidime	cart	country	Greece	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	cart	country	Guatemala	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	cart	country	India	1	614	0	1	1	613	0	0
+salmonella_enterica__ceftazidime	cart	country	India, Indonesia	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	cart	country	India, Indonesia, Philippines, Sri Lanka, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	cart	country	India, Myanmar	0	3	0	0	0	3	0	0
+salmonella_enterica__ceftazidime	cart	country	India, Nepal	0	8	0	0	0	8	0	0
+salmonella_enterica__ceftazidime	cart	country	India, Pakistan	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	cart	country	India, Philippines	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	cart	country	India, Sri Lanka	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	cart	country	India, Thailand	0	5	0	0	0	5	0	0
+salmonella_enterica__ceftazidime	cart	country	India, Turkey	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	cart	country	India, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	cart	country	India, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	cart	country	Indonesia	0	9	0	0	0	9	0	0
+salmonella_enterica__ceftazidime	cart	country	Iraq	2	21	0	2	20	1	0	0
+salmonella_enterica__ceftazidime	cart	country	Japan	0	2	0	0	2	0	0	0
+salmonella_enterica__ceftazidime	cart	country	Kenya	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	cart	country	Kenya, Somalia	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	cart	country	Kenya, Tanzania	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	cart	country	Laos, Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	cart	country	Malaysia	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	cart	country	Mexico	0	8	0	0	0	8	0	0
+salmonella_enterica__ceftazidime	cart	country	Morocco	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	cart	country	Myanmar	0	6	0	0	0	6	0	0
+salmonella_enterica__ceftazidime	cart	country	N	0	3	0	0	0	3	0	0
+salmonella_enterica__ceftazidime	cart	country	Nepal	0	6	0	0	0	6	0	0
+salmonella_enterica__ceftazidime	cart	country	Nigeria	0	13	0	0	0	13	0	0
+salmonella_enterica__ceftazidime	cart	country	No travel	0	13	0	0	0	13	0	0
+salmonella_enterica__ceftazidime	cart	country	Not Stated	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	cart	country	Pakistan	46	551	0	46	7	544	0	0
+salmonella_enterica__ceftazidime	cart	country	Pakistan, Saudi Arabia	0	1	0	0	1	0	0	0
+salmonella_enterica__ceftazidime	cart	country	Peru	0	9	0	0	8	1	0	0
+salmonella_enterica__ceftazidime	cart	country	Philippines	0	4	0	0	0	4	0	0
+salmonella_enterica__ceftazidime	cart	country	Poland	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	cart	country	Saudi Arabia	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	cart	country	Saudi arabia	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	cart	country	Singapore	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	cart	country	South Africa	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	cart	country	Spain	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	cart	country	Sudan	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	cart	country	Sweden	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	cart	country	Thailand	0	4	0	0	0	4	0	0
+salmonella_enterica__ceftazidime	cart	country	Tunisia	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	cart	country	Turkey	0	3	0	0	3	0	0	0
+salmonella_enterica__ceftazidime	cart	country	Turks and Caicos Islands	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	cart	country	Uganda	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	cart	country	United Arab Emirates	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	cart	country	Vietnam	0	3	0	0	0	3	0	0
+salmonella_enterica__ceftazidime	cart	country	Y	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	cart	country	Yemen	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	cart	country	Zimbabwe	0	11	0	0	0	11	0	0
+salmonella_enterica__ceftazidime	cart	country	india	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	cart	country	nan	1	147	0	1	27	120	0	0
+salmonella_enterica__ceftazidime	cart	mlst_in_cohort	no	0	107	0	0	90	17	0	0
+salmonella_enterica__ceftazidime	cart	mlst_in_cohort	no ST	1	94	0	1	1	93	0	0
+salmonella_enterica__ceftazidime	cart	mlst_in_cohort	yes	50	1452	0	50	0	1452	0	0
+salmonella_enterica__ceftazidime	lasso	bioproject	PRJNA248792	51	1653	48	3	72	1581	0	0
+salmonella_enterica__ceftazidime	lasso	country	Afghanistan	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	lasso	country	Afghanistan, Pakistan	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	lasso	country	American Samoa	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	lasso	country	Argentina	0	1	0	0	1	0	0	0
+salmonella_enterica__ceftazidime	lasso	country	Argentina, Bolivia, Brazil, Colombia, Chile	0	1	0	0	1	0	0	0
+salmonella_enterica__ceftazidime	lasso	country	Argentina, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	lasso	country	Asian continent	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	lasso	country	Bangladesh	1	114	1	0	2	112	0	0
+salmonella_enterica__ceftazidime	lasso	country	Bangladesh, India	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	lasso	country	Bolivia	0	8	0	0	6	2	0	0
+salmonella_enterica__ceftazidime	lasso	country	Bolivia, Brazil, Colombia, Peru	0	1	0	0	1	0	0	0
+salmonella_enterica__ceftazidime	lasso	country	Bolivia, Brazil, Peru	0	1	0	0	1	0	0	0
+salmonella_enterica__ceftazidime	lasso	country	Bolivia, Chile, Peru	0	2	0	0	1	1	0	0
+salmonella_enterica__ceftazidime	lasso	country	Brazil	0	2	0	0	2	0	0	0
+salmonella_enterica__ceftazidime	lasso	country	Cambodia	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	lasso	country	Cambodia, India, Laos, Thailand, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	lasso	country	Cambodia, India, Nepal, Thailand	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	lasso	country	Cambodia, Sri Lanka	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	lasso	country	Cambodia, Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	lasso	country	Cambodia, Thailand, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	lasso	country	Cambodia, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	lasso	country	Canada	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	lasso	country	China	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	lasso	country	China/Nigeria	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	lasso	country	Colombia	0	5	0	0	3	2	0	0
+salmonella_enterica__ceftazidime	lasso	country	Congo	0	3	0	0	0	3	0	0
+salmonella_enterica__ceftazidime	lasso	country	Dominican Republic	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	lasso	country	East Timor, Indonesia	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	lasso	country	European cruise - multiple destinations	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	lasso	country	Fiji	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	lasso	country	France	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	lasso	country	Ghana	0	6	0	0	0	6	0	0
+salmonella_enterica__ceftazidime	lasso	country	Greece	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	lasso	country	Guatemala	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	lasso	country	India	1	614	0	1	1	613	0	0
+salmonella_enterica__ceftazidime	lasso	country	India, Indonesia	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	lasso	country	India, Indonesia, Philippines, Sri Lanka, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	lasso	country	India, Myanmar	0	3	0	0	0	3	0	0
+salmonella_enterica__ceftazidime	lasso	country	India, Nepal	0	8	0	0	0	8	0	0
+salmonella_enterica__ceftazidime	lasso	country	India, Pakistan	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	lasso	country	India, Philippines	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	lasso	country	India, Sri Lanka	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	lasso	country	India, Thailand	0	5	0	0	0	5	0	0
+salmonella_enterica__ceftazidime	lasso	country	India, Turkey	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	lasso	country	India, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	lasso	country	India, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	lasso	country	Indonesia	0	9	0	0	0	9	0	0
+salmonella_enterica__ceftazidime	lasso	country	Iraq	2	21	0	2	15	6	0	0
+salmonella_enterica__ceftazidime	lasso	country	Japan	0	2	0	0	1	1	0	0
+salmonella_enterica__ceftazidime	lasso	country	Kenya	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	lasso	country	Kenya, Somalia	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	lasso	country	Kenya, Tanzania	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	lasso	country	Laos, Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	lasso	country	Malaysia	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	lasso	country	Mexico	0	8	0	0	0	8	0	0
+salmonella_enterica__ceftazidime	lasso	country	Morocco	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	lasso	country	Myanmar	0	6	0	0	0	6	0	0
+salmonella_enterica__ceftazidime	lasso	country	N	0	3	0	0	0	3	0	0
+salmonella_enterica__ceftazidime	lasso	country	Nepal	0	6	0	0	0	6	0	0
+salmonella_enterica__ceftazidime	lasso	country	Nigeria	0	13	0	0	0	13	0	0
+salmonella_enterica__ceftazidime	lasso	country	No travel	0	13	0	0	0	13	0	0
+salmonella_enterica__ceftazidime	lasso	country	Not Stated	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	lasso	country	Pakistan	46	551	46	0	6	545	0	0
+salmonella_enterica__ceftazidime	lasso	country	Pakistan, Saudi Arabia	0	1	0	0	1	0	0	0
+salmonella_enterica__ceftazidime	lasso	country	Peru	0	9	0	0	8	1	0	0
+salmonella_enterica__ceftazidime	lasso	country	Philippines	0	4	0	0	0	4	0	0
+salmonella_enterica__ceftazidime	lasso	country	Poland	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	lasso	country	Saudi Arabia	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	lasso	country	Saudi arabia	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	lasso	country	Singapore	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	lasso	country	South Africa	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	lasso	country	Spain	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	lasso	country	Sudan	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	lasso	country	Sweden	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	lasso	country	Thailand	0	4	0	0	0	4	0	0
+salmonella_enterica__ceftazidime	lasso	country	Tunisia	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	lasso	country	Turkey	0	3	0	0	3	0	0	0
+salmonella_enterica__ceftazidime	lasso	country	Turks and Caicos Islands	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	lasso	country	Uganda	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	lasso	country	United Arab Emirates	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	lasso	country	Vietnam	0	3	0	0	0	3	0	0
+salmonella_enterica__ceftazidime	lasso	country	Y	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	lasso	country	Yemen	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	lasso	country	Zimbabwe	0	11	0	0	0	11	0	0
+salmonella_enterica__ceftazidime	lasso	country	india	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	lasso	country	nan	1	147	1	0	19	128	0	0
+salmonella_enterica__ceftazidime	lasso	mlst_in_cohort	no	0	107	0	0	69	38	0	0
+salmonella_enterica__ceftazidime	lasso	mlst_in_cohort	no ST	1	94	1	0	1	93	0	0
+salmonella_enterica__ceftazidime	lasso	mlst_in_cohort	yes	50	1452	47	3	2	1450	0	0
+salmonella_enterica__ceftazidime	known_gene	bioproject	PRJNA248792	51	1653	49	2	0	1653	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Afghanistan	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Afghanistan, Pakistan	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	known_gene	country	American Samoa	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Argentina	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Argentina, Bolivia, Brazil, Colombia, Chile	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Argentina, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Asian continent	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Bangladesh	1	114	1	0	0	114	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Bangladesh, India	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Bolivia	0	8	0	0	0	8	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Bolivia, Brazil, Colombia, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Bolivia, Brazil, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Bolivia, Chile, Peru	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Brazil	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Cambodia	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Cambodia, India, Laos, Thailand, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Cambodia, India, Nepal, Thailand	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Cambodia, Sri Lanka	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Cambodia, Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Cambodia, Thailand, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Cambodia, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Canada	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	known_gene	country	China	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	known_gene	country	China/Nigeria	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Colombia	0	5	0	0	0	5	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Congo	0	3	0	0	0	3	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Dominican Republic	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	known_gene	country	East Timor, Indonesia	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	known_gene	country	European cruise - multiple destinations	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Fiji	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	known_gene	country	France	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Ghana	0	6	0	0	0	6	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Greece	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Guatemala	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	known_gene	country	India	1	614	1	0	0	614	0	0
+salmonella_enterica__ceftazidime	known_gene	country	India, Indonesia	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	known_gene	country	India, Indonesia, Philippines, Sri Lanka, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	known_gene	country	India, Myanmar	0	3	0	0	0	3	0	0
+salmonella_enterica__ceftazidime	known_gene	country	India, Nepal	0	8	0	0	0	8	0	0
+salmonella_enterica__ceftazidime	known_gene	country	India, Pakistan	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	known_gene	country	India, Philippines	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	known_gene	country	India, Sri Lanka	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	known_gene	country	India, Thailand	0	5	0	0	0	5	0	0
+salmonella_enterica__ceftazidime	known_gene	country	India, Turkey	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	known_gene	country	India, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	known_gene	country	India, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Indonesia	0	9	0	0	0	9	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Iraq	2	21	0	2	0	21	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Japan	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Kenya	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Kenya, Somalia	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Kenya, Tanzania	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Laos, Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Malaysia	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Mexico	0	8	0	0	0	8	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Morocco	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Myanmar	0	6	0	0	0	6	0	0
+salmonella_enterica__ceftazidime	known_gene	country	N	0	3	0	0	0	3	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Nepal	0	6	0	0	0	6	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Nigeria	0	13	0	0	0	13	0	0
+salmonella_enterica__ceftazidime	known_gene	country	No travel	0	13	0	0	0	13	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Not Stated	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Pakistan	46	551	46	0	0	551	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Pakistan, Saudi Arabia	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Peru	0	9	0	0	0	9	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Philippines	0	4	0	0	0	4	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Poland	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Saudi Arabia	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Saudi arabia	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Singapore	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	known_gene	country	South Africa	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Spain	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Sudan	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Sweden	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Thailand	0	4	0	0	0	4	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Tunisia	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Turkey	0	3	0	0	0	3	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Turks and Caicos Islands	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Uganda	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	known_gene	country	United Arab Emirates	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Vietnam	0	3	0	0	0	3	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Y	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Yemen	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	known_gene	country	Zimbabwe	0	11	0	0	0	11	0	0
+salmonella_enterica__ceftazidime	known_gene	country	india	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftazidime	known_gene	country	nan	1	147	1	0	0	147	0	0
+salmonella_enterica__ceftazidime	known_gene	mlst_in_cohort	no	0	107	0	0	0	107	0	0
+salmonella_enterica__ceftazidime	known_gene	mlst_in_cohort	no ST	1	94	1	0	0	94	0	0
+salmonella_enterica__ceftazidime	known_gene	mlst_in_cohort	yes	50	1452	48	2	0	1452	0	0
+salmonella_enterica__ceftriaxone	scm	bioproject	PRJEB2226	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	scm	bioproject	PRJEB3215	0	10	0	0	0	10	0	0
+salmonella_enterica__ceftriaxone	scm	bioproject	PRJNA230403	0	16	0	0	0	16	0	0
+salmonella_enterica__ceftriaxone	scm	bioproject	PRJNA248792	50	1663	47	3	1	1662	0	0
+salmonella_enterica__ceftriaxone	scm	country	Afghanistan	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	scm	country	Afghanistan, Pakistan	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	scm	country	American Samoa	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	scm	country	Argentina	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	scm	country	Argentina, Bolivia, Brazil, Colombia, Chile	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	scm	country	Argentina, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	scm	country	Asian continent	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	scm	country	Australia	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	scm	country	Bangladesh	0	115	0	0	1	114	0	0
+salmonella_enterica__ceftriaxone	scm	country	Bangladesh, India	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	scm	country	Bolivia	0	8	0	0	0	8	0	0
+salmonella_enterica__ceftriaxone	scm	country	Bolivia, Brazil, Colombia, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	scm	country	Bolivia, Brazil, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	scm	country	Bolivia, Chile, Peru	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	scm	country	Brazil	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	scm	country	Cambodia	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	scm	country	Cambodia, India, Laos, Thailand, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	scm	country	Cambodia, India, Nepal, Thailand	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	scm	country	Cambodia, Sri Lanka	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	scm	country	Cambodia, Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	scm	country	Cambodia, Thailand, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	scm	country	Cambodia, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	scm	country	Canada	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	scm	country	China	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	scm	country	China/Nigeria	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	scm	country	Colombia	0	5	0	0	0	5	0	0
+salmonella_enterica__ceftriaxone	scm	country	Congo	0	3	0	0	0	3	0	0
+salmonella_enterica__ceftriaxone	scm	country	Dominican Republic	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	scm	country	East Timor, Indonesia	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	scm	country	European cruise - multiple destinations	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	scm	country	Fiji	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	scm	country	France	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	scm	country	Ghana	0	6	0	0	0	6	0	0
+salmonella_enterica__ceftriaxone	scm	country	Greece	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	scm	country	Guatemala	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	scm	country	India	1	644	0	1	0	644	0	0
+salmonella_enterica__ceftriaxone	scm	country	India, Indonesia	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	scm	country	India, Indonesia, Philippines, Sri Lanka, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	scm	country	India, Myanmar	0	3	0	0	0	3	0	0
+salmonella_enterica__ceftriaxone	scm	country	India, Nepal	0	8	0	0	0	8	0	0
+salmonella_enterica__ceftriaxone	scm	country	India, Pakistan	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	scm	country	India, Philippines	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	scm	country	India, Sri Lanka	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	scm	country	India, Thailand	0	5	0	0	0	5	0	0
+salmonella_enterica__ceftriaxone	scm	country	India, Turkey	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	scm	country	India, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	scm	country	India, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	scm	country	Indonesia	0	9	0	0	0	9	0	0
+salmonella_enterica__ceftriaxone	scm	country	Iraq	2	21	0	2	0	21	0	0
+salmonella_enterica__ceftriaxone	scm	country	Japan	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	scm	country	Kenya	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	scm	country	Kenya, Somalia	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	scm	country	Kenya, Tanzania	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	scm	country	Laos, Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	scm	country	Malaysia	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	scm	country	Mexico	0	8	0	0	0	8	0	0
+salmonella_enterica__ceftriaxone	scm	country	Morocco	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	scm	country	Myanmar	0	6	0	0	0	6	0	0
+salmonella_enterica__ceftriaxone	scm	country	N	0	3	0	0	0	3	0	0
+salmonella_enterica__ceftriaxone	scm	country	Nepal	0	8	0	0	0	8	0	0
+salmonella_enterica__ceftriaxone	scm	country	Nigeria	0	13	0	0	0	13	0	0
+salmonella_enterica__ceftriaxone	scm	country	No travel	0	13	0	0	0	13	0	0
+salmonella_enterica__ceftriaxone	scm	country	Not Stated	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	scm	country	Pakistan	46	551	46	0	0	551	0	0
+salmonella_enterica__ceftriaxone	scm	country	Pakistan, Saudi Arabia	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	scm	country	Peru	0	9	0	0	0	9	0	0
+salmonella_enterica__ceftriaxone	scm	country	Philippines	0	4	0	0	0	4	0	0
+salmonella_enterica__ceftriaxone	scm	country	Poland	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	scm	country	Saudi Arabia	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	scm	country	Saudi arabia	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	scm	country	Singapore	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	scm	country	South Africa	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	scm	country	Spain	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	scm	country	Sudan	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	scm	country	Sweden	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	scm	country	Tanzania	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	scm	country	Thailand	0	4	0	0	0	4	0	0
+salmonella_enterica__ceftriaxone	scm	country	Tunisia	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	scm	country	Turkey	0	3	0	0	0	3	0	0
+salmonella_enterica__ceftriaxone	scm	country	Turks and Caicos Islands	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	scm	country	Uganda	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	scm	country	United Arab Emirates	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	scm	country	Vietnam	0	3	0	0	0	3	0	0
+salmonella_enterica__ceftriaxone	scm	country	Y	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	scm	country	Yemen	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	scm	country	Zimbabwe	0	11	0	0	0	11	0	0
+salmonella_enterica__ceftriaxone	scm	country	india	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	scm	country	nan	1	147	1	0	0	147	0	0
+salmonella_enterica__ceftriaxone	scm	mlst_in_cohort	no	0	107	0	0	0	107	0	0
+salmonella_enterica__ceftriaxone	scm	mlst_in_cohort	no ST	0	95	0	0	1	94	0	0
+salmonella_enterica__ceftriaxone	scm	mlst_in_cohort	yes	50	1488	47	3	0	1488	0	0
+salmonella_enterica__ceftriaxone	cart	bioproject	PRJEB2226	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	cart	bioproject	PRJEB3215	0	10	0	0	0	10	0	0
+salmonella_enterica__ceftriaxone	cart	bioproject	PRJNA230403	0	16	0	0	0	16	0	0
+salmonella_enterica__ceftriaxone	cart	bioproject	PRJNA248792	50	1663	46	4	1	1662	0	0
+salmonella_enterica__ceftriaxone	cart	country	Afghanistan	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	cart	country	Afghanistan, Pakistan	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	cart	country	American Samoa	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	cart	country	Argentina	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	cart	country	Argentina, Bolivia, Brazil, Colombia, Chile	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	cart	country	Argentina, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	cart	country	Asian continent	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	cart	country	Australia	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	cart	country	Bangladesh	0	115	0	0	1	114	0	0
+salmonella_enterica__ceftriaxone	cart	country	Bangladesh, India	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	cart	country	Bolivia	0	8	0	0	0	8	0	0
+salmonella_enterica__ceftriaxone	cart	country	Bolivia, Brazil, Colombia, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	cart	country	Bolivia, Brazil, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	cart	country	Bolivia, Chile, Peru	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	cart	country	Brazil	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	cart	country	Cambodia	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	cart	country	Cambodia, India, Laos, Thailand, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	cart	country	Cambodia, India, Nepal, Thailand	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	cart	country	Cambodia, Sri Lanka	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	cart	country	Cambodia, Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	cart	country	Cambodia, Thailand, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	cart	country	Cambodia, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	cart	country	Canada	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	cart	country	China	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	cart	country	China/Nigeria	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	cart	country	Colombia	0	5	0	0	0	5	0	0
+salmonella_enterica__ceftriaxone	cart	country	Congo	0	3	0	0	0	3	0	0
+salmonella_enterica__ceftriaxone	cart	country	Dominican Republic	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	cart	country	East Timor, Indonesia	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	cart	country	European cruise - multiple destinations	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	cart	country	Fiji	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	cart	country	France	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	cart	country	Ghana	0	6	0	0	0	6	0	0
+salmonella_enterica__ceftriaxone	cart	country	Greece	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	cart	country	Guatemala	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	cart	country	India	1	644	0	1	0	644	0	0
+salmonella_enterica__ceftriaxone	cart	country	India, Indonesia	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	cart	country	India, Indonesia, Philippines, Sri Lanka, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	cart	country	India, Myanmar	0	3	0	0	0	3	0	0
+salmonella_enterica__ceftriaxone	cart	country	India, Nepal	0	8	0	0	0	8	0	0
+salmonella_enterica__ceftriaxone	cart	country	India, Pakistan	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	cart	country	India, Philippines	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	cart	country	India, Sri Lanka	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	cart	country	India, Thailand	0	5	0	0	0	5	0	0
+salmonella_enterica__ceftriaxone	cart	country	India, Turkey	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	cart	country	India, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	cart	country	India, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	cart	country	Indonesia	0	9	0	0	0	9	0	0
+salmonella_enterica__ceftriaxone	cart	country	Iraq	2	21	0	2	0	21	0	0
+salmonella_enterica__ceftriaxone	cart	country	Japan	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	cart	country	Kenya	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	cart	country	Kenya, Somalia	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	cart	country	Kenya, Tanzania	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	cart	country	Laos, Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	cart	country	Malaysia	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	cart	country	Mexico	0	8	0	0	0	8	0	0
+salmonella_enterica__ceftriaxone	cart	country	Morocco	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	cart	country	Myanmar	0	6	0	0	0	6	0	0
+salmonella_enterica__ceftriaxone	cart	country	N	0	3	0	0	0	3	0	0
+salmonella_enterica__ceftriaxone	cart	country	Nepal	0	8	0	0	0	8	0	0
+salmonella_enterica__ceftriaxone	cart	country	Nigeria	0	13	0	0	0	13	0	0
+salmonella_enterica__ceftriaxone	cart	country	No travel	0	13	0	0	0	13	0	0
+salmonella_enterica__ceftriaxone	cart	country	Not Stated	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	cart	country	Pakistan	46	551	45	1	0	551	0	0
+salmonella_enterica__ceftriaxone	cart	country	Pakistan, Saudi Arabia	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	cart	country	Peru	0	9	0	0	0	9	0	0
+salmonella_enterica__ceftriaxone	cart	country	Philippines	0	4	0	0	0	4	0	0
+salmonella_enterica__ceftriaxone	cart	country	Poland	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	cart	country	Saudi Arabia	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	cart	country	Saudi arabia	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	cart	country	Singapore	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	cart	country	South Africa	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	cart	country	Spain	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	cart	country	Sudan	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	cart	country	Sweden	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	cart	country	Tanzania	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	cart	country	Thailand	0	4	0	0	0	4	0	0
+salmonella_enterica__ceftriaxone	cart	country	Tunisia	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	cart	country	Turkey	0	3	0	0	0	3	0	0
+salmonella_enterica__ceftriaxone	cart	country	Turks and Caicos Islands	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	cart	country	Uganda	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	cart	country	United Arab Emirates	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	cart	country	Vietnam	0	3	0	0	0	3	0	0
+salmonella_enterica__ceftriaxone	cart	country	Y	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	cart	country	Yemen	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	cart	country	Zimbabwe	0	11	0	0	0	11	0	0
+salmonella_enterica__ceftriaxone	cart	country	india	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	cart	country	nan	1	147	1	0	0	147	0	0
+salmonella_enterica__ceftriaxone	cart	mlst_in_cohort	no	0	107	0	0	0	107	0	0
+salmonella_enterica__ceftriaxone	cart	mlst_in_cohort	no ST	0	95	0	0	1	94	0	0
+salmonella_enterica__ceftriaxone	cart	mlst_in_cohort	yes	50	1488	46	4	0	1488	0	0
+salmonella_enterica__ceftriaxone	known_gene	bioproject	PRJEB2226	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	known_gene	bioproject	PRJEB3215	0	10	0	0	0	10	0	0
+salmonella_enterica__ceftriaxone	known_gene	bioproject	PRJNA230403	0	16	0	0	0	16	0	0
+salmonella_enterica__ceftriaxone	known_gene	bioproject	PRJNA248792	50	1663	48	2	1	1662	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Afghanistan	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Afghanistan, Pakistan	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	American Samoa	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Argentina	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Argentina, Bolivia, Brazil, Colombia, Chile	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Argentina, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Asian continent	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Australia	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Bangladesh	0	115	0	0	1	114	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Bangladesh, India	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Bolivia	0	8	0	0	0	8	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Bolivia, Brazil, Colombia, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Bolivia, Brazil, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Bolivia, Chile, Peru	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Brazil	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Cambodia	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Cambodia, India, Laos, Thailand, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Cambodia, India, Nepal, Thailand	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Cambodia, Sri Lanka	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Cambodia, Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Cambodia, Thailand, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Cambodia, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Canada	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	China	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	China/Nigeria	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Colombia	0	5	0	0	0	5	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Congo	0	3	0	0	0	3	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Dominican Republic	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	East Timor, Indonesia	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	European cruise - multiple destinations	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Fiji	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	France	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Ghana	0	6	0	0	0	6	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Greece	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Guatemala	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	India	1	644	1	0	0	644	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	India, Indonesia	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	India, Indonesia, Philippines, Sri Lanka, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	India, Myanmar	0	3	0	0	0	3	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	India, Nepal	0	8	0	0	0	8	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	India, Pakistan	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	India, Philippines	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	India, Sri Lanka	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	India, Thailand	0	5	0	0	0	5	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	India, Turkey	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	India, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	India, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Indonesia	0	9	0	0	0	9	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Iraq	2	21	0	2	0	21	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Japan	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Kenya	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Kenya, Somalia	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Kenya, Tanzania	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Laos, Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Malaysia	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Mexico	0	8	0	0	0	8	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Morocco	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Myanmar	0	6	0	0	0	6	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	N	0	3	0	0	0	3	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Nepal	0	8	0	0	0	8	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Nigeria	0	13	0	0	0	13	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	No travel	0	13	0	0	0	13	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Not Stated	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Pakistan	46	551	46	0	0	551	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Pakistan, Saudi Arabia	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Peru	0	9	0	0	0	9	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Philippines	0	4	0	0	0	4	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Poland	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Saudi Arabia	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Saudi arabia	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Singapore	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	South Africa	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Spain	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Sudan	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Sweden	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Tanzania	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Thailand	0	4	0	0	0	4	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Tunisia	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Turkey	0	3	0	0	0	3	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Turks and Caicos Islands	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Uganda	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	United Arab Emirates	0	2	0	0	0	2	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Vietnam	0	3	0	0	0	3	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Y	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Yemen	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	Zimbabwe	0	11	0	0	0	11	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	india	0	1	0	0	0	1	0	0
+salmonella_enterica__ceftriaxone	known_gene	country	nan	1	147	1	0	0	147	0	0
+salmonella_enterica__ceftriaxone	known_gene	mlst_in_cohort	no	0	107	0	0	0	107	0	0
+salmonella_enterica__ceftriaxone	known_gene	mlst_in_cohort	no ST	0	95	0	0	1	94	0	0
+salmonella_enterica__ceftriaxone	known_gene	mlst_in_cohort	yes	50	1488	48	2	0	1488	0	0
+salmonella_enterica__chloramphenicol	scm	bioproject	PRJNA248792	316	1388	304	12	0	1388	0	0
+salmonella_enterica__chloramphenicol	scm	bioproject	PRJNA378379	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	scm	country	Afghanistan	2	0	2	0	0	0	0	0
+salmonella_enterica__chloramphenicol	scm	country	Afghanistan, Pakistan	1	1	1	0	0	1	0	0
+salmonella_enterica__chloramphenicol	scm	country	American Samoa	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	scm	country	Argentina	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	scm	country	Argentina, Bolivia, Brazil, Colombia, Chile	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	scm	country	Argentina, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	scm	country	Asian continent	0	2	0	0	0	2	0	0
+salmonella_enterica__chloramphenicol	scm	country	Bangladesh	19	96	19	0	0	96	0	0
+salmonella_enterica__chloramphenicol	scm	country	Bangladesh, India	1	1	1	0	0	1	0	0
+salmonella_enterica__chloramphenicol	scm	country	Bolivia	0	8	0	0	0	8	0	0
+salmonella_enterica__chloramphenicol	scm	country	Bolivia, Brazil, Colombia, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	scm	country	Bolivia, Brazil, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	scm	country	Bolivia, Chile, Peru	0	2	0	0	0	2	0	0
+salmonella_enterica__chloramphenicol	scm	country	Brazil	0	2	0	0	0	2	0	0
+salmonella_enterica__chloramphenicol	scm	country	Cambodia	0	2	0	0	0	2	0	0
+salmonella_enterica__chloramphenicol	scm	country	Cambodia, India, Laos, Thailand, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	scm	country	Cambodia, India, Nepal, Thailand	0	2	0	0	0	2	0	0
+salmonella_enterica__chloramphenicol	scm	country	Cambodia, Sri Lanka	1	0	1	0	0	0	0	0
+salmonella_enterica__chloramphenicol	scm	country	Cambodia, Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	scm	country	Cambodia, Thailand, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	scm	country	Cambodia, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	scm	country	Canada	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	scm	country	China	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	scm	country	China/Nigeria	0	2	0	0	0	2	0	0
+salmonella_enterica__chloramphenicol	scm	country	Colombia	0	5	0	0	0	5	0	0
+salmonella_enterica__chloramphenicol	scm	country	Congo	2	1	2	0	0	1	0	0
+salmonella_enterica__chloramphenicol	scm	country	Dominican Republic	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	scm	country	East Timor, Indonesia	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	scm	country	European cruise - multiple destinations	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	scm	country	Fiji	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	scm	country	France	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	scm	country	Ghana	0	6	0	0	0	6	0	0
+salmonella_enterica__chloramphenicol	scm	country	Greece	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	scm	country	Guatemala	0	2	0	0	0	2	0	0
+salmonella_enterica__chloramphenicol	scm	country	India	9	606	9	0	0	606	0	0
+salmonella_enterica__chloramphenicol	scm	country	India, Indonesia	0	2	0	0	0	2	0	0
+salmonella_enterica__chloramphenicol	scm	country	India, Indonesia, Philippines, Sri Lanka, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	scm	country	India, Myanmar	0	3	0	0	0	3	0	0
+salmonella_enterica__chloramphenicol	scm	country	India, Nepal	0	8	0	0	0	8	0	0
+salmonella_enterica__chloramphenicol	scm	country	India, Pakistan	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	scm	country	India, Philippines	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	scm	country	India, Sri Lanka	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	scm	country	India, Thailand	0	5	0	0	0	5	0	0
+salmonella_enterica__chloramphenicol	scm	country	India, Turkey	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	scm	country	India, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	scm	country	India, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	scm	country	Indonesia	0	9	0	0	0	9	0	0
+salmonella_enterica__chloramphenicol	scm	country	Iraq	0	23	0	0	0	23	0	0
+salmonella_enterica__chloramphenicol	scm	country	Japan	0	2	0	0	0	2	0	0
+salmonella_enterica__chloramphenicol	scm	country	Kenya	1	0	1	0	0	0	0	0
+salmonella_enterica__chloramphenicol	scm	country	Kenya, Somalia	1	0	1	0	0	0	0	0
+salmonella_enterica__chloramphenicol	scm	country	Kenya, Tanzania	1	0	1	0	0	0	0	0
+salmonella_enterica__chloramphenicol	scm	country	Laos, Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	scm	country	Malaysia	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	scm	country	Mexico	0	8	0	0	0	8	0	0
+salmonella_enterica__chloramphenicol	scm	country	Morocco	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	scm	country	Myanmar	0	6	0	0	0	6	0	0
+salmonella_enterica__chloramphenicol	scm	country	N	2	1	2	0	0	1	0	0
+salmonella_enterica__chloramphenicol	scm	country	Nepal	0	6	0	0	0	6	0	0
+salmonella_enterica__chloramphenicol	scm	country	Nigeria	1	12	1	0	0	12	0	0
+salmonella_enterica__chloramphenicol	scm	country	No travel	4	9	4	0	0	9	0	0
+salmonella_enterica__chloramphenicol	scm	country	Not Stated	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	scm	country	Pakistan	229	368	217	12	0	368	0	0
+salmonella_enterica__chloramphenicol	scm	country	Pakistan, Saudi Arabia	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	scm	country	Peru	0	9	0	0	0	9	0	0
+salmonella_enterica__chloramphenicol	scm	country	Philippines	0	4	0	0	0	4	0	0
+salmonella_enterica__chloramphenicol	scm	country	Poland	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	scm	country	Saudi Arabia	1	0	1	0	0	0	0	0
+salmonella_enterica__chloramphenicol	scm	country	Saudi arabia	0	2	0	0	0	2	0	0
+salmonella_enterica__chloramphenicol	scm	country	Singapore	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	scm	country	South Africa	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	scm	country	Spain	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	scm	country	Sudan	0	2	0	0	0	2	0	0
+salmonella_enterica__chloramphenicol	scm	country	Sweden	1	0	1	0	0	0	0	0
+salmonella_enterica__chloramphenicol	scm	country	Switzerland	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	scm	country	Thailand	0	4	0	0	0	4	0	0
+salmonella_enterica__chloramphenicol	scm	country	Tunisia	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	scm	country	Turkey	0	3	0	0	0	3	0	0
+salmonella_enterica__chloramphenicol	scm	country	Turks and Caicos Islands	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	scm	country	Uganda	1	0	1	0	0	0	0	0
+salmonella_enterica__chloramphenicol	scm	country	United Arab Emirates	2	0	2	0	0	0	0	0
+salmonella_enterica__chloramphenicol	scm	country	Vietnam	0	3	0	0	0	3	0	0
+salmonella_enterica__chloramphenicol	scm	country	Y	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	scm	country	Yemen	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	scm	country	Zimbabwe	10	1	10	0	0	1	0	0
+salmonella_enterica__chloramphenicol	scm	country	india	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	scm	country	nan	27	121	27	0	0	121	0	0
+salmonella_enterica__chloramphenicol	scm	mlst_in_cohort	no	0	107	0	0	0	107	0	0
+salmonella_enterica__chloramphenicol	scm	mlst_in_cohort	no ST	2	93	2	0	0	93	0	0
+salmonella_enterica__chloramphenicol	scm	mlst_in_cohort	yes	314	1189	302	12	0	1189	0	0
+salmonella_enterica__chloramphenicol	cart	bioproject	PRJNA248792	316	1388	304	12	0	1388	0	0
+salmonella_enterica__chloramphenicol	cart	bioproject	PRJNA378379	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	cart	country	Afghanistan	2	0	2	0	0	0	0	0
+salmonella_enterica__chloramphenicol	cart	country	Afghanistan, Pakistan	1	1	1	0	0	1	0	0
+salmonella_enterica__chloramphenicol	cart	country	American Samoa	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	cart	country	Argentina	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	cart	country	Argentina, Bolivia, Brazil, Colombia, Chile	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	cart	country	Argentina, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	cart	country	Asian continent	0	2	0	0	0	2	0	0
+salmonella_enterica__chloramphenicol	cart	country	Bangladesh	19	96	19	0	0	96	0	0
+salmonella_enterica__chloramphenicol	cart	country	Bangladesh, India	1	1	1	0	0	1	0	0
+salmonella_enterica__chloramphenicol	cart	country	Bolivia	0	8	0	0	0	8	0	0
+salmonella_enterica__chloramphenicol	cart	country	Bolivia, Brazil, Colombia, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	cart	country	Bolivia, Brazil, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	cart	country	Bolivia, Chile, Peru	0	2	0	0	0	2	0	0
+salmonella_enterica__chloramphenicol	cart	country	Brazil	0	2	0	0	0	2	0	0
+salmonella_enterica__chloramphenicol	cart	country	Cambodia	0	2	0	0	0	2	0	0
+salmonella_enterica__chloramphenicol	cart	country	Cambodia, India, Laos, Thailand, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	cart	country	Cambodia, India, Nepal, Thailand	0	2	0	0	0	2	0	0
+salmonella_enterica__chloramphenicol	cart	country	Cambodia, Sri Lanka	1	0	1	0	0	0	0	0
+salmonella_enterica__chloramphenicol	cart	country	Cambodia, Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	cart	country	Cambodia, Thailand, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	cart	country	Cambodia, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	cart	country	Canada	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	cart	country	China	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	cart	country	China/Nigeria	0	2	0	0	0	2	0	0
+salmonella_enterica__chloramphenicol	cart	country	Colombia	0	5	0	0	0	5	0	0
+salmonella_enterica__chloramphenicol	cart	country	Congo	2	1	2	0	0	1	0	0
+salmonella_enterica__chloramphenicol	cart	country	Dominican Republic	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	cart	country	East Timor, Indonesia	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	cart	country	European cruise - multiple destinations	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	cart	country	Fiji	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	cart	country	France	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	cart	country	Ghana	0	6	0	0	0	6	0	0
+salmonella_enterica__chloramphenicol	cart	country	Greece	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	cart	country	Guatemala	0	2	0	0	0	2	0	0
+salmonella_enterica__chloramphenicol	cart	country	India	9	606	9	0	0	606	0	0
+salmonella_enterica__chloramphenicol	cart	country	India, Indonesia	0	2	0	0	0	2	0	0
+salmonella_enterica__chloramphenicol	cart	country	India, Indonesia, Philippines, Sri Lanka, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	cart	country	India, Myanmar	0	3	0	0	0	3	0	0
+salmonella_enterica__chloramphenicol	cart	country	India, Nepal	0	8	0	0	0	8	0	0
+salmonella_enterica__chloramphenicol	cart	country	India, Pakistan	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	cart	country	India, Philippines	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	cart	country	India, Sri Lanka	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	cart	country	India, Thailand	0	5	0	0	0	5	0	0
+salmonella_enterica__chloramphenicol	cart	country	India, Turkey	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	cart	country	India, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	cart	country	India, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	cart	country	Indonesia	0	9	0	0	0	9	0	0
+salmonella_enterica__chloramphenicol	cart	country	Iraq	0	23	0	0	0	23	0	0
+salmonella_enterica__chloramphenicol	cart	country	Japan	0	2	0	0	0	2	0	0
+salmonella_enterica__chloramphenicol	cart	country	Kenya	1	0	1	0	0	0	0	0
+salmonella_enterica__chloramphenicol	cart	country	Kenya, Somalia	1	0	1	0	0	0	0	0
+salmonella_enterica__chloramphenicol	cart	country	Kenya, Tanzania	1	0	1	0	0	0	0	0
+salmonella_enterica__chloramphenicol	cart	country	Laos, Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	cart	country	Malaysia	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	cart	country	Mexico	0	8	0	0	0	8	0	0
+salmonella_enterica__chloramphenicol	cart	country	Morocco	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	cart	country	Myanmar	0	6	0	0	0	6	0	0
+salmonella_enterica__chloramphenicol	cart	country	N	2	1	2	0	0	1	0	0
+salmonella_enterica__chloramphenicol	cart	country	Nepal	0	6	0	0	0	6	0	0
+salmonella_enterica__chloramphenicol	cart	country	Nigeria	1	12	1	0	0	12	0	0
+salmonella_enterica__chloramphenicol	cart	country	No travel	4	9	4	0	0	9	0	0
+salmonella_enterica__chloramphenicol	cart	country	Not Stated	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	cart	country	Pakistan	229	368	217	12	0	368	0	0
+salmonella_enterica__chloramphenicol	cart	country	Pakistan, Saudi Arabia	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	cart	country	Peru	0	9	0	0	0	9	0	0
+salmonella_enterica__chloramphenicol	cart	country	Philippines	0	4	0	0	0	4	0	0
+salmonella_enterica__chloramphenicol	cart	country	Poland	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	cart	country	Saudi Arabia	1	0	1	0	0	0	0	0
+salmonella_enterica__chloramphenicol	cart	country	Saudi arabia	0	2	0	0	0	2	0	0
+salmonella_enterica__chloramphenicol	cart	country	Singapore	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	cart	country	South Africa	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	cart	country	Spain	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	cart	country	Sudan	0	2	0	0	0	2	0	0
+salmonella_enterica__chloramphenicol	cart	country	Sweden	1	0	1	0	0	0	0	0
+salmonella_enterica__chloramphenicol	cart	country	Switzerland	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	cart	country	Thailand	0	4	0	0	0	4	0	0
+salmonella_enterica__chloramphenicol	cart	country	Tunisia	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	cart	country	Turkey	0	3	0	0	0	3	0	0
+salmonella_enterica__chloramphenicol	cart	country	Turks and Caicos Islands	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	cart	country	Uganda	1	0	1	0	0	0	0	0
+salmonella_enterica__chloramphenicol	cart	country	United Arab Emirates	2	0	2	0	0	0	0	0
+salmonella_enterica__chloramphenicol	cart	country	Vietnam	0	3	0	0	0	3	0	0
+salmonella_enterica__chloramphenicol	cart	country	Y	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	cart	country	Yemen	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	cart	country	Zimbabwe	10	1	10	0	0	1	0	0
+salmonella_enterica__chloramphenicol	cart	country	india	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	cart	country	nan	27	121	27	0	0	121	0	0
+salmonella_enterica__chloramphenicol	cart	mlst_in_cohort	no	0	107	0	0	0	107	0	0
+salmonella_enterica__chloramphenicol	cart	mlst_in_cohort	no ST	2	93	2	0	0	93	0	0
+salmonella_enterica__chloramphenicol	cart	mlst_in_cohort	yes	314	1189	302	12	0	1189	0	0
+salmonella_enterica__chloramphenicol	known_gene	bioproject	PRJNA248792	316	1388	304	12	0	1388	0	0
+salmonella_enterica__chloramphenicol	known_gene	bioproject	PRJNA378379	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Afghanistan	2	0	2	0	0	0	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Afghanistan, Pakistan	1	1	1	0	0	1	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	American Samoa	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Argentina	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Argentina, Bolivia, Brazil, Colombia, Chile	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Argentina, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Asian continent	0	2	0	0	0	2	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Bangladesh	19	96	19	0	0	96	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Bangladesh, India	1	1	1	0	0	1	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Bolivia	0	8	0	0	0	8	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Bolivia, Brazil, Colombia, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Bolivia, Brazil, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Bolivia, Chile, Peru	0	2	0	0	0	2	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Brazil	0	2	0	0	0	2	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Cambodia	0	2	0	0	0	2	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Cambodia, India, Laos, Thailand, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Cambodia, India, Nepal, Thailand	0	2	0	0	0	2	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Cambodia, Sri Lanka	1	0	1	0	0	0	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Cambodia, Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Cambodia, Thailand, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Cambodia, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Canada	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	China	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	China/Nigeria	0	2	0	0	0	2	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Colombia	0	5	0	0	0	5	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Congo	2	1	2	0	0	1	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Dominican Republic	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	East Timor, Indonesia	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	European cruise - multiple destinations	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Fiji	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	France	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Ghana	0	6	0	0	0	6	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Greece	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Guatemala	0	2	0	0	0	2	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	India	9	606	9	0	0	606	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	India, Indonesia	0	2	0	0	0	2	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	India, Indonesia, Philippines, Sri Lanka, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	India, Myanmar	0	3	0	0	0	3	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	India, Nepal	0	8	0	0	0	8	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	India, Pakistan	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	India, Philippines	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	India, Sri Lanka	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	India, Thailand	0	5	0	0	0	5	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	India, Turkey	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	India, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	India, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Indonesia	0	9	0	0	0	9	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Iraq	0	23	0	0	0	23	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Japan	0	2	0	0	0	2	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Kenya	1	0	1	0	0	0	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Kenya, Somalia	1	0	1	0	0	0	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Kenya, Tanzania	1	0	1	0	0	0	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Laos, Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Malaysia	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Mexico	0	8	0	0	0	8	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Morocco	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Myanmar	0	6	0	0	0	6	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	N	2	1	2	0	0	1	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Nepal	0	6	0	0	0	6	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Nigeria	1	12	1	0	0	12	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	No travel	4	9	4	0	0	9	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Not Stated	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Pakistan	229	368	217	12	0	368	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Pakistan, Saudi Arabia	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Peru	0	9	0	0	0	9	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Philippines	0	4	0	0	0	4	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Poland	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Saudi Arabia	1	0	1	0	0	0	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Saudi arabia	0	2	0	0	0	2	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Singapore	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	South Africa	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Spain	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Sudan	0	2	0	0	0	2	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Sweden	1	0	1	0	0	0	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Switzerland	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Thailand	0	4	0	0	0	4	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Tunisia	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Turkey	0	3	0	0	0	3	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Turks and Caicos Islands	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Uganda	1	0	1	0	0	0	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	United Arab Emirates	2	0	2	0	0	0	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Vietnam	0	3	0	0	0	3	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Y	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Yemen	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	Zimbabwe	10	1	10	0	0	1	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	india	0	1	0	0	0	1	0	0
+salmonella_enterica__chloramphenicol	known_gene	country	nan	27	121	27	0	0	121	0	0
+salmonella_enterica__chloramphenicol	known_gene	mlst_in_cohort	no	0	107	0	0	0	107	0	0
+salmonella_enterica__chloramphenicol	known_gene	mlst_in_cohort	no ST	2	93	2	0	0	93	0	0
+salmonella_enterica__chloramphenicol	known_gene	mlst_in_cohort	yes	314	1189	302	12	0	1189	0	0
+salmonella_enterica__ciprofloxacin	scm	bioproject	PRJNA248792	1526	178	1487	39	0	178	0	0
+salmonella_enterica__ciprofloxacin	scm	bioproject	PRJNA378379	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Afghanistan	2	0	2	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Afghanistan, Pakistan	1	1	1	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	scm	country	American Samoa	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Argentina	0	1	0	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Argentina, Bolivia, Brazil, Colombia, Chile	0	1	0	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Argentina, Peru	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Asian continent	2	0	2	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Bangladesh	111	4	107	4	0	4	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Bangladesh, India	2	0	1	1	0	0	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Bolivia	2	6	1	1	0	6	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Bolivia, Brazil, Colombia, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Bolivia, Brazil, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Bolivia, Chile, Peru	1	1	1	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Brazil	0	2	0	0	0	2	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Cambodia	2	0	2	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Cambodia, India, Laos, Thailand, Viet Nam	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Cambodia, India, Nepal, Thailand	2	0	2	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Cambodia, Sri Lanka	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Cambodia, Thailand	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Cambodia, Thailand, Viet Nam	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Cambodia, Vietnam	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Canada	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	scm	country	China	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	scm	country	China/Nigeria	0	2	0	0	0	2	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Colombia	0	5	0	0	0	5	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Congo	3	0	3	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Dominican Republic	0	1	0	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	scm	country	East Timor, Indonesia	0	1	0	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	scm	country	European cruise - multiple destinations	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Fiji	0	1	0	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	scm	country	France	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Ghana	0	6	0	0	0	6	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Greece	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Guatemala	2	0	2	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	scm	country	India	609	6	602	7	0	6	0	0
+salmonella_enterica__ciprofloxacin	scm	country	India, Indonesia	2	0	2	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	scm	country	India, Indonesia, Philippines, Sri Lanka, Vietnam	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	scm	country	India, Myanmar	3	0	3	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	scm	country	India, Nepal	7	1	7	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	scm	country	India, Pakistan	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	scm	country	India, Philippines	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	scm	country	India, Sri Lanka	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	scm	country	India, Thailand	5	0	5	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	scm	country	India, Turkey	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	scm	country	India, Viet Nam	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	scm	country	India, Vietnam	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Indonesia	4	5	4	0	0	5	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Iraq	2	21	2	0	0	21	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Japan	0	2	0	0	0	2	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Kenya	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Kenya, Somalia	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Kenya, Tanzania	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Laos, Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Malaysia	0	1	0	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Mexico	1	7	0	1	0	7	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Morocco	0	1	0	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Myanmar	6	0	6	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	scm	country	N	2	1	2	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Nepal	5	1	5	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Nigeria	6	7	6	0	0	7	0	0
+salmonella_enterica__ciprofloxacin	scm	country	No travel	8	5	8	0	0	5	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Not Stated	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Pakistan	582	15	568	14	0	15	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Pakistan, Saudi Arabia	0	1	0	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Peru	3	6	3	0	0	6	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Philippines	0	4	0	0	0	4	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Poland	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Saudi Arabia	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Saudi arabia	2	0	2	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Singapore	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	scm	country	South Africa	0	1	0	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Spain	0	1	0	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Sudan	0	2	0	0	0	2	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Sweden	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Switzerland	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Thailand	3	1	3	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Tunisia	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Turkey	0	3	0	0	0	3	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Turks and Caicos Islands	0	1	0	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Uganda	1	0	0	1	0	0	0	0
+salmonella_enterica__ciprofloxacin	scm	country	United Arab Emirates	2	0	2	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Vietnam	2	1	2	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Y	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Yemen	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	scm	country	Zimbabwe	9	2	1	8	0	2	0	0
+salmonella_enterica__ciprofloxacin	scm	country	india	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	scm	country	nan	101	47	99	2	0	47	0	0
+salmonella_enterica__ciprofloxacin	scm	mlst_in_cohort	no	25	82	19	6	0	82	0	0
+salmonella_enterica__ciprofloxacin	scm	mlst_in_cohort	no ST	91	4	91	0	0	4	0	0
+salmonella_enterica__ciprofloxacin	scm	mlst_in_cohort	yes	1411	92	1378	33	0	92	0	0
+salmonella_enterica__ciprofloxacin	cart	bioproject	PRJNA248792	1526	178	1419	107	2	176	0	0
+salmonella_enterica__ciprofloxacin	cart	bioproject	PRJNA378379	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Afghanistan	2	0	2	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Afghanistan, Pakistan	1	1	1	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	cart	country	American Samoa	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Argentina	0	1	0	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Argentina, Bolivia, Brazil, Colombia, Chile	0	1	0	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Argentina, Peru	1	0	0	1	0	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Asian continent	2	0	2	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Bangladesh	111	4	104	7	0	4	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Bangladesh, India	2	0	1	1	0	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Bolivia	2	6	0	2	0	6	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Bolivia, Brazil, Colombia, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Bolivia, Brazil, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Bolivia, Chile, Peru	1	1	0	1	0	1	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Brazil	0	2	0	0	0	2	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Cambodia	2	0	2	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Cambodia, India, Laos, Thailand, Viet Nam	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Cambodia, India, Nepal, Thailand	2	0	2	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Cambodia, Sri Lanka	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Cambodia, Thailand	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Cambodia, Thailand, Viet Nam	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Cambodia, Vietnam	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Canada	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	China	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	China/Nigeria	0	2	0	0	0	2	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Colombia	0	5	0	0	0	5	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Congo	3	0	3	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Dominican Republic	0	1	0	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	cart	country	East Timor, Indonesia	0	1	0	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	cart	country	European cruise - multiple destinations	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Fiji	0	1	0	0	1	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	France	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Ghana	0	6	0	0	0	6	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Greece	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Guatemala	2	0	2	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	India	609	6	576	33	0	6	0	0
+salmonella_enterica__ciprofloxacin	cart	country	India, Indonesia	2	0	2	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	India, Indonesia, Philippines, Sri Lanka, Vietnam	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	India, Myanmar	3	0	3	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	India, Nepal	7	1	6	1	0	1	0	0
+salmonella_enterica__ciprofloxacin	cart	country	India, Pakistan	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	India, Philippines	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	India, Sri Lanka	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	India, Thailand	5	0	5	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	India, Turkey	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	India, Viet Nam	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	India, Vietnam	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Indonesia	4	5	4	0	0	5	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Iraq	2	21	2	0	0	21	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Japan	0	2	0	0	0	2	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Kenya	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Kenya, Somalia	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Kenya, Tanzania	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Laos, Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Malaysia	0	1	0	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Mexico	1	7	0	1	0	7	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Morocco	0	1	0	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Myanmar	6	0	6	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	N	2	1	2	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Nepal	5	1	5	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Nigeria	6	7	5	1	0	7	0	0
+salmonella_enterica__ciprofloxacin	cart	country	No travel	8	5	8	0	0	5	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Not Stated	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Pakistan	582	15	543	39	1	14	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Pakistan, Saudi Arabia	0	1	0	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Peru	3	6	1	2	0	6	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Philippines	0	4	0	0	0	4	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Poland	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Saudi Arabia	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Saudi arabia	2	0	2	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Singapore	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	South Africa	0	1	0	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Spain	0	1	0	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Sudan	0	2	0	0	0	2	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Sweden	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Switzerland	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Thailand	3	1	3	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Tunisia	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Turkey	0	3	0	0	0	3	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Turks and Caicos Islands	0	1	0	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Uganda	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	United Arab Emirates	2	0	2	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Vietnam	2	1	1	1	0	1	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Y	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Yemen	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	Zimbabwe	9	2	1	8	0	2	0	0
+salmonella_enterica__ciprofloxacin	cart	country	india	1	0	1	0	0	0	0	0
+salmonella_enterica__ciprofloxacin	cart	country	nan	101	47	92	9	0	47	0	0
+salmonella_enterica__ciprofloxacin	cart	mlst_in_cohort	no	25	82	9	16	0	82	0	0
+salmonella_enterica__ciprofloxacin	cart	mlst_in_cohort	no ST	91	4	89	2	0	4	0	0
+salmonella_enterica__ciprofloxacin	cart	mlst_in_cohort	yes	1411	92	1322	89	2	90	0	0
+salmonella_enterica__ciprofloxacin	known_gene	bioproject	PRJNA248792	1526	178	56	1470	0	178	0	0
+salmonella_enterica__ciprofloxacin	known_gene	bioproject	PRJNA378379	1	0	0	1	0	0	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Afghanistan	2	0	0	2	0	0	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Afghanistan, Pakistan	1	1	0	1	0	1	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	American Samoa	1	0	0	1	0	0	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Argentina	0	1	0	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Argentina, Bolivia, Brazil, Colombia, Chile	0	1	0	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Argentina, Peru	1	0	0	1	0	0	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Asian continent	2	0	0	2	0	0	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Bangladesh	111	4	1	110	0	4	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Bangladesh, India	2	0	0	2	0	0	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Bolivia	2	6	1	1	0	6	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Bolivia, Brazil, Colombia, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Bolivia, Brazil, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Bolivia, Chile, Peru	1	1	0	1	0	1	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Brazil	0	2	0	0	0	2	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Cambodia	2	0	0	2	0	0	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Cambodia, India, Laos, Thailand, Viet Nam	1	0	0	1	0	0	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Cambodia, India, Nepal, Thailand	2	0	0	2	0	0	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Cambodia, Sri Lanka	1	0	0	1	0	0	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Cambodia, Thailand	1	0	0	1	0	0	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Cambodia, Thailand, Viet Nam	1	0	0	1	0	0	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Cambodia, Vietnam	1	0	0	1	0	0	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Canada	1	0	0	1	0	0	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	China	1	0	0	1	0	0	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	China/Nigeria	0	2	0	0	0	2	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Colombia	0	5	0	0	0	5	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Congo	3	0	0	3	0	0	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Dominican Republic	0	1	0	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	East Timor, Indonesia	0	1	0	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	European cruise - multiple destinations	1	0	0	1	0	0	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Fiji	0	1	0	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	France	1	0	0	1	0	0	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Ghana	0	6	0	0	0	6	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Greece	1	0	0	1	0	0	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Guatemala	2	0	0	2	0	0	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	India	609	6	1	608	0	6	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	India, Indonesia	2	0	0	2	0	0	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	India, Indonesia, Philippines, Sri Lanka, Vietnam	1	0	0	1	0	0	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	India, Myanmar	3	0	0	3	0	0	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	India, Nepal	7	1	0	7	0	1	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	India, Pakistan	1	0	0	1	0	0	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	India, Philippines	1	0	0	1	0	0	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	India, Sri Lanka	1	0	0	1	0	0	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	India, Thailand	5	0	0	5	0	0	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	India, Turkey	1	0	0	1	0	0	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	India, Viet Nam	1	0	0	1	0	0	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	India, Vietnam	1	0	0	1	0	0	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Indonesia	4	5	0	4	0	5	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Iraq	2	21	0	2	0	21	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Japan	0	2	0	0	0	2	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Kenya	1	0	0	1	0	0	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Kenya, Somalia	1	0	0	1	0	0	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Kenya, Tanzania	1	0	0	1	0	0	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Laos, Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Malaysia	0	1	0	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Mexico	1	7	0	1	0	7	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Morocco	0	1	0	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Myanmar	6	0	0	6	0	0	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	N	2	1	0	2	0	1	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Nepal	5	1	0	5	0	1	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Nigeria	6	7	0	6	0	7	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	No travel	8	5	0	8	0	5	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Not Stated	1	0	0	1	0	0	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Pakistan	582	15	43	539	0	15	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Pakistan, Saudi Arabia	0	1	0	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Peru	3	6	0	3	0	6	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Philippines	0	4	0	0	0	4	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Poland	1	0	0	1	0	0	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Saudi Arabia	1	0	0	1	0	0	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Saudi arabia	2	0	0	2	0	0	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Singapore	1	0	0	1	0	0	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	South Africa	0	1	0	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Spain	0	1	0	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Sudan	0	2	0	0	0	2	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Sweden	1	0	0	1	0	0	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Switzerland	1	0	0	1	0	0	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Thailand	3	1	0	3	0	1	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Tunisia	1	0	0	1	0	0	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Turkey	0	3	0	0	0	3	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Turks and Caicos Islands	0	1	0	0	0	1	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Uganda	1	0	0	1	0	0	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	United Arab Emirates	2	0	0	2	0	0	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Vietnam	2	1	0	2	0	1	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Y	1	0	0	1	0	0	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Yemen	1	0	0	1	0	0	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	Zimbabwe	9	2	8	1	0	2	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	india	1	0	0	1	0	0	0	0
+salmonella_enterica__ciprofloxacin	known_gene	country	nan	101	47	2	99	0	47	0	0
+salmonella_enterica__ciprofloxacin	known_gene	mlst_in_cohort	no	25	82	1	24	0	82	0	0
+salmonella_enterica__ciprofloxacin	known_gene	mlst_in_cohort	no ST	91	4	0	91	0	4	0	0
+salmonella_enterica__ciprofloxacin	known_gene	mlst_in_cohort	yes	1411	92	55	1356	0	92	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	bioproject	PRJNA248792	329	1375	251	78	1	1374	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	bioproject	PRJNA378379	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Afghanistan	2	0	2	0	0	0	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Afghanistan, Pakistan	1	1	1	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	American Samoa	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Argentina	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Argentina, Bolivia, Brazil, Colombia, Chile	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Argentina, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Asian continent	0	2	0	0	0	2	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Bangladesh	21	94	15	6	0	94	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Bangladesh, India	1	1	1	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Bolivia	0	8	0	0	0	8	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Bolivia, Brazil, Colombia, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Bolivia, Brazil, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Bolivia, Chile, Peru	0	2	0	0	0	2	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Brazil	0	2	0	0	0	2	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Cambodia	0	2	0	0	0	2	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Cambodia, India, Laos, Thailand, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Cambodia, India, Nepal, Thailand	0	2	0	0	0	2	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Cambodia, Sri Lanka	1	0	1	0	0	0	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Cambodia, Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Cambodia, Thailand, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Cambodia, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Canada	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	China	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	China/Nigeria	0	2	0	0	0	2	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Colombia	0	5	0	0	0	5	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Congo	2	1	2	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Dominican Republic	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	East Timor, Indonesia	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	European cruise - multiple destinations	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Fiji	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	France	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Ghana	0	6	0	0	0	6	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Greece	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Guatemala	0	2	0	0	0	2	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	India	12	603	10	2	0	603	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	India, Indonesia	0	2	0	0	0	2	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	India, Indonesia, Philippines, Sri Lanka, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	India, Myanmar	0	3	0	0	0	3	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	India, Nepal	0	8	0	0	0	8	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	India, Pakistan	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	India, Philippines	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	India, Sri Lanka	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	India, Thailand	0	5	0	0	0	5	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	India, Turkey	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	India, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	India, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Indonesia	0	9	0	0	0	9	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Iraq	0	23	0	0	0	23	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Japan	0	2	0	0	0	2	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Kenya	1	0	1	0	0	0	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Kenya, Somalia	1	0	1	0	0	0	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Kenya, Tanzania	1	0	1	0	0	0	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Laos, Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Malaysia	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Mexico	0	8	0	0	0	8	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Morocco	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Myanmar	0	6	0	0	0	6	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	N	2	1	2	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Nepal	0	6	0	0	0	6	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Nigeria	5	8	2	3	0	8	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	No travel	5	8	5	0	0	8	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Not Stated	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Pakistan	232	365	174	58	0	365	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Pakistan, Saudi Arabia	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Peru	0	9	0	0	0	9	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Philippines	0	4	0	0	0	4	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Poland	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Saudi Arabia	1	0	1	0	0	0	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Saudi arabia	0	2	0	0	0	2	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Singapore	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	South Africa	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Spain	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Sudan	0	2	0	0	0	2	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Sweden	1	0	1	0	0	0	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Switzerland	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Thailand	0	4	0	0	0	4	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Tunisia	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Turkey	0	3	0	0	0	3	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Turks and Caicos Islands	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Uganda	1	0	1	0	0	0	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	United Arab Emirates	2	0	1	1	0	0	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Vietnam	0	3	0	0	0	3	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Y	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Yemen	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	Zimbabwe	10	1	6	4	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	india	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	country	nan	27	121	23	4	1	120	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	mlst_in_cohort	no	0	107	0	0	1	106	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	mlst_in_cohort	no ST	2	93	2	0	0	93	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	mlst_in_cohort	yes	327	1176	249	78	0	1176	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	bioproject	PRJNA248792	329	1375	299	30	0	1375	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	bioproject	PRJNA378379	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Afghanistan	2	0	2	0	0	0	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Afghanistan, Pakistan	1	1	1	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	American Samoa	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Argentina	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Argentina, Bolivia, Brazil, Colombia, Chile	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Argentina, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Asian continent	0	2	0	0	0	2	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Bangladesh	21	94	19	2	0	94	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Bangladesh, India	1	1	1	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Bolivia	0	8	0	0	0	8	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Bolivia, Brazil, Colombia, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Bolivia, Brazil, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Bolivia, Chile, Peru	0	2	0	0	0	2	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Brazil	0	2	0	0	0	2	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Cambodia	0	2	0	0	0	2	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Cambodia, India, Laos, Thailand, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Cambodia, India, Nepal, Thailand	0	2	0	0	0	2	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Cambodia, Sri Lanka	1	0	1	0	0	0	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Cambodia, Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Cambodia, Thailand, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Cambodia, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Canada	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	China	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	China/Nigeria	0	2	0	0	0	2	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Colombia	0	5	0	0	0	5	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Congo	2	1	2	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Dominican Republic	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	East Timor, Indonesia	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	European cruise - multiple destinations	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Fiji	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	France	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Ghana	0	6	0	0	0	6	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Greece	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Guatemala	0	2	0	0	0	2	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	India	12	603	9	3	0	603	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	India, Indonesia	0	2	0	0	0	2	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	India, Indonesia, Philippines, Sri Lanka, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	India, Myanmar	0	3	0	0	0	3	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	India, Nepal	0	8	0	0	0	8	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	India, Pakistan	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	India, Philippines	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	India, Sri Lanka	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	India, Thailand	0	5	0	0	0	5	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	India, Turkey	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	India, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	India, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Indonesia	0	9	0	0	0	9	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Iraq	0	23	0	0	0	23	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Japan	0	2	0	0	0	2	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Kenya	1	0	1	0	0	0	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Kenya, Somalia	1	0	1	0	0	0	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Kenya, Tanzania	1	0	1	0	0	0	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Laos, Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Malaysia	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Mexico	0	8	0	0	0	8	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Morocco	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Myanmar	0	6	0	0	0	6	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	N	2	1	2	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Nepal	0	6	0	0	0	6	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Nigeria	5	8	1	4	0	8	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	No travel	5	8	4	1	0	8	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Not Stated	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Pakistan	232	365	218	14	0	365	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Pakistan, Saudi Arabia	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Peru	0	9	0	0	0	9	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Philippines	0	4	0	0	0	4	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Poland	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Saudi Arabia	1	0	1	0	0	0	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Saudi arabia	0	2	0	0	0	2	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Singapore	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	South Africa	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Spain	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Sudan	0	2	0	0	0	2	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Sweden	1	0	1	0	0	0	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Switzerland	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Thailand	0	4	0	0	0	4	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Tunisia	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Turkey	0	3	0	0	0	3	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Turks and Caicos Islands	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Uganda	1	0	1	0	0	0	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	United Arab Emirates	2	0	1	1	0	0	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Vietnam	0	3	0	0	0	3	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Y	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Yemen	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	Zimbabwe	10	1	9	1	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	india	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	country	nan	27	121	23	4	0	121	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	mlst_in_cohort	no	0	107	0	0	0	107	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	mlst_in_cohort	no ST	2	93	2	0	0	93	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	mlst_in_cohort	yes	327	1176	297	30	0	1176	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	bioproject	PRJNA248792	329	1375	322	7	0	1375	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	bioproject	PRJNA378379	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Afghanistan	2	0	2	0	0	0	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Afghanistan, Pakistan	1	1	1	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	American Samoa	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Argentina	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Argentina, Bolivia, Brazil, Colombia, Chile	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Argentina, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Asian continent	0	2	0	0	0	2	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Bangladesh	21	94	19	2	0	94	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Bangladesh, India	1	1	1	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Bolivia	0	8	0	0	0	8	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Bolivia, Brazil, Colombia, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Bolivia, Brazil, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Bolivia, Chile, Peru	0	2	0	0	0	2	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Brazil	0	2	0	0	0	2	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Cambodia	0	2	0	0	0	2	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Cambodia, India, Laos, Thailand, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Cambodia, India, Nepal, Thailand	0	2	0	0	0	2	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Cambodia, Sri Lanka	1	0	1	0	0	0	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Cambodia, Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Cambodia, Thailand, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Cambodia, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Canada	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	China	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	China/Nigeria	0	2	0	0	0	2	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Colombia	0	5	0	0	0	5	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Congo	2	1	2	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Dominican Republic	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	East Timor, Indonesia	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	European cruise - multiple destinations	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Fiji	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	France	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Ghana	0	6	0	0	0	6	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Greece	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Guatemala	0	2	0	0	0	2	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	India	12	603	12	0	0	603	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	India, Indonesia	0	2	0	0	0	2	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	India, Indonesia, Philippines, Sri Lanka, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	India, Myanmar	0	3	0	0	0	3	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	India, Nepal	0	8	0	0	0	8	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	India, Pakistan	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	India, Philippines	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	India, Sri Lanka	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	India, Thailand	0	5	0	0	0	5	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	India, Turkey	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	India, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	India, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Indonesia	0	9	0	0	0	9	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Iraq	0	23	0	0	0	23	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Japan	0	2	0	0	0	2	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Kenya	1	0	1	0	0	0	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Kenya, Somalia	1	0	1	0	0	0	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Kenya, Tanzania	1	0	1	0	0	0	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Laos, Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Malaysia	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Mexico	0	8	0	0	0	8	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Morocco	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Myanmar	0	6	0	0	0	6	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	N	2	1	2	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Nepal	0	6	0	0	0	6	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Nigeria	5	8	5	0	0	8	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	No travel	5	8	5	0	0	8	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Not Stated	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Pakistan	232	365	227	5	0	365	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Pakistan, Saudi Arabia	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Peru	0	9	0	0	0	9	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Philippines	0	4	0	0	0	4	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Poland	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Saudi Arabia	1	0	1	0	0	0	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Saudi arabia	0	2	0	0	0	2	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Singapore	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	South Africa	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Spain	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Sudan	0	2	0	0	0	2	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Sweden	1	0	1	0	0	0	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Switzerland	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Thailand	0	4	0	0	0	4	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Tunisia	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Turkey	0	3	0	0	0	3	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Turks and Caicos Islands	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Uganda	1	0	1	0	0	0	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	United Arab Emirates	2	0	2	0	0	0	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Vietnam	0	3	0	0	0	3	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Y	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Yemen	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	Zimbabwe	10	1	10	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	india	0	1	0	0	0	1	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	country	nan	27	121	27	0	0	121	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	mlst_in_cohort	no	0	107	0	0	0	107	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	mlst_in_cohort	no ST	2	93	2	0	0	93	0	0
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	mlst_in_cohort	yes	327	1176	320	7	0	1176	0	0
+salmonella_enterica__tetracycline	scm	bioproject	PRJNA248792	27	1677	25	2	91	1586	0	0
+salmonella_enterica__tetracycline	scm	bioproject	PRJNA378379	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	scm	country	Afghanistan	0	2	0	0	0	2	0	0
+salmonella_enterica__tetracycline	scm	country	Afghanistan, Pakistan	0	2	0	0	0	2	0	0
+salmonella_enterica__tetracycline	scm	country	American Samoa	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	scm	country	Argentina	0	1	0	0	1	0	0	0
+salmonella_enterica__tetracycline	scm	country	Argentina, Bolivia, Brazil, Colombia, Chile	0	1	0	0	1	0	0	0
+salmonella_enterica__tetracycline	scm	country	Argentina, Peru	0	1	0	0	1	0	0	0
+salmonella_enterica__tetracycline	scm	country	Asian continent	0	2	0	0	0	2	0	0
+salmonella_enterica__tetracycline	scm	country	Bangladesh	2	113	1	1	0	113	0	0
+salmonella_enterica__tetracycline	scm	country	Bangladesh, India	0	2	0	0	0	2	0	0
+salmonella_enterica__tetracycline	scm	country	Bolivia	0	8	0	0	8	0	0	0
+salmonella_enterica__tetracycline	scm	country	Bolivia, Brazil, Colombia, Peru	0	1	0	0	1	0	0	0
+salmonella_enterica__tetracycline	scm	country	Bolivia, Brazil, Peru	0	1	0	0	1	0	0	0
+salmonella_enterica__tetracycline	scm	country	Bolivia, Chile, Peru	0	2	0	0	2	0	0	0
+salmonella_enterica__tetracycline	scm	country	Brazil	0	2	0	0	2	0	0	0
+salmonella_enterica__tetracycline	scm	country	Cambodia	0	2	0	0	0	2	0	0
+salmonella_enterica__tetracycline	scm	country	Cambodia, India, Laos, Thailand, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	scm	country	Cambodia, India, Nepal, Thailand	0	2	0	0	0	2	0	0
+salmonella_enterica__tetracycline	scm	country	Cambodia, Sri Lanka	1	0	1	0	0	0	0	0
+salmonella_enterica__tetracycline	scm	country	Cambodia, Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	scm	country	Cambodia, Thailand, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	scm	country	Cambodia, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	scm	country	Canada	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	scm	country	China	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	scm	country	China/Nigeria	0	2	0	0	0	2	0	0
+salmonella_enterica__tetracycline	scm	country	Colombia	0	5	0	0	5	0	0	0
+salmonella_enterica__tetracycline	scm	country	Congo	0	3	0	0	0	3	0	0
+salmonella_enterica__tetracycline	scm	country	Dominican Republic	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	scm	country	East Timor, Indonesia	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	scm	country	European cruise - multiple destinations	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	scm	country	Fiji	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	scm	country	France	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	scm	country	Ghana	0	6	0	0	0	6	0	0
+salmonella_enterica__tetracycline	scm	country	Greece	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	scm	country	Guatemala	0	2	0	0	0	2	0	0
+salmonella_enterica__tetracycline	scm	country	India	3	612	3	0	1	611	0	0
+salmonella_enterica__tetracycline	scm	country	India, Indonesia	0	2	0	0	0	2	0	0
+salmonella_enterica__tetracycline	scm	country	India, Indonesia, Philippines, Sri Lanka, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	scm	country	India, Myanmar	0	3	0	0	0	3	0	0
+salmonella_enterica__tetracycline	scm	country	India, Nepal	0	8	0	0	0	8	0	0
+salmonella_enterica__tetracycline	scm	country	India, Pakistan	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	scm	country	India, Philippines	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	scm	country	India, Sri Lanka	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	scm	country	India, Thailand	0	5	0	0	0	5	0	0
+salmonella_enterica__tetracycline	scm	country	India, Turkey	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	scm	country	India, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	scm	country	India, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	scm	country	Indonesia	0	9	0	0	0	9	0	0
+salmonella_enterica__tetracycline	scm	country	Iraq	0	23	0	0	20	3	0	0
+salmonella_enterica__tetracycline	scm	country	Japan	0	2	0	0	2	0	0	0
+salmonella_enterica__tetracycline	scm	country	Kenya	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	scm	country	Kenya, Somalia	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	scm	country	Kenya, Tanzania	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	scm	country	Laos, Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	scm	country	Malaysia	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	scm	country	Mexico	0	8	0	0	0	8	0	0
+salmonella_enterica__tetracycline	scm	country	Morocco	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	scm	country	Myanmar	0	6	0	0	0	6	0	0
+salmonella_enterica__tetracycline	scm	country	N	0	3	0	0	0	3	0	0
+salmonella_enterica__tetracycline	scm	country	Nepal	0	6	0	0	0	6	0	0
+salmonella_enterica__tetracycline	scm	country	Nigeria	5	8	5	0	0	8	0	0
+salmonella_enterica__tetracycline	scm	country	No travel	1	12	1	0	0	12	0	0
+salmonella_enterica__tetracycline	scm	country	Not Stated	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	scm	country	Pakistan	5	592	5	0	7	585	0	0
+salmonella_enterica__tetracycline	scm	country	Pakistan, Saudi Arabia	0	1	0	0	1	0	0	0
+salmonella_enterica__tetracycline	scm	country	Peru	0	9	0	0	8	1	0	0
+salmonella_enterica__tetracycline	scm	country	Philippines	0	4	0	0	0	4	0	0
+salmonella_enterica__tetracycline	scm	country	Poland	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	scm	country	Saudi Arabia	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	scm	country	Saudi arabia	0	2	0	0	0	2	0	0
+salmonella_enterica__tetracycline	scm	country	Singapore	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	scm	country	South Africa	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	scm	country	Spain	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	scm	country	Sudan	0	2	0	0	0	2	0	0
+salmonella_enterica__tetracycline	scm	country	Sweden	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	scm	country	Switzerland	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	scm	country	Thailand	0	4	0	0	0	4	0	0
+salmonella_enterica__tetracycline	scm	country	Tunisia	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	scm	country	Turkey	0	3	0	0	3	0	0	0
+salmonella_enterica__tetracycline	scm	country	Turks and Caicos Islands	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	scm	country	Uganda	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	scm	country	United Arab Emirates	0	2	0	0	0	2	0	0
+salmonella_enterica__tetracycline	scm	country	Vietnam	0	3	0	0	0	3	0	0
+salmonella_enterica__tetracycline	scm	country	Y	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	scm	country	Yemen	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	scm	country	Zimbabwe	7	4	6	1	0	4	0	0
+salmonella_enterica__tetracycline	scm	country	india	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	scm	country	nan	3	145	3	0	27	118	0	0
+salmonella_enterica__tetracycline	scm	mlst_in_cohort	no	0	107	0	0	90	17	0	0
+salmonella_enterica__tetracycline	scm	mlst_in_cohort	no ST	0	95	0	0	1	94	0	0
+salmonella_enterica__tetracycline	scm	mlst_in_cohort	yes	27	1476	25	2	0	1476	0	0
+salmonella_enterica__tetracycline	cart	bioproject	PRJNA248792	27	1677	25	2	0	1677	0	0
+salmonella_enterica__tetracycline	cart	bioproject	PRJNA378379	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	cart	country	Afghanistan	0	2	0	0	0	2	0	0
+salmonella_enterica__tetracycline	cart	country	Afghanistan, Pakistan	0	2	0	0	0	2	0	0
+salmonella_enterica__tetracycline	cart	country	American Samoa	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	cart	country	Argentina	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	cart	country	Argentina, Bolivia, Brazil, Colombia, Chile	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	cart	country	Argentina, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	cart	country	Asian continent	0	2	0	0	0	2	0	0
+salmonella_enterica__tetracycline	cart	country	Bangladesh	2	113	1	1	0	113	0	0
+salmonella_enterica__tetracycline	cart	country	Bangladesh, India	0	2	0	0	0	2	0	0
+salmonella_enterica__tetracycline	cart	country	Bolivia	0	8	0	0	0	8	0	0
+salmonella_enterica__tetracycline	cart	country	Bolivia, Brazil, Colombia, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	cart	country	Bolivia, Brazil, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	cart	country	Bolivia, Chile, Peru	0	2	0	0	0	2	0	0
+salmonella_enterica__tetracycline	cart	country	Brazil	0	2	0	0	0	2	0	0
+salmonella_enterica__tetracycline	cart	country	Cambodia	0	2	0	0	0	2	0	0
+salmonella_enterica__tetracycline	cart	country	Cambodia, India, Laos, Thailand, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	cart	country	Cambodia, India, Nepal, Thailand	0	2	0	0	0	2	0	0
+salmonella_enterica__tetracycline	cart	country	Cambodia, Sri Lanka	1	0	1	0	0	0	0	0
+salmonella_enterica__tetracycline	cart	country	Cambodia, Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	cart	country	Cambodia, Thailand, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	cart	country	Cambodia, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	cart	country	Canada	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	cart	country	China	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	cart	country	China/Nigeria	0	2	0	0	0	2	0	0
+salmonella_enterica__tetracycline	cart	country	Colombia	0	5	0	0	0	5	0	0
+salmonella_enterica__tetracycline	cart	country	Congo	0	3	0	0	0	3	0	0
+salmonella_enterica__tetracycline	cart	country	Dominican Republic	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	cart	country	East Timor, Indonesia	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	cart	country	European cruise - multiple destinations	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	cart	country	Fiji	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	cart	country	France	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	cart	country	Ghana	0	6	0	0	0	6	0	0
+salmonella_enterica__tetracycline	cart	country	Greece	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	cart	country	Guatemala	0	2	0	0	0	2	0	0
+salmonella_enterica__tetracycline	cart	country	India	3	612	3	0	0	612	0	0
+salmonella_enterica__tetracycline	cart	country	India, Indonesia	0	2	0	0	0	2	0	0
+salmonella_enterica__tetracycline	cart	country	India, Indonesia, Philippines, Sri Lanka, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	cart	country	India, Myanmar	0	3	0	0	0	3	0	0
+salmonella_enterica__tetracycline	cart	country	India, Nepal	0	8	0	0	0	8	0	0
+salmonella_enterica__tetracycline	cart	country	India, Pakistan	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	cart	country	India, Philippines	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	cart	country	India, Sri Lanka	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	cart	country	India, Thailand	0	5	0	0	0	5	0	0
+salmonella_enterica__tetracycline	cart	country	India, Turkey	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	cart	country	India, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	cart	country	India, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	cart	country	Indonesia	0	9	0	0	0	9	0	0
+salmonella_enterica__tetracycline	cart	country	Iraq	0	23	0	0	0	23	0	0
+salmonella_enterica__tetracycline	cart	country	Japan	0	2	0	0	0	2	0	0
+salmonella_enterica__tetracycline	cart	country	Kenya	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	cart	country	Kenya, Somalia	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	cart	country	Kenya, Tanzania	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	cart	country	Laos, Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	cart	country	Malaysia	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	cart	country	Mexico	0	8	0	0	0	8	0	0
+salmonella_enterica__tetracycline	cart	country	Morocco	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	cart	country	Myanmar	0	6	0	0	0	6	0	0
+salmonella_enterica__tetracycline	cart	country	N	0	3	0	0	0	3	0	0
+salmonella_enterica__tetracycline	cart	country	Nepal	0	6	0	0	0	6	0	0
+salmonella_enterica__tetracycline	cart	country	Nigeria	5	8	5	0	0	8	0	0
+salmonella_enterica__tetracycline	cart	country	No travel	1	12	1	0	0	12	0	0
+salmonella_enterica__tetracycline	cart	country	Not Stated	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	cart	country	Pakistan	5	592	5	0	0	592	0	0
+salmonella_enterica__tetracycline	cart	country	Pakistan, Saudi Arabia	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	cart	country	Peru	0	9	0	0	0	9	0	0
+salmonella_enterica__tetracycline	cart	country	Philippines	0	4	0	0	0	4	0	0
+salmonella_enterica__tetracycline	cart	country	Poland	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	cart	country	Saudi Arabia	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	cart	country	Saudi arabia	0	2	0	0	0	2	0	0
+salmonella_enterica__tetracycline	cart	country	Singapore	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	cart	country	South Africa	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	cart	country	Spain	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	cart	country	Sudan	0	2	0	0	0	2	0	0
+salmonella_enterica__tetracycline	cart	country	Sweden	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	cart	country	Switzerland	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	cart	country	Thailand	0	4	0	0	0	4	0	0
+salmonella_enterica__tetracycline	cart	country	Tunisia	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	cart	country	Turkey	0	3	0	0	0	3	0	0
+salmonella_enterica__tetracycline	cart	country	Turks and Caicos Islands	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	cart	country	Uganda	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	cart	country	United Arab Emirates	0	2	0	0	0	2	0	0
+salmonella_enterica__tetracycline	cart	country	Vietnam	0	3	0	0	0	3	0	0
+salmonella_enterica__tetracycline	cart	country	Y	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	cart	country	Yemen	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	cart	country	Zimbabwe	7	4	6	1	0	4	0	0
+salmonella_enterica__tetracycline	cart	country	india	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	cart	country	nan	3	145	3	0	0	145	0	0
+salmonella_enterica__tetracycline	cart	mlst_in_cohort	no	0	107	0	0	0	107	0	0
+salmonella_enterica__tetracycline	cart	mlst_in_cohort	no ST	0	95	0	0	0	95	0	0
+salmonella_enterica__tetracycline	cart	mlst_in_cohort	yes	27	1476	25	2	0	1476	0	0
+salmonella_enterica__tetracycline	known_gene	bioproject	PRJNA248792	27	1677	25	2	0	1677	0	0
+salmonella_enterica__tetracycline	known_gene	bioproject	PRJNA378379	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	known_gene	country	Afghanistan	0	2	0	0	0	2	0	0
+salmonella_enterica__tetracycline	known_gene	country	Afghanistan, Pakistan	0	2	0	0	0	2	0	0
+salmonella_enterica__tetracycline	known_gene	country	American Samoa	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	known_gene	country	Argentina	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	known_gene	country	Argentina, Bolivia, Brazil, Colombia, Chile	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	known_gene	country	Argentina, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	known_gene	country	Asian continent	0	2	0	0	0	2	0	0
+salmonella_enterica__tetracycline	known_gene	country	Bangladesh	2	113	1	1	0	113	0	0
+salmonella_enterica__tetracycline	known_gene	country	Bangladesh, India	0	2	0	0	0	2	0	0
+salmonella_enterica__tetracycline	known_gene	country	Bolivia	0	8	0	0	0	8	0	0
+salmonella_enterica__tetracycline	known_gene	country	Bolivia, Brazil, Colombia, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	known_gene	country	Bolivia, Brazil, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	known_gene	country	Bolivia, Chile, Peru	0	2	0	0	0	2	0	0
+salmonella_enterica__tetracycline	known_gene	country	Brazil	0	2	0	0	0	2	0	0
+salmonella_enterica__tetracycline	known_gene	country	Cambodia	0	2	0	0	0	2	0	0
+salmonella_enterica__tetracycline	known_gene	country	Cambodia, India, Laos, Thailand, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	known_gene	country	Cambodia, India, Nepal, Thailand	0	2	0	0	0	2	0	0
+salmonella_enterica__tetracycline	known_gene	country	Cambodia, Sri Lanka	1	0	1	0	0	0	0	0
+salmonella_enterica__tetracycline	known_gene	country	Cambodia, Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	known_gene	country	Cambodia, Thailand, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	known_gene	country	Cambodia, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	known_gene	country	Canada	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	known_gene	country	China	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	known_gene	country	China/Nigeria	0	2	0	0	0	2	0	0
+salmonella_enterica__tetracycline	known_gene	country	Colombia	0	5	0	0	0	5	0	0
+salmonella_enterica__tetracycline	known_gene	country	Congo	0	3	0	0	0	3	0	0
+salmonella_enterica__tetracycline	known_gene	country	Dominican Republic	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	known_gene	country	East Timor, Indonesia	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	known_gene	country	European cruise - multiple destinations	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	known_gene	country	Fiji	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	known_gene	country	France	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	known_gene	country	Ghana	0	6	0	0	0	6	0	0
+salmonella_enterica__tetracycline	known_gene	country	Greece	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	known_gene	country	Guatemala	0	2	0	0	0	2	0	0
+salmonella_enterica__tetracycline	known_gene	country	India	3	612	3	0	0	612	0	0
+salmonella_enterica__tetracycline	known_gene	country	India, Indonesia	0	2	0	0	0	2	0	0
+salmonella_enterica__tetracycline	known_gene	country	India, Indonesia, Philippines, Sri Lanka, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	known_gene	country	India, Myanmar	0	3	0	0	0	3	0	0
+salmonella_enterica__tetracycline	known_gene	country	India, Nepal	0	8	0	0	0	8	0	0
+salmonella_enterica__tetracycline	known_gene	country	India, Pakistan	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	known_gene	country	India, Philippines	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	known_gene	country	India, Sri Lanka	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	known_gene	country	India, Thailand	0	5	0	0	0	5	0	0
+salmonella_enterica__tetracycline	known_gene	country	India, Turkey	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	known_gene	country	India, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	known_gene	country	India, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	known_gene	country	Indonesia	0	9	0	0	0	9	0	0
+salmonella_enterica__tetracycline	known_gene	country	Iraq	0	23	0	0	0	23	0	0
+salmonella_enterica__tetracycline	known_gene	country	Japan	0	2	0	0	0	2	0	0
+salmonella_enterica__tetracycline	known_gene	country	Kenya	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	known_gene	country	Kenya, Somalia	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	known_gene	country	Kenya, Tanzania	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	known_gene	country	Laos, Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	known_gene	country	Malaysia	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	known_gene	country	Mexico	0	8	0	0	0	8	0	0
+salmonella_enterica__tetracycline	known_gene	country	Morocco	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	known_gene	country	Myanmar	0	6	0	0	0	6	0	0
+salmonella_enterica__tetracycline	known_gene	country	N	0	3	0	0	0	3	0	0
+salmonella_enterica__tetracycline	known_gene	country	Nepal	0	6	0	0	0	6	0	0
+salmonella_enterica__tetracycline	known_gene	country	Nigeria	5	8	5	0	0	8	0	0
+salmonella_enterica__tetracycline	known_gene	country	No travel	1	12	1	0	0	12	0	0
+salmonella_enterica__tetracycline	known_gene	country	Not Stated	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	known_gene	country	Pakistan	5	592	5	0	0	592	0	0
+salmonella_enterica__tetracycline	known_gene	country	Pakistan, Saudi Arabia	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	known_gene	country	Peru	0	9	0	0	0	9	0	0
+salmonella_enterica__tetracycline	known_gene	country	Philippines	0	4	0	0	0	4	0	0
+salmonella_enterica__tetracycline	known_gene	country	Poland	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	known_gene	country	Saudi Arabia	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	known_gene	country	Saudi arabia	0	2	0	0	0	2	0	0
+salmonella_enterica__tetracycline	known_gene	country	Singapore	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	known_gene	country	South Africa	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	known_gene	country	Spain	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	known_gene	country	Sudan	0	2	0	0	0	2	0	0
+salmonella_enterica__tetracycline	known_gene	country	Sweden	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	known_gene	country	Switzerland	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	known_gene	country	Thailand	0	4	0	0	0	4	0	0
+salmonella_enterica__tetracycline	known_gene	country	Tunisia	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	known_gene	country	Turkey	0	3	0	0	0	3	0	0
+salmonella_enterica__tetracycline	known_gene	country	Turks and Caicos Islands	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	known_gene	country	Uganda	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	known_gene	country	United Arab Emirates	0	2	0	0	0	2	0	0
+salmonella_enterica__tetracycline	known_gene	country	Vietnam	0	3	0	0	0	3	0	0
+salmonella_enterica__tetracycline	known_gene	country	Y	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	known_gene	country	Yemen	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	known_gene	country	Zimbabwe	7	4	6	1	0	4	0	0
+salmonella_enterica__tetracycline	known_gene	country	india	0	1	0	0	0	1	0	0
+salmonella_enterica__tetracycline	known_gene	country	nan	3	145	3	0	0	145	0	0
+salmonella_enterica__tetracycline	known_gene	mlst_in_cohort	no	0	107	0	0	0	107	0	0
+salmonella_enterica__tetracycline	known_gene	mlst_in_cohort	no ST	0	95	0	0	0	95	0	0
+salmonella_enterica__tetracycline	known_gene	mlst_in_cohort	yes	27	1476	25	2	0	1476	0	0
+salmonella_enterica__trimethoprim	scm	bioproject	PRJNA248792	322	1382	13	309	0	1382	0	0
+salmonella_enterica__trimethoprim	scm	country	Afghanistan	2	0	0	2	0	0	0	0
+salmonella_enterica__trimethoprim	scm	country	Afghanistan, Pakistan	1	1	0	1	0	1	0	0
+salmonella_enterica__trimethoprim	scm	country	American Samoa	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	scm	country	Argentina	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	scm	country	Argentina, Bolivia, Brazil, Colombia, Chile	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	scm	country	Argentina, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	scm	country	Asian continent	0	2	0	0	0	2	0	0
+salmonella_enterica__trimethoprim	scm	country	Bangladesh	19	96	0	19	0	96	0	0
+salmonella_enterica__trimethoprim	scm	country	Bangladesh, India	1	1	0	1	0	1	0	0
+salmonella_enterica__trimethoprim	scm	country	Bolivia	0	8	0	0	0	8	0	0
+salmonella_enterica__trimethoprim	scm	country	Bolivia, Brazil, Colombia, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	scm	country	Bolivia, Brazil, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	scm	country	Bolivia, Chile, Peru	0	2	0	0	0	2	0	0
+salmonella_enterica__trimethoprim	scm	country	Brazil	0	2	0	0	0	2	0	0
+salmonella_enterica__trimethoprim	scm	country	Cambodia	0	2	0	0	0	2	0	0
+salmonella_enterica__trimethoprim	scm	country	Cambodia, India, Laos, Thailand, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	scm	country	Cambodia, India, Nepal, Thailand	0	2	0	0	0	2	0	0
+salmonella_enterica__trimethoprim	scm	country	Cambodia, Sri Lanka	1	0	0	1	0	0	0	0
+salmonella_enterica__trimethoprim	scm	country	Cambodia, Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	scm	country	Cambodia, Thailand, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	scm	country	Cambodia, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	scm	country	Canada	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	scm	country	China	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	scm	country	China/Nigeria	0	2	0	0	0	2	0	0
+salmonella_enterica__trimethoprim	scm	country	Colombia	0	5	0	0	0	5	0	0
+salmonella_enterica__trimethoprim	scm	country	Congo	2	1	0	2	0	1	0	0
+salmonella_enterica__trimethoprim	scm	country	Dominican Republic	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	scm	country	East Timor, Indonesia	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	scm	country	European cruise - multiple destinations	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	scm	country	Fiji	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	scm	country	France	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	scm	country	Ghana	0	6	0	0	0	6	0	0
+salmonella_enterica__trimethoprim	scm	country	Greece	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	scm	country	Guatemala	0	2	0	0	0	2	0	0
+salmonella_enterica__trimethoprim	scm	country	India	12	603	0	12	0	603	0	0
+salmonella_enterica__trimethoprim	scm	country	India, Indonesia	0	2	0	0	0	2	0	0
+salmonella_enterica__trimethoprim	scm	country	India, Indonesia, Philippines, Sri Lanka, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	scm	country	India, Myanmar	0	3	0	0	0	3	0	0
+salmonella_enterica__trimethoprim	scm	country	India, Nepal	0	8	0	0	0	8	0	0
+salmonella_enterica__trimethoprim	scm	country	India, Pakistan	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	scm	country	India, Philippines	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	scm	country	India, Sri Lanka	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	scm	country	India, Thailand	0	5	0	0	0	5	0	0
+salmonella_enterica__trimethoprim	scm	country	India, Turkey	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	scm	country	India, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	scm	country	India, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	scm	country	Indonesia	0	9	0	0	0	9	0	0
+salmonella_enterica__trimethoprim	scm	country	Iraq	0	23	0	0	0	23	0	0
+salmonella_enterica__trimethoprim	scm	country	Japan	0	2	0	0	0	2	0	0
+salmonella_enterica__trimethoprim	scm	country	Kenya	1	0	0	1	0	0	0	0
+salmonella_enterica__trimethoprim	scm	country	Kenya, Somalia	1	0	0	1	0	0	0	0
+salmonella_enterica__trimethoprim	scm	country	Kenya, Tanzania	1	0	0	1	0	0	0	0
+salmonella_enterica__trimethoprim	scm	country	Laos, Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	scm	country	Malaysia	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	scm	country	Mexico	0	8	0	0	0	8	0	0
+salmonella_enterica__trimethoprim	scm	country	Morocco	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	scm	country	Myanmar	0	6	0	0	0	6	0	0
+salmonella_enterica__trimethoprim	scm	country	N	2	1	0	2	0	1	0	0
+salmonella_enterica__trimethoprim	scm	country	Nepal	0	6	0	0	0	6	0	0
+salmonella_enterica__trimethoprim	scm	country	Nigeria	5	8	4	1	0	8	0	0
+salmonella_enterica__trimethoprim	scm	country	No travel	5	8	0	5	0	8	0	0
+salmonella_enterica__trimethoprim	scm	country	Not Stated	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	scm	country	Pakistan	227	370	0	227	0	370	0	0
+salmonella_enterica__trimethoprim	scm	country	Pakistan, Saudi Arabia	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	scm	country	Peru	0	9	0	0	0	9	0	0
+salmonella_enterica__trimethoprim	scm	country	Philippines	0	4	0	0	0	4	0	0
+salmonella_enterica__trimethoprim	scm	country	Poland	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	scm	country	Saudi Arabia	1	0	0	1	0	0	0	0
+salmonella_enterica__trimethoprim	scm	country	Saudi arabia	0	2	0	0	0	2	0	0
+salmonella_enterica__trimethoprim	scm	country	Singapore	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	scm	country	South Africa	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	scm	country	Spain	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	scm	country	Sudan	0	2	0	0	0	2	0	0
+salmonella_enterica__trimethoprim	scm	country	Sweden	1	0	0	1	0	0	0	0
+salmonella_enterica__trimethoprim	scm	country	Thailand	0	4	0	0	0	4	0	0
+salmonella_enterica__trimethoprim	scm	country	Tunisia	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	scm	country	Turkey	0	3	0	0	0	3	0	0
+salmonella_enterica__trimethoprim	scm	country	Turks and Caicos Islands	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	scm	country	Uganda	1	0	0	1	0	0	0	0
+salmonella_enterica__trimethoprim	scm	country	United Arab Emirates	2	0	0	2	0	0	0	0
+salmonella_enterica__trimethoprim	scm	country	Vietnam	0	3	0	0	0	3	0	0
+salmonella_enterica__trimethoprim	scm	country	Y	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	scm	country	Yemen	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	scm	country	Zimbabwe	10	1	8	2	0	1	0	0
+salmonella_enterica__trimethoprim	scm	country	india	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	scm	country	nan	27	121	1	26	0	121	0	0
+salmonella_enterica__trimethoprim	scm	mlst_in_cohort	no	0	107	0	0	0	107	0	0
+salmonella_enterica__trimethoprim	scm	mlst_in_cohort	no ST	2	93	0	2	0	93	0	0
+salmonella_enterica__trimethoprim	scm	mlst_in_cohort	yes	320	1182	13	307	0	1182	0	0
+salmonella_enterica__trimethoprim	cart	bioproject	PRJNA248792	322	1382	321	1	1	1381	0	0
+salmonella_enterica__trimethoprim	cart	country	Afghanistan	2	0	2	0	0	0	0	0
+salmonella_enterica__trimethoprim	cart	country	Afghanistan, Pakistan	1	1	1	0	0	1	0	0
+salmonella_enterica__trimethoprim	cart	country	American Samoa	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	cart	country	Argentina	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	cart	country	Argentina, Bolivia, Brazil, Colombia, Chile	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	cart	country	Argentina, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	cart	country	Asian continent	0	2	0	0	0	2	0	0
+salmonella_enterica__trimethoprim	cart	country	Bangladesh	19	96	19	0	0	96	0	0
+salmonella_enterica__trimethoprim	cart	country	Bangladesh, India	1	1	1	0	0	1	0	0
+salmonella_enterica__trimethoprim	cart	country	Bolivia	0	8	0	0	0	8	0	0
+salmonella_enterica__trimethoprim	cart	country	Bolivia, Brazil, Colombia, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	cart	country	Bolivia, Brazil, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	cart	country	Bolivia, Chile, Peru	0	2	0	0	0	2	0	0
+salmonella_enterica__trimethoprim	cart	country	Brazil	0	2	0	0	0	2	0	0
+salmonella_enterica__trimethoprim	cart	country	Cambodia	0	2	0	0	0	2	0	0
+salmonella_enterica__trimethoprim	cart	country	Cambodia, India, Laos, Thailand, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	cart	country	Cambodia, India, Nepal, Thailand	0	2	0	0	0	2	0	0
+salmonella_enterica__trimethoprim	cart	country	Cambodia, Sri Lanka	1	0	1	0	0	0	0	0
+salmonella_enterica__trimethoprim	cart	country	Cambodia, Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	cart	country	Cambodia, Thailand, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	cart	country	Cambodia, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	cart	country	Canada	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	cart	country	China	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	cart	country	China/Nigeria	0	2	0	0	0	2	0	0
+salmonella_enterica__trimethoprim	cart	country	Colombia	0	5	0	0	0	5	0	0
+salmonella_enterica__trimethoprim	cart	country	Congo	2	1	2	0	0	1	0	0
+salmonella_enterica__trimethoprim	cart	country	Dominican Republic	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	cart	country	East Timor, Indonesia	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	cart	country	European cruise - multiple destinations	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	cart	country	Fiji	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	cart	country	France	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	cart	country	Ghana	0	6	0	0	0	6	0	0
+salmonella_enterica__trimethoprim	cart	country	Greece	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	cart	country	Guatemala	0	2	0	0	0	2	0	0
+salmonella_enterica__trimethoprim	cart	country	India	12	603	12	0	0	603	0	0
+salmonella_enterica__trimethoprim	cart	country	India, Indonesia	0	2	0	0	0	2	0	0
+salmonella_enterica__trimethoprim	cart	country	India, Indonesia, Philippines, Sri Lanka, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	cart	country	India, Myanmar	0	3	0	0	0	3	0	0
+salmonella_enterica__trimethoprim	cart	country	India, Nepal	0	8	0	0	0	8	0	0
+salmonella_enterica__trimethoprim	cart	country	India, Pakistan	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	cart	country	India, Philippines	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	cart	country	India, Sri Lanka	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	cart	country	India, Thailand	0	5	0	0	0	5	0	0
+salmonella_enterica__trimethoprim	cart	country	India, Turkey	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	cart	country	India, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	cart	country	India, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	cart	country	Indonesia	0	9	0	0	0	9	0	0
+salmonella_enterica__trimethoprim	cart	country	Iraq	0	23	0	0	0	23	0	0
+salmonella_enterica__trimethoprim	cart	country	Japan	0	2	0	0	0	2	0	0
+salmonella_enterica__trimethoprim	cart	country	Kenya	1	0	1	0	0	0	0	0
+salmonella_enterica__trimethoprim	cart	country	Kenya, Somalia	1	0	1	0	0	0	0	0
+salmonella_enterica__trimethoprim	cart	country	Kenya, Tanzania	1	0	1	0	0	0	0	0
+salmonella_enterica__trimethoprim	cart	country	Laos, Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	cart	country	Malaysia	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	cart	country	Mexico	0	8	0	0	0	8	0	0
+salmonella_enterica__trimethoprim	cart	country	Morocco	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	cart	country	Myanmar	0	6	0	0	0	6	0	0
+salmonella_enterica__trimethoprim	cart	country	N	2	1	2	0	0	1	0	0
+salmonella_enterica__trimethoprim	cart	country	Nepal	0	6	0	0	0	6	0	0
+salmonella_enterica__trimethoprim	cart	country	Nigeria	5	8	5	0	0	8	0	0
+salmonella_enterica__trimethoprim	cart	country	No travel	5	8	5	0	0	8	0	0
+salmonella_enterica__trimethoprim	cart	country	Not Stated	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	cart	country	Pakistan	227	370	226	1	1	369	0	0
+salmonella_enterica__trimethoprim	cart	country	Pakistan, Saudi Arabia	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	cart	country	Peru	0	9	0	0	0	9	0	0
+salmonella_enterica__trimethoprim	cart	country	Philippines	0	4	0	0	0	4	0	0
+salmonella_enterica__trimethoprim	cart	country	Poland	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	cart	country	Saudi Arabia	1	0	1	0	0	0	0	0
+salmonella_enterica__trimethoprim	cart	country	Saudi arabia	0	2	0	0	0	2	0	0
+salmonella_enterica__trimethoprim	cart	country	Singapore	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	cart	country	South Africa	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	cart	country	Spain	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	cart	country	Sudan	0	2	0	0	0	2	0	0
+salmonella_enterica__trimethoprim	cart	country	Sweden	1	0	1	0	0	0	0	0
+salmonella_enterica__trimethoprim	cart	country	Thailand	0	4	0	0	0	4	0	0
+salmonella_enterica__trimethoprim	cart	country	Tunisia	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	cart	country	Turkey	0	3	0	0	0	3	0	0
+salmonella_enterica__trimethoprim	cart	country	Turks and Caicos Islands	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	cart	country	Uganda	1	0	1	0	0	0	0	0
+salmonella_enterica__trimethoprim	cart	country	United Arab Emirates	2	0	2	0	0	0	0	0
+salmonella_enterica__trimethoprim	cart	country	Vietnam	0	3	0	0	0	3	0	0
+salmonella_enterica__trimethoprim	cart	country	Y	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	cart	country	Yemen	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	cart	country	Zimbabwe	10	1	10	0	0	1	0	0
+salmonella_enterica__trimethoprim	cart	country	india	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	cart	country	nan	27	121	27	0	0	121	0	0
+salmonella_enterica__trimethoprim	cart	mlst_in_cohort	no	0	107	0	0	0	107	0	0
+salmonella_enterica__trimethoprim	cart	mlst_in_cohort	no ST	2	93	2	0	0	93	0	0
+salmonella_enterica__trimethoprim	cart	mlst_in_cohort	yes	320	1182	319	1	1	1181	0	0
+salmonella_enterica__trimethoprim	known_gene	bioproject	PRJNA248792	322	1382	321	1	1	1381	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Afghanistan	2	0	2	0	0	0	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Afghanistan, Pakistan	1	1	1	0	0	1	0	0
+salmonella_enterica__trimethoprim	known_gene	country	American Samoa	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Argentina	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Argentina, Bolivia, Brazil, Colombia, Chile	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Argentina, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Asian continent	0	2	0	0	0	2	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Bangladesh	19	96	19	0	0	96	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Bangladesh, India	1	1	1	0	0	1	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Bolivia	0	8	0	0	0	8	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Bolivia, Brazil, Colombia, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Bolivia, Brazil, Peru	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Bolivia, Chile, Peru	0	2	0	0	0	2	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Brazil	0	2	0	0	0	2	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Cambodia	0	2	0	0	0	2	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Cambodia, India, Laos, Thailand, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Cambodia, India, Nepal, Thailand	0	2	0	0	0	2	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Cambodia, Sri Lanka	1	0	1	0	0	0	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Cambodia, Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Cambodia, Thailand, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Cambodia, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Canada	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	known_gene	country	China	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	known_gene	country	China/Nigeria	0	2	0	0	0	2	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Colombia	0	5	0	0	0	5	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Congo	2	1	2	0	0	1	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Dominican Republic	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	known_gene	country	East Timor, Indonesia	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	known_gene	country	European cruise - multiple destinations	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Fiji	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	known_gene	country	France	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Ghana	0	6	0	0	0	6	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Greece	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Guatemala	0	2	0	0	0	2	0	0
+salmonella_enterica__trimethoprim	known_gene	country	India	12	603	12	0	0	603	0	0
+salmonella_enterica__trimethoprim	known_gene	country	India, Indonesia	0	2	0	0	0	2	0	0
+salmonella_enterica__trimethoprim	known_gene	country	India, Indonesia, Philippines, Sri Lanka, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	known_gene	country	India, Myanmar	0	3	0	0	0	3	0	0
+salmonella_enterica__trimethoprim	known_gene	country	India, Nepal	0	8	0	0	0	8	0	0
+salmonella_enterica__trimethoprim	known_gene	country	India, Pakistan	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	known_gene	country	India, Philippines	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	known_gene	country	India, Sri Lanka	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	known_gene	country	India, Thailand	0	5	0	0	0	5	0	0
+salmonella_enterica__trimethoprim	known_gene	country	India, Turkey	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	known_gene	country	India, Viet Nam	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	known_gene	country	India, Vietnam	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Indonesia	0	9	0	0	0	9	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Iraq	0	23	0	0	0	23	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Japan	0	2	0	0	0	2	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Kenya	1	0	1	0	0	0	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Kenya, Somalia	1	0	1	0	0	0	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Kenya, Tanzania	1	0	1	0	0	0	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Laos, Thailand	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Malaysia	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Mexico	0	8	0	0	0	8	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Morocco	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Myanmar	0	6	0	0	0	6	0	0
+salmonella_enterica__trimethoprim	known_gene	country	N	2	1	2	0	0	1	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Nepal	0	6	0	0	0	6	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Nigeria	5	8	5	0	0	8	0	0
+salmonella_enterica__trimethoprim	known_gene	country	No travel	5	8	5	0	0	8	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Not Stated	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Pakistan	227	370	226	1	1	369	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Pakistan, Saudi Arabia	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Peru	0	9	0	0	0	9	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Philippines	0	4	0	0	0	4	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Poland	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Saudi Arabia	1	0	1	0	0	0	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Saudi arabia	0	2	0	0	0	2	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Singapore	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	known_gene	country	South Africa	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Spain	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Sudan	0	2	0	0	0	2	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Sweden	1	0	1	0	0	0	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Thailand	0	4	0	0	0	4	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Tunisia	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Turkey	0	3	0	0	0	3	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Turks and Caicos Islands	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Uganda	1	0	1	0	0	0	0	0
+salmonella_enterica__trimethoprim	known_gene	country	United Arab Emirates	2	0	2	0	0	0	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Vietnam	0	3	0	0	0	3	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Y	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Yemen	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	known_gene	country	Zimbabwe	10	1	10	0	0	1	0	0
+salmonella_enterica__trimethoprim	known_gene	country	india	0	1	0	0	0	1	0	0
+salmonella_enterica__trimethoprim	known_gene	country	nan	27	121	27	0	0	121	0	0
+salmonella_enterica__trimethoprim	known_gene	mlst_in_cohort	no	0	107	0	0	0	107	0	0
+salmonella_enterica__trimethoprim	known_gene	mlst_in_cohort	no ST	2	93	2	0	0	93	0	0
+salmonella_enterica__trimethoprim	known_gene	mlst_in_cohort	yes	320	1182	319	1	1	1181	0	0

@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import type { DatasetReport, GroupRow, PanelResult } from "../../data/schema";
 import { int, pct, plural } from "../../data/format";
 import { BARS } from "../../data/metrics";
@@ -7,10 +8,27 @@ import { PanelDesigner } from "./PanelDesigner";
 import { DataTable, type Column } from "../../ui/DataTable";
 import { BarPill, PanelState, ScrollFrame, Section } from "../../ui/primitives";
 
+/** A class list such as "lincosamide/oxazolidinone/phenicol" that may break
+ *  after each "/", so it wraps in its cell rather than widen the table. */
+const SlashBreaks = ({ text }: { text: string }) => (
+  <>
+    {text.split("/").map((part, i) =>
+      i === 0 ? (
+        part
+      ) : (
+        <Fragment key={i}>
+          /<wbr />
+          {part}
+        </Fragment>
+      ),
+    )}
+  </>
+);
+
 const groupColumns: Column<GroupRow>[] = [
   { id: "group", header: "Gene group", sortValue: (g) => g.group, firstDir: "asc", cell: (g) => g.group },
-  { id: "class", header: "Class", sortValue: (g) => g.class, firstDir: "asc", cell: (g) => <span className="text-muted-text">{g.class.toLowerCase()}</span> },
-  { id: "subclass", header: "Subclass", sortValue: (g) => g.subclass, firstDir: "asc", cell: (g) => <span className="whitespace-normal break-words text-muted-text">{g.subclass.toLowerCase()}</span> },
+  { id: "class", header: "Class", sortValue: (g) => g.class, firstDir: "asc", cell: (g) => <span className="text-muted-text"><SlashBreaks text={g.class.toLowerCase()} /></span> },
+  { id: "subclass", header: "Subclass", sortValue: (g) => g.subclass, firstDir: "asc", cell: (g) => <span className="whitespace-normal break-words text-muted-text"><SlashBreaks text={g.subclass.toLowerCase()} /></span> },
   { id: "r", header: "Resistant carriers", align: "right", sortValue: (g) => g.n_resistant, cell: (g) => int(g.n_resistant) },
   { id: "s", header: "Susceptible carriers", align: "right", sortValue: (g) => g.n_susceptible, cell: (g) => int(g.n_susceptible) },
   {
@@ -96,13 +114,14 @@ export const MechanismSection = ({ r }: { r: DatasetReport }) => {
     <Section
       id="ds-mechanisms"
       title="Genes and panels"
+      question="These tests skip the learners and look only for known resistance genes: the catalog rule checks every known gene for the drug, and each simulated PCR panel checks the few a lab assay targets. Sensitivity is the share of resistant isolates a test flags; specificity is the share of susceptible isolates it leaves unflagged."
       answer={
         cat === null
           ? `The catalog has no acquired-gene rule for ${r.antibiotic}.`
           : catalogRuleWords(cat.rule)
       }
     >
-      {cat === null ? null : <p className="type-note">Catalog-containment rule · AMRFinderPlus catalog {cat.version}</p>}
+      {cat === null ? null : <p className="type-note">Catalog-containment rule · AMRFinderPlus catalog database {cat.version}</p>}
       {tests.length === 0 ? null : (
         <ScrollFrame label="Gene and panel results">
           <table className="mt-3 w-full border-collapse text-control">
@@ -127,6 +146,7 @@ export const MechanismSection = ({ r }: { r: DatasetReport }) => {
           </table>
         </ScrollFrame>
       )}
+      {tests.length === 0 ? null : <p className="type-note mt-2">The limits under VME and ME are a screen adapted from FDA&apos;s 2009 guidance for growth-based susceptibility test systems.</p>}
       <div className="mt-6">
         <h3 className="text-control font-semibold text-ink">Simulated PCR panels</h3>
         {r.panels.length === 0 && unsupported.length === 0 ? (

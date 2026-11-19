@@ -3,7 +3,7 @@ import { fixtureFile } from "../../dev/fixtures/files";
 import { parseDataset, parseManifest } from "../validate";
 import type { Manifest } from "../schema";
 import { gapWords } from "../format";
-import { auditOf, LEGACY_AUDIT, manifestAudit, NO_CALL_REVISION, nullFitWords } from "./evaluation";
+import { auditOf, EQUAL_SCORING_REVISION, LEGACY_AUDIT, manifestAudit, NO_CALL_REVISION, nullFitWords } from "./evaluation";
 import { classPools, distinctResistant, joinPanels, notScored, pool, share } from "./tests";
 import { withRealProbeRows } from "../../dev/fixtures/probeRows";
 import { splitAbsence, splitOf } from "./dataset";
@@ -19,6 +19,14 @@ describe("evaluation audit", () => {
     expect(nullFitWords(undefined)).toBe(before);
     expect(from).toContain(`From evaluation revision ${NO_CALL_REVISION} it makes no call`);
     expect(from).toContain("earlier revisions scored those isolates 0.5");
+  });
+
+  it("words null fits as scored at the training prevalence from the equal-scoring revision", () => {
+    const scored = nullFitWords(EQUAL_SCORING_REVISION);
+    expect(nullFitWords(EQUAL_SCORING_REVISION - 1)).toBe(nullFitWords(NO_CALL_REVISION));
+    expect(scored).toContain(`From evaluation revision ${EQUAL_SCORING_REVISION} it scores each isolate of that fold at the share of resistant isolates in the fold's training set`);
+    expect(scored).toContain("cover every isolate for every learner");
+    expect(scored).not.toContain("cover the isolates called");
   });
 
   it("reads a report without an audit as the legacy, provisional audit", () => {

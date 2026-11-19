@@ -1,32 +1,39 @@
 // What GRM found: a five-step primer for a reader new to the terms, then the
-// report in six numbered sections. The data behind the reports, then the
-// four findings Present shares, each with its lead, a figure, a caption that
+// report in ten numbered sections. The data behind the reports, then the
+// eight findings Present shares, each with its lead, a figure, a caption that
 // says what a mark is, and short notes on coverage in view; last, the limits
 // every number shares. The panel section also holds every panel result;
 // /tests lands on it through the #panels anchor.
 
-import { useEffect, useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 import type { Manifest } from "../data/schema";
 import { int, plural } from "../data/format";
 import type { Navigator } from "../app/router";
 import { ViewHeader } from "../ui/ViewHeader";
 import { FOCUS_RING, PanelState, VIEW_SHELL } from "../ui/primitives";
+import { AUDIT_READING, AUDIT_SCOPE } from "../ui/EvaluationNotice";
 import { PrimerSection } from "./primer";
-import { AuditReasons, FINDINGS, inApp, LINK, methodsHref, openMethodsAt, ReportLine, SectionHeading, selectionCap, showSection, STATUS_LINK, type Finding } from "./findings";
+import { useMicBaselines } from "../data/load";
+import { micConstants } from "../data/baselines";
+import { AuditReasons, FINDINGS, inApp, LINK, methodsHref, openMethodsAt, ReportLine, SectionHeading, selectionCap, showSection, STATUS_LINK, type Finding, type FindingMore } from "./findings";
 
 /** The anchor of the panel section, where /tests redirects. */
 export const PANELS_ANCHOR = "panels";
 /** The anchor of the closing section, where the status line's scope links. */
 export const LIMITS_ANCHOR = "limits";
 
+/** What the site is and the question it answers, above every chart. */
+const OVERVIEW_PURPOSE =
+  "A lab can grow a bacterium next to an antibiotic and report it resistant, if the drug does not stop it growing, or susceptible, if it does. GRM (Genomic Resistance Mapping) asks how well the bacterium's genome, its full DNA sequence, predicts that lab result. It trains learners on public genomes that have a reported result, then scores them on genomes they did not train on.";
+
 /** Supporting evidence under one explicit control, open on arrival from a
  *  link that names it. */
-const More = ({ label, open: initial, children }: { label: string; open: boolean; children: ReactNode }) => {
+const More = ({ label, open: initial, first = true, children }: { label: string; open: boolean; first?: boolean; children: ReactNode }) => {
   const [open, setOpen] = useState(initial);
   const id = useId();
   return (
-    <div className="mt-6">
+    <div className={first ? "mt-6" : "mt-1"}>
       <button
         type="button"
         aria-expanded={open}
@@ -47,8 +54,9 @@ const More = ({ label, open: initial, children }: { label: string; open: boolean
 };
 
 /** One finding as a report section: heading, lead, then the figure with its
- *  caption and notes as one unit, centered when it is a plot with a legend
- *  and across the width when it is a strip. */
+ *  caption and notes as one unit, on the heading's left edge: at most 60rem
+ *  wide when it is a plot with a legend, across the width when it is a
+ *  strip. */
 const ReportSection = ({ n, finding, open }: { n: number; finding: Finding; open: boolean }) => {
   const figure = typeof finding.figure === "function" ? finding.figure({}) : finding.figure;
   return (
@@ -57,16 +65,16 @@ const ReportSection = ({ n, finding, open }: { n: number; finding: Finding; open
         {finding.title}
       </SectionHeading>
       <p className="prose-measure mt-2 text-body text-ink">{finding.result}</p>
-      <div className={finding.span === "unit" ? "mx-auto mt-6 w-full max-w-[60rem]" : "mt-6"}>
+      <div className={finding.span === "unit" ? "mt-6 w-full max-w-[60rem]" : "mt-6"}>
         {figure === null || figure === undefined ? null : <div className="min-w-0">{figure}</div>}
         <p className={`prose-measure text-note text-muted-text ${figure === null || figure === undefined ? "" : "mt-3"}`}>{finding.caption}</p>
         {finding.note}
       </div>
-      {finding.more === undefined ? null : (
-        <More label={finding.more.label} open={open}>
-          {finding.more.body}
+      {(finding.more === undefined ? [] : Array.isArray(finding.more) ? finding.more : [finding.more]).map((m: FindingMore, i: number) => (
+        <More key={m.label} label={m.label} open={open && i === 0} first={i === 0}>
+          {m.body}
         </More>
-      )}
+      ))}
     </section>
   );
 };
@@ -80,13 +88,19 @@ const Limits = ({ n, manifest, nav }: { n: number; manifest: Manifest; nav: Navi
         Limits
       </SectionHeading>
       <ul className="prose-measure mt-3 list-disc space-y-2 pl-5 text-body text-ink">
-        <li>Every number here is internal cross-validation on public BV-BRC genomes, scored against the resistant and susceptible calls BV-BRC reports.</li>
+        <li>
+          Every number here, except those on newly deposited genomes, is internal cross-validation on public BV-BRC genomes: learners train on part of the genomes and are scored on the
+          rest, against the resistant and susceptible calls BV-BRC reports.
+        </li>
         <li>
           {capped
-            ? `The genomes are a selection: at most ${int(cap)} per species in this run, and fewer where QC or FASTA availability reduced a cohort.`
-            : "The genomes are a selection, reduced where QC or FASTA availability limited a cohort."}
+            ? `The genomes are a selection: at most ${int(cap)} per species in this run, and fewer where genomes failed QC or had no FASTA file.`
+            : "The genomes are a selection, reduced where genomes failed QC or had no FASTA file."}
         </li>
-        <li>No external, prospective, or clinical validation has been done. The numbers describe agreement with reported lab calls on these isolates, not how a diagnostic test would perform.</li>
+        <li>
+          No external, prospective, or clinical validation has been done: no test on another lab&apos;s genomes, on newly collected isolates or in a clinical study. The newly
+          deposited genomes come from the same database as the cohorts, so that test is not external validation either. {AUDIT_READING}
+        </li>
       </ul>
       <p className="mt-3 text-control">
         <a href={methodsHref("m-audit")} onClick={inApp(() => openMethodsAt(nav, "m-audit"))} className={`inline-flex min-h-11 items-center gap-1.5 font-medium ${LINK}`}>
@@ -106,12 +120,16 @@ export const OverviewView = ({ manifest, nav }: { manifest: Manifest; nav: Navig
   useEffect(() => {
     if (hash !== "") document.getElementById(hash)?.scrollIntoView?.({ block: "start" });
   }, [hash]);
-  const findings = FINDINGS.map((build) => build(manifest, { page: true, nav }));
+  // Optional: with no baselines files the MIC finding shows the model alone.
+  const files = useMicBaselines(manifest);
+  const constants = useMemo(() => (files.status === "ready" ? micConstants(manifest.datasets, files.data, manifest.evaluation_revision) : undefined), [files, manifest]);
+  const findings = FINDINGS.map((build) => build(manifest, { page: true, nav, micConstants: constants }));
 
   return (
     <div className={`${VIEW_SHELL} pb-16 pt-8`}>
       <ViewHeader
         title="What GRM found"
+        purpose={OVERVIEW_PURPOSE}
         status={
           <ReportLine
             manifest={manifest}
@@ -124,7 +142,7 @@ export const OverviewView = ({ manifest, nav }: { manifest: Manifest; nav: Navig
                 }}
                 className={STATUS_LINK}
               >
-                Internal cross-validation only
+                {AUDIT_SCOPE}
               </a>
             }
           />
@@ -133,7 +151,7 @@ export const OverviewView = ({ manifest, nav }: { manifest: Manifest; nav: Navig
       <AuditReasons manifest={manifest} />
       {manifest.datasets.length === 0 ? (
         <div className="mt-8">
-          <PanelState kind="empty" title="No dataset has a report yet" message={`${plural(curated, "dataset")} passed curation; reports appear as \`grm learn\` finishes each species.`} />
+          <PanelState kind="empty" title="No dataset has a report yet" message={`${plural(curated, "dataset")} passed curation. A report appears when \`grm learn\` finishes training on its species.`} />
         </div>
       ) : (
         <div className="mt-10 space-y-12">

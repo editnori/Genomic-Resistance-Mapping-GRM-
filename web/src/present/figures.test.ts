@@ -87,8 +87,8 @@ const motion = (reduced: boolean) =>
     removeEventListener: () => {},
   }));
 
-const open = async (manifest: Manifest = base) => {
-  vi.stubGlobal("fetch", async (path: string) => new Response(JSON.stringify(fixtureFile(path))));
+const open = async (manifest: Manifest = base, file: (path: string) => unknown = fixtureFile) => {
+  vi.stubGlobal("fetch", async (path: string) => new Response(JSON.stringify(file(path))));
   const host = document.createElement("div");
   document.body.append(host);
   root = createRoot(host);
@@ -101,13 +101,13 @@ const open = async (manifest: Manifest = base) => {
   return { dialog, status, right, onClose };
 };
 
-it("opens the deck on its title slide, then the primer, then the six finding slides, with a named outline and no deck chooser", async () => {
+it("opens the deck on its title slide, then the primer, then the finding slides, with a named outline and no deck chooser", async () => {
   motion(true);
   const { dialog, status, right, onClose } = await open();
-  const titles = ["Genomic Resistance Mapping", ...primerSteps(base).map((s) => s.title), ...FINDINGS.map((f) => f(base, { page: false }).title), "One interpretable rule"];
+  const titles = ["Genomic Resistance Mapping", ...primerSteps(base).map((s) => s.title), ...FINDINGS.map((f) => f(base, { page: false }).title), "One rule a person can read"];
   expect(titles).toHaveLength(DECK);
   expect(dialog.textContent).not.toContain("Choose a deck");
-  const selector = dialog.querySelector<HTMLButtonElement>('[role="combobox"]')!;
+  const selector = dialog.querySelector<HTMLButtonElement>('footer [role="combobox"]')!;
   expect(selector.getAttribute("aria-label")).toBe("Go to slide: 1 · Genomic Resistance Mapping");
   await act(async () => selector.click());
   expect([...document.querySelectorAll('[role="option"]')].map((o) => o.textContent)).toEqual(titles.map((t, i) => `${i + 1} · ${t}`));
@@ -117,7 +117,7 @@ it("opens the deck on its title slide, then the primer, then the six finding sli
     expect(status()).toContain(`Slide ${i} of ${titles.length}`);
     await right();
   }
-  expect(status()).toContain(`Slide ${titles.length} of ${titles.length}: One interpretable rule`);
+  expect(status()).toContain(`Slide ${titles.length} of ${titles.length}: One rule a person can read`);
   // The slide control keeps its own arrow keys.
   act(() => selector.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true })));
   expect(status()).toContain(`Slide ${titles.length} of ${titles.length}`);
@@ -157,14 +157,14 @@ it("states the report's scope on the title slide as plain words, with no chip to
   document.body.innerHTML = "";
   const passing: Manifest = { ...base, evaluation_revision: 7, datasets: base.datasets.map((d) => ({ ...d, evaluation: { revision: 7, valid: true, reasons: [] } })) };
   const again = await open(passing);
-  expect(again.dialog.querySelector("main section")?.textContent).toContain("Internal cross-validation only");
+  expect(again.dialog.querySelector("main section")?.textContent).toContain("Tested within one public database only");
 });
 
 it("shows the rule's sequence inline, never in a second dialog", async () => {
   motion(true);
   const { dialog, status } = await open();
   await act(async () => dialog.querySelector("main")!.dispatchEvent(new KeyboardEvent("keydown", { key: "End", bubbles: true })));
-  expect(status()).toContain(`Slide ${DECK} of ${DECK}: One interpretable rule`);
+  expect(status()).toContain(`Slide ${DECK} of ${DECK}: One rule a person can read`);
   expect(document.querySelectorAll("dialog")).toHaveLength(1);
   expect([...dialog.querySelectorAll("button")].map((b) => b.textContent)).not.toContain("Show sequence");
   const pick = ruleDataset(base)!;
@@ -174,19 +174,35 @@ it("shows the rule's sequence inline, never in a second dialog", async () => {
 });
 
 /** Gives every element the same laid-out box, as a browser would at one
- *  size: happy-dom lays nothing out. `tall` makes a fixed slide's content
- *  taller than its box. */
+ *  size: happy-dom lays nothing out. `tall` makes the rule slide's figure,
+ *  in the deck's one-page copy of that slide, three times the slide's
+ *  height; every other copy reads as unlaid, so it fits. */
 const layout = ({ height, tall = false }: { height: number; tall?: boolean }) => {
   const define = (key: string, get: (this: HTMLElement) => number) => Object.defineProperty(HTMLElement.prototype, key, { configurable: true, get });
   define("clientHeight", () => height);
   define("clientWidth", () => 600);
-  define("offsetHeight", function () {
-    return tall && this.parentElement?.hasAttribute("data-fixed-box") === true ? height * 3 : 40;
-  });
-  return () => ["clientHeight", "clientWidth", "offsetHeight"].forEach((key) => delete (HTMLElement.prototype as unknown as Record<string, unknown>)[key]);
+  define("offsetHeight", () => 40);
+  const rect = Element.prototype.getBoundingClientRect;
+  const box = (top: number, h: number) => ({ x: 0, y: top, top, left: 0, right: 600, bottom: top + h, width: 600, height: h, toJSON: () => ({}) }) as DOMRect;
+  Element.prototype.getBoundingClientRect = function (this: Element) {
+    const copy = this.closest('[data-slide-measure="rule"]');
+    if (!tall || copy === null) return rect.call(this);
+    if (this === copy.firstElementChild) return box(0, height);
+    if (this.parentElement?.hasAttribute("data-measure-slot") === true) return box(0, height * 3);
+    return rect.call(this);
+  };
+  return () => {
+    ["clientHeight", "clientWidth", "offsetHeight"].forEach((key) => delete (HTMLElement.prototype as unknown as Record<string, unknown>)[key]);
+    Element.prototype.getBoundingClientRect = rect;
+  };
 };
 
 describe("continuation slides", () => {
+  // At 300px the panel figure takes two slides, and so does the outside-study
+  // figure, which cannot draw both populations at its smallest plot. The
+  // input comparison measures its rows, 40px each here, so its 13 rows go 2
+  // to a page in the 116px left: seven slides. Eight more slides in the deck.
+  const SPLIT = DECK + 1 + 1 + 6;
   let restore: (() => void) | null = null;
   afterEach(() => {
     restore?.();
@@ -209,14 +225,16 @@ describe("continuation slides", () => {
     // into pages of at most 9 rows: two pages of 8 and 7.
     const caption = panelsFinding(m, { page: false }).caption;
     const seen: string[] = [];
-    const panelAt = 1 + primerSteps(m).length + 3;
+    // The slide before the panel figure's first page: the title, the
+    // primer steps, then the findings ahead of it.
+    const panelAt = 1 + primerSteps(m).length + FINDINGS.findIndex((f) => f(m, { page: false }).id === "panels");
     for (const [page, first, last] of [
       [1, 1, 8],
       [2, 9, 15],
     ] as const) {
       const n = panelAt + page;
       while (!status().startsWith(`Slide ${n} `)) await act(async () => dialog.querySelector("main")!.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })));
-      expect(status()).toBe(`Slide ${n} of ${DECK + 1}: PCR panel (${page} of 2)`);
+      expect(status()).toBe(`Slide ${n} of ${SPLIT}: Simulated PCR panel (${page} of 2)`);
       const section = dialog.querySelector("main section")!;
       const ids = [...section.querySelectorAll("[data-dataset]")].map((g) => g.getAttribute("data-dataset")!);
       expect(ids).toHaveLength(last - first + 1);
@@ -225,13 +243,66 @@ describe("continuation slides", () => {
       expect(section.querySelector("[data-caption]")?.textContent).toBe(caption);
     }
     expect(seen.sort()).toEqual(Array.from({ length: 15 }, (_, k) => `p${k}`).sort());
-    const selector = dialog.querySelector<HTMLButtonElement>('[role="combobox"]')!;
+    const selector = dialog.querySelector<HTMLButtonElement>('footer [role="combobox"]')!;
     await act(async () => selector.click());
     // The outline's options, not the open chart's keyboard option.
     const labels = [...document.querySelectorAll('[role="option"]')].map((o) => o.textContent ?? "").filter((t) => /^\d+ · /.test(t));
-    expect(labels).toContain(`${panelAt + 1} · PCR panel (1 of 2)`);
-    expect(labels).toContain(`${panelAt + 2} · PCR panel (2 of 2)`);
-    expect(labels).toHaveLength(DECK + 1);
+    expect(labels).toContain(`${panelAt + 1} · Simulated PCR panel (1 of 2)`);
+    expect(labels).toContain(`${panelAt + 2} · Simulated PCR panel (2 of 2)`);
+    expect(labels).toHaveLength(SPLIT);
+    expect(labels.filter((t) => t.includes("Newly deposited genomes"))).toEqual([expect.stringContaining("(1 of 2)"), expect.stringContaining("(2 of 2)")]);
+    expect(labels.filter((t) => t.includes("Input settings against the default"))).toEqual([1, 2, 3, 4, 5, 6, 7].map((k) => expect.stringContaining(`(${k} of 7)`)));
+  });
+
+  it("says on the rule slide what a list of families is, which gene groups GRM's known-gene rule for the drug uses, how many features tie the rule, and how far a rule outside a gene lies from the nearest one", async () => {
+    motion(true);
+    restore = layout({ height: 2000 });
+    // The synthetic fixture's showcase report under a new id, so the deck
+    // fetches it afresh, with its first rule's card, its gene-group rows and
+    // its ties set by hand, and a score that keeps it the showcase.
+    const pick = ruleDataset(base)!;
+    type Card = { feature: number; catalog_families: string[]; locus: { gene: string | null; product: string | null; codons: [number, number] | null; nearest: [string, number] | null } | null };
+    type Raw = { id: string; features: Card[]; models: { scm: { rules: { feature: number; presence: boolean }[]; steps: { n_equivalent: number }[] } }; catalog: { groups: unknown[] } | null };
+    const group = (name: string, counts: boolean) => ({ group: name, class: "BETA-LACTAM", subclass: "CARBAPENEM", n_resistant: 1, n_susceptible: 1, counts_for_rule: counts });
+    const slide = async (id: string, ties: number, change: (card: Card) => void = (card) => (card.catalog_families = ["blaNDM", "ble"])) => {
+      const raw = structuredClone(fixtureFile(`/data/datasets/${pick.row.id}.json`)) as Raw;
+      raw.id = id;
+      change(raw.features.find((f) => f.feature === raw.models.scm.rules[0]!.feature)!);
+      raw.models.scm.steps[0]!.n_equivalent = ties;
+      raw.catalog = { ...(raw.catalog ?? { version: "2026-08-14.1", rule: [["S:CARBAPENEM"]], metrics: pick.row.catalog }), groups: [group("blaNDM", true), group("ble", false)] } as Raw["catalog"];
+      const learners = pick.row.learners.map((l) => (l.learner === "scm" && l.random !== null ? { ...l, random: { ...l.random, balanced_accuracy: 0.9999 } } : l));
+      const manifest = { ...base, datasets: [...base.datasets, { ...pick.row, id, learners }] };
+      expect(ruleDataset(manifest)!.row.id).toBe(id);
+      const { dialog } = await open(manifest, (p) => (p === `/data/datasets/${id}.json` ? raw : fixtureFile(p)));
+      await act(async () => dialog.querySelector("main")!.dispatchEvent(new KeyboardEvent("keydown", { key: "End", bubbles: true })));
+      await act(async () => {});
+      return dialog.querySelector("main section")?.textContent ?? "";
+    };
+    const tied = await slide("rule-words-tied", 3);
+    expect(tied).toContain(
+      "Known-gene catalog families blaNDM, ble. Not a list of genes an isolate carries: one k-mer pattern matches all of these families. Of the gene groups GRM found in these genomes, its known-gene rule for this drug uses blaNDM but not ble.",
+    );
+    expect(tied).toContain("This rule is one of 4 features that separate these isolates equally well.");
+    act(() => root?.unmount());
+    root = null;
+    document.body.innerHTML = "";
+    const untied = await slide("rule-words-untied", 0);
+    expect(untied).toContain("Known-gene catalog families blaNDM, ble.");
+    expect(untied).not.toContain("equally well");
+    expect(untied).toContain("of k-mers matching 2 catalog families (blaNDM, ble)");
+    act(() => root?.unmount());
+    root = null;
+    document.body.innerHTML = "";
+    // A first rule whose k-mers lie in no protein-coding gene: the heading words it as the index and the
+    // inspector do, by the distance from the nearest one, and never as the bare name of that gene.
+    const outside = await slide("rule-words-outside", 0, (card) => {
+      card.catalog_families = [];
+      expect(card.locus).not.toBeNull();
+      Object.assign(card.locus!, { gene: "mgrB", codons: null, nearest: ["mgrB", -46] });
+    });
+    expect(outside).toMatch(/(Presence|Absence) of k-mers 46 bp from the nearest annotated protein-coding gene, mgrB/);
+    expect(outside).not.toMatch(/(Presence|Absence) of mgrB/);
+    expect(outside).toContain("outside protein-coding genes, 46 bp from mgrB");
   });
 
   it("moves the rule's sequence onto its own slide only when the two do not fit together", async () => {
@@ -243,16 +314,31 @@ describe("continuation slides", () => {
     const { dialog, status } = await open();
     await act(async () => dialog.querySelector("main")!.dispatchEvent(new KeyboardEvent("keydown", { key: "End", bubbles: true })));
     if (context === "") {
-      expect(status()).toContain(`Slide ${DECK} of ${DECK}: One interpretable rule`);
+      expect(status()).toContain(`Slide ${SPLIT - 1} of ${SPLIT - 1}: One rule a person can read`);
       return;
     }
-    expect(status()).toBe(`Slide ${DECK + 1} of ${DECK + 1}: One interpretable rule (2 of 2)`);
+    expect(status()).toBe(`Slide ${SPLIT} of ${SPLIT}: One rule a person can read (2 of 2)`);
     expect(dialog.querySelector("main section .seq")).not.toBeNull();
     expect(dialog.querySelector("main section")?.textContent).not.toContain("Resistant isolates carrying it");
+    // The rule keeps its caption on both pages: on page 2 it is there, heard,
+    // and read after the slide's title, as on page 1.
+    const captionOf = () => {
+      const section = dialog.querySelector("main section")!;
+      const caption = section.querySelector("[data-caption]");
+      return {
+        text: caption?.textContent ?? "",
+        heard: caption !== null && caption.closest('[aria-hidden="true"], [inert]') === null,
+        after: caption !== null && (section.querySelector("h2")!.compareDocumentPosition(caption) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0,
+      };
+    };
+    const page2 = captionOf();
+    expect(page2.text).toContain("This learner writes short yes-or-no rules.");
+    expect(page2).toEqual({ text: page2.text, heard: true, after: true });
     await act(async () => dialog.querySelector("main")!.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true })));
-    expect(status()).toBe(`Slide ${DECK} of ${DECK + 1}: One interpretable rule (1 of 2)`);
+    expect(status()).toBe(`Slide ${SPLIT - 1} of ${SPLIT}: One rule a person can read (1 of 2)`);
     expect(dialog.querySelector("main section .seq")).toBeNull();
     expect(dialog.querySelector("main section")?.textContent).toContain("Resistant isolates carrying it");
     expect(dialog.querySelector("main section")?.textContent).toContain("The rule's sequence follows on the next slide.");
+    expect(captionOf()).toEqual(page2);
   });
 });

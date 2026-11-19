@@ -52,7 +52,7 @@ export const TipBody = ({ lines }: { lines: readonly TipLine[] }) => (
       <div key={i}>
         {l.term !== undefined ? <div className="text-tiny font-semibold text-ink">{l.term}</div> : null}
         {l.text !== undefined ? <div className="text-sm leading-snug text-ink">{l.text}</div> : null}
-        {l.source !== undefined ? <div className="text-[12px] leading-snug text-muted-text">{l.source}</div> : null}
+        {l.source !== undefined ? <div className="text-tiny text-muted-text">{l.source}</div> : null}
       </div>
     ))}
   </div>

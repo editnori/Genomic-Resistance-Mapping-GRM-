@@ -7,15 +7,16 @@ use crate::annotate::{self, FeatureNote};
 use crate::bits::{BitMatrix, Bits};
 use crate::bvbrc::{self, Client, GenomeRecord};
 use crate::catalog::{self, Catalog, FamilyHit};
-use crate::curate::{Breakpoint, Call, Censor, DatasetSpec, Mic, Phenotype};
+use crate::curate::{Breakpoint, Call, Censor, DatasetSpec, Mic, Phenotype, Selection};
 use crate::dna::KmerSpace;
 use crate::fnv::Fnv;
 use crate::layout::{Layout, remove_if_present};
 use crate::learn::eval::{
-    self, EvalConfig, FinalModels, LassoFitAudit, LassoOnlyEvent, LassoProgress, LearnerResult,
-    MicInput, MicResult, SplitResult,
+    self, EvalConfig, FinalModels, FoldSplit, LassoFitAudit, LassoOnlyEvent, LassoProgress,
+    LearnerResult, MicInput, MicResult, SplitResult,
 };
 use crate::learn::gbt::GbtParams;
+use crate::learn::tie::TieRule;
 use crate::learn::tree::ForestParams;
 use crate::learn::{BinaryMetrics, NoCall, binary_metrics};
 use crate::matrix::{Dataset, FeatureMatrix, MatrixSummary};
@@ -30,6 +31,13 @@ use std::time::Instant;
 /// Schema 2 lets a learner row hold null scores (no call), null fold
 /// balanced accuracy, and null metrics when it called no isolate. A schema-1
 /// reader stops at its version check instead of reading them as numbers.
+/// Revision 14 writes none of these nulls on a learner row (it scores null
+/// fits) but keeps schema 2: its one new field, `called_metrics`, is
+/// optional, and a schema-2 reader that ignores it reads every number right.
+/// The same holds for `fold_models` and each sample's `rule_groups`, added
+/// later without a new schema or revision: they record what the evaluation
+/// already computed, and no existing field changes with them
+/// (docs/report-rule-fields.md).
 pub const REPORT_SCHEMA: u32 = 2;
 /// Revision 8 added the lasso solver evidence; revision 9 changes only the
 /// lasso's active-set solve (docs/lasso-stopping.md). Revision 10 adds the
@@ -37,8 +45,13 @@ pub const REPORT_SCHEMA: u32 = 2;
 /// duplicates whole in one outer fold (docs/duplicate-isolation.md).
 /// Revision 11 keeps those groups whole in the random split's inner tuning
 /// too (`eval::tuning_groups`), and revision 12 in the final models' tuning
-/// (`eval::final_tuning`).
-pub const EVALUATION_REVISION: u32 = 12;
+/// (`eval::final_tuning`). Revision 13 reads each gene-panel target only for
+/// its own drugs and organisms (`panels`, `panels-v2`): a report's `panels`
+/// rows change and an out-of-scope panel moves to `unsupported_assays`.
+/// Revision 14 scores a null fit's samples at its fold's training prevalence,
+/// so every learner's `metrics` cover every sample; `called_metrics` keeps
+/// revision 13's figure (`eval::pool_folds`, docs/equal-scoring.md).
+pub const EVALUATION_REVISION: u32 = 14;
 
 #[derive(Serialize)]
 pub struct EvaluationAudit {
@@ -132,13 +145,39 @@ pub struct Sample {
     /// Indices into `catalog_groups`.
     pub groups: Vec<u16>,
     pub catalog_resistant: Option<bool>,
+    /// The groups of `groups`, in the same order, whose hit in this genome
+    /// counts for the drug's rule (`catalog::counts_for`): the genome's own
+    /// allele of the group has a class or subclass the rule names. Empty
+    /// when none does. Absent when the drug has no rule, where
+    /// `catalog_resistant` is null, and on reports written before the field.
+    ///
+    /// Under a rule with one requirement, `catalog_resistant` is true
+    /// exactly when this list is not empty. A rule with two requirements
+    /// (trimethoprim with a sulfonamide) needs a counting group for each,
+    /// and the list does not say which requirement a group met, so a
+    /// genome called susceptible can list groups.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rule_groups: Option<Vec<u16>>,
 }
 
+/// One catalog gene group among a dataset's samples. A genome has at most
+/// one hit per group, its best-matching allele (`catalog::family_calls`),
+/// and the alleles of one group can carry different classes and subclasses.
+/// `class`, `subclass` and `counts_for_rule` describe one allele: that of
+/// the first sample, in sample order, that has the group. `n_resistant` and
+/// `n_susceptible` count every sample that has it, whatever its allele.
 #[derive(Serialize)]
 pub struct GroupRow {
     pub group: String,
     pub class: String,
     pub subclass: String,
+    /// Whether that first sample's allele counts for the drug's rule
+    /// (`catalog::counts_for`). It is not a statement about every genome
+    /// with the group: where a group's alleles differ in class or subclass,
+    /// some genomes' hits count and others do not, and this flag follows
+    /// whichever sample came first. Each genome's own answer is
+    /// `Sample::rule_groups`. The catalog's call and its metrics read each
+    /// genome's own hits (`Sample::catalog_resistant`) and never this flag.
     pub counts_for_rule: bool,
     pub n_resistant: usize,
     pub n_susceptible: usize,
@@ -181,6 +220,49 @@ pub struct FeatureCard {
     pub bits: String,
 }
 
+/// What each outer fold's model reads, for every split that ran: the record
+/// that lets a reader count whether the folds chose the features the final
+/// models did. It repeats no score and changes none.
+#[derive(Serialize)]
+pub struct FoldModels {
+    /// One entry per split that ran, in `splits` order; a split with an
+    /// `unavailable_reason` fitted no model and has no entry.
+    pub splits: Vec<FoldSplit>,
+    /// The presence pattern of every feature a fold's scm, cart or lasso
+    /// names (`FoldSplit::pattern_features`), ascending by feature, whether
+    /// or not it also has a card in `features`. The forest's and boosting's
+    /// lists are the top of a ranking and their features get no pattern
+    /// here, so those two compare by id alone.
+    pub features: Vec<FoldFeature>,
+}
+
+#[derive(Serialize)]
+pub struct FoldFeature {
+    /// A row of the dataset matrix, as in `models` and `features`.
+    pub feature: u32,
+    /// Presence over samples, encoded as `FeatureCard::bits`.
+    pub bits: String,
+}
+
+/// `splits` with the presence pattern, in `x`, of each feature their scm,
+/// cart and lasso fold models name.
+fn fold_models(splits: Vec<FoldSplit>, x: &BitMatrix) -> FoldModels {
+    let named: BTreeSet<u32> = splits
+        .iter()
+        .flat_map(FoldSplit::pattern_features)
+        .collect();
+    FoldModels {
+        features: named
+            .into_iter()
+            .map(|feature| FoldFeature {
+                feature,
+                bits: base64(x.row(feature as usize)),
+            })
+            .collect(),
+        splits,
+    }
+}
+
 #[derive(Serialize)]
 pub struct DatasetReport {
     pub schema: u32,
@@ -197,6 +279,10 @@ pub struct DatasetReport {
     pub antibiotic: String,
     pub drug_class: String,
     pub breakpoint: Option<Breakpoint>,
+    /// How the species' genomes were chosen, from the curated dataset. Left
+    /// out when curation recorded none, so such a report is unchanged.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub selection: Option<Selection>,
     pub counts: Counts,
     pub lineage_threshold: f32,
     pub catalog_groups: Vec<String>,
@@ -214,6 +300,9 @@ pub struct DatasetReport {
     pub mic: Option<MicResult>,
     pub models: FinalModels,
     pub features: Vec<FeatureCard>,
+    /// Missing on reports written before the fold models were kept: such a
+    /// report records none, which is not a report whose folds fitted none.
+    pub fold_models: FoldModels,
     pub seconds: f64,
 }
 
@@ -487,6 +576,55 @@ fn probe_results(
     (panels, unsupported)
 }
 
+/// The gene panels for `drug`, scored on a `species` dataset over each
+/// sample's catalog gene calls, and the reason for each panel that would
+/// report no result there.
+fn gene_panels(
+    drug: &str,
+    species: &str,
+    sample_hits: &[&[FamilyHit]],
+    truth: &[bool],
+) -> (Vec<PanelResult>, Vec<UnsupportedAssay>) {
+    let mut scored = Vec::new();
+    let mut unsupported = Vec::new();
+    for (panel, targets) in panels::for_dataset(drug, species) {
+        let targets = match targets {
+            Ok(t) => t,
+            Err(why) => {
+                unsupported.push(UnsupportedAssay {
+                    id: panel.id.into(),
+                    name: panel.name.into(),
+                    mirrors: panel.mirrors.into(),
+                    reason: why.reason().into(),
+                });
+                continue;
+            }
+        };
+        let found: Vec<Vec<String>> = sample_hits
+            .iter()
+            .map(|h| panels::detected(&targets, h))
+            .collect();
+        let scores: Vec<f64> = found.iter().map(|f| (!f.is_empty()) as u8 as f64).collect();
+        let mut detected: BTreeMap<String, (usize, usize)> = BTreeMap::new();
+        for (f, &is_r) in found.iter().zip(truth) {
+            for g in f {
+                let e = detected.entry(g.clone()).or_default();
+                if is_r { e.0 += 1 } else { e.1 += 1 }
+            }
+        }
+        scored.push(PanelResult {
+            id: panel.id.into(),
+            name: panel.name.into(),
+            mirrors: panel.mirrors.into(),
+            targets: targets.iter().map(|t| t.gene.to_string()).collect(),
+            metrics: binary_metrics(truth, &scores, 0.5, false),
+            detected: detected.into_iter().map(|(g, (r, s))| (g, r, s)).collect(),
+            no_call: None,
+        });
+    }
+    (scored, unsupported)
+}
+
 // Keep the public analysis API and its positional call contract unchanged.
 #[allow(clippy::too_many_arguments)]
 pub fn analyze_dataset(
@@ -589,6 +727,7 @@ pub fn analyze_dataset(
                 split.learners.push(LearnerResult {
                     learner: "catalog".into(),
                     metrics: Some(metrics.clone()),
+                    called_metrics: None,
                     fold_balanced_accuracy: vec![],
                     roc: vec![],
                     scores: scores.clone(),
@@ -606,9 +745,7 @@ pub fn analyze_dataset(
                         group: hit.group.clone(),
                         class: hit.class.clone(),
                         subclass: hit.subclass.clone(),
-                        counts_for_rule: catalog::explain(r, std::slice::from_ref(hit))
-                            .1
-                            .contains(&hit.group),
+                        counts_for_rule: catalog::counts_for(r, hit),
                         n_resistant: 0,
                         n_susceptible: 0,
                     });
@@ -636,36 +773,11 @@ pub fn analyze_dataset(
         _ => None,
     };
 
-    let panels: Vec<PanelResult> = panels::for_drug(&spec.antibiotic)
-        .into_iter()
-        .map(|panel| {
-            let found: Vec<Vec<String>> = sample_hits
-                .iter()
-                .map(|h| panels::detected(panel, h))
-                .collect();
-            let scores: Vec<f64> = found.iter().map(|f| (!f.is_empty()) as u8 as f64).collect();
-            let mut detected: BTreeMap<String, (usize, usize)> = BTreeMap::new();
-            for (f, &is_r) in found.iter().zip(truth) {
-                for g in f {
-                    let e = detected.entry(g.clone()).or_default();
-                    if is_r { e.0 += 1 } else { e.1 += 1 }
-                }
-            }
-            PanelResult {
-                id: panel.id.into(),
-                name: panel.name.into(),
-                mirrors: panel.mirrors.into(),
-                targets: panel.targets.iter().map(|t| t.to_string()).collect(),
-                metrics: binary_metrics(truth, &scores, 0.5, false),
-                detected: detected.into_iter().map(|(g, (r, s))| (g, r, s)).collect(),
-                no_call: None,
-            }
-        })
-        .collect();
-
-    let mut panels = panels;
-    let (probe_panels, unsupported_assays) = probe_results(&assays, probe_cache, &columns, truth);
+    let (mut panels, mut unsupported_assays) =
+        gene_panels(&spec.antibiotic, &spec.species, &sample_hits, truth);
+    let (probe_panels, unsupported_probes) = probe_results(&assays, probe_cache, &columns, truth);
     panels.extend(probe_panels);
+    unsupported_assays.extend(unsupported_probes);
 
     // Catalog group dictionary for the sample table.
     let mut dict: BTreeMap<String, u16> = BTreeMap::new();
@@ -692,6 +804,13 @@ pub fn analyze_dataset(
                 mlst: meta.and_then(|m| m.mlst.clone()),
                 groups: sample_hits[i].iter().map(|h| dict[&h.group]).collect(),
                 catalog_resistant: catalog_calls.as_ref().map(|c| c[i]),
+                rule_groups: rule.as_ref().map(|r| {
+                    sample_hits[i]
+                        .iter()
+                        .filter(|h| catalog::counts_for(r, h))
+                        .map(|h| dict[&h.group])
+                        .collect()
+                }),
             }
         })
         .collect();
@@ -737,6 +856,7 @@ pub fn analyze_dataset(
         antibiotic: spec.antibiotic.clone(),
         drug_class: spec.drug_class.clone(),
         breakpoint: spec.breakpoint,
+        selection: spec.selection.clone(),
         counts: Counts {
             samples: n,
             resistant: n_r,
@@ -762,6 +882,7 @@ pub fn analyze_dataset(
         mic: out.mic,
         models: out.finals,
         features,
+        fold_models: fold_models(out.fold_models, &ds.x),
         seconds: started.elapsed().as_secs_f64(),
     }))
 }
@@ -771,6 +892,7 @@ struct EvalInputs<'a> {
     cohort: Cohort<'a>,
     /// Each cohort row's reported call.
     resistant: Vec<bool>,
+    /// The support floor `ds` was projected at.
     min_support: u32,
     ds: Dataset,
     /// Each sample's lineage.
@@ -787,8 +909,17 @@ fn eval_inputs<'a>(input: &'a SpeciesInputs, spec: &DatasetSpec) -> Result<Optio
     if !c.meets_min_class {
         return Ok(None);
     }
+    let min_support = eval::support_floor(c.rows.len());
+    project_cohort(input, c, min_support).map(Some)
+}
+
+/// `eval_inputs` for a cohort already drawn, projected at `min_support`.
+fn project_cohort<'a>(
+    input: &'a SpeciesInputs,
+    c: Cohort<'a>,
+    min_support: u32,
+) -> Result<EvalInputs<'a>> {
     let resistant: Vec<bool> = c.rows.iter().map(|p| p.reported == Some(Call::R)).collect();
-    let min_support = (c.rows.len() as u32 / 200).max(3);
     // Per-fit candidates are a subset of the projection only when the species
     // matrix kept every k-mer that min_support could admit.
     anyhow::ensure!(
@@ -803,14 +934,240 @@ fn eval_inputs<'a>(input: &'a SpeciesInputs, spec: &DatasetSpec) -> Result<Optio
         .map(|&col| input.structure.lineages.labels[col])
         .collect();
     let duplicates = kset_duplicates(&c.columns, &input.matrix.summary.kset_digests);
-    Ok(Some(EvalInputs {
+    Ok(EvalInputs {
         cohort: c,
         resistant,
         min_support,
         ds,
         groups,
         duplicates,
+    })
+}
+
+/// One dataset's cohort as `analyze_dataset` evaluates it, for an arm of an
+/// input comparison (`ablate::arm`).
+pub struct ArmInputs {
+    /// Each sample's genome id, in cohort order.
+    pub sample_ids: Vec<String>,
+    /// Each sample's species-matrix column.
+    pub columns: Vec<usize>,
+    /// Reported resistant.
+    pub y: Bits,
+    /// The dataset's per-fit support floor.
+    pub min_support: u32,
+    /// The dataset's K projection, which `evaluate` reads.
+    pub x: BitMatrix,
+    pub lineage: Vec<u32>,
+    /// The k-mer-identical duplicate groups (`kset_duplicates`).
+    pub duplicates: Vec<Vec<usize>>,
+}
+
+/// `eval_inputs` for an arm; None when a class falls short of the dataset's
+/// class minimum.
+pub fn arm_inputs(input: &SpeciesInputs, spec: &DatasetSpec) -> Result<Option<ArmInputs>> {
+    let Some(e) = eval_inputs(input, spec)? else {
+        return Ok(None);
+    };
+    Ok(Some(ArmInputs {
+        sample_ids: e.cohort.rows.iter().map(|p| p.genome_id.clone()).collect(),
+        columns: e.cohort.columns.clone(),
+        y: e.ds.y.clone(),
+        min_support: e.min_support,
+        x: e.ds.x,
+        lineage: e.groups,
+        duplicates: e.duplicates,
     }))
+}
+
+/// The `format` of every `FoldFileResult`.
+pub const FOLD_RESULT_FORMAT: &str = "grm-fold-file-result-v1";
+
+/// One sample a fold file's partition scored.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct TestedSample {
+    pub genome_id: String,
+    pub resistant: bool,
+    /// The outer fold whose fits scored it.
+    pub fold: usize,
+}
+
+/// A dataset's cohort as a fold file divides it.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct FoldFileCounts {
+    pub samples: usize,
+    pub resistant: usize,
+    /// Samples in a test fold.
+    pub tested: usize,
+    /// Samples that train in every fold and are never scored.
+    pub train: usize,
+    /// Samples in no fold.
+    pub unused: usize,
+}
+
+/// What `grm learn --fold-file` writes: one dataset's learners scored on the
+/// outer partition a fold file supplies (`learn::foldfile`, docs/fold-file.md).
+/// It is not a dataset report. It holds no lineage split, catalog baseline,
+/// MIC regression or final model, `grm report` does not read it, and it
+/// scores only the samples the file tests.
+#[derive(Serialize)]
+pub struct FoldFileResult {
+    /// `FOLD_RESULT_FORMAT`.
+    pub format: String,
+    pub evaluation_revision: u32,
+    /// SHA-256 of the fold file's bytes (`foldfile::LoadedFoldFile::sha256`).
+    pub fold_file_sha256: String,
+    /// `input_fingerprint`, as the dataset's report records it for the same
+    /// inputs and settings.
+    pub input_fingerprint: String,
+    pub eval_config: EvalConfig,
+    pub id: String,
+    pub species_slug: String,
+    pub antibiotic: String,
+    /// The fold file's name for its partition.
+    pub scheme: String,
+    /// The per-fit support floor: `eval::support_floor` of the samples the
+    /// file tests or trains (`eval::supplied_support_floor`).
+    pub min_support: u32,
+    pub counts: FoldFileCounts,
+    /// Each outer fold as counts, in fold order.
+    pub folds: Vec<eval::FoldCounts>,
+    /// The scored samples. `split.test_fold` and every learner's `scores`
+    /// are in this order.
+    pub samples: Vec<TestedSample>,
+    pub split: SplitResult,
+    pub seconds: f64,
+}
+
+/// Where `evaluate_fold_file` writes the result for a dataset and scheme.
+pub fn fold_result_path(out: &std::path::Path, dataset: &str, scheme: &str) -> std::path::PathBuf {
+    out.join(format!("{dataset}.{scheme}.json"))
+}
+
+/// Scores the dataset a fold file names on the file's outer partition
+/// (`eval::evaluate_assigned`), on the cohort, lineages and duplicate groups
+/// `analyze_dataset` evaluates, projected at the support floor of the
+/// samples the file tests or trains, and writes a `FoldFileResult` under
+/// `out`. Samples the file leaves unused reach no fit. It writes nothing else: the dataset's
+/// report, if it has one, is neither read nor changed. An existing result is
+/// replaced only with `force`.
+pub fn evaluate_fold_file(
+    layout: &Layout,
+    slug: &str,
+    fold_file: &std::path::Path,
+    out: &std::path::Path,
+    force: bool,
+    cfg: &EvalConfig,
+) -> Result<std::path::PathBuf> {
+    let started = Instant::now();
+    // The file's own faults are reported before the species' inputs load.
+    let loaded = crate::learn::foldfile::load(fold_file)?;
+    let (input, catalog) = load_inputs(layout, slug)?;
+    let file = &loaded.file;
+    let spec = input
+        .datasets
+        .iter()
+        .find(|d| d.id == file.dataset)
+        .with_context(|| {
+            format!(
+                "fold file {}: {:?} is not a dataset of {slug}",
+                fold_file.display(),
+                file.dataset
+            )
+        })?;
+    let path = fold_result_path(out, &spec.id, &file.scheme);
+    anyhow::ensure!(
+        force || !path.exists(),
+        "{} exists; pass --force to replace it",
+        path.display()
+    );
+    let fingerprint = input_fingerprint(
+        &input,
+        spec,
+        catalog.as_ref(),
+        cfg,
+        matrix_digest(&input.matrix),
+    );
+    let c = cohort(spec, &input.phenotypes, &input.matrix.summary.genomes);
+    anyhow::ensure!(
+        c.meets_min_class,
+        "{}: too few labeled genomes after download",
+        spec.id
+    );
+    let sample_ids: Vec<String> = c.rows.iter().map(|p| p.genome_id.clone()).collect();
+    let roles = file
+        .roles(&spec.id, &sample_ids)
+        .with_context(|| format!("fold file {}", fold_file.display()))?;
+    // Projected at the floor of the genomes the file tests or trains, so
+    // the genomes it leaves unused set no candidate (`evaluate_assigned`).
+    let e = project_cohort(&input, c, eval::supplied_support_floor(&roles))?;
+    // The evaluator refuses a fold that tests a genome and trains on its
+    // copy, by sample number. Refuse it here first, by the ids the file uses.
+    for group in &e.duplicates {
+        for f in 0..file.folds() {
+            let tested = group.iter().find(|&&i| roles[i] == eval::Role::Test(f));
+            let trained = group.iter().find(|&&i| match roles[i] {
+                eval::Role::Test(g) => g != f,
+                eval::Role::Train => true,
+                eval::Role::Unused => false,
+            });
+            if let (Some(&a), Some(&b)) = (tested, trained) {
+                anyhow::bail!(
+                    "fold file {}: test fold {f} tests genome {} and trains on genome {}, its k-mer-identical copy; test both in one fold or list one under unused",
+                    fold_file.display(),
+                    sample_ids[a],
+                    sample_ids[b]
+                );
+            }
+        }
+    }
+    let assigned = eval::evaluate_assigned(
+        &spec.id,
+        &file.scheme,
+        &e.ds.x,
+        &e.ds.y,
+        &e.groups,
+        &e.duplicates,
+        &roles,
+        file.folds(),
+        cfg,
+    )
+    .with_context(|| format!("fold file {}", fold_file.display()))?;
+    let samples: Vec<TestedSample> = assigned
+        .tested
+        .iter()
+        .zip(&assigned.result.test_fold)
+        .map(|(&i, &fold)| TestedSample {
+            genome_id: sample_ids[i].clone(),
+            resistant: e.resistant[i],
+            fold,
+        })
+        .collect();
+    let result = FoldFileResult {
+        format: FOLD_RESULT_FORMAT.into(),
+        evaluation_revision: EVALUATION_REVISION,
+        fold_file_sha256: loaded.sha256.clone(),
+        input_fingerprint: fingerprint,
+        eval_config: cfg.clone(),
+        id: spec.id.clone(),
+        species_slug: slug.to_string(),
+        antibiotic: spec.antibiotic.clone(),
+        scheme: file.scheme.clone(),
+        min_support: assigned.min_support,
+        counts: FoldFileCounts {
+            samples: sample_ids.len(),
+            resistant: e.resistant.iter().filter(|&&r| r).count(),
+            tested: samples.len(),
+            train: roles.iter().filter(|r| **r == eval::Role::Train).count(),
+            unused: roles.iter().filter(|r| **r == eval::Role::Unused).count(),
+        },
+        folds: assigned.folds,
+        samples,
+        split: assigned.result,
+        seconds: started.elapsed().as_secs_f64(),
+    };
+    std::fs::create_dir_all(out).with_context(|| format!("create {}", out.display()))?;
+    write_atomic(&path, &serde_json::to_vec(&result)?)?;
+    Ok(path)
 }
 
 /// The samples whose genomes have the same kset digest, that is the same
@@ -931,9 +1288,27 @@ fn cohort<'a>(spec: &DatasetSpec, phenotypes: &'a [Phenotype], genomes: &[String
     }
 }
 
+/// Where `analyze_species` keeps a species' reports under `cfg`. The
+/// release's seeds (`EvalConfig::default()`'s `seed` and no `learner_seed`)
+/// keep `results/`, the one folder `grm report`, `grm intervals` and
+/// `grm provenance` read. Any other seeds get
+/// `draws/seed-<seed>[-learner-<learner_seed>]/` beside it, so a report of
+/// another fold draw never replaces a released report and is never indexed.
+pub fn reports_dir(layout: &Layout, slug: &str, cfg: &EvalConfig) -> std::path::PathBuf {
+    let release = EvalConfig::default();
+    if (cfg.seed, cfg.learner_seed) == (release.seed, release.learner_seed) {
+        return layout.results_dir(slug);
+    }
+    let name = match cfg.learner_seed {
+        None => format!("seed-{}", cfg.seed),
+        Some(learner) => format!("seed-{}-learner-{learner}", cfg.seed),
+    };
+    layout.species_dir(slug).join("draws").join(name)
+}
+
 /// Runs the species' datasets (or the named subset), largest minority class
 /// first, skipping datasets whose saved report is still current (see
-/// `stale_reason`) unless `force`.
+/// `stale_reason`) unless `force`. Reports go to `reports_dir`.
 pub fn analyze_species(
     layout: &Layout,
     slug: &str,
@@ -941,13 +1316,38 @@ pub fn analyze_species(
     force: bool,
     cfg: &EvalConfig,
 ) -> Result<Vec<String>> {
+    analyze_species_in(
+        layout,
+        slug,
+        only,
+        force,
+        cfg,
+        &reports_dir(layout, slug, cfg),
+    )
+}
+
+/// `analyze_species` with its reports kept in `dir`, the folder
+/// `grm learn --exp-tie-out` names, in place of `reports_dir`.
+pub fn analyze_species_in(
+    layout: &Layout,
+    slug: &str,
+    only: &[String],
+    force: bool,
+    cfg: &EvalConfig,
+    dir: &std::path::Path,
+) -> Result<Vec<String>> {
     let (input, catalog) = load_inputs(layout, slug)?;
     let digest = matrix_digest(&input.matrix);
     let client = Client::new();
-    let dir = layout.results_dir(slug);
-    // Reports go only through real directories below the data root (see
-    // `confine`), so a linked results directory cannot send them elsewhere.
-    crate::confine::Lane::new(&layout.root)?.create_dir_all(&dir, false)?;
+    if dir == layout.results_dir(slug) {
+        // Reports in results/ go only through real directories below the
+        // data root (see `confine`), so a linked results directory cannot
+        // send them elsewhere. A draw's folder or --exp-tie-out's is made
+        // as given.
+        crate::confine::Lane::new(&layout.root)?.create_dir_all(dir, false)?;
+    } else {
+        std::fs::create_dir_all(dir)?;
+    }
     let mut specs: Vec<&DatasetSpec> = input
         .datasets
         .iter()
@@ -1027,10 +1427,10 @@ fn best_learner_words(splits: &[SplitResult]) -> Result<String> {
     let rows = crate::report::learner_rows(&serde_json::to_value(splits)?);
     Ok(match crate::report::best_learner(&rows) {
         Some((best, ba)) => format!(
-            "best random-split learner among those that call every isolate: {} {ba:.3}",
+            "best random-split learner among those scored on every isolate: {} {ba:.3}",
             best.learner
         ),
-        None => "no learner calls every isolate".into(),
+        None => "no learner is scored on every isolate".into(),
     })
 }
 
@@ -1070,6 +1470,24 @@ fn stale_reason(report: &serde_json::Value, fingerprint: &str) -> Option<&'stati
         Some(_) if unannotated => Some("a feature's reference annotation failed to download"),
         Some(_) => None,
     }
+}
+
+/// The digest of a species' loaded matrix that every dataset fingerprint
+/// starts from (`dataset_fingerprint`).
+pub fn species_digest(input: &SpeciesInputs) -> u64 {
+    matrix_digest(&input.matrix)
+}
+
+/// The `input_fingerprint` `grm learn` records in a dataset's report for
+/// these inputs and settings; `digest` is `species_digest(input)`.
+pub fn dataset_fingerprint(
+    input: &SpeciesInputs,
+    spec: &DatasetSpec,
+    catalog: Option<&Catalog>,
+    cfg: &EvalConfig,
+    digest: u64,
+) -> String {
+    input_fingerprint(input, spec, catalog, cfg, digest)
 }
 
 /// Identifies what a dataset's evaluation reads apart from code: the species
@@ -1127,6 +1545,8 @@ fn input_fingerprint(
                 max_depth: forest_depth,
                 min_leaf,
                 seed: forest_seed,
+                // Each fit takes its tie rule from `tie_rule`, hashed below.
+                tie: _,
             },
         gbt:
             GbtParams {
@@ -1138,10 +1558,13 @@ fn input_fingerprint(
                 colsample,
                 patience,
                 seed: gbt_seed,
+                tie: _,
             },
         screened_features,
         lasso_lambdas,
         seed,
+        learner_seed,
+        tie_rule,
     } = cfg;
     for n in [
         *folds,
@@ -1169,6 +1592,17 @@ fn input_fingerprint(
     }
     for n in [*seed, *forest_seed, *gbt_seed] {
         h.u64(n);
+    }
+    // Hashed only when set, so a report written without one, every release
+    // report among them, keeps its key.
+    if let Some(n) = learner_seed {
+        h.bytes(&[1]);
+        h.u64(*n);
+    }
+    // Production's rule adds nothing, so its fingerprints are unchanged; a
+    // report fitted under the experiment never passes for a current one.
+    if *tie_rule == TieRule::Exact {
+        h.str("tie_rule=exact");
     }
     let Cohort {
         rows,
@@ -1285,19 +1719,21 @@ mod tests {
                 "input_fingerprint": fingerprint,
             })
         };
-        assert_eq!(EVALUATION_REVISION, 12);
+        assert_eq!(EVALUATION_REVISION, 14);
         assert_eq!(stale_reason(&saved(EVALUATION_REVISION, key), key), None);
         // Revision 8's solver could stop where revision 9's converges, a
         // revision-9 report may have scored a genome with its own copy in
         // training, a revision-10 report's random-split tuning may have put a
-        // genome and its copy on both sides of a tuning partition, and a
-        // revision-11 report's final models may have. The input fingerprint
-        // sees none of these changes.
-        for old in [7, 8, 9, 10, 11] {
+        // genome and its copy on both sides of a tuning partition, a
+        // revision-11 report's final models may have, a revision-12
+        // report's panel rows read every target for every panel drug and
+        // organism, and a revision-13 report's metrics leave a null fit's
+        // isolates out. The input fingerprint sees none of these changes.
+        for old in [7, 8, 9, 10, 11, 12, 13] {
             assert_eq!(
                 stale_reason(&saved(old, key), key),
                 Some("evaluation audit revision changed"),
-                "a same-fingerprint revision-{old} result must not enter revision 12"
+                "a same-fingerprint revision-{old} result must not enter revision 14"
             );
         }
         // A current report whose audit is invalid, or says nothing, is not a
@@ -1500,6 +1936,7 @@ mod tests {
             learners: vec![LearnerResult {
                 learner: "lasso".into(),
                 metrics: None,
+                called_metrics: None,
                 fold_balanced_accuracy: vec![],
                 roc: vec![],
                 scores: vec![],
@@ -1542,6 +1979,7 @@ mod tests {
             learners: vec![LearnerResult {
                 learner: "lasso".into(),
                 metrics: None,
+                called_metrics: None,
                 fold_balanced_accuracy: vec![],
                 roc: vec![],
                 scores: vec![],
@@ -1599,7 +2037,7 @@ mod tests {
         let line = done_line(id, 12.4, &evaluation_audit(&[], Some(&clean)), &[]).unwrap();
         assert_eq!(
             line,
-            "    fixture__meropenem done in 12s (no learner calls every isolate)"
+            "    fixture__meropenem done in 12s (no learner is scored on every isolate)"
         );
 
         // An unconverged point that was not selected leaves a written report
@@ -1631,13 +2069,17 @@ mod tests {
     }
 
     #[test]
-    fn the_log_names_the_best_learner_that_calls_every_isolate() {
-        let row = |learner: &str, ba: f64, uncalled: usize| LearnerResult {
+    fn the_log_names_the_best_learner_scored_on_every_isolate() {
+        // `scored` marks a revision-14 row: its null-fit isolates are scored
+        // at their fold's training prevalence and it carries
+        // `called_metrics`. Older rows leave them out of `metrics`.
+        let row = |learner: &str, ba: f64, in_null_folds: usize, scored: bool| LearnerResult {
             learner: learner.into(),
             metrics: Some(BinaryMetrics {
                 balanced_accuracy: ba,
                 ..Default::default()
             }),
+            called_metrics: (scored && in_null_folds > 0).then(|| Some(BinaryMetrics::default())),
             fold_balanced_accuracy: vec![],
             roc: vec![],
             scores: vec![],
@@ -1645,7 +2087,7 @@ mod tests {
             fold_complexity: vec![],
             seconds: 0.0,
             no_call: Some(crate::learn::NoCall {
-                resistant: uncalled,
+                resistant: in_null_folds,
                 susceptible: 0,
             }),
             lasso_fits: None,
@@ -1658,19 +2100,41 @@ mod tests {
             learners,
             unavailable_reason: None,
         };
-        // The lasso scores higher but leaves two isolates uncalled.
+        // Revision 14: the lasso's two null-fold isolates are in its rates,
+        // so it competes and wins.
         let splits = [
-            split("random", vec![row("rf", 0.8124, 0), row("lasso", 0.9, 2)]),
-            split("lineage", vec![row("rf", 0.7, 0), row("lasso", 0.6, 0)]),
+            split(
+                "random",
+                vec![row("rf", 0.8124, 0, true), row("lasso", 0.9, 2, true)],
+            ),
+            split(
+                "lineage",
+                vec![row("rf", 0.7, 0, true), row("lasso", 0.6, 3, true)],
+            ),
         ];
         assert_eq!(
             best_learner_words(&splits).unwrap(),
-            "best random-split learner among those that call every isolate: rf 0.812"
+            "best random-split learner among those scored on every isolate: lasso 0.900"
         );
-        let partial = [split("random", vec![row("rf", 0.8, 1)])];
+        // A revision-13 row whose rates leave two isolates out is passed over.
+        let old = [
+            split(
+                "random",
+                vec![row("rf", 0.8124, 0, false), row("lasso", 0.9, 2, false)],
+            ),
+            split(
+                "lineage",
+                vec![row("rf", 0.7, 0, false), row("lasso", 0.6, 0, false)],
+            ),
+        ];
+        assert_eq!(
+            best_learner_words(&old).unwrap(),
+            "best random-split learner among those scored on every isolate: rf 0.812"
+        );
+        let partial = [split("random", vec![row("rf", 0.8, 1, false)])];
         assert_eq!(
             best_learner_words(&partial).unwrap(),
-            "no learner calls every isolate"
+            "no learner is scored on every isolate"
         );
     }
 
@@ -1986,6 +2450,91 @@ mod tests {
         }
     }
 
+    #[test]
+    fn gene_panels_score_the_drug_s_targets_and_list_uncovered_organisms() {
+        let (ctx, kpc) = ([hit("blaCTX-M")], [hit("blaKPC")]);
+        // Resistant: KPC, CTX-M; susceptible: CTX-M, none.
+        let hits: [&[FamilyHit]; 4] = [&kpc, &ctx, &ctx, &[]];
+        let truth = [true, true, false, false];
+        let (scored, unsupported) =
+            gene_panels("meropenem", "Klebsiella pneumoniae", &hits, &truth);
+        assert!(unsupported.is_empty());
+        let bcid = scored
+            .iter()
+            .find(|p| p.id == "gram_negative_bcid")
+            .unwrap();
+        let m = &bcid.metrics;
+        // CTX-M carriers are not called: one true and no false positive.
+        assert_eq!((m.tp, m.fn_, m.fp, m.tn), (1, 1, 0, 2));
+        assert_eq!(bcid.detected, [("blaKPC".to_string(), 1, 0)]);
+        assert!(!bcid.targets.contains(&"blaCTX-M".to_string()));
+        let (_, ceph) = gene_panels("ceftriaxone", "Klebsiella pneumoniae", &hits, &truth);
+        assert!(ceph.is_empty());
+
+        let (scored, unsupported) = gene_panels("cefoxitin", "Escherichia coli", &hits, &truth);
+        assert!(scored.is_empty());
+        assert_eq!(
+            unsupported,
+            [UnsupportedAssay {
+                id: "mec".into(),
+                name: "mecA/mecC PCR".into(),
+                mirrors: "MRSA molecular assays (Xpert MRSA, BCID2 mecA/C)".into(),
+                reason: panels::Unsupported::Organism.reason().into(),
+            }]
+        );
+        let (scored, unsupported) =
+            gene_panels("colistin", "Pseudomonas aeruginosa", &hits, &truth);
+        assert!(scored.is_empty());
+        let reasons: Vec<(&str, &str)> = unsupported
+            .iter()
+            .map(|u| (u.id.as_str(), u.reason.as_str()))
+            .collect();
+        assert_eq!(
+            reasons,
+            [
+                ("gram_negative_bcid", panels::Unsupported::Drug.reason()),
+                ("mcr", panels::Unsupported::Organism.reason()),
+            ]
+        );
+    }
+
+    #[test]
+    fn bcid2_and_ctx_m_rows_differ_on_a_kpc_carrier_without_ctx_m() {
+        let (ctx, kpc, ndm) = ([hit("blaCTX-M")], [hit("blaKPC")], [hit("blaNDM")]);
+        // Resistant: KPC, CTX-M, NDM; susceptible: CTX-M, none.
+        let hits: [&[FamilyHit]; 5] = [&kpc, &ctx, &ndm, &ctx, &[]];
+        let truth = [true, true, true, false, false];
+        let row = |drug: &str, id: &str| {
+            let (scored, unsupported) = gene_panels(drug, "Klebsiella pneumoniae", &hits, &truth);
+            assert!(unsupported.is_empty(), "{drug}");
+            let p = scored.into_iter().find(|p| p.id == id).unwrap();
+            let m = &p.metrics;
+            ((m.tp, m.fn_, m.fp, m.tn), p.detected)
+        };
+        let detected = |rows: &[(&str, usize, usize)]| -> Vec<(String, usize, usize)> {
+            rows.iter().map(|&(g, tp, fp)| (g.into(), tp, fp)).collect()
+        };
+        assert_eq!(
+            row("ceftriaxone", "gram_negative_bcid"),
+            (
+                (3, 0, 1, 1),
+                detected(&[("blaCTX-M", 1, 1), ("blaKPC", 1, 0), ("blaNDM", 1, 0)])
+            )
+        );
+        assert_eq!(
+            row("ceftriaxone", "ctx_m"),
+            ((1, 2, 1, 1), detected(&[("blaCTX-M", 1, 1)]))
+        );
+        // NDM spares aztreonam: its carrier is no aztreonam call.
+        assert_eq!(
+            row("aztreonam", "gram_negative_bcid"),
+            (
+                (2, 1, 1, 1),
+                detected(&[("blaCTX-M", 1, 1), ("blaKPC", 1, 0)])
+            )
+        );
+    }
+
     fn phenotype(genome: &str, antibiotic: &str, reported: Call, mic: Option<Mic>) -> Phenotype {
         Phenotype {
             genome_id: genome.into(),
@@ -2021,6 +2570,7 @@ mod tests {
                 n: 60,
             }),
             min_class: 25,
+            selection: None,
         }
     }
 
@@ -2316,10 +2866,35 @@ mod tests {
             ("screened_features", |c| c.screened_features += 1),
             ("lasso_lambdas", |c| c.lasso_lambdas += 1),
             ("seed", |c| c.seed += 1),
+            ("learner_seed", |c| c.learner_seed = Some(c.seed)),
+            ("tie_rule", |c| c.tie_rule = TieRule::Exact),
         ];
         for (field, edit) in changes {
             assert_ne!(changed(*edit), base, "{field}");
         }
+        // Each fit takes its tie rule from `tie_rule`; the learners' own
+        // copies are not read.
+        assert_eq!(
+            changed(|c| {
+                c.forest.tie = TieRule::Exact;
+                c.gbt.tie = TieRule::Exact;
+            }),
+            base
+        );
+    }
+
+    #[test]
+    fn the_default_fingerprint_is_the_one_main_computes() {
+        // Pinned from main at 852ebc9 on the same fixture, so a flag that is
+        // off cannot move a production fingerprint. Rewrite the value only
+        // with a change that moves the fingerprint on purpose.
+        let input = inputs();
+        let spec = dataset("meropenem");
+        let cfg = EvalConfig::default();
+        assert_eq!(
+            input_fingerprint(&input, &spec, None, &cfg, matrix_digest(&input.matrix)),
+            "4979e60d3c8b1d6a"
+        );
     }
 
     #[test]
@@ -2544,6 +3119,70 @@ mod tests {
         assert!(!current.exists());
     }
 
+    /// The release's seeds keep `results/`; any other evaluation seed or a
+    /// learner seed gets a folder of its own under `draws/`.
+    #[test]
+    fn reports_of_another_draw_get_a_folder_outside_results() {
+        let layout = Layout::new("root");
+        let dir = |seed, learner_seed| {
+            let cfg = EvalConfig {
+                seed,
+                learner_seed,
+                ..Default::default()
+            };
+            reports_dir(&layout, "fixture", &cfg)
+        };
+        let species = layout.species_dir("fixture");
+        assert_eq!(dir(42, None), layout.results_dir("fixture"));
+        assert_eq!(dir(43, None), species.join("draws/seed-43"));
+        assert_eq!(dir(42, Some(42)), species.join("draws/seed-42-learner-42"));
+        assert_eq!(dir(43, Some(7)), species.join("draws/seed-43-learner-7"));
+        // Settings other than the seeds do not move the folder.
+        let budget = EvalConfig {
+            screened_features: 16000,
+            ..Default::default()
+        };
+        assert_eq!(
+            reports_dir(&layout, "fixture", &budget),
+            layout.results_dir("fixture")
+        );
+    }
+
+    /// A run at another seed reads and writes its own folder: the report in
+    /// `results/` keeps its bytes, and a stale report in the draw's folder is
+    /// the one removed. (Neither fixture dataset has 25 genomes per class,
+    /// so a recompute removes the file; see `save_report`.)
+    #[test]
+    fn a_run_at_another_seed_leaves_the_released_reports_alone() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path());
+        let input = inputs();
+        write_inputs(&layout, &input, "");
+        let (released, saved) = save_report(&layout, &input, None, "meropenem");
+        let draw = EvalConfig {
+            seed: 43,
+            ..Default::default()
+        };
+        // The release's key is not the draw's: at seed 43 the released
+        // report would read as stale and be recomputed if it were looked at.
+        let spec = dataset("meropenem");
+        let digest = matrix_digest(&input.matrix);
+        assert_ne!(
+            input_fingerprint(&input, &spec, None, &draw, digest),
+            key(&input, &spec, None)
+        );
+        let folder = reports_dir(&layout, "fixture", &draw);
+        std::fs::create_dir_all(&folder).unwrap();
+        let stale = folder.join("fixture__meropenem.json");
+        std::fs::write(&stale, &saved).unwrap();
+        analyze_species(&layout, "fixture", &[], false, &draw).unwrap();
+        assert_eq!(std::fs::read(&released).unwrap(), saved);
+        assert!(!stale.exists());
+        // And the release's own run still finds its report current.
+        assert!(learn(&layout).unwrap().is_empty());
+        assert_eq!(std::fs::read(&released).unwrap(), saved);
+    }
+
     #[test]
     fn learn_recomputes_a_current_report_whose_audit_is_invalid() {
         let dir = tempfile::tempdir().unwrap();
@@ -2565,7 +3204,12 @@ mod tests {
     /// 150 genomes in 30 lineages of five. Meropenem calls every third
     /// genome resistant; two features mark resistance and three are noise.
     fn scan_inputs() -> SpeciesInputs {
-        let n = 150;
+        scan_inputs_of(150, &[])
+    }
+
+    /// The scan fixture's rules over `n` genomes in lineages of five, with a
+    /// sixth feature present in the genomes `rare` when it names any.
+    fn scan_inputs_of(n: usize, rare: &[usize]) -> SpeciesInputs {
         let genomes: Vec<String> = (0..n).map(|i| format!("g{i}")).collect();
         let kset_digests: Vec<String> = genomes.iter().map(|g| format!("kset of {g}")).collect();
         let rules: [fn(usize) -> bool; 5] = [
@@ -2582,23 +3226,29 @@ mod tests {
             support.push(row.count());
             patterns.push_row(row.words());
         }
+        if !rare.is_empty() {
+            let row = Bits::from_indices(n, rare.iter().copied());
+            support.push(row.count());
+            patterns.push_row(row.words());
+        }
+        let rows = patterns.rows;
         SpeciesInputs {
             matrix: FeatureMatrix {
                 summary: MatrixSummary {
                     k: 7,
                     genomes: genomes.clone(),
                     min_support: 1,
-                    n_patterns: rules.len(),
-                    kmers_distinct: 5,
-                    kmers_kept: 5,
+                    n_patterns: rows,
+                    kmers_distinct: rows as u64,
+                    kmers_kept: rows as u64,
                     kmers_rare: 0,
                     kmers_core: 0,
                     kset_digests: kset_digests.clone(),
                 },
                 patterns,
                 support,
-                kmer_offsets: (0..=5).collect(),
-                kmers: (0x21..0x26).collect(),
+                kmer_offsets: (0..=rows as u64).collect(),
+                kmers: (0x21..0x21 + rows as u64).collect(),
             },
             structure: Structure {
                 genomes: genomes.clone(),
@@ -2607,8 +3257,8 @@ mod tests {
                 lineages: crate::cluster::Lineages {
                     threshold: 0.005,
                     labels: (0..n).map(|i| (i / 5) as u32).collect(),
-                    n_clusters: 30,
-                    largest_share: 1.0 / 30.0,
+                    n_clusters: n / 5,
+                    largest_share: 5.0 / n as f64,
                 },
                 merges: vec![],
                 leaf_order: vec![],
@@ -2654,6 +3304,390 @@ mod tests {
         }
         out.sort();
         out
+    }
+
+    /// The scan fixture's settings, small enough for a test.
+    fn fold_file_config() -> EvalConfig {
+        EvalConfig {
+            forest: ForestParams {
+                n_trees: 4,
+                ..Default::default()
+            },
+            gbt: GbtParams {
+                rounds: 5,
+                ..Default::default()
+            },
+            lasso_lambdas: 10,
+            ..Default::default()
+        }
+    }
+
+    /// A fold file for the synthetic scan fixture's meropenem dataset, as the
+    /// text a user would write: genomes by index into `g0..g149`.
+    fn fold_file_text(test: &[Vec<usize>], train: &[usize], unused: &[usize]) -> String {
+        let list = |ids: &[usize]| {
+            let quoted: Vec<String> = ids.iter().map(|i| format!("\"g{i}\"")).collect();
+            quoted.join(",")
+        };
+        let folds: Vec<String> = test.iter().map(|f| format!("[{}]", list(f))).collect();
+        format!(
+            "{{\"format\":\"grm-fold-file-v1\",\"dataset\":\"fixture__meropenem\",\"scheme\":\"first-public-past\",\"test\":[{}],\"train\":[{}],\"unused\":[{}]}}\n",
+            folds.join(","),
+            list(train),
+            list(unused)
+        )
+    }
+
+    /// A result's `split` without its fit timings.
+    fn timeless_split(result: &serde_json::Value) -> serde_json::Value {
+        let mut split = result["split"].clone();
+        for learner in split["learners"].as_array_mut().unwrap() {
+            learner.as_object_mut().unwrap().remove("seconds");
+        }
+        split
+    }
+
+    #[test]
+    fn a_fold_file_is_scored_as_written_and_its_result_records_the_files_sha256() {
+        // Synthetic: the scan fixture's 150 genomes. Every fifth is tested,
+        // three in five train, and one in five is in no fold.
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().join("data");
+        let layout = Layout::new(&root);
+        let input = scan_inputs();
+        write_inputs(&layout, &input, "");
+        let cfg = fold_file_config();
+        let pick = |keep: fn(usize) -> bool| (0..150).filter(|&i| keep(i)).collect::<Vec<_>>();
+        let (test, train, unused) = (
+            pick(|i| i % 5 == 0),
+            pick(|i| (1..4).contains(&(i % 5))),
+            pick(|i| i % 5 == 4),
+        );
+        let file = dir.path().join("folds.json");
+        let text = fold_file_text(std::slice::from_ref(&test), &train, &unused);
+        std::fs::write(&file, &text).unwrap();
+        let out = dir.path().join("out");
+        let before = tree(&root);
+        let run = |force: bool| evaluate_fold_file(&layout, "fixture", &file, &out, force, &cfg);
+        let read = |path: &std::path::Path| -> serde_json::Value {
+            serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap()
+        };
+
+        let path = run(false).unwrap();
+        assert_eq!(path, out.join("fixture__meropenem.first-public-past.json"));
+        // The data root is read and not written: no report, nothing changed.
+        assert_eq!(tree(&root), before);
+        assert!(!layout.results_dir("fixture").exists());
+        let result = read(&path);
+        // `sha256sum` of the same bytes, taken outside this code.
+        assert_eq!(
+            result["fold_file_sha256"],
+            "5407b930b255a57cba6c13cdd0c3ba13dfd451bf75496474831c50e4a4f4e210"
+        );
+        assert_eq!(result["format"], FOLD_RESULT_FORMAT);
+        assert_eq!(result["evaluation_revision"], EVALUATION_REVISION);
+        let spec = dataset("meropenem");
+        assert_eq!(
+            result["input_fingerprint"],
+            input_fingerprint(&input, &spec, None, &cfg, matrix_digest(&input.matrix))
+        );
+        assert_eq!(result["eval_config"], serde_json::to_value(&cfg).unwrap());
+        assert_eq!(
+            (
+                &result["id"],
+                &result["species_slug"],
+                &result["antibiotic"]
+            ),
+            (
+                &serde_json::json!("fixture__meropenem"),
+                &serde_json::json!("fixture"),
+                &serde_json::json!("meropenem")
+            )
+        );
+        assert_eq!(result["scheme"], "first-public-past");
+        assert_eq!(result["min_support"], 3);
+        assert_eq!(
+            result["counts"],
+            serde_json::json!({
+                "samples": 150, "resistant": 50, "tested": 30, "train": 90, "unused": 30
+            })
+        );
+        let e = eval_inputs(&input, &spec).unwrap().unwrap();
+        let role = |i: usize| match i % 5 {
+            0 => eval::Role::Test(0),
+            4 => eval::Role::Unused,
+            _ => eval::Role::Train,
+        };
+        let roles: Vec<eval::Role> = e
+            .cohort
+            .rows
+            .iter()
+            .map(|p| role(p.genome_id[1..].parse().unwrap()))
+            .collect();
+        let direct = eval::evaluate_assigned(
+            &spec.id,
+            "first-public-past",
+            &e.ds.x,
+            &e.ds.y,
+            &e.groups,
+            &e.duplicates,
+            &roles,
+            1,
+            &cfg,
+        )
+        .unwrap();
+        assert_eq!(
+            result["folds"],
+            serde_json::json!([{
+                "train": 90, "train_resistant": 30, "test": 30, "test_resistant": 10,
+                "candidates": direct.folds[0].candidates,
+            }])
+        );
+        let samples = result["samples"].as_array().unwrap();
+        assert_eq!(samples.len(), 30);
+        for (sample, &i) in samples.iter().zip(&test) {
+            assert_eq!(
+                *sample,
+                serde_json::json!({"genome_id": format!("g{i}"), "resistant": i % 3 == 0, "fold": 0})
+            );
+        }
+        // The file's partition reaches the evaluator as written.
+        let mut expected = serde_json::json!({"split": direct.result});
+        expected = timeless_split(&expected);
+        assert_eq!(timeless_split(&result), expected);
+        let learners = result["split"]["learners"].as_array().unwrap();
+        assert_eq!(learners.len(), eval::LEARNERS.len());
+        for learner in learners {
+            assert_eq!(learner["scores"].as_array().unwrap().len(), 30);
+            assert_eq!(learner["metrics"]["n"], 30);
+        }
+
+        // A result is replaced only on request, and the rerun is the same.
+        let refused = format!("{:#}", run(false).unwrap_err());
+        assert!(
+            refused.ends_with("exists; pass --force to replace it"),
+            "{refused}"
+        );
+        run(true).unwrap();
+        assert_eq!(timeless_split(&read(&path)), timeless_split(&result));
+
+        // One more byte in the file is another hash and the same partition.
+        std::fs::write(&file, format!("{text}\n")).unwrap();
+        run(true).unwrap();
+        let respaced = read(&path);
+        assert_eq!(
+            respaced["fold_file_sha256"],
+            "530cb135cbd9a8d8bee7d26fddb68c2c0966a822f3207c2f9bee38151bbc5d07"
+        );
+        assert_eq!(timeless_split(&respaced), timeless_split(&result));
+        assert_eq!(tree(&root), before);
+    }
+
+    #[test]
+    fn genomes_a_fold_file_leaves_unused_set_neither_the_support_floor_nor_the_tuning_groups() {
+        // Synthetic: the scan fixture's 150 genomes with a sixth feature in
+        // g1, g2 and g3, all three training. Every fifth genome is tested and
+        // the rest train. The same file is then scored on a cohort of 800,
+        // whose 650 more genomes, g150 to g799, are unused, and two of them,
+        // g700 and g701 of one lineage, are k-mer-identical copies. A floor
+        // from the whole cohort would be 4 (800 / 200) and drop the sixth
+        // feature, whose training support is 3; a copy group among unused
+        // genomes would move every fold onto grouped tuning draws.
+        let rare = [1, 2, 3];
+        let tested: Vec<usize> = (0..150).filter(|i| i % 5 == 0).collect();
+        let train: Vec<usize> = (0..150).filter(|i| i % 5 != 0).collect();
+        let cfg = fold_file_config();
+        let run = |input: &SpeciesInputs, unused: &[usize]| -> serde_json::Value {
+            let dir = tempfile::tempdir().unwrap();
+            let layout = Layout::new(dir.path().join("data"));
+            write_inputs(&layout, input, "");
+            let file = dir.path().join("folds.json");
+            let text = fold_file_text(std::slice::from_ref(&tested), &train, unused);
+            std::fs::write(&file, text).unwrap();
+            let out = dir.path().join("out");
+            let path = evaluate_fold_file(&layout, "fixture", &file, &out, false, &cfg).unwrap();
+            serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap()
+        };
+        let alone = run(&scan_inputs_of(150, &rare), &[]);
+        let mut wide = scan_inputs_of(800, &rare);
+        for digests in [
+            &mut wide.matrix.summary.kset_digests,
+            &mut wide.structure.kset_digests,
+        ] {
+            digests[701] = digests[700].clone();
+        }
+        let unused: Vec<usize> = (150..800).collect();
+        let among = run(&wide, &unused);
+        assert_eq!(among["counts"]["samples"], 800);
+        assert_eq!(among["counts"]["unused"], 650);
+        assert_eq!(
+            (&alone["min_support"], &among["min_support"]),
+            (&3.into(), &3.into())
+        );
+        // The sixth feature is a candidate at floor 3.
+        let without = run(&scan_inputs_of(150, &[]), &[]);
+        assert_eq!(
+            alone["folds"][0]["candidates"].as_u64().unwrap(),
+            without["folds"][0]["candidates"].as_u64().unwrap() + 1
+        );
+        assert_eq!(among["folds"], alone["folds"]);
+        assert_eq!(among["split"]["n_groups"], 30);
+        assert_eq!(timeless_split(&among), timeless_split(&alone));
+    }
+
+    #[test]
+    fn a_fold_file_that_does_not_fit_its_dataset_writes_no_result() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().join("data");
+        let layout = Layout::new(&root);
+        write_inputs(&layout, &scan_inputs(), "");
+        let cfg = fold_file_config();
+        let file = dir.path().join("folds.json");
+        let out = dir.path().join("out");
+        let refusal = |text: &str| {
+            std::fs::write(&file, text).unwrap();
+            let error = evaluate_fold_file(&layout, "fixture", &file, &out, false, &cfg)
+                .expect_err("the fold file is refused");
+            assert!(
+                !out.exists(),
+                "a refused file wrote under {}",
+                out.display()
+            );
+            format!("{error:#}")
+        };
+        let all: Vec<usize> = (0..150).collect();
+        let named = |words: &str| format!("fold file {}: {words}", file.display());
+
+        // One genome short: g149 is under no role.
+        assert_eq!(
+            refusal(&fold_file_text(&[all[..30].to_vec()], &all[30..149], &[])),
+            named(
+                "the fold file leaves out 1 of the 150 samples of fixture__meropenem, first g149; list every sample under test, train or unused"
+            )
+        );
+        // A genome the cohort does not hold.
+        let mut foreign = all[30..].to_vec();
+        foreign.push(150);
+        assert_eq!(
+            refusal(&fold_file_text(&[all[..30].to_vec()], &foreign, &[])),
+            named("train names genome g150, which is not a sample of fixture__meropenem")
+        );
+        // Another dataset's file.
+        let other = fold_file_text(&[all[..30].to_vec()], &all[30..], &[])
+            .replace("fixture__meropenem", "fixture__colistin");
+        assert_eq!(
+            refusal(&other),
+            named("\"fixture__colistin\" is not a dataset of fixture")
+        );
+        // A partition the evaluator refuses: g0, g3, ... g27 are the only
+        // resistant test genomes, so a test fold of the rest lacks a class.
+        let susceptible: Vec<usize> = (0..30).filter(|i| i % 3 != 0).collect();
+        let rest: Vec<usize> = (0..150).filter(|i| !susceptible.contains(i)).collect();
+        assert_eq!(
+            refusal(&fold_file_text(&[susceptible], &rest, &[])),
+            named("first-public-past outer fold 0's test samples lack one or both classes")
+        );
+        assert!(refusal("{").starts_with(&named("parse")));
+    }
+
+    #[test]
+    fn a_fold_file_that_separates_a_genome_from_its_copy_is_refused_by_genome_id() {
+        // Synthetic: the scan fixture with g0 and g1, of one lineage, given
+        // one k-mer set digest, so they are k-mer-identical copies.
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path().join("data"));
+        let mut input = scan_inputs();
+        for digests in [
+            &mut input.matrix.summary.kset_digests,
+            &mut input.structure.kset_digests,
+        ] {
+            digests[1] = digests[0].clone();
+        }
+        write_inputs(&layout, &input, "");
+        let cfg = fold_file_config();
+        let file = dir.path().join("folds.json");
+        let out = dir.path().join("out");
+        let run = |test: &[Vec<usize>], train: &[usize], unused: &[usize]| {
+            std::fs::write(&file, fold_file_text(test, train, unused)).unwrap();
+            evaluate_fold_file(&layout, "fixture", &file, &out, true, &cfg)
+        };
+        let tested = |first: &[usize]| -> Vec<usize> {
+            first.iter().copied().chain((2..30).step_by(3)).collect()
+        };
+        let training: Vec<usize> = (2..150).filter(|i| !tested(&[]).contains(i)).collect();
+        // g0 tested, its copy g1 training.
+        let mut with_copy = training.clone();
+        with_copy.push(1);
+        let apart = format!(
+            "{:#}",
+            run(&[tested(&[0])], &with_copy, &[]).expect_err("the copy trains")
+        );
+        assert_eq!(
+            apart,
+            format!(
+                "fold file {}: test fold 0 tests genome g0 and trains on genome g1, its k-mer-identical copy; test both in one fold or list one under unused",
+                file.display()
+            )
+        );
+        assert!(!out.exists());
+        // The copy in another test fold still trains fold 0.
+        let folds = [tested(&[0]), vec![1, 30, 31, 32, 33, 34, 35]];
+        let others: Vec<usize> = training
+            .iter()
+            .copied()
+            .filter(|i| !(30..36).contains(i))
+            .collect();
+        let error = format!(
+            "{:#}",
+            run(&folds, &others, &[]).expect_err("the copy trains")
+        );
+        assert!(
+            error.contains("test fold 0 tests genome g0 and trains on genome g1"),
+            "{error}"
+        );
+        // Tested together, or one of them unused, the file is scored.
+        run(&[tested(&[0, 1])], &training, &[]).unwrap();
+        run(&[tested(&[0])], &training, &[1]).unwrap();
+    }
+
+    #[test]
+    fn a_fold_file_that_repeats_the_random_split_gives_the_reports_random_rows() {
+        // The scan fixture's random split, as `analyze_dataset` draws it,
+        // written to a fold file and read back through `grm learn --fold-file`.
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path().join("data"));
+        let input = scan_inputs();
+        write_inputs(&layout, &input, "");
+        let cfg = fold_file_config();
+        let spec = dataset("meropenem");
+        let e = eval_inputs(&input, &spec).unwrap().unwrap();
+        let drawn = eval::evaluate(
+            &spec.id,
+            &e.ds.x,
+            &e.ds.y,
+            &e.groups,
+            &e.duplicates,
+            e.min_support,
+            None,
+            &cfg,
+        )
+        .unwrap();
+        let random = &drawn.splits[0];
+        assert_eq!(random.scheme, "random");
+        let mut test = vec![Vec::new(); cfg.folds];
+        for (row, &fold) in e.cohort.rows.iter().zip(&random.test_fold) {
+            test[fold].push(row.genome_id[1..].parse::<usize>().unwrap());
+        }
+        let file = dir.path().join("folds.json");
+        std::fs::write(&file, fold_file_text(&test, &[], &[])).unwrap();
+        let out = dir.path().join("out");
+        let path = evaluate_fold_file(&layout, "fixture", &file, &out, false, &cfg).unwrap();
+        let result: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+        let mut expected = serde_json::json!({"split": random});
+        expected["split"]["scheme"] = "first-public-past".into();
+        assert_eq!(timeless_split(&result), timeless_split(&expected));
+        assert_eq!(result["counts"]["tested"], 150);
     }
 
     #[test]
@@ -3004,12 +4038,12 @@ mod tests {
         assert_eq!(std::fs::read(&report).unwrap(), saved);
     }
 
-    #[test]
-    fn reports_use_the_reported_cohort_and_record_its_counts_and_k() {
-        let dir = tempfile::tempdir().unwrap();
-        let layout = Layout::new(dir.path());
-        // The default minimum admits 25 reported resistant and 25 reported
-        // susceptible genomes. One MIC-only matrix row stays out.
+    /// Synthetic: 51 genomes, 25 reported resistant and 25 reported
+    /// susceptible to meropenem (the default minimum admits them) and one
+    /// whose label comes from its MIC alone, in ten lineages, with each
+    /// genome's reference assembly and cached features written under
+    /// `layout`.
+    fn reported_inputs(layout: &Layout) -> SpeciesInputs {
         let genomes: Vec<String> = (0..51).map(|i| format!("g{i}")).collect();
         for g in &genomes {
             // Annotation reads a reference assembly and its cached features.
@@ -3029,7 +4063,7 @@ mod tests {
             })
             .collect();
         phenotypes.push(inferred("g50", "meropenem", Call::R));
-        let input = SpeciesInputs {
+        SpeciesInputs {
             matrix: FeatureMatrix {
                 summary: MatrixSummary {
                     k: 21,
@@ -3074,11 +4108,23 @@ mod tests {
             phenotypes,
             genomes: HashMap::new(),
             datasets: vec![],
-        };
-        let spec = DatasetSpec {
+        }
+    }
+
+    fn reported_dataset() -> DatasetSpec {
+        DatasetSpec {
             breakpoint: None,
             ..dataset("meropenem")
-        };
+        }
+    }
+
+    #[test]
+    fn reports_use_the_reported_cohort_and_record_its_counts_and_k() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path());
+        // One MIC-only matrix row stays out.
+        let input = reported_inputs(&layout);
+        let spec = reported_dataset();
         let report = analyze_dataset(
             &layout,
             &Client::new(),
@@ -3100,5 +4146,572 @@ mod tests {
         assert_eq!(report.counts.labels_from_mic_excluded, 1);
         assert!(report.samples.iter().all(|s| s.id != "g50" && !s.from_mic));
         assert_eq!(report.input_fingerprint, "fixture key");
+    }
+
+    /// The release's input key does not move with the seed flags: the
+    /// default key of both fixture datasets is the one `main` (852ebc9)
+    /// computes, taken from a build of it. A key that hashed an unset
+    /// learner seed, or any new field at its default, would move every
+    /// released report's key and recompute it.
+    #[test]
+    fn the_default_input_key_is_the_one_main_computes() {
+        let input = inputs();
+        assert_eq!(key(&input, &dataset("meropenem"), None), "4979e60d3c8b1d6a");
+        assert_eq!(
+            key(&input, &dataset("ciprofloxacin"), None),
+            "31fe6bb8b9591f63"
+        );
+    }
+
+    /// A run at another seed on a dataset large enough to report writes the
+    /// draw's report to `draws/seed-43/<id>.json`, and the released
+    /// `results/<id>.json` keeps its bytes.
+    #[test]
+    fn a_draw_that_writes_a_report_writes_it_under_draws_and_not_results() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path());
+        let mut input = reported_inputs(&layout);
+        input.contigs = input
+            .matrix
+            .summary
+            .genomes
+            .iter()
+            .map(|g| (g.clone(), 1))
+            .collect();
+        input.datasets = vec![reported_dataset()];
+        write_inputs(&layout, &input, "");
+        let id = "fixture__meropenem";
+        assert_eq!(learn(&layout).unwrap(), [id]);
+        let results = layout.results_dir("fixture");
+        let released = results.join(format!("{id}.json"));
+        let saved = std::fs::read(&released).unwrap();
+        let draw = EvalConfig {
+            seed: 43,
+            ..Default::default()
+        };
+        assert_eq!(
+            analyze_species(&layout, "fixture", &[], false, &draw).unwrap(),
+            [id]
+        );
+        assert_eq!(std::fs::read(&released).unwrap(), saved);
+        let names = |dir: &std::path::Path| {
+            let mut names: Vec<String> = std::fs::read_dir(dir)
+                .unwrap()
+                .map(|e| e.unwrap().file_name().into_string().unwrap())
+                .collect();
+            names.sort();
+            names
+        };
+        assert_eq!(names(&results), [format!("{id}.json")]);
+        let folder = layout.species_dir("fixture").join("draws/seed-43");
+        assert_eq!(names(&folder), [format!("{id}.json")]);
+        let read = |path: &std::path::Path| {
+            serde_json::from_slice::<serde_json::Value>(&std::fs::read(path).unwrap()).unwrap()
+        };
+        let (release, drawn) = (read(&released), read(&folder.join(format!("{id}.json"))));
+        assert_eq!(release["eval_config"]["seed"], 42);
+        assert_eq!(drawn["eval_config"]["seed"], 43);
+        assert_ne!(drawn["input_fingerprint"], release["input_fingerprint"]);
+        assert_eq!(drawn["samples"], release["samples"]);
+        // Each run then finds its own report current.
+        assert!(learn(&layout).unwrap().is_empty());
+        assert!(
+            analyze_species(&layout, "fixture", &[], false, &draw)
+                .unwrap()
+                .is_empty()
+        );
+        assert_eq!(std::fs::read(&released).unwrap(), saved);
+    }
+
+    /// A hit of a synthetic aminoglycoside-class group whose allele has
+    /// `subclass`.
+    fn aminoglycoside_hit(group: &str, subclass: &str) -> FamilyHit {
+        FamilyHit {
+            family: group.into(),
+            group: group.into(),
+            allele: format!("{group} ({subclass})"),
+            containment: 1.0,
+            class: "AMINOGLYCOSIDE".into(),
+            subclass: subclass.into(),
+        }
+    }
+
+    /// Synthetic: `scan_inputs` as a dataset of `antibiotic`, with gene
+    /// calls of three made-up groups. Every fourth genome has fixA, whose
+    /// alleles differ: genomes 0, 8, 16, ... have the one of subclass
+    /// `first` and genomes 4, 12, 20, ... the one of subclass `second`.
+    /// Every ninth genome has fixB, subclass AMINOGLYCOSIDE, and every
+    /// fifth fixC, a carbapenem group. Genome 0 has all three.
+    fn rule_inputs(antibiotic: &str, first: &str, second: &str) -> SpeciesInputs {
+        let mut input = scan_inputs();
+        for p in &mut input.phenotypes {
+            p.antibiotic = antibiotic.into();
+        }
+        input.datasets = vec![dataset(antibiotic)];
+        input.hits = (0..150)
+            .map(|i| {
+                let mut hits = Vec::new();
+                if i % 4 == 0 {
+                    let subclass = if i % 8 == 0 { first } else { second };
+                    hits.push(aminoglycoside_hit("fixA", subclass));
+                }
+                if i % 9 == 0 {
+                    hits.push(aminoglycoside_hit("fixB", "AMINOGLYCOSIDE"));
+                }
+                if i % 5 == 0 {
+                    hits.push(hit("fixC"));
+                }
+                (format!("g{i}"), hits)
+            })
+            .collect();
+        input
+    }
+
+    /// Settings small enough for a fixture report in a debug build.
+    fn quick_config() -> EvalConfig {
+        EvalConfig {
+            forest: ForestParams {
+                n_trees: 4,
+                ..Default::default()
+            },
+            gbt: GbtParams {
+                rounds: 5,
+                ..Default::default()
+            },
+            lasso_lambdas: 10,
+            ..Default::default()
+        }
+    }
+
+    /// Annotation reads a reference assembly and its cached features: one
+    /// of each per genome, so a report is computed without the network.
+    fn write_reference_files(layout: &Layout, genomes: &[String]) {
+        for g in genomes {
+            let fasta = crate::bvbrc::fasta_path(&layout.fasta_dir(), g);
+            crate::layout::ensure_parent(&fasta).unwrap();
+            std::fs::write(fasta, format!(">c\n{WILD}\n")).unwrap();
+            let features = layout.features_dir().join(format!("{g}.json"));
+            crate::layout::ensure_parent(&features).unwrap();
+            std::fs::write(features, "[]").unwrap();
+        }
+    }
+
+    /// The report of `input`'s one dataset under `quick_config`.
+    fn fixture_report(input: &SpeciesInputs) -> DatasetReport {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path());
+        write_reference_files(&layout, &input.matrix.summary.genomes);
+        let catalog = write_catalog(&layout, "v1");
+        analyze_dataset(
+            &layout,
+            &Client::new(),
+            input,
+            &input.datasets[0],
+            Some(&catalog),
+            &quick_config(),
+            &mut HashMap::new(),
+            "fixture key".into(),
+        )
+        .unwrap()
+        .unwrap()
+    }
+
+    #[test]
+    fn fold_patterns_cover_the_features_scm_cart_and_lasso_name_and_no_others() {
+        let n = 70;
+        let mut x = BitMatrix::with_cols(n);
+        for step in [2, 3, 5, 7, 11] {
+            x.push_row(Bits::from_indices(n, (0..n).step_by(step)).words());
+        }
+        let weighted = |feature: u32| eval::WeightedFeature {
+            feature,
+            weight: 1.0,
+        };
+        let split = |scheme: &str, rule: u32, cut: u32, weight: Option<u32>| FoldSplit {
+            scheme: scheme.into(),
+            scm: vec![eval::FoldScm {
+                kind: crate::learn::scm::Kind::Conjunction,
+                p: 1.0,
+                rules: vec![crate::learn::scm::Rule {
+                    feature: rule,
+                    presence: true,
+                }],
+            }],
+            cart: vec![crate::learn::tree::Tree {
+                nodes: vec![crate::learn::tree::Node {
+                    value: 0.5,
+                    n: 70,
+                    n_resistant: 35,
+                    depth: 0,
+                    split: Some(crate::learn::tree::Split {
+                        feature: cut,
+                        gain: 0.0,
+                        absent: 0,
+                        present: 0,
+                    }),
+                }],
+            }],
+            // Row 0 is in the two rankings alone.
+            rf: vec![vec![weighted(0), weighted(rule)]],
+            gbt: vec![vec![weighted(0)]],
+            lasso: vec![weight.map(|feature| crate::learn::lasso::LassoModel {
+                intercept: 0.0,
+                coef: vec![(feature, 1.0)],
+                lambda: 0.1,
+            })],
+        };
+        // Each of the three learners names a row no other model names: the
+        // lasso row 2, a tree row 3 and an scm row 4. Row 1 is named twice.
+        let kept = fold_models(
+            vec![split("random", 4, 1, Some(2)), split("lineage", 1, 3, None)],
+            &x,
+        );
+        let schemes: Vec<&str> = kept.splits.iter().map(|s| s.scheme.as_str()).collect();
+        assert_eq!(schemes, ["random", "lineage"]);
+        let listed: Vec<(u32, &str)> = kept
+            .features
+            .iter()
+            .map(|f| (f.feature, f.bits.as_str()))
+            .collect();
+        let expected: Vec<(u32, String)> = [1, 2, 3, 4]
+            .into_iter()
+            .map(|f| (f, base64(x.row(f as usize))))
+            .collect();
+        assert_eq!(
+            listed,
+            expected
+                .iter()
+                .map(|(f, b)| (*f, b.as_str()))
+                .collect::<Vec<_>>()
+        );
+        // 70 samples are two words: the pattern is the whole row.
+        assert_eq!(x.row(1).len(), 2);
+    }
+
+    #[test]
+    fn reports_keep_each_available_splits_fold_models_and_their_patterns() {
+        let input = rule_inputs("tobramycin", "GENTAMICIN", "GENTAMICIN/TOBRAMYCIN");
+        let report = fixture_report(&input);
+        let folds = quick_config().folds;
+        let e = eval_inputs(&input, &input.datasets[0]).unwrap().unwrap();
+        let ran: Vec<&str> = report
+            .splits
+            .iter()
+            .filter(|s| s.unavailable_reason.is_none())
+            .map(|s| s.scheme.as_str())
+            .collect();
+        assert_eq!(ran, ["random", "lineage"]);
+        let kept = &report.fold_models;
+        let schemes: Vec<&str> = kept.splits.iter().map(|s| s.scheme.as_str()).collect();
+        assert_eq!(schemes, ran);
+        let mut named = BTreeSet::new();
+        for split in &kept.splits {
+            let sizes = [
+                split.scm.len(),
+                split.cart.len(),
+                split.rf.len(),
+                split.gbt.len(),
+                split.lasso.len(),
+            ];
+            assert_eq!(sizes, [folds; 5]);
+            named.extend(split.pattern_features());
+        }
+        assert!(!named.is_empty());
+        let listed: Vec<u32> = kept.features.iter().map(|f| f.feature).collect();
+        assert_eq!(listed, named.into_iter().collect::<Vec<_>>());
+        for f in &kept.features {
+            assert_eq!(f.bits, base64(e.ds.x.row(f.feature as usize)));
+        }
+        // The field sits beside the final models, after `features` and
+        // before `seconds`, in the text as written; `rule_groups` is a
+        // sample's last key.
+        let text = serde_json::to_string(&report).unwrap();
+        let top = key_order(&text);
+        assert_eq!(
+            top[top.len() - 4..],
+            ["models", "features", "fold_models", "seconds"]
+        );
+        let sample = key_order(&serde_json::to_string(&report.samples[0]).unwrap());
+        assert_eq!(
+            sample[sample.len() - 3..],
+            ["groups", "catalog_resistant", "rule_groups"]
+        );
+        // And the splits' rows keep the keys they had.
+        let json = serde_json::to_value(&report).unwrap();
+        let keys = |v: &serde_json::Value| -> Vec<String> {
+            v.as_object().unwrap().keys().cloned().collect()
+        };
+        assert_eq!(keys(&json["fold_models"]), ["features", "splits"]);
+        assert_eq!(
+            keys(&json["fold_models"]["splits"][0]),
+            ["cart", "gbt", "lasso", "rf", "scheme", "scm"]
+        );
+        assert_eq!(
+            keys(&json["splits"][0]),
+            ["folds", "learners", "n_groups", "scheme", "test_fold"]
+        );
+        assert_eq!((json["schema"].as_u64(), REPORT_SCHEMA), (Some(2), 2));
+        assert_eq!(json["evaluation"]["revision"], 14);
+    }
+
+    /// The keys of the JSON object `text`, in the order the text writes
+    /// them. `serde_json::Value` sorts keys (no `preserve_order`), so it
+    /// cannot show where a key sits.
+    fn key_order(text: &str) -> Vec<String> {
+        struct Keys(Vec<String>);
+        struct Visit;
+        impl<'de> serde::de::Visitor<'de> for Visit {
+            type Value = Keys;
+            fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+                f.write_str("a JSON object")
+            }
+            fn visit_map<A: serde::de::MapAccess<'de>>(self, mut map: A) -> Result<Keys, A::Error> {
+                let mut keys = Vec::new();
+                while let Some(key) = map.next_key::<String>()? {
+                    map.next_value::<serde::de::IgnoredAny>()?;
+                    keys.push(key);
+                }
+                Ok(Keys(keys))
+            }
+        }
+        impl<'de> serde::Deserialize<'de> for Keys {
+            fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Keys, D::Error> {
+                d.deserialize_map(Visit)
+            }
+        }
+        serde_json::from_str::<Keys>(text).unwrap().0
+    }
+
+    /// What a report says of fixA under the tobramycin rule when the first
+    /// genome's allele has subclass `first` and the others' `second`: the
+    /// group row's subclass and flag, the genomes whose `rule_groups` name
+    /// fixA, and the genomes a call rebuilt from the group flags gets wrong.
+    fn fix_a_under_tobramycin(first: &str, second: &str) -> (String, bool, Vec<usize>, usize) {
+        let report = fixture_report(&rule_inputs("tobramycin", first, second));
+        assert_eq!(report.catalog_groups, ["fixA", "fixB", "fixC"]);
+        let catalog = report.catalog.as_ref().unwrap();
+        let rule: Vec<Vec<String>> = vec![vec!["S:TOBRAMYCIN".into(), "S:AMINOGLYCOSIDE".into()]];
+        assert_eq!(catalog.rule, rule);
+        let row = |group: &str| catalog.groups.iter().find(|g| g.group == group).unwrap();
+        // fixB always counts and fixC never does, whatever fixA's alleles.
+        assert!(row("fixB").counts_for_rule && !row("fixC").counts_for_rule);
+        assert_eq!(row("fixA").n_resistant + row("fixA").n_susceptible, 38);
+        let mut with_fix_a = Vec::new();
+        let mut flags_wrong = 0;
+        let mut calls = Vec::new();
+        for (i, s) in report.samples.iter().enumerate() {
+            assert_eq!(s.id, format!("g{i}"));
+            let groups: Vec<u16> = [(4, 0), (9, 1), (5, 2)]
+                .into_iter()
+                .filter(|(every, _)| i % every == 0)
+                .map(|(_, group)| group)
+                .collect();
+            assert_eq!(s.groups, groups);
+            let counting = s.rule_groups.as_ref().expect("tobramycin has a rule");
+            // A subset of the genome's groups, in their order.
+            assert!(counting.iter().all(|g| s.groups.contains(g)));
+            assert!(counting.windows(2).all(|w| w[0] < w[1]));
+            assert_eq!(counting.contains(&1), i % 9 == 0);
+            assert!(!counting.contains(&2));
+            // One requirement: the call is whether any hit counts.
+            assert_eq!(s.catalog_resistant, Some(!counting.is_empty()));
+            if counting.contains(&0) {
+                with_fix_a.push(i);
+            }
+            let by_flag = s
+                .groups
+                .iter()
+                .any(|&g| row(&report.catalog_groups[g as usize]).counts_for_rule);
+            flags_wrong += usize::from(Some(by_flag) != s.catalog_resistant);
+            calls.push(s.catalog_resistant.unwrap());
+        }
+        // The published metrics are those of each genome's own call.
+        let truth: Vec<bool> = report.samples.iter().map(|s| s.resistant).collect();
+        let scores: Vec<f64> = calls.iter().map(|&c| c as u8 as f64).collect();
+        assert_eq!(catalog.metrics, binary_metrics(&truth, &scores, 0.5, false));
+        // A group row has the six keys it had: the outside-study replay
+        // compares the rows whole (scripts/outside-study/score.py).
+        let json = serde_json::to_value(&report).unwrap();
+        let keys: Vec<&String> = json["catalog"]["groups"][0]
+            .as_object()
+            .unwrap()
+            .keys()
+            .collect();
+        assert_eq!(
+            keys,
+            [
+                "class",
+                "counts_for_rule",
+                "group",
+                "n_resistant",
+                "n_susceptible",
+                "subclass"
+            ]
+        );
+        assert!(json["samples"][0]["rule_groups"].is_array());
+        (
+            row("fixA").subclass.clone(),
+            row("fixA").counts_for_rule,
+            with_fix_a,
+            flags_wrong,
+        )
+    }
+
+    #[test]
+    fn a_groups_flag_follows_its_first_genome_and_rule_groups_each_genomes_own_hit() {
+        let odd_fours: Vec<usize> = (0..150).filter(|i| i % 8 == 4).collect();
+        let even_fours: Vec<usize> = (0..150).filter(|i| i % 8 == 0).collect();
+        // Genomes with fixA and no fixB: the ones a call rebuilt from the
+        // group flags gets wrong when the flag is not their own answer.
+        let alone = |with: &[usize]| with.iter().filter(|&&i| i % 9 != 0).count();
+
+        // The first genome's allele is gentamicin-only: the row says the
+        // group does not count, and 19 genomes' hits count all the same.
+        let (subclass, flag, counting, flags_wrong) =
+            fix_a_under_tobramycin("GENTAMICIN", "GENTAMICIN/TOBRAMYCIN");
+        assert_eq!((subclass.as_str(), flag), ("GENTAMICIN", false));
+        assert_eq!(counting, odd_fours);
+        assert_eq!((counting.len(), flags_wrong), (19, alone(&odd_fours)));
+
+        // The other way round: the row says the group counts, and the 19
+        // genomes with the gentamicin-only allele are not called by it.
+        let (subclass, flag, counting, flags_wrong) =
+            fix_a_under_tobramycin("GENTAMICIN/TOBRAMYCIN", "GENTAMICIN");
+        assert_eq!((subclass.as_str(), flag), ("GENTAMICIN/TOBRAMYCIN", true));
+        assert_eq!(counting, even_fours);
+        assert_eq!((counting.len(), flags_wrong), (19, alone(&odd_fours)));
+        assert!(alone(&odd_fours) > 0);
+
+        // One allele throughout: the flag is every genome's answer.
+        let (_, flag, counting, flags_wrong) = fix_a_under_tobramycin("TOBRAMYCIN", "TOBRAMYCIN");
+        assert!(flag);
+        assert_eq!((counting.len(), flags_wrong), (38, 0));
+    }
+
+    #[test]
+    fn a_genome_can_list_rule_groups_and_be_called_susceptible_under_two_requirements() {
+        // Synthetic: `scan_inputs` as a sulfamethoxazole/trimethoprim
+        // dataset. Every third genome has fixD, a trimethoprim group; every
+        // fifth fixS, a sulfonamide group; every seventh fixC, a carbapenem
+        // group. Genome 0 has all three.
+        let drug = "sulfamethoxazole/trimethoprim";
+        let mut input = scan_inputs();
+        for p in &mut input.phenotypes {
+            p.antibiotic = drug.into();
+        }
+        input.datasets = vec![dataset(drug)];
+        let folate = |group: &str, class: &str| FamilyHit {
+            class: class.into(),
+            subclass: class.into(),
+            ..hit(group)
+        };
+        input.hits = (0..150)
+            .map(|i| {
+                let mut hits = Vec::new();
+                if i % 3 == 0 {
+                    hits.push(folate("fixD", "TRIMETHOPRIM"));
+                }
+                if i % 5 == 0 {
+                    hits.push(folate("fixS", "SULFONAMIDE"));
+                }
+                if i % 7 == 0 {
+                    hits.push(hit("fixC"));
+                }
+                (format!("g{i}"), hits)
+            })
+            .collect();
+        let report = fixture_report(&input);
+        assert_eq!(report.catalog_groups, ["fixD", "fixS", "fixC"]);
+        let catalog = report.catalog.as_ref().unwrap();
+        let rule: Vec<Vec<String>> =
+            vec![vec!["C:TRIMETHOPRIM".into()], vec!["C:SULFONAMIDE".into()]];
+        assert_eq!(catalog.rule, rule);
+        let counted = |s: &Sample| s.rule_groups.clone().expect("the drug has a rule");
+        // A trimethoprim hit alone meets one requirement: the genome lists
+        // its group and is called susceptible. So does a sulfonamide hit
+        // alone. With both, it lists both and is called resistant.
+        let s = &report.samples;
+        assert_eq!(
+            (counted(&s[3]), s[3].catalog_resistant),
+            (vec![0], Some(false))
+        );
+        assert_eq!(
+            (counted(&s[5]), s[5].catalog_resistant),
+            (vec![1], Some(false))
+        );
+        assert_eq!(
+            (counted(&s[15]), s[15].catalog_resistant),
+            (vec![0, 1], Some(true))
+        );
+        assert_eq!(
+            (counted(&s[7]), s[7].catalog_resistant),
+            (vec![], Some(false))
+        );
+        assert_eq!(
+            (counted(&s[0]), s[0].groups.clone()),
+            (vec![0, 1], vec![0, 1, 2])
+        );
+        let mut listed_susceptible = 0;
+        for (i, sample) in s.iter().enumerate() {
+            let own: Vec<u16> = [(3, 0), (5, 1)]
+                .into_iter()
+                .filter(|(every, _)| i % every == 0)
+                .map(|(_, group)| group)
+                .collect();
+            assert_eq!(counted(sample), own, "genome {i}");
+            assert_eq!(sample.catalog_resistant, Some(own.len() == 2), "genome {i}");
+            listed_susceptible +=
+                usize::from(!counted(sample).is_empty() && sample.catalog_resistant == Some(false));
+        }
+        // 50 genomes have fixD and 30 fixS, 10 of them both.
+        let resistant = s
+            .iter()
+            .filter(|s| s.catalog_resistant == Some(true))
+            .count();
+        assert_eq!((listed_susceptible, resistant), (60, 10));
+    }
+
+    #[test]
+    fn a_drug_without_a_rule_records_no_rule_groups() {
+        assert!(catalog::drug_rule("isoniazid").is_none());
+        let report = fixture_report(&rule_inputs("isoniazid", "GENTAMICIN", "TOBRAMYCIN"));
+        assert!(report.catalog.is_none());
+        assert!(
+            report
+                .samples
+                .iter()
+                .all(|s| s.rule_groups.is_none() && s.catalog_resistant.is_none())
+        );
+        // The groups are still listed; only the rule's reading is absent.
+        assert_eq!(report.samples[0].groups, [0, 1, 2]);
+        let json = serde_json::to_value(&report).unwrap();
+        let sample = json["samples"][0].as_object().unwrap();
+        assert!(!sample.contains_key("rule_groups"));
+        assert!(sample["catalog_resistant"].is_null());
+    }
+
+    /// Writes `rule_inputs` for tobramycin as a data root `grm learn` runs
+    /// on without the network, so the report of two builds can be compared
+    /// field by field (docs/report-rule-fields.md).
+    #[test]
+    #[ignore = "writes a synthetic data root; set GRM_REPORT_FIELDS_FIXTURE to a new directory"]
+    fn write_report_fields_fixture_root() {
+        let root = std::path::PathBuf::from(
+            std::env::var("GRM_REPORT_FIELDS_FIXTURE").expect("set GRM_REPORT_FIELDS_FIXTURE"),
+        );
+        assert!(
+            std::fs::read_dir(&root).map_or(true, |mut d| d.next().is_none()),
+            "{} must be new or empty",
+            root.display()
+        );
+        let layout = Layout::new(&root);
+        let input = rule_inputs("tobramycin", "GENTAMICIN", "GENTAMICIN/TOBRAMYCIN");
+        let catalog = write_catalog(&layout, "v1");
+        write_inputs(&layout, &input, &catalog.calls_version());
+        let genomes = &input.matrix.summary.genomes;
+        write_reference_files(&layout, genomes);
+        // `grm learn` checks the selection against the counts.
+        let selection = layout.species_dir("fixture").join("genomes.txt");
+        std::fs::write(selection, genomes.join("\n") + "\n").unwrap();
     }
 }

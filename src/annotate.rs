@@ -45,7 +45,8 @@ pub struct Locus {
     pub gene_strand: Option<String>,
     /// Codon range within the gene (1-based), when inside a CDS.
     pub codons: Option<(u64, u64)>,
-    /// Nearest CDS and distance when the span is intergenic.
+    /// Nearest CDS and distance when the span lies in no CDS. Only CDS
+    /// features are read, so the span may still lie in an RNA gene.
     pub nearest: Option<(String, i64)>,
     /// Contig sequence around the span (forward strand), span in uppercase.
     pub context: String,
@@ -66,6 +67,23 @@ pub struct FeatureNote {
     pub locus: Option<Locus>,
     pub n_resistant: u32,
     pub n_susceptible: u32,
+}
+
+/// The words a feature's catalog families give it on a rule term, or None
+/// when it matches none. A feature matches a family when one of its sampled
+/// k-mers lies in any allele of that family, so a feature that matches
+/// several may lie in any one of them, or span them: no family is picked.
+/// The label lists them all, in byte order, after their count.
+pub fn family_label<S: AsRef<str>>(families: &[S]) -> Option<String> {
+    let names: BTreeSet<&str> = families.iter().map(AsRef::as_ref).collect();
+    match names.len() {
+        0 => None,
+        1 => names.first().map(|n| n.to_string()),
+        n => Some(format!(
+            "k-mers matching {n} catalog families ({})",
+            names.into_iter().collect::<Vec<_>>().join(", ")
+        )),
+    }
 }
 
 fn feature_kmers(matrix: &FeatureMatrix, ds: &Dataset, f: u32) -> (usize, Vec<u64>) {
@@ -507,5 +525,24 @@ mod tests {
             std::fs::write(layout.features_dir().join("g0.json"), &listed).unwrap();
             assert_eq!(locus_of(&layout, &matrix, &ds)["gene"], "blaA", "{listed}");
         }
+    }
+
+    #[test]
+    fn a_feature_matching_several_families_is_labelled_with_all_of_them_in_byte_order() {
+        assert_eq!(family_label::<&str>(&[]), None);
+        assert_eq!(family_label(&["blaKPC"]).as_deref(), Some("blaKPC"));
+        // The annotation's own order, any other, and repeats give one label.
+        let shared = "k-mers matching 3 catalog families (blaAFM, blaNDM, ble)";
+        for families in [
+            ["blaAFM", "blaNDM", "ble"],
+            ["ble", "blaNDM", "blaAFM"],
+            ["blaNDM", "ble", "blaAFM"],
+        ] {
+            assert_eq!(family_label(&families).as_deref(), Some(shared));
+        }
+        assert_eq!(
+            family_label(&["blaKPC", "blaKPC"]).as_deref(),
+            Some("blaKPC")
+        );
     }
 }

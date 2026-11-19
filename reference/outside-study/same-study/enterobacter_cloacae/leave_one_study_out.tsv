@@ -1,0 +1,9 @@
+dataset	learner	left_out	scored_resistant	scored_susceptible	reportable	tp	fn	fp	tn	no_call_resistant	no_call_susceptible	sensitivity	specificity	balanced_accuracy
+enterobacter_cloacae__ciprofloxacin	scm	PRJNA288601	0	0	no	0	0	0	0	0	0			
+enterobacter_cloacae__ciprofloxacin	cart	PRJNA288601	0	0	no	0	0	0	0	0	0			
+enterobacter_cloacae__ciprofloxacin	lasso	PRJNA288601	0	0	no	0	0	0	0	0	0			
+enterobacter_cloacae__ciprofloxacin	known_gene	PRJNA288601	0	0	no	0	0	0	0	0	0			
+enterobacter_cloacae__sulfamethoxazole_trimethoprim	scm	PRJNA288601	0	0	no	0	0	0	0	0	0			
+enterobacter_cloacae__sulfamethoxazole_trimethoprim	cart	PRJNA288601	0	0	no	0	0	0	0	0	0			
+enterobacter_cloacae__sulfamethoxazole_trimethoprim	lasso	PRJNA288601	0	0	no	0	0	0	0	0	0			
+enterobacter_cloacae__sulfamethoxazole_trimethoprim	known_gene	PRJNA288601	0	0	no	0	0	0	0	0	0			

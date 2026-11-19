@@ -1,0 +1,8 @@
+dataset	labelled_resistant	labelled_susceptible	excluded_no_sequence	excluded_species_check_failed	excluded_not_counted	scored_resistant	scored_susceptible	scored_borderline	reportable	lasso_complete	known_gene	top_study_resistant	top_study_resistant_count	top_study_resistant_share	top_study_susceptible	top_study_susceptible_count	top_study_susceptible_share	studies	loso_folds_reportable	top_study_resistant_fold_reportable	top_study_susceptible_fold_reportable	studies_not_left_out	scored_no_bioproject	top_study_resistant_tied	top_study_susceptible_tied
+streptococcus_pneumoniae__chloramphenicol	90	412	0	0	0	90	412	3	yes	yes	scored	PRJNA1357085	48	0.533333	PRJNA320861	262	0.635922	3	3	yes	yes		0		
+streptococcus_pneumoniae__clindamycin	195	306	0	0	0	195	306	3	yes	yes	scored	PRJEB82317	105	0.538462	PRJNA320861	258	0.843137	3	3	yes	yes		0		
+streptococcus_pneumoniae__erythromycin	222	279	0	0	0	222	279	3	yes	yes	scored	PRJEB82317	124	0.558559	PRJNA320861	259	0.928315	3	2	yes	no	PRJNA320861	0		
+streptococcus_pneumoniae__meropenem	47	302	0	0	0	47	302	3	yes	yes	scored	PRJEB82317	28	0.595745	PRJNA320861	190	0.629139	3	2	no	yes	PRJEB82317	0		
+streptococcus_pneumoniae__penicillin	44	308	0	0	0	44	308	3	yes	yes	scored	PRJEB82317	44	1.000000	PRJNA320861	185	0.600649	3	2	no	yes	PRJEB82317	0		
+streptococcus_pneumoniae__sulfamethoxazole_trimethoprim	63	257	0	0	0	63	257	3	yes	yes	scored	PRJNA1357085	62	0.984127	PRJNA320861	231	0.898833	2	1	no	yes	PRJNA1357085	0		
+streptococcus_pneumoniae__tetracycline	215	271	0	0	0	215	271	3	yes	yes	scored	PRJEB82317	123	0.572093	PRJNA320861	247	0.911439	3	2	yes	no	PRJNA320861	0		

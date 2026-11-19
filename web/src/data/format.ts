@@ -9,6 +9,10 @@ export const int = (n: number): string => grouped.format(Math.round(n));
 export const pct = (share: number | null | undefined, digits = 1): string =>
   share === null || share === undefined || !Number.isFinite(share) ? "–" : `${(share * 100).toFixed(digits)}%`;
 
+/** A limit as a percent, to one decimal with no trailing zero: 0.075 ->
+ *  "7.5%", 0.03 -> "3%". */
+export const limitPct = (limit: number): string => `${Number((limit * 100).toFixed(1))}%`;
+
 /** A difference of two shares in percentage points: 0.031 -> "3.1 points". */
 export const points = (diff: number, digits = 1): string => {
   const v = Math.abs(diff * 100).toFixed(digits);
@@ -18,9 +22,10 @@ export const points = (diff: number, digits = 1): string => {
 /** Plural noun for a count: plural(1, "dataset") -> "1 dataset". */
 export const plural = (n: number, one: string, many = `${one}s`): string => `${int(n)} ${n === 1 ? one : many}`;
 
-/** ["a", "b", "c"] -> "a, b and c". */
-export const listWords = (items: readonly string[]): string =>
-  items.length <= 1 ? (items[0] ?? "") : `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
+/** ["a", "b", "c"] -> "a, b and c"; `last` is the word before the final
+ *  item, "or" after a negative. */
+export const listWords = (items: readonly string[], last: "and" | "or" = "and"): string =>
+  items.length <= 1 ? (items[0] ?? "") : `${items.slice(0, -1).join(", ")} ${last} ${items[items.length - 1]}`;
 
 /** "Klebsiella pneumoniae" -> "K. pneumoniae", joined by a non-breaking
  *  space so the abbreviation never ends a line. */
@@ -28,6 +33,37 @@ export const speciesShort = (species: string): string => {
   const [genus, ...rest] = species.split(" ");
   return genus !== undefined && rest.length > 0 ? `${genus.charAt(0)}. ${rest.join(" ")}` : species;
 };
+
+/** Everyday names for species a general reader knows by another name, keyed
+ *  by the scientific name. Only names in wide everyday use; every other
+ *  species keeps its short scientific name, which for E. coli is already
+ *  the everyday one. */
+const EVERYDAY_NAME: ReadonlyMap<string, string> = new Map([
+  ["Mycobacterium tuberculosis", "TB"],
+  ["Neisseria gonorrhoeae", "Gonorrhea"],
+  ["Salmonella enterica", "Salmonella"],
+  ["Staphylococcus aureus", "Staph"],
+  ["Streptococcus pneumoniae", "Pneumococcus"],
+]);
+
+/** A species by the name a general reader knows: "Staph", "TB"; the short
+ *  scientific name ("K. pneumoniae", "E. coli") for any other species. */
+export const speciesName = (species: string): string => EVERYDAY_NAME.get(species) ?? speciesShort(species);
+
+/** Whether speciesName gives an everyday name, so a view that shows both
+ *  names never prints the same one twice. */
+export const hasEverydayName = (species: string): boolean => EVERYDAY_NAME.has(species);
+
+/** A species in a list of species: the scientific name, then the everyday
+ *  one where there is one: "Staphylococcus aureus (Staph)". */
+export const speciesOption = (species: string): string => (hasEverydayName(species) ? `${species} (${speciesName(species)})` : species);
+
+/** A dataset, one species tested against one antibiotic, as a title:
+ *  "Salmonella vs ciprofloxacin", "K. pneumoniae vs meropenem". A
+ *  non-breaking space keeps "vs" with the drug, so a wrapped title reads
+ *  "K. pneumoniae" over "vs meropenem". Ids, URLs and sort keys keep the
+ *  scientific name. */
+export const datasetTitle = (d: { species: string; antibiotic: string }): string => `${speciesName(d.species)} vs ${d.antibiotic}`;
 
 /** Sentence-case a lowercase drug name for a title or table cell. */
 export const capitalize = (s: string): string => (s === "" ? s : s.charAt(0).toUpperCase() + s.slice(1));

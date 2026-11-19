@@ -5,8 +5,8 @@
 // sequence and the carriage bars together, the sequence continues on the
 // next slide, so nothing opens a second dialog and nothing scrolls.
 import type { CatalogRow, Manifest } from "../data/schema";
-import { capitalize, int, pct, speciesShort } from "../data/format";
-import { featureIndex, featureLabel, featurePlace } from "../data/derive/dataset";
+import { datasetTitle, int, pct } from "../data/format";
+import { familyNotes, featureIndex, featurePlace, ruleWords, tieWords } from "../data/derive/dataset";
 import { loadErrorText, useDataset } from "../data/load";
 import { PanelState } from "../ui/primitives";
 import { Seq } from "../ui/Seq";
@@ -42,27 +42,32 @@ export const RuleFigure = ({ manifest, page = 0, pages }: { manifest: Manifest; 
   const rShare = card.n_resistant / Math.max(r.counts.resistant, 1);
   const sShare = card.n_susceptible / Math.max(r.counts.susceptible, 1);
   const context = card.locus?.context ?? "";
+  const notes = familyNotes(card.catalog_families, r.catalog);
+  // The slide shows the first rule alone, so it says when other features tie it.
+  const ties = tieWords(r.models.scm.steps[0]?.n_equivalent ?? 0, 0);
   const split = pages !== undefined && pages > 1 && context !== "";
   const header = (
     <>
       <p className="text-note text-muted-text">
-        {capitalize(r.antibiotic)} · {speciesShort(r.species)} · rule 1 of {r.models.scm.rules.length}
+        {datasetTitle(r)} · rule 1 of {r.models.scm.rules.length}
       </p>
-      <p className="mt-2 break-words text-headline font-semibold text-ink">
-        {rule.presence ? "Presence" : "Absence"} of {featureLabel(card, rule.feature)}
-      </p>
+      {/* The rule as the inspector words it (ruleWords, the index's termLabel): k-mers that lie in no
+          protein-coding gene are named by their distance from the nearest one, not by its bare name. */}
+      <p className="mt-2 break-words text-headline font-semibold text-ink">{ruleWords(rule, cards)}</p>
       {card.catalog_families.length === 0 ? null : (
         <p className="mt-2 text-note text-muted-text">
-          Catalog {card.catalog_families.length === 1 ? "family" : "families"} {card.catalog_families.join(", ")}
+          Known-gene catalog {card.catalog_families.length === 1 ? "family" : "families"} {card.catalog_families.join(", ")}
+          {notes.length === 0 ? "" : `. ${notes.join(" ")}`}
         </p>
       )}
       <p className="mt-2 text-note text-ink">{featurePlace(card) ?? "Not placed on a reference assembly."}</p>
+      {ties === null ? null : <p className="mt-2 text-note text-ink">This rule is {ties}.</p>}
     </>
   );
   const sequence =
     context === "" ? null : (
       <div className="mt-3">
-        <p className="text-note text-muted-text">The contig around the rule&apos;s k-mers; the k-mers are in capitals.</p>
+        <p className="text-note text-muted-text">The contig, a stretch of assembled DNA, around the rule&apos;s k-mers; the k-mers are in capitals.</p>
         <Seq context={context} className="mt-1" />
       </div>
     );

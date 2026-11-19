@@ -1,0 +1,12 @@
+dataset	learner	resistant_genomes	resistant_both	resistant_learner_only	resistant_known_gene_only	resistant_neither	susceptible_genomes	susceptible_both	susceptible_learner_only	susceptible_known_gene_only	susceptible_neither
+mycobacterium_tuberculosis__amikacin	scm	185	0	178	0	7	828	0	47	0	781
+mycobacterium_tuberculosis__amikacin	cart	185	0	178	0	7	828	0	24	0	804
+mycobacterium_tuberculosis__kanamycin	scm	338	0	321	0	17	681	0	38	0	643
+mycobacterium_tuberculosis__kanamycin	cart	338	0	321	0	17	681	0	38	0	643
+mycobacterium_tuberculosis__levofloxacin	scm	122	115	0	7	0	645	39	0	606	0
+mycobacterium_tuberculosis__levofloxacin	cart	122	115	0	7	0	645	39	0	606	0
+mycobacterium_tuberculosis__moxifloxacin	scm	232	192	0	40	0	783	54	0	728	1
+mycobacterium_tuberculosis__moxifloxacin	cart	232	201	0	31	0	783	58	0	724	1
+mycobacterium_tuberculosis__moxifloxacin	lasso	232	201	0	31	0	783	58	0	724	1
+mycobacterium_tuberculosis__streptomycin	scm	157	0	130	0	27	80	0	5	0	75
+mycobacterium_tuberculosis__streptomycin	cart	157	0	130	0	27	80	0	5	0	75

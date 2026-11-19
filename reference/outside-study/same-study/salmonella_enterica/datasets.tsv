@@ -1,0 +1,9 @@
+dataset	labelled_resistant	labelled_susceptible	excluded_no_sequence	excluded_species_check_failed	excluded_not_counted	scored_resistant	scored_susceptible	scored_borderline	reportable	lasso_complete	known_gene	top_study_resistant	top_study_resistant_count	top_study_resistant_share	top_study_susceptible	top_study_susceptible_count	top_study_susceptible_share	studies	loso_folds_reportable	top_study_resistant_fold_reportable	top_study_susceptible_fold_reportable	studies_not_left_out	scored_no_bioproject	top_study_resistant_tied	top_study_susceptible_tied
+salmonella_enterica__amoxicillin_clavulanate	301	716	0	0	0	301	716	0	yes	yes	scored	PRJNA248792	301	1.000000	PRJNA248792	715	0.998603	2	1	no	no	PRJNA248792	0		
+salmonella_enterica__ceftazidime	51	1653	0	0	0	51	1653	0	yes	yes	scored	PRJNA248792	51	1.000000	PRJNA248792	1653	1.000000	1	0	no	no	PRJNA248792	0		
+salmonella_enterica__ceftriaxone	50	1690	0	0	0	50	1690	0	yes	no	scored	PRJNA248792	50	1.000000	PRJNA248792	1663	0.984024	4	3	no	no	PRJNA248792	0		
+salmonella_enterica__chloramphenicol	316	1389	0	0	0	316	1389	0	yes	no	scored	PRJNA248792	316	1.000000	PRJNA248792	1388	0.999280	2	1	no	no	PRJNA248792	0		
+salmonella_enterica__ciprofloxacin	1527	178	0	0	0	1527	178	0	yes	no	scored	PRJNA248792	1526	0.999345	PRJNA248792	178	1.000000	2	1	no	no	PRJNA248792	0		
+salmonella_enterica__sulfamethoxazole_trimethoprim	329	1376	0	0	0	329	1376	0	yes	no	scored	PRJNA248792	329	1.000000	PRJNA248792	1375	0.999273	2	1	no	no	PRJNA248792	0		
+salmonella_enterica__tetracycline	27	1678	0	0	0	27	1678	0	yes	no	scored	PRJNA248792	27	1.000000	PRJNA248792	1677	0.999404	2	1	no	no	PRJNA248792	0		
+salmonella_enterica__trimethoprim	322	1382	0	0	0	322	1382	0	yes	no	scored	PRJNA248792	322	1.000000	PRJNA248792	1382	1.000000	1	0	no	no	PRJNA248792	0		

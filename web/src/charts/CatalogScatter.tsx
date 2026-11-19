@@ -7,7 +7,7 @@
 
 import { useLayoutEffect, useRef, useState } from "react";
 import type { CatalogRow } from "../data/schema";
-import { capitalize, int, pct, speciesShort } from "../data/format";
+import { datasetTitle, int, pct } from "../data/format";
 import { CATALOG_CUTOFF, catalogDiff, catalogSummary, uniformCall, type UniformCall } from "../data/derive/overview";
 import { AxisX, AxisY, HALO, LABEL_CLASS, linear, MarkListbox, RefLineH, ticks, useSvgId, useWidth, type ListMark } from "./kit";
 
@@ -84,8 +84,8 @@ export const CatalogScatter = ({ rows, height, onOpen }: { rows: readonly Catalo
         call,
         tip: () => [
           {
-            term: `${capitalize(r.antibiotic)}, ${speciesShort(r.species)}`,
-            text: `Catalog rule ${pct(c.balanced_accuracy)}, learner ${pct(r.best_lineage)} with lineages held out: ${d >= 0 ? "ahead by" : "behind by"} ${Math.abs(d * 100).toFixed(1)} points.`,
+            term: datasetTitle(r),
+            text: `Known-gene rule ${pct(c.balanced_accuracy)}, learner ${pct(r.best_lineage)} with lineages held out: ${d >= 0 ? "ahead by" : "behind by"} ${Math.abs(d * 100).toFixed(1)} points.`,
           },
           {
             source:
@@ -102,7 +102,7 @@ export const CatalogScatter = ({ rows, height, onOpen }: { rows: readonly Catalo
   const { ahead, within, behind } = summary.regions;
   const axisTitle = (
     <p className="pt-1 text-center text-tiny text-muted-text" style={{ width }}>
-      Best learner with lineages held out, balanced accuracy (%)
+      Best learner with lineages held out, balanced accuracy (%). Higher is better on both axes.
     </p>
   );
   const legend = (
@@ -137,7 +137,7 @@ export const CatalogScatter = ({ rows, height, onOpen }: { rows: readonly Catalo
     <div ref={frame} className={`flex min-w-0 ${wide ? "flex-row items-start gap-10" : "flex-col items-start"}`}>
       <div className="min-w-0">
         <MarkListbox
-          label={`Catalog rule against the best learner with lineages held out, one mark per dataset, ${int(compared.length)} datasets. Arrow keys move between datasets; click or Enter to pin details.`}
+          label={`Known-gene rule against the best learner with lineages held out, one mark per dataset, ${int(compared.length)} datasets. Arrow keys move between datasets; click or Enter to pin details.`}
           marks={marks}
           width={width}
           onOpen={onOpen === undefined ? undefined : (i) => onOpen(marks[i]!.key)}
@@ -154,7 +154,7 @@ export const CatalogScatter = ({ rows, height, onOpen }: { rows: readonly Catalo
             <path d={band} fill="rgb(var(--ink) / 0.06)" clipPath={`url(#${clip})`} />
             <line x1={x(lo)} y1={y(lo)} x2={x(1)} y2={y(1)} stroke="var(--chart-axis)" clipPath={`url(#${clip})`} />
             <text transform={`translate(12 ${pad.t + plotH / 2}) rotate(-90)`} textAnchor="middle" className="fill-[rgb(var(--muted-text))] text-[12px]">
-              Catalog rule, balanced accuracy (%)
+              Known-gene rule, balanced accuracy (%)
             </text>
             {marks.map((m) => (
               <g key={m.key} data-dataset={m.key}><CatalogMark call={m.call} x={m.x} y={m.y} /></g>

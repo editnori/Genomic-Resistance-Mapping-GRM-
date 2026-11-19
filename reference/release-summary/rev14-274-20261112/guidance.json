@@ -1,0 +1,836 @@
+{
+ "revision": 14,
+ "generated_at": "2026-11-12T20:16:29Z",
+ "datasets": 274,
+ "criteria": {
+  "wording": {
+   "vme_upper_below": 0.075,
+   "vme_lower_below": 0.015,
+   "me_rate_below": 0.03,
+   "strict": true,
+   "vme_interval": "the served Clopper-Pearson 95% interval of VME",
+   "me_rate": "x / n of the served ME counts"
+  },
+  "screen": {
+   "vme_upper_at_most": 0.015,
+   "me_upper_at_most": 0.03,
+   "shown_to_miss": "VME lower bound over 1.5% or ME lower bound over 3%"
+  },
+  "without_tuberculosis": "mycobacterium_tuberculosis",
+  "table_8_first_resistant": 48
+ },
+ "rows": {
+  "best:random": {
+   "n": 274,
+   "meets_wording": 22,
+   "vme_upper": 62,
+   "vme_lower": 68,
+   "vme": 34,
+   "me": 96,
+   "without_tuberculosis": {
+    "n": 252,
+    "meets_wording": 22
+   },
+   "screen": {
+    "shown_to_meet_both": 2,
+    "shown_to_miss_one": 214,
+    "not_decided": 58
+   },
+   "vme_n_under_table_8": 37,
+   "fewer_than_every_genome": 0
+  },
+  "scm:random": {
+   "n": 274,
+   "meets_wording": 16,
+   "vme_upper": 51,
+   "vme_lower": 50,
+   "vme": 26,
+   "me": 73,
+   "without_tuberculosis": {
+    "n": 252,
+    "meets_wording": 16
+   },
+   "screen": {
+    "shown_to_meet_both": 2,
+    "shown_to_miss_one": 232,
+    "not_decided": 40
+   },
+   "vme_n_under_table_8": 37,
+   "fewer_than_every_genome": 0
+  },
+  "cart:random": {
+   "n": 274,
+   "meets_wording": 17,
+   "vme_upper": 47,
+   "vme_lower": 46,
+   "vme": 27,
+   "me": 63,
+   "without_tuberculosis": {
+    "n": 252,
+    "meets_wording": 17
+   },
+   "screen": {
+    "shown_to_meet_both": 2,
+    "shown_to_miss_one": 235,
+    "not_decided": 37
+   },
+   "vme_n_under_table_8": 37,
+   "fewer_than_every_genome": 0
+  },
+  "rf:random": {
+   "n": 274,
+   "meets_wording": 8,
+   "vme_upper": 67,
+   "vme_lower": 49,
+   "vme": 36,
+   "me": 89,
+   "without_tuberculosis": {
+    "n": 252,
+    "meets_wording": 8
+   },
+   "screen": {
+    "shown_to_meet_both": 1,
+    "shown_to_miss_one": 250,
+    "not_decided": 23
+   },
+   "vme_n_under_table_8": 37,
+   "fewer_than_every_genome": 0
+  },
+  "gbt:random": {
+   "n": 274,
+   "meets_wording": 17,
+   "vme_upper": 57,
+   "vme_lower": 53,
+   "vme": 27,
+   "me": 77,
+   "without_tuberculosis": {
+    "n": 252,
+    "meets_wording": 17
+   },
+   "screen": {
+    "shown_to_meet_both": 1,
+    "shown_to_miss_one": 225,
+    "not_decided": 48
+   },
+   "vme_n_under_table_8": 37,
+   "fewer_than_every_genome": 0
+  },
+  "lasso:random": {
+   "n": 274,
+   "meets_wording": 14,
+   "vme_upper": 46,
+   "vme_lower": 49,
+   "vme": 24,
+   "me": 74,
+   "without_tuberculosis": {
+    "n": 252,
+    "meets_wording": 14
+   },
+   "screen": {
+    "shown_to_meet_both": 1,
+    "shown_to_miss_one": 231,
+    "not_decided": 42
+   },
+   "vme_n_under_table_8": 37,
+   "fewer_than_every_genome": 0
+  },
+  "catalog:random": {
+   "n": 253,
+   "meets_wording": 7,
+   "vme_upper": 91,
+   "vme_lower": 88,
+   "vme": 72,
+   "me": 99,
+   "without_tuberculosis": {
+    "n": 244,
+    "meets_wording": 7
+   },
+   "screen": {
+    "shown_to_meet_both": 0,
+    "shown_to_miss_one": 235,
+    "not_decided": 18
+   },
+   "vme_n_under_table_8": 34,
+   "fewer_than_every_genome": 0
+  },
+  "best:lineage": {
+   "n": 268,
+   "meets_wording": 14,
+   "vme_upper": 39,
+   "vme_lower": 35,
+   "vme": 20,
+   "me": 73,
+   "without_tuberculosis": {
+    "n": 246,
+    "meets_wording": 14
+   },
+   "screen": {
+    "shown_to_meet_both": 0,
+    "shown_to_miss_one": 239,
+    "not_decided": 29
+   },
+   "vme_n_under_table_8": 33,
+   "fewer_than_every_genome": 0
+  },
+  "scm:lineage": {
+   "n": 268,
+   "meets_wording": 12,
+   "vme_upper": 39,
+   "vme_lower": 36,
+   "vme": 21,
+   "me": 68,
+   "without_tuberculosis": {
+    "n": 246,
+    "meets_wording": 12
+   },
+   "screen": {
+    "shown_to_meet_both": 0,
+    "shown_to_miss_one": 240,
+    "not_decided": 28
+   },
+   "vme_n_under_table_8": 33,
+   "fewer_than_every_genome": 0
+  },
+  "cart:lineage": {
+   "n": 268,
+   "meets_wording": 13,
+   "vme_upper": 32,
+   "vme_lower": 37,
+   "vme": 21,
+   "me": 53,
+   "without_tuberculosis": {
+    "n": 246,
+    "meets_wording": 13
+   },
+   "screen": {
+    "shown_to_meet_both": 0,
+    "shown_to_miss_one": 238,
+    "not_decided": 30
+   },
+   "vme_n_under_table_8": 33,
+   "fewer_than_every_genome": 0
+  },
+  "rf:lineage": {
+   "n": 268,
+   "meets_wording": 3,
+   "vme_upper": 46,
+   "vme_lower": 34,
+   "vme": 28,
+   "me": 89,
+   "without_tuberculosis": {
+    "n": 246,
+    "meets_wording": 3
+   },
+   "screen": {
+    "shown_to_meet_both": 0,
+    "shown_to_miss_one": 257,
+    "not_decided": 11
+   },
+   "vme_n_under_table_8": 33,
+   "fewer_than_every_genome": 0
+  },
+  "gbt:lineage": {
+   "n": 268,
+   "meets_wording": 9,
+   "vme_upper": 37,
+   "vme_lower": 33,
+   "vme": 17,
+   "me": 54,
+   "without_tuberculosis": {
+    "n": 246,
+    "meets_wording": 9
+   },
+   "screen": {
+    "shown_to_meet_both": 1,
+    "shown_to_miss_one": 244,
+    "not_decided": 23
+   },
+   "vme_n_under_table_8": 33,
+   "fewer_than_every_genome": 0
+  },
+  "lasso:lineage": {
+   "n": 268,
+   "meets_wording": 11,
+   "vme_upper": 36,
+   "vme_lower": 34,
+   "vme": 19,
+   "me": 60,
+   "without_tuberculosis": {
+    "n": 246,
+    "meets_wording": 11
+   },
+   "screen": {
+    "shown_to_meet_both": 0,
+    "shown_to_miss_one": 242,
+    "not_decided": 26
+   },
+   "vme_n_under_table_8": 33,
+   "fewer_than_every_genome": 0
+  },
+  "catalog:lineage": {
+   "n": 249,
+   "meets_wording": 7,
+   "vme_upper": 91,
+   "vme_lower": 87,
+   "vme": 72,
+   "me": 96,
+   "without_tuberculosis": {
+    "n": 240,
+    "meets_wording": 7
+   },
+   "screen": {
+    "shown_to_meet_both": 0,
+    "shown_to_miss_one": 231,
+    "not_decided": 18
+   },
+   "vme_n_under_table_8": 32,
+   "fewer_than_every_genome": 0
+  }
+ },
+ "best_meets_wording": {
+  "random": [
+   {
+    "dataset": "acinetobacter_baumannii__ciprofloxacin",
+    "learner": "gbt",
+    "vme": {
+     "x": 9,
+     "n": 1319,
+     "lo": 0.003124677807216674,
+     "hi": 0.012913167361208455
+    },
+    "me": {
+     "x": 3,
+     "n": 121,
+     "rate": 0.024793388429752067
+    }
+   },
+   {
+    "dataset": "acinetobacter_baumannii__levofloxacin",
+    "learner": "gbt",
+    "vme": {
+     "x": 17,
+     "n": 760,
+     "lo": 0.013083146141855656,
+     "hi": 0.035573052383354786
+    },
+    "me": {
+     "x": 4,
+     "n": 159,
+     "rate": 0.025157232704402517
+    }
+   },
+   {
+    "dataset": "campylobacter_coli__ciprofloxacin",
+    "learner": "lasso",
+    "vme": {
+     "x": 0,
+     "n": 132,
+     "lo": 0.0,
+     "hi": 0.027559177723457784
+    },
+    "me": {
+     "x": 0,
+     "n": 259,
+     "rate": 0.0
+    }
+   },
+   {
+    "dataset": "campylobacter_coli__erythromycin",
+    "learner": "cart",
+    "vme": {
+     "x": 1,
+     "n": 78,
+     "lo": 0.00032453460909721626,
+     "hi": 0.06937274078560446
+    },
+    "me": {
+     "x": 0,
+     "n": 313,
+     "rate": 0.0
+    }
+   },
+   {
+    "dataset": "campylobacter_coli__nalidixic_acid",
+    "learner": "lasso",
+    "vme": {
+     "x": 3,
+     "n": 119,
+     "lo": 0.005229407817373603,
+     "hi": 0.07190798046104235
+    },
+    "me": {
+     "x": 0,
+     "n": 256,
+     "rate": 0.0
+    }
+   },
+   {
+    "dataset": "campylobacter_jejuni__tetracycline",
+    "learner": "lasso",
+    "vme": {
+     "x": 2,
+     "n": 357,
+     "lo": 0.0006791788916791109,
+     "hi": 0.020089674666995128
+    },
+    "me": {
+     "x": 4,
+     "n": 151,
+     "rate": 0.026490066225165563
+    }
+   },
+   {
+    "dataset": "enterococcus_faecium__ampicillin",
+    "learner": "gbt",
+    "vme": {
+     "x": 11,
+     "n": 1291,
+     "lo": 0.00426086907566047,
+     "hi": 0.015194326209577225
+    },
+    "me": {
+     "x": 5,
+     "n": 389,
+     "rate": 0.012853470437017995
+    }
+   },
+   {
+    "dataset": "enterococcus_faecium__vancomycin",
+    "learner": "scm",
+    "vme": {
+     "x": 4,
+     "n": 896,
+     "lo": 0.0012176665498381503,
+     "hi": 0.0113905849590486
+    },
+    "me": {
+     "x": 8,
+     "n": 845,
+     "rate": 0.009467455621301775
+    }
+   },
+   {
+    "dataset": "escherichia_coli__ceftiofur",
+    "learner": "scm",
+    "vme": {
+     "x": 2,
+     "n": 105,
+     "lo": 0.0023151367400751337,
+     "hi": 0.06711576030229277
+    },
+    "me": {
+     "x": 1,
+     "n": 98,
+     "rate": 0.01020408163265306
+    }
+   },
+   {
+    "dataset": "escherichia_coli__erythromycin",
+    "learner": "lasso",
+    "vme": {
+     "x": 0,
+     "n": 71,
+     "lo": 0.0,
+     "hi": 0.05062940795440435
+    },
+    "me": {
+     "x": 0,
+     "n": 134,
+     "rate": 0.0
+    }
+   },
+   {
+    "dataset": "neisseria_gonorrhoeae__ciprofloxacin",
+    "learner": "scm",
+    "vme": {
+     "x": 5,
+     "n": 1086,
+     "lo": 0.0014965618239492695,
+     "hi": 0.010711367299290842
+    },
+    "me": {
+     "x": 8,
+     "n": 660,
+     "rate": 0.012121212121212121
+    }
+   },
+   {
+    "dataset": "salmonella_enterica__ceftriaxone",
+    "learner": "cart",
+    "vme": {
+     "x": 14,
+     "n": 568,
+     "lo": 0.013539259442718127,
+     "hi": 0.04100943973725618
+    },
+    "me": {
+     "x": 5,
+     "n": 587,
+     "rate": 0.008517887563884156
+    }
+   },
+   {
+    "dataset": "salmonella_enterica__pefloxacin",
+    "learner": "lasso",
+    "vme": {
+     "x": 3,
+     "n": 142,
+     "lo": 0.004378218036953997,
+     "hi": 0.06049859125056517
+    },
+    "me": {
+     "x": 1,
+     "n": 206,
+     "rate": 0.0048543689320388345
+    }
+   },
+   {
+    "dataset": "shigella_sonnei__amikacin",
+    "learner": "cart",
+    "vme": {
+     "x": 5,
+     "n": 270,
+     "lo": 0.00603958017204324,
+     "hi": 0.042684536618850355
+    },
+    "me": {
+     "x": 3,
+     "n": 310,
+     "rate": 0.00967741935483871
+    }
+   },
+   {
+    "dataset": "shigella_sonnei__ceftriaxone",
+    "learner": "cart",
+    "vme": {
+     "x": 7,
+     "n": 439,
+     "lo": 0.006434263835342612,
+     "hi": 0.03257628275482788
+    },
+    "me": {
+     "x": 2,
+     "n": 724,
+     "rate": 0.0027624309392265192
+    }
+   },
+   {
+    "dataset": "shigella_sonnei__ciprofloxacin",
+    "learner": "gbt",
+    "vme": {
+     "x": 14,
+     "n": 606,
+     "lo": 0.012686465362002262,
+     "hi": 0.03845820305150488
+    },
+    "me": {
+     "x": 15,
+     "n": 791,
+     "rate": 0.018963337547408345
+    }
+   },
+   {
+    "dataset": "shigella_sonnei__gentamicin",
+    "learner": "gbt",
+    "vme": {
+     "x": 12,
+     "n": 513,
+     "lo": 0.01214395913746191,
+     "hi": 0.04050402762694533
+    },
+    "me": {
+     "x": 10,
+     "n": 775,
+     "rate": 0.012903225806451613
+    }
+   },
+   {
+    "dataset": "shigella_sonnei__nalidixic_acid",
+    "learner": "scm",
+    "vme": {
+     "x": 3,
+     "n": 544,
+     "lo": 0.001138712004535844,
+     "hi": 0.016031078742782034
+    },
+    "me": {
+     "x": 8,
+     "n": 310,
+     "rate": 0.025806451612903226
+    }
+   },
+   {
+    "dataset": "staphylococcus_aureus__moxifloxacin",
+    "learner": "cart",
+    "vme": {
+     "x": 1,
+     "n": 118,
+     "lo": 0.0002145346789260275,
+     "hi": 0.04631272790510382
+    },
+    "me": {
+     "x": 2,
+     "n": 69,
+     "rate": 0.028985507246376812
+    }
+   },
+   {
+    "dataset": "streptococcus_pneumoniae__cefuroxime",
+    "learner": "lasso",
+    "vme": {
+     "x": 3,
+     "n": 184,
+     "lo": 0.003375052501265935,
+     "hi": 0.04690656279572919
+    },
+    "me": {
+     "x": 10,
+     "n": 1548,
+     "rate": 0.006459948320413436
+    }
+   },
+   {
+    "dataset": "streptococcus_pneumoniae__penicillin",
+    "learner": "lasso",
+    "vme": {
+     "x": 6,
+     "n": 196,
+     "lo": 0.011315375226237046,
+     "hi": 0.06543606173033406
+    },
+    "me": {
+     "x": 18,
+     "n": 1494,
+     "rate": 0.012048192771084338
+    }
+   },
+   {
+    "dataset": "vibrio_cholerae__nalidixic_acid",
+    "learner": "lasso",
+    "vme": {
+     "x": 0,
+     "n": 49,
+     "lo": 0.0,
+     "hi": 0.07251926366427769
+    },
+    "me": {
+     "x": 1,
+     "n": 42,
+     "rate": 0.023809523809523808
+    }
+   }
+  ],
+  "lineage": [
+   {
+    "dataset": "campylobacter_coli__ciprofloxacin",
+    "learner": "lasso",
+    "vme": {
+     "x": 0,
+     "n": 132,
+     "lo": 0.0,
+     "hi": 0.027559177723457784
+    },
+    "me": {
+     "x": 0,
+     "n": 259,
+     "rate": 0.0
+    }
+   },
+   {
+    "dataset": "campylobacter_coli__nalidixic_acid",
+    "learner": "lasso",
+    "vme": {
+     "x": 3,
+     "n": 119,
+     "lo": 0.005229407817373603,
+     "hi": 0.07190798046104235
+    },
+    "me": {
+     "x": 0,
+     "n": 256,
+     "rate": 0.0
+    }
+   },
+   {
+    "dataset": "campylobacter_jejuni__tetracycline",
+    "learner": "lasso",
+    "vme": {
+     "x": 10,
+     "n": 357,
+     "lo": 0.01351246395537968,
+     "hi": 0.05090907149266671
+    },
+    "me": {
+     "x": 4,
+     "n": 151,
+     "rate": 0.026490066225165563
+    }
+   },
+   {
+    "dataset": "enterococcus_faecium__ampicillin",
+    "learner": "gbt",
+    "vme": {
+     "x": 9,
+     "n": 1291,
+     "lo": 0.003192550116962919,
+     "hi": 0.013192357249919906
+    },
+    "me": {
+     "x": 9,
+     "n": 389,
+     "rate": 0.02313624678663239
+    }
+   },
+   {
+    "dataset": "enterococcus_faecium__vancomycin",
+    "learner": "scm",
+    "vme": {
+     "x": 4,
+     "n": 896,
+     "lo": 0.0012176665498381503,
+     "hi": 0.0113905849590486
+    },
+    "me": {
+     "x": 18,
+     "n": 845,
+     "rate": 0.021301775147928994
+    }
+   },
+   {
+    "dataset": "escherichia_coli__erythromycin",
+    "learner": "lasso",
+    "vme": {
+     "x": 0,
+     "n": 71,
+     "lo": 0.0,
+     "hi": 0.05062940795440435
+    },
+    "me": {
+     "x": 0,
+     "n": 134,
+     "rate": 0.0
+    }
+   },
+   {
+    "dataset": "neisseria_gonorrhoeae__ciprofloxacin",
+    "learner": "scm",
+    "vme": {
+     "x": 17,
+     "n": 1086,
+     "lo": 0.009144651782868569,
+     "hi": 0.024945232204430512
+    },
+    "me": {
+     "x": 9,
+     "n": 660,
+     "rate": 0.013636363636363636
+    }
+   },
+   {
+    "dataset": "salmonella_enterica__pefloxacin",
+    "learner": "lasso",
+    "vme": {
+     "x": 3,
+     "n": 142,
+     "lo": 0.004378218036953997,
+     "hi": 0.06049859125056517
+    },
+    "me": {
+     "x": 1,
+     "n": 206,
+     "rate": 0.0048543689320388345
+    }
+   },
+   {
+    "dataset": "shigella_flexneri__trimethoprim",
+    "learner": "cart",
+    "vme": {
+     "x": 6,
+     "n": 280,
+     "lo": 0.007903552986266826,
+     "hi": 0.046055085627729364
+    },
+    "me": {
+     "x": 2,
+     "n": 82,
+     "rate": 0.024390243902439025
+    }
+   },
+   {
+    "dataset": "shigella_sonnei__amikacin",
+    "learner": "cart",
+    "vme": {
+     "x": 3,
+     "n": 270,
+     "lo": 0.0022972658375898253,
+     "hi": 0.03212619368930686
+    },
+    "me": {
+     "x": 9,
+     "n": 310,
+     "rate": 0.02903225806451613
+    }
+   },
+   {
+    "dataset": "shigella_sonnei__ceftriaxone",
+    "learner": "cart",
+    "vme": {
+     "x": 7,
+     "n": 439,
+     "lo": 0.006434263835342612,
+     "hi": 0.03257628275482788
+    },
+    "me": {
+     "x": 2,
+     "n": 724,
+     "rate": 0.0027624309392265192
+    }
+   },
+   {
+    "dataset": "shigella_sonnei__nalidixic_acid",
+    "learner": "scm",
+    "vme": {
+     "x": 9,
+     "n": 544,
+     "lo": 0.007592216676296292,
+     "hi": 0.031172782336849225
+    },
+    "me": {
+     "x": 8,
+     "n": 310,
+     "rate": 0.025806451612903226
+    }
+   },
+   {
+    "dataset": "streptococcus_agalactiae__tetracycline",
+    "learner": "lasso",
+    "vme": {
+     "x": 2,
+     "n": 104,
+     "lo": 0.0023374796086099367,
+     "hi": 0.06774489489176344
+    },
+    "me": {
+     "x": 1,
+     "n": 37,
+     "rate": 0.02702702702702703
+    }
+   },
+   {
+    "dataset": "streptococcus_pneumoniae__cefuroxime",
+    "learner": "lasso",
+    "vme": {
+     "x": 6,
+     "n": 184,
+     "lo": 0.01205905457427087,
+     "hi": 0.06962112960616879
+    },
+    "me": {
+     "x": 5,
+     "n": 1548,
+     "rate": 0.003229974160206718
+    }
+   }
+  ]
+ }
+}

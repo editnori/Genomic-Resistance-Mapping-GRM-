@@ -8,7 +8,9 @@ sweeping each distinct score as a cutoff. Scores are multiples of 1/32.
 
 In the default revision-7 report gbt has the best random-split balanced
 accuracy but its lineage fold 2 is a null fit, and lasso's random fold 4 is
-a null fit, so the best learner that calls every isolate is rf.
+a null fit, so the best learner that calls every isolate is rf. From
+revision 14 (EQUAL_SCORING_REVISION) a null fit's isolates score their
+fold's training prevalence, every row covers every isolate, and gbt is best.
 """
 import base64
 import copy
@@ -41,6 +43,7 @@ WRONG = {"random": {"scm": 12, "cart": 10, "rf": 4, "gbt": 2, "lasso": 6},
 COMPLEXITY = {"scm": 3.0, "cart": 7.0, "rf": 200.0, "gbt": 40.0, "lasso": 12.0}
 NULL_FITS = (("lineage", "gbt", 2), ("random", "lasso", 4))
 FEATURES = 20
+EQUAL_SCORING_REVISION = 14
 RF_IMPORTANCE = [{"feature": 7, "weight": 0.25}, {"feature": 2, "weight": 0.125}, {"feature": 11, "weight": 0.125}]
 SCOPE = ("Internal cross-validation on public BV-BRC genomes scored against reported R/S labels. "
          "This is not external or clinical validation.")
@@ -118,15 +121,40 @@ def roc(truth, scores):
     return points
 
 
+def prevalence(truth, test_fold, k):
+    """Resistant share of the isolates outside test fold k: a null fit's score."""
+    train = [t for t, f in zip(truth, test_fold) if f != k]
+    return sum(train) / len(train)
+
+
+def null_folds_of(row):
+    return [k for k, c in enumerate(row["fold_complexity"]) if row["learner"] in ("gbt", "lasso") and c == 0]
+
+
 def rescore(report):
     """Recompute every learner row's derived fields from its scores, as grm
-    would: called-only metrics, ROC, fold balanced accuracy, and no_call."""
+    would: metrics (of the called isolates before revision 14, of every
+    isolate from it, with a null fit's isolates refilled at their fold's
+    training prevalence and called_metrics beside), ROC, fold balanced
+    accuracy, and no_call."""
     truth = [s["resistant"] for s in report["samples"]]
     schema = report["schema"]
+    equal = report["evaluation"]["revision"] >= EQUAL_SCORING_REVISION
     for split in report["splits"]:
         test_fold = split.get("test_fold") or FOLDS[split["scheme"]]
         for row in split["learners"]:
             name, scores = row["learner"], row["scores"]
+            if equal and name != "catalog":
+                null = null_folds_of(row)
+                for i, f in enumerate(test_fold):
+                    if f in null:
+                        scores[i] = prevalence(truth, test_fold, f)
+                in_null = [i for i in range(len(truth)) if test_fold[i] in null]
+                row["no_call"] = {"resistant": sum(1 for i in in_null if truth[i]),
+                                  "susceptible": sum(1 for i in in_null if not truth[i])}
+                row.pop("called_metrics", None)
+                if in_null:
+                    row["called_metrics"] = rates(truth, [None if test_fold[i] in null else s for i, s in enumerate(scores)], name in RANKED)
             row["metrics"] = rates(truth, scores, name in RANKED)
             row["roc"] = roc(truth, scores) if name in RANKED else []
             if name == "catalog":
@@ -137,7 +165,7 @@ def rescore(report):
                 m = rates([truth[i] for i in held], [scores[i] for i in held], False)
                 fold_ba.append(None if m is None else m["balanced_accuracy"])
             row["fold_balanced_accuracy"] = fold_ba
-            if schema >= 2:
+            if schema >= 2 and not equal:
                 row["no_call"] = {"resistant": sum(1 for t, s in zip(truth, scores) if s is None and t),
                                   "susceptible": sum(1 for t, s in zip(truth, scores) if s is None and not t)}
     return report
@@ -248,6 +276,8 @@ def lite(learner_row, schema=2):
     out = dict.fromkeys(keys) if m is None else {k: m[k] for k in keys}
     if schema >= 2 and "no_call" in learner_row:
         out["no_call"] = learner_row["no_call"]
+    if "called_metrics" in learner_row:
+        out["null_fits_scored"] = True
     return out
 
 
@@ -276,6 +306,13 @@ def done_line(learner, ba, dataset=ID):
     if learner is None:
         return "    %s done in 3s (no learner calls every isolate)" % dataset
     return "    %s done in 3s (best random-split learner among those that call every isolate: %s %.3f)" % (dataset, learner, ba)
+
+
+def scored_done_line(learner, ba, dataset=ID):
+    """A revision-14 done line."""
+    if learner is None:
+        return "    %s done in 3s (no learner is scored on every isolate)" % dataset
+    return "    %s done in 3s (best random-split learner among those scored on every isolate: %s %.3f)" % (dataset, learner, ba)
 
 
 def old_done_line(learner, ba, dataset=ID):

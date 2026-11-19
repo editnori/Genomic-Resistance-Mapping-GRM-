@@ -13,6 +13,7 @@ import json
 import math
 import re
 import reprlib
+from collections import defaultdict
 
 SCHEMA = "ablation-report"
 SCHEMA_VERSION = 1
@@ -37,7 +38,12 @@ POOLED_FAMILIES = ("A", "B", "D")
 PRIMARY_CONTRAST_ENDPOINT = "log_loss"
 PRIMARY_POOLED_ENDPOINT = "r2_ll"
 # Contract section 12: ci_method is exactly one of these; "none" only on an undefined record.
-CI_METHODS = ("cluster_jackknife_t", "none")
+# repeat_fold_t and repeat_fold_corrected_t are the input comparison's paired t and corrected resampled t over
+# (repeat, outer fold) units, by learner
+# (stats.compare_units; main's rulings after VERIFY-H1STATS and after its first calibration failed).
+CI_METHODS = ("cluster_jackknife_t", "repeat_fold_t", "repeat_fold_corrected_t", "none")
+# That test's unit, a (repeat, outer fold) refit: few_clusters is about clusters, so it is false there.
+REPEAT_FOLD_UNIT = "repeat_fold"
 # Contract section 13: few_clusters is n_units < FEW_CLUSTERS; the exact sign-flip test cannot give
 # a pooled p below 2 / 2^S, so with fewer than MIN_TESTABLE_SPECIES species p < 0.05 is unreachable.
 FEW_CLUSTERS = 20
@@ -58,7 +64,15 @@ PARTITIONS = ("development", "confirmatory")
 ADJUSTMENTS = ("holm", "bh", "none")
 # Contract section 15 withdraws equivalent: no floor held the false-equivalence rate at 5%.
 DECISIONS = ("improves", "worse", "inconclusive")
-RUN_STATUSES = ("ok", "unavailable")
+# identical_cohort: an input-comparison arm whose genome set equals its baseline's, so it is not run.
+RUN_STATUSES = ("ok", "unavailable", "identical_cohort")
+# J's pairing rules (DECISIONS V-1). A run without `pairing` is paired by
+# same_plan; common_outer_test_set runs record their own cohort plans.
+PAIRINGS = ("same_plan", "k31_groups", "common_outer_test_set_balanced", "common_outer_test_set")
+SAME_PLAN = "same_plan"
+# Rules whose treatment scores a subset of the reference's samples and records
+# its own plans; the unbalanced one is kept for older records.
+SUBSET_PAIRINGS = ("common_outer_test_set_balanced", "common_outer_test_set")
 ALPHA = 0.05
 # H's BlockKind -> collapse priority (C=0 < H=1 < P=2 < N=3 < X=4 < K=5).
 H_KIND_PRIORITY = {"CuratedExact": 0, "Hierarchical": 1, "Presence": 2, "Count": 3,
@@ -360,8 +374,30 @@ def validate_predictions(rows, manifest=None):
                 c.fail(f"predictions[{i}].repeat", f"run {run['id']} has {run['repeats']} repeats")
             elif r["fold_plan_sha256"] != run["fold_plan_sha256"][r["repeat"]]:
                 c.fail(f"predictions[{i}].fold_plan_sha256", f"differs from run {run['id']}'s plan for this repeat")
+        _check_paired_samples(c, rows, runs)
     c.done()
     return rows
+
+
+def _check_paired_samples(c, rows, runs):
+    """A run paired to a reference arm scores the reference's samples (same_plan,
+    k31_groups) or a subset of them (SUBSET_PAIRINGS), per repeat."""
+    samples = defaultdict(set)
+    for r in rows:
+        samples[(r["dataset"], r["arm"], r["learner"], r["split"], r["repeat"])].add(r["sample_id"])
+    for (dataset, arm, learner, split), run in sorted(runs.items()):
+        pairing = run.get("pairing")
+        if pairing is None:
+            continue
+        for repeat in range(run["repeats"]):
+            own = samples.get((dataset, arm, learner, split, repeat), set())
+            ref = samples.get((dataset, pairing["reference_arm"], learner, split, repeat), set())
+            fits = own <= ref if pairing["rule"] in SUBSET_PAIRINGS else own == ref
+            if not fits:
+                c.fail(f"manifest.runs.{run['id']}",
+                       f"repeat {repeat} scores {len(own - ref)} samples outside, and misses {len(ref - own)} of, "
+                       f"reference arm {pairing['reference_arm']}'s samples; {pairing['rule']} needs "
+                       + ("a subset of them" if pairing["rule"] in SUBSET_PAIRINGS else "the same samples"))
 
 
 # Run manifest.
@@ -392,6 +428,15 @@ def _run_after(c, path, u):
             c.fail(f"{path}.fit_count", "an ok run has at least one fit")
     elif u["reason"] is None:
         c.fail(f"{path}.reason", "an unavailable run must give its reason")
+    pairing = u.get("pairing")
+    if pairing is not None:
+        own = pairing["arm_plan_sha256"]
+        if (own is not None) != (pairing["rule"] in SUBSET_PAIRINGS) and u["status"] == "ok":
+            c.fail(f"{path}.pairing.arm_plan_sha256", f"is set exactly when the rule is one of {SUBSET_PAIRINGS}")
+        elif own is not None and len(own) != u["repeats"]:
+            c.fail(f"{path}.pairing.arm_plan_sha256", f"needs one plan per repeat ({u['repeats']})")
+        if pairing["reference_arm"] == u["arm"]:
+            c.fail(f"{path}.pairing.reference_arm", "names the run's own arm")
 
 
 def _missingness_after(c, path, r):
@@ -430,17 +475,74 @@ RUN = record({
     "fold_plan_sha256": nullable(records(text(HEX64), nonempty=True)), "status": enum(RUN_STATUSES),
     "reason": nullable(text()), "metrics": mapping(nullable(number())),
     "fit_count": integer(0), "seconds": number(0), "predictions": nullable(text()),
+}, optional={
+    # An arm paired to a reference arm by another rule than identical plans
+    # (DECISIONS V-1); absent means same_plan with any arm of the same plan.
+    "pairing": record({
+        "rule": enum(PAIRINGS), "reference_arm": text(),
+        "arm_plan_sha256": nullable(records(text(HEX64), nonempty=True)),
+    }),
 }, after=_run_after)
 COMPUTE = record({
     "planned_fit_units": integer(0), "actual_seconds": number(0), "tiers_completed": strings(),
 })
+# Splits whose contrasts are descriptive only (main's ruling after the calibration study, 5 Nov 2026):
+# planned in family D, printed in their own block.
+DESCRIPTIVE_SPLITS = ("random",)
+# The split a sentinel arm is judged on.
+SENTINEL_SPLIT = "lineage"
+
+
+def _manifest_after(c, path, m):
+    if m.get("revision12_gate") == "not_required" and m.get("synthetic") is not True:
+        c.fail(f"{path}.revision12_gate", "only a synthetic run can skip the revision-12 gate")
+    arms = {u["arm"] for u in m["runs"]}
+    for i, arm in enumerate(m.get("sentinel_arms", [])):
+        if arm not in arms:
+            c.fail(f"{path}.sentinel_arms[{i}]", f"arm {arm} has no run")
+    for arm in m.get("sentinel_learners", {}):
+        if arm not in m.get("sentinel_arms", []):
+            c.fail(f"{path}.sentinel_learners.{arm}", "names an arm that is not a sentinel arm")
+    if "sentinel_adjust" in m and not m.get("sentinel_arms"):
+        c.fail(f"{path}.sentinel_adjust", "needs sentinel_arms")
+    _unique(c, f"{path}.base_rates", m.get("base_rates", []), lambda b: b["arm"], "arm")
+    for i, b in enumerate(m.get("base_rates", [])):
+        if b["arm"] not in arms:
+            c.fail(f"{path}.base_rates[{i}].arm", f"arm {b['arm']} has no run")
+        if (b["rate"] is None) != (b["seeds"] is None) or (b["rate"] is None and b["ci95"] is not None):
+            c.fail(f"{path}.base_rates[{i}]", "a rate needs its seeds; a rate not measured has no seeds or interval")
+
+
 MANIFEST = record({
     "schema_version": enum((SCHEMA_VERSION,)),
     "protocol_sha256": text(HEX64), "source_commit": text(COMMIT), "binary_sha256": text(HEX64),
     "blocks": records(BLOCK), "datasets": records(DATASET, nonempty=True),
     "missingness": records(MISSINGNESS), "group_proxy_audit": records(GROUP_PROXY),
     "runs": records(RUN, nonempty=True), "compute": COMPUTE,
-})
+}, optional={
+    # Arms exchangeable with their baseline (the input comparison's learner-seed twin): any decision on
+    # one makes every decision of that learner on that species unreliable.
+    "sentinel_arms": strings(),
+    # The input comparison's spec said "synthetic": true, so it ran without the revision-12 gate a real run needs
+    # (main's ruling on REVIEW-INPUT9 L1).
+    "synthetic": boolean,
+    # What the revision-12 gate did: "passed", or "not_required" when a synthetic spec on a synthetic RAW carried
+    # none (main's ruling on REVIEW-INTEG7 L2). A real run can only have passed it.
+    "revision12_gate": enum(("passed", "not_required")),
+    # A measured no-signal decision rate printed beside each contrast of the arm (main's rulings on
+    # REVIEW-INPUT2 and REVIEW-INPUT3 I-c: the rate of the arm's kind, or null when that kind has none).
+    # The input comparison's species pool: the union of the run's arms' cohorts, which its lineages and the
+    # fold keys of units outside the default depend on (main's ruling on REVIEW-INPUT4 M1).
+    "species_pool": record({"genomes": integer(1), "arms": strings(nonempty=True), "structure_sha256": text(HEX64)}),
+    # The input comparison's sentinels (main's ruling 3 after VERIFY-H1STATS): the learners each sentinel arm
+    # judges, and "none" when their family C contrasts sit outside BH, judged on their own p.
+    "sentinel_learners": mapping(strings(nonempty=True)),
+    "sentinel_adjust": enum(("none",)),
+    "base_rates": records(record({
+        "arm": text(), "rate": nullable(number(0, 1)), "ci95": nullable(interval), "seeds": nullable(integer(1)),
+        "source": text(),
+    }, optional={"kind": text()})),
+}, after=_manifest_after)
 
 
 def validate_manifest(m):
@@ -479,6 +581,18 @@ def validate_manifest(m):
             if fold_plans.setdefault((u["dataset"], u["split"], repeat), plan) != plan:
                 c.fail(f"{path}.fold_plan_sha256[{repeat}]",
                        "differs from another run's plan for the same dataset, split and repeat")
+    keyed = {(u["dataset"], u["arm"], u["learner"], u["split"]): u for u in m["runs"]}
+    for i, u in enumerate(m["runs"]):
+        pairing = u.get("pairing")
+        if pairing is None:
+            continue
+        ref = keyed.get((u["dataset"], pairing["reference_arm"], u["learner"], u["split"]))
+        if ref is None:
+            c.fail(f"manifest.runs[{i}].pairing.reference_arm",
+                   f"arm {pairing['reference_arm']} has no run for {u['dataset']}, {u['learner']}, {u['split']}")
+        elif ref.get("pairing") is not None:
+            c.fail(f"manifest.runs[{i}].pairing.reference_arm",
+                   f"arm {pairing['reference_arm']} is itself paired to another arm")
     c.done()
     return m
 
@@ -535,8 +649,13 @@ def _estimates(c, path, v, defined):
     unless it is family D. Then the decision must follow the rule."""
     values = ("estimate", "ci", "ci_tost", "p", "p_adj")
     before = len(c.errors)
-    if v["adjust"] != FAMILY_ADJUST[v["family"]]:
+    # A family C record with adjust none is a sentinel judged on its own p (main's ruling 3 after
+    # VERIFY-H1STATS); the report checks that it is one.
+    sentinel = v["family"] == "C" and v["adjust"] == "none"
+    if v["adjust"] != FAMILY_ADJUST[v["family"]] and not sentinel:
         c.fail(f"{path}.adjust", f"family {v['family']} uses {FAMILY_ADJUST[v['family']]}")
+    if sentinel and v["p_adj"] != v["p"]:
+        c.fail(f"{path}.adjust", "is none only on a sentinel judged on its own p, whose p_adj is its p")
     if not defined:
         for k in values:
             if v[k] is not None:
@@ -606,9 +725,16 @@ def _contrast_after(c, path, v):
         c.fail(f"{path}.claim_level", f"contrasts always carry {CONTRAST_LEVEL}; manual levels apply to features")
     if v["undefined_reason"] is None and v["ci_method"] == "none":
         c.fail(f"{path}.ci_method", "a defined record names its interval method")
-    if v["few_clusters"] != (v["n_units"] < FEW_CLUSTERS):
-        c.fail(f"{path}.few_clusters", f"must be n_units < {FEW_CLUSTERS}")
+    if v["few_clusters"] != (v["unit"] != REPEAT_FOLD_UNIT and v["n_units"] < FEW_CLUSTERS):
+        c.fail(f"{path}.few_clusters", f"must be n_units < {FEW_CLUSTERS}, and false on unit {REPEAT_FOLD_UNIT}")
     _jackknife_reason(c, path, v)
+    if (v["auroc_delta"] is None) != (v["auroc_ci"] is None):
+        c.fail(f"{path}.auroc_ci", "auroc_delta and auroc_ci are both null or both set")
+    elif v["auroc_delta"] is not None:
+        if v["endpoint"] != PRIMARY_CONTRAST_ENDPOINT:
+            c.fail(f"{path}.auroc_delta", f"is carried only beside a {PRIMARY_CONTRAST_ENDPOINT} decision")
+        elif not v["auroc_ci"][0] <= v["auroc_delta"] <= v["auroc_ci"][1]:
+            c.fail(f"{path}.auroc_ci", "must contain auroc_delta")
     if len(c.errors) == before:
         _estimates(c, path, v, v["undefined_reason"] is None)
 
@@ -621,6 +747,9 @@ CONTRAST = record({
     "p": nullable(number(0, 1)), "p_adj": nullable(number(0, 1)), "adjust": enum(ADJUSTMENTS),
     "margin": number(positive=True), "decision": enum(DECISIONS), "claim_level": enum(CLAIM_LEVELS),
     "undefined_resamples": integer(0), "undefined_reason": nullable(text()), "interval_label": text(),
+    "pairing": enum(PAIRINGS),
+    # J's descriptive AUROC delta beside a log-loss decision; it decides nothing.
+    "auroc_delta": nullable(number()), "auroc_ci": nullable(interval),
 }, after=_contrast_after)
 
 

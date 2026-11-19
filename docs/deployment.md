@@ -1,6 +1,6 @@
 # Deployment
 
-Until the Vast container was destroyed on 31 October 2026, genomicresistance.com was served by one `grm serve` process on it, bound to 127.0.0.1:8641, and published through a Cloudflare Tunnel whose connector ran on the same container. No host has served the site since; this page describes the toolkit as it ran there. The scripts in `scripts/deployment/` stage, switch, roll back and restore that process from immutable builds and report copies.
+Until the Vast container was destroyed on 31 October 2026, genomicresistance.com was served by one `grm serve` process on it, bound to 127.0.0.1:8641, and published through a Cloudflare Tunnel whose connector ran on the same container. No host has served the site since; this page describes the toolkit as it ran there. Its replacement, a Cloudflare Worker in front of an R2 bucket with no origin process, is in [static-hosting.md](static-hosting.md). The scripts in `scripts/deployment/` stage, switch, roll back and restore that process from immutable builds and report copies.
 
 They never deploy by default. `publish.sh`, `build-release.sh`, `stage.sh`, `activate.sh`, `rollback.sh`, `restore.sh` and `approve-legacy.sh` change the deployment root or the service only with `--apply`; without it they run their read-only checks, print what they would do, and write nothing under the root. `connector.sh` has no dry run: `check` and `status` change nothing, but `run` and `stop` act at once (see [Tunnel connector](#tunnel-connector)). `smoke.sh` and `status.sh` only send GET requests to 127.0.0.1, and they write nothing but a temporary directory that `smoke.sh` creates with `mktemp` and removes.
 
@@ -8,7 +8,7 @@ They never deploy by default. `publish.sh`, `build-release.sh`, `stage.sh`, `act
 
 - One host, one origin process. Activation stops the old process before starting the new one (the port allows one listener), so the site returns errors for the second or two between them. There is no standby host; if the container or its disk is lost, rebuild it from a source commit and a verified report backup.
 - The container has no service manager. Nothing restarts `grm serve` when it exits between boots; `restore.sh` must be run after a crash. On the Vast host, `/root/onstart.sh` started the tunnel connector at boot and ran `boot-active.sh`, which restored the pair `state/active` recorded through `restore.sh --apply`, tried once more after a failure, and otherwise fell back to the pinned revision-8 pair; see [After a container restart](#after-a-container-restart).
-- The tunnel, its public hostname route, the DNS record and the Cloudflare Access bypass application live in the Cloudflare account and are not managed here. The scripts check only the local origin. The public URL depends on Cloudflare, the domain registration and the connector's outbound HTTP/2 connections (QUIC failed from the Vast host).
+- The tunnel, its public hostname route, the DNS record and the Cloudflare Access bypass application live in the Cloudflare account and are not managed here. The Access application belongs to the hostname, not the tunnel: retiring the tunnel leaves it in place, and the R2 site needs it ([static-hosting.md](static-hosting.md), step 8). The scripts check only the local origin. The public URL depends on Cloudflare, the domain registration and the connector's outbound HTTP/2 connections (QUIC failed from the Vast host).
 - The scripts were tested by a per-file `bash -n`, by `tests/dry-run.sh`, and by `tests/apply.sh`, which runs every `--apply` path in a temporary root against a stub server compiled from C (not `grm`), a stub cloudflared (a shell script that execs `sleep`) and a stub `node` for the browser check (see [Checks](#checks)), and by a mutation harness, kept outside the repository, that reintroduced each reviewed defect into a temporary copy of the scripts (see [Checks](#checks)). None of them has been run against the live service, the real `grm`, the real cloudflared or the real browser check, and none checks the public site. Signals in the tests come from test hooks at named steps of the scripts and of the forked child before it execs, plus external TERM and KILL; a real `grm` or cloudflared that takes longer than about 10 s to listen or exit has not been tested.
 - A started process is tracked by a lock on a spawn marker that it inherits at the fork (see [Supervised starts](#supervised-starts)). That relies on the server keeping inherited descriptors open, which the stub does and Rust's standard library and Go's runtime do (they mark only their own descriptors close-on-exec); it has not been checked against the real binaries. A server that closed the marker is still found by its registered PID and start time, and the process group it leads is stopped until no member is left, even after the server itself has exited (tested with a descendant that closes the marker and ignores SIGTERM). Once the server has exited, though, its group's number can be reused by unrelated work, as after a container restart, so then only members tied to the start are signalled: seen in the group while the server lived, carrying its token (`GRM_DEPLOY_SPAWN`) or holding its marker. Any other member stops the resolution with nothing signalled and the journal kept (tested, including an unrelated group that took the number). So a descendant that clears its environment and closes the marker after the server has exited keeps the journal until it is resolved by hand. A process the server forks that closes the marker, or releases the inherited lock (`flock -u` on the marker's descriptor releases it for every process sharing it), and leaves the group is not signalled, but it still carries the start's token, so the stop fails and keeps the journal, naming it (tested). That needs its environment and descriptors to be readable, as a root operator's are on an ordinary host. Not found are: one that also clears its environment; any such process of a connector supervisor that was killed outright, because its token was not kept; and, where root lacks `CAP_SYS_PTRACE` (Docker's default), one that made itself non-dumpable, or runs as another user, after converting its lock to shared or closing the marker (the stop then succeeds without it; `/proc/locks` does not help, because it omits a lock whose taker, here a `flock` helper that has exited, is gone). One that converts the lock to a shared one is not signalled either, but the stop then fails and keeps the journal, naming it (tested).
 - `stage.sh` takes no root lock. A second stage on the same spare port is refused while the first one's journal names a live owner, but two stages started at the same instant on one port are not supported.
@@ -49,7 +49,7 @@ Labels and names may contain only letters, digits, `.`, `_` and single `-`.
 
 A tree verification, used for every publication and release below, requires that the tree holds only directories and regular files (a symlink, device, FIFO or socket anywhere fails), that its manifest lists each file once with a matching SHA-256, and that nothing is missing or unlisted. Only a release's own `MANIFEST.sha256` is left out of its listing; a stray `MANIFEST.sha256` inside a report is an unlisted file. A release's manifest must list `grm`, `COMMIT` and `dist/index.html`, and `COMMIT` must be one full commit id. An index check, used for every publication below, requires that `index.json` has the expected schema, `evaluation_revision` and dataset count, and lists exactly the reports in `datasets/`. From revision 8 on, every dataset must also give that revision as an integer `evaluation.revision`, both in its `index.json` row and in its own report; a missing or malformed one fails, and the message names the datasets. `grm report` stamps the index with its own revision but copies each dataset's audit, so the index alone would pass a root that still holds reports of an earlier revision, such as one left by a stopped run. Revision 7 and earlier keep the index checks only: the revision-7 publication predates this rule, and `activate.sh`, `rollback.sh` and `restore.sh` check it again against its approval.
 
-Run `grm intervals` on a report tree after `grm report` and before its `SOURCE.sha256` is written (README, "Intervals"). The tree verification needs the manifest to list every file, so intervals added after it make `publish.sh` refuse the tree, and a tree published without them shows no intervals.
+Run `grm intervals` and `grm baselines` on a report tree after `grm report` and before its `SOURCE.sha256` is written (README, "Intervals" and "Baselines"). The tree verification needs the manifest to list every file, so intervals or baselines (`report/baselines/` and `report/baselines.json`) added after it make `publish.sh` refuse the tree, and a tree published without them shows no intervals or baselines.
 
 Which script checks what:
 
@@ -103,33 +103,79 @@ bash $G/status.sh                   # read-only: state, live release, live healt
 
 ## Local preview
 
+Serve a released report tree. The site's tree is the [`data-rev14-274-20261112` release](https://github.com/editnori/Genomic-Resistance-Mapping-GRM-/releases/tag/data-rev14-274-20261112): `rev14-274-20261112.tar.zst` (179,708,807 bytes) holds its 575 files under one folder, `rev14-274-20261112/`, and `rev14-274-20261112.sha256` lists each of them as `SHA256  ./path`.
+
 ```bash
 cargo build --release --locked
 npm --prefix web ci && npm --prefix web run build
-./target/release/grm --data data/backups/revision7-published-20261025 serve --port 8641
+U=https://github.com/editnori/Genomic-Resistance-Mapping-GRM-/releases/download/data-rev14-274-20261112
+R=data/releases/rev14-274-20261112
+mkdir -p $R/report
+curl -fL -o $R/rev14-274-20261112.tar.zst $U/rev14-274-20261112.tar.zst
+curl -fL -o $R/rev14-274-20261112.sha256 $U/rev14-274-20261112.sha256
+echo "c67155f598dbb1ebe1a4ab908e793124ebc058430a33c1c67d7e2058910256de  $R/rev14-274-20261112.tar.zst" | sha256sum --strict -c
+tar --zstd -xf $R/rev14-274-20261112.tar.zst -C $R/report --strip-components=1
+(cd $R/report && sha256sum --quiet --strict -c ../rev14-274-20261112.sha256)
+./target/release/grm --data $R serve --port 8641
 ```
 
-`--data` names a root that contains `report/`; the verified backup has that layout. Open <http://127.0.0.1:8641>. For the Vite dev server, set `GRM_REPORT_DIR=data/backups/revision7-published-20261025/report`.
+`--data` names a root that contains `report/`, and `--strip-components=1` puts the release's folder there. Open <http://127.0.0.1:8641>. For the Vite dev server, set `GRM_REPORT_DIR=$R/report`. `tar --zstd` needs GNU tar 1.31 or newer and `zstd`. Other releases are laid out differently, so list one with `tar -tf` before unpacking it. The revision 9 tree, `grm-release-rev9-275-20261030.tar.gz` in the [`data-rev9-275-20261030` release](https://github.com/editnori/Genomic-Resistance-Mapping-GRM-/releases/tag/data-rev9-275-20261030), holds `data/report/` with the hash list `SOURCE.sha256` beside `data/`: unpack it into its own folder with `tar -xzf`, check it from `data/report` with `sha256sum --quiet --strict -c ../../SOURCE.sha256`, and serve it with `--data <folder>/data`.
 
-## Verified backup
+On 15 November 2026 these steps ran with the release's own file, already on the host with the sha256 above, in place of the two downloads: the tree check passed, and `grm serve`, built at `852ebc9`, answered 200 for `index.json`, `corpus.json`, `SKIPS.json` and all 274 dataset reports the index lists, each byte for byte the release's file. The web app was not built for that check; a one-line page stood in for `web/dist` (`grm serve --app`).
 
-`data/backups/revision7-published-20261025` holds the published revision-7 report (252 files: index, corpus, 237 dataset and 13 species reports) with `SOURCE.sha256`, plus the curated inputs, logs and receipts that validate it; its `README.md` describes the checks. Do not modify it. Verify it before use:
+### Browser check on a tree with baselines files
+
+The release holds no baselines files. To check the pages that read them, write them into a copy of the tree with `grm baselines` ([docs/baselines.md](baselines.md)), then serve the copy and run the check on it. `P` is a folder holding `playwright-core` installed outside the app, and `GRM_CHROMIUM` names the Chromium or Chrome to launch.
 
 ```bash
-B=data/backups/revision7-published-20261025
-(cd $B/report && sha256sum --quiet --strict -c ../SOURCE.sha256)
-python3 -I -B $B/validation/run-check-results.py
+D=$(mktemp -d) && mkdir -p $D/report && cp -a $R/report/. $D/report
+unshare -rn ./target/release/grm --data $D baselines
+(cd web && npm run build && GRM_REPORT_DIR=$D/report npm run preview -- --host 127.0.0.1 --port 4173 --strictPort) &
+GRM_CHROMIUM=/usr/bin/google-chrome node web/scripts/browser-check.cjs $P/node_modules/playwright-core <out-dir> http://127.0.0.1:4173 $D/report
 ```
 
-To make a publication from it on a host, copy `report/` and `SOURCE.sha256` there, then:
+The synthetic `full` shape (`web/scripts/synthetic-report.mts --shape full`) has baselines files of its own: fixture values, not `grm baselines` output, with one model level with its constant, one below it, one file with `confirmed: false`, and one MIC dataset with no file. The other three shapes and the release have none, so between them the check reads both cases.
+
+The check's last block, `baselineChecks`, reads the baselines files, the summary and the bundled `web/src/data/clindamycin-labels.json`, applies the pins this page and [docs/clindamycin-labels.md](clindamycin-labels.md) give, and checks the pages against them:
+
+- the overview, the datasets table and the methods page request the summary once and no dataset's file;
+- each MIC constant and clindamycin mark in the datasets table, and the overview's and the methods page's figures;
+- on each dataset report, the MIC sentence, the line under the heatmap, the lineage baseline in the learner table, each row's lead with its words for a screen reader, and the clindamycin note;
+- the same pages with `index.json` or a report served with one byte more, which must show no constant, baseline or note;
+- the width of the MIC text column beside the heatmap on every MIC dataset: 300 px or more at 1024 px and 500 px or more at 1440 px (at `1721a08` the narrowest was 310 and 536 px, on P. aeruginosa vs meropenem, and the same at `318c3ac`). A report on which the check finds no column fails; the check skips only on a tree with no MIC dataset.
+
+A 404 for `baselines.json` or `baselines/<id>.json` is the tree without them, not an error. `GRM_CHECK_PART=baselines` runs that block alone, for a quick pass on one page change, and `GRM_CHECK_PART=present` runs Present alone at each size and theme; the result file says `part: "baselines"` or `part: "present"`, and only a run of every part stands for the check.
+
+Present runs at 1280x720, 1440x900, 390x844 and 1024x768, in both themes. A figure slide whose title, answer, figure and caption do not fit one page takes a second page (`web/src/present/paging.ts`): page 1 shows the title, the answer and the figure, and page 2 the title and the caption. `figure above caption` reads every page that shows its slide whole, as before. On a slide split this way, the check reads page 1 for the whole figure and no caption, page 2 for the same title and the whole caption with no figure, and the deck's one-page copy of the slide for proof that one page could not hold it. The copies themselves are held on every page past the title: one for each of the 15 figure slides, each within 1 px of the live slide's width. The height each copy lays its slide out in changes by 1 px or less from page to page, and on a page that shows that copy's own slide whole, it is within 1 px of the live slide's height. A copy whose slide takes more than one page at that size is held to the same height on every page, and to no live height.
+
+On 15 November 2026 the check at `e9732c1` ran this way on six trees, on 16 November the check and the app at `e127ff6`, and on 18 November the check and the app at `318c3ac`, each with Chrome 151.0.7922.108, playwright-core 1.56.1 and Node 22.23.2, the preview and the browser in one network namespace with loopback only. Checks passed of those run, each with 0 script errors:
+
+| Tree | `e9732c1` | Skipped | `e127ff6` | Skipped | `318c3ac` | Skipped |
+|---|---|---|---|---|---|---|
+| synthetic `base` | 2201 of 2201 | 69 | 2655 of 2655 | 71 | 2663 of 2663 | 71 |
+| synthetic `r11` | 2213 of 2213 | 57 | 2667 of 2667 | 59 | 2675 of 2675 | 59 |
+| synthetic `wide` | 2223 of 2223 | 57 | 2677 of 2677 | 59 | 2685 of 2685 | 59 |
+| synthetic `full` | 2249 of 2251 | 40 | 2727 of 2727 | 42 | 2735 of 2735 | 42 |
+| rev14 as released | 2352 of 2352 | 6 | 2834 of 2834 | 6 | 2842 of 2842 | 6 |
+| rev14 after `grm baselines` | 2360 of 2362 | 3 | 2866 of 2866 | 3 | 2874 of 2874 | 3 |
+
+Each skip names what the tree lacks, such as a release summary for a synthetic revision or a file with `confirmed: false` in the release, or, on the release, the 138 reports with neither an MIC model nor a clindamycin entry, left out to bound the run. The checks `e127ff6` adds to `e9732c1`'s are Present at 1024x768 in both themes (454 on each synthetic tree; 482 on the release, whose panel slide takes two pages at that size), and on the two trees with `baselines.json` 22 at 390x844: the MIC slide's second page in each theme takes the 9 checks every page gets, and its two pages take the 3 checks of a caption split in place of one `figure above caption`. The two skips more on each synthetic tree are the 1024x768 pair of the bars slide's wording check, which needs a release summary. The 8 checks `318c3ac` adds to `e127ff6`'s are the copies check above, one at each size and theme; every other check, its outcome and every skip are the same. At `318c3ac` the six trees ran twice, with the same outcome for every check.
+
+At `e9732c1` the two failures on each tree with `baselines.json` were one page defect: at 390 px, in both themes, the MIC slide's longer headline and caption left its strip less height than it draws, so the axis printed over the caption (`slide 13` or `slide 14 figure above caption`). It is fixed since `48dd11a`: on those two trees at 390 px the MIC slide takes two pages in both themes, the title, the answer and the whole strip on the first, and the title and the whole caption on the second. No other slide's page count changed at the four sizes where the check reads every slide. In a shorter window, such as 1280x560, where the check reads only "Newly deposited genomes" and "Input settings against the default", "The five learners compared" also takes a caption page on every tree, and the MIC slide on the two trees with `baselines.json`; there the rule slide's first page still runs its caption past the slide (108.5 px on the synthetic trees, 113.84 px on the release), as at `e9732c1`.
+
+## Publish a released tree
+
+`publish.sh` takes a report tree and a list of its files' hashes in the form `SHA256  ./path`. A release's `.sha256` file has that form, so a tree checked as above can be published as it is. On a host, copy `$R/report` and `$R/rev14-274-20261112.sha256` there first.
 
 ```bash
-rsync -a $B/report $B/SOURCE.sha256 vast:/root/grm-incoming-rev7/
-# on the host
-export GRM_EXPECT_REVISION=7 GRM_EXPECT_DATASETS=237
-bash $G/publish.sh /root/grm-incoming-rev7/report /root/grm-incoming-rev7/SOURCE.sha256 rev7-restored          # dry run
-bash $G/publish.sh /root/grm-incoming-rev7/report /root/grm-incoming-rev7/SOURCE.sha256 rev7-restored --apply
+export GRM_EXPECT_REVISION=14 GRM_EXPECT_DATASETS=274
+bash $G/publish.sh $R/report $R/rev14-274-20261112.sha256 rev14-274-20261112          # dry run
+bash $G/publish.sh $R/report $R/rev14-274-20261112.sha256 rev14-274-20261112 --apply
 ```
+
+The dry run passed on 15 November 2026 on the tree checked above, and wrote nothing under the root; with `GRM_EXPECT_DATASETS=275` it refused the tree (exit 1).
+
+History: until the Vast host was destroyed, this page previewed and published from `data/backups/revision7-published-20261025`, a copy of the published revision-7 report (237 dataset reports) with the files that validated it. That copy was on the laptop only, and no release holds the revision-7 reports, so no command here reads it.
 
 `publish.sh` verifies the source tree and checks its index against `GRM_EXPECT_*` first, refuses an existing name, copies into `published/NAME.partial`, verifies the copy, makes it read-only and renames it into place. `GRM_EXPECT_REVISION` and `GRM_EXPECT_DATASETS` are required for `publish.sh`, `stage.sh` and `approve-legacy.sh`: set them to the report's revision and dataset count (for example 11 and 275).
 

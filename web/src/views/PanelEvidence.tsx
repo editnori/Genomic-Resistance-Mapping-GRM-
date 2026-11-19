@@ -4,7 +4,7 @@
 
 import { useState } from "react";
 import type { CatalogRow, Manifest } from "../data/schema";
-import { capitalize, int, LEARNER_LABEL, pct, plural, speciesShort } from "../data/format";
+import { capitalize, datasetTitle, hasEverydayName, int, LEARNER_LABEL, pct, plural, speciesOption, speciesShort } from "../data/format";
 import { applyAxes, countBy, memberTest, type Axis } from "../data/facets";
 import { BARS } from "../data/metrics";
 import { classPools, distinctResistant, joinPanels, noCallWords, panelsWithoutBest, pool, share, type PanelRowJoined } from "../data/derive/tests";
@@ -39,8 +39,8 @@ const rowColumns: Column<PanelRowJoined>[] = [
     firstDir: "asc",
     cell: (r) => (
       <span className="block">
-        <span className="block">{capitalize(r.antibiotic)}</span>
-        <span className="block text-tiny font-normal italic text-muted-text">{speciesShort(r.species)}</span>
+        <span className="block">{datasetTitle(r)}</span>
+        {hasEverydayName(r.species) ? <span className="block text-tiny font-normal italic text-muted-text">{speciesShort(r.species)}</span> : null}
       </span>
     ),
   },
@@ -123,7 +123,7 @@ export const PanelEvidence = ({ manifest, onOpen }: { manifest: Manifest; onOpen
         <Dropdown
           ariaLabel="Species"
           rest="All species"
-          options={[...new Set(all.map((r) => r.species))].sort().map((s) => ({ id: s, label: s, count: speciesCounts.get(s) ?? 0 }))}
+          options={[...new Set(all.map((r) => r.species))].sort().map((s) => ({ id: s, label: speciesOption(s), count: speciesCounts.get(s) ?? 0 }))}
           mode={{ kind: "many", value: f.species, onChange: (species) => setF({ ...f, species }) }}
         />
         <Dropdown
@@ -148,6 +148,10 @@ export const PanelEvidence = ({ manifest, onOpen }: { manifest: Manifest; onOpen
         <p className="prose-measure">No panel result matches these filters.</p>
       ) : (
         <>
+          <p className="prose-measure">
+            A PCR panel is a lab test that looks for a short list of resistance genes. Here each panel is run in software on the assembled genomes, and a resistant isolate
+            counts as found when its genome carries one of the panel&apos;s targets.
+          </p>
           <p className="prose-measure">
             Across {plural(byPanel.length, "panel")} and {plural(pooled.datasets, "panel and dataset pair")} over {plural(distinct.datasets, "dataset")} with {int(distinct.resistant)} distinct resistant isolates, targets are found in{" "}
             {pct(share(pooled.caught, pooled.calledResistant))} of {int(pooled.calledResistant)} resistant evaluations with a panel call; {BEST_LEARNER_WORDS} calls {pct(share(pooled.modelCaught, pooled.modelResistant))} of {int(pooled.modelResistant)} resistant.
@@ -250,7 +254,7 @@ export const PanelEvidence = ({ manifest, onOpen }: { manifest: Manifest; onOpen
             <p className="type-note mt-2">
               Found is resistant isolates with a panel call whose assembled genome carries a target, over the resistant isolates the panel calls; Specificity is susceptible isolates with a
               panel call and no target, over the susceptible isolates it calls. No call counts isolates whose genome carries none of a probe assay&apos;s k-mers: they are neither found nor
-              missed. Learner is the share of all resistant isolates {BEST_LEARNER_WORDS} calls resistant. VME and ME are read against the FDA-style bars in their headers.
+              missed. Learner is the share of all resistant isolates {BEST_LEARNER_WORDS} calls resistant. VME and ME are read against the limits in their headers, adapted from FDA&apos;s 2009 guidance for growth-based susceptibility test systems as a research screen.
             </p>
           </div>
         </>

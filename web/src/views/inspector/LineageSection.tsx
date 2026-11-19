@@ -49,6 +49,7 @@ export const LineageSection = ({ r }: { r: DatasetReport }) => {
     <Section
       id="ds-lineages"
       title="Lineages"
+      question="Each dot is one genome of this species, placed so that close relatives sit near each other; a lineage is a group of close relatives. Where resistant dots cluster, resistance follows lineages."
       answer={`Resistant isolates fall in ${plural(spread.lineages, "lineage")} of ${int(r.counts.lineages)}; the three with the most hold ${pct(spread.share)} of them.`}
       right={
         best !== undefined ? (

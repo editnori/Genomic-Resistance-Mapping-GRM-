@@ -1,0 +1,275 @@
+dataset_id	species_slug	antibiotic	cohort_R	cohort_S	inscope_R	inscope_S	qc_R	qc_S	xdup_R	xdup_S	wdup_R	wdup_S	primary_R	primary_S	samestudy_R	samestudy_S	eligible_primary	eligible_same_study	primary_salmonella_tags
+acinetobacter_baumannii__amikacin	acinetobacter_baumannii	amikacin	785	492	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+acinetobacter_baumannii__ampicillin_sulbactam	acinetobacter_baumannii	ampicillin/sulbactam	555	434	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+acinetobacter_baumannii__cefepime	acinetobacter_baumannii	cefepime	412	25	32	1	31	1	31	1	31	1	31	1	0	0	no	no	
+acinetobacter_baumannii__cefotaxime	acinetobacter_baumannii	cefotaxime	778	30	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+acinetobacter_baumannii__ceftazidime	acinetobacter_baumannii	ceftazidime	1087	160	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+acinetobacter_baumannii__ceftriaxone	acinetobacter_baumannii	ceftriaxone	1011	59	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+acinetobacter_baumannii__ciprofloxacin	acinetobacter_baumannii	ciprofloxacin	1319	121	33	1	32	1	32	1	32	1	32	1	0	0	no	no	
+acinetobacter_baumannii__doripenem	acinetobacter_baumannii	doripenem	61	152	28	4	27	4	27	4	27	4	27	4	0	0	no	no	
+acinetobacter_baumannii__doxycycline	acinetobacter_baumannii	doxycycline	107	60	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+acinetobacter_baumannii__gentamicin	acinetobacter_baumannii	gentamicin	1204	138	20	1	19	1	19	1	19	1	19	1	0	0	no	no	
+acinetobacter_baumannii__imipenem	acinetobacter_baumannii	imipenem	794	750	28	6	27	6	27	6	27	6	27	6	0	0	no	no	
+acinetobacter_baumannii__levofloxacin	acinetobacter_baumannii	levofloxacin	760	159	33	1	32	1	32	1	32	1	32	1	0	0	no	no	
+acinetobacter_baumannii__meropenem	acinetobacter_baumannii	meropenem	455	211	30	3	29	3	29	3	29	3	29	3	0	0	no	no	
+acinetobacter_baumannii__minocycline	acinetobacter_baumannii	minocycline	28	111	1	20	0	20	0	20	0	20	0	20	0	0	no	no	
+acinetobacter_baumannii__moxifloxacin	acinetobacter_baumannii	moxifloxacin	60	31	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+acinetobacter_baumannii__sulfamethoxazole_trimethoprim	acinetobacter_baumannii	sulfamethoxazole/trimethoprim	962	152	34	0	33	0	33	0	33	0	33	0	0	0	no	no	
+acinetobacter_baumannii__tetracycline	acinetobacter_baumannii	tetracycline	759	203	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+acinetobacter_baumannii__tobramycin	acinetobacter_baumannii	tobramycin	681	300	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+campylobacter_coli__azithromycin	campylobacter_coli	azithromycin	78	311	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+campylobacter_coli__ciprofloxacin	campylobacter_coli	ciprofloxacin	132	259	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+campylobacter_coli__clindamycin	campylobacter_coli	clindamycin	94	295	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+campylobacter_coli__erythromycin	campylobacter_coli	erythromycin	78	313	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+campylobacter_coli__gentamicin	campylobacter_coli	gentamicin	65	326	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+campylobacter_coli__nalidixic_acid	campylobacter_coli	nalidixic acid	119	256	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+campylobacter_coli__telithromycin	campylobacter_coli	telithromycin	53	321	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+campylobacter_coli__tetracycline	campylobacter_coli	tetracycline	304	87	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+campylobacter_jejuni__ciprofloxacin	campylobacter_jejuni	ciprofloxacin	113	395	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+campylobacter_jejuni__clindamycin	campylobacter_jejuni	clindamycin	25	483	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+campylobacter_jejuni__nalidixic_acid	campylobacter_jejuni	nalidixic acid	110	396	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+campylobacter_jejuni__tetracycline	campylobacter_jejuni	tetracycline	357	151	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+clostridioides_difficile__azithromycin	clostridioides_difficile	azithromycin	91	112	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+clostridioides_difficile__ceftriaxone	clostridioides_difficile	ceftriaxone	90	46	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+clostridioides_difficile__clarithromycin	clostridioides_difficile	clarithromycin	92	111	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+clostridioides_difficile__moxifloxacin	clostridioides_difficile	moxifloxacin	86	118	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+corynebacterium_diphtheriae__sulfamethoxazole_trimethoprim	corynebacterium_diphtheriae	sulfamethoxazole/trimethoprim	28	208	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+corynebacterium_diphtheriae__tetracycline	corynebacterium_diphtheriae	tetracycline	46	197	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+corynebacterium_diphtheriae__trimethoprim	corynebacterium_diphtheriae	trimethoprim	30	199	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+enterobacter_cloacae__cefepime	enterobacter_cloacae	cefepime	70	33	22	49	22	49	22	49	22	49	0	0	22	49	no	no	
+enterobacter_cloacae__ciprofloxacin	enterobacter_cloacae	ciprofloxacin	67	43	25	46	25	46	25	46	25	46	0	0	25	46	no	yes	
+enterobacter_cloacae__gentamicin	enterobacter_cloacae	gentamicin	27	77	2	67	2	67	2	67	2	67	0	0	2	67	no	no	
+enterobacter_cloacae__imipenem	enterobacter_cloacae	imipenem	58	28	22	45	22	45	22	45	22	45	0	0	22	45	no	no	
+enterobacter_cloacae__levofloxacin	enterobacter_cloacae	levofloxacin	58	46	24	46	24	46	24	46	24	46	0	0	24	46	no	no	
+enterobacter_cloacae__meropenem	enterobacter_cloacae	meropenem	40	59	19	49	19	49	19	49	19	49	0	0	19	49	no	no	
+enterobacter_cloacae__sulfamethoxazole_trimethoprim	enterobacter_cloacae	sulfamethoxazole/trimethoprim	41	39	27	44	27	44	27	44	27	44	0	0	27	44	no	yes	
+enterobacter_cloacae__tobramycin	enterobacter_cloacae	tobramycin	45	54	6	61	6	61	6	61	6	61	0	0	6	61	no	no	
+enterobacter_cloacae__trimethoprim	enterobacter_cloacae	trimethoprim	38	86	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+enterococcus_faecium__ampicillin	enterococcus_faecium	ampicillin	1291	389	325	39	323	39	323	39	323	39	0	0	323	39	no	yes	
+enterococcus_faecium__chloramphenicol	enterococcus_faecium	chloramphenicol	30	50	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+enterococcus_faecium__clindamycin	enterococcus_faecium	clindamycin	619	282	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+enterococcus_faecium__dalfopristin_quinupristin	enterococcus_faecium	dalfopristin/quinupristin	112	1006	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+enterococcus_faecium__daptomycin	enterococcus_faecium	daptomycin	55	278	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+enterococcus_faecium__doxycycline	enterococcus_faecium	doxycycline	136	209	200	103	198	103	198	103	198	103	0	0	198	103	no	yes	
+enterococcus_faecium__erythromycin	enterococcus_faecium	erythromycin	1063	88	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+enterococcus_faecium__gentamicin	enterococcus_faecium	gentamicin	396	949	30	326	30	324	30	324	30	324	0	0	30	324	no	yes	
+enterococcus_faecium__kanamycin	enterococcus_faecium	kanamycin	612	332	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+enterococcus_faecium__linezolid	enterococcus_faecium	linezolid	70	1297	2	357	2	355	2	355	2	355	0	0	2	355	no	no	
+enterococcus_faecium__streptomycin	enterococcus_faecium	streptomycin	488	751	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+enterococcus_faecium__teicoplanin	enterococcus_faecium	teicoplanin	516	676	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+enterococcus_faecium__tetracycline	enterococcus_faecium	tetracycline	717	241	275	83	273	83	273	83	273	83	0	0	273	83	no	yes	
+enterococcus_faecium__vancomycin	enterococcus_faecium	vancomycin	896	845	300	65	298	65	298	65	298	65	0	0	298	65	no	yes	
+escherichia_coli__amikacin	escherichia_coli	amikacin	30	1095	66	613	66	613	66	613	66	613	64	528	2	85	yes	no	
+escherichia_coli__amoxicillin_clavulanate	escherichia_coli	amoxicillin/clavulanate	548	567	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+escherichia_coli__ampicillin	escherichia_coli	ampicillin	1596	369	611	76	611	76	611	76	611	76	547	53	64	23	yes	no	
+escherichia_coli__ampicillin_sulbactam	escherichia_coli	ampicillin/sulbactam	142	141	369	78	369	78	369	78	369	78	369	78	0	0	yes	no	
+escherichia_coli__aztreonam	escherichia_coli	aztreonam	225	474	389	178	389	178	389	178	389	178	349	133	40	45	yes	yes	
+escherichia_coli__cefazolin	escherichia_coli	cefazolin	322	92	507	65	507	65	507	65	507	65	451	40	56	25	yes	yes	
+escherichia_coli__cefepime	escherichia_coli	cefepime	211	913	284	213	284	213	284	213	284	213	255	155	29	58	yes	yes	
+escherichia_coli__cefotaxime	escherichia_coli	cefotaxime	615	534	483	201	483	201	483	201	483	201	438	159	45	42	yes	yes	
+escherichia_coli__cefoxitin	escherichia_coli	cefoxitin	399	667	86	470	86	470	86	470	86	470	58	416	28	54	yes	yes	
+escherichia_coli__cefpodoxime	escherichia_coli	cefpodoxime	103	72	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+escherichia_coli__cefpodoxime_clavulanate	escherichia_coli	cefpodoxime/clavulanate	101	35	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+escherichia_coli__ceftazidime	escherichia_coli	ceftazidime	601	865	215	397	215	397	215	397	215	397	179	349	36	48	yes	yes	
+escherichia_coli__ceftiofur	escherichia_coli	ceftiofur	105	98	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+escherichia_coli__ceftriaxone	escherichia_coli	ceftriaxone	438	485	45	42	45	42	45	42	45	42	0	0	45	42	no	yes	
+escherichia_coli__cefuroxime	escherichia_coli	cefuroxime	272	276	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+escherichia_coli__cephalothin	escherichia_coli	cephalothin	278	194	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+escherichia_coli__chloramphenicol	escherichia_coli	chloramphenicol	250	459	496	87	496	87	496	87	496	87	496	87	0	0	yes	no	
+escherichia_coli__ciprofloxacin	escherichia_coli	ciprofloxacin	826	789	564	95	564	95	564	95	564	95	513	62	51	33	yes	yes	
+escherichia_coli__colistin	escherichia_coli	colistin	50	189	14	53	14	53	14	53	14	53	10	53	4	0	no	no	
+escherichia_coli__doxycycline	escherichia_coli	doxycycline	147	80	291	39	291	39	291	39	291	39	291	39	0	0	yes	no	
+escherichia_coli__ertapenem	escherichia_coli	ertapenem	205	615	31	141	31	141	31	141	31	141	0	85	31	56	no	yes	
+escherichia_coli__erythromycin	escherichia_coli	erythromycin	71	134	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+escherichia_coli__gentamicin	escherichia_coli	gentamicin	455	1240	357	237	357	237	357	237	357	237	341	169	16	68	yes	no	
+escherichia_coli__imipenem	escherichia_coli	imipenem	113	501	30	570	30	570	30	570	30	570	15	507	15	63	no	no	
+escherichia_coli__levofloxacin	escherichia_coli	levofloxacin	294	109	478	80	478	80	478	80	478	80	428	46	50	34	yes	yes	
+escherichia_coli__meropenem	escherichia_coli	meropenem	82	1457	31	644	31	644	31	644	31	644	16	580	15	64	no	no	
+escherichia_coli__nalidixic_acid	escherichia_coli	nalidixic acid	164	242	484	85	484	85	484	85	484	85	484	85	0	0	yes	no	
+escherichia_coli__nitrofurantoin	escherichia_coli	nitrofurantoin	46	436	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+escherichia_coli__norfloxacin	escherichia_coli	norfloxacin	41	156	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+escherichia_coli__piperacillin_tazobactam	escherichia_coli	piperacillin/tazobactam	292	687	32	52	32	52	32	52	32	52	0	0	32	52	no	yes	
+escherichia_coli__streptomycin	escherichia_coli	streptomycin	254	132	471	98	471	98	471	98	471	98	471	98	0	0	yes	no	
+escherichia_coli__sulfamethoxazole	escherichia_coli	sulfamethoxazole	161	180	23	1	23	1	23	1	23	1	23	1	0	0	no	no	
+escherichia_coli__sulfamethoxazole_trimethoprim	escherichia_coli	sulfamethoxazole/trimethoprim	580	345	506	156	506	156	506	156	506	156	458	117	48	39	yes	yes	
+escherichia_coli__tetracycline	escherichia_coli	tetracycline	464	318	590	86	590	86	590	86	590	86	547	46	43	40	yes	yes	
+escherichia_coli__tobramycin	escherichia_coli	tobramycin	343	727	17	60	17	60	17	60	17	60	0	0	17	60	no	no	
+escherichia_coli__trimethoprim	escherichia_coli	trimethoprim	431	430	15	9	15	9	15	9	15	9	15	9	0	0	no	no	
+klebsiella_aerogenes__ertapenem	klebsiella_aerogenes	ertapenem	48	35	12	14	12	14	12	14	12	14	0	0	12	14	no	no	
+klebsiella_aerogenes__imipenem	klebsiella_aerogenes	imipenem	26	42	8	13	8	13	8	13	8	13	0	0	8	13	no	no	
+klebsiella_aerogenes__meropenem	klebsiella_aerogenes	meropenem	26	52	3	21	3	21	3	21	3	21	0	0	3	21	no	no	
+klebsiella_oxytoca__cefotaxime	klebsiella_oxytoca	cefotaxime	57	41	1	0	1	0	1	0	1	0	0	0	1	0	no	no	
+klebsiella_oxytoca__cefoxitin	klebsiella_oxytoca	cefoxitin	47	52	1	0	1	0	1	0	1	0	0	0	1	0	no	no	
+klebsiella_oxytoca__cefpodoxime	klebsiella_oxytoca	cefpodoxime	47	27	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+klebsiella_oxytoca__ertapenem	klebsiella_oxytoca	ertapenem	78	34	1	0	1	0	1	0	1	0	0	0	1	0	no	no	
+klebsiella_pneumoniae__amikacin	klebsiella_pneumoniae	amikacin	318	1270	877	1273	877	1264	877	1261	877	1261	861	873	16	388	yes	no	
+klebsiella_pneumoniae__amoxicillin_clavulanate	klebsiella_pneumoniae	amoxicillin/clavulanate	591	187	546	111	546	111	546	111	546	111	546	111	0	0	yes	no	
+klebsiella_pneumoniae__ampicillin_sulbactam	klebsiella_pneumoniae	ampicillin/sulbactam	536	208	218	228	218	228	218	228	218	228	218	228	0	0	yes	no	
+klebsiella_pneumoniae__aztreonam	klebsiella_pneumoniae	aztreonam	693	357	709	335	708	334	708	334	708	334	434	141	274	193	yes	yes	
+klebsiella_pneumoniae__cefazolin	klebsiella_pneumoniae	cefazolin	763	378	313	268	313	266	313	266	313	266	14	120	299	146	no	yes	
+klebsiella_pneumoniae__cefepime	klebsiella_pneumoniae	cefepime	619	614	1109	697	1108	696	1108	696	1108	696	840	494	268	202	yes	yes	
+klebsiella_pneumoniae__cefotetan	klebsiella_pneumoniae	cefotetan	25	36	7	123	7	123	7	123	7	123	7	123	0	0	no	no	
+klebsiella_pneumoniae__cefoxitin	klebsiella_pneumoniae	cefoxitin	550	631	1045	533	1044	532	1044	532	1044	532	778	345	266	187	yes	yes	
+klebsiella_pneumoniae__cefpodoxime	klebsiella_pneumoniae	cefpodoxime	180	41	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+klebsiella_pneumoniae__cefpodoxime_ceftriaxone	klebsiella_pneumoniae	cefpodoxime/ceftriaxone	28	28	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+klebsiella_pneumoniae__cefpodoxime_clavulanate	klebsiella_pneumoniae	cefpodoxime/clavulanate	182	25	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+klebsiella_pneumoniae__ceftazidime	klebsiella_pneumoniae	ceftazidime	860	450	1264	529	1264	528	1264	528	1264	528	984	340	280	188	yes	yes	
+klebsiella_pneumoniae__ceftazidime_avibactam	klebsiella_pneumoniae	ceftazidime/avibactam	79	180	31	28	31	28	31	28	31	28	31	28	0	0	yes	no	
+klebsiella_pneumoniae__ceftriaxone	klebsiella_pneumoniae	ceftriaxone	843	365	1215	547	1208	546	1205	546	1205	546	926	363	279	183	yes	yes	
+klebsiella_pneumoniae__cefuroxime	klebsiella_pneumoniae	cefuroxime	468	97	102	149	102	149	102	149	102	149	102	149	0	0	yes	no	
+klebsiella_pneumoniae__chloramphenicol	klebsiella_pneumoniae	chloramphenicol	302	107	55	22	49	21	48	19	48	19	48	19	0	0	no	no	
+klebsiella_pneumoniae__ciprofloxacin	klebsiella_pneumoniae	ciprofloxacin	1096	610	1773	611	1765	610	1763	609	1763	609	1479	437	284	172	yes	yes	
+klebsiella_pneumoniae__colistin	klebsiella_pneumoniae	colistin	112	224	156	59	155	59	155	59	155	59	108	59	47	0	yes	no	
+klebsiella_pneumoniae__doripenem	klebsiella_pneumoniae	doripenem	217	26	377	395	377	394	377	394	377	394	145	175	232	219	yes	yes	
+klebsiella_pneumoniae__doxycycline	klebsiella_pneumoniae	doxycycline	46	95	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+klebsiella_pneumoniae__ertapenem	klebsiella_pneumoniae	ertapenem	671	281	827	639	827	638	827	638	827	638	570	428	257	210	yes	yes	
+klebsiella_pneumoniae__fosfomycin	klebsiella_pneumoniae	fosfomycin	83	211	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+klebsiella_pneumoniae__gentamicin	klebsiella_pneumoniae	gentamicin	689	1153	1024	1326	1018	1324	1017	1322	1017	1322	931	971	86	351	yes	yes	
+klebsiella_pneumoniae__imipenem	klebsiella_pneumoniae	imipenem	615	543	1118	731	1117	730	1117	730	1117	730	883	512	234	218	yes	yes	
+klebsiella_pneumoniae__levofloxacin	klebsiella_pneumoniae	levofloxacin	549	322	280	308	279	307	279	307	279	307	6	125	273	182	no	yes	
+klebsiella_pneumoniae__meropenem	klebsiella_pneumoniae	meropenem	736	1029	1316	792	1315	784	1314	782	1314	782	1074	565	240	217	yes	yes	
+klebsiella_pneumoniae__nitrofurantoin	klebsiella_pneumoniae	nitrofurantoin	375	187	358	29	358	29	358	29	358	29	358	29	0	0	yes	no	
+klebsiella_pneumoniae__norfloxacin	klebsiella_pneumoniae	norfloxacin	29	165	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+klebsiella_pneumoniae__ofloxacin	klebsiella_pneumoniae	ofloxacin	44	27	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+klebsiella_pneumoniae__piperacillin_tazobactam	klebsiella_pneumoniae	piperacillin/tazobactam	868	584	874	425	874	424	874	424	874	424	610	229	264	195	yes	yes	
+klebsiella_pneumoniae__polymyxin_b	klebsiella_pneumoniae	polymyxin b	48	52	53	0	53	0	53	0	53	0	0	0	53	0	no	no	
+klebsiella_pneumoniae__streptomycin	klebsiella_pneumoniae	streptomycin	54	26	1	0	1	0	1	0	1	0	1	0	0	0	no	no	
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	klebsiella_pneumoniae	sulfamethoxazole/trimethoprim	1042	504	1537	507	1530	506	1527	506	1527	506	1240	323	287	183	yes	yes	
+klebsiella_pneumoniae__tetracycline	klebsiella_pneumoniae	tetracycline	387	354	165	349	158	347	156	346	156	346	58	11	98	335	no	yes	
+klebsiella_pneumoniae__ticarcillin_clavulanate	klebsiella_pneumoniae	ticarcillin/clavulanate	107	143	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+klebsiella_pneumoniae__tigecycline	klebsiella_pneumoniae	tigecycline	257	667	229	949	229	948	229	948	229	948	218	509	11	439	yes	no	
+klebsiella_pneumoniae__tobramycin	klebsiella_pneumoniae	tobramycin	630	600	213	210	213	209	213	209	213	209	0	0	213	209	no	yes	
+klebsiella_pneumoniae__trimethoprim	klebsiella_pneumoniae	trimethoprim	112	146	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+klebsiella_quasipneumoniae__cefotaxime	klebsiella_quasipneumoniae	cefotaxime	62	39	1	0	1	0	1	0	1	0	1	0	0	0	no	no	
+klebsiella_quasipneumoniae__ceftazidime	klebsiella_quasipneumoniae	ceftazidime	59	43	1	0	1	0	1	0	1	0	1	0	0	0	no	no	
+klebsiella_quasipneumoniae__sulfamethoxazole_trimethoprim	klebsiella_quasipneumoniae	sulfamethoxazole/trimethoprim	57	44	1	0	1	0	1	0	1	0	1	0	0	0	no	no	
+mycobacterium_tuberculosis__amikacin	mycobacterium_tuberculosis	amikacin	548	1265	189	930	185	867	185	867	185	867	185	828	0	39	yes	no	
+mycobacterium_tuberculosis__amoxicillin	mycobacterium_tuberculosis	amoxicillin	25	32	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+mycobacterium_tuberculosis__capreomycin	mycobacterium_tuberculosis	capreomycin	422	248	52	909	50	845	50	845	50	845	49	807	1	38	yes	no	
+mycobacterium_tuberculosis__ciprofloxacin	mycobacterium_tuberculosis	ciprofloxacin	73	28	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+mycobacterium_tuberculosis__clofazimine	mycobacterium_tuberculosis	clofazimine	193	1110	2	100	2	98	2	98	2	98	2	59	0	39	no	no	
+mycobacterium_tuberculosis__cycloserine	mycobacterium_tuberculosis	cycloserine	119	282	2	100	2	98	2	98	2	98	1	60	1	38	no	no	
+mycobacterium_tuberculosis__delamanid	mycobacterium_tuberculosis	delamanid	448	800	1	61	1	60	1	60	1	60	1	60	0	0	no	no	
+mycobacterium_tuberculosis__ethambutol	mycobacterium_tuberculosis	ethambutol	1338	609	401	494	372	456	372	456	372	456	344	445	28	11	yes	no	
+mycobacterium_tuberculosis__ethionamide	mycobacterium_tuberculosis	ethionamide	915	859	27	77	27	74	27	74	27	74	20	42	7	32	no	no	
+mycobacterium_tuberculosis__isoniazid	mycobacterium_tuberculosis	isoniazid	1388	566	1083	175	1021	168	1021	168	1021	168	993	157	28	11	yes	no	
+mycobacterium_tuberculosis__kanamycin	mycobacterium_tuberculosis	kanamycin	617	1183	345	781	340	718	340	718	340	718	338	681	2	37	yes	no	
+mycobacterium_tuberculosis__levofloxacin	mycobacterium_tuberculosis	levofloxacin	753	495	125	683	124	682	124	682	124	682	122	645	2	37	yes	no	
+mycobacterium_tuberculosis__linezolid	mycobacterium_tuberculosis	linezolid	202	1046	2	60	2	59	2	59	2	59	2	59	0	0	no	no	
+mycobacterium_tuberculosis__moxifloxacin	mycobacterium_tuberculosis	moxifloxacin	733	791	249	872	236	818	236	818	236	818	232	783	4	35	yes	no	
+mycobacterium_tuberculosis__nicotinamide	mycobacterium_tuberculosis	nicotinamide	83	83	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+mycobacterium_tuberculosis__ofloxacin	mycobacterium_tuberculosis	ofloxacin	355	288	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+mycobacterium_tuberculosis__para_aminosalicylic_acid	mycobacterium_tuberculosis	para-aminosalicylic acid	429	1221	15	106	14	104	14	104	14	104	14	104	0	0	no	no	
+mycobacterium_tuberculosis__prothionamide	mycobacterium_tuberculosis	prothionamide	92	78	29	33	29	32	29	32	29	32	29	32	0	0	yes	no	
+mycobacterium_tuberculosis__pyrazinamide	mycobacterium_tuberculosis	pyrazinamide	381	111	475	436	442	408	442	408	442	408	442	408	0	0	yes	no	
+mycobacterium_tuberculosis__rifabutin	mycobacterium_tuberculosis	rifabutin	665	652	86	15	85	14	85	14	85	14	49	11	36	3	no	no	
+mycobacterium_tuberculosis__rifampin	mycobacterium_tuberculosis	rifampin	1365	602	1037	220	978	210	978	210	978	210	945	204	33	6	yes	no	
+mycobacterium_tuberculosis__streptomycin	mycobacterium_tuberculosis	streptomycin	539	159	222	120	169	107	169	107	169	107	157	80	12	27	yes	no	
+neisseria_gonorrhoeae__azithromycin	neisseria_gonorrhoeae	azithromycin	408	1491	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+neisseria_gonorrhoeae__cefixime	neisseria_gonorrhoeae	cefixime	103	497	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+neisseria_gonorrhoeae__ceftriaxone	neisseria_gonorrhoeae	ceftriaxone	40	1886	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+neisseria_gonorrhoeae__ciprofloxacin	neisseria_gonorrhoeae	ciprofloxacin	1086	660	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+neisseria_gonorrhoeae__erythromycin	neisseria_gonorrhoeae	erythromycin	98	81	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+neisseria_gonorrhoeae__penicillin	neisseria_gonorrhoeae	penicillin	888	466	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+neisseria_gonorrhoeae__tetracycline	neisseria_gonorrhoeae	tetracycline	359	1012	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+pseudomonas_aeruginosa__amikacin	pseudomonas_aeruginosa	amikacin	127	581	1	0	1	0	1	0	1	0	1	0	0	0	no	no	
+pseudomonas_aeruginosa__aztreonam	pseudomonas_aeruginosa	aztreonam	114	121	1	0	1	0	1	0	1	0	1	0	0	0	no	no	
+pseudomonas_aeruginosa__cefepime	pseudomonas_aeruginosa	cefepime	122	123	1	0	1	0	1	0	1	0	1	0	0	0	no	no	
+pseudomonas_aeruginosa__ceftazidime	pseudomonas_aeruginosa	ceftazidime	372	461	1	0	1	0	1	0	1	0	1	0	0	0	no	no	
+pseudomonas_aeruginosa__ceftazidime_avibactam	pseudomonas_aeruginosa	ceftazidime/avibactam	139	170	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+pseudomonas_aeruginosa__ceftolozane_tazobactam	pseudomonas_aeruginosa	ceftolozane/tazobactam	132	127	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+pseudomonas_aeruginosa__ciprofloxacin	pseudomonas_aeruginosa	ciprofloxacin	391	312	1	0	1	0	1	0	1	0	1	0	0	0	no	no	
+pseudomonas_aeruginosa__gentamicin	pseudomonas_aeruginosa	gentamicin	101	245	1	0	1	0	1	0	1	0	1	0	0	0	no	no	
+pseudomonas_aeruginosa__imipenem	pseudomonas_aeruginosa	imipenem	235	212	1	0	1	0	1	0	1	0	1	0	0	0	no	no	
+pseudomonas_aeruginosa__levofloxacin	pseudomonas_aeruginosa	levofloxacin	330	372	1	0	1	0	1	0	1	0	1	0	0	0	no	no	
+pseudomonas_aeruginosa__meropenem	pseudomonas_aeruginosa	meropenem	488	395	1	0	1	0	1	0	1	0	1	0	0	0	no	no	
+pseudomonas_aeruginosa__piperacillin_tazobactam	pseudomonas_aeruginosa	piperacillin/tazobactam	87	123	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+pseudomonas_aeruginosa__tobramycin	pseudomonas_aeruginosa	tobramycin	194	451	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+salmonella_enterica__amoxicillin_clavulanate	salmonella_enterica	amoxicillin/clavulanate	471	328	304	779	304	775	304	775	304	775	3	59	301	716	no	yes	non-typhoidal=29;serovar unknown=33
+salmonella_enterica__ampicillin	salmonella_enterica	ampicillin	1406	591	489	889	489	885	489	885	489	866	489	865	0	1	yes	no	non-typhoidal=73;serovar unknown=550;typhoidal=731
+salmonella_enterica__ampicillin_sulbactam	salmonella_enterica	ampicillin/sulbactam	126	57	106	13	106	13	106	13	106	13	106	13	0	0	no	no	serovar unknown=119
+salmonella_enterica__azithromycin	salmonella_enterica	azithromycin	184	1171	154	2993	154	2982	154	2982	149	2968	149	1263	0	1705	yes	no	non-typhoidal=69;serovar unknown=605;typhoidal=738
+salmonella_enterica__cefazolin	salmonella_enterica	cefazolin	119	66	174	30	174	30	174	30	174	30	174	29	0	1	yes	no	non-typhoidal=66;serovar unknown=137
+salmonella_enterica__cefotaxime	salmonella_enterica	cefotaxime	319	622	350	124	350	124	350	124	350	124	350	123	0	1	yes	no	non-typhoidal=73;serovar unknown=400
+salmonella_enterica__cefoxitin	salmonella_enterica	cefoxitin	395	685	8	121	8	121	8	121	8	121	8	121	0	0	no	no	serovar unknown=129
+salmonella_enterica__ceftazidime	salmonella_enterica	ceftazidime	30	753	289	1937	289	1930	289	1930	289	1930	238	277	51	1653	yes	yes	non-typhoidal=4;serovar unknown=397;typhoidal=114
+salmonella_enterica__ceftiofur	salmonella_enterica	ceftiofur	461	228	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+salmonella_enterica__ceftriaxone	salmonella_enterica	ceftriaxone	568	587	171	2948	171	2934	171	2929	170	2889	120	1199	50	1690	yes	yes	non-typhoidal=4;serovar unknown=577;typhoidal=738
+salmonella_enterica__chloramphenicol	salmonella_enterica	chloramphenicol	713	1276	561	2485	561	2474	561	2474	561	2455	245	1066	316	1389	yes	yes	non-typhoidal=73;serovar unknown=500;typhoidal=738
+salmonella_enterica__ciprofloxacin	salmonella_enterica	ciprofloxacin	353	1150	2504	663	2494	662	2494	662	2475	662	948	484	1527	178	yes	yes	non-typhoidal=65;serovar unknown=629;typhoidal=738
+salmonella_enterica__gentamicin	salmonella_enterica	gentamicin	415	1260	176	2254	176	2247	176	2247	176	2247	176	542	0	1705	yes	no	non-typhoidal=69;serovar unknown=535;typhoidal=114
+salmonella_enterica__kanamycin	salmonella_enterica	kanamycin	154	430	135	296	135	296	135	296	135	296	135	295	0	1	yes	no	non-typhoidal=69;serovar unknown=247;typhoidal=114
+salmonella_enterica__nalidixic_acid	salmonella_enterica	nalidixic acid	500	1099	339	294	339	294	339	294	339	294	339	294	0	0	yes	no	serovar unknown=387;typhoidal=246
+salmonella_enterica__pefloxacin	salmonella_enterica	pefloxacin	142	206	146	155	146	155	146	155	146	155	146	155	0	0	yes	no	serovar unknown=169;typhoidal=132
+salmonella_enterica__spectinomycin	salmonella_enterica	spectinomycin	208	188	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+salmonella_enterica__streptomycin	salmonella_enterica	streptomycin	640	629	169	259	169	259	169	259	169	259	169	258	0	1	yes	no	non-typhoidal=59;serovar unknown=254;typhoidal=114
+salmonella_enterica__sulfamethoxazole	salmonella_enterica	sulfamethoxazole	92	183	271	120	271	120	271	120	271	120	271	120	0	0	yes	no	non-typhoidal=4;serovar unknown=255;typhoidal=132
+salmonella_enterica__sulfamethoxazole_trimethoprim	salmonella_enterica	sulfamethoxazole/trimethoprim	296	849	490	2337	490	2326	490	2326	490	2307	161	931	329	1376	yes	yes	non-typhoidal=69;serovar unknown=285;typhoidal=738
+salmonella_enterica__sulfathiazole	salmonella_enterica	sulfathiazole	175	50	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+salmonella_enterica__sulfisoxazole	salmonella_enterica	sulfisoxazole	443	101	130	13	130	13	130	13	130	13	130	13	0	0	no	no	serovar unknown=143
+salmonella_enterica__temocillin	salmonella_enterica	temocillin	34	130	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+salmonella_enterica__tetracycline	salmonella_enterica	tetracycline	1118	751	467	2078	467	2071	467	2071	467	2071	440	393	27	1678	yes	yes	non-typhoidal=72;serovar unknown=515;typhoidal=246
+salmonella_enterica__trimethoprim	salmonella_enterica	trimethoprim	256	378	400	1920	400	1913	400	1913	400	1913	78	531	322	1382	yes	yes	non-typhoidal=4;serovar unknown=359;typhoidal=246
+shigella_flexneri__ampicillin	shigella_flexneri	ampicillin	318	40	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+shigella_flexneri__azithromycin	shigella_flexneri	azithromycin	186	175	68	11	68	11	68	11	68	11	68	11	0	0	no	no	
+shigella_flexneri__ciprofloxacin	shigella_flexneri	ciprofloxacin	33	328	31	47	31	47	31	47	31	47	31	47	0	0	yes	no	
+shigella_flexneri__trimethoprim	shigella_flexneri	trimethoprim	280	82	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+shigella_sonnei__amikacin	shigella_sonnei	amikacin	270	310	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+shigella_sonnei__ampicillin	shigella_sonnei	ampicillin	848	826	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+shigella_sonnei__azithromycin	shigella_sonnei	azithromycin	602	705	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+shigella_sonnei__cefoperazone	shigella_sonnei	cefoperazone	226	31	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+shigella_sonnei__cefotaxime	shigella_sonnei	cefotaxime	112	481	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+shigella_sonnei__cefoxitin	shigella_sonnei	cefoxitin	105	488	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+shigella_sonnei__cefpirome	shigella_sonnei	cefpirome	97	236	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+shigella_sonnei__ceftazidime	shigella_sonnei	ceftazidime	98	484	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+shigella_sonnei__ceftriaxone	shigella_sonnei	ceftriaxone	439	724	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+shigella_sonnei__ciprofloxacin	shigella_sonnei	ciprofloxacin	606	791	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+shigella_sonnei__colistin	shigella_sonnei	colistin	35	233	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+shigella_sonnei__ertapenem	shigella_sonnei	ertapenem	101	237	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+shigella_sonnei__gentamicin	shigella_sonnei	gentamicin	513	775	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+shigella_sonnei__nalidixic_acid	shigella_sonnei	nalidixic acid	544	310	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+shigella_sonnei__streptomycin	shigella_sonnei	streptomycin	471	124	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+shigella_sonnei__sulfamethoxazole_trimethoprim	shigella_sonnei	sulfamethoxazole/trimethoprim	524	93	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+shigella_sonnei__temocillin	shigella_sonnei	temocillin	97	236	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+shigella_sonnei__tetracycline	shigella_sonnei	tetracycline	704	174	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+shigella_sonnei__tobramycin	shigella_sonnei	tobramycin	462	79	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+shigella_sonnei__trimethoprim	shigella_sonnei	trimethoprim	1036	68	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+staphylococcus_aureus__cefoxitin	staphylococcus_aureus	cefoxitin	730	677	187	1	187	1	187	1	187	1	187	1	0	0	no	no	
+staphylococcus_aureus__ceftaroline	staphylococcus_aureus	ceftaroline	45	72	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+staphylococcus_aureus__chloramphenicol	staphylococcus_aureus	chloramphenicol	123	915	0	33	0	33	0	33	0	33	0	33	0	0	no	no	
+staphylococcus_aureus__ciprofloxacin	staphylococcus_aureus	ciprofloxacin	625	999	257	476	254	476	254	476	254	476	254	476	0	0	yes	no	
+staphylococcus_aureus__clindamycin	staphylococcus_aureus	clindamycin	693	850	19	694	19	693	19	693	19	693	19	693	0	0	no	no	
+staphylococcus_aureus__daptomycin	staphylococcus_aureus	daptomycin	47	857	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+staphylococcus_aureus__erythromycin	staphylococcus_aureus	erythromycin	948	1009	212	574	209	574	209	574	209	574	209	574	0	0	yes	no	
+staphylococcus_aureus__fusidic_acid	staphylococcus_aureus	fusidic acid	283	818	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+staphylococcus_aureus__gentamicin	staphylococcus_aureus	gentamicin	367	1546	92	626	92	624	92	624	92	624	92	624	0	0	yes	no	
+staphylococcus_aureus__levofloxacin	staphylococcus_aureus	levofloxacin	32	282	60	346	60	346	60	346	60	346	60	346	0	0	yes	no	
+staphylococcus_aureus__moxifloxacin	staphylococcus_aureus	moxifloxacin	118	69	1	442	1	441	1	441	1	441	1	441	0	0	no	no	
+staphylococcus_aureus__mupirocin	staphylococcus_aureus	mupirocin	51	685	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+staphylococcus_aureus__oxacillin	staphylococcus_aureus	oxacillin	568	750	661	56	659	56	659	56	659	56	659	56	0	0	yes	no	
+staphylococcus_aureus__penicillin	staphylococcus_aureus	penicillin	1252	256	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+staphylococcus_aureus__rifampin	staphylococcus_aureus	rifampin	49	882	6	738	6	735	6	735	6	735	6	735	0	0	no	no	
+staphylococcus_aureus__sulfamethoxazole_trimethoprim	staphylococcus_aureus	sulfamethoxazole/trimethoprim	285	1104	95	663	94	661	94	661	94	661	94	661	0	0	yes	no	
+staphylococcus_aureus__tetracycline	staphylococcus_aureus	tetracycline	408	1239	105	629	104	627	104	627	104	627	104	627	0	0	yes	no	
+staphylococcus_aureus__vancomycin	staphylococcus_aureus	vancomycin	50	1283	3	703	3	700	3	700	3	700	3	700	0	0	no	no	
+staphylococcus_haemolyticus__ciprofloxacin	staphylococcus_haemolyticus	ciprofloxacin	78	46	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+staphylococcus_haemolyticus__fusidic_acid	staphylococcus_haemolyticus	fusidic acid	39	75	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+staphylococcus_haemolyticus__tetracycline	staphylococcus_haemolyticus	tetracycline	37	67	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+streptococcus_agalactiae__clindamycin	streptococcus_agalactiae	clindamycin	115	26	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+streptococcus_agalactiae__erythromycin	streptococcus_agalactiae	erythromycin	116	25	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+streptococcus_agalactiae__tetracycline	streptococcus_agalactiae	tetracycline	104	37	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+streptococcus_pneumoniae__azithromycin	streptococcus_pneumoniae	azithromycin	147	1150	3	187	3	187	3	187	3	187	3	187	0	0	no	no	
+streptococcus_pneumoniae__cefepime	streptococcus_pneumoniae	cefepime	49	1553	0	269	0	267	0	267	0	267	0	267	0	0	no	no	
+streptococcus_pneumoniae__cefotaxime	streptococcus_pneumoniae	cefotaxime	43	1841	7	554	7	552	7	552	7	552	7	354	0	198	no	no	
+streptococcus_pneumoniae__ceftriaxone	streptococcus_pneumoniae	ceftriaxone	56	1783	0	263	0	263	0	263	0	263	0	263	0	0	no	no	
+streptococcus_pneumoniae__cefuroxime	streptococcus_pneumoniae	cefuroxime	184	1548	0	190	0	190	0	190	0	190	0	190	0	0	no	no	
+streptococcus_pneumoniae__chloramphenicol	streptococcus_pneumoniae	chloramphenicol	134	1725	93	627	92	626	92	626	92	626	90	412	2	214	yes	no	
+streptococcus_pneumoniae__clindamycin	streptococcus_pneumoniae	clindamycin	166	1728	196	307	195	306	195	306	195	306	195	306	0	0	yes	no	
+streptococcus_pneumoniae__erythromycin	streptococcus_pneumoniae	erythromycin	460	1531	395	522	393	522	393	522	393	522	222	279	171	243	yes	yes	
+streptococcus_pneumoniae__meropenem	streptococcus_pneumoniae	meropenem	72	1736	47	304	47	302	47	302	47	302	47	302	0	0	yes	no	
+streptococcus_pneumoniae__penicillin	streptococcus_pneumoniae	penicillin	196	1494	215	549	215	547	215	547	215	547	44	308	171	239	yes	yes	
+streptococcus_pneumoniae__sulfamethoxazole_trimethoprim	streptococcus_pneumoniae	sulfamethoxazole/trimethoprim	343	1434	151	368	150	368	150	368	150	368	63	257	87	111	yes	yes	
+streptococcus_pneumoniae__tetracycline	streptococcus_pneumoniae	tetracycline	314	1657	306	403	304	403	304	403	304	403	215	271	89	132	yes	yes	
+vibrio_cholerae__nalidixic_acid	vibrio_cholerae	nalidixic acid	49	42	222	0	217	0	217	0	217	0	217	0	0	0	no	no	
+vibrio_cholerae__sulfamethoxazole	vibrio_cholerae	sulfamethoxazole	37	37	0	0	0	0	0	0	0	0	0	0	0	0	no	no	
+vibrio_cholerae__trimethoprim	vibrio_cholerae	trimethoprim	40	34	0	0	0	0	0	0	0	0	0	0	0	0	no	no	

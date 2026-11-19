@@ -23,6 +23,11 @@ p = audit.options("Null-fold effect on pooled metrics.")
 p.add_argument("out")
 args = p.parse_args()
 audit.configure(args, need=())
+if audit.REVISION >= audit.EQUAL_SCORING_REVISION:
+    # From revision 14 a null fit's isolates are scored, not left null, so
+    # this script, which finds null folds by their null scores, does not
+    # apply; audit.py audits those reports.
+    sys.exit("%s reads revisions before %d, whose null fits leave isolates uncalled" % (os.path.basename(__file__), audit.EQUAL_SCORING_REVISION))
 fg = audit.FoldGen()
 rows, mismatch = [], []
 null_by = Counter()

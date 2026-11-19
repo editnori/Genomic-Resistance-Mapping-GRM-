@@ -1,0 +1,175 @@
+dataset	learner	left_out	scored_resistant	scored_susceptible	reportable	tp	fn	fp	tn	no_call_resistant	no_call_susceptible	sensitivity	specificity	balanced_accuracy
+mycobacterium_tuberculosis__amikacin	scm	PRJEB27354	182	821	yes	175	7	46	775	0	0	0.961538	0.943971	0.952755
+mycobacterium_tuberculosis__amikacin	scm	PRJEB36040	185	827	yes	178	7	47	780	0	0	0.962162	0.943168	0.952665
+mycobacterium_tuberculosis__amikacin	scm	PRJEB38780	181	783	yes	175	6	40	743	0	0	0.966851	0.948914	0.957883
+mycobacterium_tuberculosis__amikacin	scm	PRJEB40777	185	827	yes	178	7	47	780	0	0	0.962162	0.943168	0.952665
+mycobacterium_tuberculosis__amikacin	scm	PRJEB48275	9	149	no	7	2	18	131	0	0			
+mycobacterium_tuberculosis__amikacin	scm	PRJNA1044389	183	733	yes	177	6	37	696	0	0	0.967213	0.949523	0.958368
+mycobacterium_tuberculosis__amikacin	cart	PRJEB27354	182	821	yes	175	7	24	797	0	0	0.961538	0.970767	0.966153
+mycobacterium_tuberculosis__amikacin	cart	PRJEB36040	185	827	yes	178	7	24	803	0	0	0.962162	0.970979	0.966571
+mycobacterium_tuberculosis__amikacin	cart	PRJEB38780	181	783	yes	175	6	20	763	0	0	0.966851	0.974457	0.970654
+mycobacterium_tuberculosis__amikacin	cart	PRJEB40777	185	827	yes	178	7	24	803	0	0	0.962162	0.970979	0.966571
+mycobacterium_tuberculosis__amikacin	cart	PRJEB48275	9	149	no	7	2	7	142	0	0			
+mycobacterium_tuberculosis__amikacin	cart	PRJNA1044389	183	733	yes	177	6	21	712	0	0	0.967213	0.971351	0.969282
+mycobacterium_tuberculosis__amikacin	known_gene	PRJEB27354	182	821	yes	0	182	0	821	0	0	0.000000	1.000000	0.500000
+mycobacterium_tuberculosis__amikacin	known_gene	PRJEB36040	185	827	yes	0	185	0	827	0	0	0.000000	1.000000	0.500000
+mycobacterium_tuberculosis__amikacin	known_gene	PRJEB38780	181	783	yes	0	181	0	783	0	0	0.000000	1.000000	0.500000
+mycobacterium_tuberculosis__amikacin	known_gene	PRJEB40777	185	827	yes	0	185	0	827	0	0	0.000000	1.000000	0.500000
+mycobacterium_tuberculosis__amikacin	known_gene	PRJEB48275	9	149	no	0	9	0	149	0	0			
+mycobacterium_tuberculosis__amikacin	known_gene	PRJNA1044389	183	733	yes	0	183	0	733	0	0	0.000000	1.000000	0.500000
+mycobacterium_tuberculosis__capreomycin	scm	PRJEB26996	36	759	yes	23	13	9	750	0	0	0.638889	0.988142	0.813516
+mycobacterium_tuberculosis__capreomycin	scm	PRJEB27354	46	800	yes	30	16	10	790	0	0	0.652174	0.987500	0.819837
+mycobacterium_tuberculosis__capreomycin	scm	PRJEB36040	49	806	yes	32	17	10	796	0	0	0.653061	0.987593	0.820327
+mycobacterium_tuberculosis__capreomycin	scm	PRJEB38780	43	764	yes	30	13	9	755	0	0	0.697674	0.988220	0.842947
+mycobacterium_tuberculosis__capreomycin	scm	PRJEB40777	49	806	yes	32	17	10	796	0	0	0.653061	0.987593	0.820327
+mycobacterium_tuberculosis__capreomycin	scm	PRJEB48275	24	195	no	14	10	2	193	0	0			
+mycobacterium_tuberculosis__capreomycin	scm	PRJNA1044389	47	712	yes	31	16	10	702	0	0	0.659574	0.985955	0.822765
+mycobacterium_tuberculosis__capreomycin	cart	PRJEB26996	36	759	yes	26	10	68	691	0	0	0.722222	0.910408	0.816315
+mycobacterium_tuberculosis__capreomycin	cart	PRJEB27354	46	800	yes	33	13	70	730	0	0	0.717391	0.912500	0.814946
+mycobacterium_tuberculosis__capreomycin	cart	PRJEB36040	49	806	yes	35	14	71	735	0	0	0.714286	0.911911	0.813098
+mycobacterium_tuberculosis__capreomycin	cart	PRJEB38780	43	764	yes	33	10	64	700	0	0	0.767442	0.916230	0.841836
+mycobacterium_tuberculosis__capreomycin	cart	PRJEB40777	49	806	yes	35	14	71	735	0	0	0.714286	0.911911	0.813098
+mycobacterium_tuberculosis__capreomycin	cart	PRJEB48275	24	195	no	14	10	26	169	0	0			
+mycobacterium_tuberculosis__capreomycin	cart	PRJNA1044389	47	712	yes	34	13	56	656	0	0	0.723404	0.921348	0.822376
+mycobacterium_tuberculosis__ethambutol	scm	PRJEB27354	338	441	yes	291	47	304	137	0	0	0.860947	0.310658	0.585802
+mycobacterium_tuberculosis__ethambutol	scm	PRJEB36040	343	445	yes	295	48	307	138	0	0	0.860058	0.310112	0.585085
+mycobacterium_tuberculosis__ethambutol	scm	PRJEB38780	316	425	yes	271	45	290	135	0	0	0.857595	0.317647	0.587621
+mycobacterium_tuberculosis__ethambutol	scm	PRJEB40777	343	445	yes	295	48	307	138	0	0	0.860058	0.310112	0.585085
+mycobacterium_tuberculosis__ethambutol	scm	PRJEB48275	76	81	yes	64	12	65	16	0	0	0.842105	0.197531	0.519818
+mycobacterium_tuberculosis__ethambutol	scm	PRJNA1044389	304	388	yes	264	40	262	126	0	0	0.868421	0.324742	0.596582
+mycobacterium_tuberculosis__ethambutol	cart	PRJEB27354	338	441	yes	296	42	319	122	0	0	0.875740	0.276644	0.576192
+mycobacterium_tuberculosis__ethambutol	cart	PRJEB36040	343	445	yes	300	43	323	122	0	0	0.874636	0.274157	0.574396
+mycobacterium_tuberculosis__ethambutol	cart	PRJEB38780	316	425	yes	275	41	306	119	0	0	0.870253	0.280000	0.575127
+mycobacterium_tuberculosis__ethambutol	cart	PRJEB40777	343	445	yes	300	43	323	122	0	0	0.874636	0.274157	0.574396
+mycobacterium_tuberculosis__ethambutol	cart	PRJEB48275	76	81	yes	65	11	67	14	0	0	0.855263	0.172840	0.514051
+mycobacterium_tuberculosis__ethambutol	cart	PRJNA1044389	304	388	yes	269	35	277	111	0	0	0.884868	0.286082	0.585475
+mycobacterium_tuberculosis__ethambutol	lasso	PRJEB27354	338	441	yes	314	24	299	142	0	0	0.928994	0.321995	0.625495
+mycobacterium_tuberculosis__ethambutol	lasso	PRJEB36040	343	445	yes	319	24	303	142	0	0	0.930029	0.319101	0.624565
+mycobacterium_tuberculosis__ethambutol	lasso	PRJEB38780	316	425	yes	292	24	289	136	0	0	0.924051	0.320000	0.622025
+mycobacterium_tuberculosis__ethambutol	lasso	PRJEB40777	343	445	yes	319	24	303	142	0	0	0.930029	0.319101	0.624565
+mycobacterium_tuberculosis__ethambutol	lasso	PRJEB48275	76	81	yes	70	6	55	26	0	0	0.921053	0.320988	0.621020
+mycobacterium_tuberculosis__ethambutol	lasso	PRJNA1044389	304	388	yes	286	18	266	122	0	0	0.940789	0.314433	0.627611
+mycobacterium_tuberculosis__isoniazid	scm	PRJEB26996	921	95	yes	907	14	6	89	0	0	0.984799	0.936842	0.960821
+mycobacterium_tuberculosis__isoniazid	scm	PRJEB27354	983	157	yes	959	24	7	150	0	0	0.975585	0.955414	0.965499
+mycobacterium_tuberculosis__isoniazid	scm	PRJEB36040	992	157	yes	968	24	7	150	0	0	0.975806	0.955414	0.965610
+mycobacterium_tuberculosis__isoniazid	scm	PRJEB38780	946	155	yes	922	24	6	149	0	0	0.974630	0.961290	0.967960
+mycobacterium_tuberculosis__isoniazid	scm	PRJEB40777	992	157	yes	968	24	7	150	0	0	0.975806	0.955414	0.965610
+mycobacterium_tuberculosis__isoniazid	scm	PRJEB48275	221	71	yes	209	12	2	69	0	0	0.945701	0.971831	0.958766
+mycobacterium_tuberculosis__isoniazid	scm	PRJNA1044389	903	150	yes	881	22	7	143	0	0	0.975637	0.953333	0.964485
+mycobacterium_tuberculosis__isoniazid	cart	PRJEB26996	921	95	yes	907	14	6	89	0	0	0.984799	0.936842	0.960821
+mycobacterium_tuberculosis__isoniazid	cart	PRJEB27354	983	157	yes	959	24	7	150	0	0	0.975585	0.955414	0.965499
+mycobacterium_tuberculosis__isoniazid	cart	PRJEB36040	992	157	yes	968	24	7	150	0	0	0.975806	0.955414	0.965610
+mycobacterium_tuberculosis__isoniazid	cart	PRJEB38780	946	155	yes	922	24	6	149	0	0	0.974630	0.961290	0.967960
+mycobacterium_tuberculosis__isoniazid	cart	PRJEB40777	992	157	yes	968	24	7	150	0	0	0.975806	0.955414	0.965610
+mycobacterium_tuberculosis__isoniazid	cart	PRJEB48275	221	71	yes	209	12	2	69	0	0	0.945701	0.971831	0.958766
+mycobacterium_tuberculosis__isoniazid	cart	PRJNA1044389	903	150	yes	881	22	7	143	0	0	0.975637	0.953333	0.964485
+mycobacterium_tuberculosis__kanamycin	scm	PRJEB26996	321	636	yes	305	16	30	606	0	0	0.950156	0.952830	0.951493
+mycobacterium_tuberculosis__kanamycin	scm	PRJEB38780	335	679	yes	319	16	38	641	0	0	0.952239	0.944035	0.948137
+mycobacterium_tuberculosis__kanamycin	scm	PRJEB48275	24	140	no	20	4	9	131	0	0			
+mycobacterium_tuberculosis__kanamycin	scm	PRJNA1044389	334	588	yes	319	15	37	551	0	0	0.955090	0.937075	0.946082
+mycobacterium_tuberculosis__kanamycin	cart	PRJEB26996	321	636	yes	305	16	30	606	0	0	0.950156	0.952830	0.951493
+mycobacterium_tuberculosis__kanamycin	cart	PRJEB38780	335	679	yes	319	16	38	641	0	0	0.952239	0.944035	0.948137
+mycobacterium_tuberculosis__kanamycin	cart	PRJEB48275	24	140	no	20	4	9	131	0	0			
+mycobacterium_tuberculosis__kanamycin	cart	PRJNA1044389	334	588	yes	319	15	37	551	0	0	0.955090	0.937075	0.946082
+mycobacterium_tuberculosis__kanamycin	known_gene	PRJEB26996	321	636	yes	0	321	0	636	0	0	0.000000	1.000000	0.500000
+mycobacterium_tuberculosis__kanamycin	known_gene	PRJEB38780	335	679	yes	0	335	0	679	0	0	0.000000	1.000000	0.500000
+mycobacterium_tuberculosis__kanamycin	known_gene	PRJEB48275	24	140	no	0	24	0	140	0	0			
+mycobacterium_tuberculosis__kanamycin	known_gene	PRJNA1044389	334	588	yes	0	334	0	588	0	0	0.000000	1.000000	0.500000
+mycobacterium_tuberculosis__levofloxacin	scm	PRJEB27354	118	639	yes	111	7	39	600	0	0	0.940678	0.938967	0.939823
+mycobacterium_tuberculosis__levofloxacin	scm	PRJEB36040	122	644	yes	115	7	39	605	0	0	0.942623	0.939441	0.941032
+mycobacterium_tuberculosis__levofloxacin	scm	PRJEB38780	113	605	yes	107	6	34	571	0	0	0.946903	0.943802	0.945352
+mycobacterium_tuberculosis__levofloxacin	scm	PRJEB40777	121	645	yes	114	7	39	606	0	0	0.942149	0.939535	0.940842
+mycobacterium_tuberculosis__levofloxacin	scm	PRJEB48275	14	47	no	13	1	5	42	0	0			
+mycobacterium_tuberculosis__levofloxacin	cart	PRJEB27354	118	639	yes	111	7	39	600	0	0	0.940678	0.938967	0.939823
+mycobacterium_tuberculosis__levofloxacin	cart	PRJEB36040	122	644	yes	115	7	39	605	0	0	0.942623	0.939441	0.941032
+mycobacterium_tuberculosis__levofloxacin	cart	PRJEB38780	113	605	yes	107	6	34	571	0	0	0.946903	0.943802	0.945352
+mycobacterium_tuberculosis__levofloxacin	cart	PRJEB40777	121	645	yes	114	7	39	606	0	0	0.942149	0.939535	0.940842
+mycobacterium_tuberculosis__levofloxacin	cart	PRJEB48275	14	47	no	13	1	5	42	0	0			
+mycobacterium_tuberculosis__levofloxacin	known_gene	PRJEB27354	118	639	yes	118	0	639	0	0	0	1.000000	0.000000	0.500000
+mycobacterium_tuberculosis__levofloxacin	known_gene	PRJEB36040	122	644	yes	122	0	644	0	0	0	1.000000	0.000000	0.500000
+mycobacterium_tuberculosis__levofloxacin	known_gene	PRJEB38780	113	605	yes	113	0	605	0	0	0	1.000000	0.000000	0.500000
+mycobacterium_tuberculosis__levofloxacin	known_gene	PRJEB40777	121	645	yes	121	0	645	0	0	0	1.000000	0.000000	0.500000
+mycobacterium_tuberculosis__levofloxacin	known_gene	PRJEB48275	14	47	no	14	0	47	0	0	0			
+mycobacterium_tuberculosis__moxifloxacin	scm	PRJEB27354	229	776	yes	189	40	53	723	0	0	0.825328	0.931701	0.878514
+mycobacterium_tuberculosis__moxifloxacin	scm	PRJEB36040	232	782	yes	192	40	54	728	0	0	0.827586	0.930946	0.879266
+mycobacterium_tuberculosis__moxifloxacin	scm	PRJEB38780	225	741	yes	186	39	47	694	0	0	0.826667	0.936572	0.881619
+mycobacterium_tuberculosis__moxifloxacin	scm	PRJEB40777	231	783	yes	191	40	54	729	0	0	0.826840	0.931034	0.878937
+mycobacterium_tuberculosis__moxifloxacin	scm	PRJEB48275	24	134	no	17	7	9	125	0	0			
+mycobacterium_tuberculosis__moxifloxacin	scm	PRJNA1044389	219	699	yes	185	34	53	646	0	0	0.844749	0.924177	0.884463
+mycobacterium_tuberculosis__moxifloxacin	cart	PRJEB27354	229	776	yes	198	31	57	719	0	0	0.864629	0.926546	0.895588
+mycobacterium_tuberculosis__moxifloxacin	cart	PRJEB36040	232	782	yes	201	31	58	724	0	0	0.866379	0.925831	0.896105
+mycobacterium_tuberculosis__moxifloxacin	cart	PRJEB38780	225	741	yes	195	30	51	690	0	0	0.866667	0.931174	0.898920
+mycobacterium_tuberculosis__moxifloxacin	cart	PRJEB40777	231	783	yes	200	31	58	725	0	0	0.865801	0.925926	0.895863
+mycobacterium_tuberculosis__moxifloxacin	cart	PRJEB48275	24	134	no	17	7	9	125	0	0			
+mycobacterium_tuberculosis__moxifloxacin	cart	PRJNA1044389	219	699	yes	194	25	57	642	0	0	0.885845	0.918455	0.902150
+mycobacterium_tuberculosis__moxifloxacin	lasso	PRJEB27354	229	776	yes	198	31	57	719	0	0	0.864629	0.926546	0.895588
+mycobacterium_tuberculosis__moxifloxacin	lasso	PRJEB36040	232	782	yes	201	31	58	724	0	0	0.866379	0.925831	0.896105
+mycobacterium_tuberculosis__moxifloxacin	lasso	PRJEB38780	225	741	yes	195	30	51	690	0	0	0.866667	0.931174	0.898920
+mycobacterium_tuberculosis__moxifloxacin	lasso	PRJEB40777	231	783	yes	200	31	58	725	0	0	0.865801	0.925926	0.895863
+mycobacterium_tuberculosis__moxifloxacin	lasso	PRJEB48275	24	134	no	17	7	9	125	0	0			
+mycobacterium_tuberculosis__moxifloxacin	lasso	PRJNA1044389	219	699	yes	194	25	57	642	0	0	0.885845	0.918455	0.902150
+mycobacterium_tuberculosis__moxifloxacin	known_gene	PRJEB27354	229	776	yes	229	0	775	1	0	0	1.000000	0.001289	0.500644
+mycobacterium_tuberculosis__moxifloxacin	known_gene	PRJEB36040	232	782	yes	232	0	781	1	0	0	1.000000	0.001279	0.500639
+mycobacterium_tuberculosis__moxifloxacin	known_gene	PRJEB38780	225	741	yes	225	0	740	1	0	0	1.000000	0.001350	0.500675
+mycobacterium_tuberculosis__moxifloxacin	known_gene	PRJEB40777	231	783	yes	231	0	782	1	0	0	1.000000	0.001277	0.500639
+mycobacterium_tuberculosis__moxifloxacin	known_gene	PRJEB48275	24	134	no	24	0	133	1	0	0			
+mycobacterium_tuberculosis__moxifloxacin	known_gene	PRJNA1044389	219	699	yes	219	0	699	0	0	0	1.000000	0.000000	0.500000
+mycobacterium_tuberculosis__prothionamide	scm	PRJEB27354	25	26	yes	20	5	17	9	0	0	0.800000	0.346154	0.573077
+mycobacterium_tuberculosis__prothionamide	scm	PRJEB36040	28	32	yes	23	5	21	11	0	0	0.821429	0.343750	0.582589
+mycobacterium_tuberculosis__prothionamide	scm	PRJEB38780	6	6	no	4	2	4	2	0	0			
+mycobacterium_tuberculosis__prothionamide	scm	PRJEB40777	28	32	yes	22	6	21	11	0	0	0.785714	0.343750	0.564732
+mycobacterium_tuberculosis__prothionamide	cart	PRJEB27354	25	26	yes	21	4	17	9	0	0	0.840000	0.346154	0.593077
+mycobacterium_tuberculosis__prothionamide	cart	PRJEB36040	28	32	yes	24	4	21	11	0	0	0.857143	0.343750	0.600446
+mycobacterium_tuberculosis__prothionamide	cart	PRJEB38780	6	6	no	4	2	4	2	0	0			
+mycobacterium_tuberculosis__prothionamide	cart	PRJEB40777	28	32	yes	23	5	21	11	0	0	0.821429	0.343750	0.582589
+mycobacterium_tuberculosis__prothionamide	lasso	PRJEB27354	25	26	yes	19	6	20	6	0	0	0.760000	0.230769	0.495385
+mycobacterium_tuberculosis__prothionamide	lasso	PRJEB36040	28	32	yes	23	5	26	6	0	0	0.821429	0.187500	0.504464
+mycobacterium_tuberculosis__prothionamide	lasso	PRJEB38780	6	6	no	5	1	6	0	0	0			
+mycobacterium_tuberculosis__prothionamide	lasso	PRJEB40777	28	32	yes	22	6	26	6	0	0	0.785714	0.187500	0.486607
+mycobacterium_tuberculosis__pyrazinamide	scm	PRJEB26996	420	337	yes	90	330	120	217	0	0	0.214286	0.643917	0.429101
+mycobacterium_tuberculosis__pyrazinamide	scm	PRJEB27354	435	405	yes	94	341	127	278	0	0	0.216092	0.686420	0.451256
+mycobacterium_tuberculosis__pyrazinamide	scm	PRJEB36040	442	407	yes	96	346	129	278	0	0	0.217195	0.683047	0.450121
+mycobacterium_tuberculosis__pyrazinamide	scm	PRJEB38780	409	392	yes	94	315	126	266	0	0	0.229829	0.678571	0.454200
+mycobacterium_tuberculosis__pyrazinamide	scm	PRJEB40777	441	408	yes	96	345	129	279	0	0	0.217687	0.683824	0.450755
+mycobacterium_tuberculosis__pyrazinamide	scm	PRJEB48275	117	129	yes	26	91	23	106	0	0	0.222222	0.821705	0.521964
+mycobacterium_tuberculosis__pyrazinamide	scm	PRJNA1044389	388	370	yes	80	308	120	250	0	0	0.206186	0.675676	0.440931
+mycobacterium_tuberculosis__pyrazinamide	cart	PRJEB26996	420	337	yes	281	139	224	113	0	0	0.669048	0.335312	0.502180
+mycobacterium_tuberculosis__pyrazinamide	cart	PRJEB27354	435	405	yes	286	149	247	158	0	0	0.657471	0.390123	0.523797
+mycobacterium_tuberculosis__pyrazinamide	cart	PRJEB36040	442	407	yes	290	152	248	159	0	0	0.656109	0.390663	0.523386
+mycobacterium_tuberculosis__pyrazinamide	cart	PRJEB38780	409	392	yes	269	140	238	154	0	0	0.657702	0.392857	0.525279
+mycobacterium_tuberculosis__pyrazinamide	cart	PRJEB40777	441	408	yes	289	152	248	160	0	0	0.655329	0.392157	0.523743
+mycobacterium_tuberculosis__pyrazinamide	cart	PRJEB48275	117	129	yes	83	34	60	69	0	0	0.709402	0.534884	0.622143
+mycobacterium_tuberculosis__pyrazinamide	cart	PRJNA1044389	388	370	yes	242	146	223	147	0	0	0.623711	0.397297	0.510504
+mycobacterium_tuberculosis__rifampin	scm	PRJEB26996	887	129	yes	884	3	53	76	0	0	0.996618	0.589147	0.792883
+mycobacterium_tuberculosis__rifampin	scm	PRJEB27354	937	202	yes	932	5	51	151	0	0	0.994664	0.747525	0.871094
+mycobacterium_tuberculosis__rifampin	scm	PRJEB36040	944	204	yes	939	5	53	151	0	0	0.994703	0.740196	0.867450
+mycobacterium_tuberculosis__rifampin	scm	PRJEB38780	898	202	yes	893	5	51	151	0	0	0.994432	0.747525	0.870978
+mycobacterium_tuberculosis__rifampin	scm	PRJEB40777	944	204	yes	939	5	53	151	0	0	0.994703	0.740196	0.867450
+mycobacterium_tuberculosis__rifampin	scm	PRJEB48275	198	93	yes	196	2	14	79	0	0	0.989899	0.849462	0.919681
+mycobacterium_tuberculosis__rifampin	scm	PRJNA1044389	862	190	yes	857	5	43	147	0	0	0.994200	0.773684	0.883942
+mycobacterium_tuberculosis__rifampin	cart	PRJEB26996	887	129	yes	884	3	53	76	0	0	0.996618	0.589147	0.792883
+mycobacterium_tuberculosis__rifampin	cart	PRJEB27354	937	202	yes	932	5	51	151	0	0	0.994664	0.747525	0.871094
+mycobacterium_tuberculosis__rifampin	cart	PRJEB36040	944	204	yes	939	5	53	151	0	0	0.994703	0.740196	0.867450
+mycobacterium_tuberculosis__rifampin	cart	PRJEB38780	898	202	yes	893	5	51	151	0	0	0.994432	0.747525	0.870978
+mycobacterium_tuberculosis__rifampin	cart	PRJEB40777	944	204	yes	939	5	53	151	0	0	0.994703	0.740196	0.867450
+mycobacterium_tuberculosis__rifampin	cart	PRJEB48275	198	93	yes	196	2	14	79	0	0	0.989899	0.849462	0.919681
+mycobacterium_tuberculosis__rifampin	cart	PRJNA1044389	862	190	yes	857	5	43	147	0	0	0.994200	0.773684	0.883942
+mycobacterium_tuberculosis__rifampin	lasso	PRJEB26996	887	129	yes	813	74	39	90	0	0	0.916573	0.697674	0.807124
+mycobacterium_tuberculosis__rifampin	lasso	PRJEB27354	937	202	yes	858	79	37	165	0	0	0.915688	0.816832	0.866260
+mycobacterium_tuberculosis__rifampin	lasso	PRJEB36040	944	204	yes	865	79	39	165	0	0	0.916314	0.808824	0.862569
+mycobacterium_tuberculosis__rifampin	lasso	PRJEB38780	898	202	yes	823	75	37	165	0	0	0.916481	0.816832	0.866656
+mycobacterium_tuberculosis__rifampin	lasso	PRJEB40777	944	204	yes	865	79	39	165	0	0	0.916314	0.808824	0.862569
+mycobacterium_tuberculosis__rifampin	lasso	PRJEB48275	198	93	yes	180	18	14	79	0	0	0.909091	0.849462	0.879277
+mycobacterium_tuberculosis__rifampin	lasso	PRJNA1044389	862	190	yes	792	70	29	161	0	0	0.918794	0.847368	0.883081
+mycobacterium_tuberculosis__streptomycin	scm	PRJEB26996	85	18	no	73	12	2	16	0	0			
+mycobacterium_tuberculosis__streptomycin	scm	PRJEB27354	156	80	yes	129	27	5	75	0	0	0.826923	0.937500	0.882212
+mycobacterium_tuberculosis__streptomycin	scm	PRJEB38780	152	80	yes	125	27	5	75	0	0	0.822368	0.937500	0.879934
+mycobacterium_tuberculosis__streptomycin	scm	PRJNA1044389	78	62	yes	63	15	3	59	0	0	0.807692	0.951613	0.879653
+mycobacterium_tuberculosis__streptomycin	cart	PRJEB26996	85	18	no	73	12	2	16	0	0			
+mycobacterium_tuberculosis__streptomycin	cart	PRJEB27354	156	80	yes	129	27	5	75	0	0	0.826923	0.937500	0.882212
+mycobacterium_tuberculosis__streptomycin	cart	PRJEB38780	152	80	yes	125	27	5	75	0	0	0.822368	0.937500	0.879934
+mycobacterium_tuberculosis__streptomycin	cart	PRJNA1044389	78	62	yes	63	15	3	59	0	0	0.807692	0.951613	0.879653
+mycobacterium_tuberculosis__streptomycin	known_gene	PRJEB26996	85	18	no	0	85	0	18	0	0			
+mycobacterium_tuberculosis__streptomycin	known_gene	PRJEB27354	156	80	yes	0	156	0	80	0	0	0.000000	1.000000	0.500000
+mycobacterium_tuberculosis__streptomycin	known_gene	PRJEB38780	152	80	yes	0	152	0	80	0	0	0.000000	1.000000	0.500000
+mycobacterium_tuberculosis__streptomycin	known_gene	PRJNA1044389	78	62	yes	0	78	0	62	0	0	0.000000	1.000000	0.500000

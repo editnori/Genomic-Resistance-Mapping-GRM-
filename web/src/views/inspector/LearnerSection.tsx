@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import type { DatasetReport, Learner, LearnerResult, Research, Scheme } from "../../data/schema";
 import { int, LEARNER_NAME, LEARNER_ORDER, learnerInSentence, pct } from "../../data/format";
 import { BARS } from "../../data/metrics";
-import { bestLearner, countsNoCalls, learnerOf, NO_BEST_LEARNER, nullFolds, outscoringPartial, splitAbsence, splitOf, uncalledOf } from "../../data/derive/dataset";
+import { bestLearner, countsNoCalls, learnerOf, NO_BEST_LEARNER, nullFolds, outscoringPartial, scoresNullFits, splitAbsence, splitOf, uncalledOf } from "../../data/derive/dataset";
 import { linear, useWidth } from "../../charts/kit";
 import { LearnerStripRow, StripAxis } from "../../charts/LearnerStrip";
 import { BarPill, Dot, LegendItem, ScrollFrame, Section, Segmented } from "../../ui/primitives";
@@ -10,6 +10,7 @@ import { BarPill, Dot, LegendItem, ScrollFrame, Section, Segmented } from "../..
 import type { Resource } from "../../data/load";
 import { intervalKey, type RateInterval, type RowIntervals } from "../../data/intervals";
 import { SelectiveResearch } from "./SelectiveResearch";
+import { leadOver, leadWords, lineageOf, signedPoints, type Baselines, type LineageBaseline } from "../../data/baselines";
 
 const STRIP_MIN = 220;
 
@@ -49,8 +50,9 @@ const RateRange = ({ ci, of, as }: { ci: RateInterval | null | undefined; of: st
     </span>
   );
 
-/** Null folds in a report written before no-calls, which scored them 0.5;
- *  the note under the table says what that did to the rates. */
+/** Null folds in a report that scored them: at 0.5 before no-calls, at the
+ *  fold's training prevalence from revision 14; the note under the table
+ *  says what that did to the rates. */
 const NullFoldCell = ({ l }: { l: LearnerResult }) => {
   const k = nullFolds(l);
   return k === 0 ? <span className="text-muted-text">None</span> : <span className="tabular-nums">{`${int(k)} of ${int(l.fold_complexity.length)}`}</span>;
@@ -70,13 +72,61 @@ const uncalledLines = (r: DatasetReport, rows: readonly (LearnerResult | undefin
     ];
   });
 
-export const LearnerSection = ({ r, research, intervals }: { r: DatasetReport; research?: Resource<Research>; intervals?: RowIntervals }) => {
+/** What lineage identity alone reaches on each split, in words under the
+ *  table: on the random split the baseline and its unseen share, read beside
+ *  the line under each random-split score; on the lineage split no
+ *  difference, as the baseline has nothing of the lineage to read there. */
+const lineageBaselineText = (random: LineageBaseline | undefined, lineage: LineageBaseline | undefined): string => {
+  const parts: string[] = [];
+  if (random !== undefined)
+    parts.push(
+      `Lineage identity alone, which scores a test genome by the resistant share of its lineage among the fold's training genomes, or by the resistant share of the fold's training genomes when none of them shares its lineage, reaches ${pct(random.balanced_accuracy)} balanced accuracy on the random split, where ${pct(random.unseen_share)} of test genomes (${int(random.unseen)} of ${int(random.n)}) have a lineage no training genome of their fold shares. The line under each random-split score is that score minus this baseline, in points.`,
+    );
+  if (lineage !== undefined)
+    parts.push(
+      `With lineages held out, ${pct(lineage.unseen_share)} of test genomes (${int(lineage.unseen)} of ${int(lineage.n)}) have a lineage no training genome of their fold shares, so this baseline has nothing of the lineage to read there and no difference is shown.`,
+    );
+  return parts.join(" ");
+};
+
+export const LearnerSection = ({
+  r,
+  research,
+  intervals,
+  baselines = null,
+}: {
+  r: DatasetReport;
+  research?: Resource<Research>;
+  intervals?: RowIntervals;
+  /** The baselines file as pinned to this report (baselinesFor), or null. */
+  baselines?: Baselines | null;
+}) => {
   const [scheme, setScheme] = useState<Scheme>("random");
   const frame = useRef<HTMLDivElement | null>(null);
+  const stripBox = useRef<HTMLDivElement | null>(null);
   // Wide, the strip takes what the number columns leave, within bounds; on
   // a phone it fits beside the learner names and the numbers scroll.
   const avail = useWidth(frame, 900);
-  const stripWidth = avail < 640 ? Math.max(120, avail - 210) : Math.max(STRIP_MIN, Math.min(560, avail - 640));
+  const wide = avail >= 640;
+  // Wide, the table lays the strip out itself: its column takes the width
+  // the number columns leave (they widen with intervals such as
+  // "92.6%–100.0%" under VME and ME, and keep to one line), and the strip
+  // draws at the width it gets. The strip sits in a box with no width of its
+  // own, so it never adds to the table's width and the table fits its frame
+  // from the first layout. Until the cell is measured the strip draws at the
+  // old 640 px allowance.
+  const cellWidth = useWidth(stripBox, avail - 640);
+  const stripWidth = wide ? Math.max(STRIP_MIN, Math.min(560, cellWidth)) : Math.max(120, avail - 210);
+  // Wide only: the strip's column (at least STRIP_MIN plus its px-2
+  // padding), and the box that fills its cell without sizing it.
+  const stripColumn = wide ? { width: "100%", minWidth: STRIP_MIN + 16 } : undefined;
+  const stripFill = wide ? { width: 0, minWidth: "100%" } : undefined;
+  // Wide only: when the cell narrows (the lineage view's wider intervals),
+  // the strip keeps its old width until the observer reads the cell again.
+  // The cell clips it meanwhile, so it never paints over the next column;
+  // settled, the strip ends inside the cell's content box and the clip cuts
+  // nothing.
+  const stripClip = wide ? "overflow-hidden" : "";
   const random = splitOf(r, "random");
   const lineage = splitOf(r, "lineage");
   const best = bestLearner(r);
@@ -92,8 +142,10 @@ export const LearnerSection = ({ r, research, intervals }: { r: DatasetReport; r
   const x = linear([lo, 1], [8, stripWidth - 8]);
   const bestLineage = best === undefined ? undefined : learnerOf(r, "lineage", best.learner);
 
-  // Reports with no-call counts get the share each row calls; older reports
-  // get the null folds they scored 0.5, when they have any.
+  // Reports with no-call counts (revisions 7 to 13) get the share each row
+  // calls; other reports get the null folds they scored, when they have any:
+  // at 0.5 before no-calls, at the training prevalence from revision 14.
+  const prevalenceScored = scoresNullFits(r);
   const noCalls = countsNoCalls(r);
   const rows = learners.flatMap((l) => [learnerOf(r, "random", l), learnerOf(r, "lineage", l)]);
   const anyUncalled = rows.some((l) => l !== undefined && (uncalledOf(l) ?? 0) > 0);
@@ -109,7 +161,7 @@ export const LearnerSection = ({ r, research, intervals }: { r: DatasetReport; r
         : "No learner result is recorded for this dataset."
       : `${LEARNER_NAME[best.learner]} scores ${pct(best.metrics.balanced_accuracy)} on random splits${
           bestLineage === undefined ? "" : ` and ${pct(baOf(bestLineage))} with lineages held out`
-        }${catalogBa === null ? "." : `; the catalog alone scores ${pct(catalogBa)}.`}`;
+        }${catalogBa === null ? "." : `; the known-gene catalog alone scores ${pct(catalogBa)}.`}`;
 
   // Higher random-split scores that lose to the best learner because they
   // leave isolates uncalled. The note sits outside the error toggle, so it
@@ -121,18 +173,22 @@ export const LearnerSection = ({ r, research, intervals }: { r: DatasetReport; r
       ? null
       : `${outscoring
           .map((o) => `${LEARNER_NAME[o.learner]} scores ${pct(o.ba)} on random splits, above ${learnerInSentence(best.learner)}, but gives no call for ${o.uncalled.map(uncalledWords).join(" and ")}.`)
-          .join(" ")} The best learner has to call every isolate on every split it ran.`;
+          .join(" ")} The best learner has to be scored on every isolate on every split it ran.`;
 
   const errorsOf = (l: Learner) => learnerOf(r, scheme, l);
   // The rows the Called column reads, named in words under the table.
   const uncalled = noCalls ? uncalledLines(r, learners.map(errorsOf), scheme) : [];
   const ciOf = (l: Learner) => intervals?.get(intervalKey(scheme, l));
   const anyInterval = learners.some((l) => ciOf(l) !== undefined);
+  const randomBase = lineageOf(baselines, "random");
+  const lineageBase = lineageOf(baselines, "lineage");
+  const baselineText = lineageBaselineText(randomBase, lineageBase);
 
   return (
     <Section
       id="ds-learners"
       title="Learner comparison"
+      question="Each row is one learner, a kind of model that calls resistance from the genome. Further right scores higher: a filled dot is the random split, a ring the test on lineages it never saw."
       answer={answer}
       right={
         lineage !== undefined ? (
@@ -157,20 +213,30 @@ export const LearnerSection = ({ r, research, intervals }: { r: DatasetReport; r
       {outscoringNote === null ? null : <p className="type-note mb-3">{outscoringNote}</p>}
       <div ref={frame}>
       <ScrollFrame label="Learner comparison">
-        <table className="w-full border-collapse text-control">
+        <table className={`w-full border-collapse text-control ${wide ? "whitespace-nowrap" : ""}`}>
           <thead>
             <tr className="border-b border-hair text-left">
               <th scope="col" className="px-2 py-2 text-tiny font-medium text-blue">
                 Learner
               </th>
-              <th scope="col" className="px-2 py-1 text-tiny font-medium text-blue">
+              <th scope="col" className={`px-2 py-1 text-tiny font-medium text-blue ${stripClip}`} style={stripColumn}>
                 <span className="sr-only">Balanced accuracy, </span>
-                <StripAxis x={x} width={stripWidth} />
+                <div ref={stripBox} style={stripFill}>
+                  <StripAxis x={x} width={stripWidth} />
+                </div>
               </th>
               {["Random", "Lineages held out", "VME", "ME", ...(extra === null ? [] : [extra]), "AUROC"].map((h) => (
                 <th key={h} scope="col" className="whitespace-nowrap px-2 py-2 text-right text-tiny font-medium text-blue">
                   {h}
-                  {h === "VME" ? <span className="block font-normal text-muted-text">≤1.5%</span> : h === "ME" ? <span className="block font-normal text-muted-text">≤3%</span> : null}
+                  {h === "VME" ? (
+                    <span className="block font-normal text-muted-text">≤1.5%</span>
+                  ) : h === "ME" ? (
+                    <span className="block font-normal text-muted-text">≤3%</span>
+                  ) : h === "Random" && randomBase !== undefined ? (
+                    <span className="block font-normal text-muted-text" data-baseline="lineage-header">
+                      lineage {pct(randomBase.balanced_accuracy)}
+                    </span>
+                  ) : null}
                 </th>
               ))}
             </tr>
@@ -188,8 +254,8 @@ export const LearnerSection = ({ r, research, intervals }: { r: DatasetReport; r
                     {LEARNER_NAME[l]}
                     {isBest ? <span className="ml-2 text-tiny font-medium text-blue">Best</span> : null}
                   </th>
-                  <td className="px-2 py-0.5">
-                    <div>
+                  <td className={`px-2 py-0.5 ${stripClip}`}>
+                    <div style={stripFill}>
                       <LearnerStripRow
                         x={x}
                         width={stripWidth}
@@ -202,7 +268,15 @@ export const LearnerSection = ({ r, research, intervals }: { r: DatasetReport; r
                       />
                     </div>
                   </td>
-                  <td className={`px-2 py-1 text-right tabular-nums ${a?.metrics === null ? "text-muted-text" : ""}`}>{baText(a)}</td>
+                  <td className={`px-2 py-1 text-right tabular-nums ${a?.metrics === null ? "text-muted-text" : ""}`}>
+                    {baText(a)}
+                    {randomBase === undefined || baOf(a) === null ? null : (
+                      <span className="block text-tiny text-muted-text" data-baseline="lineage-lead">
+                        <span aria-hidden="true">{signedPoints(leadOver(baOf(a)!, randomBase.balanced_accuracy))}</span>
+                        <span className="sr-only"> {leadWords(leadOver(baOf(a)!, randomBase.balanced_accuracy), "lineage identity alone")}</span>
+                      </span>
+                    )}
+                  </td>
                   <td className={`px-2 py-1 text-right tabular-nums ${b?.metrics === null ? "text-muted-text" : ""}`}>
                     {l === "catalog" ? (
                       <span className="text-muted-text">
@@ -247,7 +321,9 @@ export const LearnerSection = ({ r, research, intervals }: { r: DatasetReport; r
       </ScrollFrame>
       </div>
       <p className="type-note mt-3">
-        Balanced accuracy over pooled out-of-fold predictions; faint dots are the {random?.folds ?? 5} single folds.
+        The genomes are cut into {random?.folds ?? 5} parts (folds), and each part is held out once while the model trains on the rest. Balanced accuracy pools those held-out
+        predictions; faint dots are the single folds. AUROC is how well the scores rank resistant isolates above susceptible ones, from 0.5 for chance to 1 for a perfect ranking.
+        {" "}The limits under VME and ME are a screen adapted from FDA&apos;s 2009 guidance for growth-based susceptibility test systems.
         {lineage !== undefined
           ? ` With lineages held out, each of the ${lineage.n_groups} lineages goes whole to one fold.`
           : ` No lineage-held-out result: ${splitAbsence(r, "lineage") ?? ""}`}
@@ -259,9 +335,16 @@ export const LearnerSection = ({ r, research, intervals }: { r: DatasetReport; r
           ? " Under VME and ME, the 95% Clopper-Pearson interval from this report's own counts: VME over the resistant isolates the row called, ME over the susceptible ones; a range's tooltip gives its counts. It treats the isolates as independent and reflects which ones happened to be sampled, not calibration or clinical performance."
           : ""}
         {anyNullFold
-          ? " This report scored a fold where boosting kept no tree, or the lasso kept no weight, at 0.5, which the 0.5 cutoff calls resistant; Null folds counts those folds, and every rate includes them."
+          ? prevalenceScored
+            ? " A fold where boosting kept no tree, or the lasso kept no weight, predicts its training isolates' resistant share for each isolate it holds, and the 0.5 cutoff calls that score like any other; Null folds counts those folds, and every rate includes them."
+            : " This report scored a fold where boosting kept no tree, or the lasso kept no weight, at 0.5, which the 0.5 cutoff calls resistant; Null folds counts those folds, and every rate includes them."
           : ""}
       </p>
+      {baselineText === "" ? null : (
+        <p className="type-note mt-1.5" data-baseline="lineage-note">
+          {baselineText}
+        </p>
+      )}
       {uncalled.length === 0 ? null : (
         <ul className="type-note mt-1.5 list-disc space-y-0.5 pl-5">
           {uncalled.map((line) => (

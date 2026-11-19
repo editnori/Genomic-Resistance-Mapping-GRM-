@@ -28,21 +28,38 @@
 //! Every random draw in an outer fold (inner folds, tuning holdouts, boosting
 //! column samples, forest subsamples and node features) is seeded from
 //! `EvalConfig::seed` and the fold, so `fit_fold` rebuilds any held-out fit.
+//! `EvalConfig::learner_seed`, when set, seeds the forest's and boosting's
+//! own draws in its place and leaves every partition as `seed` draws it.
 //!
 //! A boosted model that keeps no tree, or a lasso that keeps no weight, is a
-//! null fit: it scores the class-balanced 0.5 prior, so it makes no call for
-//! its test fold. Metrics cover the called samples and `no_call` counts the
-//! rest; a learner with no called sample has no metrics. A fitted model's
-//! score is a call even when it is exactly 0.5.
+//! null fit. A null fit is still a model: it predicts its training
+//! prevalence (`train_prevalence`, resistant training samples over training
+//! samples of the outer fold) for every sample, and the 0.5 cutoff calls
+//! that score like any other, so a prevalence of exactly 0.5 is a resistant
+//! call. From revision 14 every learner is therefore scored on every sample
+//! of a split: `metrics`, the ROC points and each fold's balanced accuracy
+//! cover them all. `no_call` still counts, by class, the samples of null-fit
+//! folds, and a row with any such sample keeps the figure over the other
+//! samples in `called_metrics` (null when every fold's fit was null), the
+//! figure revisions 7 to 13 published as `metrics`. A fitted model's score
+//! is a call even when it is exactly 0.5.
+//!
+//! `EvalOutput::fold_models` keeps what each outer fold's model reads
+//! (`FoldSplit`), its features numbered as rows of the dataset matrix like
+//! the final models'. The final models are fitted on every sample, so the
+//! fold models are what shows whether the folds chose the same features.
+//! They record fits `evaluate` already makes and change no score.
 
 use super::gbt::{self, GbtParams, Objective};
 use super::lasso;
+use super::null_refit;
 use super::scm::{self, Kind, Rule};
+use super::tie::TieRule;
 use super::tree::{self, ForestParams, TreeParams};
 use super::{
-    BinaryMetrics, NoCall, binary_metrics, fold_masks, grouped_folds, holdout, isolate_groups,
-    roc_curve, screen, stratified_folds, training_candidates, training_folds, tuning_holdout,
-    validate_folds,
+    BinaryMetrics, NoCall, any_training_candidate, binary_metrics, fold_masks, grouped_folds,
+    holdout, isolate_groups, roc_curve, screen, stratified_folds, train_prevalence,
+    training_candidates, training_folds, tuning_holdout, validate_folds,
 };
 use crate::bits::{BitMatrix, Bits};
 use crate::curate::{Breakpoint, Call, Censor, Mic, infer_breakpoint};
@@ -63,7 +80,21 @@ pub struct EvalConfig {
     /// forest, screened on each fit's own fitting samples.
     pub screened_features: usize,
     pub lasso_lambdas: usize,
+    /// Seeds every partition (both splits' outer folds, each fit's inner
+    /// folds and tuning holdouts, the MIC regression's folds) and, unless
+    /// `learner_seed` is set, the learners' own draws.
     pub seed: u64,
+    /// Seeds the learners' own draws in place of `seed`: the forest's
+    /// subsamples and node features and boosting's column samples, in every
+    /// outer fold, the final models and the MIC regression. No partition
+    /// reads it. None, the default and every release's setting, is left out
+    /// of a report's `eval_config`, so such a report is unchanged.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub learner_seed: Option<u64>,
+    /// The tree learners' tie rule. `TieRule::Exact` is an experiment, off by
+    /// default; a report records the field only when it is on.
+    #[serde(skip_serializing_if = "TieRule::is_float")]
+    pub tie_rule: TieRule,
 }
 
 impl Default for EvalConfig {
@@ -78,6 +109,8 @@ impl Default for EvalConfig {
             screened_features: 4000,
             lasso_lambdas: 30,
             seed: 42,
+            learner_seed: None,
+            tie_rule: TieRule::Float,
         }
     }
 }
@@ -184,17 +217,31 @@ pub struct LassoProgress<'a> {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct LearnerResult {
     pub learner: String,
-    /// Metrics on the pooled out-of-fold calls; samples without a call are
-    /// left out and counted in `no_call`. None (null in JSON) when no sample
-    /// has a call: an empty call set has no error rates, not 0% error.
+    /// Metrics on the pooled out-of-fold scores of every sample, a null-fit
+    /// fold's samples at that fold's training prevalence. Rows written before
+    /// revision 14 left a null fit's samples out (they are counted in
+    /// `no_call`) and are None (null in JSON) when no sample had a call.
     pub metrics: Option<BinaryMetrics>,
-    /// Balanced accuracy of each outer fold's calls, by fold id; NaN (null
-    /// in JSON) for a fold whose fit made no call.
+    /// Revision 14 rows with a null-fit fold only: the metrics over the
+    /// samples of fitted folds, which revisions 7 to 13 published as
+    /// `metrics`. `Some(None)` (null in JSON) when every fold's fit was null.
+    /// Absent on a row without a null fit, whose `metrics` already are that
+    /// figure, and on every row written before revision 14.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_present"
+    )]
+    pub called_metrics: Option<Option<BinaryMetrics>>,
+    /// Balanced accuracy of each outer fold's calls, by fold id; a null-fit
+    /// fold's is that of its constant prevalence call. Rows written before
+    /// revision 14 hold NaN (null in JSON) for a null-fit fold.
     #[serde(deserialize_with = "deserialize_nullable_scores")]
     pub fold_balanced_accuracy: Vec<f64>,
     pub roc: Vec<(f64, f64)>,
-    /// Out-of-fold resistant score per sample, in dataset sample order; NaN
-    /// (null in JSON) for a sample without a call.
+    /// Out-of-fold resistant score per sample, in dataset sample order; a
+    /// null-fit fold's samples carry its training prevalence. Rows written
+    /// before revision 14 hold NaN (null in JSON) for those samples.
     #[serde(deserialize_with = "deserialize_nullable_scores")]
     pub scores: Vec<f64>,
     pub conformal: Vec<ConformalPoint>,
@@ -202,12 +249,13 @@ pub struct LearnerResult {
     /// trees kept by early stopping, or lasso non-zero weights. Zero for
     /// boosting or the lasso is a null fit. Rows without `no_call` scored
     /// that fold's samples 0.5, which the 0.5 cutoff calls resistant; rows
-    /// with it leave them uncalled.
+    /// of revisions 7 to 13 leave them uncalled; revision 14 rows score them
+    /// at the fold's training prevalence.
     pub fold_complexity: Vec<f64>,
     pub seconds: f64,
-    /// Samples in folds whose fit was null, by reported class. Absent on
-    /// catalog rows, which call every sample, and on rows written before
-    /// null fits became no-calls.
+    /// Samples in folds whose fit was null, by reported class: those without
+    /// a fitted model's call. Absent on catalog rows, which call every
+    /// sample, and on rows written before null fits became no-calls.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub no_call: Option<NoCall>,
     /// One solver-audit record per outer fold on revision-8 lasso rows.
@@ -265,6 +313,16 @@ pub struct MicResult {
     pub predicted: Vec<f64>,
 }
 
+/// Reads a field that is present, null included, as Some: `called_metrics`
+/// is absent (None), null (Some(None)) or an object.
+fn deserialize_present<'de, D, T>(d: D) -> Result<Option<T>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    T::deserialize(d).map(Some)
+}
+
 /// Reads values that serde_json wrote as null from NaN back as NaN.
 fn deserialize_nullable_scores<'de, D: serde::Deserializer<'de>>(
     d: D,
@@ -305,9 +363,150 @@ pub struct FinalModels {
     pub gbt_importance: Vec<WeightedFeature>,
 }
 
+/// How many features a forest's or a boosted model's importance list
+/// keeps: the final models' lists and each fold model's.
+pub const TOP_WEIGHTED: usize = 50;
+
+/// One outer fold's set covering machine: the kind and trade-off its inner
+/// folds chose, and its rules in the order the greedy fit added them. The
+/// fold fits list no tied rules (`scm::fit` without `track_equivalent`).
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct FoldScm {
+    pub kind: Kind,
+    pub p: f64,
+    pub rules: Vec<Rule>,
+}
+
+/// The outer-fold models of one split, each learner's by fold id: the model
+/// fitted for the samples `test_fold` gives that fold, whose scores the
+/// split's row holds for them unless the fit was null. Each has the shape
+/// of the final model it stands beside:
+///
+/// - `scm`: as `FinalModels::scm`'s kind, p and rules;
+/// - `cart`: the tree, as `FinalModels::cart`, grown to its selected depth;
+/// - `rf` and `gbt`: the `TOP_WEIGHTED` features by importance, heaviest
+///   first and equal weights by lower feature first, as `rf_importance` and
+///   `gbt_importance`; a boosted model that kept no tree has none;
+/// - `lasso`: the scored refit, as `FinalModels::lasso`; None when the
+///   tuning path was empty, and without weights when the refit kept none.
+///   A lasso fold model that is None or has no weights, like a boosting
+///   fold with an empty list, is a null fit: its fold scored each test
+///   sample at the fold's training prevalence (`pool_folds`,
+///   docs/equal-scoring.md), not at the sigmoid of its intercept.
+///
+/// A feature is a row of the dataset matrix, the numbering of the final
+/// models and of a report's feature cards. A fold chooses among the rows
+/// that differ on its own training samples and names the lowest row of each
+/// set that agrees there (`training_candidates`), so two folds, or a fold
+/// and the final model, can name different rows for patterns that differ
+/// only on samples one of them did not train on. Equal ids are therefore
+/// the strict reading of "the same feature". A report also carries the
+/// presence pattern of every feature in `pattern_features`, so those can be
+/// compared sample by sample against `SplitResult::test_fold`.
+///
+/// A feature here is a marker a model reads and an association with the
+/// reported label. It is not a cause.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct FoldSplit {
+    /// The split's `SplitResult::scheme`.
+    pub scheme: String,
+    pub scm: Vec<FoldScm>,
+    pub cart: Vec<tree::Tree>,
+    pub rf: Vec<Vec<WeightedFeature>>,
+    pub gbt: Vec<Vec<WeightedFeature>>,
+    pub lasso: Vec<Option<lasso::LassoModel>>,
+}
+
+impl FoldSplit {
+    fn new(scheme: &str) -> Self {
+        FoldSplit {
+            scheme: scheme.to_string(),
+            scm: vec![],
+            cart: vec![],
+            rf: vec![],
+            gbt: vec![],
+            lasso: vec![],
+        }
+    }
+
+    /// Adds the next fold's `model`, fitted on a candidate matrix whose row
+    /// c is dataset row `rows[c]` (`training_candidates`), under dataset
+    /// row numbers.
+    fn push(&mut self, model: FoldModel, rows: &[u32]) {
+        let row = |f: u32| rows[f as usize];
+        let weighted = |list: Vec<WeightedFeature>| -> Vec<WeightedFeature> {
+            list.into_iter()
+                .map(|w| WeightedFeature {
+                    feature: row(w.feature),
+                    weight: w.weight,
+                })
+                .collect()
+        };
+        match model {
+            FoldModel::Scm(mut m) => {
+                for rule in &mut m.rules {
+                    rule.feature = row(rule.feature);
+                }
+                self.scm.push(m);
+            }
+            FoldModel::Cart(mut t) => {
+                for split in t.nodes.iter_mut().filter_map(|n| n.split.as_mut()) {
+                    split.feature = row(split.feature);
+                }
+                self.cart.push(t);
+            }
+            FoldModel::Rf(list) => self.rf.push(weighted(list)),
+            FoldModel::Gbt(list) => self.gbt.push(weighted(list)),
+            FoldModel::Lasso(mut m) => {
+                for (feature, _) in m.iter_mut().flat_map(|m| &mut m.coef) {
+                    *feature = row(*feature);
+                }
+                self.lasso.push(m);
+            }
+        }
+    }
+
+    /// Every feature of the split's scm rules, cart splits and lasso
+    /// weights, each once: the learners whose fold model is its whole
+    /// feature list. The forest's and boosting's lists are the top of a
+    /// ranking, and their features are left out.
+    pub fn pattern_features(&self) -> std::collections::BTreeSet<u32> {
+        let mut named = std::collections::BTreeSet::new();
+        named.extend(self.scm.iter().flat_map(|m| &m.rules).map(|r| r.feature));
+        named.extend(
+            self.cart
+                .iter()
+                .flat_map(|t| &t.nodes)
+                .filter_map(|n| n.split.as_ref().map(|s| s.feature)),
+        );
+        named.extend(
+            self.lasso
+                .iter()
+                .flatten()
+                .flat_map(|m| &m.coef)
+                .map(|c| c.0),
+        );
+        named
+    }
+}
+
+/// One outer fold's model as `FoldSplit` keeps it, its features numbered as
+/// rows of the matrix it was fitted on.
+pub(crate) enum FoldModel {
+    Scm(FoldScm),
+    Cart(tree::Tree),
+    Rf(Vec<WeightedFeature>),
+    Gbt(Vec<WeightedFeature>),
+    Lasso(Option<lasso::LassoModel>),
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct EvalOutput {
     pub splits: Vec<SplitResult>,
+    /// The outer-fold models of each split that ran, in `splits` order.
+    /// Empty when read from an output written before they were kept.
+    #[serde(default)]
+    pub fold_models: Vec<FoldSplit>,
     pub mic: Option<MicResult>,
     pub finals: FinalModels,
     pub lineage_threshold: Option<f64>,
@@ -320,26 +519,53 @@ pub struct MicInput<'a> {
     pub breakpoint: Option<Breakpoint>,
 }
 
-struct Scored {
+pub(crate) struct Scored {
     /// A score for every sample, or None for a null fit, which makes no call.
-    scores: Option<Vec<f64>>,
-    complexity: f64,
-    lasso_fit: Option<LassoFitAudit>,
+    pub(crate) scores: Option<Vec<f64>>,
+    pub(crate) complexity: f64,
+    pub(crate) lasso_fit: Option<LassoFitAudit>,
 }
 
-fn fit_scm(x: &BitMatrix, y: &Bits, train: &Bits, inner: &[usize], cfg: &EvalConfig) -> Scored {
+pub(crate) fn fit_scm(
+    x: &BitMatrix,
+    y: &Bits,
+    train: &Bits,
+    inner: &[usize],
+    cfg: &EvalConfig,
+) -> (Scored, FoldScm) {
     let c = scm::select(x, y, train, cfg.scm_max_rules, inner, cfg.inner_folds);
     let m = scm::fit(x, y, train, c.kind, c.p, c.n_rules, false);
     let pred = m.predict(x);
-    Scored {
-        scores: Some((0..x.cols).map(|i| pred.contains(i) as u8 as f64).collect()),
-        complexity: m.rules.len() as f64,
-        lasso_fit: None,
-    }
+    (
+        Scored {
+            scores: Some((0..x.cols).map(|i| pred.contains(i) as u8 as f64).collect()),
+            complexity: m.rules.len() as f64,
+            lasso_fit: None,
+        },
+        FoldScm {
+            kind: m.kind,
+            p: m.p,
+            rules: m.rules,
+        },
+    )
 }
 
-fn fit_cart(x: &BitMatrix, y: &Bits, train: &Bits, inner: &[usize], cfg: &EvalConfig) -> Scored {
-    let (depth, _) = tree::select_depth(x, y, train, inner, cfg.inner_folds, cfg.cart_max_depth);
+pub(crate) fn fit_cart(
+    x: &BitMatrix,
+    y: &Bits,
+    train: &Bits,
+    inner: &[usize],
+    cfg: &EvalConfig,
+) -> (Scored, tree::Tree) {
+    let (depth, _) = tree::select_depth(
+        x,
+        y,
+        train,
+        inner,
+        cfg.inner_folds,
+        cfg.cart_max_depth,
+        cfg.tie_rule,
+    );
     let t = tree::fit_tree(
         x,
         y,
@@ -349,20 +575,24 @@ fn fit_cart(x: &BitMatrix, y: &Bits, train: &Bits, inner: &[usize], cfg: &EvalCo
             min_leaf: 1,
             max_features: None,
             seed: 0,
+            tie: cfg.tie_rule,
         },
     );
     let leaves = t.nodes.iter().filter(|n| n.split.is_none()).count();
-    Scored {
-        scores: Some(t.predict(x, depth)),
-        complexity: leaves as f64,
-        lasso_fit: None,
-    }
+    (
+        Scored {
+            scores: Some(t.predict(x, depth)),
+            complexity: leaves as f64,
+            lasso_fit: None,
+        },
+        t,
+    )
 }
 
 /// The forest fits on the same number of chi-square-screened features as
 /// boosting and the lasso, screened on its training samples. Its trees name
 /// positions in that screen, so importance is returned keyed by rows of `x`.
-fn fit_rf(
+pub(crate) fn fit_rf(
     x: &BitMatrix,
     y: &Bits,
     train: &Bits,
@@ -374,7 +604,12 @@ fn fit_rf(
     for &f in &feats {
         screened.push_row(x.row(f as usize));
     }
-    let forest = tree::fit_forest(&screened, y, train, &ForestParams { seed, ..cfg.forest });
+    let params = ForestParams {
+        seed,
+        tie: cfg.tie_rule,
+        ..cfg.forest
+    };
+    let forest = tree::fit_forest(&screened, y, train, &params);
     let importance = forest
         .importance()
         .into_iter()
@@ -393,7 +628,7 @@ fn fit_rf(
 /// Scores from a boosted model, or None when early stopping kept no tree:
 /// that model is the 0.5 prior, a null fit. A model with trees is scored
 /// even where it gives exactly 0.5.
-fn gbt_scores(m: &gbt::Gbt, x: &BitMatrix) -> Option<Vec<f64>> {
+pub(crate) fn gbt_scores(m: &gbt::Gbt, x: &BitMatrix) -> Option<Vec<f64>> {
     (!m.trees.is_empty()).then(|| m.predict_proba(x))
 }
 
@@ -409,6 +644,10 @@ pub(crate) const GBT_HOLDOUT: f64 = 0.15;
 /// The share of training samples the lasso holds out to choose its penalty.
 pub(crate) const LASSO_HOLDOUT: f64 = 0.2;
 
+/// `seed` draws the early-stopping holdout, a partition; `draws` seeds
+/// boosting's column samples. They are equal unless
+/// `EvalConfig::learner_seed` is set.
+#[allow(clippy::too_many_arguments)]
 fn fit_gbt(
     x: &BitMatrix,
     y: &Bits,
@@ -417,6 +656,7 @@ fn fit_gbt(
     unit: &str,
     cfg: &EvalConfig,
     seed: u64,
+    draws: u64,
 ) -> Result<(Scored, gbt::Gbt)> {
     let (fit_m, val) = tuning_holdout(train, y, groups, unit, GBT_HOLDOUT, seed)?;
     let feats = screen(x, y, &fit_m, cfg.screened_features);
@@ -426,7 +666,11 @@ fn fit_gbt(
         &fit_m,
         &val,
         &feats,
-        &GbtParams { seed, ..cfg.gbt },
+        &GbtParams {
+            seed: draws,
+            tie: cfg.tie_rule,
+            ..cfg.gbt
+        },
     );
     Ok((
         Scored {
@@ -439,10 +683,10 @@ fn fit_gbt(
 }
 
 #[derive(Clone, Copy, Debug)]
-struct LassoContext<'a> {
-    dataset: &'a str,
-    scheme: &'a str,
-    outer_fold: Option<usize>,
+pub(crate) struct LassoContext<'a> {
+    pub(crate) dataset: &'a str,
+    pub(crate) scheme: &'a str,
+    pub(crate) outer_fold: Option<usize>,
 }
 
 impl LassoContext<'_> {
@@ -518,9 +762,42 @@ fn fit_lasso_traced(
     })
 }
 
+/// `fit_lasso` for other modules' tests: its scores and selected point.
+#[cfg(test)]
+pub(crate) fn fit_lasso_for_tests(
+    x: &BitMatrix,
+    y: &Bits,
+    train: &Bits,
+    cfg: &EvalConfig,
+    seed: u64,
+    context: LassoContext<'_>,
+) -> (Option<Vec<f64>>, Option<usize>) {
+    let (scored, _) = fit_lasso(x, y, train, None, cfg, seed, context).unwrap();
+    (
+        scored.scores,
+        scored.lasso_fit.and_then(|a| a.selected_point),
+    )
+}
+
+/// `fit_gbt` for other modules' tests: its scores, None for a null fit.
+/// `seed` draws both the holdout and the column samples.
+#[cfg(test)]
+pub(crate) fn fit_gbt_for_tests(
+    x: &BitMatrix,
+    y: &Bits,
+    train: &Bits,
+    cfg: &EvalConfig,
+    seed: u64,
+) -> Option<Vec<f64>> {
+    fit_gbt(x, y, train, None, "group", cfg, seed, seed)
+        .unwrap()
+        .0
+        .scores
+}
+
 /// Select and refit one already-solved path. Keeping this separate lets the
 /// negative tests inject capped statuses without changing solver limits.
-fn fit_lasso_from_path(
+pub(crate) fn fit_lasso_from_path(
     x: &BitMatrix,
     y: &Bits,
     val: &Bits,
@@ -599,13 +876,31 @@ fn fit_lasso_from_path(
     ))
 }
 
-/// The seed of every random draw in outer fold `fold`.
+/// The seed of every partition drawn inside outer fold `fold` (its inner
+/// folds and tuning holdouts) and, unless `EvalConfig::learner_seed` is set,
+/// of the learners' own draws there: `seed + 101 * fold`, wrapping at 2^64
+/// (`ablate::plan::fold_seed`). Every seed sum here wraps, because `--seed`
+/// takes any 64-bit value.
 fn fold_seed(cfg: &EvalConfig, fold: usize) -> u64 {
-    cfg.seed + fold as u64 * 101
+    crate::ablate::plan::fold_seed(cfg.seed, fold)
+}
+
+/// The base seed of the learners' own draws: `EvalConfig::learner_seed`, or
+/// `EvalConfig::seed` when it is not set.
+fn draw_seed(cfg: &EvalConfig) -> u64 {
+    cfg.learner_seed.unwrap_or(cfg.seed)
+}
+
+/// The seed of the forest's and boosting's own draws in outer fold `fold`:
+/// `fold_seed` on `draw_seed`, so it is `fold_seed` unless
+/// `EvalConfig::learner_seed` is set.
+fn fold_draw_seed(cfg: &EvalConfig, fold: usize) -> u64 {
+    crate::ablate::plan::fold_seed(draw_seed(cfg), fold)
 }
 
 /// One learner's fit on outer fold `fold`'s training samples, scoring every
-/// sample. Evaluation and any rebuild of a saved score call this alone.
+/// sample, with the fitted model as `FoldSplit` keeps it: its features are
+/// rows of `x`. Evaluation and any rebuild of a saved score call this alone.
 fn fit_fold(
     learner: &str,
     x: &BitMatrix,
@@ -614,36 +909,68 @@ fn fit_fold(
     groups: Option<&[u32]>,
     cfg: &EvalConfig,
     context: LassoContext<'_>,
-) -> Result<Scored> {
+) -> Result<(Scored, FoldModel)> {
     let fold = context.outer_fold.expect("an outer fit needs its fold");
     let seed = fold_seed(cfg, fold);
+    let draws = fold_draw_seed(cfg, fold);
     let inner = || training_folds(y, train, groups, cfg.inner_folds, seed);
     Ok(match learner {
-        "scm" => fit_scm(x, y, train, &inner(), cfg),
-        "cart" => fit_cart(x, y, train, &inner(), cfg),
-        "rf" => fit_rf(x, y, train, cfg, seed).0,
-        "gbt" => fit_gbt(x, y, train, groups, tuning_unit(context.scheme), cfg, seed)?.0,
-        "lasso" => fit_lasso(x, y, train, groups, cfg, seed, context)?.0,
+        "scm" => {
+            let (scored, model) = fit_scm(x, y, train, &inner(), cfg);
+            (scored, FoldModel::Scm(model))
+        }
+        "cart" => {
+            let (scored, tree) = fit_cart(x, y, train, &inner(), cfg);
+            (scored, FoldModel::Cart(tree))
+        }
+        "rf" => {
+            let (scored, importance) = fit_rf(x, y, train, cfg, draws);
+            (
+                scored,
+                FoldModel::Rf(top_weighted(importance, TOP_WEIGHTED)),
+            )
+        }
+        "gbt" => {
+            let unit = tuning_unit(context.scheme);
+            let (scored, model) = fit_gbt(x, y, train, groups, unit, cfg, seed, draws)?;
+            let top = top_weighted(model.importance(), TOP_WEIGHTED);
+            (scored, FoldModel::Gbt(top))
+        }
+        "lasso" => {
+            let (scored, model) = fit_lasso(x, y, train, groups, cfg, seed, context)?;
+            (scored, FoldModel::Lasso(model))
+        }
         _ => unreachable!(),
     })
 }
 
 /// Pools one learner's outer-fold fits, in fold order. Sample i takes its
 /// score from the fit of fold `test_fold[i]`, the one fit that did not train
-/// on it. A null fit leaves its fold uncalled: those scores stay NaN, the
-/// fold's balanced accuracy is NaN, and every metric covers called samples.
-/// When every fit is null there are no metrics and no ROC points.
-fn pool_folds(
+/// on it. A null fit predicts its training prevalence, `train_prevalence[f]`
+/// (`learn::train_prevalence` of the fold's training samples), for every
+/// sample of its fold, and the 0.5 cutoff calls it like any other score, so
+/// `metrics`, the ROC points and each fold's balanced accuracy cover every
+/// sample. `no_call` counts the samples of null-fit folds by class, and a
+/// row with any keeps the metrics over the rest in `called_metrics`.
+pub(crate) fn pool_folds(
     learner: &str,
     truth: &[bool],
     test_fold: &[usize],
     fits: &[Scored],
+    train_prevalence: &[f64],
     seconds: f64,
 ) -> Result<LearnerResult> {
     let n = truth.len();
     ensure!(
         test_fold.len() == n && test_fold.iter().all(|&f| f < fits.len()),
         "a sample has no outer test fold"
+    );
+    ensure!(
+        train_prevalence.len() == fits.len()
+            && train_prevalence
+                .iter()
+                .all(|p| p.is_finite() && (0.0..=1.0).contains(p)),
+        "{learner} needs one training prevalence in [0, 1] per outer fold"
     );
     let lasso_fits = if learner == "lasso" {
         let audit = fits
@@ -659,47 +986,47 @@ fn pool_folds(
         );
         None
     };
+    let null = |i: usize| fits[test_fold[i]].scores.is_none();
     let mut scores = vec![f64::NAN; n];
     for (i, &f) in test_fold.iter().enumerate() {
-        if let Some(s) = &fits[f].scores {
-            ensure!(
-                s[i].is_finite(),
-                "{learner} produced a non-finite test score"
-            );
-            scores[i] = s[i];
-        }
+        scores[i] = match &fits[f].scores {
+            Some(s) => {
+                ensure!(
+                    s[i].is_finite(),
+                    "{learner} produced a non-finite test score"
+                );
+                s[i]
+            }
+            None => train_prevalence[f],
+        };
     }
-    let calls = |keep: &dyn Fn(usize) -> bool| -> (Vec<bool>, Vec<f64>) {
+    let pooled = |keep: &dyn Fn(usize) -> bool| -> (Vec<bool>, Vec<f64>) {
         (0..n)
-            .filter(|&i| keep(i) && !scores[i].is_nan())
+            .filter(|&i| keep(i))
             .map(|i| (truth[i], scores[i]))
             .unzip()
     };
-    let fold_balanced_accuracy = fits
-        .iter()
-        .enumerate()
-        .map(|(f, fit)| {
-            if fit.scores.is_none() {
-                return f64::NAN;
-            }
-            let (t, s) = calls(&|i| test_fold[i] == f);
+    let fold_balanced_accuracy = (0..fits.len())
+        .map(|f| {
+            let (t, s) = pooled(&|i| test_fold[i] == f);
             binary_metrics(&t, &s, 0.5, false).balanced_accuracy
         })
         .collect();
-    let uncalled = |class: bool| {
-        (0..n)
-            .filter(|&i| scores[i].is_nan() && truth[i] == class)
-            .count()
-    };
+    let in_null_fold = |class: bool| (0..n).filter(|&i| null(i) && truth[i] == class).count();
     let no_call = NoCall {
-        resistant: uncalled(true),
-        susceptible: uncalled(false),
+        resistant: in_null_fold(true),
+        susceptible: in_null_fold(false),
     };
     let ranked = !matches!(learner, "scm");
-    let (t, s) = calls(&|_| true);
+    let (t, s) = pooled(&|_| true);
+    let called_metrics = (no_call.resistant + no_call.susceptible > 0).then(|| {
+        let (t, s) = pooled(&|i| !null(i));
+        (!t.is_empty()).then(|| binary_metrics(&t, &s, 0.5, ranked))
+    });
     Ok(LearnerResult {
         learner: learner.to_string(),
         metrics: (!t.is_empty()).then(|| binary_metrics(&t, &s, 0.5, ranked)),
+        called_metrics,
         fold_balanced_accuracy,
         roc: if ranked {
             roc_curve(&t, &s, 60)
@@ -807,6 +1134,7 @@ pub fn evaluate(
     let truth: Vec<bool> = (0..n).map(|i| y.contains(i)).collect();
     let n_groups = count_groups(groups);
     let mut splits = Vec::new();
+    let mut fold_models = Vec::new();
 
     for (scheme, folds) in &outer_splits(y, groups, duplicates, cfg) {
         let tuning = tuning_groups(scheme, groups, duplicates);
@@ -826,34 +1154,32 @@ pub fn evaluate(
             }
             Err(error) => return Err(error),
         }
-        let mut fits: Vec<Vec<Scored>> = LEARNERS.iter().map(|_| Vec::new()).collect();
-        let mut seconds = vec![0.0; LEARNERS.len()];
-        for (fi, (train, _)) in fold_masks(folds, cfg.folds).into_iter().enumerate() {
-            let (cx, _) = training_candidates(x, &train, min_support);
-            for (li, learner) in LEARNERS.iter().enumerate() {
-                let t0 = Instant::now();
-                fits[li].push(fit_fold(
-                    learner,
-                    &cx,
-                    y,
-                    &train,
-                    tuning.as_deref(),
-                    cfg,
-                    LassoContext {
-                        dataset,
-                        scheme,
-                        outer_fold: Some(fi),
-                    },
-                )?);
-                seconds[li] += t0.elapsed().as_secs_f64();
-            }
-        }
+        let trains: Vec<Bits> = fold_masks(folds, cfg.folds)
+            .into_iter()
+            .map(|(train, _)| train)
+            .collect();
+        let OuterFits {
+            fits,
+            models,
+            seconds,
+            prevalence,
+            ..
+        } = fit_outer_folds(
+            dataset,
+            scheme,
+            x,
+            y,
+            &trains,
+            tuning.as_deref(),
+            min_support,
+            cfg,
+        )?;
         let learners = LEARNERS
             .iter()
             .zip(&fits)
             .zip(seconds)
             .map(|((name, fits), seconds)| {
-                pool_folds(name, &truth, folds, fits, seconds)
+                pool_folds(name, &truth, folds, fits, &prevalence, seconds)
                     .with_context(|| format!("{scheme} split"))
             })
             .collect::<Result<_>>()?;
@@ -865,6 +1191,7 @@ pub fn evaluate(
             learners,
             unavailable_reason: None,
         });
+        fold_models.push(models);
     }
 
     let mic_result = mic.and_then(|m| evaluate_mic(x, y, min_support, &m, cfg));
@@ -872,6 +1199,7 @@ pub fn evaluate(
     let finals = final_models(dataset, x, y, tuning.as_deref(), min_support, cfg)?;
     Ok(EvalOutput {
         splits,
+        fold_models,
         mic: mic_result,
         finals,
         lineage_threshold: None,
@@ -1031,16 +1359,353 @@ fn check_split_plan(
     validate_folds(y, &Bits::ones(y.len()), folds, cfg.folds)
         .with_context(|| format!("invalid {scheme} outer evaluation"))?;
     for (fi, (train, _)) in fold_masks(folds, cfg.folds).into_iter().enumerate() {
-        let seed = fold_seed(cfg, fi);
-        let inner = training_folds(y, &train, tuning, cfg.inner_folds, seed);
-        validate_folds(y, &train, &inner, cfg.inner_folds)
-            .with_context(|| format!("invalid {scheme} inner evaluation in outer fold {fi}"))?;
-        for fraction in [GBT_HOLDOUT, LASSO_HOLDOUT] {
-            tuning_holdout(&train, y, tuning, tuning_unit(scheme), fraction, seed)
-                .with_context(|| format!("invalid {scheme} tuning holdout in outer fold {fi}"))?;
-        }
+        check_fold_tuning(scheme, fi, &train, y, tuning, cfg)?;
     }
     Ok(())
+}
+
+/// Checks the partitions outer fold `fi`'s fits draw inside its training
+/// samples: the inner folds, and both tuning holdouts.
+fn check_fold_tuning(
+    scheme: &str,
+    fi: usize,
+    train: &Bits,
+    y: &Bits,
+    tuning: Option<&[u32]>,
+    cfg: &EvalConfig,
+) -> Result<()> {
+    let seed = fold_seed(cfg, fi);
+    let inner = training_folds(y, train, tuning, cfg.inner_folds, seed);
+    validate_folds(y, train, &inner, cfg.inner_folds)
+        .with_context(|| format!("invalid {scheme} inner evaluation in outer fold {fi}"))?;
+    for fraction in [GBT_HOLDOUT, LASSO_HOLDOUT] {
+        tuning_holdout(train, y, tuning, tuning_unit(scheme), fraction, seed)
+            .with_context(|| format!("invalid {scheme} tuning holdout in outer fold {fi}"))?;
+    }
+    Ok(())
+}
+
+/// Every learner's fits on a split's outer folds.
+struct OuterFits {
+    /// Per learner, in `LEARNERS` order, one fit per outer fold.
+    fits: Vec<Vec<Scored>>,
+    /// Each fold's model from the fit whose scores `fits` holds for it, its
+    /// features numbered as dataset rows (`FoldSplit::push`).
+    models: FoldSplit,
+    /// Per learner, the seconds its fits took together.
+    seconds: Vec<f64>,
+    /// Per outer fold, the resistant share of its training samples.
+    prevalence: Vec<f64>,
+    /// Per outer fold, the candidate features its fits chose from.
+    candidates: Vec<usize>,
+}
+
+/// Fits every learner on each of `trains`, outer fold `fi` on `trains[fi]`:
+/// its candidates come from those samples alone (`training_candidates`) and
+/// every draw is seeded from the fold (`fit_fold`: partitions from
+/// `fold_seed`, the forest's and boosting's own draws from `fold_draw_seed`).
+/// Each fit gives the fold's scores and its model together, so a fold's
+/// model is the one that scored it. `evaluate` fits the folds it draws
+/// through this and keeps the models as `fold_models`; `evaluate_assigned`
+/// fits the folds it is handed and keeps no model, so a supplied partition
+/// is fitted exactly as a drawn one. With the null-fold experiment on
+/// (`null_refit::enabled`), each boosting or lasso fold that comes out null
+/// is refitted after its timer with these same inputs and seeds and recorded
+/// (`null_refit::record_fold`); `evaluate_assigned` refuses to run then.
+#[allow(clippy::too_many_arguments)]
+fn fit_outer_folds(
+    dataset: &str,
+    scheme: &str,
+    x: &BitMatrix,
+    y: &Bits,
+    trains: &[Bits],
+    tuning: Option<&[u32]>,
+    min_support: u32,
+    cfg: &EvalConfig,
+) -> Result<OuterFits> {
+    let mut fits: Vec<Vec<Scored>> = LEARNERS.iter().map(|_| Vec::new()).collect();
+    let mut models = FoldSplit::new(scheme);
+    let mut seconds = vec![0.0; LEARNERS.len()];
+    let mut prevalence = Vec::with_capacity(trains.len());
+    let mut candidates = Vec::with_capacity(trains.len());
+    for (fi, train) in trains.iter().enumerate() {
+        prevalence.push(train_prevalence(y, train));
+        let (cx, rows) = training_candidates(x, train, min_support);
+        candidates.push(cx.rows);
+        for (li, learner) in LEARNERS.iter().enumerate() {
+            let t0 = Instant::now();
+            let context = LassoContext {
+                dataset,
+                scheme,
+                outer_fold: Some(fi),
+            };
+            let (fit, model) = fit_fold(learner, &cx, y, train, tuning, cfg, context)?;
+            seconds[li] += t0.elapsed().as_secs_f64();
+            // The null-fold experiment, off by default, writes only its
+            // own file and changes no fit, score or fold model.
+            if fit.scores.is_none() && null_refit::enabled() {
+                null_refit::record_fold(
+                    learner,
+                    &cx,
+                    y,
+                    train,
+                    tuning,
+                    cfg,
+                    fold_seed(cfg, fi),
+                    fold_draw_seed(cfg, fi),
+                    context,
+                )?;
+            }
+            fits[li].push(fit);
+            // The fold fitted on its candidates; the report names
+            // dataset rows.
+            models.push(model, &rows);
+        }
+    }
+    Ok(OuterFits {
+        fits,
+        models,
+        seconds,
+        prevalence,
+        candidates,
+    })
+}
+
+/// What a supplied outer partition makes of one sample (`evaluate_assigned`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Role {
+    /// Scored by this outer fold's fits. It trains in every other fold.
+    Test(usize),
+    /// Trains in every outer fold and is never scored.
+    Train,
+    /// In no fold: it neither trains nor is scored.
+    Unused,
+}
+
+/// One outer fold of a supplied partition, as counts.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct FoldCounts {
+    pub train: usize,
+    pub train_resistant: usize,
+    pub test: usize,
+    pub test_resistant: usize,
+    /// Candidate features the fold's fits chose from (`training_candidates`).
+    pub candidates: usize,
+}
+
+/// One split scored on a supplied outer partition.
+pub struct AssignedSplit {
+    /// `test_fold` and each learner's `scores` are over `tested`, in order.
+    pub result: SplitResult,
+    /// The scored samples, in sample order.
+    pub tested: Vec<usize>,
+    pub folds: Vec<FoldCounts>,
+    /// The support floor every fold's candidates were chosen at
+    /// (`supplied_support_floor`).
+    pub min_support: u32,
+}
+
+/// The per-fit support floor of a cohort of `samples` samples: a candidate
+/// feature is present in, and absent from, at least this many of a fold's
+/// training samples (`training_candidates`). A report takes it from its
+/// whole cohort, a supplied partition from the samples it uses
+/// (`supplied_support_floor`).
+pub fn support_floor(samples: usize) -> u32 {
+    (samples as u32 / 200).max(3)
+}
+
+/// The support floor of a supplied partition: `support_floor` of the samples
+/// it tests or trains. Unused samples do not count, so listing more of them
+/// cannot change a fit.
+pub fn supplied_support_floor(roles: &[Role]) -> u32 {
+    support_floor(roles.iter().filter(|r| **r != Role::Unused).count())
+}
+
+/// The split names `evaluate` writes, which a supplied partition may not take.
+pub const DRAWN_SCHEMES: [&str; 2] = ["random", "lineage"];
+
+/// Scores every learner on an outer partition the caller supplies in place
+/// of the two `evaluate` draws: `roles[i]` says whether sample i is tested
+/// in one of `folds` outer folds, trains in all of them, or is left out.
+///
+/// Only the outer partition is supplied. Each fold's candidates, inner folds,
+/// tuning holdouts and seeds are `evaluate`'s (`fit_outer_folds`), and tuning
+/// keeps each k-mer-identical duplicate group whole, as the random split
+/// does (`tuning_groups`). So roles that repeat a split `evaluate` drew give
+/// that split's scores.
+///
+/// Unused samples reach no fit. The support floor is that of the tested and
+/// training samples alone (`supplied_support_floor`), a duplicate group keeps
+/// only its tested and training members before the tuning groups are made,
+/// and `n_groups` counts the lineages of those samples. `x` must hold every
+/// feature whose support among them lies inside that floor, as a projection
+/// of the cohort at that floor does (`matrix::Dataset::project`). Learners
+/// read only their training samples, and only tested samples are scored.
+///
+/// A partition is refused before any fit when a fold tests no sample, when a
+/// fold's test or training samples lack a class, when a fold tests a sample
+/// and trains on its k-mer-identical copy, when a fold's training samples
+/// give no candidate feature, or when an inner fold or tuning holdout lacks
+/// a class. `cfg.folds` is not read: `folds` is the count.
+/// Final models and the MIC regression are not fitted.
+///
+/// It refuses to run while the null-fold experiment is on
+/// (`null_refit::enabled`): a record names a fold's test samples as every
+/// sample outside its training ones, which a partition with unused samples
+/// would make wrong, and the records are read against the drawn splits of a
+/// dataset report. `grm learn` refuses `--exp-null-refit` beside
+/// `--fold-file` for the same reason.
+#[allow(clippy::too_many_arguments)]
+pub fn evaluate_assigned(
+    dataset: &str,
+    scheme: &str,
+    x: &BitMatrix,
+    y: &Bits,
+    groups: &[u32],
+    duplicates: &[Vec<usize>],
+    roles: &[Role],
+    folds: usize,
+    cfg: &EvalConfig,
+) -> Result<AssignedSplit> {
+    ensure!(
+        !null_refit::enabled(),
+        "the null-fold refit records the folds grm learn draws; it does not run on a supplied partition"
+    );
+    let min_support = supplied_support_floor(roles);
+    check_inputs(x, y, groups, duplicates, min_support, cfg)?;
+    let n = x.cols;
+    ensure!(roles.len() == n, "{} roles for {n} samples", roles.len());
+    let used = |i: usize| roles[i] != Role::Unused;
+    let duplicates: Vec<Vec<usize>> = duplicates
+        .iter()
+        .map(|group| {
+            group
+                .iter()
+                .copied()
+                .filter(|&i| used(i))
+                .collect::<Vec<_>>()
+        })
+        .filter(|group| group.len() > 1)
+        .collect();
+    let duplicates = duplicates.as_slice();
+    let used_groups: Vec<u32> = (0..n).filter(|&i| used(i)).map(|i| groups[i]).collect();
+    ensure!(
+        !scheme.is_empty() && !DRAWN_SCHEMES.contains(&scheme),
+        "a supplied partition needs a name of its own, not {scheme:?}"
+    );
+    ensure!(folds >= 1, "a supplied partition needs an outer fold");
+    ensure!(
+        roles
+            .iter()
+            .all(|r| !matches!(r, Role::Test(f) if *f >= folds)),
+        "a sample is tested in an outer fold outside 0..{folds}"
+    );
+    let tuning = tuning_groups(scheme, groups, duplicates);
+    let mut trains = Vec::with_capacity(folds);
+    let mut counts = Vec::with_capacity(folds);
+    for f in 0..folds {
+        let test = Bits::from_indices(n, (0..n).filter(|&i| roles[i] == Role::Test(f)));
+        let train = Bits::from_indices(
+            n,
+            (0..n).filter(|&i| match roles[i] {
+                Role::Test(g) => g != f,
+                Role::Train => true,
+                Role::Unused => false,
+            }),
+        );
+        for (side, mask) in [("test", &test), ("training", &train)] {
+            let pos = mask.and(y).count();
+            ensure!(
+                pos > 0 && pos < mask.count(),
+                "{scheme} outer fold {f}'s {side} samples lack one or both classes"
+            );
+        }
+        for group in duplicates {
+            let tested = group.iter().find(|&&i| test.contains(i));
+            let trained = group.iter().find(|&&i| train.contains(i));
+            if let (Some(a), Some(b)) = (tested, trained) {
+                anyhow::bail!(
+                    "{scheme} outer fold {f} tests sample {a} and trains on sample {b}, its k-mer-identical copy"
+                );
+            }
+        }
+        // A fit on no candidate would give every sample one score, and scm,
+        // cart and the forest would call it as if it had learned it.
+        ensure!(
+            any_training_candidate(x, &train, min_support),
+            "{scheme} outer fold {f}'s {} training samples give no candidate feature: none is present in at least {min_support} of them and absent from at least {min_support}",
+            train.count()
+        );
+        check_fold_tuning(scheme, f, &train, y, tuning.as_deref(), cfg)?;
+        counts.push(FoldCounts {
+            train: train.count() as usize,
+            train_resistant: train.and(y).count() as usize,
+            test: test.count() as usize,
+            test_resistant: test.and(y).count() as usize,
+            candidates: 0,
+        });
+        trains.push(train);
+    }
+    // The fold models are dropped: a fold file result keeps its fields.
+    let OuterFits {
+        fits,
+        models: _,
+        seconds,
+        prevalence,
+        candidates,
+    } = fit_outer_folds(
+        dataset,
+        scheme,
+        x,
+        y,
+        &trains,
+        tuning.as_deref(),
+        min_support,
+        cfg,
+    )?;
+    for (count, candidates) in counts.iter_mut().zip(candidates) {
+        count.candidates = candidates;
+    }
+    let tested: Vec<usize> = (0..n)
+        .filter(|&i| matches!(roles[i], Role::Test(_)))
+        .collect();
+    let truth: Vec<bool> = tested.iter().map(|&i| y.contains(i)).collect();
+    let test_fold: Vec<usize> = tested
+        .iter()
+        .map(|&i| match roles[i] {
+            Role::Test(f) => f,
+            _ => unreachable!("a tested sample has an outer fold"),
+        })
+        .collect();
+    let learners = LEARNERS
+        .iter()
+        .zip(fits)
+        .zip(seconds)
+        .map(|((name, fits), seconds)| {
+            let fits: Vec<Scored> = fits
+                .into_iter()
+                .map(|s| Scored {
+                    scores: s.scores.map(|all| tested.iter().map(|&i| all[i]).collect()),
+                    ..s
+                })
+                .collect();
+            pool_folds(name, &truth, &test_fold, &fits, &prevalence, seconds)
+                .with_context(|| format!("{scheme} split"))
+        })
+        .collect::<Result<Vec<LearnerResult>>>()?;
+    Ok(AssignedSplit {
+        result: SplitResult {
+            scheme: scheme.to_string(),
+            folds,
+            n_groups: count_groups(&used_groups),
+            test_fold,
+            learners,
+            unavailable_reason: None,
+        },
+        tested,
+        folds: counts,
+        min_support,
+    })
 }
 
 /// Runs only the lasso fits of `evaluate`, in its order and with its
@@ -1160,6 +1825,8 @@ fn observed_lasso(
     error.map_or(Ok(()), Err)
 }
 
+/// The `k` heaviest features of `imp`, heaviest first, and among equal
+/// weights the lower feature first.
 fn top_weighted(imp: std::collections::HashMap<u32, f64>, k: usize) -> Vec<WeightedFeature> {
     let mut v: Vec<WeightedFeature> = imp
         .into_iter()
@@ -1197,7 +1864,15 @@ fn final_models(
     let choice = scm::select(x, y, &all, cfg.scm_max_rules, &inner, cfg.inner_folds);
     let model = scm::fit(x, y, &all, choice.kind, choice.p, choice.n_rules, true);
     let importance = scm::rule_importance(&model, x, y, &all);
-    let (depth, _) = tree::select_depth(x, y, &all, &inner, cfg.inner_folds, cfg.cart_max_depth);
+    let (depth, _) = tree::select_depth(
+        x,
+        y,
+        &all,
+        &inner,
+        cfg.inner_folds,
+        cfg.cart_max_depth,
+        cfg.tie_rule,
+    );
     let cart = tree::fit_tree(
         x,
         y,
@@ -1207,6 +1882,7 @@ fn final_models(
             min_leaf: 1,
             max_features: None,
             seed: 0,
+            tie: cfg.tie_rule,
         },
     );
     let (lasso_scored, lasso_model) = final_lasso(
@@ -1218,8 +1894,18 @@ fn final_models(
         &mut LassoTrace::default(),
         &mut |_, _| {},
     )?;
-    let (_, rf_importance) = fit_rf(x, y, &all, cfg, cfg.seed + 17);
-    let (_, gbt_model) = fit_gbt(x, y, &all, tuning, "group", cfg, cfg.seed + 13)?;
+    let draws = draw_seed(cfg);
+    let (_, rf_importance) = fit_rf(x, y, &all, cfg, draws.wrapping_add(17));
+    let (_, gbt_model) = fit_gbt(
+        x,
+        y,
+        &all,
+        tuning,
+        "group",
+        cfg,
+        cfg.seed.wrapping_add(13),
+        draws.wrapping_add(13),
+    )?;
     Ok(FinalModels {
         scm: FinalScm {
             kind: model.kind,
@@ -1233,8 +1919,8 @@ fn final_models(
         cart_depth: depth,
         lasso: lasso_model,
         lasso_fit: lasso_scored.lasso_fit,
-        rf_importance: top_weighted(rf_importance, 50),
-        gbt_importance: top_weighted(gbt_model.importance(), 50),
+        rf_importance: top_weighted(rf_importance, TOP_WEIGHTED),
+        gbt_importance: top_weighted(gbt_model.importance(), TOP_WEIGHTED),
     })
 }
 
@@ -1256,7 +1942,7 @@ fn final_plan(
         training_candidates(x, &all, min_support).1.len() == x.rows,
         "final models need a matrix filtered and collapsed on all samples at min_support {min_support}"
     );
-    let inner = training_folds(y, &all, tuning, cfg.inner_folds, cfg.seed + 7);
+    let inner = training_folds(y, &all, tuning, cfg.inner_folds, cfg.seed.wrapping_add(7));
     validate_folds(y, &all, &inner, cfg.inner_folds)
         .context("invalid final-model inner evaluation")?;
     Ok(inner)
@@ -1279,7 +1965,7 @@ fn final_lasso(
         &Bits::ones(x.cols),
         tuning,
         cfg,
-        cfg.seed + 11,
+        cfg.seed.wrapping_add(11),
         LassoContext {
             dataset,
             scheme: "final",
@@ -1332,7 +2018,7 @@ fn evaluate_mic(
             })
             .collect();
         fold_breakpoints.push(infer_breakpoint(&pairs));
-        let (fit_m, val) = holdout(&train, y, 0.15, cfg.seed + fi as u64);
+        let (fit_m, val) = holdout(&train, y, 0.15, cfg.seed.wrapping_add(fi as u64));
         if fit_m.count() == 0 || val.count() == 0 {
             return None;
         }
@@ -1350,7 +2036,8 @@ fn evaluate_mic(
             &val,
             &feats,
             &GbtParams {
-                seed: cfg.seed + fi as u64,
+                seed: draw_seed(cfg).wrapping_add(fi as u64),
+                tie: cfg.tie_rule,
                 ..cfg.gbt
             },
         );
@@ -1416,6 +2103,23 @@ fn mic_categorical(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_report_records_the_tie_rule_only_when_the_experiment_is_on() {
+        let off = serde_json::to_value(EvalConfig::default()).unwrap();
+        assert!(off.get("tie_rule").is_none());
+        assert!(off["forest"].get("tie").is_none() && off["gbt"].get("tie").is_none());
+        let on = serde_json::to_value(EvalConfig {
+            tie_rule: TieRule::Exact,
+            ..Default::default()
+        })
+        .unwrap();
+        assert_eq!(on["tie_rule"], "exact");
+        assert_eq!(
+            off.as_object().unwrap().len() + 1,
+            on.as_object().unwrap().len()
+        );
+    }
 
     fn small_config() -> EvalConfig {
         EvalConfig {
@@ -2022,8 +2726,15 @@ mod tests {
             ),
             (choice.kind, choice.p, choice.cv_error)
         );
-        let (depth, _) =
-            tree::select_depth(&x, &y, &all, &inner, cfg.inner_folds, cfg.cart_max_depth);
+        let (depth, _) = tree::select_depth(
+            &x,
+            &y,
+            &all,
+            &inner,
+            cfg.inner_folds,
+            cfg.cart_max_depth,
+            cfg.tie_rule,
+        );
         assert_eq!(out.finals.cart_depth, depth);
         let (_, gbt) = fit_gbt(
             &x,
@@ -2032,6 +2743,7 @@ mod tests {
             tuning.as_deref(),
             "group",
             &cfg,
+            cfg.seed + 13,
             cfg.seed + 13,
         )
         .unwrap();
@@ -2331,9 +3043,9 @@ mod tests {
                     .unwrap()
                     .0;
                     [
-                        fit_scm(&cx, &y, &train, &inner, &cfg),
-                        fit_cart(&cx, &y, &train, &inner, &cfg),
-                        fit_gbt(&cx, &y, &train, ids, "group", &cfg, seed)
+                        fit_scm(&cx, &y, &train, &inner, &cfg).0,
+                        fit_cart(&cx, &y, &train, &inner, &cfg).0,
+                        fit_gbt(&cx, &y, &train, ids, "group", &cfg, seed, seed)
                             .unwrap()
                             .0,
                         penalized,
@@ -2344,7 +3056,8 @@ mod tests {
                 for (li, learner) in ["scm", "cart", "gbt", "lasso"].into_iter().enumerate() {
                     let context = test_context(scheme, fi);
                     let fit = fit_fold(learner, &cx, &y, &train, tuning.as_deref(), &cfg, context)
-                        .unwrap();
+                        .unwrap()
+                        .0;
                     assert_eq!(
                         (fit.scores, fit.complexity, fit.lasso_fit),
                         grouped[li],
@@ -2518,24 +3231,39 @@ mod tests {
                 };
                 assert_eq!(split.test_fold, folds);
                 let tuning = tuning_groups(&split.scheme, &groups, &duplicates);
+                // Each fold's training prevalence, counted here from the
+                // saved folds and labels: the score of a null fit.
+                let prevalence = |f: usize| {
+                    let train: Vec<usize> = (0..n).filter(|&i| split.test_fold[i] != f).collect();
+                    train.iter().filter(|&&i| truth[i]).count() as f64 / train.len() as f64
+                };
+                let all: Vec<usize> = (0..n).collect();
                 for learner in &split.learners {
-                    let called: Vec<usize> =
-                        (0..n).filter(|&i| !learner.scores[i].is_nan()).collect();
                     let ranked = learner.learner != "scm";
+                    assert!(learner.scores.iter().all(|s| s.is_finite()));
                     assert_eq!(
                         learner.metrics,
-                        (!called.is_empty()).then(|| metrics_on(&called, &learner.scores, ranked))
+                        Some(metrics_on(&all, &learner.scores, ranked))
                     );
-                    let uncalled = |class: bool| {
-                        (0..n)
-                            .filter(|&i| learner.scores[i].is_nan() && truth[i] == class)
-                            .count()
+                    let null = |i: usize| {
+                        learner.fold_complexity[split.test_fold[i]] == 0.0
+                            && matches!(learner.learner.as_str(), "gbt" | "lasso")
                     };
+                    let fitted: Vec<usize> = (0..n).filter(|&i| !null(i)).collect();
+                    let in_null =
+                        |class: bool| (0..n).filter(|&i| null(i) && truth[i] == class).count();
                     assert_eq!(
                         learner.no_call,
                         Some(NoCall {
-                            resistant: uncalled(true),
-                            susceptible: uncalled(false)
+                            resistant: in_null(true),
+                            susceptible: in_null(false)
+                        })
+                    );
+                    assert_eq!(
+                        learner.called_metrics,
+                        (fitted.len() < n).then(|| {
+                            (!fitted.is_empty())
+                                .then(|| metrics_on(&fitted, &learner.scores, ranked))
                         })
                     );
                     for (f, (train, test)) in fold_masks(&split.test_fold, cfg.folds)
@@ -2553,22 +3281,20 @@ mod tests {
                             &cfg,
                             test_context(&split.scheme, f),
                         )
-                        .unwrap();
+                        .unwrap()
+                        .0;
                         assert_eq!(learner.fold_complexity[f], refit.complexity);
                         let idx: Vec<usize> = test.iter_ones().collect();
                         match &refit.scores {
                             None => {
-                                assert!(idx.iter().all(|&i| learner.scores[i].is_nan()));
-                                assert!(learner.fold_balanced_accuracy[f].is_nan());
+                                assert!(idx.iter().all(|&i| learner.scores[i] == prevalence(f)))
                             }
-                            Some(s) => {
-                                assert!(idx.iter().all(|&i| learner.scores[i] == s[i]));
-                                assert_eq!(
-                                    learner.fold_balanced_accuracy[f],
-                                    metrics_on(&idx, &learner.scores, false).balanced_accuracy
-                                );
-                            }
+                            Some(s) => assert!(idx.iter().all(|&i| learner.scores[i] == s[i])),
                         }
+                        assert_eq!(
+                            learner.fold_balanced_accuracy[f],
+                            metrics_on(&idx, &learner.scores, false).balanced_accuracy
+                        );
                         if learner.learner == "rf" {
                             // The forest scores its own training samples apart
                             // from the held-out fits whose scores were saved.
@@ -2581,33 +3307,68 @@ mod tests {
         }
     }
 
-    #[test]
-    fn pooled_metrics_cover_called_samples_and_count_null_folds_apart() {
-        // Six samples in three folds; fold 1's fit is null. Each fit also
-        // scores samples outside its test fold, which must not be read.
-        // Sample 4 scores exactly 0.5 from a fitted model: a resistant call.
-        let truth = [true, false, true, false, true, false];
-        let test_fold = [0, 0, 1, 1, 2, 2];
-        let fitted = |s: [f64; 6]| Scored {
-            scores: Some(s.to_vec()),
+    fn fitted(scores: &[f64]) -> Scored {
+        Scored {
+            scores: Some(scores.to_vec()),
             complexity: 3.0,
             lasso_fit: None,
-        };
+        }
+    }
+
+    fn null_fit() -> Scored {
+        Scored {
+            scores: None,
+            complexity: 0.0,
+            lasso_fit: None,
+        }
+    }
+
+    /// Each fold's training prevalence, as `evaluate` counts it.
+    fn prevalences(truth: &[bool], test_fold: &[usize], k: usize) -> Vec<f64> {
+        let y = Bits::from_indices(truth.len(), (0..truth.len()).filter(|&i| truth[i]));
+        fold_masks(test_fold, k)
+            .iter()
+            .map(|(train, _)| train_prevalence(&y, train))
+            .collect()
+    }
+
+    #[test]
+    fn one_null_fold_of_several_is_scored_at_its_training_prevalence() {
+        // Eight samples in three folds; fold 1's fit is null. Its training
+        // samples are 0, 1, 2, 5, 6, 7, two of them resistant, so samples 3
+        // and 4 score 2/6 = 1/3 and are called susceptible. The test fold's
+        // own prevalence (1/2) would call them resistant, and the whole
+        // dataset's is 3/8. Each fit also scores samples outside its test
+        // fold, which must not be read.
+        let truth = [true, true, false, true, false, false, false, false];
+        let test_fold = [0, 0, 0, 1, 1, 2, 2, 2];
+        let prevalence = prevalences(&truth, &test_fold, 3);
+        assert_eq!(prevalence, [1.0 / 5.0, 2.0 / 6.0, 3.0 / 5.0]);
         let fits = [
-            fitted([0.9, 0.2, 0.0, 0.0, 0.0, 0.0]),
-            Scored {
-                scores: None,
-                complexity: 0.0,
-                lasso_fit: None,
-            },
-            fitted([0.0, 0.0, 0.0, 0.0, 0.5, 0.6]),
+            fitted(&[0.9, 0.4, 0.2, 0.0, 0.0, 0.0, 0.0, 0.0]),
+            null_fit(),
+            fitted(&[0.0, 0.0, 0.0, 0.0, 0.0, 0.6, 0.1, 0.3]),
         ];
-        let l = pool_folds("gbt", &truth, &test_fold, &fits, 1.0).unwrap();
-        assert_eq!(l.scores[..2], [0.9, 0.2]);
-        assert!(l.scores[2].is_nan() && l.scores[3].is_nan());
-        assert_eq!(l.scores[4..], [0.5, 0.6]);
+        let l = pool_folds("gbt", &truth, &test_fold, &fits, &prevalence, 1.0).unwrap();
+        let third = 2.0 / 6.0;
+        assert_eq!(l.scores, [0.9, 0.4, 0.2, third, third, 0.6, 0.1, 0.3]);
+        // Every sample: tp {0}, fn {1, 3}, fp {5}, tn {2, 4, 6, 7}.
         let m = l.metrics.as_ref().unwrap();
-        assert_eq!((m.n, m.tp, m.fn_, m.tn, m.fp), (4, 2, 0, 1, 1));
+        assert_eq!((m.n, m.tp, m.fn_, m.fp, m.tn), (8, 1, 2, 1, 4));
+        assert_eq!(m.sensitivity, 1.0 / 3.0);
+        assert_eq!(m.specificity, 0.8);
+        assert_eq!(m.balanced_accuracy, (1.0 / 3.0 + 0.8) / 2.0);
+        // Resistant scores 0.9, 0.4, 1/3 against susceptible 0.2, 1/3, 0.6,
+        // 0.1, 0.3: 5 + 4 + 3.5 of 15 pairs, the tie at 1/3 counting half.
+        assert!((m.auroc.unwrap() - 12.5 / 15.0).abs() < 1e-12);
+        assert_eq!(l.roc, roc_curve(&truth, &l.scores, 60));
+        // Fold 0: one of two resistant called, its susceptible sample right.
+        // Fold 1: the constant susceptible call, 0 and 1. Fold 2: no
+        // resistant sample, so sensitivity 0, and 2 of 3 susceptible right.
+        assert_eq!(
+            l.fold_balanced_accuracy,
+            [0.75, 0.5, (0.0 + 2.0 / 3.0) / 2.0]
+        );
         assert_eq!(
             l.no_call,
             Some(NoCall {
@@ -2615,24 +3376,104 @@ mod tests {
                 susceptible: 1
             })
         );
-        let (called, called_scores) = ([true, false, true, false], [0.9, 0.2, 0.5, 0.6]);
-        assert_eq!(m.auroc, crate::learn::auroc(&called, &called_scores));
-        assert_eq!(l.roc, roc_curve(&called, &called_scores, 60));
-        assert!(!l.roc.is_empty());
-        assert_eq!(l.fold_balanced_accuracy[0], 1.0);
-        assert!(l.fold_balanced_accuracy[1].is_nan());
-        assert_eq!(l.fold_balanced_accuracy[2], 0.5);
+        // The figure revision 13 published: samples 3 and 4 left out.
+        let c = l.called_metrics.as_ref().unwrap().as_ref().unwrap();
+        assert_eq!((c.n, c.tp, c.fn_, c.fp, c.tn), (6, 1, 1, 1, 3));
+        assert_eq!(c.balanced_accuracy, (0.5 + 0.75) / 2.0);
+        assert!((c.auroc.unwrap() - 7.0 / 8.0).abs() < 1e-12);
         assert_eq!(l.fold_complexity, [3.0, 0.0, 3.0]);
+        // Saved and read back, the row keeps both figures.
+        let saved = serde_json::to_value(&l).unwrap();
+        assert_eq!(saved["called_metrics"]["n"], 6);
+        assert_eq!(saved["metrics"]["n"], 8);
+        assert!(
+            saved["scores"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .all(|s| s.is_number())
+        );
+        let back: LearnerResult = serde_json::from_value(saved).unwrap();
+        assert_eq!(back.called_metrics, l.called_metrics);
+        assert_eq!(back.metrics, l.metrics);
+        assert_eq!(back.scores, l.scores);
     }
 
     #[test]
-    fn null_fits_make_no_call_while_fitted_half_scores_are_calls() {
+    fn a_training_prevalence_of_exactly_one_half_is_a_resistant_call() {
+        // Fold 1's training samples are 0 and 1, one resistant: its null fit
+        // scores 0.5, which the 0.5 cutoff calls resistant.
+        let truth = [true, false, true, false];
+        let test_fold = [0, 0, 1, 1];
+        let prevalence = prevalences(&truth, &test_fold, 2);
+        assert_eq!(prevalence, [0.5, 0.5]);
+        let fits = [fitted(&[0.8, 0.3, 0.0, 0.0]), null_fit()];
+        let l = pool_folds("gbt", &truth, &test_fold, &fits, &prevalence, 1.0).unwrap();
+        assert_eq!(l.scores, [0.8, 0.3, 0.5, 0.5]);
+        let m = l.metrics.as_ref().unwrap();
+        assert_eq!((m.n, m.tp, m.fn_, m.fp, m.tn), (4, 2, 0, 1, 1));
+        assert_eq!(m.balanced_accuracy, 0.75);
+        // The constant resistant call: every resistant right, every
+        // susceptible wrong.
+        assert_eq!(l.fold_balanced_accuracy, [1.0, 0.5]);
+        let c = l.called_metrics.as_ref().unwrap().as_ref().unwrap();
+        assert_eq!((c.n, c.tp, c.fp, c.tn), (2, 1, 0, 1));
+    }
+
+    #[test]
+    fn a_row_without_a_null_fit_has_no_called_metrics_and_the_same_numbers() {
+        // Every fold fitted: the metrics are those of every pooled score, as
+        // before revision 14, and the row has no `called_metrics` field.
+        let truth = [true, false, true, false, true, false];
+        let test_fold = [0, 0, 1, 1, 2, 2];
+        let fits = [
+            fitted(&[0.9, 0.2, 0.0, 0.0, 0.0, 0.0]),
+            fitted(&[0.0, 0.0, 0.4, 0.7, 0.0, 0.0]),
+            fitted(&[0.0, 0.0, 0.0, 0.0, 0.5, 0.6]),
+        ];
+        let prevalence = prevalences(&truth, &test_fold, 3);
+        let l = pool_folds("rf", &truth, &test_fold, &fits, &prevalence, 1.0).unwrap();
+        let scores = [0.9, 0.2, 0.4, 0.7, 0.5, 0.6];
+        assert_eq!(l.scores, scores);
+        assert_eq!(l.metrics, Some(binary_metrics(&truth, &scores, 0.5, true)));
+        let m = l.metrics.as_ref().unwrap();
+        assert_eq!((m.n, m.tp, m.fn_, m.fp, m.tn), (6, 2, 1, 2, 1));
+        assert_eq!(l.called_metrics, None);
+        assert_eq!(
+            l.no_call,
+            Some(NoCall {
+                resistant: 0,
+                susceptible: 0
+            })
+        );
+        assert_eq!(l.fold_balanced_accuracy, [1.0, 0.0, 0.5]);
+        let saved = serde_json::to_value(&l).unwrap();
+        assert!(saved.get("called_metrics").is_none());
+        // The prevalences are not read when no fit is null.
+        let other = pool_folds("rf", &truth, &test_fold, &fits, &[0.0, 1.0, 0.5], 1.0).unwrap();
+        assert_eq!(serde_json::to_value(&other).unwrap(), saved);
+    }
+
+    #[test]
+    fn pooling_refuses_a_missing_or_impossible_training_prevalence() {
+        let truth = [true, false];
+        let fits = [null_fit(), fitted(&[0.2, 0.7])];
+        for bad in [&[0.5][..], &[0.5, f64::NAN], &[1.5, 0.5]] {
+            assert!(pool_folds("gbt", &truth, &[0, 1], &fits, bad, 1.0).is_err());
+        }
+    }
+
+    #[test]
+    fn null_fits_are_scored_at_their_folds_training_prevalence_in_evaluate() {
         // With no candidate feature, boosting keeps no tree and the lasso
         // path is empty in every fold: null fits. CART's one leaf and the
         // forest's leaf-only trees score exactly 0.5 too, but they are
         // fitted models, so the 0.5 cutoff calls every sample resistant.
+        // Three extra resistant samples (1, 5, 9) make the folds' training
+        // prevalences differ from one another, from their test folds' and
+        // from the whole dataset's.
         let n = 80;
-        let y = Bits::from_indices(n, (0..n).filter(|i| i % 4 == 0));
+        let y = Bits::from_indices(n, (0..n).filter(|i| i % 4 == 0 || [1, 5, 9].contains(i)));
         let groups: Vec<u32> = (0..n).map(|i| (i / 4) as u32).collect();
         let cfg = small_config();
         let out = evaluate(
@@ -2646,39 +3487,66 @@ mod tests {
             &cfg,
         )
         .unwrap();
+        let truth: Vec<bool> = (0..n).map(|i| y.contains(i)).collect();
         let none = NoCall {
             resistant: 0,
             susceptible: 0,
         };
+        let mut distinct = std::collections::BTreeSet::new();
         for split in &out.splits {
             assert!(split.unavailable_reason.is_none());
+            let f = &split.test_fold;
+            let share = |keep: &dyn Fn(usize) -> bool| {
+                let idx: Vec<usize> = (0..n).filter(|&i| keep(i)).collect();
+                idx.iter().filter(|&&i| truth[i]).count() as f64 / idx.len() as f64
+            };
+            let train: Vec<f64> = (0..cfg.folds).map(|k| share(&|i| f[i] != k)).collect();
+            let test: Vec<f64> = (0..cfg.folds).map(|k| share(&|i| f[i] == k)).collect();
+            assert!(
+                (0..cfg.folds).any(|k| train[k] != test[k]),
+                "{}",
+                split.scheme
+            );
+            assert!(train.iter().any(|&p| p != 23.0 / 80.0), "{}", split.scheme);
+            distinct.extend(train.iter().map(|p| p.to_bits()));
             for l in &split.learners {
                 match l.learner.as_str() {
                     "gbt" | "lasso" => {
-                        assert!(l.scores.iter().all(|s| s.is_nan()));
-                        assert_eq!(l.metrics, None);
-                        assert!(l.roc.is_empty());
+                        let want: Vec<f64> = (0..n).map(|i| train[f[i]]).collect();
+                        assert_eq!(l.scores, want, "{} {}", split.scheme, l.learner);
+                        // Every prevalence is below 0.5: all called susceptible.
+                        let m = l.metrics.as_ref().unwrap();
+                        assert_eq!((m.n, m.tp, m.fp, m.tn, m.fn_), (n, 0, 0, 57, 23));
+                        assert_eq!(m.balanced_accuracy, 0.5);
+                        assert_eq!(m.auroc, crate::learn::auroc(&truth, &want));
+                        assert_eq!(l.roc, roc_curve(&truth, &want, 60));
                         assert_eq!(
                             l.no_call,
                             Some(NoCall {
-                                resistant: 20,
-                                susceptible: 60
+                                resistant: 23,
+                                susceptible: 57
                             })
                         );
-                        assert!(l.fold_balanced_accuracy.iter().all(|b| b.is_nan()));
+                        assert_eq!(l.called_metrics, Some(None));
+                        assert_eq!(l.fold_balanced_accuracy, vec![0.5; cfg.folds]);
                         assert_eq!(l.fold_complexity, vec![0.0; cfg.folds]);
                     }
                     "cart" | "rf" => {
                         assert!(l.scores.iter().all(|&s| s == 0.5));
                         let m = l.metrics.as_ref().unwrap();
-                        assert_eq!((m.n, m.tp, m.fp), (n, 20, 60));
+                        assert_eq!((m.n, m.tp, m.fp), (n, 23, 57));
                         assert_eq!(l.no_call, Some(none));
+                        assert_eq!(l.called_metrics, None);
                     }
-                    _ => assert_eq!(l.no_call, Some(none)),
+                    _ => {
+                        assert_eq!(l.no_call, Some(none));
+                        assert_eq!(l.called_metrics, None);
+                    }
                 }
             }
         }
-        // A sample without a call is saved as null and read back as NaN.
+        assert!(distinct.len() > 1);
+        // Saved, the scores are numbers and `called_metrics` is null.
         let gbt = &out.splits[0].learners[3];
         let saved = serde_json::to_value(gbt).unwrap();
         assert!(
@@ -2686,32 +3554,40 @@ mod tests {
                 .as_array()
                 .unwrap()
                 .iter()
-                .all(|s| s.is_null())
+                .all(|s| s.is_number())
         );
+        assert!(saved["called_metrics"].is_null() && saved.get("called_metrics").is_some());
         let back: LearnerResult = serde_json::from_value(saved).unwrap();
-        assert!(back.scores.iter().all(|s| s.is_nan()));
-        assert!(back.fold_balanced_accuracy.iter().all(|b| b.is_nan()));
+        assert_eq!(back.called_metrics, Some(None));
+        assert_eq!(back.scores, gbt.scores);
+        assert_eq!(back.fold_balanced_accuracy, gbt.fold_balanced_accuracy);
     }
 
     #[test]
-    fn a_learner_with_every_fold_null_has_no_metrics_roc_or_fold_scores() {
+    fn a_learner_with_every_fold_null_predicts_each_folds_prevalence() {
         // E. coli amikacin in revision 5: 1,012 isolates, 30 resistant, and
         // lineage boosting kept no tree in any of its 5 folds. Revision 5
-        // scored those isolates 0.5 and reported 0% VME; without a call
-        // there is no rate to report.
+        // scored those isolates 0.5 (all resistant, 0% VME); revisions 7 to
+        // 13 left them uncalled with no rates. A null fit predicts its
+        // training prevalence: folds 0 and 1 hold 203 isolates, so their
+        // training sets are 24 of 809, the others' 24 of 810. All are below
+        // 0.5, so every isolate is called susceptible.
         let truth: Vec<bool> = (0..1012).map(|i| i < 30).collect();
         let test_fold: Vec<usize> = (0..1012).map(|i| i % 5).collect();
-        let fits: Vec<Scored> = (0..5)
-            .map(|_| Scored {
-                scores: None,
-                complexity: 0.0,
-                lasso_fit: None,
-            })
-            .collect();
-        let l = pool_folds("gbt", &truth, &test_fold, &fits, 1.0).unwrap();
-        assert_eq!(l.metrics, None);
-        assert!(l.roc.is_empty());
-        assert!(l.fold_balanced_accuracy.iter().all(|b| b.is_nan()));
+        let fits: Vec<Scored> = (0..5).map(|_| null_fit()).collect();
+        let prevalence = prevalences(&truth, &test_fold, 5);
+        let (high, low) = (24.0 / 809.0, 24.0 / 810.0);
+        assert_eq!(prevalence, [high, high, low, low, low]);
+        let l = pool_folds("gbt", &truth, &test_fold, &fits, &prevalence, 1.0).unwrap();
+        let m = l.metrics.as_ref().unwrap();
+        assert_eq!((m.n, m.tp, m.fn_, m.fp, m.tn), (1012, 0, 30, 0, 982));
+        assert_eq!((m.sensitivity, m.specificity, m.vme), (0.0, 1.0, 1.0));
+        assert_eq!(m.balanced_accuracy, 0.5);
+        // 12 resistant and 394 susceptible score high, 18 and 588 low:
+        // (12 * 588 + (12 * 394 + 18 * 588) / 2) / (30 * 982).
+        assert!((m.auroc.unwrap() - 14712.0 / 29460.0).abs() < 1e-12);
+        assert!(!l.roc.is_empty());
+        assert_eq!(l.fold_balanced_accuracy, vec![0.5; 5]);
         assert_eq!(
             l.no_call,
             Some(NoCall {
@@ -2719,14 +3595,51 @@ mod tests {
                 susceptible: 982
             })
         );
+        assert_eq!(l.called_metrics, Some(None));
         let saved = serde_json::to_value(&l).unwrap();
-        assert!(saved["metrics"].is_null());
-        assert_eq!(saved["roc"], serde_json::json!([]));
+        assert_eq!(saved["metrics"]["n"], 1012);
+        assert!(saved["called_metrics"].is_null());
         for key in ["scores", "fold_balanced_accuracy"] {
-            assert!(saved[key].as_array().unwrap().iter().all(|v| v.is_null()));
+            assert!(saved[key].as_array().unwrap().iter().all(|v| v.is_number()));
         }
         let back: LearnerResult = serde_json::from_value(saved).unwrap();
-        assert_eq!(back.metrics, None);
+        assert_eq!(back.metrics, l.metrics);
+        assert_eq!(back.called_metrics, Some(None));
+    }
+
+    #[test]
+    fn rows_written_before_revision_14_read_back_unchanged() {
+        // A revision-13 row: fold 1's samples uncalled (null scores, null
+        // fold balanced accuracy), metrics over the called samples, and no
+        // `called_metrics` field.
+        let old = serde_json::json!({
+            "learner": "gbt",
+            "metrics": {"n": 4, "tp": 2, "fp": 1, "tn": 1, "fn": 0, "accuracy": 0.75,
+                        "balanced_accuracy": 0.75, "sensitivity": 1.0, "specificity": 0.5,
+                        "precision": 0.6666666666666666, "f1": 0.8, "mcc": 0.5773502691896258,
+                        "vme": 0.0, "me": 0.5, "auroc": 0.75, "auprc": 0.8333333333333333},
+            "fold_balanced_accuracy": [1.0, null, 0.5],
+            "roc": [[0.0, 0.0], [1.0, 1.0]],
+            "scores": [0.9, 0.2, null, null, 0.5, 0.6],
+            "conformal": [],
+            "fold_complexity": [3.0, 0.0, 3.0],
+            "seconds": 1.0,
+            "no_call": {"resistant": 1, "susceptible": 1}
+        });
+        let back: LearnerResult = serde_json::from_value(old.clone()).unwrap();
+        assert_eq!(back.called_metrics, None);
+        assert_eq!(back.metrics.as_ref().unwrap().n, 4);
+        assert!(back.scores[2].is_nan() && back.fold_balanced_accuracy[1].is_nan());
+        assert_eq!(serde_json::to_value(&back).unwrap(), old);
+        // A row with null metrics (every fold null, revisions 7 to 13).
+        let mut none = old;
+        none["metrics"] = serde_json::Value::Null;
+        let back: LearnerResult = serde_json::from_value(none.clone()).unwrap();
+        assert_eq!((back.metrics, back.called_metrics), (None, None));
+        let again =
+            serde_json::to_value(serde_json::from_value::<LearnerResult>(none.clone()).unwrap())
+                .unwrap();
+        assert_eq!(again, none);
     }
 
     #[test]
@@ -2769,7 +3682,8 @@ mod tests {
                     &cfg,
                     test_context("random", 1),
                 )
-                .unwrap();
+                .unwrap()
+                .0;
                 (s.scores, s.complexity)
             };
             assert_eq!(fit(&y), fit(&y2), "{learner}");
@@ -2793,7 +3707,8 @@ mod tests {
         let (fit, val) = tuning_holdout(&all, &y, None, "group", 0.15, 42).unwrap();
         let mut x = BitMatrix::with_cols(n);
         x.push_row(fit.and(&y).or(&val.and_not(&y)).words());
-        let (scored, model) = fit_gbt(&x, &y, &all, None, "group", &small_config(), 42).unwrap();
+        let (scored, model) =
+            fit_gbt(&x, &y, &all, None, "group", &small_config(), 42, 42).unwrap();
         assert!(model.trees.is_empty());
         assert!(scored.scores.is_none());
         assert_eq!(scored.complexity, 0.0);
@@ -2896,6 +3811,7 @@ mod tests {
                 test_context("random", fold),
             )
             .unwrap()
+            .0
             .scores
             .unwrap()
         };
@@ -2924,6 +3840,403 @@ mod tests {
         assert_eq!(saved["gbt"]["rounds"], 400);
         assert!(saved["forest"].get("seed").is_none());
         assert!(saved["gbt"].get("seed").is_none());
+        // Not set, the learner seed is left out, so a release report's
+        // `eval_config` keeps its bytes; set, it is recorded.
+        assert!(saved.get("learner_seed").is_none());
+        let twin = EvalConfig {
+            learner_seed: Some(7),
+            ..Default::default()
+        };
+        assert_eq!(serde_json::to_value(twin).unwrap()["learner_seed"], 7);
+    }
+
+    /// Synthetic: 120 genomes in 24 lineages of five, a third resistant,
+    /// two features that follow the label with noise and four of noise.
+    fn draw_fixture() -> (BitMatrix, Bits, Vec<u32>) {
+        use rand::{Rng, SeedableRng};
+        let n = 120;
+        let y = Bits::from_indices(n, (0..n).filter(|i| i % 3 == 0));
+        let groups: Vec<u32> = (0..n as u32).map(|i| i / 5).collect();
+        let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(20261114);
+        let mut x = BitMatrix::with_cols(n);
+        for f in 0..6 {
+            let present: Vec<usize> = (0..n)
+                .filter(|&i| {
+                    if f < 2 {
+                        y.contains(i) != rng.random_bool(0.15)
+                    } else {
+                        rng.random_bool(0.4)
+                    }
+                })
+                .collect();
+            x.push_row(Bits::from_indices(n, present).words());
+        }
+        (x, y, groups)
+    }
+
+    fn draw_config() -> EvalConfig {
+        EvalConfig {
+            folds: 3,
+            inner_folds: 2,
+            forest: ForestParams {
+                n_trees: 8,
+                ..Default::default()
+            },
+            gbt: GbtParams {
+                rounds: 12,
+                ..Default::default()
+            },
+            screened_features: 6,
+            lasso_lambdas: 6,
+            ..Default::default()
+        }
+    }
+
+    fn learner_scores(out: &EvalOutput, scheme: &str, learner: &str) -> Vec<f64> {
+        let split = out.splits.iter().find(|s| s.scheme == scheme).unwrap();
+        let row = split.learners.iter().find(|l| l.learner == learner);
+        row.unwrap().scores.clone()
+    }
+
+    fn test_folds(out: &EvalOutput) -> Vec<Vec<usize>> {
+        out.splits.iter().map(|s| s.test_fold.clone()).collect()
+    }
+
+    /// Another evaluation seed is another fold draw of the same dataset:
+    /// both splits' outer folds are the ones `fold_plan` draws for that
+    /// seed, they differ from the release seed's, and nothing about the
+    /// dataset (its samples, labels and lineage count) moves with it.
+    #[test]
+    fn another_seed_redraws_both_splits_outer_folds_on_the_same_dataset() {
+        use crate::ablate::plan::{GroupIds, Scheme, fold_plan};
+        let (x, y, groups) = draw_fixture();
+        let run = |seed| {
+            let cfg = EvalConfig {
+                seed,
+                ..draw_config()
+            };
+            evaluate("fixture__fixturemycin", &x, &y, &groups, &[], 1, None, &cfg).unwrap()
+        };
+        let (base, other) = (run(42), run(43));
+        assert_eq!(base.splits.len(), 2);
+        assert!(base.splits.iter().all(|s| s.unavailable_reason.is_none()));
+        assert!(other.splits.iter().all(|s| s.unavailable_reason.is_none()));
+        for (a, b) in base.splits.iter().zip(&other.splits) {
+            assert_eq!((&a.scheme, a.n_groups), (&b.scheme, b.n_groups));
+            assert_eq!(a.test_fold.len(), x.cols);
+            assert_ne!(a.test_fold, b.test_fold, "{}", a.scheme);
+        }
+        let ids = GroupIds::new(groups.clone(), vec![], None).unwrap();
+        for (seed, out) in [(42, &base), (43, &other)] {
+            for (scheme, split) in [Scheme::Random, Scheme::Lineage]
+                .into_iter()
+                .zip(&out.splits)
+            {
+                let plan = fold_plan(&y, &ids, scheme, 3, 2, seed, 0).unwrap();
+                assert_eq!(plan.outer, split.test_fold, "seed {seed} {}", split.scheme);
+            }
+        }
+    }
+
+    /// The learner seed moves the forest's and boosting's own draws and
+    /// nothing else: every outer fold, and so every score of the SCM, CART
+    /// and the lasso, is the one the evaluation seed alone gives. Set to the
+    /// evaluation seed it changes no score at all.
+    #[test]
+    fn the_learner_seed_moves_the_forest_and_boosting_and_no_partition() {
+        let (x, y, groups) = draw_fixture();
+        let run = |learner_seed| {
+            let cfg = EvalConfig {
+                learner_seed,
+                ..draw_config()
+            };
+            evaluate("fixture__fixturemycin", &x, &y, &groups, &[], 1, None, &cfg).unwrap()
+        };
+        let (base, same, twin) = (run(None), run(Some(42)), run(Some(4242)));
+        assert_eq!(test_folds(&base), test_folds(&twin));
+        for scheme in ["random", "lineage"] {
+            for learner in LEARNERS {
+                assert_eq!(
+                    learner_scores(&base, scheme, learner),
+                    learner_scores(&same, scheme, learner),
+                    "{scheme} {learner}"
+                );
+            }
+            for learner in ["scm", "cart", "lasso"] {
+                assert_eq!(
+                    learner_scores(&base, scheme, learner),
+                    learner_scores(&twin, scheme, learner),
+                    "{scheme} {learner}"
+                );
+            }
+            assert_ne!(
+                learner_scores(&base, scheme, "rf"),
+                learner_scores(&twin, scheme, "rf"),
+                "{scheme}"
+            );
+        }
+        // Boosting draws column samples only when it has columns to drop;
+        // its seed still reaches the fit.
+        assert_eq!(
+            fold_draw_seed(&draw_config(), 2),
+            fold_seed(&draw_config(), 2)
+        );
+        let cfg = EvalConfig {
+            learner_seed: Some(4242),
+            ..draw_config()
+        };
+        assert_eq!(fold_seed(&cfg, 2), 42 + 202);
+        assert_eq!(fold_draw_seed(&cfg, 2), 4242 + 202);
+    }
+
+    fn value<T: Serialize>(v: &T) -> serde_json::Value {
+        serde_json::to_value(v).unwrap()
+    }
+
+    /// Synthetic: an exact MIC for each of `draw_fixture`'s genomes, two to
+    /// four doublings for a resistant genome and -1 to 1 for the rest, so
+    /// the MIC regression runs.
+    fn draw_mic(y: &Bits) -> Vec<Option<Mic>> {
+        (0..y.len())
+            .map(|i| {
+                let base = if y.contains(i) { 2 } else { -1 };
+                Some(Mic {
+                    log2: base + (i % 3) as i32,
+                    censor: Censor::Exact,
+                })
+            })
+            .collect()
+    }
+
+    /// The learner seed reaches each of the forest's and boosting's draws:
+    /// boosting's held-out scores on both splits, the final forest's and
+    /// boosting's importance lists, and the MIC regression's boosting. SCM's,
+    /// CART's and the lasso's final models do not move. Every partition still
+    /// comes from `seed`: boosting rebuilt with the evaluation seed's
+    /// early-stopping holdout and the learner seed's column samples gives
+    /// the fits `evaluate` made, in each outer fold and in the final model,
+    /// and a holdout drawn from the learner seed would not.
+    /// The MIC regression's boosted models take the tie rule too: on this
+    /// synthetic fixture (`wide_fixture(120, 40, 1)`, `draw_mic`) their
+    /// out-of-fold predictions differ between the two rules.
+    #[test]
+    fn the_tie_rule_reaches_the_mic_regression() {
+        let (x, y, groups) = wide_fixture(120, 40, 1);
+        let mic = draw_mic(&y);
+        let predicted = |tie_rule| {
+            let cfg = EvalConfig {
+                tie_rule,
+                screened_features: 40,
+                ..draw_config()
+            };
+            let input = MicInput {
+                mic: &mic,
+                breakpoint: None,
+            };
+            let out = evaluate(
+                "fixture__fixturemycin",
+                &x,
+                &y,
+                &groups,
+                &[],
+                1,
+                Some(input),
+                &cfg,
+            )
+            .unwrap();
+            value(&out.mic.unwrap().predicted)
+        };
+        assert_ne!(predicted(TieRule::Exact), predicted(TieRule::Float));
+    }
+
+    /// `draw_fixture` with `features` features, all but the first two
+    /// present at random on half the samples: with many candidates, small
+    /// boosting nodes meet features that divide them into the same groups.
+    fn wide_fixture(n: usize, features: usize, seed: u64) -> (BitMatrix, Bits, Vec<u32>) {
+        use rand::{Rng, SeedableRng};
+        let y = Bits::from_indices(n, (0..n).filter(|i| i % 3 == 0));
+        let groups: Vec<u32> = (0..n as u32).map(|i| i / 5).collect();
+        let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(seed);
+        let mut x = BitMatrix::with_cols(n);
+        for f in 0..features {
+            let present: Vec<usize> = (0..n)
+                .filter(|&i| {
+                    if f < 2 {
+                        y.contains(i) != rng.random_bool(0.15)
+                    } else {
+                        rng.random_bool(0.5)
+                    }
+                })
+                .collect();
+            x.push_row(Bits::from_indices(n, present).words());
+        }
+        (x, y, groups)
+    }
+
+    #[test]
+    fn the_learner_seed_reaches_boosting_the_final_models_and_the_mic_regression() {
+        use crate::ablate::plan::fold_seed as seed_of_fold;
+        let (x, y, groups) = draw_fixture();
+        let mic = draw_mic(&y);
+        let run = |learner_seed| {
+            let cfg = EvalConfig {
+                learner_seed,
+                ..draw_config()
+            };
+            let input = MicInput {
+                mic: &mic,
+                breakpoint: None,
+            };
+            evaluate(
+                "fixture__fixturemycin",
+                &x,
+                &y,
+                &groups,
+                &[],
+                1,
+                Some(input),
+                &cfg,
+            )
+            .unwrap()
+        };
+        let (base, twin) = (run(None), run(Some(4242)));
+        for scheme in ["random", "lineage"] {
+            assert_ne!(
+                learner_scores(&base, scheme, "gbt"),
+                learner_scores(&twin, scheme, "gbt"),
+                "{scheme}"
+            );
+        }
+        let (a, b) = (&base.finals, &twin.finals);
+        assert_ne!(value(&a.rf_importance), value(&b.rf_importance));
+        assert_ne!(value(&a.gbt_importance), value(&b.gbt_importance));
+        let predicted = |out: &EvalOutput| value(&out.mic.as_ref().unwrap().predicted);
+        assert_ne!(predicted(&base), predicted(&twin));
+        assert_eq!(value(&a.scm), value(&b.scm));
+        assert_eq!(
+            (value(&a.cart), a.cart_depth),
+            (value(&b.cart), b.cart_depth)
+        );
+        assert_eq!(value(&a.lasso), value(&b.lasso));
+        assert_eq!(value(&a.lasso_fit), value(&b.lasso_fit));
+
+        let cfg = EvalConfig {
+            learner_seed: Some(4242),
+            ..draw_config()
+        };
+        let mut holdout_matters = false;
+        for (scheme, folds) in outer_splits(&y, &groups, &[], &cfg) {
+            let tuning = tuning_groups(scheme, &groups, &[]);
+            let unit = tuning_unit(scheme);
+            for (fi, (train, _)) in fold_masks(&folds, cfg.folds).into_iter().enumerate() {
+                let (cx, _) = training_candidates(&x, &train, 1);
+                let draws = seed_of_fold(4242, fi);
+                let built = |holdout| {
+                    let fit = fit_gbt(
+                        &cx,
+                        &y,
+                        &train,
+                        tuning.as_deref(),
+                        unit,
+                        &cfg,
+                        holdout,
+                        draws,
+                    );
+                    fit.unwrap().0.scores
+                };
+                let context = test_context(scheme, fi);
+                let fit = fit_fold("gbt", &cx, &y, &train, tuning.as_deref(), &cfg, context);
+                let expected = built(seed_of_fold(42, fi));
+                assert_eq!(fit.unwrap().0.scores, expected, "{scheme} outer fold {fi}");
+                holdout_matters |= built(draws) != expected;
+            }
+        }
+        assert!(holdout_matters);
+        let all = Bits::ones(x.cols);
+        let importance = |holdout| {
+            let fit = fit_gbt(&x, &y, &all, None, "group", &cfg, holdout, 4242 + 13);
+            value(&top_weighted(fit.unwrap().1.importance(), 50))
+        };
+        assert_eq!(value(&b.gbt_importance), importance(42 + 13));
+        assert_ne!(importance(42 + 13), importance(4242 + 13));
+    }
+
+    /// `--seed` takes any 64-bit value, so every seed sum wraps at 2^64:
+    /// the per-fold seeds, the final models' (+7, +11, +13, +17) and the MIC
+    /// regression's (+ fold). The release gate builds without overflow
+    /// checks, where `+` wraps as well, so this pins the wrapped values; a
+    /// debug run of this test is the one that fails on a sum that does not
+    /// wrap.
+    #[test]
+    fn seed_sums_wrap_at_the_largest_seed() {
+        let top = EvalConfig {
+            seed: u64::MAX,
+            ..draw_config()
+        };
+        assert_eq!(fold_seed(&top, 0), u64::MAX);
+        assert_eq!(fold_seed(&top, 1), 100);
+        assert_eq!(fold_seed(&top, 4), 403);
+        assert_eq!(fold_draw_seed(&top, 1), 100);
+        let twin = EvalConfig {
+            learner_seed: Some(u64::MAX),
+            ..draw_config()
+        };
+        assert_eq!(fold_seed(&twin, 1), 42 + 101);
+        assert_eq!(fold_draw_seed(&twin, 1), 100);
+        // Evaluation at the largest seed reaches every sum, the MIC
+        // regression's in each of its folds, and its final models are the
+        // ones fitted at the wrapped seeds.
+        let (x, y, groups) = draw_fixture();
+        let mic = draw_mic(&y);
+        let input = MicInput {
+            mic: &mic,
+            breakpoint: None,
+        };
+        let out = evaluate(
+            "fixture__fixturemycin",
+            &x,
+            &y,
+            &groups,
+            &[],
+            1,
+            Some(input),
+            &top,
+        )
+        .unwrap();
+        assert!(out.mic.is_some());
+        assert!(out.splits.iter().all(|s| s.unavailable_reason.is_none()));
+        let all = Bits::ones(x.cols);
+        assert_eq!(
+            final_plan(&x, &y, None, 1, &top).unwrap(),
+            training_folds(&y, &all, None, top.inner_folds, 6)
+        );
+        let (_, rf) = fit_rf(&x, &y, &all, &top, 16);
+        assert_eq!(
+            value(&out.finals.rf_importance),
+            value(&top_weighted(rf, 50))
+        );
+        let (_, gbt) = fit_gbt(&x, &y, &all, None, "group", &top, 12, 12).unwrap();
+        assert_eq!(
+            value(&out.finals.gbt_importance),
+            value(&top_weighted(gbt.importance(), 50))
+        );
+        let (lasso, _) = fit_lasso_traced(
+            &x,
+            &y,
+            &all,
+            None,
+            &top,
+            10,
+            LassoContext {
+                dataset: "fixture__fixturemycin",
+                scheme: "final",
+                outer_fold: None,
+            },
+            &mut LassoTrace::default(),
+            &mut |_, _| {},
+        )
+        .unwrap();
+        assert_eq!(value(&out.finals.lasso_fit), value(&lasso.lasso_fit));
     }
 
     #[test]
@@ -3301,6 +4614,7 @@ mod tests {
         let result = LearnerResult {
             learner: "lasso".into(),
             metrics: Some(binary_metrics(&truth, &scores, 0.5, true)),
+            called_metrics: None,
             fold_balanced_accuracy: vec![],
             roc: roc_curve(&truth, &scores, 60),
             // Infer the stored field's type so this regression also runs
@@ -3435,7 +4749,8 @@ mod tests {
                         &cfg,
                         test_context("random", 1),
                     )
-                    .unwrap();
+                    .unwrap()
+                    .0;
                     let s = s.scores.expect("every learner fits this matrix");
                     assert!(s.iter().all(|v| v.is_finite()));
                     s[..40].to_vec()
@@ -3443,6 +4758,533 @@ mod tests {
                 .collect()
         };
         assert_eq!(fits(&x), fits(&x2));
+    }
+
+    /// Synthetic: 120 samples in 30 lineages of four. Every third sample is
+    /// resistant, two rows mark resistance imperfectly and three are noise.
+    fn assigned_fixture() -> (BitMatrix, Bits, Vec<u32>) {
+        let n = 120;
+        let rules: [fn(usize) -> bool; 5] = [
+            |i| (i % 3 == 0 && i % 10 != 0) || i % 20 == 1,
+            |i| i % 3 == 0 && i % 7 != 0,
+            |i| i % 5 == 0,
+            |i| i % 7 == 1,
+            |i| i % 4 < 2,
+        ];
+        let mut x = BitMatrix::with_cols(n);
+        for rule in rules {
+            x.push_row(Bits::from_indices(n, (0..n).filter(|&i| rule(i))).words());
+        }
+        let y = Bits::from_indices(n, (0..n).filter(|i| i % 3 == 0));
+        (x, y, (0..n).map(|i| (i / 4) as u32).collect())
+    }
+
+    /// `evaluate_assigned` on the synthetic fixture under the name "supplied".
+    fn assigned(
+        x: &BitMatrix,
+        y: &Bits,
+        duplicates: &[Vec<usize>],
+        roles: &[Role],
+        folds: usize,
+        cfg: &EvalConfig,
+    ) -> Result<AssignedSplit> {
+        let groups: Vec<u32> = (0..x.cols).map(|i| (i / 4) as u32).collect();
+        evaluate_assigned(
+            "fixture__fixturemycin",
+            "supplied",
+            x,
+            y,
+            &groups,
+            duplicates,
+            roles,
+            folds,
+            cfg,
+        )
+    }
+
+    #[test]
+    fn roles_that_repeat_a_drawn_split_give_that_splits_scores() {
+        // The tuning-sensitive synthetic fixture of
+        // `scm_cart_boosting_and_lasso_tune_on_the_splits_tuning_groups`:
+        // 160 genomes in lineages of four, every other lineage four copies of
+        // one genome. Its fits change when tuning splits the copies, so the
+        // equality below also holds the supplied path to the random split's
+        // tuning groups.
+        let n = 160;
+        let copies = |i: usize| (i / 4).is_multiple_of(2);
+        let genome = |i: usize| if copies(i) { i / 4 * 4 } else { i };
+        let marker = |i: usize| copies(i) || i.is_multiple_of(2);
+        let mislabeled = |i: usize| copies(i) && (i / 4).is_multiple_of(6);
+        let y = Bits::from_indices(n, (0..n).filter(|&i| marker(i) && !mislabeled(i)));
+        let mut x = BitMatrix::with_cols(n);
+        x.push_row(Bits::from_indices(n, (0..n).filter(|&i| marker(i))).words());
+        for bit in 0..8 {
+            x.push_row(
+                Bits::from_indices(n, (0..n).filter(|&i| (genome(i) >> bit) & 1 == 1)).words(),
+            );
+        }
+        for lineage in (0..n / 4).step_by(6) {
+            x.push_row(Bits::from_indices(n, (0..n).filter(|&i| i / 4 == lineage)).words());
+        }
+        let groups: Vec<u32> = (0..n).map(|i| (i / 4) as u32).collect();
+        let duplicates = identical_columns(&x);
+        assert_eq!(duplicates.len(), 20);
+        let cfg = EvalConfig {
+            forest: ForestParams {
+                n_trees: 8,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let mut tuning_matters = false;
+        for duplicates in [&duplicates[..], &[]] {
+            let drawn = evaluate(
+                "fixture__fixturemycin",
+                &x,
+                &y,
+                &groups,
+                duplicates,
+                3,
+                None,
+                &cfg,
+            )
+            .unwrap();
+            let random = &drawn.splits[0];
+            assert_eq!(random.scheme, "random");
+            let roles: Vec<Role> = random.test_fold.iter().map(|&f| Role::Test(f)).collect();
+            let supplied = evaluate_assigned(
+                "fixture__fixturemycin",
+                "supplied",
+                &x,
+                &y,
+                &groups,
+                duplicates,
+                &roles,
+                cfg.folds,
+                &cfg,
+            )
+            .unwrap();
+            assert_eq!(supplied.tested, (0..n).collect::<Vec<_>>());
+            assert_eq!(supplied.folds.len(), cfg.folds);
+            for (f, counts) in supplied.folds.iter().enumerate() {
+                let test = random.test_fold.iter().filter(|&&t| t == f).count();
+                assert_eq!((counts.test, counts.train), (test, n - test), "fold {f}");
+            }
+            let renamed = SplitResult {
+                scheme: "random".into(),
+                ..supplied.result
+            };
+            assert_eq!(timeless(&renamed), timeless(random));
+            // The same outer folds without the copies' tuning groups are
+            // other fits, so the supplied path did tune on the groups.
+            if !duplicates.is_empty() {
+                let untuned = evaluate_assigned(
+                    "fixture__fixturemycin",
+                    "supplied",
+                    &x,
+                    &y,
+                    &groups,
+                    &[],
+                    &roles,
+                    cfg.folds,
+                    &cfg,
+                )
+                .unwrap();
+                tuning_matters = serde_json::to_vec(&untuned.result.learners).unwrap()
+                    != serde_json::to_vec(&renamed.learners).unwrap();
+            }
+        }
+        assert!(tuning_matters);
+        assert_eq!(
+            tuning_groups("supplied", &groups, &duplicates),
+            tuning_groups("random", &groups, &duplicates)
+        );
+        assert_eq!(tuning_unit("supplied"), tuning_unit("random"));
+    }
+
+    #[test]
+    fn the_features_and_labels_of_unused_samples_and_the_labels_of_tested_ones_cannot_change_a_folds_scores()
+     {
+        // One fold: samples 0..30 are tested, 30..90 train, 90..120 are in
+        // no fold.
+        let (x, y, _) = assigned_fixture();
+        let n = x.cols;
+        let roles: Vec<Role> = (0..n)
+            .map(|i| match i {
+                0..30 => Role::Test(0),
+                30..90 => Role::Train,
+                _ => Role::Unused,
+            })
+            .collect();
+        let cfg = small_config();
+        let base = assigned(&x, &y, &[], &roles, 1, &cfg).unwrap();
+        let train = Bits::from_indices(n, 30..90);
+        assert_eq!(
+            base.folds,
+            [FoldCounts {
+                train: 60,
+                train_resistant: 20,
+                test: 30,
+                test_resistant: 10,
+                candidates: training_candidates(&x, &train, 3).0.rows,
+            }]
+        );
+        assert!(base.folds[0].candidates > 0);
+        assert_eq!(base.tested, (0..30).collect::<Vec<_>>());
+        assert_eq!(base.result.test_fold, vec![0; 30]);
+        // The lineages of the 90 tested and training samples, 0..90 in
+        // lineages of four; the unused ones add none.
+        assert_eq!((base.result.folds, base.result.n_groups), (1, 23));
+        for learner in &base.result.learners {
+            assert_eq!(learner.scores.len(), 30, "{}", learner.learner);
+            assert_eq!(learner.metrics.as_ref().unwrap().n, 30);
+            assert_eq!(learner.fold_balanced_accuracy.len(), 1);
+        }
+        // The marker rows fit: every learner has a model and calls both
+        // classes, so a changed training set would show in its scores.
+        for l in &base.result.learners {
+            let m = l.metrics.as_ref().unwrap();
+            assert!(
+                l.fold_complexity[0] > 0.0 && m.tp > 0 && m.tn > 0,
+                "{}",
+                l.learner
+            );
+        }
+
+        // Every feature and the label of each unused sample inverted.
+        let mut x2 = BitMatrix::with_cols(n);
+        for r in 0..x.rows {
+            let row = (0..n).filter(|&i| x.get(r, i) != (i >= 90));
+            x2.push_row(Bits::from_indices(n, row).words());
+        }
+        let y2 = Bits::from_indices(n, (0..n).filter(|&i| y.contains(i) != (i >= 90)));
+        let changed = assigned(&x2, &y2, &[], &roles, 1, &cfg).unwrap();
+        assert_eq!(timeless(&changed.result), timeless(&base.result));
+        assert_eq!(changed.folds, base.folds);
+        // The same change does move the scores once those samples train, so
+        // the equality above is not a fixture too dull to show a leak.
+        let training: Vec<Role> = roles
+            .iter()
+            .map(|&r| if r == Role::Unused { Role::Train } else { r })
+            .collect();
+        let leaked = |x: &BitMatrix, y: &Bits| {
+            let split = assigned(x, y, &[], &training, 1, &cfg).unwrap();
+            assert_eq!(split.folds[0].train, 90);
+            timeless(&split.result)
+        };
+        assert_ne!(leaked(&x, &y), leaked(&x2, &y2));
+        assert_ne!(leaked(&x, &y), timeless(&base.result));
+
+        // A test sample's label changes the metrics and never a score.
+        let y3 = Bits::from_indices(
+            n,
+            (0..n).filter(|&i| y.contains(i) != (i < 30 && i % 2 == 0)),
+        );
+        let relabelled = assigned(&x, &y3, &[], &roles, 1, &cfg).unwrap();
+        assert_eq!(relabelled.folds[0].test_resistant, 15);
+        let mut metrics_moved = false;
+        for (a, b) in relabelled.result.learners.iter().zip(&base.result.learners) {
+            assert_eq!(a.scores, b.scores, "{}", a.learner);
+            assert_eq!(a.fold_complexity, b.fold_complexity, "{}", a.learner);
+            metrics_moved |= a.metrics != b.metrics;
+        }
+        assert!(metrics_moved);
+    }
+
+    #[test]
+    fn a_copy_pair_among_unused_samples_cannot_change_a_folds_fits() {
+        // One fold: samples 0..30 are tested, 30..90 train, 90..120 are in
+        // no fold. Samples 92 and 93 are unused and share a lineage. Naming
+        // them a k-mer-identical pair changes no training and no test sample,
+        // so no fit may change: a copy group made of unused samples alone
+        // must not move the fold onto grouped tuning draws.
+        let (x, y, _) = assigned_fixture();
+        let n = x.cols;
+        let roles: Vec<Role> = (0..n)
+            .map(|i| match i {
+                0..30 => Role::Test(0),
+                30..90 => Role::Train,
+                _ => Role::Unused,
+            })
+            .collect();
+        let cfg = EvalConfig {
+            forest: ForestParams {
+                n_trees: 8,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let base = assigned(&x, &y, &[], &roles, 1, &cfg).unwrap();
+        let copies = assigned(&x, &y, &[vec![92, 93]], &roles, 1, &cfg).unwrap();
+        assert_eq!(copies.folds, base.folds);
+        let row = |l: &LearnerResult| {
+            let mut v = serde_json::to_value(l).unwrap();
+            v.as_object_mut().unwrap().remove("seconds");
+            v
+        };
+        let moved: Vec<&str> = base
+            .result
+            .learners
+            .iter()
+            .zip(&copies.result.learners)
+            .filter(|(a, b)| row(a) != row(b))
+            .map(|(a, _)| a.learner.as_str())
+            .collect();
+        let scores_moved: Vec<&str> = base
+            .result
+            .learners
+            .iter()
+            .zip(&copies.result.learners)
+            .filter(|(a, b)| a.scores != b.scores)
+            .map(|(a, _)| a.learner.as_str())
+            .collect();
+        assert!(
+            moved.is_empty(),
+            "an unused copy pair moved the rows of {moved:?} and the scores of {scores_moved:?}"
+        );
+        // The same pair among training samples does move a fit, so the
+        // equality above is not a fixture too dull to show the switch.
+        let trained = assigned(&x, &y, &[vec![32, 33]], &roles, 1, &cfg).unwrap();
+        assert!(
+            base.result
+                .learners
+                .iter()
+                .zip(&trained.result.learners)
+                .any(|(a, b)| row(a) != row(b))
+        );
+    }
+
+    #[test]
+    fn each_supplied_fold_chooses_candidates_and_fits_on_its_own_training_samples() {
+        // Synthetic: the 120-sample fixture and one more row, present in
+        // samples 0..4 only. Fold 0 tests 0..30 and fold 1 tests 30..60, so
+        // the row has no support among fold 0's training samples and four
+        // among fold 1's.
+        let (mut x, y, _) = assigned_fixture();
+        let n = x.cols;
+        x.push_row(Bits::from_indices(n, 0..4).words());
+        let roles: Vec<Role> = (0..n)
+            .map(|i| match i {
+                0..30 => Role::Test(0),
+                30..60 => Role::Test(1),
+                _ => Role::Train,
+            })
+            .collect();
+        let cfg = small_config();
+        let base = assigned(&x, &y, &[], &roles, 2, &cfg).unwrap();
+        let trains = [
+            Bits::from_indices(n, 30..n),
+            Bits::from_indices(n, (0..30).chain(60..n)),
+        ];
+        let expected: Vec<usize> = trains
+            .iter()
+            .map(|train| training_candidates(&x, train, 3).0.rows)
+            .collect();
+        assert_eq!(expected[1], expected[0] + 1);
+        let counted: Vec<usize> = base.folds.iter().map(|f| f.candidates).collect();
+        assert_eq!(counted, expected);
+        assert_eq!(base.tested, (0..60).collect::<Vec<_>>());
+
+        // Fold 0's test samples train fold 1 and nothing else. With half of
+        // them relabelled, fold 0 scores them as before, and fold 1, whose
+        // training samples they are, does not.
+        let y2 = Bits::from_indices(
+            n,
+            (0..n).filter(|&i| y.contains(i) != (i < 30 && i % 2 == 0)),
+        );
+        let relabelled = assigned(&x, &y2, &[], &roles, 2, &cfg).unwrap();
+        assert_eq!(
+            relabelled.folds[0].train_resistant,
+            base.folds[0].train_resistant
+        );
+        assert_eq!(
+            relabelled.folds[1].train_resistant,
+            base.folds[1].train_resistant + 5
+        );
+        let mut fold_1_moved = false;
+        for (a, b) in relabelled.result.learners.iter().zip(&base.result.learners) {
+            assert_eq!(a.scores[..30], b.scores[..30], "{}", a.learner);
+            assert_eq!(a.fold_complexity[0], b.fold_complexity[0], "{}", a.learner);
+            fold_1_moved |= a.scores[30..] != b.scores[30..];
+        }
+        assert!(fold_1_moved);
+    }
+
+    #[test]
+    fn a_fold_whose_training_samples_give_no_candidate_feature_is_refused() {
+        // Synthetic: the 120-sample fixture's labels. Samples 0..30 are
+        // tested and the rest train.
+        let (fixture, y, _) = assigned_fixture();
+        let n = fixture.cols;
+        let roles: Vec<Role> = (0..n)
+            .map(|i| if i < 30 { Role::Test(0) } else { Role::Train })
+            .collect();
+        let cfg = small_config();
+        // One feature in every sample and one in samples 0..30 and 118..120:
+        // all 90 training samples carry the first, and 2 carry the second,
+        // under the floor of 3. Neither is a candidate.
+        let matrix = |carriers: std::ops::Range<usize>| {
+            let mut x = BitMatrix::with_cols(n);
+            x.push_row(Bits::ones(n).words());
+            x.push_row(Bits::from_indices(n, (0..30).chain(carriers)).words());
+            x
+        };
+        let x = matrix(118..120);
+        let train = Bits::from_indices(n, 30..n);
+        assert_eq!(training_candidates(&x, &train, 3).0.rows, 0);
+        let error = assigned(&x, &y, &[], &roles, 1, &cfg)
+            .err()
+            .expect("a fold without a candidate feature is refused");
+        assert_eq!(
+            format!("{error:#}"),
+            "supplied outer fold 0's 90 training samples give no candidate feature: none is present in at least 3 of them and absent from at least 3"
+        );
+        // A third training sample with the second feature makes it a
+        // candidate, and the fold is scored.
+        let x = matrix(117..120);
+        assert_eq!(training_candidates(&x, &train, 3).0.rows, 1);
+        let split = assigned(&x, &y, &[], &roles, 1, &cfg).unwrap();
+        assert_eq!(split.folds[0].candidates, 1);
+        // The fixture's own features give the fold candidates.
+        assert!(assigned(&fixture, &y, &[], &roles, 1, &cfg).is_ok());
+    }
+
+    #[test]
+    fn a_tested_sample_takes_its_own_score_wherever_it_sits_in_the_sample_order() {
+        // Synthetic: the 120-sample fixture and one more row that is the
+        // label itself, so a one-rule SCM scores every sample by its own
+        // label. Samples 80..111 are tested: they are not the first samples
+        // of the cohort, their labels are not those of samples 0..31, and
+        // they do not read the same in reverse.
+        let (mut x, y, _) = assigned_fixture();
+        let n = x.cols;
+        x.push_row(y.words());
+        let roles: Vec<Role> = (0..n)
+            .map(|i| match i {
+                80..111 => Role::Test(0),
+                20..80 => Role::Train,
+                _ => Role::Unused,
+            })
+            .collect();
+        let split = assigned(&x, &y, &[], &roles, 1, &small_config()).unwrap();
+        assert_eq!(split.tested, (80..111).collect::<Vec<_>>());
+        let label = |i: usize| if i.is_multiple_of(3) { 1.0 } else { 0.0 };
+        let own: Vec<f64> = (80..111).map(label).collect();
+        let first: Vec<f64> = (0..31).map(label).collect();
+        let reversed: Vec<f64> = own.iter().rev().copied().collect();
+        assert_ne!(own, first);
+        assert_ne!(own, reversed);
+        let scm = &split.result.learners[0];
+        assert_eq!(scm.learner, "scm");
+        assert_eq!(scm.scores, own);
+        let m = scm.metrics.as_ref().unwrap();
+        assert_eq!((m.tp, m.tn, m.fp, m.fn_), (10, 21, 0, 0));
+    }
+
+    #[test]
+    fn a_supplied_partition_that_cannot_be_scored_fairly_is_refused() {
+        let (x, y, _) = assigned_fixture();
+        let n = x.cols;
+        let cfg = small_config();
+        let refusal = |duplicates: &[Vec<usize>], roles: &[Role], folds: usize| {
+            let error = assigned(&x, &y, duplicates, roles, folds, &cfg)
+                .err()
+                .expect("the partition is refused");
+            format!("{error:#}")
+        };
+        let roles = |role: fn(usize) -> Role| (0..n).map(role).collect::<Vec<Role>>();
+        let good = roles(|i| if i < 30 { Role::Test(0) } else { Role::Train });
+        assert!(assigned(&x, &y, &[], &good, 1, &cfg).is_ok());
+
+        // Its shape.
+        assert_eq!(
+            refusal(&[], &good, 0),
+            "a supplied partition needs an outer fold"
+        );
+        assert_eq!(refusal(&[], &good[1..], 1), "119 roles for 120 samples");
+        let mut outside = good.clone();
+        outside[0] = Role::Test(1);
+        assert_eq!(
+            refusal(&[], &outside, 1),
+            "a sample is tested in an outer fold outside 0..1"
+        );
+        let groups: Vec<u32> = (0..n).map(|i| (i / 4) as u32).collect();
+        for name in ["", "random", "lineage"] {
+            let error = evaluate_assigned(
+                "fixture__fixturemycin",
+                name,
+                &x,
+                &y,
+                &groups,
+                &[],
+                &good,
+                1,
+                &cfg,
+            )
+            .err()
+            .expect("a drawn split's name is refused");
+            assert_eq!(
+                format!("{error:#}"),
+                format!("a supplied partition needs a name of its own, not {name:?}")
+            );
+        }
+
+        // A class missing from a fold's test or training samples.
+        let susceptible_test = roles(|i| match i {
+            i if i < 30 && i % 3 != 0 => Role::Test(0),
+            _ => Role::Train,
+        });
+        assert_eq!(
+            refusal(&[], &susceptible_test, 1),
+            "supplied outer fold 0's test samples lack one or both classes"
+        );
+        let resistant_training = roles(|i| match i {
+            0..30 => Role::Test(0),
+            i if i % 3 == 0 => Role::Train,
+            _ => Role::Unused,
+        });
+        assert_eq!(
+            refusal(&[], &resistant_training, 1),
+            "supplied outer fold 0's training samples lack one or both classes"
+        );
+        // A fold the roles test nobody in.
+        assert_eq!(
+            refusal(&[], &good, 2),
+            "supplied outer fold 1's test samples lack one or both classes"
+        );
+        // One resistant training sample cannot fill two inner folds.
+        let one_resistant = roles(|i| match i {
+            0..30 => Role::Test(0),
+            i if i % 3 != 0 || i == 30 => Role::Train,
+            _ => Role::Unused,
+        });
+        assert!(
+            refusal(&[], &one_resistant, 1)
+                .starts_with("invalid supplied inner evaluation in outer fold 0"),
+            "{}",
+            refusal(&[], &one_resistant, 1)
+        );
+
+        // Samples 29 and 30 share a lineage and are k-mer-identical copies.
+        let copies = [vec![29, 30]];
+        let copy_words = "supplied outer fold 0 tests sample 29 and trains on sample 30, its k-mer-identical copy";
+        assert_eq!(refusal(&copies, &good, 1), copy_words);
+        // The copy in another test fold still trains fold 0.
+        let two_folds = roles(|i| match i {
+            0..30 => Role::Test(0),
+            30..60 => Role::Test(1),
+            _ => Role::Train,
+        });
+        assert_eq!(refusal(&copies, &two_folds, 2), copy_words);
+        assert!(assigned(&x, &y, &[], &two_folds, 2, &cfg).is_ok());
+        // A copy left out of every fold, or beside its copy, is no leak.
+        let mut left_out = good.clone();
+        left_out[30] = Role::Unused;
+        assert!(assigned(&x, &y, &copies, &left_out, 1, &cfg).is_ok());
+        let mut together = good.clone();
+        together[30] = Role::Test(0);
+        assert!(assigned(&x, &y, &copies, &together, 1, &cfg).is_ok());
+        assert!(assigned(&x, &y, &[vec![40, 41]], &good, 1, &cfg).is_ok());
     }
 
     #[test]
@@ -3462,5 +5304,693 @@ mod tests {
         let pts = conformal(&truth, &scores, &[0.01, 0.2], 3);
         assert!(pts[0].coverage <= pts[1].coverage);
         assert!(pts[1].me <= 0.25);
+    }
+
+    /// Synthetic: 60 samples, half resistant. Rows 0 to 3 are each present
+    /// in three samples, the support floor, so a fold that holds one of the
+    /// three out drops the row and every later candidate's index falls
+    /// behind its dataset row. Rows 4 to 6 follow the label with noise, and
+    /// the last nine are noise.
+    fn shifted_fixture() -> (BitMatrix, Bits, Vec<u32>) {
+        use rand::{Rng, SeedableRng};
+        let n = 60;
+        let y = Bits::from_indices(n, (0..n).filter(|i| i % 2 == 0));
+        let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(11);
+        let mut raw = BitMatrix::with_cols(n);
+        for k in 0..4 {
+            raw.push_row(Bits::from_indices(n, [3 * k + 1, 3 * k + 2, 3 * k + 3]).words());
+        }
+        for k in 0..12 {
+            let rate = |r: bool| match (k < 3, r) {
+                (true, true) => 0.8,
+                (true, false) => 0.15,
+                _ => 0.4,
+            };
+            let present = (0..n).filter(|&i| rng.random_bool(rate(y.contains(i))));
+            raw.push_row(Bits::from_indices(n, present.collect::<Vec<_>>()).words());
+        }
+        let (x, kept) = training_candidates(&raw, &Bits::ones(n), 3);
+        assert_eq!(kept.len(), raw.rows, "every fixture row is a candidate");
+        (x, y, (0..n).map(|i| (i % 15) as u32).collect())
+    }
+
+    #[test]
+    fn fold_models_give_each_folds_saved_scores_under_dataset_row_numbers() {
+        let (x, y, groups) = shifted_fixture();
+        let n = x.cols;
+        let cfg = EvalConfig {
+            scm_max_rules: 2,
+            cart_max_depth: 2,
+            screened_features: 6,
+            ..small_config()
+        };
+        let out = evaluate("fixture__fixturemycin", &x, &y, &groups, &[], 3, None, &cfg).unwrap();
+        assert_eq!(out.fold_models.len(), out.splits.len());
+        // Features each learner named under a row number that is not its
+        // index among the fold's candidates: what a model left in candidate
+        // numbering would get wrong.
+        let mut shifted: std::collections::BTreeMap<&str, usize> = Default::default();
+        for (split, models) in out.splits.iter().zip(&out.fold_models) {
+            assert!(split.unavailable_reason.is_none(), "{split:?}");
+            assert_eq!(models.scheme, split.scheme);
+            let saved = |name: &str| split.learners.iter().find(|l| l.learner == name).unwrap();
+            let tuning = tuning_groups(&split.scheme, &groups, &[]);
+            let masks = fold_masks(&split.test_fold, cfg.folds);
+            for lists in [models.scm.len(), models.cart.len(), models.rf.len()] {
+                assert_eq!(lists, cfg.folds);
+            }
+            assert_eq!(models.gbt.len(), cfg.folds);
+            assert_eq!(models.lasso.len(), cfg.folds);
+            for (f, (train, test)) in masks.into_iter().enumerate() {
+                let held_out: Vec<usize> = test.iter_ones().collect();
+                let prevalence = (0..n)
+                    .filter(|&i| train.contains(i) && y.contains(i))
+                    .count() as f64
+                    / train.count() as f64;
+                let (cx, rows) = training_candidates(&x, &train, 3);
+                assert!(rows.len() < x.rows, "the fold drops a row");
+                let mut note = |name: &'static str, feature: u32| {
+                    let c = rows.iter().position(|&r| r == feature);
+                    let c = c.unwrap_or_else(|| panic!("{name} names row {feature}, no candidate"));
+                    *shifted.entry(name).or_default() += usize::from(c as u32 != feature);
+                };
+                let refit = |name: &str| {
+                    fit_fold(
+                        name,
+                        &cx,
+                        &y,
+                        &train,
+                        tuning.as_deref(),
+                        &cfg,
+                        test_context(&split.scheme, f),
+                    )
+                    .unwrap()
+                    .1
+                };
+
+                // The rules alone, read on the dataset matrix, give the
+                // fold's saved calls.
+                let (scm, row) = (&models.scm[f], saved("scm"));
+                assert_eq!(scm.rules.len() as f64, row.fold_complexity[f]);
+                let calls = scm::ScmModel {
+                    kind: scm.kind,
+                    p: scm.p,
+                    rules: scm.rules.clone(),
+                    steps: vec![],
+                }
+                .predict(&x);
+                assert!(
+                    held_out
+                        .iter()
+                        .all(|&i| row.scores[i] == calls.contains(i) as u8 as f64)
+                );
+                let FoldModel::Scm(again) = refit("scm") else {
+                    panic!("another model")
+                };
+                assert_eq!((scm.kind, scm.p), (again.kind, again.p));
+                let renamed: Vec<Rule> = again
+                    .rules
+                    .iter()
+                    .map(|r| Rule {
+                        feature: rows[r.feature as usize],
+                        presence: r.presence,
+                    })
+                    .collect();
+                assert_eq!(scm.rules, renamed);
+                scm.rules.iter().for_each(|r| note("scm", r.feature));
+
+                let (cart, row) = (&models.cart[f], saved("cart"));
+                let leaves = cart.nodes.iter().filter(|n| n.split.is_none()).count();
+                assert_eq!(leaves as f64, row.fold_complexity[f]);
+                let scores = cart.predict(&x, u32::MAX);
+                assert!(held_out.iter().all(|&i| row.scores[i] == scores[i]));
+                let FoldModel::Cart(again) = refit("cart") else {
+                    panic!("another model")
+                };
+                let split_rows =
+                    |t: &tree::Tree, rename: &dyn Fn(u32) -> u32| -> Vec<Option<u32>> {
+                        t.nodes
+                            .iter()
+                            .map(|n| n.split.as_ref().map(|s| rename(s.feature)))
+                            .collect()
+                    };
+                assert_eq!(
+                    split_rows(cart, &|f| f),
+                    split_rows(&again, &|c| rows[c as usize])
+                );
+                for feature in split_rows(cart, &|f| f).into_iter().flatten() {
+                    note("cart", feature);
+                }
+
+                let (model, row) = (&models.lasso[f], saved("lasso"));
+                let weights = model.as_ref().map_or(0, |m| m.coef.len());
+                assert_eq!(weights as f64, row.fold_complexity[f]);
+                match lasso_scores(model.as_ref(), &x) {
+                    Some(scores) => assert!(held_out.iter().all(|&i| row.scores[i] == scores[i])),
+                    None => assert!(held_out.iter().all(|&i| row.scores[i] == prevalence)),
+                }
+                let FoldModel::Lasso(again) = refit("lasso") else {
+                    panic!("another model")
+                };
+                assert_eq!(
+                    model
+                        .as_ref()
+                        .map(|m| (m.intercept, m.lambda, m.coef.clone())),
+                    again.map(|m| {
+                        let coef = m.coef.iter().map(|&(c, w)| (rows[c as usize], w));
+                        (m.intercept, m.lambda, coef.collect())
+                    })
+                );
+                for &(feature, _) in model.iter().flat_map(|m| &m.coef) {
+                    note("lasso", feature);
+                }
+
+                // The forest and boosting keep a ranking: the importance of
+                // a fit on the fold's candidates, keyed by dataset row.
+                let seed = fold_seed(&cfg, f);
+                let draws = fold_draw_seed(&cfg, f);
+                let pairs = |list: &[WeightedFeature]| -> Vec<(u32, f64)> {
+                    list.iter().map(|w| (w.feature, w.weight)).collect()
+                };
+                let by_row = |importance: std::collections::HashMap<u32, f64>| {
+                    let renamed = importance.into_iter().map(|(c, w)| (rows[c as usize], w));
+                    pairs(&top_weighted(renamed.collect(), TOP_WEIGHTED))
+                };
+                let forest = fit_rf(&cx, &y, &train, &cfg, draws).1;
+                assert_eq!(pairs(&models.rf[f]), by_row(forest));
+                let unit = tuning_unit(&split.scheme);
+                let boosted = fit_gbt(&cx, &y, &train, tuning.as_deref(), unit, &cfg, seed, draws)
+                    .unwrap()
+                    .1;
+                assert_eq!(pairs(&models.gbt[f]), by_row(boosted.importance()));
+                assert_eq!(
+                    models.gbt[f].is_empty(),
+                    saved("gbt").fold_complexity[f] == 0.0
+                );
+                for (name, list) in [("rf", &models.rf[f]), ("gbt", &models.gbt[f])] {
+                    assert!(list.len() <= TOP_WEIGHTED);
+                    assert!(in_rank_order(list));
+                    list.iter().for_each(|w| note(name, w.feature));
+                }
+            }
+        }
+        for name in LEARNERS {
+            assert!(
+                shifted.get(name).copied().unwrap_or(0) > 0,
+                "{name}: {shifted:?}"
+            );
+        }
+    }
+
+    /// Synthetic: 90 samples, a third resistant, and twelve rows of noise
+    /// present in about 40% of samples whatever the label, so the lasso has
+    /// little to keep.
+    fn noise_fixture() -> (BitMatrix, Bits, Vec<u32>) {
+        use rand::{Rng, SeedableRng};
+        let n = 90;
+        let y = Bits::from_indices(n, (0..n).filter(|i| i % 3 == 0));
+        let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(29);
+        let mut x = BitMatrix::with_cols(n);
+        for _ in 0..12 {
+            let present: Vec<usize> = (0..n).filter(|_| rng.random_bool(0.4)).collect();
+            x.push_row(Bits::from_indices(n, present).words());
+        }
+        (x, y, (0..n).map(|i| (i % 30) as u32).collect())
+    }
+
+    #[test]
+    fn a_weightless_lasso_fold_scored_its_test_samples_at_its_training_prevalence() {
+        // docs/report-rule-fields.md: a lasso fold model that is null or has
+        // no weights scored its fold's test samples at the fold's training
+        // prevalence, read from `test_fold` and the labels alone, and not at
+        // the sigmoid of its intercept.
+        let (x, y, groups) = noise_fixture();
+        let n = x.cols;
+        let cfg = EvalConfig {
+            screened_features: 12,
+            lasso_lambdas: 10,
+            ..small_config()
+        };
+        let out = evaluate("fixture__fixturemycin", &x, &y, &groups, &[], 3, None, &cfg).unwrap();
+        let (mut weightless, mut other_call) = (0, 0);
+        for (split, models) in out.splits.iter().zip(&out.fold_models) {
+            assert_eq!(models.scheme, split.scheme);
+            let row = split
+                .learners
+                .iter()
+                .find(|l| l.learner == "lasso")
+                .unwrap();
+            for (f, model) in models.lasso.iter().enumerate() {
+                if model.as_ref().is_some_and(|m| !m.coef.is_empty()) {
+                    continue;
+                }
+                weightless += 1;
+                assert_eq!(row.fold_complexity[f], 0.0);
+                let train: Vec<usize> = (0..n).filter(|&i| split.test_fold[i] != f).collect();
+                let resistant = train.iter().filter(|&&i| y.contains(i)).count();
+                let prevalence = resistant as f64 / train.len() as f64;
+                assert_ne!(prevalence, 0.5);
+                let literal = model.as_ref().map(|m| m.predict_proba(&x));
+                for i in (0..n).filter(|&i| split.test_fold[i] == f) {
+                    // By the rule: the saved score, exactly.
+                    assert_eq!(row.scores[i], prevalence);
+                    // Read as written: another score, and here another call.
+                    if let Some(literal) = &literal {
+                        assert_ne!(row.scores[i], literal[i]);
+                        other_call += usize::from((literal[i] >= 0.5) != (prevalence >= 0.5));
+                    }
+                }
+            }
+        }
+        assert!(weightless > 0, "the fixture has no weightless lasso fold");
+        assert!(
+            other_call > 0,
+            "no weightless fold's intercept gives another call"
+        );
+    }
+
+    /// Heaviest first, and among equal weights the lower feature first.
+    fn in_rank_order(list: &[WeightedFeature]) -> bool {
+        list.windows(2).all(|w| {
+            let (a, b) = (&w[0], &w[1]);
+            a.weight > b.weight || (a.weight == b.weight && a.feature < b.feature)
+        })
+    }
+
+    #[test]
+    fn ranked_lists_put_the_lower_feature_first_among_equal_weights() {
+        let importance: std::collections::HashMap<u32, f64> =
+            [(7, 0.5), (3, 0.5), (9, 1.0), (1, 0.25), (5, 0.5), (2, 0.25)]
+                .into_iter()
+                .collect();
+        let ranked = |k: usize| -> Vec<(u32, f64)> {
+            let list = top_weighted(importance.clone(), k);
+            assert!(in_rank_order(&list));
+            list.iter().map(|w| (w.feature, w.weight)).collect()
+        };
+        assert_eq!(
+            ranked(6),
+            [(9, 1.0), (3, 0.5), (5, 0.5), (7, 0.5), (1, 0.25), (2, 0.25)]
+        );
+        // A cut inside a tie keeps the lower features.
+        assert_eq!(ranked(3), [(9, 1.0), (3, 0.5), (5, 0.5)]);
+    }
+
+    #[test]
+    fn fold_forest_and_boosting_lists_keep_the_fifty_heaviest_features() {
+        // Synthetic: 400 samples, half resistant, and 150 rows that each
+        // follow the label with a quarter of the samples flipped, so the
+        // forest and boosting spread their weight over many more than 50
+        // features.
+        use rand::{Rng, SeedableRng};
+        let n = 400;
+        let y = Bits::from_indices(n, (0..n).filter(|i| i % 2 == 0));
+        let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(41);
+        let mut x = BitMatrix::with_cols(n);
+        for _ in 0..150 {
+            let present: Vec<usize> = (0..n)
+                .filter(|&i| y.contains(i) != rng.random_bool(0.25))
+                .collect();
+            x.push_row(Bits::from_indices(n, present).words());
+        }
+        let groups: Vec<u32> = (0..n).map(|i| (i / 2) as u32).collect();
+        let cfg = EvalConfig {
+            forest: ForestParams {
+                n_trees: 40,
+                max_depth: 4,
+                ..Default::default()
+            },
+            gbt: GbtParams {
+                rounds: 60,
+                max_depth: 4,
+                patience: 60,
+                ..Default::default()
+            },
+            screened_features: 150,
+            ..small_config()
+        };
+        let out = evaluate("fixture__fixturemycin", &x, &y, &groups, &[], 3, None, &cfg).unwrap();
+        // The cap the docs give, and the final models' cap.
+        assert_eq!(TOP_WEIGHTED, 50);
+        assert_eq!(out.finals.rf_importance.len(), 50);
+        assert_eq!(out.finals.gbt_importance.len(), 50);
+        assert_eq!(out.fold_models.len(), 2);
+        for models in &out.fold_models {
+            assert_eq!((models.rf.len(), models.gbt.len()), (cfg.folds, cfg.folds));
+            for f in 0..cfg.folds {
+                let lengths = (models.rf[f].len(), models.gbt[f].len());
+                assert_eq!(lengths, (50, 50), "{} fold {f}", models.scheme);
+                assert!(in_rank_order(&models.rf[f]) && in_rank_order(&models.gbt[f]));
+            }
+        }
+    }
+
+    #[test]
+    fn a_split_that_did_not_run_keeps_no_fold_models() {
+        let n = 80;
+        let y = Bits::from_indices(n, 0..40);
+        let mut x = BitMatrix::with_cols(n);
+        x.push_row(y.words());
+        // One lineage holds every resistant sample, so the lineage split is
+        // unavailable (`unsupported_lineage_plan_preserves_the_random_evaluation`).
+        let groups: Vec<u32> = (0..n).map(|i| if i < 40 { 0 } else { i as u32 }).collect();
+        let cfg = small_config();
+        let out = evaluate("fixture__fixturemycin", &x, &y, &groups, &[], 3, None, &cfg).unwrap();
+        assert_eq!(out.splits.len(), 2);
+        assert!(out.splits[1].unavailable_reason.is_some());
+        let schemes: Vec<&str> = out.fold_models.iter().map(|m| m.scheme.as_str()).collect();
+        assert_eq!(schemes, ["random"]);
+        // An output written before the fold models were kept reads back
+        // with none.
+        let mut older = serde_json::to_value(&out).unwrap();
+        older.as_object_mut().unwrap().remove("fold_models");
+        let older: EvalOutput = serde_json::from_value(older).unwrap();
+        assert!(older.fold_models.is_empty());
+    }
+
+    #[test]
+    fn fold_models_are_written_in_the_final_models_shapes_under_dataset_rows() {
+        // Candidate c of this fold is dataset row `rows[c]`.
+        let rows = [4, 7, 9, 12];
+        let mut split = FoldSplit::new("random");
+        let scm = FoldScm {
+            kind: Kind::Disjunction,
+            p: 0.5,
+            rules: vec![
+                Rule {
+                    feature: 2,
+                    presence: true,
+                },
+                Rule {
+                    feature: 0,
+                    presence: false,
+                },
+            ],
+        };
+        split.push(FoldModel::Scm(scm), &rows);
+        let leaf = |value: f64, n_resistant: u32| tree::Node {
+            value,
+            n: 5,
+            n_resistant,
+            depth: 1,
+            split: None,
+        };
+        let root = tree::Node {
+            value: 0.5,
+            n: 10,
+            n_resistant: 5,
+            depth: 0,
+            split: Some(tree::Split {
+                feature: 1,
+                gain: 0.25,
+                absent: 1,
+                present: 2,
+            }),
+        };
+        let cart = tree::Tree {
+            nodes: vec![root, leaf(0.0, 0), leaf(1.0, 5)],
+        };
+        split.push(FoldModel::Cart(cart), &rows);
+        let weighted = |feature: u32, weight: f64| WeightedFeature { feature, weight };
+        split.push(
+            FoldModel::Rf(vec![weighted(3, 0.75), weighted(0, 0.25)]),
+            &rows,
+        );
+        split.push(FoldModel::Gbt(vec![]), &rows);
+        let lasso = lasso::LassoModel {
+            intercept: -1.0,
+            coef: vec![(2, 1.5)],
+            lambda: 0.125,
+        };
+        split.push(FoldModel::Lasso(Some(lasso)), &rows);
+        split.push(FoldModel::Lasso(None), &rows);
+        assert_eq!(
+            serde_json::to_value(&split).unwrap(),
+            serde_json::json!({
+                "scheme": "random",
+                "scm": [{
+                    "kind": "disjunction",
+                    "p": 0.5,
+                    "rules": [
+                        {"feature": 9, "presence": true},
+                        {"feature": 4, "presence": false},
+                    ],
+                }],
+                "cart": [{"nodes": [
+                    {
+                        "value": 0.5, "n": 10, "n_resistant": 5, "depth": 0,
+                        "split": {"feature": 7, "gain": 0.25, "absent": 1, "present": 2},
+                    },
+                    {"value": 0.0, "n": 5, "n_resistant": 0, "depth": 1, "split": null},
+                    {"value": 1.0, "n": 5, "n_resistant": 5, "depth": 1, "split": null},
+                ]}],
+                "rf": [[{"feature": 12, "weight": 0.75}, {"feature": 4, "weight": 0.25}]],
+                "gbt": [[]],
+                "lasso": [{"intercept": -1.0, "coef": [[9, 1.5]], "lambda": 0.125}, null],
+            })
+        );
+        // Row 12 is in the forest's ranking alone, so it gets no pattern.
+        let patterns: Vec<u32> = split.pattern_features().into_iter().collect();
+        assert_eq!(patterns, [4, 7, 9]);
+    }
+
+    #[test]
+    fn folds_name_the_lowest_row_among_patterns_equal_on_their_training_samples() {
+        // Row 1 is the label. Row 0 is the label without sample 0, so the
+        // two differ on that one sample.
+        let n = 80;
+        let y = Bits::from_indices(n, (0..n).filter(|i| i % 2 == 0));
+        let mut x = BitMatrix::with_cols(n);
+        x.push_row(Bits::from_indices(n, (2..n).filter(|i| i % 2 == 0)).words());
+        x.push_row(y.words());
+        let groups: Vec<u32> = (0..n).map(|i| (i / 4) as u32).collect();
+        let cfg = small_config();
+        let out = evaluate("fixture__fixturemycin", &x, &y, &groups, &[], 3, None, &cfg).unwrap();
+        let (split, models) = (&out.splits[0], &out.fold_models[0]);
+        assert_eq!(
+            (split.scheme.as_str(), models.scheme.as_str()),
+            ("random", "random")
+        );
+        let named = |fold: usize| -> Vec<u32> {
+            models.scm[fold].rules.iter().map(|r| r.feature).collect()
+        };
+        // The fold that holds sample 0 out cannot tell the rows apart and
+        // names the lower. The other fold trains on sample 0 and names the
+        // label itself. The two ids differ for one pattern on the first
+        // fold's training samples: equal ids undercount agreement between
+        // folds, and the presence patterns settle it.
+        let without = split.test_fold[0];
+        assert_eq!(named(without), [0]);
+        assert_eq!(named(1 - without), [1]);
+        let (train, _) = fold_masks(&split.test_fold, cfg.folds).swap_remove(without);
+        assert!(train.iter_ones().all(|i| x.get(0, i) == x.get(1, i)));
+    }
+
+    /// Synthetic: 120 genomes in 30 lineages of four, every third lineage
+    /// resistant, and rows of noise: eight drawn at random, a copy of row 0
+    /// with the four genomes of lineage 12 flipped, and a row in three
+    /// genomes of three lineages. The matrix is filtered and collapsed at
+    /// `min_support` 3, as `evaluate` requires. A fold that tests one of the
+    /// three genomes drops the last row from its candidates, and the lineage
+    /// fold that tests lineage 12 keeps one copy only, so a fold's
+    /// candidates are not the matrix. The noise seed is one under which both
+    /// boosting and the lasso have null folds on both splits.
+    fn null_fold_fixture() -> (BitMatrix, Bits, Vec<u32>) {
+        use rand::{Rng, SeedableRng};
+        let n = 120;
+        let groups: Vec<u32> = (0..n as u32).map(|i| i / 4).collect();
+        let y = Bits::from_indices(n, (0..n).filter(|&i| groups[i].is_multiple_of(3)));
+        let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(20261117);
+        let mut x = BitMatrix::with_cols(n);
+        for _ in 0..8 {
+            let present: Vec<usize> = (0..n).filter(|_| rng.random_bool(0.3)).collect();
+            x.push_row(Bits::from_indices(n, present).words());
+        }
+        let copy = (0..n).filter(|&i| x.get(0, i) != (groups[i] == 12));
+        x.push_row(Bits::from_indices(n, copy.collect::<Vec<_>>()).words());
+        x.push_row(Bits::from_indices(n, [5, 47, 77]).words());
+        assert_eq!(training_candidates(&x, &Bits::ones(n), 3).1.len(), x.rows);
+        (x, y, groups)
+    }
+
+    fn null_fold_config() -> EvalConfig {
+        EvalConfig {
+            folds: 3,
+            inner_folds: 2,
+            scm_max_rules: 1,
+            cart_max_depth: 1,
+            forest: ForestParams {
+                n_trees: 2,
+                max_depth: 2,
+                ..Default::default()
+            },
+            gbt: GbtParams {
+                rounds: 30,
+                max_depth: 2,
+                patience: 3,
+                ..Default::default()
+            },
+            screened_features: 6,
+            lasso_lambdas: 8,
+            ..Default::default()
+        }
+    }
+
+    /// The null-fold experiment beside a supplied partition (the merge of
+    /// `main` after #119). `evaluate_assigned` fits through
+    /// `fit_outer_folds`, as `evaluate` does, but a record names every sample
+    /// outside a fold's training ones as tested, which an unused sample would
+    /// make wrong. So with the experiment on it is refused before any fit
+    /// and no record is written; with it off the same call scores the
+    /// partition, on which a boosting or lasso fold is null.
+    #[test]
+    fn a_supplied_partition_is_refused_while_the_null_fold_refit_is_on() {
+        let (x, y, groups) = null_fold_fixture();
+        let cfg = null_fold_config();
+        let [(scheme, random), _] = outer_splits(&y, &groups, &[], &cfg);
+        assert_eq!(scheme, "random");
+        let roles: Vec<Role> = random.iter().map(|&f| Role::Test(f)).collect();
+        let run = || {
+            evaluate_assigned(
+                "fixture__fixturemycin",
+                "supplied",
+                &x,
+                &y,
+                &groups,
+                &[],
+                &roles,
+                cfg.folds,
+                &cfg,
+            )
+        };
+        let scored = run().unwrap();
+        assert!(
+            scored
+                .result
+                .learners
+                .iter()
+                .filter(|l| l.learner == "gbt" || l.learner == "lasso")
+                .any(|l| l.fold_complexity.contains(&0.0))
+        );
+        let (refused, lines) = null_refit::capture(run);
+        let error = refused.err().expect("refused while the experiment is on");
+        assert_eq!(
+            format!("{error:#}"),
+            "the null-fold refit records the folds grm learn draws; it does not run on a supplied partition"
+        );
+        assert!(lines.is_empty(), "{lines:?}");
+    }
+
+    /// The call site of the null-fold experiment (S2 of the review of 15 Nov
+    /// 2026). Each record `evaluate` writes is the arms `null_refit` fits
+    /// when called directly with that outer fold's training candidates, its
+    /// seed (`fold_seed`), its draws seed (`fold_draw_seed`) and its split's
+    /// tuning groups; its counts are the fold's; and there is one record per
+    /// null boosting or lasso fold. The test also shows that each of those
+    /// inputs moves some record, so a wrong one at the call site fails it.
+    #[test]
+    fn each_null_fold_record_is_the_arms_of_that_folds_candidates_seeds_and_groups() {
+        let (x, y, groups) = null_fold_fixture();
+        let min_support = 3;
+        let mut moved = [false; 4];
+        for learner_seed in [None, Some(4242)] {
+            let cfg = EvalConfig {
+                learner_seed,
+                ..null_fold_config()
+            };
+            let run = || {
+                let dataset = "fixture__fixturemycin";
+                evaluate(dataset, &x, &y, &groups, &[], min_support, None, &cfg).unwrap()
+            };
+            let (out, lines) = null_refit::capture(run);
+            let records: Vec<serde_json::Value> = lines
+                .iter()
+                .map(|l| serde_json::from_str(l).unwrap())
+                .collect();
+            let mut null_folds = vec![];
+            for split in &out.splits {
+                for l in split
+                    .learners
+                    .iter()
+                    .filter(|l| l.learner == "gbt" || l.learner == "lasso")
+                {
+                    for (fold, c) in l.fold_complexity.iter().enumerate() {
+                        if *c == 0.0 {
+                            null_folds.push((split.scheme.clone(), fold, l.learner.clone()));
+                        }
+                    }
+                }
+            }
+            let mut keys: Vec<(String, usize, String)> = records
+                .iter()
+                .map(|r| {
+                    let s = |k: &str| r[k].as_str().unwrap().to_string();
+                    (
+                        s("scheme"),
+                        r["fold"].as_u64().unwrap() as usize,
+                        s("learner"),
+                    )
+                })
+                .collect();
+            null_folds.sort();
+            keys.sort();
+            assert_eq!(keys, null_folds, "learner seed {learner_seed:?}");
+            for (scheme, folds) in outer_splits(&y, &groups, &[], &cfg) {
+                let tuning = tuning_groups(scheme, &groups, &[]);
+                let unit = tuning_unit(scheme);
+                for (fi, (train, _)) in fold_masks(&folds, cfg.folds).into_iter().enumerate() {
+                    let (cx, _) = training_candidates(&x, &train, min_support);
+                    let test: Vec<usize> = (0..x.cols).filter(|&i| !train.contains(i)).collect();
+                    let (seed, draws) = (fold_seed(&cfg, fi), fold_draw_seed(&cfg, fi));
+                    let context = test_context(scheme, fi);
+                    let lasso = |x: &BitMatrix, groups: Option<&[u32]>, seed| {
+                        let arms = null_refit::lasso_arms(
+                            x, &y, &train, groups, &cfg, seed, context, &test,
+                        );
+                        value(&arms.unwrap())
+                    };
+                    let gbt = |x: &BitMatrix, groups: Option<&[u32]>, seed, draws| {
+                        let arms = null_refit::gbt_arms(
+                            x, &y, &train, groups, unit, &cfg, seed, draws, &test,
+                        );
+                        value(&arms.unwrap())
+                    };
+                    let here = records
+                        .iter()
+                        .filter(|r| r["scheme"] == scheme && r["fold"] == fi);
+                    for r in here {
+                        let at = format!(
+                            "{scheme} fold {fi} {} learner seed {learner_seed:?}",
+                            r["learner"]
+                        );
+                        assert_eq!(r["dataset"], "fixture__fixturemycin", "{at}");
+                        assert_eq!(r["train_n"], train.count(), "{at}");
+                        assert_eq!(r["train_resistant"], train.and(&y).count(), "{at}");
+                        assert_eq!(r["test"], value(&test), "{at}");
+                        let other = fold_seed(&cfg, fi + 1);
+                        if r["learner"] == "lasso" {
+                            assert!(r["gbt"].is_null(), "{at}");
+                            let want = lasso(&cx, tuning.as_deref(), seed);
+                            assert_eq!(r["lasso"], want, "{at}");
+                            moved[0] |= lasso(&cx, tuning.as_deref(), other) != want;
+                            moved[1] |= lasso(&cx, None, seed) != want;
+                            moved[2] |= lasso(&x, tuning.as_deref(), seed) != want;
+                        } else {
+                            assert_eq!(r["learner"], "gbt", "{at}");
+                            assert!(r["lasso"].is_null(), "{at}");
+                            let want = gbt(&cx, tuning.as_deref(), seed, draws);
+                            assert_eq!(r["gbt"], want, "{at}");
+                            moved[0] |= gbt(&cx, tuning.as_deref(), other, draws) != want;
+                            moved[1] |= gbt(&cx, None, seed, draws) != want;
+                            moved[2] |= gbt(&x, tuning.as_deref(), seed, draws) != want;
+                            moved[3] |= gbt(&cx, tuning.as_deref(), seed, seed) != want;
+                        }
+                    }
+                }
+            }
+        }
+        // The seed, the tuning groups, the candidates and the draws seed
+        // each move some record.
+        assert_eq!(moved, [true; 4]);
     }
 }

@@ -1,0 +1,13 @@
+dataset	learner	resistant_genomes	resistant_both	resistant_learner_only	resistant_known_gene_only	resistant_neither	susceptible_genomes	susceptible_both	susceptible_learner_only	susceptible_known_gene_only	susceptible_neither
+enterococcus_faecium__ampicillin	scm	323	0	317	0	6	39	0	2	0	37
+enterococcus_faecium__ampicillin	cart	323	0	323	0	0	39	0	2	0	37
+enterococcus_faecium__ampicillin	lasso	323	0	323	0	0	39	0	2	0	37
+enterococcus_faecium__doxycycline	scm	198	171	0	27	0	103	6	0	25	72
+enterococcus_faecium__doxycycline	cart	198	172	0	26	0	103	8	1	23	71
+enterococcus_faecium__gentamicin	scm	30	4	0	26	0	324	11	0	313	0
+enterococcus_faecium__gentamicin	cart	30	6	0	24	0	324	15	0	309	0
+enterococcus_faecium__tetracycline	scm	273	198	0	73	2	83	4	0	7	72
+enterococcus_faecium__tetracycline	cart	273	195	0	76	2	83	3	0	8	72
+enterococcus_faecium__tetracycline	lasso	273	199	0	72	2	83	3	0	8	72
+enterococcus_faecium__vancomycin	scm	298	296	0	2	0	65	2	0	4	59
+enterococcus_faecium__vancomycin	cart	298	296	0	2	0	65	2	0	4	59

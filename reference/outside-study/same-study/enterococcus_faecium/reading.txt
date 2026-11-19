@@ -1,0 +1,81 @@
+Outside-study test, enterococcus_faecium, same-study population
+This is a retrospective test on newly deposited studies from the same database.
+It is not a lockbox: the batch's metadata and label totals were read before the rules were frozen.
+The genomes come from the same database as the cohort.
+
+Frozen genomes: 368. Scored: 368 (10 of them borderline in the species check, kept and flagged).
+Genomes excluded, no sequence: 0.
+Genomes excluded, species check failed: 0.
+Genomes excluded, not counted: 0.
+
+Each model is the report's final model, fitted once on the whole cohort and applied unchanged.
+The report's figures are for models refitted in each cross-validation fold and scored on held-out cohort genomes.
+Calls use the 0.5 cutoff. Intervals are exact Clopper-Pearson 95% intervals.
+A dataset with fewer than 25 resistant or 25 susceptible scored genomes is reported as counts only.
+Sensitivity and specificity are over the genomes a learner called; genomes with no call are counted in their own column.
+The known-gene rule's reference figure is a fixed rule applied to the whole cohort: nothing was fitted, so there is no cross-validation figure for it.
+The datasets share genomes and studies, so they are not independent of each other.
+Precision depends on the share of resistant genomes, which differs between the cohort and the new genomes.
+Scored genomes with the same k-mer set as a cohort genome: 0; as another scored genome: 0 (listed in duplicates.tsv; none is excluded for it).
+Stage attempts: setup 1, fetch 1, species-check 1, count 1, known-gene 1, predict 1.
+
+enterococcus_faecium__ampicillin: 323 resistant and 39 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA771404 holds 323 of the 323 resistant genomes (100.0%); PRJNA771404 holds 39 of the 39 susceptible genomes (100.0%). Of 1 study, 0 can be left out with 25 of each class remaining.
+  Every scored genome is from one study, so the estimate is that study's and no study-to-study range can be shown.
+  scm: TP 317, FN 6, FP 2, TN 37. Sensitivity 98.1% [96.0%, 99.3%], lineage split 99.3%, random split 99.2%: consistent. Specificity 94.9% [82.7%, 99.4%], lineage split 98.5%, random split 98.5%: consistent.
+    Reference figure: cross-validation, lineage split.
+  cart: TP 323, FN 0, FP 2, TN 37. Sensitivity 100.0% [98.9%, 100.0%], lineage split 99.3%, random split 99.3%: consistent. Specificity 94.9% [82.7%, 99.4%], lineage split 98.5%, random split 98.5%: consistent.
+    Reference figure: cross-validation, lineage split.
+  lasso: TP 323, FN 0, FP 2, TN 37. Sensitivity 100.0% [98.9%, 100.0%], lineage split 98.6%, random split 99.2%: above. Specificity 94.9% [82.7%, 99.4%], lineage split 98.5%, random split 98.5%: consistent.
+    Reference figure: cross-validation, lineage split.
+  known_gene: TP 0, FN 323, FP 0, TN 39. Sensitivity 0.0% [0.0%, 1.1%], lineage split 0.2%, random split 0.2%: consistent. Specificity 100.0% [91.0%, 100.0%], lineage split 100.0%, random split 100.0%: consistent.
+    Reference figure: fixed rule, whole cohort; a reference sensitivity or specificity is exactly 0 or 1.
+enterococcus_faecium__doxycycline: 198 resistant and 103 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA771404 holds 198 of the 198 resistant genomes (100.0%); PRJNA771404 holds 103 of the 103 susceptible genomes (100.0%). Of 1 study, 0 can be left out with 25 of each class remaining.
+  Every scored genome is from one study, so the estimate is that study's and no study-to-study range can be shown.
+  scm: TP 171, FN 27, FP 6, TN 97. Sensitivity 86.4% [80.8%, 90.8%], lineage split 66.9%, random split 91.9%: above. Specificity 94.2% [87.8%, 97.8%], lineage split 85.6%, random split 96.7%: above.
+    Reference figure: cross-validation, lineage split.
+  cart: TP 172, FN 26, FP 9, TN 94. Sensitivity 86.9% [81.4%, 91.2%], lineage split 86.8%, random split 92.6%: consistent. Specificity 91.3% [84.1%, 95.9%], lineage split 90.0%, random split 97.1%: consistent.
+    Reference figure: cross-validation, lineage split.
+  known_gene: TP 198, FN 0, FP 31, TN 72. Sensitivity 100.0% [98.2%, 100.0%], lineage split 97.8%, random split 97.8%: above. Specificity 69.9% [60.1%, 78.5%], lineage split 83.3%, random split 83.3%: below.
+    Reference figure: fixed rule, whole cohort.
+enterococcus_faecium__gentamicin: 30 resistant and 324 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA771404 holds 30 of the 30 resistant genomes (100.0%); PRJNA771404 holds 324 of the 324 susceptible genomes (100.0%). Of 1 study, 0 can be left out with 25 of each class remaining.
+  Every scored genome is from one study, so the estimate is that study's and no study-to-study range can be shown.
+  scm: TP 4, FN 26, FP 11, TN 313. Sensitivity 13.3% [3.8%, 30.7%], lineage split 84.6%, random split 92.9%: below. Specificity 96.6% [94.0%, 98.3%], lineage split 89.1%, random split 94.3%: above.
+    Reference figure: cross-validation, lineage split.
+  cart: TP 6, FN 24, FP 15, TN 309. Sensitivity 20.0% [7.7%, 38.6%], lineage split 93.9%, random split 94.2%: below. Specificity 95.4% [92.5%, 97.4%], lineage split 89.7%, random split 92.0%: above.
+    Reference figure: cross-validation, lineage split.
+  known_gene: TP 30, FN 0, FP 324, TN 0. Sensitivity 100.0% [88.4%, 100.0%], lineage split 100.0%, random split 100.0%: consistent. Specificity 0.0% [0.0%, 1.1%], lineage split 0.0%, random split 0.0%: consistent.
+    Reference figure: fixed rule, whole cohort; a reference sensitivity or specificity is exactly 0 or 1.
+enterococcus_faecium__tetracycline: 273 resistant and 83 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA771404 holds 273 of the 273 resistant genomes (100.0%); PRJNA771404 holds 83 of the 83 susceptible genomes (100.0%). Of 1 study, 0 can be left out with 25 of each class remaining.
+  Every scored genome is from one study, so the estimate is that study's and no study-to-study range can be shown.
+  scm: TP 198, FN 75, FP 4, TN 79. Sensitivity 72.5% [66.8%, 77.7%], lineage split 94.3%, random split 95.5%: below. Specificity 95.2% [88.1%, 98.7%], lineage split 86.7%, random split 94.2%: above.
+    Reference figure: cross-validation, lineage split.
+  cart: TP 195, FN 78, FP 3, TN 80. Sensitivity 71.4% [65.7%, 76.7%], lineage split 93.3%, random split 95.0%: below. Specificity 96.4% [89.8%, 99.2%], lineage split 90.5%, random split 93.8%: consistent.
+    Reference figure: cross-validation, lineage split.
+  lasso: TP 199, FN 74, FP 3, TN 80. Sensitivity 72.9% [67.2%, 78.1%], lineage split 96.5%, random split 96.5%: below. Specificity 96.4% [89.8%, 99.2%], lineage split 88.0%, random split 95.4%: above.
+    Reference figure: cross-validation, lineage split.
+  known_gene: TP 271, FN 2, FP 11, TN 72. Sensitivity 99.3% [97.4%, 99.9%], lineage split 99.0%, random split 99.0%: consistent. Specificity 86.7% [77.5%, 93.2%], lineage split 77.2%, random split 77.2%: above.
+    Reference figure: fixed rule, whole cohort.
+enterococcus_faecium__vancomycin: 298 resistant and 65 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA771404 holds 298 of the 298 resistant genomes (100.0%); PRJNA771404 holds 65 of the 65 susceptible genomes (100.0%). Of 1 study, 0 can be left out with 25 of each class remaining.
+  Every scored genome is from one study, so the estimate is that study's and no study-to-study range can be shown.
+  scm: TP 296, FN 2, FP 2, TN 63. Sensitivity 99.3% [97.6%, 99.9%], lineage split 99.6%, random split 99.6%: consistent. Specificity 96.9% [89.3%, 99.6%], lineage split 97.9%, random split 99.1%: consistent.
+    Reference figure: cross-validation, lineage split.
+  cart: TP 296, FN 2, FP 2, TN 63. Sensitivity 99.3% [97.6%, 99.9%], lineage split 99.1%, random split 99.7%: consistent. Specificity 96.9% [89.3%, 99.6%], lineage split 97.6%, random split 98.9%: consistent.
+    Reference figure: cross-validation, lineage split.
+  known_gene: TP 298, FN 0, FP 6, TN 59. Sensitivity 100.0% [98.8%, 100.0%], lineage split 100.0%, random split 100.0%: consistent. Specificity 90.8% [81.0%, 96.5%], lineage split 97.5%, random split 97.5%: below.
+    Reference figure: fixed rule, whole cohort; a reference sensitivity or specificity is exactly 0 or 1.
+
+Readings per learner (each dataset contributes sensitivity and specificity):
+  scm: below 2, consistent 4, above 4, not read 0.
+  cart: below 2, consistent 7, above 1, not read 0.
+  lasso: below 1, consistent 1, above 2, not read 0.
+  known_gene: below 2, consistent 6, above 2, not read 0.
+The reading is descriptive. It has no multiplicity correction and is not a hypothesis test.
+paired.tsv sets each learner beside the known-gene rule on the same genomes (counts only, no test).
+
+Not run here: sequence-distance novelty, partial-feature counts (--matrix), calibration,
+any hypothesis test, forests and boosted trees (not published in full).

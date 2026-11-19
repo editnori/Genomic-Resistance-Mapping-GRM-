@@ -1,0 +1,43 @@
+Outside-study test, shigella_flexneri, primary population
+This is a retrospective test on newly deposited studies from the same database.
+It is not a lockbox: the batch's metadata and label totals were read before the rules were frozen.
+The genomes come from the same database as the cohort.
+
+Frozen genomes: 78. Scored: 78 (0 of them borderline in the species check, kept and flagged).
+Genomes excluded, no sequence: 0.
+Genomes excluded, species check failed: 0.
+Genomes excluded, not counted: 0.
+
+Each model is the report's final model, fitted once on the whole cohort and applied unchanged.
+The report's figures are for models refitted in each cross-validation fold and scored on held-out cohort genomes.
+Calls use the 0.5 cutoff. Intervals are exact Clopper-Pearson 95% intervals.
+A dataset with fewer than 25 resistant or 25 susceptible scored genomes is reported as counts only.
+Sensitivity and specificity are over the genomes a learner called; genomes with no call are counted in their own column.
+The known-gene rule's reference figure is a fixed rule applied to the whole cohort: nothing was fitted, so there is no cross-validation figure for it.
+The datasets share genomes and studies, so they are not independent of each other.
+Precision depends on the share of resistant genomes, which differs between the cohort and the new genomes.
+Scored genomes with the same k-mer set as a cohort genome: 0; as another scored genome: 0 (listed in duplicates.tsv; none is excluded for it).
+Stage attempts: setup 1, fetch 1, species-check 1, count 1, known-gene 1, predict 1.
+
+shigella_flexneri__ciprofloxacin: 31 resistant and 47 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA1069659 holds 31 of the 31 resistant genomes (100.0%); PRJNA1069659 holds 47 of the 47 susceptible genomes (100.0%). Of 1 study, 0 can be left out with 25 of each class remaining.
+  Every scored genome is from one study, so the estimate is that study's and no study-to-study range can be shown.
+  scm: TP 23, FN 8, FP 8, TN 39. Sensitivity 74.2% [55.4%, 88.1%], lineage split 69.7%, random split 93.9%: consistent. Specificity 83.0% [69.2%, 92.4%], lineage split 95.7%, random split 93.3%: below.
+    Reference figure: cross-validation, lineage split.
+  cart: TP 23, FN 8, FP 9, TN 38. Sensitivity 74.2% [55.4%, 88.1%], lineage split 87.9%, random split 100.0%: consistent. Specificity 80.9% [66.7%, 90.9%], lineage split 89.6%, random split 90.9%: consistent.
+    Reference figure: cross-validation, lineage split; a reference sensitivity or specificity is exactly 0 or 1.
+  lasso: TP 23, FN 8, FP 8, TN 39. Sensitivity 74.2% [55.4%, 88.1%], lineage split 69.7%, random split 75.8%: consistent. Specificity 83.0% [69.2%, 92.4%], lineage split 94.5%, random split 98.8%: below.
+    Reference figure: cross-validation, lineage split.
+  known_gene: TP 0, FN 31, FP 0, TN 47. Sensitivity 0.0% [0.0%, 11.2%], lineage split 27.3%, random split 27.3%: below. Specificity 100.0% [92.5%, 100.0%], lineage split 90.9%, random split 90.9%: above.
+    Reference figure: fixed rule, whole cohort.
+
+Readings per learner (each dataset contributes sensitivity and specificity):
+  scm: below 1, consistent 1, above 0, not read 0.
+  cart: below 0, consistent 2, above 0, not read 0.
+  lasso: below 1, consistent 1, above 0, not read 0.
+  known_gene: below 1, consistent 0, above 1, not read 0.
+The reading is descriptive. It has no multiplicity correction and is not a hypothesis test.
+paired.tsv sets each learner beside the known-gene rule on the same genomes (counts only, no test).
+
+Not run here: sequence-distance novelty, partial-feature counts (--matrix), calibration,
+any hypothesis test, forests and boosted trees (not published in full).

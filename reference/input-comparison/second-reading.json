@@ -1,0 +1,2815 @@
+{
+ "panel": {
+  "by_dataset": {
+   "budget-1000": {
+    "better": 12,
+    "datasets": 49,
+    "median": -0.008190366715489325,
+    "p": 0.0004697573180081349,
+    "unchanged": 0,
+    "worse": 37
+   },
+   "budget-16000": {
+    "better": 27,
+    "datasets": 49,
+    "median": 0.0018809078774261728,
+    "p": 0.5681724128491652,
+    "unchanged": 0,
+    "worse": 22
+   },
+   "cap-1000": {
+    "better": 8,
+    "datasets": 33,
+    "median": -0.032933590823779224,
+    "p": 0.004551384132355452,
+    "unchanged": 0,
+    "worse": 25
+   },
+   "cap-4000": {
+    "better": 31,
+    "datasets": 49,
+    "median": 0.018894552273318745,
+    "p": 0.08543313315739454,
+    "unchanged": 0,
+    "worse": 18
+   },
+   "grr-v1": {
+    "better": 15,
+    "datasets": 33,
+    "median": -0.010109131077577091,
+    "p": 0.7283324808813632,
+    "unchanged": 0,
+    "worse": 18
+   },
+   "k-c": {
+    "better": 5,
+    "datasets": 22,
+    "median": 0.0,
+    "p": 1.0,
+    "unchanged": 13,
+    "worse": 4
+   },
+   "k-c-h-p": {
+    "better": 2,
+    "datasets": 3,
+    "median": 0.0071640611166026895,
+    "p": 0.5,
+    "unchanged": 1,
+    "worse": 0
+   },
+   "k-h": {
+    "better": 2,
+    "datasets": 4,
+    "median": 0.011660207700274846,
+    "p": 0.5,
+    "unchanged": 2,
+    "worse": 0
+   },
+   "k-p": {
+    "better": 13,
+    "datasets": 49,
+    "median": 0.0,
+    "p": 1.0,
+    "unchanged": 22,
+    "worse": 14
+   },
+   "k21": {
+    "better": 20,
+    "datasets": 49,
+    "median": -0.003956051531373676,
+    "p": 0.2528697301676033,
+    "unchanged": 0,
+    "worse": 29
+   },
+   "k25": {
+    "better": 19,
+    "datasets": 49,
+    "median": -0.004653229329459736,
+    "p": 0.15240777196147803,
+    "unchanged": 0,
+    "worse": 30
+   },
+   "sentinel-seed-twin": {
+    "better": 22,
+    "datasets": 49,
+    "median": -0.00027473792779526433,
+    "p": 0.5681724128491652,
+    "unchanged": 0,
+    "worse": 27
+   },
+   "sentinel-tuning-twin": {
+    "better": 20,
+    "datasets": 46,
+    "median": -0.0015731569061862311,
+    "p": 0.4613911821367651,
+    "unchanged": 0,
+    "worse": 26
+   }
+  },
+  "calibration": {
+   "cart": {
+    "ci95": [
+     0.022690880643073286,
+     0.19601418347889005
+    ],
+    "flagged": false,
+    "of": 49,
+    "rejections": 4,
+    "tail": 0.22871402073743988
+   },
+   "gbt": {
+    "ci95": [
+     0.0,
+     0.07251926366427736
+    ],
+    "flagged": false,
+    "of": 49,
+    "rejections": 0,
+    "tail": 1.0
+   },
+   "lasso": {
+    "ci95": [
+     0.012808421318278806,
+     0.1686589007023011
+    ],
+    "flagged": false,
+    "of": 49,
+    "rejections": 3,
+    "tail": 0.44627438698665023
+   },
+   "rf": {
+    "ci95": [
+     0.012808421318278806,
+     0.1686589007023011
+    ],
+    "flagged": false,
+    "of": 49,
+    "rejections": 3,
+    "tail": 0.44627438698665023
+   },
+   "scm": {
+    "ci95": [
+     0.022690880643073286,
+     0.19601418347889005
+    ],
+    "flagged": false,
+    "of": 49,
+    "rejections": 4,
+    "tail": 0.22871402073743988
+   }
+  },
+  "decisions": [
+   {
+    "auroc_delta": -0.0028899031113745217,
+    "ci": [
+     -0.04927852792597015,
+     -0.01999371312893865
+    ],
+    "estimate": -0.0346361205274544,
+    "firm": true,
+    "id": "salmonella_enterica__amoxicillin_clavulanate/C:rf:lineage:default->budget-16000:log_loss",
+    "in_panel": "worse",
+    "in_species": "worse",
+    "learner_flagged": false,
+    "p": 0.00016981361799961459,
+    "p_adj_panel": 0.03735899595991521,
+    "p_adj_species": 0.04669874494989401,
+    "species": "Salmonella enterica"
+   },
+   {
+    "auroc_delta": 0.0013751863575418874,
+    "ci": [
+     0.019649423339969795,
+     0.04073989999533446
+    ],
+    "estimate": 0.030194661667652126,
+    "firm": true,
+    "id": "salmonella_enterica__azithromycin/C:rf:lineage:default->cap-4000:log_loss",
+    "in_panel": "improves",
+    "in_species": "improves",
+    "learner_flagged": false,
+    "p": 2.5564704275504724e-05,
+    "p_adj_panel": 0.008436352410916559,
+    "p_adj_species": 0.008787867094704749,
+    "species": "Salmonella enterica"
+   },
+   {
+    "auroc_delta": -0.14418677941300798,
+    "ci": [
+     -0.319592042161259,
+     -0.12116241971004245
+    ],
+    "estimate": -0.22037723093565073,
+    "firm": false,
+    "id": "salmonella_enterica__cefotaxime/C:rf:lineage:default->cap-1000:log_loss",
+    "in_panel": "worse",
+    "in_species": "inconclusive",
+    "learner_flagged": false,
+    "p": 0.0003023509375124078,
+    "p_adj_panel": 0.0484202061506019,
+    "p_adj_species": 0.06928875651326012,
+    "species": "Salmonella enterica"
+   },
+   {
+    "auroc_delta": -0.0022068641878330983,
+    "ci": [
+     -0.04437793487247945,
+     -0.022759829425611285
+    ],
+    "estimate": -0.03356888214904537,
+    "firm": true,
+    "id": "salmonella_enterica__ceftiofur/C:rf:lineage:default->budget-16000:log_loss",
+    "in_panel": "worse",
+    "in_species": "worse",
+    "learner_flagged": false,
+    "p": 1.0768253973947317e-05,
+    "p_adj_panel": 0.005264820332603559,
+    "p_adj_species": 0.008705947112545853,
+    "species": "Salmonella enterica"
+   },
+   {
+    "auroc_delta": 0.08616359322778437,
+    "ci": [
+     0.14277222950895133,
+     0.2906005863894693
+    ],
+    "estimate": 0.2166864079492103,
+    "firm": true,
+    "id": "salmonella_enterica__tetracycline/C:rf:lineage:default->cap-4000:log_loss",
+    "in_panel": "improves",
+    "in_species": "improves",
+    "learner_flagged": false,
+    "p": 1.9963226541297452e-05,
+    "p_adj_panel": 0.007186761554867083,
+    "p_adj_species": 0.008787867094704749,
+    "species": "Salmonella enterica"
+   },
+   {
+    "auroc_delta": 0.10525143204234218,
+    "ci": [
+     0.15901691366649773,
+     0.3134471487184772
+    ],
+    "estimate": 0.23623203119248745,
+    "firm": true,
+    "id": "salmonella_enterica__tetracycline/C:gbt:lineage:default->grr-v1:log_loss",
+    "in_panel": "improves",
+    "in_species": "improves",
+    "learner_flagged": false,
+    "p": 1.2663195800066696e-05,
+    "p_adj_panel": 0.005264820332603559,
+    "p_adj_species": 0.008705947112545853,
+    "species": "Salmonella enterica"
+   },
+   {
+    "auroc_delta": 0.023586389034091514,
+    "ci": [
+     0.03606208040785111,
+     0.08985819853023938
+    ],
+    "estimate": 0.06296013946904525,
+    "firm": false,
+    "id": "staphylococcus_aureus__ciprofloxacin/C:rf:lineage:default->budget-1000:log_loss",
+    "in_panel": "improves",
+    "in_species": "inconclusive",
+    "learner_flagged": false,
+    "p": 0.00018733709254370456,
+    "p_adj_panel": 0.03847734722854046,
+    "p_adj_species": 0.09273186080913376,
+    "species": "Staphylococcus aureus"
+   },
+   {
+    "auroc_delta": -0.01584917448370827,
+    "ci": [
+     -0.11156663663379657,
+     -0.04899316993868344
+    ],
+    "estimate": -0.08027990328624,
+    "firm": false,
+    "id": "staphylococcus_aureus__ciprofloxacin/C:rf:lineage:default->budget-16000:log_loss",
+    "in_panel": "worse",
+    "in_species": "inconclusive",
+    "learner_flagged": false,
+    "p": 7.77564454679247e-05,
+    "p_adj_panel": 0.02299834014576531,
+    "p_adj_species": 0.07697888101324546,
+    "species": "Staphylococcus aureus"
+   },
+   {
+    "auroc_delta": -0.008817671590235766,
+    "ci": [
+     -0.06824420026221856,
+     -0.027123543869694768
+    ],
+    "estimate": -0.04768387206595666,
+    "firm": false,
+    "id": "neisseria_gonorrhoeae__ciprofloxacin/C:rf:lineage:default->cap-1000:log_loss",
+    "in_panel": "worse",
+    "in_species": "inconclusive",
+    "learner_flagged": false,
+    "p": 0.0002040465383331691,
+    "p_adj_panel": 0.03847734722854046,
+    "p_adj_species": 0.0785579172582701,
+    "species": "Neisseria gonorrhoeae"
+   },
+   {
+    "auroc_delta": -0.00924163386058933,
+    "ci": [
+     -0.06352581500610367,
+     -0.022317219051388244
+    ],
+    "estimate": -0.042921517028745956,
+    "firm": false,
+    "id": "mycobacterium_tuberculosis__amikacin/C:rf:lineage:default->cap-1000:log_loss",
+    "in_panel": "inconclusive",
+    "in_species": "worse",
+    "learner_flagged": false,
+    "p": 0.0005308745446270802,
+    "p_adj_panel": 0.07007543989077458,
+    "p_adj_species": 0.030588485666607955,
+    "species": "Mycobacterium tuberculosis"
+   },
+   {
+    "auroc_delta": 0.030915343915343917,
+    "ci": [
+     -0.5025367801259486,
+     -0.21976048414522262
+    ],
+    "estimate": -0.3611486321355856,
+    "firm": true,
+    "id": "mycobacterium_tuberculosis__amoxicillin/C:rf:lineage:default->cap-4000:log_loss",
+    "in_panel": "worse",
+    "in_species": "worse",
+    "learner_flagged": false,
+    "p": 8.130726314159453e-05,
+    "p_adj_panel": 0.02299834014576531,
+    "p_adj_species": 0.010512967027347386,
+    "species": "Mycobacterium tuberculosis"
+   },
+   {
+    "auroc_delta": -0.019188114672475054,
+    "ci": [
+     -0.11507356828214188,
+     -0.03823768677842501
+    ],
+    "estimate": -0.07665562753028345,
+    "firm": false,
+    "id": "mycobacterium_tuberculosis__capreomycin/C:rf:lineage:default->cap-4000:log_loss",
+    "in_panel": "inconclusive",
+    "in_species": "worse",
+    "learner_flagged": false,
+    "p": 0.0007632215014695687,
+    "p_adj_panel": 0.09066148513387946,
+    "p_adj_species": 0.03847908403242409,
+    "species": "Mycobacterium tuberculosis"
+   },
+   {
+    "auroc_delta": -0.11776556776556779,
+    "ci": [
+     -0.6894103245151587,
+     -0.34858976372916295
+    ],
+    "estimate": -0.5190000441221608,
+    "firm": true,
+    "id": "mycobacterium_tuberculosis__capreomycin/C:rf:lineage:default->grr-v1:log_loss",
+    "in_panel": "worse",
+    "in_species": "worse",
+    "learner_flagged": false,
+    "p": 1.3295000839907978e-05,
+    "p_adj_panel": 0.005264820332603559,
+    "p_adj_species": 0.0020108688770360816,
+    "species": "Mycobacterium tuberculosis"
+   },
+   {
+    "auroc_delta": -0.026111130160236702,
+    "ci": [
+     -0.05245899882906572,
+     -0.021344056384841444
+    ],
+    "estimate": -0.03690152760695358,
+    "firm": true,
+    "id": "mycobacterium_tuberculosis__capreomycin/C:rf:lineage:default->budget-16000:log_loss",
+    "in_panel": "worse",
+    "in_species": "worse",
+    "learner_flagged": false,
+    "p": 0.00016551480368254268,
+    "p_adj_panel": 0.03735899595991521,
+    "p_adj_species": 0.01668940937132305,
+    "species": "Mycobacterium tuberculosis"
+   },
+   {
+    "auroc_delta": -0.013767602174328552,
+    "ci": [
+     1.5925594321284697,
+     3.994360919953933
+    ],
+    "estimate": 2.7934601760412012,
+    "firm": true,
+    "id": "mycobacterium_tuberculosis__clofazimine/C:scm:lineage:default->cap-4000:log_loss",
+    "in_panel": "improves",
+    "in_species": "improves",
+    "learner_flagged": false,
+    "p": 0.00019850019740108582,
+    "p_adj_panel": 0.03847734722854046,
+    "p_adj_species": 0.01847578760425491,
+    "species": "Mycobacterium tuberculosis"
+   },
+   {
+    "auroc_delta": -0.01173236499672768,
+    "ci": [
+     -0.06069557318077649,
+     -0.02374504598647436
+    ],
+    "estimate": -0.04222030958362542,
+    "firm": true,
+    "id": "mycobacterium_tuberculosis__clofazimine/C:rf:lineage:default->cap-4000:log_loss",
+    "in_panel": "worse",
+    "in_species": "worse",
+    "learner_flagged": false,
+    "p": 0.00023371076010103575,
+    "p_adj_panel": 0.042067936818186435,
+    "p_adj_species": 0.01975778810431243,
+    "species": "Mycobacterium tuberculosis"
+   },
+   {
+    "auroc_delta": -0.05315623551616983,
+    "ci": [
+     -0.14219328574814127,
+     -0.09081068075127251
+    ],
+    "estimate": -0.1165019832497069,
+    "firm": true,
+    "id": "mycobacterium_tuberculosis__delamanid/C:rf:lineage:default->cap-1000:log_loss",
+    "in_panel": "worse",
+    "in_species": "worse",
+    "learner_flagged": false,
+    "p": 1.3164989054459397e-07,
+    "p_adj_panel": 0.00026066678327829607,
+    "p_adj_species": 7.964818377947935e-05,
+    "species": "Mycobacterium tuberculosis"
+   },
+   {
+    "auroc_delta": -0.08455784145688702,
+    "ci": [
+     -0.07145037374951382,
+     -0.03076540076652061
+    ],
+    "estimate": -0.051107887258017216,
+    "firm": true,
+    "id": "mycobacterium_tuberculosis__delamanid/C:gbt:lineage:default->cap-1000:log_loss",
+    "in_panel": "worse",
+    "in_species": "worse",
+    "learner_flagged": false,
+    "p": 9.557242752133988e-05,
+    "p_adj_panel": 0.02365417581153162,
+    "p_adj_species": 0.010512967027347386,
+    "species": "Mycobacterium tuberculosis"
+   },
+   {
+    "auroc_delta": -0.017085989956931235,
+    "ci": [
+     -0.06214652306188429,
+     -0.0211115207338674
+    ],
+    "estimate": -0.041629021897875845,
+    "firm": false,
+    "id": "mycobacterium_tuberculosis__delamanid/C:rf:lineage:default->budget-1000:log_loss",
+    "in_panel": "inconclusive",
+    "in_species": "worse",
+    "learner_flagged": false,
+    "p": 0.0006638510913059559,
+    "p_adj_panel": 0.08215157254911204,
+    "p_adj_species": 0.03492434002087855,
+    "species": "Mycobacterium tuberculosis"
+   },
+   {
+    "auroc_delta": -0.004382193333115617,
+    "ci": [
+     -0.04068622901950939,
+     -0.015340278137876655
+    ],
+    "estimate": -0.028013253578693022,
+    "firm": true,
+    "id": "mycobacterium_tuberculosis__ethambutol/C:rf:lineage:default->budget-1000:log_loss",
+    "in_panel": "worse",
+    "in_species": "worse",
+    "learner_flagged": false,
+    "p": 0.0003157704996935573,
+    "p_adj_panel": 0.0484202061506019,
+    "p_adj_species": 0.02219259448569254,
+    "species": "Mycobacterium tuberculosis"
+   },
+   {
+    "auroc_delta": 0.009763708420353168,
+    "ci": [
+     0.01032378053024497,
+     0.028020359838123517
+    ],
+    "estimate": 0.019172070184184244,
+    "firm": false,
+    "id": "mycobacterium_tuberculosis__ethambutol/C:rf:lineage:default->budget-16000:log_loss",
+    "in_panel": "inconclusive",
+    "in_species": "improves",
+    "learner_flagged": false,
+    "p": 0.0003770632520789796,
+    "p_adj_panel": 0.0533275170797414,
+    "p_adj_species": 0.02401297552713502,
+    "species": "Mycobacterium tuberculosis"
+   },
+   {
+    "auroc_delta": -0.05176991117709642,
+    "ci": [
+     -0.29612425776690776,
+     -0.19686901622779313
+    ],
+    "estimate": -0.24649663699735044,
+    "firm": true,
+    "id": "mycobacterium_tuberculosis__kanamycin/C:rf:lineage:default->grr-v1:log_loss",
+    "in_panel": "worse",
+    "in_species": "worse",
+    "learner_flagged": false,
+    "p": 4.243710349793872e-08,
+    "p_adj_panel": 0.00016805092985183734,
+    "p_adj_species": 5.1348895232505853e-05,
+    "species": "Mycobacterium tuberculosis"
+   },
+   {
+    "auroc_delta": -0.01313162361625595,
+    "ci": [
+     -0.03319938111113257,
+     -0.019387982175297008
+    ],
+    "estimate": -0.026293681643214786,
+    "firm": true,
+    "id": "mycobacterium_tuberculosis__kanamycin/C:rf:lineage:default->budget-16000:log_loss",
+    "in_panel": "worse",
+    "in_species": "worse",
+    "learner_flagged": false,
+    "p": 1.0768392897375634e-06,
+    "p_adj_panel": 0.0014214278624535837,
+    "p_adj_species": 0.00043432518019415056,
+    "species": "Mycobacterium tuberculosis"
+   },
+   {
+    "auroc_delta": -0.01879980265119583,
+    "ci": [
+     -0.5327936386016056,
+     -0.2862393725338779
+    ],
+    "estimate": -0.4095165055677417,
+    "firm": true,
+    "id": "mycobacterium_tuberculosis__levofloxacin/C:rf:lineage:default->cap-1000:log_loss",
+    "in_panel": "worse",
+    "in_species": "worse",
+    "learner_flagged": false,
+    "p": 5.13344092234469e-06,
+    "p_adj_panel": 0.004065685210496994,
+    "p_adj_species": 0.001242292703207415,
+    "species": "Mycobacterium tuberculosis"
+   },
+   {
+    "auroc_delta": -0.04179947279098181,
+    "ci": [
+     -0.10200897609361695,
+     -0.05384602176170081
+    ],
+    "estimate": -0.07792749892765888,
+    "firm": true,
+    "id": "mycobacterium_tuberculosis__levofloxacin/C:rf:lineage:default->cap-4000:log_loss",
+    "in_panel": "worse",
+    "in_species": "worse",
+    "learner_flagged": false,
+    "p": 6.866316964670993e-06,
+    "p_adj_panel": 0.0045317691966828555,
+    "p_adj_species": 0.0013847072545419836,
+    "species": "Mycobacterium tuberculosis"
+   },
+   {
+    "auroc_delta": 0.05688514610208521,
+    "ci": [
+     -0.20082403977767538,
+     -0.10852133305843849
+    ],
+    "estimate": -0.15467268641805693,
+    "firm": true,
+    "id": "mycobacterium_tuberculosis__linezolid/C:rf:lineage:default->cap-1000:log_loss",
+    "in_panel": "worse",
+    "in_species": "worse",
+    "learner_flagged": false,
+    "p": 4.650336418610124e-06,
+    "p_adj_panel": 0.004065685210496994,
+    "p_adj_species": 0.001242292703207415,
+    "species": "Mycobacterium tuberculosis"
+   },
+   {
+    "auroc_delta": -0.041969792190931804,
+    "ci": [
+     -0.059809784112887704,
+     -0.02582454867314103
+    ],
+    "estimate": -0.04281716639301437,
+    "firm": true,
+    "id": "mycobacterium_tuberculosis__linezolid/C:rf:lineage:default->cap-4000:log_loss",
+    "in_panel": "worse",
+    "in_species": "worse",
+    "learner_flagged": false,
+    "p": 9.288471718549296e-05,
+    "p_adj_panel": 0.02365417581153162,
+    "p_adj_species": 0.010512967027347386,
+    "species": "Mycobacterium tuberculosis"
+   },
+   {
+    "auroc_delta": -0.03212162410351644,
+    "ci": [
+     -0.1467332374827009,
+     -0.05521511527371713
+    ],
+    "estimate": -0.10097417637820902,
+    "firm": true,
+    "id": "mycobacterium_tuberculosis__linezolid/C:rf:lineage:default->budget-1000:log_loss",
+    "in_panel": "worse",
+    "in_species": "worse",
+    "learner_flagged": false,
+    "p": 0.0003206938972561968,
+    "p_adj_panel": 0.0484202061506019,
+    "p_adj_species": 0.02219259448569254,
+    "species": "Mycobacterium tuberculosis"
+   },
+   {
+    "auroc_delta": -0.007462478398045503,
+    "ci": [
+     -0.024103926529841037,
+     -0.009036536397023206
+    ],
+    "estimate": -0.01657023146343212,
+    "firm": true,
+    "id": "mycobacterium_tuberculosis__moxifloxacin/C:rf:lineage:default->budget-16000:log_loss",
+    "in_panel": "worse",
+    "in_species": "worse",
+    "learner_flagged": false,
+    "p": 0.00033013776920864935,
+    "p_adj_panel": 0.0484202061506019,
+    "p_adj_species": 0.02219259448569254,
+    "species": "Mycobacterium tuberculosis"
+   },
+   {
+    "auroc_delta": -0.025238032423054245,
+    "ci": [
+     -0.0970535219115502,
+     -0.033730667418960886
+    ],
+    "estimate": -0.06539209466525554,
+    "firm": false,
+    "id": "mycobacterium_tuberculosis__ofloxacin/C:rf:lineage:default->budget-16000:log_loss",
+    "in_panel": "inconclusive",
+    "in_species": "worse",
+    "learner_flagged": false,
+    "p": 0.0005711878244361035,
+    "p_adj_panel": 0.07296463821828934,
+    "p_adj_species": 0.03141533034398569,
+    "species": "Mycobacterium tuberculosis"
+   },
+   {
+    "auroc_delta": 0.01913855700550348,
+    "ci": [
+     0.01296484439180229,
+     0.03545569223791449
+    ],
+    "estimate": 0.02421026831485839,
+    "firm": false,
+    "id": "mycobacterium_tuberculosis__rifabutin/C:cart:lineage:default->cap-4000:log_loss",
+    "in_panel": "inconclusive",
+    "in_species": "improves",
+    "learner_flagged": false,
+    "p": 0.00039895422540991987,
+    "p_adj_panel": 0.05447788733183734,
+    "p_adj_species": 0.024136730637300152,
+    "species": "Mycobacterium tuberculosis"
+   },
+   {
+    "auroc_delta": 0.013355633607689276,
+    "ci": [
+     0.04684327273498508,
+     0.12040757371252263
+    ],
+    "estimate": 0.08362542322375385,
+    "firm": true,
+    "id": "mycobacterium_tuberculosis__rifampin/C:rf:lineage:default->grr-v1:log_loss",
+    "in_panel": "improves",
+    "in_species": "improves",
+    "learner_flagged": false,
+    "p": 0.0002449312574914764,
+    "p_adj_panel": 0.04217077302896723,
+    "p_adj_species": 0.01975778810431243,
+    "species": "Mycobacterium tuberculosis"
+   },
+   {
+    "auroc_delta": -0.0014836629136934694,
+    "ci": [
+     -0.011497558901083973,
+     -0.005954265840297002
+    ],
+    "estimate": -0.008725912370690488,
+    "firm": true,
+    "id": "mycobacterium_tuberculosis__rifampin/C:rf:lineage:default->k21:log_loss",
+    "in_panel": "worse",
+    "in_species": "worse",
+    "learner_flagged": false,
+    "p": 9.283383541114354e-06,
+    "p_adj_panel": 0.005251742688973262,
+    "p_adj_species": 0.0016046991549640527,
+    "species": "Mycobacterium tuberculosis"
+   }
+  ],
+  "family": {
+   "entered_at_p_1": 2015,
+   "size": 3960,
+   "tested": 1945
+  },
+  "firm": {
+   "improves": 5,
+   "worse": 18
+  },
+  "flagged_or_unjudged": 0,
+  "one_family_only": 10,
+  "predictions": {
+   "pass": false,
+   "species": [
+    "Staphylococcus aureus",
+    "Mycobacterium tuberculosis"
+   ],
+   "tests": [
+    {
+     "arm": "cap-4000",
+     "better": 15,
+     "p_one_sided": 0.3505540192127228,
+     "predicted": "better",
+     "unchanged": 0,
+     "worse": 12
+    },
+    {
+     "arm": "cap-1000",
+     "better": 7,
+     "p_one_sided": 0.09462356567382812,
+     "predicted": "worse",
+     "unchanged": 0,
+     "worse": 14
+    }
+   ]
+  }
+ },
+ "species": [
+  {
+   "arms": {
+    "budget-1000": {
+     "auroc_median": 0.0,
+     "beyond": 27,
+     "improves": 0,
+     "inside": 38,
+     "made": 90,
+     "median": 0.0,
+     "planned": 125,
+     "q1": -0.010190811643037137,
+     "q3": 0.0,
+     "twin": false,
+     "worse": 0,
+     "zero": 36
+    },
+    "budget-16000": {
+     "auroc_median": 0.0,
+     "beyond": 31,
+     "improves": 0,
+     "inside": 37,
+     "made": 90,
+     "median": 0.0,
+     "planned": 125,
+     "q1": -0.003297440030774257,
+     "q3": 0.01357636554424201,
+     "twin": false,
+     "worse": 2,
+     "zero": 36
+    },
+    "cap-1000": {
+     "auroc_median": -0.029485024892330756,
+     "beyond": 40,
+     "improves": 0,
+     "inside": 0,
+     "made": 50,
+     "median": -0.07016017357179258,
+     "planned": 125,
+     "q1": -0.17048667052814723,
+     "q3": 0.0004673871704766316,
+     "twin": false,
+     "worse": 0,
+     "zero": 0
+    },
+    "cap-4000": {
+     "auroc_median": 0.00683982257563818,
+     "beyond": 67,
+     "improves": 2,
+     "inside": 3,
+     "made": 90,
+     "median": 0.023477893644634353,
+     "planned": 125,
+     "q1": -0.01363172064871614,
+     "q3": 0.09047751569143282,
+     "twin": false,
+     "worse": 0,
+     "zero": 1
+    },
+    "grr-v1": {
+     "auroc_median": 0.0068753375982439175,
+     "beyond": 66,
+     "improves": 1,
+     "inside": 0,
+     "made": 75,
+     "median": 0.002385506590400967,
+     "planned": 125,
+     "q1": -0.07366697926600436,
+     "q3": 0.09138986483144967,
+     "twin": false,
+     "worse": 0,
+     "zero": 0
+    },
+    "k-c": {
+     "auroc_median": 0.0,
+     "beyond": 1,
+     "improves": 0,
+     "inside": 84,
+     "made": 90,
+     "median": 0.0,
+     "planned": 125,
+     "q1": 0.0,
+     "q3": 0.0,
+     "twin": false,
+     "worse": 0,
+     "zero": 78
+    },
+    "k-c-h-p": {
+     "auroc_median": 0.0,
+     "beyond": 3,
+     "improves": 0,
+     "inside": 10,
+     "made": 15,
+     "median": 0.0,
+     "planned": 125,
+     "q1": 0.0,
+     "q3": 0.010535896465345702,
+     "twin": false,
+     "worse": 0,
+     "zero": 8
+    },
+    "k-h": {
+     "auroc_median": 0.0,
+     "beyond": 4,
+     "improves": 0,
+     "inside": 9,
+     "made": 15,
+     "median": 0.0,
+     "planned": 125,
+     "q1": 0.0,
+     "q3": 0.027104195027295126,
+     "twin": false,
+     "worse": 0,
+     "zero": 8
+    },
+    "k-p": {
+     "auroc_median": 0.0,
+     "beyond": 16,
+     "improves": 0,
+     "inside": 54,
+     "made": 90,
+     "median": 0.0,
+     "planned": 125,
+     "q1": -0.002110072495469787,
+     "q3": 0.0010146757149654055,
+     "twin": false,
+     "worse": 0,
+     "zero": 31
+    },
+    "k21": {
+     "auroc_median": 0.001766259084329236,
+     "beyond": 41,
+     "improves": 0,
+     "inside": 10,
+     "made": 90,
+     "median": -0.001691956808824017,
+     "planned": 125,
+     "q1": -0.013488785155239977,
+     "q3": 0.01878179868015465,
+     "twin": false,
+     "worse": 0,
+     "zero": 1
+    },
+    "k25": {
+     "auroc_median": 0.0009011877551835079,
+     "beyond": 44,
+     "improves": 0,
+     "inside": 17,
+     "made": 90,
+     "median": 0.0015886479387701652,
+     "planned": 125,
+     "q1": -0.015584859231289343,
+     "q3": 0.018977151593630788,
+     "twin": false,
+     "worse": 0,
+     "zero": 1
+    },
+    "sentinel-seed-twin": {
+     "auroc_median": 0.0,
+     "beyond": 6,
+     "improves": 0,
+     "inside": 69,
+     "made": 90,
+     "median": 0.0,
+     "planned": 125,
+     "q1": 0.0,
+     "q3": 0.0,
+     "twin": true,
+     "worse": 1,
+     "zero": 54
+    },
+    "sentinel-tuning-twin": {
+     "auroc_median": 0.0,
+     "beyond": 48,
+     "improves": 1,
+     "inside": 21,
+     "made": 90,
+     "median": 0.0,
+     "planned": 125,
+     "q1": -0.03138861184448842,
+     "q3": 0.016712954186037715,
+     "twin": true,
+     "worse": 0,
+     "zero": 20
+    }
+   },
+   "by_dataset": {
+    "budget-1000": {
+     "better": 6,
+     "datasets": 18,
+     "median": -0.00591599029145251,
+     "p": 0.237884521484375,
+     "unchanged": 0,
+     "worse": 12
+    },
+    "budget-16000": {
+     "better": 12,
+     "datasets": 18,
+     "median": 0.006932325712074137,
+     "p": 0.237884521484375,
+     "unchanged": 0,
+     "worse": 6
+    },
+    "cap-1000": {
+     "better": 1,
+     "datasets": 10,
+     "median": -0.09808909172207017,
+     "p": 0.021484375,
+     "unchanged": 0,
+     "worse": 9
+    },
+    "cap-4000": {
+     "better": 14,
+     "datasets": 18,
+     "median": 0.045706626088883116,
+     "p": 0.0308837890625,
+     "unchanged": 0,
+     "worse": 4
+    },
+    "grr-v1": {
+     "better": 7,
+     "datasets": 15,
+     "median": -0.019200247690189208,
+     "p": 1.0,
+     "unchanged": 0,
+     "worse": 8
+    },
+    "k-c": {
+     "better": 3,
+     "datasets": 18,
+     "median": 0.0,
+     "p": 1.0,
+     "unchanged": 12,
+     "worse": 3
+    },
+    "k-c-h-p": {
+     "better": 2,
+     "datasets": 3,
+     "median": 0.0071640611166026895,
+     "p": 0.5,
+     "unchanged": 1,
+     "worse": 0
+    },
+    "k-h": {
+     "better": 2,
+     "datasets": 3,
+     "median": 0.02332041540054969,
+     "p": 0.5,
+     "unchanged": 1,
+     "worse": 0
+    },
+    "k-p": {
+     "better": 7,
+     "datasets": 18,
+     "median": -0.0017958139675256363,
+     "p": 0.803619384765625,
+     "unchanged": 2,
+     "worse": 9
+    },
+    "k21": {
+     "better": 7,
+     "datasets": 18,
+     "median": -0.007796227240458086,
+     "p": 0.480682373046875,
+     "unchanged": 0,
+     "worse": 11
+    },
+    "k25": {
+     "better": 8,
+     "datasets": 18,
+     "median": -0.0008609936615653999,
+     "p": 0.8145294189453125,
+     "unchanged": 0,
+     "worse": 10
+    },
+    "sentinel-seed-twin": {
+     "better": 9,
+     "datasets": 18,
+     "median": 7.63370555307175e-06,
+     "p": 1.0,
+     "unchanged": 0,
+     "worse": 9
+    },
+    "sentinel-tuning-twin": {
+     "better": 7,
+     "datasets": 18,
+     "median": -0.005251899208260243,
+     "p": 0.480682373046875,
+     "unchanged": 0,
+     "worse": 11
+    }
+   },
+   "calibration": {
+    "cart": {
+     "flagged": false,
+     "left_out": 7,
+     "no_test": 0,
+     "of": 18,
+     "rejections": 0,
+     "rule10_contrasts": 469,
+     "tail": 1.0,
+     "twins": [
+      "sentinel-tuning-twin"
+     ]
+    },
+    "gbt": {
+     "flagged": false,
+     "left_out": 7,
+     "no_test": 0,
+     "of": 18,
+     "rejections": 0,
+     "rule10_contrasts": 469,
+     "tail": 1.0,
+     "twins": [
+      "sentinel-seed-twin"
+     ]
+    },
+    "lasso": {
+     "flagged": false,
+     "left_out": 7,
+     "no_test": 0,
+     "of": 18,
+     "rejections": 0,
+     "rule10_contrasts": 469,
+     "tail": 1.0,
+     "twins": [
+      "sentinel-tuning-twin"
+     ]
+    },
+    "rf": {
+     "flagged": false,
+     "left_out": 7,
+     "no_test": 0,
+     "of": 18,
+     "rejections": 1,
+     "rule10_contrasts": 469,
+     "tail": 0.6027856815417818,
+     "twins": [
+      "sentinel-seed-twin"
+     ]
+    },
+    "scm": {
+     "flagged": false,
+     "left_out": 7,
+     "no_test": 0,
+     "of": 18,
+     "rejections": 1,
+     "rule10_contrasts": 469,
+     "tail": 0.6027856815417818,
+     "twins": [
+      "sentinel-tuning-twin"
+     ]
+    }
+   },
+   "dataset_means": {
+    "budget-1000": {
+     "salmonella_enterica__amoxicillin_clavulanate": 0.002036876648126929,
+     "salmonella_enterica__ampicillin": -0.03444621708310817,
+     "salmonella_enterica__azithromycin": -0.005584729118721356,
+     "salmonella_enterica__cefotaxime": -0.019269305153172194,
+     "salmonella_enterica__cefoxitin": 0.0014594237565657016,
+     "salmonella_enterica__ceftiofur": 0.010185693558397848,
+     "salmonella_enterica__ceftriaxone": 0.01150149796299223,
+     "salmonella_enterica__chloramphenicol": -0.01448189383978317,
+     "salmonella_enterica__ciprofloxacin": -0.0031824708891131995,
+     "salmonella_enterica__gentamicin": -0.01747895605378646,
+     "salmonella_enterica__kanamycin": -0.006247251464183664,
+     "salmonella_enterica__nalidixic_acid": 0.005299061154738916,
+     "salmonella_enterica__spectinomycin": 0.010256811384195194,
+     "salmonella_enterica__streptomycin": -0.010773343521567112,
+     "salmonella_enterica__sulfamethoxazole_trimethoprim": -0.024391712121303692,
+     "salmonella_enterica__sulfisoxazole": -0.03483423027886538,
+     "salmonella_enterica__tetracycline": -0.001030318319479449,
+     "salmonella_enterica__trimethoprim": -0.00738439127846231
+    },
+    "budget-16000": {
+     "salmonella_enterica__amoxicillin_clavulanate": -0.008985031744899074,
+     "salmonella_enterica__ampicillin": 0.016080972562663075,
+     "salmonella_enterica__azithromycin": 0.0012929987211418102,
+     "salmonella_enterica__cefotaxime": 0.009099836824341451,
+     "salmonella_enterica__cefoxitin": -0.004199500542151438,
+     "salmonella_enterica__ceftiofur": -0.01030732796804561,
+     "salmonella_enterica__ceftriaxone": -0.01934856216401839,
+     "salmonella_enterica__chloramphenicol": 0.016421910879345324,
+     "salmonella_enterica__ciprofloxacin": 0.005198620380314577,
+     "salmonella_enterica__gentamicin": 0.06073747152661428,
+     "salmonella_enterica__kanamycin": 0.009325487977897468,
+     "salmonella_enterica__nalidixic_acid": 0.0038557978413335053,
+     "salmonella_enterica__spectinomycin": 0.008666031043833696,
+     "salmonella_enterica__streptomycin": -0.016258267403274566,
+     "salmonella_enterica__sulfamethoxazole_trimethoprim": -0.009751555264673792,
+     "salmonella_enterica__sulfisoxazole": 0.04342239346317326,
+     "salmonella_enterica__tetracycline": 0.012931057176508737,
+     "salmonella_enterica__trimethoprim": 0.010775583279584968
+    },
+    "cap-1000": {
+     "salmonella_enterica__cefotaxime": -0.36332596578001886,
+     "salmonella_enterica__cefoxitin": 0.027766925131163227,
+     "salmonella_enterica__chloramphenicol": -0.2231257182872565,
+     "salmonella_enterica__ciprofloxacin": -0.2916474501610846,
+     "salmonella_enterica__gentamicin": -0.032933590823779224,
+     "salmonella_enterica__kanamycin": -0.15832838307578212,
+     "salmonella_enterica__nalidixic_acid": -0.0285302384170416,
+     "salmonella_enterica__streptomycin": -0.007576771106070976,
+     "salmonella_enterica__sulfamethoxazole_trimethoprim": -0.03784980036835821,
+     "salmonella_enterica__tetracycline": -0.25048458115448674
+    },
+    "cap-4000": {
+     "salmonella_enterica__amoxicillin_clavulanate": -0.013764043926833119,
+     "salmonella_enterica__ampicillin": 0.029535544108550145,
+     "salmonella_enterica__azithromycin": 0.021849035525714648,
+     "salmonella_enterica__cefotaxime": 0.06399814873118961,
+     "salmonella_enterica__cefoxitin": 0.00911452007166326,
+     "salmonella_enterica__ceftiofur": -0.0360978492899634,
+     "salmonella_enterica__ceftriaxone": 0.06187770806921609,
+     "salmonella_enterica__chloramphenicol": 0.018894552273318745,
+     "salmonella_enterica__ciprofloxacin": -0.04797304142959839,
+     "salmonella_enterica__gentamicin": 0.243036299663118,
+     "salmonella_enterica__kanamycin": 0.01657938713351493,
+     "salmonella_enterica__nalidixic_acid": 0.07369979103660507,
+     "salmonella_enterica__spectinomycin": -0.060536815242237675,
+     "salmonella_enterica__streptomycin": 0.0696303773948693,
+     "salmonella_enterica__sulfamethoxazole_trimethoprim": 0.08627693262222655,
+     "salmonella_enterica__sulfisoxazole": 0.14513844359338862,
+     "salmonella_enterica__tetracycline": 0.07437241451173314,
+     "salmonella_enterica__trimethoprim": 0.09142891497407071
+    },
+    "grr-v1": {
+     "salmonella_enterica__amoxicillin_clavulanate": -0.05625518278509948,
+     "salmonella_enterica__ampicillin": 0.07550110655838257,
+     "salmonella_enterica__cefotaxime": 0.012003102874309612,
+     "salmonella_enterica__cefoxitin": -0.049482728962906924,
+     "salmonella_enterica__ceftiofur": -0.08281651330523608,
+     "salmonella_enterica__ceftriaxone": 0.017457744389844106,
+     "salmonella_enterica__chloramphenicol": -0.019200247690189208,
+     "salmonella_enterica__ciprofloxacin": -0.12291716204750096,
+     "salmonella_enterica__gentamicin": 0.07171795517447986,
+     "salmonella_enterica__nalidixic_acid": -0.07413332936078612,
+     "salmonella_enterica__streptomycin": 0.16283945815777084,
+     "salmonella_enterica__sulfamethoxazole_trimethoprim": -0.04496171342691692,
+     "salmonella_enterica__sulfisoxazole": 0.1536076144153045,
+     "salmonella_enterica__tetracycline": 0.11340238234162794,
+     "salmonella_enterica__trimethoprim": -0.09638526540388995
+    },
+    "k-c": {
+     "salmonella_enterica__amoxicillin_clavulanate": 0.0,
+     "salmonella_enterica__ampicillin": 0.0,
+     "salmonella_enterica__azithromycin": 0.0,
+     "salmonella_enterica__cefotaxime": 0.0,
+     "salmonella_enterica__cefoxitin": 0.0,
+     "salmonella_enterica__ceftiofur": 0.0,
+     "salmonella_enterica__ceftriaxone": 0.0,
+     "salmonella_enterica__chloramphenicol": 0.0,
+     "salmonella_enterica__ciprofloxacin": -0.002405956987336478,
+     "salmonella_enterica__gentamicin": 0.01820747671082051,
+     "salmonella_enterica__kanamycin": 0.0,
+     "salmonella_enterica__nalidixic_acid": 0.0038657293145710676,
+     "salmonella_enterica__spectinomycin": -0.003232254841902386,
+     "salmonella_enterica__streptomycin": 0.0,
+     "salmonella_enterica__sulfamethoxazole_trimethoprim": 0.0,
+     "salmonella_enterica__sulfisoxazole": -0.0023170416017549303,
+     "salmonella_enterica__tetracycline": 0.0002797339519202991,
+     "salmonella_enterica__trimethoprim": 0.0
+    },
+    "k-c-h-p": {
+     "salmonella_enterica__cefotaxime": 0.020889118708405853,
+     "salmonella_enterica__cefoxitin": 0.0,
+     "salmonella_enterica__ceftriaxone": 0.0071640611166026895
+    },
+    "k-h": {
+     "salmonella_enterica__cefotaxime": 0.0468176170077397,
+     "salmonella_enterica__cefoxitin": 0.0,
+     "salmonella_enterica__ceftriaxone": 0.02332041540054969
+    },
+    "k-p": {
+     "salmonella_enterica__amoxicillin_clavulanate": -0.004492385046655928,
+     "salmonella_enterica__ampicillin": 0.02715498784207308,
+     "salmonella_enterica__azithromycin": 0.008378691694594447,
+     "salmonella_enterica__cefotaxime": 0.028923388647443742,
+     "salmonella_enterica__cefoxitin": 0.0,
+     "salmonella_enterica__ceftiofur": 0.025486492248121724,
+     "salmonella_enterica__ceftriaxone": 0.006192188855598156,
+     "salmonella_enterica__chloramphenicol": 0.018623744016665698,
+     "salmonella_enterica__ciprofloxacin": -0.021306611012017723,
+     "salmonella_enterica__gentamicin": 0.023897112384381476,
+     "salmonella_enterica__kanamycin": -0.07820509977423051,
+     "salmonella_enterica__nalidixic_acid": 0.0,
+     "salmonella_enterica__spectinomycin": -0.036933627340397485,
+     "salmonella_enterica__streptomycin": -0.0035916279350512725,
+     "salmonella_enterica__sulfamethoxazole_trimethoprim": -0.07521672348102429,
+     "salmonella_enterica__sulfisoxazole": -0.006340737966134438,
+     "salmonella_enterica__tetracycline": -0.00426591651100623,
+     "salmonella_enterica__trimethoprim": -0.008570551500482597
+    },
+    "k21": {
+     "salmonella_enterica__amoxicillin_clavulanate": -0.016330003319545493,
+     "salmonella_enterica__ampicillin": -0.005261918057154093,
+     "salmonella_enterica__azithromycin": -0.019756414774816593,
+     "salmonella_enterica__cefotaxime": -0.014408841890009719,
+     "salmonella_enterica__cefoxitin": 0.008189476675740439,
+     "salmonella_enterica__ceftiofur": -0.003856134415528422,
+     "salmonella_enterica__ceftriaxone": 0.014858898128982325,
+     "salmonella_enterica__chloramphenicol": -0.023264554461416634,
+     "salmonella_enterica__ciprofloxacin": -0.03280332765886243,
+     "salmonella_enterica__gentamicin": 0.014151278990551663,
+     "salmonella_enterica__kanamycin": -0.03372689675255987,
+     "salmonella_enterica__nalidixic_acid": 0.025975297846005368,
+     "salmonella_enterica__spectinomycin": -0.06828941308766483,
+     "salmonella_enterica__streptomycin": 0.017310094731594467,
+     "salmonella_enterica__sulfamethoxazole_trimethoprim": 0.00436164425298124,
+     "salmonella_enterica__sulfisoxazole": 0.04144506771711419,
+     "salmonella_enterica__tetracycline": -0.010330536423762079,
+     "salmonella_enterica__trimethoprim": -0.0427350592423175
+    },
+    "k25": {
+     "salmonella_enterica__amoxicillin_clavulanate": -0.008535124850195372,
+     "salmonella_enterica__ampicillin": 0.0016422634258399156,
+     "salmonella_enterica__azithromycin": 0.006954226186110084,
+     "salmonella_enterica__cefotaxime": 0.015911674505981594,
+     "salmonella_enterica__cefoxitin": 0.014864895877886933,
+     "salmonella_enterica__ceftiofur": 0.005452258624804487,
+     "salmonella_enterica__ceftriaxone": -0.0007973750995430853,
+     "salmonella_enterica__chloramphenicol": -0.007856218647638467,
+     "salmonella_enterica__ciprofloxacin": -0.01791138290794211,
+     "salmonella_enterica__gentamicin": 0.051682178045845406,
+     "salmonella_enterica__kanamycin": -0.05445560770151338,
+     "salmonella_enterica__nalidixic_acid": -0.0009246122235877145,
+     "salmonella_enterica__spectinomycin": -0.024513754474541793,
+     "salmonella_enterica__streptomycin": 0.019626999322740746,
+     "salmonella_enterica__sulfamethoxazole_trimethoprim": -0.05065876100037868,
+     "salmonella_enterica__sulfisoxazole": -0.09119895813108006,
+     "salmonella_enterica__tetracycline": -0.01193204764051992,
+     "salmonella_enterica__trimethoprim": 0.012834165875675133
+    },
+    "sentinel-seed-twin": {
+     "salmonella_enterica__amoxicillin_clavulanate": -0.0011917813295012972,
+     "salmonella_enterica__ampicillin": 0.0035452244422838576,
+     "salmonella_enterica__azithromycin": 0.002338042659758534,
+     "salmonella_enterica__cefotaxime": 0.0007288895956164063,
+     "salmonella_enterica__cefoxitin": -0.00027473792779526433,
+     "salmonella_enterica__ceftiofur": -0.0047412645857871985,
+     "salmonella_enterica__ceftriaxone": 0.0007270618583633608,
+     "salmonella_enterica__chloramphenicol": 0.00029000533890140783,
+     "salmonella_enterica__ciprofloxacin": -0.0016300514106708658,
+     "salmonella_enterica__gentamicin": 0.01682915168356852,
+     "salmonella_enterica__kanamycin": 0.0020211254226870827,
+     "salmonella_enterica__nalidixic_acid": 0.0010919212315307248,
+     "salmonella_enterica__spectinomycin": -0.005298607238320476,
+     "salmonella_enterica__streptomycin": -0.0019500653172117293,
+     "salmonella_enterica__sulfamethoxazole_trimethoprim": -0.007479640100988394,
+     "salmonella_enterica__sulfisoxazole": 0.003775395860191011,
+     "salmonella_enterica__tetracycline": -0.0034663233371362567,
+     "salmonella_enterica__trimethoprim": -0.0031179258971731753
+    },
+    "sentinel-tuning-twin": {
+     "salmonella_enterica__amoxicillin_clavulanate": -0.009440345406072031,
+     "salmonella_enterica__ampicillin": -0.018316344343282286,
+     "salmonella_enterica__azithromycin": 0.029487207373809176,
+     "salmonella_enterica__cefotaxime": -0.04498758303795873,
+     "salmonella_enterica__cefoxitin": 0.011272117402745235,
+     "salmonella_enterica__ceftiofur": 0.0014547196828478318,
+     "salmonella_enterica__ceftriaxone": -0.02226541984644216,
+     "salmonella_enterica__chloramphenicol": 0.008891059031058609,
+     "salmonella_enterica__ciprofloxacin": -0.004898188039427562,
+     "salmonella_enterica__gentamicin": 0.04404349261692926,
+     "salmonella_enterica__kanamycin": -0.08533292588854186,
+     "salmonella_enterica__nalidixic_acid": -0.006661052561272471,
+     "salmonella_enterica__spectinomycin": -0.07348989361677918,
+     "salmonella_enterica__streptomycin": -0.02021482405773358,
+     "salmonella_enterica__sulfamethoxazole_trimethoprim": 0.03828545344416302,
+     "salmonella_enterica__sulfisoxazole": 0.01515886884814197,
+     "salmonella_enterica__tetracycline": -0.005605610377092925,
+     "salmonella_enterica__trimethoprim": -0.0015406665028664611
+    }
+   },
+   "datasets": 25,
+   "made": 965,
+   "planned": 1625,
+   "species": "Salmonella enterica",
+   "unanswered": [
+    "salmonella_enterica__ampicillin_sulbactam",
+    "salmonella_enterica__cefazolin",
+    "salmonella_enterica__ceftazidime",
+    "salmonella_enterica__pefloxacin",
+    "salmonella_enterica__sulfamethoxazole",
+    "salmonella_enterica__sulfathiazole",
+    "salmonella_enterica__temocillin"
+   ]
+  },
+  {
+   "arms": {
+    "budget-1000": {
+     "auroc_median": 0.0,
+     "beyond": 15,
+     "improves": 0,
+     "inside": 14,
+     "made": 35,
+     "median": 0.0,
+     "planned": 90,
+     "q1": -0.010421551813773204,
+     "q3": 0.0,
+     "twin": false,
+     "worse": 0,
+     "zero": 14
+    },
+    "budget-16000": {
+     "auroc_median": 0.0,
+     "beyond": 10,
+     "improves": 0,
+     "inside": 15,
+     "made": 35,
+     "median": 0.0,
+     "planned": 90,
+     "q1": -0.0005058902830237745,
+     "q3": 0.010519471155582903,
+     "twin": false,
+     "worse": 0,
+     "zero": 14
+    },
+    "cap-1000": {
+     "auroc_median": -0.03766104228748778,
+     "beyond": 15,
+     "improves": 0,
+     "inside": 0,
+     "made": 15,
+     "median": -0.06848396738810233,
+     "planned": 90,
+     "q1": -0.26516087778552977,
+     "q3": -0.0414752637704624,
+     "twin": false,
+     "worse": 0,
+     "zero": 0
+    },
+    "cap-4000": {
+     "auroc_median": 0.005524245832195818,
+     "beyond": 26,
+     "improves": 0,
+     "inside": 0,
+     "made": 35,
+     "median": 0.020566719693404553,
+     "planned": 90,
+     "q1": -0.019718779990453857,
+     "q3": 0.0902671150460887,
+     "twin": false,
+     "worse": 0,
+     "zero": 0
+    },
+    "grr-v1": {
+     "auroc_median": -0.0010719520261162035,
+     "beyond": 18,
+     "improves": 0,
+     "inside": 0,
+     "made": 20,
+     "median": 0.026997014743401306,
+     "planned": 90,
+     "q1": -0.05396021260111987,
+     "q3": 0.13107501254894888,
+     "twin": false,
+     "worse": 0,
+     "zero": 0
+    },
+    "k-c": {
+     "auroc_median": null,
+     "beyond": 0,
+     "improves": 0,
+     "inside": 0,
+     "made": 0,
+     "median": null,
+     "planned": 90,
+     "q1": null,
+     "q3": null,
+     "twin": false,
+     "worse": 0,
+     "zero": 0
+    },
+    "k-c-h-p": {
+     "auroc_median": null,
+     "beyond": 0,
+     "improves": 0,
+     "inside": 0,
+     "made": 0,
+     "median": null,
+     "planned": 90,
+     "q1": null,
+     "q3": null,
+     "twin": false,
+     "worse": 0,
+     "zero": 0
+    },
+    "k-h": {
+     "auroc_median": 0.0,
+     "beyond": 0,
+     "improves": 0,
+     "inside": 5,
+     "made": 5,
+     "median": 0.0,
+     "planned": 90,
+     "q1": 0.0,
+     "q3": 0.0,
+     "twin": false,
+     "worse": 0,
+     "zero": 5
+    },
+    "k-p": {
+     "auroc_median": 0.0,
+     "beyond": 6,
+     "improves": 0,
+     "inside": 25,
+     "made": 35,
+     "median": 0.0,
+     "planned": 90,
+     "q1": -5.618890728235418e-05,
+     "q3": 0.001141317769932783,
+     "twin": false,
+     "worse": 0,
+     "zero": 10
+    },
+    "k21": {
+     "auroc_median": 0.0006198838516862907,
+     "beyond": 19,
+     "improves": 0,
+     "inside": 3,
+     "made": 35,
+     "median": -0.0012722816938316997,
+     "planned": 90,
+     "q1": -0.01071622619744492,
+     "q3": 0.03698009133120571,
+     "twin": false,
+     "worse": 0,
+     "zero": 0
+    },
+    "k25": {
+     "auroc_median": -0.0014962886493526024,
+     "beyond": 19,
+     "improves": 0,
+     "inside": 8,
+     "made": 35,
+     "median": -0.0028578613783026984,
+     "planned": 90,
+     "q1": -0.042711184632192145,
+     "q3": 0.009082180187874381,
+     "twin": false,
+     "worse": 0,
+     "zero": 1
+    },
+    "sentinel-seed-twin": {
+     "auroc_median": 0.0,
+     "beyond": 2,
+     "improves": 0,
+     "inside": 27,
+     "made": 35,
+     "median": 0.0,
+     "planned": 90,
+     "q1": -0.002814897724092493,
+     "q3": 0.0,
+     "twin": true,
+     "worse": 1,
+     "zero": 21
+    },
+    "sentinel-tuning-twin": {
+     "auroc_median": 0.0,
+     "beyond": 11,
+     "improves": 1,
+     "inside": 4,
+     "made": 20,
+     "median": 0.0,
+     "planned": 90,
+     "q1": -0.01767899072591545,
+     "q3": 0.030461398064075343,
+     "twin": true,
+     "worse": 0,
+     "zero": 4
+    }
+   },
+   "by_dataset": {
+    "budget-1000": {
+     "better": 3,
+     "datasets": 7,
+     "median": -0.008190366715489325,
+     "p": 1.0,
+     "unchanged": 0,
+     "worse": 4
+    },
+    "budget-16000": {
+     "better": 3,
+     "datasets": 7,
+     "median": -0.0018997333728977173,
+     "p": 1.0,
+     "unchanged": 0,
+     "worse": 4
+    },
+    "cap-1000": {
+     "better": 0,
+     "datasets": 3,
+     "median": -0.21874059248799638,
+     "p": 0.25,
+     "unchanged": 0,
+     "worse": 3
+    },
+    "cap-4000": {
+     "better": 4,
+     "datasets": 7,
+     "median": 0.08351614382431254,
+     "p": 1.0,
+     "unchanged": 0,
+     "worse": 3
+    },
+    "grr-v1": {
+     "better": 3,
+     "datasets": 4,
+     "median": 0.03941411651294455,
+     "p": 0.625,
+     "unchanged": 0,
+     "worse": 1
+    },
+    "k-c": {
+     "better": 0,
+     "datasets": 0,
+     "median": null,
+     "p": null,
+     "unchanged": 0,
+     "worse": 0
+    },
+    "k-c-h-p": {
+     "better": 0,
+     "datasets": 0,
+     "median": null,
+     "p": null,
+     "unchanged": 0,
+     "worse": 0
+    },
+    "k-h": {
+     "better": 0,
+     "datasets": 1,
+     "median": 0.0,
+     "p": null,
+     "unchanged": 1,
+     "worse": 0
+    },
+    "k-p": {
+     "better": 3,
+     "datasets": 7,
+     "median": -9.801150873789519e-05,
+     "p": 1.0,
+     "unchanged": 0,
+     "worse": 4
+    },
+    "k21": {
+     "better": 4,
+     "datasets": 7,
+     "median": 0.007084174342224759,
+     "p": 1.0,
+     "unchanged": 0,
+     "worse": 3
+    },
+    "k25": {
+     "better": 1,
+     "datasets": 7,
+     "median": -0.012198285675062964,
+     "p": 0.125,
+     "unchanged": 0,
+     "worse": 6
+    },
+    "sentinel-seed-twin": {
+     "better": 1,
+     "datasets": 7,
+     "median": -0.0009243730354910968,
+     "p": 0.125,
+     "unchanged": 0,
+     "worse": 6
+    },
+    "sentinel-tuning-twin": {
+     "better": 2,
+     "datasets": 4,
+     "median": 0.007206584204251236,
+     "p": 1.0,
+     "unchanged": 0,
+     "worse": 2
+    }
+   },
+   "calibration": {
+    "cart": {
+     "flagged": true,
+     "left_out": 11,
+     "no_test": 3,
+     "of": 7,
+     "rejections": 4,
+     "rule10_contrasts": 241,
+     "tail": 0.0001935781250000007,
+     "twins": [
+      "sentinel-tuning-twin"
+     ]
+    },
+    "gbt": {
+     "flagged": false,
+     "left_out": 11,
+     "no_test": 0,
+     "of": 7,
+     "rejections": 0,
+     "rule10_contrasts": 241,
+     "tail": 0.9999999999999999,
+     "twins": [
+      "sentinel-seed-twin"
+     ]
+    },
+    "lasso": {
+     "flagged": true,
+     "left_out": 11,
+     "no_test": 3,
+     "of": 7,
+     "rejections": 3,
+     "rule10_contrasts": 241,
+     "tail": 0.0037570429687500094,
+     "twins": [
+      "sentinel-tuning-twin"
+     ]
+    },
+    "rf": {
+     "flagged": false,
+     "left_out": 11,
+     "no_test": 0,
+     "of": 7,
+     "rejections": 1,
+     "rule10_contrasts": 241,
+     "tail": 0.3016627039062502,
+     "twins": [
+      "sentinel-seed-twin"
+     ]
+    },
+    "scm": {
+     "flagged": true,
+     "left_out": 11,
+     "no_test": 3,
+     "of": 7,
+     "rejections": 3,
+     "rule10_contrasts": 241,
+     "tail": 0.0037570429687500094,
+     "twins": [
+      "sentinel-tuning-twin"
+     ]
+    }
+   },
+   "dataset_means": {
+    "budget-1000": {
+     "staphylococcus_aureus__chloramphenicol": -0.010952312379877186,
+     "staphylococcus_aureus__ciprofloxacin": 0.03415077560635686,
+     "staphylococcus_aureus__clindamycin": -0.008190366715489325,
+     "staphylococcus_aureus__erythromycin": 0.010197389622190628,
+     "staphylococcus_aureus__oxacillin": 0.003015466318922985,
+     "staphylococcus_aureus__penicillin": -0.01108449674284512,
+     "staphylococcus_aureus__tetracycline": -0.03473237266735336
+    },
+    "budget-16000": {
+     "staphylococcus_aureus__chloramphenicol": -0.005213440009253034,
+     "staphylococcus_aureus__ciprofloxacin": -0.010176853940052877,
+     "staphylococcus_aureus__clindamycin": 0.026725063149602934,
+     "staphylococcus_aureus__erythromycin": 0.05905219155186599,
+     "staphylococcus_aureus__oxacillin": -0.0018997333728977173,
+     "staphylococcus_aureus__penicillin": -0.007591211553164281,
+     "staphylococcus_aureus__tetracycline": 0.021634682112135543
+    },
+    "cap-1000": {
+     "staphylococcus_aureus__clindamycin": -0.33710356967513794,
+     "staphylococcus_aureus__erythromycin": -0.21874059248799638,
+     "staphylococcus_aureus__tetracycline": -0.13578069174623866
+    },
+    "cap-4000": {
+     "staphylococcus_aureus__chloramphenicol": -0.08843341633476794,
+     "staphylococcus_aureus__ciprofloxacin": 0.08351614382431254,
+     "staphylococcus_aureus__clindamycin": 0.11151741271951573,
+     "staphylococcus_aureus__erythromycin": 0.12585034055980085,
+     "staphylococcus_aureus__oxacillin": -0.06522183716991518,
+     "staphylococcus_aureus__penicillin": -0.02079054445340176,
+     "staphylococcus_aureus__tetracycline": 0.08802228025399932
+    },
+    "grr-v1": {
+     "staphylococcus_aureus__ciprofloxacin": 0.028572084860158505,
+     "staphylococcus_aureus__clindamycin": -0.05350491965644096,
+     "staphylococcus_aureus__erythromycin": 0.05025614816573058,
+     "staphylococcus_aureus__penicillin": 0.1023505172870482
+    },
+    "k-c": {},
+    "k-c-h-p": {},
+    "k-h": {
+     "staphylococcus_aureus__oxacillin": 0.0
+    },
+    "k-p": {
+     "staphylococcus_aureus__chloramphenicol": 0.003392203217898587,
+     "staphylococcus_aureus__ciprofloxacin": -9.801150873789519e-05,
+     "staphylococcus_aureus__clindamycin": -0.03619725474077774,
+     "staphylococcus_aureus__erythromycin": 0.005915883651569932,
+     "staphylococcus_aureus__oxacillin": 1.3965135468384427e-06,
+     "staphylococcus_aureus__penicillin": -0.00076716929763142,
+     "staphylococcus_aureus__tetracycline": -0.005471126979736033
+    },
+    "k21": {
+     "staphylococcus_aureus__chloramphenicol": -0.0877942877174667,
+     "staphylococcus_aureus__ciprofloxacin": 0.028920408884320275,
+     "staphylococcus_aureus__clindamycin": -0.019343932974401828,
+     "staphylococcus_aureus__erythromycin": 0.00991751468220859,
+     "staphylococcus_aureus__oxacillin": 0.007084174342224759,
+     "staphylococcus_aureus__penicillin": -0.01006931953614899,
+     "staphylococcus_aureus__tetracycline": 0.1174321912176941
+    },
+    "k25": {
+     "staphylococcus_aureus__chloramphenicol": -0.1830219593725465,
+     "staphylococcus_aureus__ciprofloxacin": -0.012198285675062964,
+     "staphylococcus_aureus__clindamycin": -0.16217892504040063,
+     "staphylococcus_aureus__erythromycin": -0.003024114975976518,
+     "staphylococcus_aureus__oxacillin": -0.007193535092424245,
+     "staphylococcus_aureus__penicillin": 0.0067436035678258175,
+     "staphylococcus_aureus__tetracycline": -0.10757500935036861
+    },
+    "sentinel-seed-twin": {
+     "staphylococcus_aureus__chloramphenicol": -0.001134500562835727,
+     "staphylococcus_aureus__ciprofloxacin": -0.00046909306893529553,
+     "staphylococcus_aureus__clindamycin": -0.001937267985212092,
+     "staphylococcus_aureus__erythromycin": 0.005498278003392734,
+     "staphylococcus_aureus__oxacillin": -0.00016503915482303562,
+     "staphylococcus_aureus__penicillin": -0.0009243730354910968,
+     "staphylococcus_aureus__tetracycline": -0.024780251499581418
+    },
+    "sentinel-tuning-twin": {
+     "staphylococcus_aureus__ciprofloxacin": 0.02322932231464807,
+     "staphylococcus_aureus__clindamycin": -0.046636108667603496,
+     "staphylococcus_aureus__erythromycin": -0.0088161539061456,
+     "staphylococcus_aureus__penicillin": 0.0746026692035115
+    }
+   },
+   "datasets": 18,
+   "made": 305,
+   "planned": 1170,
+   "species": "Staphylococcus aureus",
+   "unanswered": [
+    "staphylococcus_aureus__cefoxitin",
+    "staphylococcus_aureus__ceftaroline",
+    "staphylococcus_aureus__daptomycin",
+    "staphylococcus_aureus__fusidic_acid",
+    "staphylococcus_aureus__gentamicin",
+    "staphylococcus_aureus__levofloxacin",
+    "staphylococcus_aureus__moxifloxacin",
+    "staphylococcus_aureus__mupirocin",
+    "staphylococcus_aureus__rifampin",
+    "staphylococcus_aureus__sulfamethoxazole_trimethoprim",
+    "staphylococcus_aureus__vancomycin"
+   ]
+  },
+  {
+   "arms": {
+    "budget-1000": {
+     "auroc_median": 0.0,
+     "beyond": 8,
+     "improves": 0,
+     "inside": 9,
+     "made": 20,
+     "median": 0.0,
+     "planned": 35,
+     "q1": -0.0279892807011377,
+     "q3": 0.0,
+     "twin": false,
+     "worse": 0,
+     "zero": 8
+    },
+    "budget-16000": {
+     "auroc_median": 0.0,
+     "beyond": 5,
+     "improves": 0,
+     "inside": 11,
+     "made": 20,
+     "median": 0.0,
+     "planned": 35,
+     "q1": -0.0007185143396876663,
+     "q3": 0.00669051867376228,
+     "twin": false,
+     "worse": 0,
+     "zero": 8
+    },
+    "cap-1000": {
+     "auroc_median": -0.007663287279883576,
+     "beyond": 6,
+     "improves": 0,
+     "inside": 0,
+     "made": 10,
+     "median": -0.06704929558241249,
+     "planned": 35,
+     "q1": -0.17756079523390841,
+     "q3": -0.015623835720125639,
+     "twin": false,
+     "worse": 0,
+     "zero": 0
+    },
+    "cap-4000": {
+     "auroc_median": 0.00465212876523281,
+     "beyond": 14,
+     "improves": 0,
+     "inside": 0,
+     "made": 20,
+     "median": 0.016782417300607297,
+     "planned": 35,
+     "q1": -0.02046843972338195,
+     "q3": 0.048731782943728284,
+     "twin": false,
+     "worse": 0,
+     "zero": 0
+    },
+    "grr-v1": {
+     "auroc_median": 0.0007481689237623749,
+     "beyond": 14,
+     "improves": 0,
+     "inside": 0,
+     "made": 20,
+     "median": 0.004325886210914552,
+     "planned": 35,
+     "q1": -0.03340520854374611,
+     "q3": 0.08744160554440654,
+     "twin": false,
+     "worse": 0,
+     "zero": 0
+    },
+    "k-c": {
+     "auroc_median": 0.0,
+     "beyond": 1,
+     "improves": 0,
+     "inside": 17,
+     "made": 20,
+     "median": 0.0,
+     "planned": 35,
+     "q1": 0.0,
+     "q3": 0.0,
+     "twin": false,
+     "worse": 0,
+     "zero": 13
+    },
+    "k-c-h-p": {
+     "auroc_median": null,
+     "beyond": 0,
+     "improves": 0,
+     "inside": 0,
+     "made": 0,
+     "median": null,
+     "planned": 35,
+     "q1": null,
+     "q3": null,
+     "twin": false,
+     "worse": 0,
+     "zero": 0
+    },
+    "k-h": {
+     "auroc_median": null,
+     "beyond": 0,
+     "improves": 0,
+     "inside": 0,
+     "made": 0,
+     "median": null,
+     "planned": 35,
+     "q1": null,
+     "q3": null,
+     "twin": false,
+     "worse": 0,
+     "zero": 0
+    },
+    "k-p": {
+     "auroc_median": 0.0,
+     "beyond": 1,
+     "improves": 0,
+     "inside": 19,
+     "made": 20,
+     "median": 0.0,
+     "planned": 35,
+     "q1": 0.0,
+     "q3": 7.124281501463586e-06,
+     "twin": false,
+     "worse": 0,
+     "zero": 13
+    },
+    "k21": {
+     "auroc_median": -0.0003119471726957775,
+     "beyond": 8,
+     "improves": 0,
+     "inside": 4,
+     "made": 20,
+     "median": 0.0009675516879930617,
+     "planned": 35,
+     "q1": -0.01096474310289519,
+     "q3": 0.01370156789704832,
+     "twin": false,
+     "worse": 0,
+     "zero": 0
+    },
+    "k25": {
+     "auroc_median": -0.0016095064209923071,
+     "beyond": 10,
+     "improves": 0,
+     "inside": 4,
+     "made": 20,
+     "median": 0.0026226278621749614,
+     "planned": 35,
+     "q1": -0.012856672388935132,
+     "q3": 0.016905153426235095,
+     "twin": false,
+     "worse": 0,
+     "zero": 0
+    },
+    "sentinel-seed-twin": {
+     "auroc_median": 0.0,
+     "beyond": 1,
+     "improves": 0,
+     "inside": 16,
+     "made": 20,
+     "median": 0.0,
+     "planned": 35,
+     "q1": 0.0,
+     "q3": 0.0011783222153674171,
+     "twin": true,
+     "worse": 0,
+     "zero": 12
+    },
+    "sentinel-tuning-twin": {
+     "auroc_median": 0.0,
+     "beyond": 13,
+     "improves": 0,
+     "inside": 5,
+     "made": 20,
+     "median": 0.0,
+     "planned": 35,
+     "q1": -0.05512387822539801,
+     "q3": 0.027975977191801824,
+     "twin": true,
+     "worse": 0,
+     "zero": 4
+    }
+   },
+   "by_dataset": {
+    "budget-1000": {
+     "better": 1,
+     "datasets": 4,
+     "median": -0.016509764665560946,
+     "p": 0.625,
+     "unchanged": 0,
+     "worse": 3
+    },
+    "budget-16000": {
+     "better": 3,
+     "datasets": 4,
+     "median": 0.00519649529445802,
+     "p": 0.625,
+     "unchanged": 0,
+     "worse": 1
+    },
+    "cap-1000": {
+     "better": 0,
+     "datasets": 2,
+     "median": -0.15035717508733787,
+     "p": 0.5,
+     "unchanged": 0,
+     "worse": 2
+    },
+    "cap-4000": {
+     "better": 2,
+     "datasets": 4,
+     "median": -0.06223686667707979,
+     "p": 1.0,
+     "unchanged": 0,
+     "worse": 2
+    },
+    "grr-v1": {
+     "better": 3,
+     "datasets": 4,
+     "median": 0.04336746991860912,
+     "p": 0.625,
+     "unchanged": 0,
+     "worse": 1
+    },
+    "k-c": {
+     "better": 2,
+     "datasets": 4,
+     "median": 0.0011124155639270984,
+     "p": 1.0,
+     "unchanged": 1,
+     "worse": 1
+    },
+    "k-c-h-p": {
+     "better": 0,
+     "datasets": 0,
+     "median": null,
+     "p": null,
+     "unchanged": 0,
+     "worse": 0
+    },
+    "k-h": {
+     "better": 0,
+     "datasets": 0,
+     "median": null,
+     "p": null,
+     "unchanged": 0,
+     "worse": 0
+    },
+    "k-p": {
+     "better": 2,
+     "datasets": 4,
+     "median": 0.0003096738509756089,
+     "p": 1.0,
+     "unchanged": 1,
+     "worse": 1
+    },
+    "k21": {
+     "better": 1,
+     "datasets": 4,
+     "median": -0.00625696792373676,
+     "p": 0.625,
+     "unchanged": 0,
+     "worse": 3
+    },
+    "k25": {
+     "better": 2,
+     "datasets": 4,
+     "median": -0.008621595034180926,
+     "p": 1.0,
+     "unchanged": 0,
+     "worse": 2
+    },
+    "sentinel-seed-twin": {
+     "better": 3,
+     "datasets": 4,
+     "median": 0.0025755865215532255,
+     "p": 0.625,
+     "unchanged": 0,
+     "worse": 1
+    },
+    "sentinel-tuning-twin": {
+     "better": 2,
+     "datasets": 4,
+     "median": -0.010469237360363651,
+     "p": 1.0,
+     "unchanged": 0,
+     "worse": 2
+    }
+   },
+   "calibration": {
+    "cart": {
+     "flagged": false,
+     "left_out": 3,
+     "no_test": 0,
+     "of": 4,
+     "rejections": 0,
+     "rule10_contrasts": 118,
+     "tail": 1.0,
+     "twins": [
+      "sentinel-tuning-twin"
+     ]
+    },
+    "gbt": {
+     "flagged": false,
+     "left_out": 3,
+     "no_test": 0,
+     "of": 4,
+     "rejections": 0,
+     "rule10_contrasts": 118,
+     "tail": 1.0,
+     "twins": [
+      "sentinel-seed-twin"
+     ]
+    },
+    "lasso": {
+     "flagged": false,
+     "left_out": 3,
+     "no_test": 0,
+     "of": 4,
+     "rejections": 0,
+     "rule10_contrasts": 118,
+     "tail": 1.0,
+     "twins": [
+      "sentinel-tuning-twin"
+     ]
+    },
+    "rf": {
+     "flagged": false,
+     "left_out": 3,
+     "no_test": 0,
+     "of": 4,
+     "rejections": 0,
+     "rule10_contrasts": 118,
+     "tail": 1.0,
+     "twins": [
+      "sentinel-seed-twin"
+     ]
+    },
+    "scm": {
+     "flagged": false,
+     "left_out": 3,
+     "no_test": 0,
+     "of": 4,
+     "rejections": 0,
+     "rule10_contrasts": 118,
+     "tail": 1.0,
+     "twins": [
+      "sentinel-tuning-twin"
+     ]
+    }
+   },
+   "dataset_means": {
+    "budget-1000": {
+     "neisseria_gonorrhoeae__azithromycin": -0.012196579972835643,
+     "neisseria_gonorrhoeae__ciprofloxacin": 0.014867248578582477,
+     "neisseria_gonorrhoeae__penicillin": -0.06494942058813408,
+     "neisseria_gonorrhoeae__tetracycline": -0.020822949358286248
+    },
+    "budget-16000": {
+     "neisseria_gonorrhoeae__azithromycin": 0.009255968888378437,
+     "neisseria_gonorrhoeae__ciprofloxacin": -0.014192003732153726,
+     "neisseria_gonorrhoeae__penicillin": 0.06162416183943205,
+     "neisseria_gonorrhoeae__tetracycline": 0.0011370217005376032
+    },
+    "cap-1000": {
+     "neisseria_gonorrhoeae__ciprofloxacin": -0.012451372797707135,
+     "neisseria_gonorrhoeae__tetracycline": -0.2882629773769686
+    },
+    "cap-4000": {
+     "neisseria_gonorrhoeae__azithromycin": 0.12487996317707135,
+     "neisseria_gonorrhoeae__ciprofloxacin": 0.03660529214044002,
+     "neisseria_gonorrhoeae__penicillin": -0.1610790254945996,
+     "neisseria_gonorrhoeae__tetracycline": -0.17454711428725436
+    },
+    "grr-v1": {
+     "neisseria_gonorrhoeae__azithromycin": 0.08046327638517264,
+     "neisseria_gonorrhoeae__ciprofloxacin": 0.006271663452045594,
+     "neisseria_gonorrhoeae__penicillin": 0.0864751236663513,
+     "neisseria_gonorrhoeae__tetracycline": -0.11200157646869346
+    },
+    "k-c": {
+     "neisseria_gonorrhoeae__azithromycin": 0.002224831127854197,
+     "neisseria_gonorrhoeae__ciprofloxacin": 0.005178019743566746,
+     "neisseria_gonorrhoeae__penicillin": -0.0007662525780503802,
+     "neisseria_gonorrhoeae__tetracycline": 0.0
+    },
+    "k-c-h-p": {},
+    "k-h": {},
+    "k-p": {
+     "neisseria_gonorrhoeae__azithromycin": 0.0006193477019512178,
+     "neisseria_gonorrhoeae__ciprofloxacin": 0.0,
+     "neisseria_gonorrhoeae__penicillin": 0.040150940755632115,
+     "neisseria_gonorrhoeae__tetracycline": -0.00023257222946350092
+    },
+    "k21": {
+     "neisseria_gonorrhoeae__azithromycin": 0.06125971834505558,
+     "neisseria_gonorrhoeae__ciprofloxacin": -0.0011456103062870249,
+     "neisseria_gonorrhoeae__penicillin": -0.1256605075427326,
+     "neisseria_gonorrhoeae__tetracycline": -0.011368325541186495
+    },
+    "k25": {
+     "neisseria_gonorrhoeae__azithromycin": 0.042307697559985424,
+     "neisseria_gonorrhoeae__ciprofloxacin": 0.0008972599496016914,
+     "neisseria_gonorrhoeae__penicillin": -0.06824072093653095,
+     "neisseria_gonorrhoeae__tetracycline": -0.018140450017963543
+    },
+    "sentinel-seed-twin": {
+     "neisseria_gonorrhoeae__azithromycin": 0.006063282358684934,
+     "neisseria_gonorrhoeae__ciprofloxacin": 0.000462930338542558,
+     "neisseria_gonorrhoeae__penicillin": 0.004688242704563893,
+     "neisseria_gonorrhoeae__tetracycline": -0.001274017146134319
+    },
+    "sentinel-tuning-twin": {
+     "neisseria_gonorrhoeae__azithromycin": 0.06275399295271591,
+     "neisseria_gonorrhoeae__ciprofloxacin": 0.0007919199838037898,
+     "neisseria_gonorrhoeae__penicillin": -0.13062306444992292,
+     "neisseria_gonorrhoeae__tetracycline": -0.021730394704531093
+    }
+   },
+   "datasets": 7,
+   "made": 210,
+   "planned": 455,
+   "species": "Neisseria gonorrhoeae",
+   "unanswered": [
+    "neisseria_gonorrhoeae__cefixime",
+    "neisseria_gonorrhoeae__ceftriaxone",
+    "neisseria_gonorrhoeae__erythromycin"
+   ]
+  },
+  {
+   "arms": {
+    "budget-1000": {
+     "auroc_median": 0.0,
+     "beyond": 21,
+     "improves": 0,
+     "inside": 54,
+     "made": 100,
+     "median": 0.0,
+     "planned": 110,
+     "q1": -0.015896208316004648,
+     "q3": 0.0,
+     "twin": false,
+     "worse": 3,
+     "zero": 40
+    },
+    "budget-16000": {
+     "auroc_median": 0.0,
+     "beyond": 11,
+     "improves": 1,
+     "inside": 62,
+     "made": 100,
+     "median": 0.0,
+     "planned": 110,
+     "q1": -0.0003452513618082782,
+     "q3": 0.002989033622204571,
+     "twin": false,
+     "worse": 4,
+     "zero": 40
+    },
+    "cap-1000": {
+     "auroc_median": 0.00032149555544847366,
+     "beyond": 57,
+     "improves": 0,
+     "inside": 4,
+     "made": 90,
+     "median": -0.013530388155331523,
+     "planned": 110,
+     "q1": -0.05088130988984814,
+     "q3": 0.012861782245970014,
+     "twin": false,
+     "worse": 5,
+     "zero": 0
+    },
+    "cap-4000": {
+     "auroc_median": -0.0021588137377932526,
+     "beyond": 53,
+     "improves": 2,
+     "inside": 12,
+     "made": 100,
+     "median": -0.0015126269534625604,
+     "planned": 110,
+     "q1": -0.020737816691937264,
+     "q3": 0.020802583797774513,
+     "twin": false,
+     "worse": 5,
+     "zero": 0
+    },
+    "grr-v1": {
+     "auroc_median": -0.01613648070042224,
+     "beyond": 45,
+     "improves": 1,
+     "inside": 1,
+     "made": 50,
+     "median": -0.04136440720704965,
+     "planned": 110,
+     "q1": -0.10424683986851735,
+     "q3": 0.012123251538909509,
+     "twin": false,
+     "worse": 2,
+     "zero": 1
+    },
+    "k-c": {
+     "auroc_median": null,
+     "beyond": 0,
+     "improves": 0,
+     "inside": 0,
+     "made": 0,
+     "median": null,
+     "planned": 110,
+     "q1": null,
+     "q3": null,
+     "twin": false,
+     "worse": 0,
+     "zero": 0
+    },
+    "k-c-h-p": {
+     "auroc_median": null,
+     "beyond": 0,
+     "improves": 0,
+     "inside": 0,
+     "made": 0,
+     "median": null,
+     "planned": 110,
+     "q1": null,
+     "q3": null,
+     "twin": false,
+     "worse": 0,
+     "zero": 0
+    },
+    "k-h": {
+     "auroc_median": null,
+     "beyond": 0,
+     "improves": 0,
+     "inside": 0,
+     "made": 0,
+     "median": null,
+     "planned": 110,
+     "q1": null,
+     "q3": null,
+     "twin": false,
+     "worse": 0,
+     "zero": 0
+    },
+    "k-p": {
+     "auroc_median": 0.0,
+     "beyond": 0,
+     "improves": 0,
+     "inside": 100,
+     "made": 100,
+     "median": 0.0,
+     "planned": 110,
+     "q1": 0.0,
+     "q3": 0.0,
+     "twin": false,
+     "worse": 0,
+     "zero": 99
+    },
+    "k21": {
+     "auroc_median": -0.0006472731912694819,
+     "beyond": 32,
+     "improves": 0,
+     "inside": 43,
+     "made": 100,
+     "median": -0.001323333716091119,
+     "planned": 110,
+     "q1": -0.006669490601934392,
+     "q3": 0.005665504830379356,
+     "twin": false,
+     "worse": 1,
+     "zero": 0
+    },
+    "k25": {
+     "auroc_median": -0.001080861388449635,
+     "beyond": 26,
+     "improves": 0,
+     "inside": 50,
+     "made": 100,
+     "median": -0.0004116317244794357,
+     "planned": 110,
+     "q1": -0.004892589261759036,
+     "q3": 0.00370834282895301,
+     "twin": false,
+     "worse": 0,
+     "zero": 1
+    },
+    "sentinel-seed-twin": {
+     "auroc_median": 0.0,
+     "beyond": 2,
+     "improves": 0,
+     "inside": 89,
+     "made": 100,
+     "median": 0.0,
+     "planned": 110,
+     "q1": 0.0,
+     "q3": 0.0,
+     "twin": true,
+     "worse": 1,
+     "zero": 60
+    },
+    "sentinel-tuning-twin": {
+     "auroc_median": 0.0,
+     "beyond": 30,
+     "improves": 0,
+     "inside": 41,
+     "made": 100,
+     "median": -0.00010068731228319653,
+     "planned": 110,
+     "q1": -0.007234724525248206,
+     "q3": 0.0027657133155298214,
+     "twin": true,
+     "worse": 0,
+     "zero": 21
+    }
+   },
+   "by_dataset": {
+    "budget-1000": {
+     "better": 2,
+     "datasets": 20,
+     "median": -0.008986132121339988,
+     "p": 0.0004024505615234375,
+     "unchanged": 0,
+     "worse": 18
+    },
+    "budget-16000": {
+     "better": 9,
+     "datasets": 20,
+     "median": -0.0004286937969177998,
+     "p": 0.8238029479980469,
+     "unchanged": 0,
+     "worse": 11
+    },
+    "cap-1000": {
+     "better": 7,
+     "datasets": 18,
+     "median": -0.01063150319984536,
+     "p": 0.480682373046875,
+     "unchanged": 0,
+     "worse": 11
+    },
+    "cap-4000": {
+     "better": 11,
+     "datasets": 20,
+     "median": 0.004925592554115696,
+     "p": 0.8238029479980469,
+     "unchanged": 0,
+     "worse": 9
+    },
+    "grr-v1": {
+     "better": 2,
+     "datasets": 10,
+     "median": -0.04282052018790238,
+     "p": 0.109375,
+     "unchanged": 0,
+     "worse": 8
+    },
+    "k-c": {
+     "better": 0,
+     "datasets": 0,
+     "median": null,
+     "p": null,
+     "unchanged": 0,
+     "worse": 0
+    },
+    "k-c-h-p": {
+     "better": 0,
+     "datasets": 0,
+     "median": null,
+     "p": null,
+     "unchanged": 0,
+     "worse": 0
+    },
+    "k-h": {
+     "better": 0,
+     "datasets": 0,
+     "median": null,
+     "p": null,
+     "unchanged": 0,
+     "worse": 0
+    },
+    "k-p": {
+     "better": 1,
+     "datasets": 20,
+     "median": 0.0,
+     "p": 1.0,
+     "unchanged": 19,
+     "worse": 0
+    },
+    "k21": {
+     "better": 8,
+     "datasets": 20,
+     "median": -0.003761049987058895,
+     "p": 0.5034446716308594,
+     "unchanged": 0,
+     "worse": 12
+    },
+    "k25": {
+     "better": 8,
+     "datasets": 20,
+     "median": -0.004478723131915696,
+     "p": 0.5034446716308594,
+     "unchanged": 0,
+     "worse": 12
+    },
+    "sentinel-seed-twin": {
+     "better": 9,
+     "datasets": 20,
+     "median": -0.00016969194357912849,
+     "p": 0.8238029479980469,
+     "unchanged": 0,
+     "worse": 11
+    },
+    "sentinel-tuning-twin": {
+     "better": 9,
+     "datasets": 20,
+     "median": -0.0014411312023623747,
+     "p": 0.8238029479980469,
+     "unchanged": 0,
+     "worse": 11
+    }
+   },
+   "calibration": {
+    "cart": {
+     "flagged": false,
+     "left_out": 2,
+     "no_test": 0,
+     "of": 20,
+     "rejections": 0,
+     "rule10_contrasts": 379,
+     "tail": 1.0,
+     "twins": [
+      "sentinel-tuning-twin"
+     ]
+    },
+    "gbt": {
+     "flagged": false,
+     "left_out": 2,
+     "no_test": 0,
+     "of": 20,
+     "rejections": 0,
+     "rule10_contrasts": 379,
+     "tail": 1.0,
+     "twins": [
+      "sentinel-seed-twin"
+     ]
+    },
+    "lasso": {
+     "flagged": false,
+     "left_out": 2,
+     "no_test": 0,
+     "of": 20,
+     "rejections": 0,
+     "rule10_contrasts": 379,
+     "tail": 1.0,
+     "twins": [
+      "sentinel-tuning-twin"
+     ]
+    },
+    "rf": {
+     "flagged": false,
+     "left_out": 2,
+     "no_test": 0,
+     "of": 20,
+     "rejections": 1,
+     "rule10_contrasts": 379,
+     "tail": 0.6415140775914581,
+     "twins": [
+      "sentinel-seed-twin"
+     ]
+    },
+    "scm": {
+     "flagged": false,
+     "left_out": 2,
+     "no_test": 0,
+     "of": 20,
+     "rejections": 0,
+     "rule10_contrasts": 379,
+     "tail": 1.0,
+     "twins": [
+      "sentinel-tuning-twin"
+     ]
+    }
+   },
+   "dataset_means": {
+    "budget-1000": {
+     "mycobacterium_tuberculosis__amikacin": -0.0013188652756265771,
+     "mycobacterium_tuberculosis__amoxicillin": -0.019509647627613,
+     "mycobacterium_tuberculosis__capreomycin": -0.0018500394449404434,
+     "mycobacterium_tuberculosis__clofazimine": -0.011795567007023892,
+     "mycobacterium_tuberculosis__cycloserine": -0.012576887583668147,
+     "mycobacterium_tuberculosis__delamanid": -0.009514797572110496,
+     "mycobacterium_tuberculosis__ethambutol": -0.007970300909051148,
+     "mycobacterium_tuberculosis__ethionamide": -0.018745155437155533,
+     "mycobacterium_tuberculosis__isoniazid": -0.012748603877909234,
+     "mycobacterium_tuberculosis__kanamycin": -0.00845746667056948,
+     "mycobacterium_tuberculosis__levofloxacin": -0.0019035109674720458,
+     "mycobacterium_tuberculosis__linezolid": -0.027782845411229308,
+     "mycobacterium_tuberculosis__moxifloxacin": -0.0005688314732654089,
+     "mycobacterium_tuberculosis__ofloxacin": 0.006229433874024028,
+     "mycobacterium_tuberculosis__para_aminosalicylic_acid": -0.00976158896459764,
+     "mycobacterium_tuberculosis__prothionamide": -0.006722910434528051,
+     "mycobacterium_tuberculosis__pyrazinamide": -0.000503047930709642,
+     "mycobacterium_tuberculosis__rifabutin": 0.0005488608125177252,
+     "mycobacterium_tuberculosis__rifampin": -0.01028084982641685,
+     "mycobacterium_tuberculosis__streptomycin": -0.011606940387681477
+    },
+    "budget-16000": {
+     "mycobacterium_tuberculosis__amikacin": -0.0024578540038872393,
+     "mycobacterium_tuberculosis__amoxicillin": -0.0004532336390467722,
+     "mycobacterium_tuberculosis__capreomycin": -0.0034601169403065727,
+     "mycobacterium_tuberculosis__clofazimine": -0.0054325341357865245,
+     "mycobacterium_tuberculosis__cycloserine": -0.005623873963204548,
+     "mycobacterium_tuberculosis__delamanid": 0.002013242161517646,
+     "mycobacterium_tuberculosis__ethambutol": 0.006875925260100725,
+     "mycobacterium_tuberculosis__ethionamide": -0.0008056324025782456,
+     "mycobacterium_tuberculosis__isoniazid": 0.007525021894485515,
+     "mycobacterium_tuberculosis__kanamycin": -0.004453470027274834,
+     "mycobacterium_tuberculosis__levofloxacin": 0.004044556621235182,
+     "mycobacterium_tuberculosis__linezolid": 0.008430214654126697,
+     "mycobacterium_tuberculosis__moxifloxacin": -0.004829937370255002,
+     "mycobacterium_tuberculosis__ofloxacin": -0.011072957992237198,
+     "mycobacterium_tuberculosis__para_aminosalicylic_acid": 0.0018809078774261728,
+     "mycobacterium_tuberculosis__prothionamide": -0.003839899188404972,
+     "mycobacterium_tuberculosis__pyrazinamide": 0.0065335377663224585,
+     "mycobacterium_tuberculosis__rifabutin": -0.0004041539547888275,
+     "mycobacterium_tuberculosis__rifampin": 0.014776249365342243,
+     "mycobacterium_tuberculosis__streptomycin": 0.016405101703511695
+    },
+    "cap-1000": {
+     "mycobacterium_tuberculosis__amikacin": -0.01694644969858716,
+     "mycobacterium_tuberculosis__capreomycin": 0.01652168049441895,
+     "mycobacterium_tuberculosis__clofazimine": -0.07953230735584808,
+     "mycobacterium_tuberculosis__cycloserine": 0.2251291928759346,
+     "mycobacterium_tuberculosis__delamanid": -0.04784211588354651,
+     "mycobacterium_tuberculosis__ethambutol": -0.045717101820582536,
+     "mycobacterium_tuberculosis__ethionamide": -0.03923517223586869,
+     "mycobacterium_tuberculosis__isoniazid": -0.0036492727285570353,
+     "mycobacterium_tuberculosis__kanamycin": -0.01772757884501313,
+     "mycobacterium_tuberculosis__levofloxacin": -0.4680468972022768,
+     "mycobacterium_tuberculosis__linezolid": 0.08800407916453375,
+     "mycobacterium_tuberculosis__moxifloxacin": 0.0008233924092902018,
+     "mycobacterium_tuberculosis__ofloxacin": -0.004316556701103558,
+     "mycobacterium_tuberculosis__para_aminosalicylic_acid": 0.03470382866932701,
+     "mycobacterium_tuberculosis__pyrazinamide": 0.08687880663244049,
+     "mycobacterium_tuberculosis__rifabutin": -0.023370445480929862,
+     "mycobacterium_tuberculosis__rifampin": 0.00029354125400284195,
+     "mycobacterium_tuberculosis__streptomycin": -0.07146448781875933
+    },
+    "cap-4000": {
+     "mycobacterium_tuberculosis__amikacin": -0.008649875567686595,
+     "mycobacterium_tuberculosis__amoxicillin": 0.22374380465039093,
+     "mycobacterium_tuberculosis__capreomycin": 0.010092111035951376,
+     "mycobacterium_tuberculosis__clofazimine": 0.5633755626114206,
+     "mycobacterium_tuberculosis__cycloserine": -0.035506339939457524,
+     "mycobacterium_tuberculosis__delamanid": 0.05569627323216329,
+     "mycobacterium_tuberculosis__ethambutol": -0.0468390540084044,
+     "mycobacterium_tuberculosis__ethionamide": 0.036925662466338355,
+     "mycobacterium_tuberculosis__isoniazid": -0.001014919845599776,
+     "mycobacterium_tuberculosis__kanamycin": 0.005206912128324779,
+     "mycobacterium_tuberculosis__levofloxacin": -0.026960763959513023,
+     "mycobacterium_tuberculosis__linezolid": 0.24760301783216607,
+     "mycobacterium_tuberculosis__moxifloxacin": -0.012483523279953777,
+     "mycobacterium_tuberculosis__ofloxacin": 0.004644272979906614,
+     "mycobacterium_tuberculosis__para_aminosalicylic_acid": 0.049999602836895585,
+     "mycobacterium_tuberculosis__prothionamide": -0.1051276200447138,
+     "mycobacterium_tuberculosis__pyrazinamide": 0.335816984688522,
+     "mycobacterium_tuberculosis__rifabutin": 0.01707418534549996,
+     "mycobacterium_tuberculosis__rifampin": -0.019706948285981702,
+     "mycobacterium_tuberculosis__streptomycin": -0.008399081876605244
+    },
+    "grr-v1": {
+     "mycobacterium_tuberculosis__capreomycin": -0.15494839660502593,
+     "mycobacterium_tuberculosis__delamanid": -0.009606885876669049,
+     "mycobacterium_tuberculosis__ethambutol": -0.010109131077577091,
+     "mycobacterium_tuberculosis__ethionamide": -0.15314247595529226,
+     "mycobacterium_tuberculosis__isoniazid": 0.08415098421383423,
+     "mycobacterium_tuberculosis__kanamycin": -0.18754552706277586,
+     "mycobacterium_tuberculosis__moxifloxacin": -0.056145268597725416,
+     "mycobacterium_tuberculosis__ofloxacin": -0.03962226272331279,
+     "mycobacterium_tuberculosis__rifabutin": -0.046018777652491974,
+     "mycobacterium_tuberculosis__rifampin": 0.025879984005131862
+    },
+    "k-c": {},
+    "k-c-h-p": {},
+    "k-h": {},
+    "k-p": {
+     "mycobacterium_tuberculosis__amikacin": 0.0,
+     "mycobacterium_tuberculosis__amoxicillin": 0.0,
+     "mycobacterium_tuberculosis__capreomycin": 0.0,
+     "mycobacterium_tuberculosis__clofazimine": 0.0,
+     "mycobacterium_tuberculosis__cycloserine": 0.0,
+     "mycobacterium_tuberculosis__delamanid": 0.0007675200305813298,
+     "mycobacterium_tuberculosis__ethambutol": 0.0,
+     "mycobacterium_tuberculosis__ethionamide": 0.0,
+     "mycobacterium_tuberculosis__isoniazid": 0.0,
+     "mycobacterium_tuberculosis__kanamycin": 0.0,
+     "mycobacterium_tuberculosis__levofloxacin": 0.0,
+     "mycobacterium_tuberculosis__linezolid": 0.0,
+     "mycobacterium_tuberculosis__moxifloxacin": 0.0,
+     "mycobacterium_tuberculosis__ofloxacin": 0.0,
+     "mycobacterium_tuberculosis__para_aminosalicylic_acid": 0.0,
+     "mycobacterium_tuberculosis__prothionamide": 0.0,
+     "mycobacterium_tuberculosis__pyrazinamide": 0.0,
+     "mycobacterium_tuberculosis__rifabutin": 0.0,
+     "mycobacterium_tuberculosis__rifampin": 0.0,
+     "mycobacterium_tuberculosis__streptomycin": 0.0
+    },
+    "k21": {
+     "mycobacterium_tuberculosis__amikacin": -0.022911004004775765,
+     "mycobacterium_tuberculosis__amoxicillin": -0.009583152819574989,
+     "mycobacterium_tuberculosis__capreomycin": 0.024655794004442073,
+     "mycobacterium_tuberculosis__clofazimine": 0.26758279144032,
+     "mycobacterium_tuberculosis__cycloserine": 0.06644312016453532,
+     "mycobacterium_tuberculosis__delamanid": -0.05423031118358769,
+     "mycobacterium_tuberculosis__ethambutol": -0.013664204981400557,
+     "mycobacterium_tuberculosis__ethionamide": -0.004773601268886999,
+     "mycobacterium_tuberculosis__isoniazid": -0.0017701952687380347,
+     "mycobacterium_tuberculosis__kanamycin": -0.003956051531373676,
+     "mycobacterium_tuberculosis__levofloxacin": -0.011050150304574598,
+     "mycobacterium_tuberculosis__linezolid": 0.15800812339705186,
+     "mycobacterium_tuberculosis__moxifloxacin": -0.01060617264807159,
+     "mycobacterium_tuberculosis__ofloxacin": 0.004289024125863851,
+     "mycobacterium_tuberculosis__para_aminosalicylic_acid": 0.017099314681302446,
+     "mycobacterium_tuberculosis__prothionamide": -0.0035660484427441136,
+     "mycobacterium_tuberculosis__pyrazinamide": 0.033526005750324946,
+     "mycobacterium_tuberculosis__rifabutin": -0.004953268512033158,
+     "mycobacterium_tuberculosis__rifampin": -0.017091353170715785,
+     "mycobacterium_tuberculosis__streptomycin": 0.042451963567261726
+    },
+    "k25": {
+     "mycobacterium_tuberculosis__amikacin": -0.013731056176622666,
+     "mycobacterium_tuberculosis__amoxicillin": -0.24177858352483952,
+     "mycobacterium_tuberculosis__capreomycin": 0.009015801364177928,
+     "mycobacterium_tuberculosis__clofazimine": 0.2964398657422788,
+     "mycobacterium_tuberculosis__cycloserine": 0.12017396710274708,
+     "mycobacterium_tuberculosis__delamanid": -0.010163065861214706,
+     "mycobacterium_tuberculosis__ethambutol": -0.005275970895146967,
+     "mycobacterium_tuberculosis__ethionamide": 0.020255185499805175,
+     "mycobacterium_tuberculosis__isoniazid": -0.0020579005381754444,
+     "mycobacterium_tuberculosis__kanamycin": -0.006478171007615224,
+     "mycobacterium_tuberculosis__levofloxacin": -0.012944684403892192,
+     "mycobacterium_tuberculosis__linezolid": 0.0917608795795208,
+     "mycobacterium_tuberculosis__moxifloxacin": 0.0066467445643669685,
+     "mycobacterium_tuberculosis__ofloxacin": 0.0035415063639277857,
+     "mycobacterium_tuberculosis__para_aminosalicylic_acid": -0.006178304990036782,
+     "mycobacterium_tuberculosis__prothionamide": 0.0762511479429934,
+     "mycobacterium_tuberculosis__pyrazinamide": -0.04782234687590013,
+     "mycobacterium_tuberculosis__rifabutin": -0.004653229329459736,
+     "mycobacterium_tuberculosis__rifampin": -0.004304216934371655,
+     "mycobacterium_tuberculosis__streptomycin": -0.01737785404771689
+    },
+    "sentinel-seed-twin": {
+     "mycobacterium_tuberculosis__amikacin": -0.0005526637561085631,
+     "mycobacterium_tuberculosis__amoxicillin": -0.0020447035813486196,
+     "mycobacterium_tuberculosis__capreomycin": 0.0029478298921747624,
+     "mycobacterium_tuberculosis__clofazimine": -0.0008576882007673491,
+     "mycobacterium_tuberculosis__cycloserine": -0.005080389953213142,
+     "mycobacterium_tuberculosis__delamanid": 0.001044519193653473,
+     "mycobacterium_tuberculosis__ethambutol": -0.001009460659700975,
+     "mycobacterium_tuberculosis__ethionamide": -0.00031547253139043607,
+     "mycobacterium_tuberculosis__isoniazid": -2.3911355767820916e-05,
+     "mycobacterium_tuberculosis__kanamycin": 0.0011383829128874413,
+     "mycobacterium_tuberculosis__levofloxacin": -0.0006771457744297413,
+     "mycobacterium_tuberculosis__linezolid": 0.005040798475541355,
+     "mycobacterium_tuberculosis__moxifloxacin": -0.000345414729818548,
+     "mycobacterium_tuberculosis__ofloxacin": 0.0004357789111814104,
+     "mycobacterium_tuberculosis__para_aminosalicylic_acid": -0.0013869380132782605,
+     "mycobacterium_tuberculosis__prothionamide": -0.003638099454997986,
+     "mycobacterium_tuberculosis__pyrazinamide": 0.00098443816056228,
+     "mycobacterium_tuberculosis__rifabutin": 0.0017732405749327155,
+     "mycobacterium_tuberculosis__rifampin": 0.0002877804428649896,
+     "mycobacterium_tuberculosis__streptomycin": 0.006702595698983992
+    },
+    "sentinel-tuning-twin": {
+     "mycobacterium_tuberculosis__amikacin": -0.01129862641300272,
+     "mycobacterium_tuberculosis__amoxicillin": -0.040565069571677256,
+     "mycobacterium_tuberculosis__capreomycin": 0.02269501923412598,
+     "mycobacterium_tuberculosis__clofazimine": 0.13980899301751987,
+     "mycobacterium_tuberculosis__cycloserine": -0.021702808945321662,
+     "mycobacterium_tuberculosis__delamanid": 0.03712002502365648,
+     "mycobacterium_tuberculosis__ethambutol": 0.009536260534243677,
+     "mycobacterium_tuberculosis__ethionamide": 0.010726271051555363,
+     "mycobacterium_tuberculosis__isoniazid": -0.002519946317924105,
+     "mycobacterium_tuberculosis__kanamycin": -0.0014453500435981934,
+     "mycobacterium_tuberculosis__levofloxacin": -0.001605647309506001,
+     "mycobacterium_tuberculosis__linezolid": 0.11185998925179139,
+     "mycobacterium_tuberculosis__moxifloxacin": 0.002048103826257761,
+     "mycobacterium_tuberculosis__ofloxacin": -0.001436912361126556,
+     "mycobacterium_tuberculosis__para_aminosalicylic_acid": 0.02699735498887968,
+     "mycobacterium_tuberculosis__prothionamide": -0.10291510746801044,
+     "mycobacterium_tuberculosis__pyrazinamide": -0.04436175032766923,
+     "mycobacterium_tuberculosis__rifabutin": -0.004430768446038539,
+     "mycobacterium_tuberculosis__rifampin": -0.003683140751271516,
+     "mycobacterium_tuberculosis__streptomycin": 0.0053768236052061345
+    }
+   },
+   "datasets": 22,
+   "made": 940,
+   "planned": 1430,
+   "species": "Mycobacterium tuberculosis",
+   "unanswered": [
+    "mycobacterium_tuberculosis__ciprofloxacin",
+    "mycobacterium_tuberculosis__nicotinamide"
+   ]
+  }
+ ]
+}

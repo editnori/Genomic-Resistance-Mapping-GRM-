@@ -1,0 +1,17 @@
+dataset	learner	grouping	group	scored_resistant	scored_susceptible	tp	fn	fp	tn	no_call_resistant	no_call_susceptible
+shigella_flexneri__ciprofloxacin	scm	bioproject	PRJNA1069659	31	47	23	8	8	39	0	0
+shigella_flexneri__ciprofloxacin	scm	country	Canada	31	47	23	8	8	39	0	0
+shigella_flexneri__ciprofloxacin	scm	mlst_in_cohort	no	1	0	1	0	0	0	0	0
+shigella_flexneri__ciprofloxacin	scm	mlst_in_cohort	yes	30	47	22	8	8	39	0	0
+shigella_flexneri__ciprofloxacin	cart	bioproject	PRJNA1069659	31	47	23	8	9	38	0	0
+shigella_flexneri__ciprofloxacin	cart	country	Canada	31	47	23	8	9	38	0	0
+shigella_flexneri__ciprofloxacin	cart	mlst_in_cohort	no	1	0	1	0	0	0	0	0
+shigella_flexneri__ciprofloxacin	cart	mlst_in_cohort	yes	30	47	22	8	9	38	0	0
+shigella_flexneri__ciprofloxacin	lasso	bioproject	PRJNA1069659	31	47	23	8	8	39	0	0
+shigella_flexneri__ciprofloxacin	lasso	country	Canada	31	47	23	8	8	39	0	0
+shigella_flexneri__ciprofloxacin	lasso	mlst_in_cohort	no	1	0	1	0	0	0	0	0
+shigella_flexneri__ciprofloxacin	lasso	mlst_in_cohort	yes	30	47	22	8	8	39	0	0
+shigella_flexneri__ciprofloxacin	known_gene	bioproject	PRJNA1069659	31	47	0	31	0	47	0	0
+shigella_flexneri__ciprofloxacin	known_gene	country	Canada	31	47	0	31	0	47	0	0
+shigella_flexneri__ciprofloxacin	known_gene	mlst_in_cohort	no	1	0	0	1	0	0	0	0
+shigella_flexneri__ciprofloxacin	known_gene	mlst_in_cohort	yes	30	47	0	30	0	47	0	0

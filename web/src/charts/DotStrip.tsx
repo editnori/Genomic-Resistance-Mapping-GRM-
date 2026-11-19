@@ -8,7 +8,8 @@
 
 import { useLayoutEffect, useRef, useState } from "react";
 import type { CatalogRow } from "../data/schema";
-import { capitalize, pct, speciesShort } from "../data/format";
+import { datasetTitle, median, pct } from "../data/format";
+import { leadOver, leadWords, type MicConstant } from "../data/baselines";
 import { largestGaps } from "../data/derive/overview";
 import { REFERENCE_BARS } from "../data/metrics";
 import type { TipLine } from "../ui/HoverTip";
@@ -186,8 +187,6 @@ export const DotStrip = ({
   );
 };
 
-const datasetName = (r: CatalogRow): string => `${capitalize(r.antibiotic)}, ${speciesShort(r.species)}`;
-
 /** Per paired dataset, random-split minus lineage-held-out balanced
  *  accuracy of the best learner, in points. */
 export const GapSwarm = ({ rows, height, onOpen }: { rows: readonly CatalogRow[]; height?: number; onOpen?(id: string): void }) => {
@@ -202,11 +201,11 @@ export const GapSwarm = ({ rows, height, onOpen }: { rows: readonly CatalogRow[]
       data={paired.map((r) => ({
         id: r.id,
         value: r.best_random! - r.best_lineage!,
-        tip: [{ term: datasetName(r), text: `${((r.best_random! - r.best_lineage!) * 100).toFixed(1)} points: ${pct(r.best_random)} random, ${pct(r.best_lineage)} lineages held out.` }],
+        tip: [{ term: datasetTitle(r), text: `${((r.best_random! - r.best_lineage!) * 100).toFixed(1)} points: ${pct(r.best_random)} random, ${pct(r.best_lineage)} lineages held out.` }],
       }))}
       domain={[lo, hi]}
       format={(v) => (v * 100).toFixed(0)}
-      axisTitle="Points of balanced accuracy lost with lineages held out (random minus lineage)"
+      axisTitle="Balanced accuracy lost when whole lineages are held out, in percentage points (random split minus lineage split). Further left is a smaller drop; below 0, the lineage split scored higher."
       refs={[
         { key: "bar", value: 0.05, anchor: "end" },
         { key: "zero", value: 0, label: "No change", anchor: "end", solid: true },
@@ -215,7 +214,7 @@ export const GapSwarm = ({ rows, height, onOpen }: { rows: readonly CatalogRow[]
         { key: "below", label: `${gaps.length - above} ≤5 points`, short: `${gaps.length - above} ≤5`, at: 0.05, anchor: "end" },
         { key: "above", label: `${above} >5 points`, short: `${above} >5`, at: 0.05, anchor: "start" },
       ]}
-      named={largestGaps(paired, 3).map(({ row }) => ({ id: row.id, lines: [datasetName(row), `${pct(row.best_random)} to ${pct(row.best_lineage)}`] }))}
+      named={largestGaps(paired, 3).map(({ row }) => ({ id: row.id, lines: [datasetTitle(row), `${pct(row.best_random)} to ${pct(row.best_lineage)}`] }))}
       height={height}
       onOpen={onOpen}
     />
@@ -224,11 +223,30 @@ export const GapSwarm = ({ rows, height, onOpen }: { rows: readonly CatalogRow[]
 
 /** Per dataset with an MIC model, the share of exact MICs predicted within
  *  one doubling dilution. Every dataset is drawn. */
-export const MicStrip = ({ rows, height, onOpen }: { rows: readonly CatalogRow[]; height?: number; onOpen?(id: string): void }) => {
+export const MicStrip = ({
+  rows,
+  height,
+  onOpen,
+  constants,
+}: {
+  rows: readonly CatalogRow[];
+  height?: number;
+  onOpen?(id: string): void;
+  /** Each dataset's constant MIC from the training folds (micConstants):
+   *  a solid line at their median, and each one in its dataset's tooltip. */
+  constants?: ReadonlyMap<string, MicConstant>;
+}) => {
   const scored = rows.filter((r) => r.mic_essential_agreement !== null);
   const values = scored.map((r) => r.mic_essential_agreement!);
   const atOrAbove = values.filter((v) => v >= REFERENCE_BARS.mic).length;
-  const lo = Math.min(0.8, Math.floor(Math.min(...values) * 10) / 10);
+  const shown = constants === undefined ? [] : scored.flatMap((r) => (constants.has(r.id) ? [constants.get(r.id)!.constant] : []));
+  const medianConstant = median(shown);
+  const lo = Math.min(0.8, Math.floor(Math.min(...values, ...(medianConstant === null ? [] : [medianConstant])) * 10) / 10);
+  const constantTip = (r: CatalogRow): TipLine[] => {
+    const c = constants?.get(r.id);
+    if (c === undefined) return [];
+    return [{ term: "Constant MIC", text: `${pct(c.constant)} from the training folds' median MIC, on the same exact MICs; the model is ${leadWords(leadOver(c.model, c.constant))}.${c.confirmed ? "" : " † The held-out predictions do not confirm the rebuilt folds."}` }];
+  };
   const lowest = [...scored].sort((a, b) => a.mic_essential_agreement! - b.mic_essential_agreement! || a.id.localeCompare(b.id))[0];
   return (
     <DotStrip
@@ -236,17 +254,20 @@ export const MicStrip = ({ rows, height, onOpen }: { rows: readonly CatalogRow[]
       data={scored.map((r) => ({
         id: r.id,
         value: r.mic_essential_agreement!,
-        tip: [{ term: datasetName(r), text: `${pct(r.mic_essential_agreement)} of exact MICs predicted within one doubling dilution.` }],
+        tip: [{ term: datasetTitle(r), text: `${pct(r.mic_essential_agreement)} of exact MICs predicted within one doubling dilution.` }, ...constantTip(r)],
       }))}
       domain={[lo, 1]}
       format={(v) => `${Math.round(v * 100)}`}
-      axisTitle="Essential agreement: exact MICs predicted within one doubling dilution (%)"
-      refs={[{ key: "bar", value: REFERENCE_BARS.mic, anchor: "start" }]}
+      axisTitle="Essential agreement: share of exact MICs predicted within one doubling dilution (%). Higher is better."
+      refs={[
+        { key: "bar", value: REFERENCE_BARS.mic, anchor: "start" },
+        ...(medianConstant === null ? [] : [{ key: "constant", value: medianConstant, label: `Constant MIC, median ${pct(medianConstant)}`, anchor: "end" as const, solid: true }]),
+      ]}
       regions={[
         { key: "below", label: `${values.length - atOrAbove} <90%`, at: REFERENCE_BARS.mic, anchor: "end" },
         { key: "above", label: `${atOrAbove} ≥90%`, at: REFERENCE_BARS.mic, anchor: "start" },
       ]}
-      named={lowest === undefined ? [] : [{ id: lowest.id, lines: [datasetName(lowest), pct(lowest.mic_essential_agreement)] }]}
+      named={lowest === undefined ? [] : [{ id: lowest.id, lines: [datasetTitle(lowest), pct(lowest.mic_essential_agreement)] }]}
       height={height}
       onOpen={onOpen}
     />

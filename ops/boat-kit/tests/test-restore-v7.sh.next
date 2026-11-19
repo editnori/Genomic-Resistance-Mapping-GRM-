@@ -1,0 +1,150 @@
+#!/usr/bin/env bash
+# The kit's sec_restore (kit/mtb-box.sh, extracted verbatim as REVIEW-DRIVE7 and REVIEW-RESTORE7 did) on copies of
+# X4's and X2's real restore sets, with assertions; it fails loudly. Replaces main's test-restore-v7.sh, which read the
+# uninstalled kit/mtb-box.sh.new and asserted nothing (REVIEW-RESTORE7 L1). Cases follow REVIEW-RESTORE7's
+# test-restore7.sh, with KIT9's L2/L3 expectations and new cases 10-13. After a passing restore that should validate,
+# data/curated and data/catalog are laid out as prepare does (links to the laptop's data root, whose files X4's
+# INPUT-MANIFEST pins) and report_contract.validate_manifest runs strictly on prefix, added and full, with
+# run_revision8_checks.verify_outputs on each receipt's outputs. The stage folders are only read: each case works on a
+# copy (matrices hardlinked, every file a case changes copied), and the end checks X4's set against its manifest.
+# Prints one "== N name: want W, got G" block per case, then "FAILS n"; exits 1 on any failure.
+# usage: test-restore-v7.sh [KIT_MTB_BOX_SH]     (default: the installed kit)
+set -u
+KIT=${1:-/home/layth/review/grm-port-r11-20261105/kit/mtb-box.sh}
+ST=/home/layth/review/grm-r12-run-20261105/stages
+DR=/home/layth/review/grm-r12-run-20261105/data-root
+S=/home/layth/review/grm-mtb-src-r12-20261106/scripts/mtb-4k
+FAILS=0
+fail() { echo "  FAIL: $*"; FAILS=$((FAILS + 1)); }
+[ -f "$KIT" ] || { echo "FAIL: no kit at $KIT"; echo "FAILS 1"; exit 1; }
+for x in "$ST/X4/restore" "$ST/X2/restore" "$ST/X4/RESTORE-MANIFEST.sha256" "$S/report_contract.py" "$DR/curated"; do
+  [ -e "$x" ] || { echo "FAIL: missing input $x"; echo "FAILS 1"; exit 1; }
+done
+sha256sum "$KIT"
+bash -n "$KIT" || fail "kit syntax"
+sed -n '/^sec_restore() {/,/^}/p' "$KIT" | grep -q 'local src=/home/user/grm-resume' || fail "sec_restore not found in $KIT"
+# run_case NAME SET WANT(ok|stop) VALIDATE(0|1) PRE [STOPMSG]: PRE runs with T set, before the restore manifest is
+# written unless it sets KEEP_SUMS=1 (then after); STOPMSG, for a stop, is a fixed string the STOP line must hold.
+# PRE_RUN runs in the case's RUN before the restore; POST runs after a passing restore and must print "yes" lines only.
+run_case() {
+  local name=$1 set=$2 want=$3 val=$4 pre=$5 msg=${6:-} T out rc got KEEP_SUMS=0
+  T=$(mktemp -d)
+  cp -al "$set" "$T/grm-resume" || { fail "copy of $set"; return; }
+  # every file a case may change is a copy, never a link to the stage folder
+  (cd "$T/grm-resume" && find cohorts audit -type f \( -path '*/data/report/*' -o -name validation-manifest.json -o -path 'audit/*' \) 2> /dev/null |
+    while read -r f; do cp -p "$f" "$f.c" && mv "$f.c" "$f"; done)
+  sums() { (cd "$T/grm-resume" && find . -type f ! -name .grm-input-manifest.sha256 | sed 's#^\./##' | LC_ALL=C sort | xargs sha256sum) > "$T/grm-resume/.grm-input-manifest.sha256"; }
+  case "$pre" in *KEEP_SUMS=1*) sums; eval "$pre";; *) eval "$pre"; sums;; esac
+  out=$(
+    RUN=$T/run SLUG=mycobacterium_tuberculosis W=$T/w MTB_RESTORE_SUMS=.grm-input-manifest.sha256 cohorts="prefix added full matched2k"
+    mkdir -p "$W/logs"; for c in $cohorts; do mkdir -p "$RUN/cohorts/$c/data/species/$SLUG"; done
+    [ -n "${PRE_RUN:-}" ] && eval "$PRE_RUN"
+    slog() { printf '%s\n' "$*" >> "$W/logs/sections.log"; }; stop() { echo "STOP $*"; exit 1; }
+    eval "$(sed -n '/^sec_restore() {/,/^}/p' "$KIT" | sed "s#local src=/home/user/grm-resume#local src=$T/grm-resume#")"
+    type sec_restore > /dev/null 2>&1 || { echo "NO sec_restore extracted"; exit 3; }
+    sec_restore; echo "restore ok"; grep -v 'restored run receipts' "$W/logs/sections.log" | sed 's/^/log: /'
+  ); rc=$?
+  got=$([ $rc = 0 ] && echo ok || { [ $rc = 1 ] && echo stop || echo "rc$rc"; })
+  echo "== $name: want $want, got $got"; printf '%s\n' "$out" | sed 's/^/  /'
+  [ "$got" = "$want" ] || fail "$name: want $want, got $got"
+  if [ "$got" = stop ] && [ -n "$msg" ]; then
+    grep -qF "STOP $msg" <<< "$out" || fail "$name: the STOP line does not hold '$msg'"
+  fi
+  if [ "$got" = ok ]; then
+    for c in prefix added full matched2k; do
+      a=$T/grm-resume/cohorts/$c/data/report b=$T/run/cohorts/$c/data/report
+      if [ -d "$a" ]; then
+        e=$(diff -r "$a" "$b" > /dev/null 2>&1 && echo yes || echo NO)
+        echo "  $c: report files resume $(find "$a" -type f | wc -l) run $(find "$b" -type f 2> /dev/null | wc -l), equal trees $e"
+        [ "$e" = yes ] || fail "$name: cohort $c's report in RUN is not the restored tree"
+        [ -L "$b" ] && fail "$name: cohort $c's report in RUN is a link"
+      else
+        echo "  $c: no report in the set; in RUN: $([ -e "$b" ] && find "$b" -type f | wc -l || echo none)"
+      fi
+      for f in $(cd "$T/grm-resume/cohorts/$c/data/species/mycobacterium_tuberculosis" 2> /dev/null && find . -type f); do
+        cmp -s "$T/grm-resume/cohorts/$c/data/species/mycobacterium_tuberculosis/$f" "$T/run/cohorts/$c/data/species/mycobacterium_tuberculosis/$f" ||
+          { fail "$name: $c species file $f differs in RUN"; break; }
+      done
+    done
+    if [ -d "$T/grm-resume/audit" ]; then
+      diff -rq "$T/grm-resume/audit" "$T/run/audit" > /dev/null 2>&1 || fail "$name: RUN/audit is not the restored audit/"
+    fi
+    if [ -n "${POST:-}" ]; then
+      p=$(eval "$POST"); printf '%s\n' "$p" | sed 's/^/  post: /'
+      grep -qv '^yes' <<< "$p" && fail "$name: a POST check is not yes"
+    fi
+    if [ "$val" = 1 ]; then
+      for c in prefix added full; do
+        [ -f "$T/run/cohorts/$c/validation-manifest.json" ] || continue
+        ln -s "$DR/curated" "$T/run/cohorts/$c/data/curated"; ln -s "$DR/catalog" "$T/run/cohorts/$c/data/catalog"
+      done
+      (cd /tmp && python3 -I - "$S" "$T/run" << 'EOF' --profile rN-cleaned) > "$T/val.out" 2>&1; rc=$?
+import json, sys
+from pathlib import Path
+lane, run = sys.argv[1], Path(sys.argv[2]); sys.path.insert(0, lane)
+import report_contract as vc, run_revision8_checks as runner
+ok, n = True, 0
+for c in ("prefix", "added", "full"):
+    m = run / "cohorts" / c / "validation-manifest.json"
+    if not m.is_file(): continue
+    try:
+        co = vc.validate_manifest(m, vc.RULES)
+        rec = json.load(open(run / "audit" / (c + "-revision8-receipt.json")))
+        outs = {k: run / "audit" / Path(e["path"]).name for k, e in rec["outputs"].items()}
+        errs = runner.verify_outputs(outs, co, rec["source_commit"], co.manifest["binary_sha256"], rec["foldgen_sha256"])
+        print(c, "validate_manifest ok:", len(co.reports), "reports;", "verify_outputs", "ok" if not errs else errs[:3])
+        ok = ok and not errs; n += 1
+    except Exception as e:
+        print(c, "validate_manifest FAILED:", type(e).__name__, str(e)[:300]); ok = False
+print("validated cohorts:", n)
+sys.exit(0 if ok and n == 3 else 1)
+EOF
+      sed 's/^/  /' "$T/val.out"
+      [ $rc = 0 ] || fail "$name: strict validation of the restored RUN failed"
+    fi
+  fi
+  chmod -R u+w "$T/run" 2> /dev/null; rm -rf "$T"; unset POST PRE_RUN
+}
+X4=$ST/X4/restore X2=$ST/X2/restore
+run_case "1 X4 set as is" "$X4" ok 1 ":"
+run_case "2 X4, prefix index.json removed" "$X4" stop 0 'rm "$T/grm-resume/cohorts/prefix/data/report/index.json"' \
+  "restore: cohort prefix has a validation manifest but no data/report/index.json"
+run_case "3 X4, added data/report removed whole" "$X4" stop 0 'rm -r "$T/grm-resume/cohorts/added/data/report"' \
+  "restore: cohort added has a validation manifest but no data/report/index.json"
+run_case "4 X2 set (X1 only; also X3's)" "$X2" ok 0 ":"
+run_case "5 X4, prefix index.json changed, sums kept" "$X4" stop 0 'KEEP_SUMS=1; echo " " >> "$T/grm-resume/cohorts/prefix/data/report/index.json"' \
+  "restore set differs from"
+# L3: REVIEW-RESTORE7 found this one passed restore and stopped only at compare; it now stops at restore
+run_case "6 X4, full index.json changed, sums rewritten" "$X4" stop 0 'python3 -I -c "import json,sys; p=sys.argv[1]; d=json.load(open(p)); d[\"datasets\"]=d[\"datasets\"][:-1]; json.dump(d,open(p,\"w\"))" "$T/grm-resume/cohorts/full/data/report/index.json"' \
+  "restore: cohort full's data/report/index.json is not the one its validation manifest pins"
+run_case "7 X4, matched2k has a manifest, no report" "$X4" stop 0 'cp "$T/grm-resume/cohorts/prefix/validation-manifest.json" "$T/grm-resume/cohorts/matched2k/"' \
+  "restore: cohort matched2k has a validation manifest but no data/report/index.json"
+# L2: a stale tree or a link already in RUN is replaced, never merged into or written through
+PRE_RUN='mkdir -p "$RUN/cohorts/prefix/data/report/datasets"; echo stale > "$RUN/cohorts/prefix/data/report/datasets/stale.json"; echo old > "$RUN/cohorts/prefix/data/report/index.json"' \
+POST='[ ! -e "$T/run/cohorts/prefix/data/report/datasets/stale.json" ] && echo "yes: the pre-placed stale.json is gone" || echo "no: stale.json survived"'
+run_case "8 X4, RUN already holds a stale prefix report tree" "$X4" ok 1 ":"
+PRE_RUN='mkdir -p "$RUN/cohorts/added/data" "$T/elsewhere"; ln -s "$T/elsewhere" "$RUN/cohorts/added/data/report"' \
+POST='[ ! -L "$T/run/cohorts/added/data/report" ] && echo "yes: added data/report is a real folder" || echo "no: still a link"
+[ "$(find "$T/elsewhere" -type f | wc -l)" = 0 ] && echo "yes: nothing written through the link" || echo "no: files written through the link"'
+run_case "9 X4, RUN cohort data/report is a symlink" "$X4" ok 0 ":"
+# L3: the copy is checked
+PRE_RUN='mkdir -p "$RUN/cohorts/full/data"; chmod a-w "$RUN/cohorts/full/data"'
+run_case "10 X4, full's report can't be written in RUN" "$X4" stop 0 ":" "restore: copying cohort full's report failed"
+PRE_RUN='mkdir -p "$RUN/audit"; echo "{}" > "$RUN/audit/prefix-summary.json"'
+run_case "11 X4, RUN/audit already holds a different prefix-summary.json (cp -n keeps it)" "$X4" stop 0 ":" "restore: audit/ in"
+run_case "12 X4, an unlisted extra file in added's report (sums kept)" "$X4" stop 0 'KEEP_SUMS=1; echo "{}" > "$T/grm-resume/cohorts/added/data/report/datasets/extra.json"' \
+  "restore: cohort added's report holds 17 files, the restore set lists 16"
+run_case "13 X4, a matrix file differs in the set (sums kept)" "$X4" stop 0 'KEEP_SUMS=1; f=$T/grm-resume/cohorts/prefix/data/species/mycobacterium_tuberculosis/genomes.txt; cp "$f" "$f.c"; echo x >> "$f.c"; mv "$f.c" "$f"' \
+  "restore set differs from"
+# KIT10 (REVIEW-KIT9 L7): the species copy's own check, and the cohort byte check, each with a case only it catches
+PRE_RUN='chmod a-w "$RUN/cohorts/prefix/data/species/$SLUG"'
+run_case "14 X4, prefix's species outputs can't be written in RUN" "$X4" stop 0 ":" "restore: copying cohort prefix's species outputs failed"
+# a copy that returns 0 but leaves other bytes (a short or failed write cp didn't report): cp is wrapped so the
+# species copy of prefix appends to genomes.txt after the real copy
+PRE_RUN='cp() { command cp "$@" || return; case "$*" in *"cohorts/prefix/data/species/"*) echo x >> "$RUN/cohorts/prefix/data/species/$SLUG/genomes.txt";; esac; }'
+run_case "15 X4, prefix's genomes.txt differs in RUN after a copy that returned 0" "$X4" stop 0 ":" "restore: cohorts/prefix/ in"
+# the stage folders are untouched
+(cd "$ST/X4/restore" && sha256sum -c --strict --quiet "$ST/X4/RESTORE-MANIFEST.sha256") && echo "X4 restore set unchanged: ok" || fail "X4's restore set changed"
+find "$ST/X4/restore" -type f | wc -l | grep -qx "$(wc -l < "$ST/X4/RESTORE-MANIFEST.sha256")" || fail "X4's restore set has a file the manifest doesn't list"
+echo "FAILS $FAILS"
+[ "$FAILS" = 0 ]

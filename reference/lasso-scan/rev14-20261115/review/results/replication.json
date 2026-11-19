@@ -1,0 +1,134 @@
+[
+ {
+  "id": "mycobacterium_tuberculosis__clofazimine",
+  "inputs": {
+   "input_fingerprint": "e00e3023054359ba",
+   "samples": 1303,
+   "resistant": 193,
+   "features": 118205
+  },
+  "release": {
+   "input_fingerprint": "e00e3023054359ba",
+   "samples": 1303,
+   "resistant": 193,
+   "features": 118205
+  },
+  "events_mine": 23,
+  "events_lane": 23,
+  "inputs_equal_release": true,
+  "inputs_equal_lane": true,
+  "events_equal_lane": true,
+  "events_first_diff_vs_lane": null,
+  "dump_binary_events_equal_plain": true,
+  "dump_binary_first_diff": null,
+  "splits": [
+   {
+    "scheme": "random",
+    "n": 1303,
+    "binary_scores_compared_with_lane": 1042,
+    "binary_scores_equal_lane": 1042,
+    "pooled_equal_release": 1303,
+    "calls_changed_vs_release": 0
+   },
+   {
+    "scheme": "lineage",
+    "n": 1303,
+    "binary_scores_compared_with_lane": 1042,
+    "binary_scores_equal_lane": 1042,
+    "pooled_equal_release": 1303,
+    "calls_changed_vs_release": 0
+   }
+  ],
+  "partition_and_fit_diffs_vs_lane": [],
+  "final_model_equal_release": true,
+  "seconds_mine_outer": 21.312371216
+ },
+ {
+  "id": "salmonella_enterica__ampicillin",
+  "inputs": {
+   "input_fingerprint": "2f9ca169d88ef66f",
+   "samples": 1997,
+   "resistant": 1406,
+   "features": 1062824
+  },
+  "release": {
+   "input_fingerprint": "2f9ca169d88ef66f",
+   "samples": 1997,
+   "resistant": 1406,
+   "features": 1062824
+  },
+  "events_mine": 23,
+  "events_lane": 23,
+  "inputs_equal_release": true,
+  "inputs_equal_lane": true,
+  "events_equal_lane": true,
+  "events_first_diff_vs_lane": null,
+  "dump_binary_events_equal_plain": true,
+  "dump_binary_first_diff": null,
+  "splits": [
+   {
+    "scheme": "random",
+    "n": 1997,
+    "binary_scores_compared_with_lane": 1997,
+    "binary_scores_equal_lane": 1997,
+    "pooled_equal_release": 1997,
+    "calls_changed_vs_release": 0
+   },
+   {
+    "scheme": "lineage",
+    "n": 1997,
+    "binary_scores_compared_with_lane": 1997,
+    "binary_scores_equal_lane": 1997,
+    "pooled_equal_release": 1997,
+    "calls_changed_vs_release": 0
+   }
+  ],
+  "partition_and_fit_diffs_vs_lane": [],
+  "final_model_equal_release": true,
+  "seconds_mine_outer": 40.152806807
+ },
+ {
+  "id": "escherichia_coli__ampicillin",
+  "inputs": {
+   "input_fingerprint": "a01f750fd4a06500",
+   "samples": 1965,
+   "resistant": 1596,
+   "features": 3078562
+  },
+  "release": {
+   "input_fingerprint": "a01f750fd4a06500",
+   "samples": 1965,
+   "resistant": 1596,
+   "features": 3078562
+  },
+  "events_mine": 23,
+  "events_lane": 23,
+  "inputs_equal_release": true,
+  "inputs_equal_lane": true,
+  "events_equal_lane": true,
+  "events_first_diff_vs_lane": null,
+  "dump_binary_events_equal_plain": true,
+  "dump_binary_first_diff": null,
+  "splits": [
+   {
+    "scheme": "random",
+    "n": 1965,
+    "binary_scores_compared_with_lane": 1965,
+    "binary_scores_equal_lane": 1965,
+    "pooled_equal_release": 1965,
+    "calls_changed_vs_release": 0
+   },
+   {
+    "scheme": "lineage",
+    "n": 1965,
+    "binary_scores_compared_with_lane": 1965,
+    "binary_scores_equal_lane": 1965,
+    "pooled_equal_release": 1965,
+    "calls_changed_vs_release": 0
+   }
+  ],
+  "partition_and_fit_diffs_vs_lane": [],
+  "final_model_equal_release": true,
+  "seconds_mine_outer": 5.809830821
+ }
+]

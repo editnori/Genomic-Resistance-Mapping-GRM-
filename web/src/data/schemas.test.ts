@@ -85,6 +85,8 @@ describe("schema compatibility", () => {
     } catch (e) {
       text = loadErrorText({ kind: "schema", path: "/data/index.json", message: (e as ShapeError).message, found: (e as ShapeError).foundSchema });
     }
-    expect(text).toBe("index.json is schema 3; this dashboard reads schemas 1 and 2. Rebuild the report with the matching `grm` version.");
+    expect(text).toBe(
+      "index.json is schema 3; this dashboard reads schemas 1 and 2. The page and the report come from different versions of GRM. If you run GRM yourself, rebuild the report with the matching `grm` version.",
+    );
   });
 });

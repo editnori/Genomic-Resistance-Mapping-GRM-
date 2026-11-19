@@ -1,6 +1,6 @@
 # Source, year and measurement fields from fetch to report
 
-GRM fetches the source, year and measurement fields of every BV-BRC AST record and genome, and most of them stop at `grm curate`. Only the consolidated MIC and the genome's collection year reach a dataset report. The method and standard reach `corpus.json` only as corpus-wide counts of the raw records. Work-program row A06 records this as "source/year/measurement provenance is not retained and used throughout" (`docs/work-program-20261027.md:133`).
+GRM fetches the source, year and measurement fields of every BV-BRC AST record and genome, and most of them stop at `grm curate`. Only the consolidated MIC and the genome's collection year reach a dataset report. The method and standard reach `corpus.json` only as corpus-wide counts of the raw records. Work-program row A06 records this as "source/year/measurement provenance is not retained and used throughout" (`docs/work-program-20261027.md:133`). Its first step adds side files that carry them, unchanged and as provenance only, to `report/provenance/` ("The side files", below); the trace up to there describes the pinned files, which that step leaves as they were.
 
 The line numbers below are those of `b90be1ca`, read from the record types, the code that reads them and the synthetic test fixtures. This trace proposes no new field and no use of any field as a predictor, and H's proxy refusal stays in force (see the last section).
 
@@ -65,6 +65,55 @@ The pair also keeps every `laboratory_typing_method` and every uppercased `testi
 
 `grm learn` reads the genome metadata only to fill each `Sample` row (`src/analysis.rs:676-686`), and `input.genomes` has no other use in `src/analysis.rs`. Its input fingerprint leaves the metadata out because it changes "only descriptive report fields" (`src/analysis.rs:1074-1075`).
 
+## The side files (register row A06, step 1)
+
+Three side files now carry these fields to the report directory. No pinned file changes: `genomes.jsonl`, `GENOME_FIELDS`, `Phenotype` and every curated file `grm curate` wrote before are byte for byte as they were, and no dataset report changes. No side file enters an input fingerprint, a feature block or a learner.
+
+| Step | Writes | Pinned by |
+|---|---|---|
+| `grm fetch genome-dates` | `bvbrc/genome_dates.jsonl`: one row per genome of `species/*/genomes.txt` that BV-BRC returns, in genome id order | `bvbrc/genome_dates.manifest.json`: each list's SHA-256, the requested, returned and missing genomes, and the file's size and SHA-256 |
+| `grm curate` | `curated/provenance.jsonl`: one row per genome and drug, beside each `phenotypes.jsonl` row and in the same order | the SHA-256 that `grm provenance` records |
+| `grm provenance` | `report/provenance/<id>.json` for each dataset `index.json` lists: the report's samples in its order, each with its genome's dates and its pair's row | the report's SHA-256 and evaluation revision, and both inputs' SHA-256; `grm provenance --check` fails when any differs or a file was edited |
+
+The code is `src/provenance.rs`, `curate::PairProvenance` and `bvbrc::GenomeDate`.
+
+### What each field reaches now
+
+| Field | From | Side file field | Reaches | Proxy check by name |
+|---|---|---|---|---|
+| `date_inserted` (genome) | BV-BRC `genome` | `genome_dates.jsonl` `date_inserted` | `report/provenance`, per sample | refused (insertion date) |
+| `completion_date` (genome) | BV-BRC `genome` | `genome_dates.jsonl` `completion_date` | `report/provenance`, per sample | refused (date) |
+| `date_inserted` (AST record) | `genome_amr.jsonl` | `date_inserted_first`, `date_inserted_last`: the earliest and latest over the pair's records | `report/provenance`, per sample | refused (insertion date) |
+| `testing_standard_year` | `genome_amr.jsonl` | `testing_standard_years`, a set | `report/provenance`, per sample | refused (year) |
+| `pmid` | `genome_amr.jsonl` | `pmids`, a set, a list split at `;` | `report/provenance`, per sample | refused (record field) |
+| `source` | `genome_amr.jsonl` | `sources`, a set | `report/provenance`, per sample | refused (record field) |
+| `laboratory_typing_method` | `genome_amr.jsonl` | `methods`, as in `phenotypes.jsonl` | `report/provenance`, per sample | refused (record field) |
+| `testing_standard` | `genome_amr.jsonl` | `standards`, as in `phenotypes.jsonl` | `report/provenance`, per sample | refused (record field) |
+| `n_records`, `mic_spread` | `grm curate` | as in `phenotypes.jsonl` | `report/provenance`, per sample | refused (record field) |
+| `vendor`, `isolation_source`, `measurement_unit`, `laboratory_typing_platform` | raw files | none | raw file only, as before | |
+
+A pair's row covers the records its phenotype consolidates: the records `grm curate` sets aside (an unresolved drug name, a genome that fails QC, a record with neither a call nor an MIC) are in neither. The record dates are ordered by time, the whole seconds and then the fraction, since BV-BRC writes some without milliseconds and `13.5Z` sorts before `13Z` as text. They stay as BV-BRC wrote them.
+
+A sample whose genome has no row in the dates file has `genome_dates` null, and one with no curated pair has `pair` null; each file counts both. A genome BV-BRC returns without a date has a row with that date null, and the manifest counts those too.
+
+### The proxy check
+
+`ablate::blocks::admit` refuses a block with any side-file field as a column, block id or version name. The dates and years match the date rules. `pmid`, `pmids`, `source`, `sources`, `methods`, `standards`, `n_records` and `mic_spread` are an AST record's study and lab-method fields (`RECORD_FIELDS`, kind "study or lab-method field of an AST record"). They are refused only as a whole name, or as the part after a block prefix (`C:pmid`), ignoring case, so a genotype name that merely contains one, such as `P:resource`, still passes.
+
+- `admit_refuses_a_block_of_the_provenance_side_file_fields` names each side-file field with the rule that refuses it, so the test fails when a side file gains a field until the field has a rule.
+- `admit_refuses_record_fields_by_exact_name_only` checks each record field as a column and as a version, and genotype-shaped names that carry one inside a longer name.
+- `the_real_catalog_s_gene_groups_pass_the_deny_list` (ignored; it needs the catalog in `GRM_CATALOG_DIR`) runs the deny-list over every gene group of a real AMRFinderPlus catalog and every panel name. No name in catalog 2026-08-07.1 contains "source".
+
+Neither side file reaches a block in any case: no adapter reads them, and `admit` accepts only this module's adapters.
+
+### Kept out of copies and hashes
+
+What reads, ships or hashes data, and where the side files stay out:
+- `grm learn`, `grm report` and every input fingerprint read named curated files only, never `curated/provenance.jsonl` or the genome dates.
+- The release and publish scripts (`scripts/deployment/`, `ops/cloudflare/`) never read `curated/`, but they publish exactly what a tree's `SOURCE.sha256` lists. `report/provenance/` is not part of a publication, so a release `SOURCE.sha256` must leave it out, even when `grm provenance` ran in the same root (listing all of `report/`, as for the intervals, would take it in).
+- The box kit's `stage-manifest.py` (outside this repo) stages every `curated/*` line of a master manifest, so it sends `curated/provenance.jsonl` to a box until main installs the version that skips it (`stage-manifest.py.next`, sha256 `68cf7b4c…`, from lane PROV). A push-data manifest built by hand must leave out `curated/provenance.jsonl` and `bvbrc/genome_dates*`: the runner's allowlist accepts any `curated/*.jsonl` line.
+- `scripts/input-comparison/run.py` removes `curated/provenance.jsonl` from each data root right after it curates (about 310 MB per root on the real root, and no arm reads it). The species pool never copies it, and the disk estimate never counts it. RAW's input manifest leaves out `bvbrc/genome_dates.jsonl` and its manifest, so fetching the dates into RAW doesn't refuse a WORK made before.
+
 ## H's proxy refusal stays in force
 
 This trace proposes no field and no predictor. H, the ablation task that wrote the feature-block registry (`docs/ablation-runner.md:3`, `src/ablate/plan.rs:654`; not block H, the hierarchical panel calls), refuses source proxies in `src/ablate/blocks.rs`, and that refusal is unchanged:
@@ -74,3 +123,42 @@ This trace proposes no field and no predictor. H, the ablation task that wrote t
 That is `src/ablate/blocks.rs:20-25`. `check_spec` applies it to a block's id and version (`:376`) and `check_block` to its column names (`:903`). `admit` (`:843-860`) is the only way to make a predictor block, and its sealed bound accepts only that module's adapters (`:30-32`).
 
 Block X, genome context, stays unavailable because "the context fields in genome metadata are source proxies and are refused" (`:205`, `:253`). The deny-list's test names `collection_year`, `Date Inserted` and `sequencing_platform` among the refused names (`:1750`, `:1794-1802`). The module doc states the limits of a name check and names the seal on `admit` as the real guard (`:44-48`).
+
+## Collection date (ledger action 11)
+
+`grm fetch genomes` also asks BV-BRC for `collection_date`, next to `collection_year` in `GENOME_FIELDS`, and `GenomeRecord` holds it as `bvbrc::CollectionDate`.
+
+Each time a line is read, fetch's or a later reader's, the value is first taken as text through `value_text`, as every other genome field is. That text is the value trimmed of outer whitespace (a no-break space too), a number written as its text, and a list's values joined with `;`. A boolean or an object becomes its JSON text, and null, blank text and a list with no text are no value. What is written back is that text, so it is not always the value BV-BRC sent: `" 2015"`, `2015` and `["2015"]` all write back as `"2015"`, and `["2015","2016"]` as `"2015;2016"` (`bvbrc::tests::collection_dates_read_from_a_genome_line_are_their_value_text`). The saved BV-BRC records of 11 Nov send every value as a string with no outer whitespace, so on them the text is the value.
+
+The text is then read strictly:
+
+| Text | Reading | Examples |
+|---|---|---|
+| `YYYY-MM-DD`, a day that exists | a date at day precision | `2015-03-12`, `2016-02-29` |
+| `YYYY-MM`, month 01 to 12 | a date at month precision, with no day | `2014-05` |
+| `YYYY` | a date at year precision, with no month | `2013` |
+| any other text | `Unparsed`: kept as that text, with no date | `2015-2016`, `2004-20`, `2017-02-30`, `2015-03-12T00:00:00Z`, `12/03/2015`, `missing` |
+| no value from BV-BRC | `Missing`, written as null | |
+| no key, in a line fetched before this change | `NotFetched`, written back without the key | |
+
+A value is trimmed before it is parsed, so `" 2015-03-12 "` on a genome line reads as a day. The parse test's case `"2015-03-12 "`, which reads as unparsed, describes `CollectionDate::parse` called directly, which trims nothing, and not fetch.
+
+Nothing is guessed. A range is not cut to one of its years, a day that does not exist is not moved to one that does, a month out of range is not read as its year, and neither year field fills in the other. The year is not checked against a range: whether a stated year is plausible is for the analysis that reads it, so `1800` reads as the year 1800, `0000` as the year 0 and `0000-02-29` as a day. `grm fetch genomes` prints how many genomes had each kind.
+
+A month reading may be a range. A range written with a two-digit end year, such as `2009-10` for 2009 to 2010, has the form `YYYY-MM` and reads as a month, and nothing in a record tells which it is. `collection_year` does not tell either: on the saved records' full ranges (`YYYY-YYYY`) whose `collection_year` equals one end, it equals the start on 135 and the end on 65, so a month whose year equals `collection_year` is no evidence against a range. The review of 15 Nov 2026 (rev116) counted the month readings that could be such a range in the 35,151 BV-BRC genome records the 11 Nov data review saved: 84 of the 1,145 month readings. Its rule: read as a range, the end year is the first of 19MM, 20MM and 21MM after the stated year, and the reading could be a range unless that end year is after the year of the record's `date_inserted` (an isolate is collected before its genome is deposited). The file is `rev116/results/recount.json`, field `month_could_be_two_digit_range_not_ruled_out_by_insert_year`. Of the 84, 63 have no `collection_year` and 21 have one equal to the stated year, and 71 would be ranges of 5 years or less. A later split by collection time has to treat those month readings as uncertain: each may be a month or a range of years. The reading rule stays as it is.
+
+It is a genome field and says when the isolate was taken. It is kept apart from every date tied to a label: the AST record's `date_inserted`, the pair's `date_inserted_first` and `date_inserted_last`, `testing_standard_year` and the papers of `pmid`. No AST record, `Phenotype` or `PairProvenance` row has it (`bvbrc::tests::collection_date_stays_off_every_label_record`). It is also apart from `genome_dates.jsonl`, the days BV-BRC stored the genome.
+
+Data already fetched reads as before:
+
+- A `genomes.jsonl` line written before this change has no `collection_date` key. It reads as `NotFetched` and writes back byte for byte (`genome_lines_fetched_before_collection_date_read_and_write_as_before`).
+- No curated file changes: `grm curate` does not read the field. `collection_dates_leave_every_curated_file_as_it_was` (`src/main.rs`) runs `grm curate` on a synthetic raw root before and after its genomes get collection dates of every kind, with the legacy and the group selection rule. The curated files and species files are the same, `qc.json` compared as JSON because its failure map is written from a `HashMap` in no fixed order, and no curated file holds the word `collection` or a date text of the fixture.
+- `grm fetch genomes` asks for both year fields: `bvbrc::tests::the_genome_request_asks_for_both_collection_fields` reads the query that `fetch_genomes` posts, built by `genome_query`, and checks that it asks for `collection_year` and `collection_date` and for exactly the fields of a `genomes.jsonl` line. The POST itself needs the network and is not tested.
+- No report field changes. `samples[].year`, the species files' `genomes[].year` and `corpus.json`'s `years` still read `collection_year`, and nothing in a report reads `collection_date`. The input fingerprint of `grm learn` leaves genome metadata out, so a report fitted before stays current. `collection_dates_leave_every_report_file_as_it_was` (`src/main.rs`) builds a report on a synthetic root, then gives every genome a collection date of one kind or another: `grm learn` keeps its reports, `grm report` writes the same files byte for byte apart from the index's `generated_at`, and a forced refit gives the same files apart from that and each learner's `seconds`.
+- `EVALUATION_REVISION` and the report schema do not change.
+
+A new `grm fetch genomes` writes the key on every line, null when BV-BRC has no value, so a file fetched after this change tells a genome with no date apart from a file fetched before it.
+
+The proxy check refuses `collection_date` under the collection-date rule, as it refuses `collection_year`; the deny-list test names both.
+
+This change has no effect on any result by itself. It makes a later split by collection time possible from GRM's own fetch. Joining it to `scripts/temporal/splits.py`, which takes a full ISO day as `collection_date`, is left to that split, which will also decide how a month or a year that straddles a cutoff is counted.

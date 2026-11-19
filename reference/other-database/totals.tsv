@@ -1,0 +1,4 @@
+learner	species	plan_meets	plan_fails	plan_not_assessable	L_meets	L_fails	L_not_assessable	C_meets	C_fails	C_not_assessable	D_meets	D_fails	D_not_assessable	estimable	holds	recall_below	log_loss_worse	specificity_under_half	results_one_from_other
+cart	8	5	3	0	7	1	0	5	3	0	7	1	0	84	50	19	26	5	2
+lasso	8	3	1	4	4	0	4	3	1	4	4	0	4	24	17	5	3	1	1
+scm	8	6	2	0	7	1	0	7	1	0	8	0	0	84	52	22	23	5	2

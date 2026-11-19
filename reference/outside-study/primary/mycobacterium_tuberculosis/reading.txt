@@ -1,0 +1,155 @@
+Outside-study test, mycobacterium_tuberculosis, primary population
+This is a retrospective test on newly deposited studies from the same database.
+It is not a lockbox: the batch's metadata and label totals were read before the rules were frozen.
+The genomes come from the same database as the cohort.
+
+Frozen genomes: 1152. Scored: 1152 (1 of them borderline in the species check, kept and flagged).
+Genomes excluded, no sequence: 0.
+Genomes excluded, species check failed: 0.
+Genomes excluded, not counted: 0.
+
+Each model is the report's final model, fitted once on the whole cohort and applied unchanged.
+The report's figures are for models refitted in each cross-validation fold and scored on held-out cohort genomes.
+Calls use the 0.5 cutoff. Intervals are exact Clopper-Pearson 95% intervals.
+A dataset with fewer than 25 resistant or 25 susceptible scored genomes is reported as counts only.
+Sensitivity and specificity are over the genomes a learner called; genomes with no call are counted in their own column.
+The known-gene rule's reference figure is a fixed rule applied to the whole cohort: nothing was fitted, so there is no cross-validation figure for it.
+The datasets share genomes and studies, so they are not independent of each other.
+Precision depends on the share of resistant genomes, which differs between the cohort and the new genomes.
+Scored genomes with the same k-mer set as a cohort genome: 0; as another scored genome: 0 (listed in duplicates.tsv; none is excluded for it).
+Stage attempts: setup 1, fetch 1, species-check 1, count 1, known-gene 1, predict 1.
+
+mycobacterium_tuberculosis__amikacin: 185 resistant and 828 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJEB48275 holds 176 of the 185 resistant genomes (95.1%); PRJEB48275 holds 679 of the 828 susceptible genomes (82.0%). Of 6 studies, 5 can be left out with 25 of each class remaining.
+  With PRJEB48275 left out, fewer than 25 resistant or 25 susceptible genomes remain, so no estimate can be shown without that study, and every leave-one-study-out range for this dataset includes it.
+  scm: TP 178, FN 7, FP 47, TN 781. Sensitivity 96.2% [92.4%, 98.5%], lineage split 81.9%, random split 83.4%: above. Specificity 94.3% [92.5%, 95.8%], lineage split 95.5%, random split 93.5%: consistent.
+    Reference figure: cross-validation, lineage split.
+    With each of 6 BioProjects left out: sensitivity 96.2% to 96.7%, specificity 94.3% to 95.0% (over 5 estimates).
+  cart: TP 178, FN 7, FP 24, TN 804. Sensitivity 96.2% [92.4%, 98.5%], lineage split 78.6%, random split 81.2%: above. Specificity 97.1% [95.7%, 98.1%], lineage split 94.7%, random split 92.8%: above.
+    Reference figure: cross-validation, lineage split.
+    With each of 6 BioProjects left out: sensitivity 96.2% to 96.7%, specificity 97.1% to 97.4% (over 5 estimates).
+  known_gene: TP 0, FN 185, FP 0, TN 828. Sensitivity 0.0% [0.0%, 2.0%], lineage split 0.0%, random split 0.0%: consistent. Specificity 100.0% [99.6%, 100.0%], lineage split 100.0%, random split 100.0%: consistent.
+    Reference figure: fixed rule, whole cohort; a reference sensitivity or specificity is exactly 0 or 1.
+    With each of 6 BioProjects left out: sensitivity 0.0% to 0.0%, specificity 100.0% to 100.0% (over 5 estimates).
+mycobacterium_tuberculosis__capreomycin: 49 resistant and 807 susceptible genomes scored (estimates); known-gene rule: no rule published.
+  By study: PRJEB48275 holds 25 of the 49 resistant genomes (51.0%); PRJEB48275 holds 612 of the 807 susceptible genomes (75.8%). Of 7 studies, 6 can be left out with 25 of each class remaining.
+  With PRJEB48275 left out, fewer than 25 resistant or 25 susceptible genomes remain, so no estimate can be shown without that study, and every leave-one-study-out range for this dataset includes it.
+  scm: TP 32, FN 17, FP 10, TN 797. Sensitivity 65.3% [50.4%, 78.3%], lineage split 76.8%, random split 79.1%: consistent. Specificity 98.8% [97.7%, 99.4%], lineage split 88.7%, random split 86.7%: above.
+    Reference figure: cross-validation, lineage split.
+    With each of 7 BioProjects left out: sensitivity 63.9% to 69.8%, specificity 98.6% to 98.8% (over 6 estimates).
+  cart: TP 35, FN 14, FP 71, TN 736. Sensitivity 71.4% [56.7%, 83.4%], lineage split 77.0%, random split 81.8%: consistent. Specificity 91.2% [89.0%, 93.1%], lineage split 88.3%, random split 87.5%: above.
+    Reference figure: cross-validation, lineage split.
+    With each of 7 BioProjects left out: sensitivity 71.4% to 76.7%, specificity 91.0% to 92.1% (over 6 estimates).
+mycobacterium_tuberculosis__ethambutol: 344 resistant and 445 susceptible genomes scored (estimates); known-gene rule: no rule published.
+  By study: PRJEB48275 holds 268 of the 344 resistant genomes (77.9%); PRJEB48275 holds 364 of the 445 susceptible genomes (81.8%). Of 6 studies, 6 can be left out with 25 of each class remaining.
+  scm: TP 296, FN 48, FP 307, TN 138. Sensitivity 86.0% [81.9%, 89.5%], lineage split 79.6%, random split 76.0%: above. Specificity 31.0% [26.7%, 35.5%], lineage split 60.9%, random split 65.0%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 6 BioProjects left out: sensitivity 84.2% to 86.8%, specificity 19.8% to 32.5% (over 6 estimates).
+  cart: TP 301, FN 43, FP 323, TN 122. Sensitivity 87.5% [83.5%, 90.8%], lineage split 77.2%, random split 77.6%: above. Specificity 27.4% [23.3%, 31.8%], lineage split 63.5%, random split 63.5%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 6 BioProjects left out: sensitivity 85.5% to 88.5%, specificity 17.3% to 28.6% (over 6 estimates).
+  lasso: TP 320, FN 24, FP 303, TN 142. Sensitivity 93.0% [89.8%, 95.5%], lineage split 75.2%, random split 75.9%: above. Specificity 31.9% [27.6%, 36.5%], lineage split 68.6%, random split 68.6%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 6 BioProjects left out: sensitivity 92.1% to 94.1%, specificity 31.4% to 32.2% (over 6 estimates).
+mycobacterium_tuberculosis__isoniazid: 993 resistant and 157 susceptible genomes scored (estimates); known-gene rule: no rule published.
+  By study: PRJEB48275 holds 772 of the 993 resistant genomes (77.7%); PRJEB48275 holds 86 of the 157 susceptible genomes (54.8%). Of 7 studies, 7 can be left out with 25 of each class remaining.
+  scm: TP 969, FN 24, FP 7, TN 150. Sensitivity 97.6% [96.4%, 98.4%], lineage split 94.3%, random split 94.4%: above. Specificity 95.5% [91.0%, 98.2%], lineage split 84.8%, random split 85.2%: above.
+    Reference figure: cross-validation, lineage split.
+    With each of 7 BioProjects left out: sensitivity 94.6% to 98.5%, specificity 93.7% to 97.2% (over 7 estimates).
+  cart: TP 969, FN 24, FP 7, TN 150. Sensitivity 97.6% [96.4%, 98.4%], lineage split 93.7%, random split 93.7%: above. Specificity 95.5% [91.0%, 98.2%], lineage split 86.2%, random split 86.2%: above.
+    Reference figure: cross-validation, lineage split.
+    With each of 7 BioProjects left out: sensitivity 94.6% to 98.5%, specificity 93.7% to 97.2% (over 7 estimates).
+mycobacterium_tuberculosis__kanamycin: 338 resistant and 681 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJEB48275 holds 314 of the 338 resistant genomes (92.9%); PRJEB48275 holds 541 of the 681 susceptible genomes (79.4%). Of 4 studies, 3 can be left out with 25 of each class remaining.
+  With PRJEB48275 left out, fewer than 25 resistant or 25 susceptible genomes remain, so no estimate can be shown without that study, and every leave-one-study-out range for this dataset includes it.
+  scm: TP 321, FN 17, FP 38, TN 643. Sensitivity 95.0% [92.1%, 97.0%], lineage split 83.1%, random split 83.3%: above. Specificity 94.4% [92.4%, 96.0%], lineage split 94.7%, random split 94.8%: consistent.
+    Reference figure: cross-validation, lineage split.
+    With each of 4 BioProjects left out: sensitivity 95.0% to 95.5%, specificity 93.7% to 95.3% (over 3 estimates).
+  cart: TP 321, FN 17, FP 38, TN 643. Sensitivity 95.0% [92.1%, 97.0%], lineage split 82.0%, random split 81.8%: above. Specificity 94.4% [92.4%, 96.0%], lineage split 95.8%, random split 95.5%: consistent.
+    Reference figure: cross-validation, lineage split.
+    With each of 4 BioProjects left out: sensitivity 95.0% to 95.5%, specificity 93.7% to 95.3% (over 3 estimates).
+  known_gene: TP 0, FN 338, FP 0, TN 681. Sensitivity 0.0% [0.0%, 1.1%], lineage split 0.2%, random split 0.2%: consistent. Specificity 100.0% [99.5%, 100.0%], lineage split 100.0%, random split 100.0%: consistent.
+    Reference figure: fixed rule, whole cohort; a reference sensitivity or specificity is exactly 0 or 1.
+    With each of 4 BioProjects left out: sensitivity 0.0% to 0.0%, specificity 100.0% to 100.0% (over 3 estimates).
+mycobacterium_tuberculosis__levofloxacin: 122 resistant and 645 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJEB48275 holds 108 of the 122 resistant genomes (88.5%); PRJEB48275 holds 598 of the 645 susceptible genomes (92.7%). Of 5 studies, 4 can be left out with 25 of each class remaining.
+  With PRJEB48275 left out, fewer than 25 resistant or 25 susceptible genomes remain, so no estimate can be shown without that study, and every leave-one-study-out range for this dataset includes it.
+  scm: TP 115, FN 7, FP 39, TN 606. Sensitivity 94.3% [88.5%, 97.7%], lineage split 59.8%, random split 61.1%: above. Specificity 94.0% [91.8%, 95.7%], lineage split 79.2%, random split 79.2%: above.
+    Reference figure: cross-validation, lineage split.
+    With each of 5 BioProjects left out: sensitivity 94.1% to 94.7%, specificity 93.9% to 94.4% (over 4 estimates).
+  cart: TP 115, FN 7, FP 39, TN 606. Sensitivity 94.3% [88.5%, 97.7%], lineage split 58.6%, random split 61.4%: above. Specificity 94.0% [91.8%, 95.7%], lineage split 79.2%, random split 78.8%: above.
+    Reference figure: cross-validation, lineage split.
+    With each of 5 BioProjects left out: sensitivity 94.1% to 94.7%, specificity 93.9% to 94.4% (over 4 estimates).
+  known_gene: TP 122, FN 0, FP 645, TN 0. Sensitivity 100.0% [97.0%, 100.0%], lineage split 100.0%, random split 100.0%: consistent. Specificity 0.0% [0.0%, 0.6%], lineage split 0.2%, random split 0.2%: consistent.
+    Reference figure: fixed rule, whole cohort; a reference sensitivity or specificity is exactly 0 or 1.
+    With each of 5 BioProjects left out: sensitivity 100.0% to 100.0%, specificity 0.0% to 0.0% (over 4 estimates).
+mycobacterium_tuberculosis__moxifloxacin: 232 resistant and 783 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJEB48275 holds 208 of the 232 resistant genomes (89.7%); PRJEB48275 holds 649 of the 783 susceptible genomes (82.9%). Of 6 studies, 5 can be left out with 25 of each class remaining.
+  With PRJEB48275 left out, fewer than 25 resistant or 25 susceptible genomes remain, so no estimate can be shown without that study, and every leave-one-study-out range for this dataset includes it.
+  scm: TP 192, FN 40, FP 54, TN 729. Sensitivity 82.8% [77.3%, 87.4%], lineage split 81.4%, random split 82.7%: consistent. Specificity 93.1% [91.1%, 94.8%], lineage split 82.4%, random split 82.3%: above.
+    Reference figure: cross-validation, lineage split.
+    With each of 6 BioProjects left out: sensitivity 82.5% to 84.5%, specificity 92.4% to 93.7% (over 5 estimates).
+  cart: TP 201, FN 31, FP 58, TN 725. Sensitivity 86.6% [81.6%, 90.7%], lineage split 81.3%, random split 82.9%: above. Specificity 92.6% [90.5%, 94.3%], lineage split 82.7%, random split 81.9%: above.
+    Reference figure: cross-validation, lineage split.
+    With each of 6 BioProjects left out: sensitivity 86.5% to 88.6%, specificity 91.8% to 93.1% (over 5 estimates).
+  lasso: TP 201, FN 31, FP 58, TN 725. Sensitivity 86.6% [81.6%, 90.7%], lineage split 82.3%, random split 82.0%: consistent. Specificity 92.6% [90.5%, 94.3%], lineage split 82.2%, random split 82.0%: above.
+    Reference figure: cross-validation, lineage split.
+    With each of 6 BioProjects left out: sensitivity 86.5% to 88.6%, specificity 91.8% to 93.1% (over 5 estimates).
+  known_gene: TP 232, FN 0, FP 782, TN 1. Sensitivity 100.0% [98.4%, 100.0%], lineage split 100.0%, random split 100.0%: consistent. Specificity 0.1% [0.0%, 0.7%], lineage split 0.1%, random split 0.1%: consistent.
+    Reference figure: fixed rule, whole cohort; a reference sensitivity or specificity is exactly 0 or 1.
+    With each of 6 BioProjects left out: sensitivity 100.0% to 100.0%, specificity 0.0% to 0.1% (over 5 estimates).
+mycobacterium_tuberculosis__prothionamide: 29 resistant and 32 susceptible genomes scored (estimates); known-gene rule: no rule published.
+  By study: PRJEB38780 holds 23 of the 29 resistant genomes (79.3%); PRJEB38780 holds 26 of the 32 susceptible genomes (81.2%). Of 4 studies, 3 can be left out with 25 of each class remaining.
+  With PRJEB38780 left out, fewer than 25 resistant or 25 susceptible genomes remain, so no estimate can be shown without that study, and every leave-one-study-out range for this dataset includes it.
+  scm: TP 23, FN 6, FP 21, TN 11. Sensitivity 79.3% [60.3%, 92.0%], lineage split 69.6%, random split 60.9%: consistent. Specificity 34.4% [18.6%, 53.2%], lineage split 67.9%, random split 73.1%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 4 BioProjects left out: sensitivity 78.6% to 82.1%, specificity 34.4% to 34.6% (over 3 estimates).
+  cart: TP 24, FN 5, FP 21, TN 11. Sensitivity 82.8% [64.2%, 94.2%], lineage split 77.2%, random split 79.3%: consistent. Specificity 34.4% [18.6%, 53.2%], lineage split 65.4%, random split 64.1%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 4 BioProjects left out: sensitivity 82.1% to 85.7%, specificity 34.4% to 34.6% (over 3 estimates).
+  lasso: TP 23, FN 6, FP 26, TN 6. Sensitivity 79.3% [60.3%, 92.0%], lineage split 75.0%, random split 78.3%: consistent. Specificity 18.8% [7.2%, 36.4%], lineage split 67.9%, random split 65.4%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 4 BioProjects left out: sensitivity 76.0% to 82.1%, specificity 18.8% to 23.1% (over 3 estimates).
+mycobacterium_tuberculosis__pyrazinamide: 442 resistant and 408 susceptible genomes scored (estimates); known-gene rule: no rule published.
+  By study: PRJEB48275 holds 325 of the 442 resistant genomes (73.5%); PRJEB48275 holds 279 of the 408 susceptible genomes (68.4%). Of 7 studies, 7 can be left out with 25 of each class remaining.
+  scm: TP 96, FN 346, FP 129, TN 279. Sensitivity 21.7% [18.0%, 25.9%], lineage split 58.0%, random split 50.7%: below. Specificity 68.4% [63.6%, 72.9%], lineage split 55.9%, random split 81.1%: above.
+    Reference figure: cross-validation, lineage split.
+    With each of 7 BioProjects left out: sensitivity 20.6% to 23.0%, specificity 64.4% to 82.2% (over 7 estimates).
+  cart: TP 290, FN 152, FP 248, TN 160. Sensitivity 65.6% [61.0%, 70.0%], lineage split 55.4%, random split 68.0%: above. Specificity 39.2% [34.4%, 44.1%], lineage split 61.3%, random split 68.5%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 7 BioProjects left out: sensitivity 62.4% to 70.9%, specificity 33.5% to 53.5% (over 7 estimates).
+mycobacterium_tuberculosis__rifampin: 945 resistant and 204 susceptible genomes scored (estimates); known-gene rule: no rule published.
+  By study: PRJEB48275 holds 747 of the 945 resistant genomes (79.0%); PRJEB48275 holds 111 of the 204 susceptible genomes (54.4%). Of 7 studies, 7 can be left out with 25 of each class remaining.
+  scm: TP 940, FN 5, FP 53, TN 151. Sensitivity 99.5% [98.8%, 99.8%], lineage split 93.6%, random split 93.7%: above. Specificity 74.0% [67.4%, 79.9%], lineage split 87.5%, random split 87.9%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 7 BioProjects left out: sensitivity 99.0% to 99.7%, specificity 58.9% to 84.9% (over 7 estimates).
+  cart: TP 940, FN 5, FP 53, TN 151. Sensitivity 99.5% [98.8%, 99.8%], lineage split 92.8%, random split 93.2%: above. Specificity 74.0% [67.4%, 79.9%], lineage split 87.7%, random split 87.9%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 7 BioProjects left out: sensitivity 99.0% to 99.7%, specificity 58.9% to 84.9% (over 7 estimates).
+  lasso: TP 866, FN 79, FP 39, TN 165. Sensitivity 91.6% [89.7%, 93.3%], lineage split 89.9%, random split 89.9%: consistent. Specificity 80.9% [74.8%, 86.0%], lineage split 87.5%, random split 87.9%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 7 BioProjects left out: sensitivity 90.9% to 91.9%, specificity 69.8% to 84.9% (over 7 estimates).
+mycobacterium_tuberculosis__streptomycin: 157 resistant and 80 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA1044389 holds 79 of the 157 resistant genomes (50.3%); PRJEB26996 holds 62 of the 80 susceptible genomes (77.5%). Of 4 studies, 3 can be left out with 25 of each class remaining.
+  More than half of the resistant genomes are from PRJNA1044389 and more than half of the susceptible genomes from PRJEB26996, so sensitivity and specificity are measured mostly on different studies.
+  With PRJEB26996 left out, fewer than 25 resistant or 25 susceptible genomes remain, so no estimate can be shown without that study, and every leave-one-study-out range for this dataset includes it.
+  scm: TP 130, FN 27, FP 5, TN 75. Sensitivity 82.8% [76.0%, 88.4%], lineage split 81.3%, random split 84.6%: consistent. Specificity 93.8% [86.0%, 97.9%], lineage split 79.9%, random split 89.9%: above.
+    Reference figure: cross-validation, lineage split.
+    With each of 4 BioProjects left out: sensitivity 80.8% to 82.7%, specificity 93.8% to 95.2% (over 3 estimates).
+  cart: TP 130, FN 27, FP 5, TN 75. Sensitivity 82.8% [76.0%, 88.4%], lineage split 67.5%, random split 84.6%: above. Specificity 93.8% [86.0%, 97.9%], lineage split 91.8%, random split 92.5%: consistent.
+    Reference figure: cross-validation, lineage split.
+    With each of 4 BioProjects left out: sensitivity 80.8% to 82.7%, specificity 93.8% to 95.2% (over 3 estimates).
+  known_gene: TP 0, FN 157, FP 0, TN 80. Sensitivity 0.0% [0.0%, 2.3%], lineage split 0.0%, random split 0.0%: consistent. Specificity 100.0% [95.5%, 100.0%], lineage split 100.0%, random split 100.0%: consistent.
+    Reference figure: fixed rule, whole cohort; a reference sensitivity or specificity is exactly 0 or 1.
+    With each of 4 BioProjects left out: sensitivity 0.0% to 0.0%, specificity 100.0% to 100.0% (over 3 estimates).
+
+Readings per learner (each dataset contributes sensitivity and specificity):
+  scm: below 4, consistent 6, above 12, not read 0.
+  cart: below 4, consistent 4, above 14, not read 0.
+  lasso: below 3, consistent 3, above 2, not read 0.
+  known_gene: below 0, consistent 10, above 0, not read 0.
+The reading is descriptive. It has no multiplicity correction and is not a hypothesis test.
+paired.tsv sets each learner beside the known-gene rule on the same genomes (counts only, no test).
+
+Not run here: sequence-distance novelty, partial-feature counts (--matrix), calibration,
+any hypothesis test, forests and boosted trees (not published in full).

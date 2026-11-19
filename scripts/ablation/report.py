@@ -82,11 +82,37 @@ only.
 predictive_increment. Features claim at most association_stable from the pipeline; mechanism_candidate and \
 causal_supported come only from named manual annotations with evidence references.
 7. This is software output for review. It makes no release or clinical claim.
+8. A log-loss improves can come from better calibration or less overfitting, not only from better \
+discrimination. The AUROC delta printed beside each log-loss decision is the discrimination change; it is \
+descriptive only and decides nothing.
+9. Random-split contrasts are descriptive only (family D, no p, no direction), and the input comparison scores \
+the random split once. Decisions come from the lineage split only. In the input comparison the unit of a \
+contrast is the (repeat, outer fold) refit of 3 keyed lineage repeats (unit repeat_fold). The test over the unit \
+means goes by learner, and each contrast's line prints its own: a paired t for scm, cart and rf (repeat_fold_t), \
+and Nadeau and Bengio's corrected resampled t for gbt and the lasso (repeat_fold_corrected_t). \
+One pair of fitted models scores every lineage of an outer fold, so a test over lineage clusters treats \
+dependent clusters as independent and is anti-conservative for learners whose fits vary (VERIFY-H1STATS: gbt's \
+learner-seed twin rejected in 26 to 46% of seeds).
+10. A sentinel arm is exchangeable with the default: the learner-seed twin judges rf and gbt, and the retuned \
+twin, which redraws every outer fold's inner folds and tuning holdouts, judges scm, cart and the lasso, which \
+draw no other randomness. When a sentinel's lineage-split contrast for a learner it judges is anything but \
+inconclusive on its own p (it is outside the BH family), or was not produced, every decision of that learner on \
+that species is marked unreliable: kept and listed, but left out of every summary of decisions. The input \
+comparison sorts every arm's genomes by id, which removes \
+genome-order effects only between arms with equal genome sets. It keys every fold on genome identity, through \
+the default's cohort and one grouping of the species' eligible genomes that every arm splits on, so a genome both \
+arms hold is scored only in its default outer fold and has the default's inner fold and holdout memberships in \
+every outer fold it trains in. Neither makes a cohort arm's decision free of the change in its training samples. \
+Beside each cohort arm's contrasts is the no-signal base rate measured for its kind (cap down, cap up or \
+selection swap), or "not measured".
+11. An arm whose genome set equals its baseline's is not run: it is reported as an identical cohort, with its \
+reason, and has no contrasts.
 """
 REPORT_KEYS = ("schema", "schema_version", "inputs_sha256", "predictions_sha256", "manifest", "planned_contrasts",
                "planned_pooled", "not_produced_reasons", "attempts", "contrast_counts", "pooled_counts",
                "not_produced", "pooled_not_produced", "undefined_contrasts", "unavailable_runs",
-               "unavailable_blocks", "exclusions", "contrasts", "pooled", "features")
+               "unavailable_blocks", "identical_cohorts", "exclusions", "unreliable", "contrasts", "pooled",
+               "features")
 
 
 COMPARISON = ("learner", "split", "baseline", "treatment", "endpoint")
@@ -121,12 +147,31 @@ def _check_records(contrasts, pooled, features, planned, planned_pooled, not_pro
     c.done()
 
 
-def _check_adjustment(c, contrasts, pooled, planned, planned_pooled):
+def unadjusted_ids(manifest, planned):
+    """The planned family C ids judged on their own p, outside BH: every sentinel arm's, when the manifest says
+    "sentinel_adjust": "none" (main's ruling 3 after VERIFY-H1STATS)."""
+    if manifest.get("sentinel_adjust") != "none":
+        return set()
+    sentinels = set(manifest.get("sentinel_arms", []))
+    out = set()
+    for pid in planned:
+        parts = schema.parse_key(schema.contrast_key(pid))
+        if parts["family"] == "C" and parts["treatment"] in sentinels:
+            out.add(pid)
+    return out
+
+
+def _check_adjustment(c, contrasts, pooled, planned, planned_pooled, unadjusted=frozenset()):
     """Section 17: recompute p_adj in families A to C from every planned hypothesis of the family,
-    Holm in A and B and BH in C, with a missing or undefined hypothesis at p = 1."""
+    Holm in A and B and BH in C, with a missing or undefined hypothesis at p = 1. The `unadjusted`
+    ids (sentinels) are out of BH with adjust none; no other family C record is."""
     by_name = {x["id"]: (f"contrasts[{i}]", x) for i, x in enumerate(contrasts)}
     by_name.update({p["contrast"]: (f"pooled[{j}]", p) for j, p in enumerate(pooled)})
-    family_of = {pid: schema.parse_key(schema.contrast_key(pid))["family"] for pid in planned}
+    for i, x in enumerate(contrasts):
+        if x["family"] == "C" and (x["adjust"] == "none") != (x["id"] in unadjusted):
+            c.fail(f"contrasts[{i}].adjust", "a sentinel contrast is judged on its own p (adjust none) when the "
+                                             "manifest says sentinel_adjust none; every other family C contrast is bh")
+    family_of = {pid: schema.parse_key(schema.contrast_key(pid))["family"] for pid in planned if pid not in unadjusted}
     family_of.update({key: schema.parse_key(key)["family"] for key in planned_pooled})
     for family in schema.CONFIRMATORY_FAMILIES:
         method = schema.FAMILY_ADJUST[family]
@@ -137,6 +182,22 @@ def _check_adjustment(c, contrasts, pooled, planned, planned_pooled):
             if rec is not None and rec["p_adj"] is not None and abs(rec["p_adj"] - expected) > schema.ADJUST_TOLERANCE:
                 c.fail(f"{path}.p_adj", f"is {rec['p_adj']!r}, but {method} over the {len(names)} planned hypotheses "
                                         f"of family {family}, missing or undefined at p = 1, gives {expected!r}")
+
+
+def _check_pairing(c, path, x, base, treat):
+    """A contrast's pairing rule is its treatment run's (same_plan when the run names none),
+    and a run paired by another rule pairs only with the reference arm it names. Two arms
+    each paired to a reference, or a paired arm against another baseline, are refused."""
+    if base is None or treat is None:
+        return
+    rule = (treat.get("pairing") or {}).get("rule", schema.SAME_PLAN)
+    if x["pairing"] != rule:
+        c.fail(f"{path}.pairing", f"is {x['pairing']}, but run {treat['id']} pairs by {rule}")
+    if base.get("pairing") is not None:
+        c.fail(path, f"baseline arm {x['baseline']} is paired to {base['pairing']['reference_arm']}; "
+                     "a contrast compares an arm with its own reference arm")
+    if treat.get("pairing") is not None and treat["pairing"]["reference_arm"] != x["baseline"]:
+        c.fail(path, f"arm {x['treatment']} is paired to {treat['pairing']['reference_arm']}, not {x['baseline']}")
 
 
 def _check_links(manifest, contrasts, pooled, features, planned, planned_pooled, not_produced):
@@ -174,6 +235,8 @@ def _check_links(manifest, contrasts, pooled, features, planned, planned_pooled,
             run = runs.get((dataset, arm, x["learner"], x["split"]))
             if run is None or run["status"] != "ok":
                 c.fail(path, f"arm {arm} has no ok run for {dataset}, {x['learner']}, {x['split']}")
+        _check_pairing(c, path, x, runs.get((dataset, x["baseline"], x["learner"], x["split"])),
+                       runs.get((dataset, x["treatment"], x["learner"], x["split"])))
 
     pooled_planned_set = set(planned_pooled)
     for i, key in enumerate(planned_pooled):
@@ -250,7 +313,7 @@ def _check_links(manifest, contrasts, pooled, features, planned, planned_pooled,
         for b in f["blocks"]:
             if b not in blocks:
                 c.fail(f"features[{i}].blocks", f"unknown block {b}")
-    _check_adjustment(c, contrasts, pooled, planned, planned_pooled)
+    _check_adjustment(c, contrasts, pooled, planned, planned_pooled, unadjusted_ids(manifest, planned))
     c.done()
     return missing, pooled_missing
 
@@ -350,6 +413,7 @@ def build_report(manifest, contrasts, pooled, features, planned_contrasts, plann
             "runs": len(runs),
             "ok": sum(u["status"] == "ok" for u in runs),
             "unavailable": sum(u["status"] == "unavailable" for u in runs),
+            "identical_cohort": sum(u["status"] == "identical_cohort" for u in runs),
         },
         "contrast_counts": {
             "planned": len(planned),
@@ -370,6 +434,10 @@ def build_report(manifest, contrasts, pooled, features, planned_contrasts, plann
             {k: u[k] for k in ("id", "dataset", "arm", "learner", "split", "reason")}
             for u in runs if u["status"] == "unavailable"
         ],
+        "identical_cohorts": [
+            {k: u[k] for k in ("id", "dataset", "arm", "learner", "split", "reason")}
+            for u in runs if u["status"] == "identical_cohort"
+        ],
         "unavailable_blocks": [
             {"block": b["id"], "reason": b["unavailable_reason"]}
             for b in manifest["blocks"] if b["unavailable_reason"] is not None
@@ -378,6 +446,7 @@ def build_report(manifest, contrasts, pooled, features, planned_contrasts, plann
             {"pooled": p["contrast"], "dataset": e["dataset"], "reason": e["reason"]}
             for p in pooled for e in p["excluded"]
         ],
+        "unreliable": _unreliable(manifest, contrasts, planned, missing),
         "contrasts": contrasts,
         "pooled": pooled,
         "features": features,
@@ -652,7 +721,93 @@ def _design(x):
             f"{_md(x['endpoint'])}")
 
 
-def _contrast_line(x, datasets, arm_blocks):
+RANDOM_SPLIT_SENTENCE = ("Descriptive only, with no p and no direction: decisions come from the lineage split, "
+                         "and the input comparison scores the random split once.")
+UNRELIABLE_SENTENCE = ("The sentinel judging these learners, which is exchangeable with its baseline, was not "
+                       "inconclusive on the lineage split, so every decision of these learners on these species is "
+                       "unreliable: kept below and flagged, and left out of every summary of decisions.")
+UNANSWERED_HEADING = "## Datasets the per-dataset test can't answer"
+UNANSWERED_SENTENCE = ("No family C contrast of these confirmatory datasets outside the sentinel arms has a p: each "
+                       "planned one was not produced or is undefined, for the reasons listed above. So the "
+                       "test decides nothing for them. Each can't be tested this way, and its missing "
+                       "decisions are not a measured result.")
+
+
+def unanswered_datasets(report):
+    """The confirmatory datasets with planned family C contrasts outside the sentinel arms, none of which has a p:
+    the per-dataset test answers nothing for them, and the summary lists each rather than leave it to read as a
+    contrast that found nothing (Layth's ruling on H-1's pilot, 2026-11-09). A dataset with no family C planned
+    asked that test nothing and isn't listed, and K refuses family C on a development dataset, so each one listed
+    is confirmatory. Derived from the report's own records, so its JSON keys and validate_report are unchanged.
+    Each entry gives the dataset, its planned family C contrasts outside the sentinels, how many of them were not
+    produced or are undefined, and their splits."""
+    sentinels = set(report["manifest"].get("sentinel_arms", []))
+    decided = {x["dataset"] for x in report["contrasts"]
+               if x["family"] == "C" and x["p"] is not None and x["treatment"] not in sentinels}
+    absent = {x["id"] for x in report["not_produced"]}
+    undefined = {x["id"] for x in report["undefined_contrasts"]}
+    planned = defaultdict(list)
+    for pid in report["planned_contrasts"]:
+        parts = schema.parse_key(schema.contrast_key(pid))
+        if parts["family"] == "C" and parts["treatment"] not in sentinels:
+            planned[schema.contrast_dataset(pid)].append((pid, parts["split"]))
+    return [{"dataset": d["id"], "planned": len(planned[d["id"]]),
+             "not_produced": sum(pid in absent for pid, _ in planned[d["id"]]),
+             "undefined": sum(pid in undefined for pid, _ in planned[d["id"]]),
+             "splits": sorted({split for _, split in planned[d["id"]]})}
+            for d in report["manifest"]["datasets"] if planned[d["id"]] and d["id"] not in decided]
+
+
+def _unanswered_line(u):
+    splits = ", ".join(_md(s) for s in u["splits"])
+    return (f"- {_code(u['dataset'])}: can't be tested this way: {_plural(u['planned'], 'planned family C contrast')} "
+            f"outside the sentinel arms ({splits} split), {u['not_produced']} not produced, {u['undefined']} "
+            "undefined.")
+
+
+def judging_contrasts(manifest, planned):
+    """The planned contrasts by which a sentinel arm judges a learner (rule 10), each as (id, the parts of its
+    key): a sentinel arm's contrasts on the sentinel split and the primary endpoint. With `sentinel_learners`,
+    a sentinel judges only the learners it names."""
+    sentinels = set(manifest.get("sentinel_arms", []))
+    judges = manifest.get("sentinel_learners")
+    out = []
+    for pid in planned:
+        parts = schema.parse_key(schema.contrast_key(pid))
+        if (parts["treatment"] in sentinels and parts["split"] == schema.SENTINEL_SPLIT
+                and parts["endpoint"] == schema.PRIMARY_CONTRAST_ENDPOINT
+                and (judges is None or parts["learner"] in judges.get(parts["treatment"], ()))):
+            out.append((pid, parts))
+    return out
+
+
+def _unreliable(manifest, contrasts, planned, missing):
+    """Each (species, learner) a sentinel arm flags, with the sentinel contrast, the reason and the
+    contrasts it makes unreliable (rule 10)."""
+    species = {d["id"]: d["species"] for d in manifest["datasets"]}
+    by_id = {x["id"]: x for x in contrasts}
+    absent = {m["id"]: m["reason"] for m in missing}
+    flagged = {}
+    for pid, parts in judging_contrasts(manifest, planned):
+        x = by_id.get(pid)
+        if x is None:
+            reason = f"the sentinel contrast was not produced: {absent.get(pid, 'no record')}"
+        elif x["decision"] != "inconclusive":
+            reason = f"the sentinel contrast is {x['decision']}"
+        else:
+            continue
+        key = (species[schema.contrast_dataset(pid)], parts["learner"])
+        flagged.setdefault(key, (pid, reason))
+    out = []
+    for (sp, learner), (pid, reason) in sorted(flagged.items()):
+        ids = sorted(x["id"] for x in contrasts
+                     if x["learner"] == learner and species[x["dataset"]] == sp)
+        out.append({"species": sp, "learner": learner, "sentinel": pid, "reason": reason, "contrasts": ids})
+    return out
+
+
+def _contrast_line(x, datasets, arm_blocks, base_rates=None):
+    base_rates = base_rates or {}
     dataset = datasets[x["dataset"]]
     head = f"- {_code(x['id'])} ({_md(dataset['species'])}, {dataset['partition']}): {_design(x)}: "
     method = f"{_md(x['ci_method'])}, n = {_units(x['n_units'], x['unit'])}"
@@ -670,6 +825,22 @@ def _contrast_line(x, datasets, arm_blocks):
                  "below nominal in calibration.")
     if x["undefined_resamples"]:
         line += f" Undefined resamples: {x['undefined_resamples']}."
+    rate = base_rates.get(x["treatment"])
+    if rate is not None:
+        kind = f" ({_md(rate['kind'])})" if rate.get("kind") else ""
+        if rate["rate"] is None:
+            line += f" No-signal base rate for this arm type{kind}: not measured."
+        else:
+            interval = (f" (95% interval [{rate['ci95'][0] * 100:.1f}, {rate['ci95'][1] * 100:.1f}]%)"
+                        if rate["ci95"] else "")
+            line += (f" No-signal base rate for this arm type{kind}: {rate['rate'] * 100:.1f}% of lineage-split "
+                     f"contrasts non-inconclusive{interval} over {rate['seeds']} seeds ({_md(rate['source'])}).")
+    if x["auroc_delta"] is not None:
+        lo, hi = x["auroc_ci"]
+        line += (f" AUROC delta {_num(x['auroc_delta'])} (95% interval [{_num(lo)}, {_num(hi)}]), descriptive "
+                 "only.")
+    if x["pairing"] != schema.SAME_PLAN:
+        line += f" Pairing: {_code(x['pairing'])}."
     return line
 
 
@@ -718,6 +889,20 @@ def _feature_claim(f):
     return text
 
 
+def _synthetic_line(m):
+    """The header's synthetic line, saying what the revision-12 gate did (main's ruling on REVIEW-INTEG7 L2)."""
+    gate = m.get("revision12_gate")
+    if not m["synthetic"]:
+        return "- Synthetic run: no. The revision-12 gate passed."
+    if gate == "passed":
+        return "- Synthetic run: yes. The spec also carries a revision-12 gate, and it passed."
+    if gate == "not_required":
+        return ("- Synthetic run: yes, on a synthetic data root. The spec carries no revision-12 gate, so none ran; "
+                "a real run needs it.")
+    return ("- Synthetic run: yes. The spec says it is synthetic, so the revision-12 gate a real run needs was not "
+            "required; this manifest doesn't record whether one ran.")
+
+
 def render_markdown(report):
     m = report["manifest"]
     datasets = {d["id"]: d for d in m["datasets"]}
@@ -735,6 +920,11 @@ def render_markdown(report):
         f"- Protocol sha256: `{m['protocol_sha256']}`",
         f"- Source commit: `{m['source_commit']}`",
         f"- Binary sha256: `{m['binary_sha256']}`",
+        *([_synthetic_line(m)] if "synthetic" in m else []),
+        *([f"- Species pool: the union of the cohorts of this run's {len(m['species_pool']['arms'])} arms "
+           f"({m['species_pool']['genomes']} genomes; structure sha256 `{m['species_pool']['structure_sha256']}`). "
+           "Lineages and the fold keys of units outside the default depend on this union, so adding an arm "
+           "means rerunning the whole comparison."] if m.get("species_pool") else []),
         "- Input sha256 (canonical JSON): " + ", ".join(f"{k} `{v}`" for k, v in report["inputs_sha256"].items()),
         "- Prediction files: " + ("not checked" if report["predictions_sha256"] is None else
                                   f"{_plural(len(report['predictions_sha256']), 'file')} checked against the "
@@ -746,6 +936,11 @@ def render_markdown(report):
         f"{a['runs']} runs attempted: {a['ok']} ok, {a['unavailable']} unavailable.",
         "",
     ]
+    if report["identical_cohorts"]:
+        out += ["Identical cohorts, not run (rule 11):", ""]
+        out += [f"- {_code(u['id'])} ({_md(u['dataset'])}, arm {_md(u['arm'])}, {_md(u['learner'])}, "
+                f"{_md(u['split'])} split): {_md(u['reason'])}" for u in report["identical_cohorts"]]
+        out.append("")
     if report["unavailable_runs"]:
         out += ["Unavailable runs:", ""]
         out += [f"- {_code(u['id'])} ({_code(u['dataset'])}, arm {_md(u['arm'])}, {_md(u['learner'])}, "
@@ -777,6 +972,9 @@ def render_markdown(report):
         groups = ", ".join(f"{_md(k)} {v}" for k, v in sorted(d["group_counts"].items())) or "none"
         out.append(f"| {_code(d['id'])} | {_md(d['species'])} | {d['partition']} | {d['n_samples']} | {groups} |")
     out.append("")
+    unanswered = unanswered_datasets(report)
+    if unanswered:
+        out += [UNANSWERED_HEADING, "", UNANSWERED_SENTENCE, ""] + [_unanswered_line(u) for u in unanswered] + [""]
 
     out += ["## Pooled across species", ""]
     for family in schema.POOLED_FAMILIES:
@@ -792,13 +990,32 @@ def render_markdown(report):
     if not report["planned_pooled"]:
         out += ["No pooled records planned.", ""]
 
+    if report["unreliable"]:
+        out += ["## Unreliable learners", "", UNRELIABLE_SENTENCE, ""]
+        out += [f"- {_md(u['species'])}, {_code(u['learner'])}: sentinel {_code(u['sentinel'])}: "
+                f"{_md(u['reason'])}; {_plural(len(u['contrasts']), 'contrast')} flagged."
+                for u in report["unreliable"]]
+        out.append("")
+    unreliable = {i for u in report["unreliable"] for i in u["contrasts"]}
+    rates = {b["arm"]: b for b in report["manifest"].get("base_rates", [])}
+
+    def line(x):
+        text = _contrast_line(x, datasets, arm_blocks, rates)
+        return text + " Unreliable (rule 10)." if x["id"] in unreliable else text
+
+    descriptive = [x for x in report["contrasts"]
+                   if x["family"] == "D" and x["split"] in schema.DESCRIPTIVE_SPLITS]
     out += ["## Per-dataset contrasts", ""]
     for family in schema.CONTRAST_FAMILIES:
-        rows = [x for x in report["contrasts"] if x["family"] == family]
+        rows = [x for x in report["contrasts"] if x["family"] == family and x not in descriptive]
         if rows:
             out += [f"### {FAMILY_TITLES[family]}", "", FAMILY_NOTES[family], ""]
-            out += [_contrast_line(x, datasets, arm_blocks) for x in rows]
+            out += [line(x) for x in rows]
             out.append("")
+    if descriptive:
+        out += ["### Random split: descriptive only", "", RANDOM_SPLIT_SENTENCE, ""]
+        out += [line(x) for x in descriptive]
+        out.append("")
     if not report["contrasts"]:
         out += ["No contrasts.", ""]
 

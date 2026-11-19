@@ -4,15 +4,15 @@
 import type { CatalogRow, Lite, Manifest } from "../schema";
 import { int, listWords, median, plural } from "../format";
 
-/** " 3 datasets with a catalog rule have no learner that calls every isolate
+/** " 3 datasets with a catalog rule have no learner scored on every isolate
  *  and are left out." Empty when every dataset has a best learner. */
 export const noBestWords = (n: number, which = ""): string =>
-  n === 0 ? "" : ` ${plural(n, "dataset")}${which} ${n === 1 ? "has" : "have"} no learner that calls every isolate and ${n === 1 ? "is" : "are"} left out.`;
+  n === 0 ? "" : ` ${plural(n, "dataset")}${which} ${n === 1 ? "has" : "have"} no learner scored on every isolate and ${n === 1 ? "is" : "are"} left out.`;
 
 export interface SplitSummary {
   /** Datasets with a best learner, so a random-split score. */
   n: number;
-  /** Datasets where no learner calls every isolate, left out of every median. */
+  /** Datasets where no learner is scored on every isolate, left out of every median. */
   nNoBest: number;
   /** Datasets that also ran the lineage split. */
   nLineage: number;

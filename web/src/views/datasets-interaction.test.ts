@@ -33,6 +33,9 @@ let opened: Mock<(id: string) => void>;
 let nav: Navigator;
 
 beforeEach(() => {
+  // The view reads the optional baselines files on mount; each answers 404
+  // here, so the MIC column shows the model alone.
+  vi.stubGlobal("fetch", async () => new Response("", { status: 404 }));
   window.matchMedia = media;
   window.history.replaceState(null, "", "/datasets");
   host = document.createElement("div");
@@ -46,6 +49,7 @@ afterEach(() => {
   act(() => root.unmount());
   host.remove();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
   unclip();
 });
 
@@ -101,7 +105,7 @@ describe("dataset filters", () => {
     expect(rail().querySelectorAll("[aria-pressed]")).toHaveLength(0);
     const boxes = [...rail().querySelectorAll<HTMLInputElement>("input[type='checkbox']")];
     expect(boxes.map((b) => b.closest("label")!.textContent)).toEqual([
-      expect.stringContaining("Has MIC regression"),
+      expect.stringContaining("Has MIC prediction"),
       expect.stringContaining("VME ≤1.5%"),
       expect.stringContaining("ME ≤3%"),
     ]);
@@ -150,6 +154,19 @@ describe("rule cells", () => {
     // Anywhere else on the row still opens the dataset.
     act(() => (row.children[1] as HTMLElement).click());
     expect(opened).toHaveBeenCalledTimes(1);
+  });
+
+  it("show the several-families note under each opened rule that names several, and under no other", () => {
+    const base = manifest.datasets[0]!;
+    const several = "presence of k-mers matching 3 catalog families (blaAFM, blaNDM, ble)";
+    draw({ ...manifest, datasets: [{ ...base, scm_rules: ["presence of blaKPC", several, "absence of gyrA", `absence of ${several.slice("presence of ".length)}`] }] });
+    const cell = table().querySelector("tbody tr")!.lastElementChild!;
+    // Closed, only the first rule shows, and it names one family.
+    expect(cell.querySelectorAll("[data-rule-note]")).toHaveLength(0);
+    act(() => cell.querySelector<HTMLButtonElement>("button[aria-label='Show all 4 rules']")!.click());
+    const notes = [...cell.querySelectorAll("li")].map((li) => li.querySelector("[data-rule-note]")?.textContent ?? null);
+    const note = "Not a list of genes an isolate carries: one k-mer pattern matches all of these families.";
+    expect(notes).toEqual([null, note, null, note]);
   });
 
   it("make a single cut-off rule its own button for the whole text, and leave a rule that fits as text", () => {
@@ -347,6 +364,23 @@ describe("rule cells on touch and hover (A34)", () => {
     root = createRoot(host);
     draw({ ...manifest, datasets: [{ ...base, scm_rules: ["presence of blaKPC"] }] });
     expect(table().querySelector("tbody tr")!.lastElementChild!.querySelector("[title]")).toBeNull();
+  });
+});
+
+describe("dataset search", () => {
+  it("finds a dataset by its species' everyday name, and still by drug then species", () => {
+    const base = manifest.datasets[0]!;
+    // "gonorrhea" is not part of "Neisseria gonorrhoeae", so only the
+    // everyday name can match it.
+    const ngo = { ...base, id: "neisseria_gonorrhoeae__ceftriaxone", species: "Neisseria gonorrhoeae", antibiotic: "ceftriaxone" };
+    const kpn = { ...base, id: "klebsiella_pneumoniae__ceftriaxone", species: "Klebsiella pneumoniae", antibiotic: "ceftriaxone" };
+    draw({ ...manifest, datasets: [ngo, kpn] });
+    const search = host.querySelector<HTMLInputElement>("input[type='search']")!;
+    act(() => type(search, "gonorrhea"));
+    expect(live()).toBe("1 of 2 datasets");
+    expect(table().querySelector("tbody tr")!.textContent).toContain("CeftriaxoneGonorrhea ·");
+    act(() => type(search, "ceftriaxone klebsiella pneumoniae"));
+    expect(live()).toBe("1 of 2 datasets");
   });
 });
 

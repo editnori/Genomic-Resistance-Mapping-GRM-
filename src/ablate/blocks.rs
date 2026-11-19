@@ -4,8 +4,9 @@
 //!
 //! - C, curated exact calls: the region probes in `probes`, for the species
 //!   whose assays can call.
-//! - H, hierarchical panel calls: each `panels` panel for the drug, and each
-//!   of its targets, over the genome's `catalog::family_calls`.
+//! - H, hierarchical panel calls: each `panels` panel that reports for the
+//!   drug in the species, and each of its targets read for that drug, over
+//!   the genome's `catalog::family_calls`.
 //! - P, presence: catalog gene groups found by `Catalog::detect`.
 //! - N, gene copy counts: unavailable, since nothing in GRM counts copies.
 //! - X, genome context: unavailable until a reviewed source exists.
@@ -22,7 +23,9 @@
 //! assembly QC say where a genome came from, not what it carries, and a model
 //! can learn resistance prevalence from them. `proxy_kind` names them, and
 //! `admit` refuses any block whose id, version or column names match one.
-//! They can only ever be reported as a named diagnostic.
+//! They can only ever be reported as a named diagnostic. So are an AST
+//! record's study and lab-method fields (`RECORD_FIELDS`), matched as whole
+//! names only.
 //!
 //! Splitting groups. Task G's `GroupIds`, and any other group id, decide which
 //! genomes are held out together, so they must never also be a predictor.
@@ -51,7 +54,7 @@ use crate::bits::{self, Bits};
 use crate::catalog::{self, Catalog, FamilyHit};
 use crate::dna::KmerSpace;
 use crate::matrix::FeatureMatrix;
-use crate::panels::{self, Panel};
+use crate::panels::{self, Panel, Target};
 use crate::probes::{self, Assay, ProbeCall, ProbeSet};
 use anyhow::{Context, Result, bail, ensure};
 use serde::{Deserialize, Serialize};
@@ -541,10 +544,11 @@ pub enum ProxyKind {
     InsertionDate,
     SequencingPlatform,
     AssemblyQc,
+    RecordField,
 }
 
 impl ProxyKind {
-    pub const ALL: [ProxyKind; 10] = [
+    pub const ALL: [ProxyKind; 11] = [
         ProxyKind::Lineage,
         ProxyKind::Cluster,
         ProxyKind::BioProject,
@@ -555,6 +559,7 @@ impl ProxyKind {
         ProxyKind::InsertionDate,
         ProxyKind::SequencingPlatform,
         ProxyKind::AssemblyQc,
+        ProxyKind::RecordField,
     ];
 
     pub fn label(self) -> &'static str {
@@ -569,6 +574,7 @@ impl ProxyKind {
             ProxyKind::InsertionDate => "insertion date",
             ProxyKind::SequencingPlatform => "sequencing platform",
             ProxyKind::AssemblyQc => "assembly QC",
+            ProxyKind::RecordField => "study or lab-method field of an AST record",
         }
     }
 }
@@ -748,7 +754,34 @@ pub fn proxy_kind(name: &str) -> Option<ProxyKind> {
                 || r.accessions.iter().any(|p| accession(p))
         })
         .map(|r| r.kind)
+        .or_else(|| record_field(name))
         .or_else(|| value_kind(name))
+}
+
+/// The study and lab-method fields of an AST record and its curation
+/// (`curate::PairProvenance`): a PMID or submitting source names the study,
+/// and the methods, standards, record count and MIC spread describe how it
+/// was measured. They are refused as whole names only (`record_field`), so a
+/// genotype name that contains one, such as `P:resource`, still passes.
+pub const RECORD_FIELDS: [&str; 8] = [
+    "pmid",
+    "pmids",
+    "source",
+    "sources",
+    "methods",
+    "standards",
+    "n_records",
+    "mic_spread",
+];
+
+/// `RecordField` when a name's last `:` part, the column after its block
+/// prefix, is exactly one of `RECORD_FIELDS`, ignoring ASCII case.
+fn record_field(name: &str) -> Option<ProxyKind> {
+    let last = name.rsplit(':').next().unwrap_or(name).trim();
+    RECORD_FIELDS
+        .iter()
+        .any(|f| last.eq_ignore_ascii_case(f))
+        .then_some(ProxyKind::RecordField)
 }
 
 /// The proxy a name's last `:` part is a value of, when that part is only a
@@ -1158,15 +1191,16 @@ impl BlockSource for ProbeSource {
 
 // ------------------------------------------------------------- H: panels
 
-const PANELS_VERSION: &str = "panels-v1";
+const PANELS_VERSION: &str = "panels-v2";
 
-/// Block H: for each panel that targets the drug, whether the panel calls
-/// (any target detected) and, under it, whether each target is detected,
-/// from the genome's catalog gene calls. Every call is assessable.
+/// Block H: for each panel that reports a target for the drug in the
+/// species, whether the panel calls (any of those targets detected) and,
+/// under it, whether each of those targets is detected, from the genome's
+/// catalog gene calls. Every call is assessable.
 pub struct PanelSource {
     spec: BlockSpec,
     genomes: Genomes,
-    panels: Vec<&'static Panel>,
+    panels: Vec<(&'static Panel, Vec<&'static Target>)>,
     calls: Vec<Vec<FamilyHit>>,
 }
 
@@ -1177,6 +1211,7 @@ impl PanelSource {
     /// List only genomes whose calls were computed; the others get no row.
     pub fn new(
         drug: &str,
+        species: &str,
         provenance: &Provenance,
         calls_version: &str,
         genomes: Vec<String>,
@@ -1193,20 +1228,34 @@ impl PanelSource {
             calls.len(),
             genomes.len()
         );
-        let panels = panels::for_drug(drug);
+        let candidates = panels::for_dataset(drug, species);
+        let mut panels = Vec::new();
+        let mut refused = Vec::new();
+        for (panel, targets) in &candidates {
+            match targets {
+                Ok(t) => panels.push((*panel, t.clone())),
+                Err(why) => refused.push(format!("{}: {}", panel.id, why.reason())),
+            }
+        }
         let mut digest = Digest::new();
         digest
             .field(provenance.source_sha256.as_bytes())
             .field(calls_version.as_bytes())
             .field(drug.as_bytes())
+            .field(species.as_bytes())
             .field(&serde_json::to_vec(&panels)?);
         let mut spec = registered("H").spec(Provenance {
             version: format!("{calls_version}|{PANELS_VERSION}:{drug}"),
             source_sha256: digest.finish(),
             catalog_date: provenance.catalog_date.clone(),
         });
-        if panels.is_empty() {
+        if candidates.is_empty() {
             spec.unavailable_reason = Some(format!("no panel targets {drug}"));
+        } else if panels.is_empty() {
+            spec.unavailable_reason = Some(format!(
+                "no panel reports {drug} in {species}; {}",
+                refused.join("; ")
+            ));
         }
         Ok(PanelSource {
             spec,
@@ -1220,6 +1269,7 @@ impl PanelSource {
     /// as `grm count` does, then builds as `new`.
     pub fn from_catalog(
         drug: &str,
+        species: &str,
         cat: &Catalog,
         provenance: &Provenance,
         genomes: Vec<String>,
@@ -1230,7 +1280,14 @@ impl PanelSource {
             .iter()
             .map(|hits| catalog::family_calls(cat, hits))
             .collect();
-        Self::new(drug, provenance, &cat.calls_version(), genomes, calls)
+        Self::new(
+            drug,
+            species,
+            provenance,
+            &cat.calls_version(),
+            genomes,
+            calls,
+        )
     }
 }
 
@@ -1246,24 +1303,24 @@ impl BlockSource for PanelSource {
         let (ids, at) = self.genomes.rows(sample_ids)?;
         let n = at.len();
         let (mut names, mut cols) = (Vec::new(), Vec::new());
-        for panel in &self.panels {
+        for (panel, used) in &self.panels {
             let mut any = Bits::zeros(n);
-            let mut targets = vec![Bits::zeros(n); panel.targets.len()];
+            let mut targets = vec![Bits::zeros(n); used.len()];
             for (i, &g) in at.iter().enumerate() {
                 let hits = &self.calls[g];
-                if !panels::detected(panel, hits).is_empty() {
+                if !panels::detected(used, hits).is_empty() {
                     any.insert(i);
                 }
-                for (t, target) in panel.targets.iter().enumerate() {
-                    if hits.iter().any(|h| panels::target_hit(target, h)) {
+                for (t, target) in used.iter().enumerate() {
+                    if hits.iter().any(|h| panels::target_hit(target.gene, h)) {
                         targets[t].insert(i);
                     }
                 }
             }
             names.push(format!("H:{}", panel.id));
             cols.push(always_assessable(any));
-            for (target, found) in panel.targets.iter().zip(targets) {
-                names.push(format!("H:{}/{target}", panel.id));
+            for (target, found) in used.iter().zip(targets) {
+                names.push(format!("H:{}/{}", panel.id, target.gene));
                 cols.push(always_assessable(found));
             }
         }
@@ -1633,6 +1690,7 @@ mod tests {
     fn panel_source(genomes: &[&str], calls: Vec<Vec<FamilyHit>>) -> PanelSource {
         PanelSource::new(
             "meropenem",
+            "Klebsiella pneumoniae",
             &fixture_provenance(),
             CALLS_VERSION,
             ids(genomes),
@@ -1787,6 +1845,19 @@ mod tests {
             ),
             (Study, &["study", "Study Title", "SRP012345"]),
             (
+                RecordField,
+                &[
+                    "pmid",
+                    "PMIDs",
+                    "source",
+                    "Sources",
+                    "methods",
+                    "standards",
+                    "n_records",
+                    "mic_spread",
+                ],
+            ),
+            (
                 Submitter,
                 &[
                     "submitter",
@@ -1806,7 +1877,12 @@ mod tests {
             ),
             (
                 CollectionDate,
-                &["Collection Date", "collection_year", "collectionDate"],
+                &[
+                    "Collection Date",
+                    "collection_year",
+                    "collection_date",
+                    "collectionDate",
+                ],
             ),
             (InsertionDate, &["Date Inserted", "insertion_date"]),
             (
@@ -1851,6 +1927,167 @@ mod tests {
         }
     }
 
+    /// A block whose columns are named for the provenance side files' fields.
+    /// No adapter reads those files, so this one exists only in tests: it
+    /// asks whether `admit` would refuse such a block if one did.
+    struct SideFileSource {
+        spec: BlockSpec,
+        names: Vec<String>,
+    }
+
+    impl sealed::Adapter for SideFileSource {}
+
+    impl BlockSource for SideFileSource {
+        fn spec(&self) -> &BlockSpec {
+            &self.spec
+        }
+
+        fn build(&self, sample_ids: &[String]) -> Result<RawBlock> {
+            let n = sample_ids.len();
+            let cols = self
+                .names
+                .iter()
+                .map(|_| RawColumn::binary(&vec![false; n], &vec![true; n]))
+                .collect::<Result<_>>()?;
+            Ok(RawBlock {
+                spec: self.spec.clone(),
+                sample_ids: sample_ids.to_vec(),
+                names: self.names.clone(),
+                cols,
+            })
+        }
+    }
+
+    #[test]
+    fn admit_refuses_a_block_of_the_provenance_side_file_fields() {
+        // Every field of bvbrc/genome_dates.jsonl and curated/provenance.jsonl
+        // but the row keys (`report/provenance/<id>.json` carries the same).
+        let mut fields: Vec<String> = [
+            serde_json::to_value(crate::bvbrc::GenomeDate::default()).unwrap(),
+            serde_json::to_value(crate::curate::PairProvenance::default()).unwrap(),
+        ]
+        .iter()
+        .flat_map(|row| row.as_object().unwrap().keys().cloned())
+        .filter(|k| k != "genome_id" && k != "antibiotic")
+        .collect();
+        fields.sort();
+        // Each field and the proxy that refuses it: the dates and years by
+        // the date rules, the record and measurement details by
+        // `RECORD_FIELDS`. A new side-file field fails here until it has a
+        // rule and a line.
+        use ProxyKind::*;
+        let refused = [
+            ("completion_date", CollectionDate),
+            ("date_inserted", InsertionDate),
+            ("date_inserted_first", InsertionDate),
+            ("date_inserted_last", InsertionDate),
+            ("methods", RecordField),
+            ("mic_spread", RecordField),
+            ("n_records", RecordField),
+            ("pmids", RecordField),
+            ("sources", RecordField),
+            ("standards", RecordField),
+            ("testing_standard_years", CollectionDate),
+        ];
+        let listed: Vec<&str> = refused.iter().map(|r| r.0).collect();
+        assert_eq!(
+            fields, listed,
+            "give each new side-file field a rule and a line here"
+        );
+
+        let samples = ids(&["g0", "g1"]);
+        let all: Vec<&str> = fields.iter().map(String::as_str).collect();
+        let err = admit(&side_file_source(&all), &samples).err().unwrap();
+        assert!(format!("{err:#}").contains("named diagnostic"), "{err:#}");
+        for (name, kind) in refused {
+            assert_eq!(proxy_kind(name), Some(kind), "{name}");
+            assert_refused(name, &samples);
+        }
+    }
+
+    /// A block with one `C:` column per name.
+    fn side_file_source(names: &[&str]) -> SideFileSource {
+        SideFileSource {
+            spec: probe_source().spec().clone(),
+            names: names.iter().map(|n| format!("C:{n}")).collect(),
+        }
+    }
+
+    /// `admit` refuses `name` as a column and as the block's version.
+    fn assert_refused(name: &str, samples: &[String]) {
+        let err = admit(&side_file_source(&[name]), samples).err().unwrap();
+        assert!(
+            format!("{err:#}").contains("named diagnostic"),
+            "{name}: {err:#}"
+        );
+        let mut versioned = side_file_source(&[]);
+        versioned.spec.version = name.to_string();
+        let err = admit(&versioned, samples).err().unwrap();
+        assert!(
+            format!("{err:#}").contains("named diagnostic"),
+            "{name}: {err:#}"
+        );
+    }
+
+    #[test]
+    fn admit_refuses_record_fields_by_exact_name_only() {
+        let samples = ids(&["g0", "g1"]);
+        for field in RECORD_FIELDS {
+            assert_refused(field, &samples);
+            assert_refused(&field.to_ascii_uppercase(), &samples);
+        }
+        // No name in the pinned AMRFinderPlus catalog (2026-08-07.1) or the
+        // probe and panel registries contains "source" or another record
+        // field, so these genotype-shaped names carry them inside a longer
+        // name: none is the whole column, and `admit` accepts each.
+        let inside = [
+            "resource",
+            "sourceA-1",
+            "blaSOURCE-2",
+            "carbapenemase/source",
+            "aac(6')-Ib source variant",
+            "pmid1",
+            "n_records2",
+            "mic_spread-like",
+            "tet(methods)",
+        ];
+        for name in inside {
+            assert_eq!(proxy_kind(&format!("P:{name}")), None, "{name}");
+            assert!(
+                admit(&side_file_source(&[name]), &samples).is_ok(),
+                "{name}"
+            );
+        }
+    }
+
+    /// The deny-list against every P column the real catalog gives (each
+    /// gene group) and every H column, as docs/ci.md's catalog name check:
+    /// GRM_CATALOG_DIR names a folder of `grm fetch catalog`'s three files.
+    #[test]
+    #[ignore = "needs the AMRFinderPlus catalog in GRM_CATALOG_DIR"]
+    fn the_real_catalog_s_gene_groups_pass_the_deny_list() {
+        let dir = std::env::var("GRM_CATALOG_DIR").expect("set GRM_CATALOG_DIR");
+        let cat = Catalog::load(Path::new(&dir), &KmerSpace::new(31)).unwrap();
+        let groups: BTreeSet<&str> = cat.genes.iter().map(|g| g.group.as_str()).collect();
+        assert!(groups.len() > 1000, "{} groups", groups.len());
+        let mut names: Vec<String> = groups.iter().map(|g| format!("P:{g}")).collect();
+        for p in panels::PANELS {
+            names.push(format!("H:{}", p.id));
+            names.extend(p.targets.iter().map(|t| format!("H:{}/{}", p.id, t.gene)));
+        }
+        let refused: Vec<(&String, ProxyKind)> = names
+            .iter()
+            .filter_map(|n| proxy_kind(n).map(|k| (n, k)))
+            .collect();
+        assert!(refused.is_empty(), "{} refused: {refused:?}", refused.len());
+        eprintln!(
+            "catalog {}: {} gene groups and the panels' {} names pass the deny-list",
+            cat.version,
+            groups.len(),
+            names.len() - groups.len()
+        );
+    }
+
     #[test]
     fn the_deny_list_passes_genotype_names() {
         let mut names: Vec<String> = [
@@ -1859,13 +2096,15 @@ mod tests {
             "P:aac(6')-Ib-cr",
             "P:tet(M)",
             "IS26 insertion sequence",
+            "P:resource",
+            "P:sourceA-1",
         ]
         .map(String::from)
         .to_vec();
         names.extend(probes::ASSAYS.iter().map(|a| format!("C:{}", a.id)));
         for p in panels::PANELS {
             names.push(format!("H:{}", p.id));
-            names.extend(p.targets.iter().map(|t| format!("H:{}/{t}", p.id)));
+            names.extend(p.targets.iter().map(|t| format!("H:{}/{}", p.id, t.gene)));
         }
         for name in &names {
             assert_eq!(proxy_kind(name), None, "{name}");
@@ -1992,10 +2231,17 @@ mod tests {
         let matrix = matrix_fixture();
         let specs = [
             probe_source().spec().clone(),
-            PanelSource::from_catalog("meropenem", &cat, &prov, genomes.clone(), kmers())
-                .unwrap()
-                .spec()
-                .clone(),
+            PanelSource::from_catalog(
+                "meropenem",
+                "Escherichia coli",
+                &cat,
+                &prov,
+                genomes.clone(),
+                kmers(),
+            )
+            .unwrap()
+            .spec()
+            .clone(),
             PresenceSource::new(&cat, &prov, genomes.clone(), kmers())
                 .unwrap()
                 .spec()
@@ -2202,7 +2448,7 @@ mod tests {
         let calls = vec![
             vec![hit("blaKPC", "blaKPC")],
             vec![hit("blaOXA", "blaOXA (OXA-1 family)")],
-            vec![],
+            vec![hit("blaCTX-M", "blaCTX-M")],
         ];
         let block = admit(&panel_source(&genomes, calls.clone()), &ids(&genomes)).unwrap();
         let raw = block.raw();
@@ -2213,40 +2459,81 @@ mod tests {
                 .0
                 .is_empty()
         );
-        // Each panel column is the union of its targets.
-        let meropenem = panels::for_drug("meropenem");
-        for panel in &meropenem {
-            let union: BTreeSet<usize> = panel
-                .targets
+        // CTX-M is no meropenem column, and the CTX-M genome is no call.
+        assert_eq!(binary(raw, "H:gram_negative_bcid").0, [0]);
+        assert!(!raw.names.iter().any(|n| n.contains("CTX-M")));
+        // Each panel column is the union of the targets read for the drug.
+        let meropenem = panels::for_dataset("meropenem", "Klebsiella pneumoniae");
+        let mut columns = 0;
+        for (panel, targets) in &meropenem {
+            let targets = targets.as_ref().unwrap();
+            let union: BTreeSet<usize> = targets
                 .iter()
-                .flat_map(|t| binary(raw, &format!("H:{}/{t}", panel.id)).0)
+                .flat_map(|t| binary(raw, &format!("H:{}/{}", panel.id, t.gene)).0)
                 .collect();
             assert_eq!(
                 binary(raw, &format!("H:{}", panel.id)).0,
                 union.into_iter().collect::<Vec<_>>()
             );
+            columns += targets.len() + 1;
         }
-        let columns: usize = meropenem.iter().map(|p| p.targets.len() + 1).sum();
         assert_eq!(raw.names.len(), columns);
-        let none = PanelSource::new(
-            "isoniazid",
+        // A. baumannii: BCID2 reports no OXA-48-like there.
+        let source = PanelSource::new(
+            "meropenem",
+            "Acinetobacter baumannii",
             &fixture_provenance(),
             CALLS_VERSION,
             ids(&genomes),
             calls.clone(),
         )
         .unwrap();
-        assert!(
-            none.spec()
-                .unavailable_reason
-                .as_deref()
-                .unwrap()
-                .contains("no panel")
+        let names = admit(&source, &ids(&genomes)).unwrap().raw().names.clone();
+        assert!(names.contains(&"H:carbapenemase/blaOXA (OXA-48 family)".to_string()));
+        assert!(!names.contains(&"H:gram_negative_bcid/blaOXA (OXA-48 family)".to_string()));
+        assert_ne!(
+            source.spec().source_sha256,
+            panel_source(&genomes, calls.clone()).spec().source_sha256
+        );
+        let reason = |drug: &str, species: &str| {
+            PanelSource::new(
+                drug,
+                species,
+                &fixture_provenance(),
+                CALLS_VERSION,
+                ids(&genomes),
+                calls.clone(),
+            )
+            .unwrap()
+            .spec()
+            .unavailable_reason
+            .clone()
+        };
+        assert_eq!(
+            reason("isoniazid", "Mycobacterium tuberculosis").as_deref(),
+            Some("no panel targets isoniazid")
+        );
+        // A drug some panel reads, in an organism none reports it for.
+        assert_eq!(
+            reason("cefoxitin", "Escherichia coli").unwrap(),
+            format!(
+                "no panel reports cefoxitin in Escherichia coli; mec: {}",
+                panels::Unsupported::Organism.reason()
+            )
+        );
+        assert_eq!(
+            reason("colistin", "Pseudomonas aeruginosa").unwrap(),
+            format!(
+                "no panel reports colistin in Pseudomonas aeruginosa; gram_negative_bcid: {}; mcr: {}",
+                panels::Unsupported::Drug.reason(),
+                panels::Unsupported::Organism.reason()
+            )
         );
         // Calls from another catalog release are refused.
         assert!(
             PanelSource::new(
                 "meropenem",
+                "Klebsiella pneumoniae",
                 &fixture_provenance(),
                 "2025-12-01.1|group-calls-v2",
                 ids(&genomes),
@@ -2276,6 +2563,7 @@ mod tests {
         // H reads the same catalog through family_calls.
         let panels = PanelSource::from_catalog(
             "meropenem",
+            "Klebsiella pneumoniae",
             &cat,
             &prov,
             genomes.clone(),
