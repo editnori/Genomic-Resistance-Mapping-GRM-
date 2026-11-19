@@ -132,6 +132,7 @@ src/lib.rs analysis::tests::rows_follow_matrix_columns_rather_than_genome_ids
 src/lib.rs analysis::tests::swapping_genomes_with_identical_columns_changes_the_matrix_digest
 src/lib.rs analysis::tests::the_default_fingerprint_is_the_one_main_computes
 src/lib.rs analysis::tests::the_default_input_key_is_the_one_main_computes
+src/lib.rs analysis::tests::the_disk_sparse_learn_writes_reports_only_through_real_directories
 src/lib.rs analysis::tests::the_lasso_scan_fits_the_report_inputs_as_the_evaluator_does
 src/lib.rs analysis::tests::the_log_names_the_best_learner_scored_on_every_isolate
 src/lib.rs analysis::tests::unsourced_and_unsupported_probe_assays_give_a_reason_without_ksets
@@ -140,6 +141,7 @@ src/lib.rs analysis::tests::write_lasso_scan_fixture_root [ignored]
 src/lib.rs analysis::tests::write_report_fields_fixture_root [ignored]
 src/lib.rs annotate::tests::a_failed_annotation_download_is_recorded_on_the_locus_and_not_cached
 src/lib.rs annotate::tests::a_feature_matching_several_families_is_labelled_with_all_of_them_in_byte_order
+src/lib.rs annotate::tests::only_the_disk_sparse_pipeline_refuses_to_cache_annotations_through_a_link
 src/lib.rs annotate::tests::the_cached_feature_order_does_not_choose_the_gene
 src/lib.rs baselines::tests::a_failed_write_names_its_path_and_leaves_no_pending_file
 src/lib.rs baselines::tests::a_lineage_share_never_counts_the_test_genome
@@ -658,6 +660,7 @@ src/main.rs tests::learn_with_a_fold_file_screens_as_many_features_as_it_is_told
 src/main.rs tests::matrix_and_pipeline_keep_the_stock_path_unless_disk_sparse_is_given
 src/main.rs tests::matrix_column_blocks_reach_the_block_merge_through_run
 src/main.rs tests::matrix_takes_only_a_column_block_width_of_whole_words
+src/main.rs tests::only_the_disk_sparse_pipeline_refuses_a_linked_results_directory
 src/main.rs tests::pipeline_and_learn_take_a_k_and_a_retained_feature_budget
 src/main.rs tests::pipeline_refuses_a_missing_kover_file_with_its_own_remedy
 src/main.rs tests::predict_replays_the_final_models_on_their_own_cohort
