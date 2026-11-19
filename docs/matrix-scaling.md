@@ -726,7 +726,7 @@ At minimum:
   Lifting the gate requires an explicit reviewed code change and downstream
   evidence, not a test helper, benchmark flag, or larger `ulimit`.
 - **Real-data measurements.** The MTB plan's section 3 gives an earlier
-  run's measured matrix stage (its section 5 receipt): 57 min 10 s for four
+  run's measured matrix stage (its section 5 result file): 57 min 10 s for four
   matrices with their checks and the duplicate screen, a
   peak disk growth of 6,226,591,744 B during the full matrix, and a kept
   full matrix of 367,757,922 B. Distinct k-mers per block, full-row share
