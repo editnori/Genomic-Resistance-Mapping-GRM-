@@ -1039,6 +1039,155 @@ fn sparse_rebuilds_at_another_min_support_and_adopts_a_complete_stock_count() {
     assert!(!saved.species_dir(SLUG).join("matrix-partials").exists());
 }
 
+/// The message a recount that does not reproduce its expectations stops on.
+const RECOUNT_CHANGED: &str =
+    "changed genome, kset digest or catalog while recreating a sparse block";
+
+/// Writes genome `g`'s SYNTHETIC FASTA as `fixture` wrote it, or when
+/// `changed` with 64 more bases from a linear congruential generator, whose
+/// 7-mers the fixture's few repeating ones do not cover; returns the digest
+/// of the k-mers it now holds.
+fn write_fasta(layout: &Layout, g: usize, changed: bool) -> String {
+    let mut seq = sequence(g);
+    if changed {
+        let mut x = g as u64 + 1;
+        seq.push_str("NNNN");
+        seq.extend((0..64).map(|_| {
+            x = x
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            b"ACGT"[(x >> 62) as usize] as char
+        }));
+    }
+    let path = fasta_path(&layout.fasta_dir(), &format!("g{g:04}"));
+    std::fs::write(&path, format!(">contig\n{seq}\n")).unwrap();
+    let (mut values, mut scratch) = (Vec::new(), Vec::new());
+    kset::count_into(&path, &KmerSpace::new(7), 1, &mut values, &mut scratch).unwrap();
+    kset::digest(&values)
+}
+
+/// Genome `g`'s kset digest in counted.json.
+fn recorded_digest(layout: &Layout, g: usize) -> Option<String> {
+    load_counted(layout, SLUG).unwrap().genomes[g]
+        .kset_digest
+        .clone()
+}
+
+fn counted_path_of(layout: &Layout) -> PathBuf {
+    layout.species_dir(SLUG).join("counted.json")
+}
+
+fn rebuild_until(layout: &Layout, stop: &str) -> Result<matrix::MatrixSummary> {
+    build_matrix_disk_sparse_with(layout, SLUG, 7, None, 2, 64, 0, |event| {
+        if event == stop {
+            anyhow::bail!("injected stop at {event}")
+        }
+        Ok(())
+    })
+}
+
+#[test]
+fn a_rebuild_refuses_a_changed_genome_in_a_later_block_as_in_the_first() {
+    // A finished run of 130 SYNTHETIC genomes in blocks of 64 has deleted
+    // its ksets, so another min_support recounts every block, and each
+    // recount must give the digests counted.json recorded: g0005 is in the
+    // first block, g0070 in the second.
+    let dir = tempfile::tempdir().unwrap();
+    for g in [5, 70] {
+        let layout = fixture(&dir.path().join(format!("g{g}")), 130, false);
+        sparse_at(&layout, 1, 64).unwrap();
+        let counted = std::fs::read(counted_path_of(&layout)).unwrap();
+        let matrix = matrix_files(&layout);
+        let recorded = recorded_digest(&layout, g);
+        assert_ne!(Some(write_fasta(&layout, g, true)), recorded);
+        let Err(err) = sparse_at(&layout, 2, 64) else {
+            panic!("the rebuild accepted g{g:04} changed");
+        };
+        assert!(
+            format!("{err:#}").contains(&format!("g{g:04} {RECOUNT_CHANGED}")),
+            "g{g:04}: {err:#}"
+        );
+        // Every block's expectations, and the matrix, stay as the finished
+        // run wrote them.
+        assert_eq!(
+            std::fs::read(counted_path_of(&layout)).unwrap(),
+            counted,
+            "g{g:04}"
+        );
+        assert_eq!(matrix_files(&layout), matrix, "g{g:04}");
+    }
+}
+
+#[test]
+fn an_interrupted_rebuild_keeps_each_later_blocks_expectations_until_its_recount() {
+    let dir = tempfile::tempdir().unwrap();
+    let stock = stock_matrix(&dir.path().join("stock"), 130, 2);
+
+    // Stopped after its first block is folded, the rebuild has recounted
+    // only that block; counted.json still holds all 130 expectations, none
+    // pending. A genome of the second block changed before the resume is
+    // refused there.
+    let layout = fixture(&dir.path().join("folded"), 130, false);
+    sparse_at(&layout, 1, 64).unwrap();
+    let counted = std::fs::read(counted_path_of(&layout)).unwrap();
+    assert!(rebuild_until(&layout, "after_fold:0").is_err());
+    assert_eq!(read_run(&layout).folded_columns, 64);
+    assert_eq!(std::fs::read(counted_path_of(&layout)).unwrap(), counted);
+    let recorded = recorded_digest(&layout, 70);
+    assert_ne!(Some(write_fasta(&layout, 70, true)), recorded);
+    let Err(err) = sparse_at(&layout, 2, 64) else {
+        panic!("the resumed rebuild accepted g0070 changed");
+    };
+    assert!(
+        format!("{err:#}").contains(&format!("g0070 {RECOUNT_CHANGED}")),
+        "{err:#}"
+    );
+    assert_eq!(read_run(&layout).folded_columns, 64);
+    assert_eq!(std::fs::read(counted_path_of(&layout)).unwrap(), counted);
+    // With its FASTA back, and the kset the refused count left gone, the
+    // resumed run builds the stock matrix.
+    assert_eq!(Some(write_fasta(&layout, 70, false)), recorded);
+    std::fs::remove_file(layout.kset_dir(SLUG).join("g0070.kset")).unwrap();
+    sparse_at(&layout, 2, 64).unwrap();
+    assert_same_matrix(&stock, &layout);
+    assert_eq!(std::fs::read(counted_path_of(&layout)).unwrap(), counted);
+
+    // Stopped as the second block's count starts, with the ksets that count
+    // writes then put in place, as a kill between them and counted.json
+    // leaves them: the resume writes the block from those ksets, and the
+    // changed one fails its recorded digest.
+    let layout = fixture(&dir.path().join("counting"), 130, false);
+    sparse_at(&layout, 1, 64).unwrap();
+    let counted = std::fs::read(counted_path_of(&layout)).unwrap();
+    assert!(rebuild_until(&layout, "before_count:64").is_err());
+    let run = read_run(&layout);
+    assert_eq!(run.folded_columns, 64);
+    assert!(run.active.is_some_and(|a| a.preexisting.is_empty()));
+    assert_eq!(std::fs::read(counted_path_of(&layout)).unwrap(), counted);
+    let recorded = recorded_digest(&layout, 70);
+    assert_ne!(Some(write_fasta(&layout, 70, true)), recorded);
+    let ids: Vec<String> = (64..128).map(|g| format!("g{g:04}")).collect();
+    count_sparse_block(
+        &layout,
+        SLUG,
+        &ids,
+        &KmerSpace::new(7),
+        None,
+        &Reserve::new(0),
+        &HashSet::new(),
+    )
+    .unwrap();
+    let Err(err) = sparse_at(&layout, 2, 64) else {
+        panic!("the resumed rebuild accepted g0070's kset from the changed FASTA");
+    };
+    assert!(
+        format!("{err:#}").contains("the kset of g0070 (column 70) has digest"),
+        "{err:#}"
+    );
+    assert_eq!(std::fs::read(counted_path_of(&layout)).unwrap(), counted);
+    assert_eq!(read_run(&layout).folded_columns, 64);
+}
+
 #[test]
 fn parallel_writes_share_one_reserve() {
     fn free(_: &Path) -> Result<u64> {

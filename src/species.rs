@@ -1448,7 +1448,7 @@ fn build_matrix_disk_sparse_with(
     // whole selection was already counted: a stock `grm count`, or a
     // finished sparse run now rebuilt at another min_support. That count is
     // adopted block by block; ksets it no longer has are recounted, and
-    // must reproduce its digests.
+    // must reproduce its digests. Every block not yet recounted keeps them.
     let fully_counted = counted.pending.is_empty() && counted.genomes.len() == n;
     anyhow::ensure!(
         run.folded_columns <= n
@@ -1566,9 +1566,13 @@ fn build_matrix_disk_sparse_with(
                         );
                     }
                 }
-                counted.genomes.truncate(first);
-                counted.genomes.extend(new);
-                counted.pending = config.genomes[end..].to_vec();
+                // Only this block's expectations make way for the recount just
+                // checked against them. A later block keeps its own, here and
+                // in counted.json across an interruption, until its recount is
+                // checked in turn; pending is what no count has recorded yet.
+                let recounted = first..counted.genomes.len().min(end);
+                counted.genomes.splice(recounted, new);
+                counted.pending = config.genomes[counted.genomes.len()..].to_vec();
                 write_json_durably(&species_dir.join("counted.json"), &counted, reserve)?;
             }
             for suffix in ["", ".part", ".receipt.json", ".receipt.json.part"] {
