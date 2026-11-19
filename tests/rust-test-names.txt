@@ -551,11 +551,13 @@ src/lib.rs serve::tests::rejects_methods_other_than_get_and_head
 src/lib.rs serve::tests::serves_bounded_single_byte_ranges
 src/lib.rs serve::tests::symlinks_cannot_escape_either_root
 src/lib.rs species::sparse_tests::a_linked_data_root_is_resolved_once_and_a_linked_kept_kset_is_only_read
+src/lib.rs species::sparse_tests::a_rebuild_refuses_a_changed_genome_in_a_later_block_as_in_the_first
 src/lib.rs species::sparse_tests::a_stock_count_reads_and_writes_through_linked_lane_files_as_before
 src/lib.rs species::sparse_tests::a_stock_count_records_no_sketch_from_sidecars_a_sparse_run_wrote
 src/lib.rs species::sparse_tests::a_stock_count_that_counts_no_genome_records_the_failures_as_main_does
 src/lib.rs species::sparse_tests::a_stock_count_writes_counted_json_and_sidecars_without_sketches
 src/lib.rs species::sparse_tests::an_interrupted_cleanups_empty_run_directory_is_removed
+src/lib.rs species::sparse_tests::an_interrupted_rebuild_keeps_each_later_blocks_expectations_until_its_recount
 src/lib.rs species::sparse_tests::column_blocks_leave_an_unfinished_sparse_run_alone
 src/lib.rs species::sparse_tests::disk_sparse_matches_stock_and_structure_after_kset_deletion
 src/lib.rs species::sparse_tests::mtb_probe_panels_do_not_read_deleted_ksets
