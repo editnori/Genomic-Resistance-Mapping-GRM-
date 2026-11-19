@@ -3063,6 +3063,49 @@ mod tests {
         assert_eq!(counted.k, 21);
     }
 
+    /// `grm pipeline --k 21` from its parsed arguments through `run`, on the
+    /// stock path and with `--disk-sparse`: counts, structure and matrix
+    /// each record 21. A dispatch that passed another k on (the merge's
+    /// `src/main.rs` hunk) would count at 31. Synthetic fixture.
+    #[test]
+    fn the_pipeline_command_counts_at_the_k_it_is_given() {
+        for sparse in [false, true] {
+            let dir = tempfile::tempdir().unwrap();
+            let layout = fixture(dir.path());
+            let data = dir.path().to_str().unwrap();
+            let mut args = vec![
+                "grm",
+                "--data",
+                data,
+                "pipeline",
+                "--species",
+                SLUG,
+                "--k",
+                "21",
+            ];
+            if sparse {
+                args.extend(["--disk-sparse", "--block-width", "64"]);
+            }
+            let ran = run(Cli::try_parse_from(args).unwrap()).map_err(|e| format!("{e:#}"));
+            let counted = grm::species::load_counted(&layout, SLUG).unwrap();
+            assert_eq!(counted.k, 21, "sparse {sparse}: {ran:?}");
+            let (input, _) = grm::analysis::load_inputs(&layout, SLUG).unwrap();
+            assert_eq!(
+                (input.structure.k, input.matrix.summary.k),
+                (21, 21),
+                "sparse {sparse}: {ran:?}"
+            );
+            // The fixture has no curated/funnel.json, so the run ends at
+            // the report step, after count, structure, matrix and learn.
+            assert!(!layout.curated().join("funnel.json").exists());
+            assert_eq!(
+                ran,
+                Err("No such file or directory (os error 2)".to_string()),
+                "sparse {sparse}"
+            );
+        }
+    }
+
     fn curated_json(layout: &Layout, file: &str) -> serde_json::Value {
         serde_json::from_slice(&std::fs::read(layout.curated().join(file)).unwrap()).unwrap()
     }
