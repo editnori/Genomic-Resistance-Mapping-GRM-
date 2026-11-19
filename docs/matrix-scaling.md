@@ -10,18 +10,23 @@ software built for them:
    and open at once. A prototype out-of-core merge over column-block
    partials needs only one block of ksets at a time.
 
-Status, 2026-10-28: software and synthetic tests only. No biological input
-was merged and no 4k or 8k MTB matrix was built. Independent review closed
-the re-save space check (M1), expected-k binding (L1), orphan-partial cleanup
-(L2), and durable matrix save. The pipeline wiring described below is now
-implemented in this patch, including the review's durable-block-directory
-precondition (R2), but still needs its own independent wiring review. The
-cap-4000 biological run remains unauthorized until that review clears it.
+Status: the wide key, the column-block switch and the disk-sparse path below
+are all on `main`, and every default command keeps the stock `build`.
+Independent review closed the re-save space check (M1), expected-k binding
+(L1), orphan-partial cleanup (L2), and durable matrix save; the wiring
+below includes the review's durable-block-directory precondition (R2). The
+M. tuberculosis 4,000-genome run of 6 Nov 2026 (release
+`data-mtb4k-r12-20261106`, evaluation revision 12) built its matrices on the
+disk-sparse path, with `--block-width 128` (`ops/boat-kit/kit/mtb-box.sh`);
+`scripts/mtb-4k/README.md` says what that run was. This page holds none of
+its figures.
 
-Since 15 Nov 2026 one command calls the out-of-core path:
-`grm matrix --column-blocks N` (below, "The column-block switch"). It
-keeps every kset, so it is not the disk-sparse sequence, and
-`grm pipeline` still calls `build`.
+Two opt-in commands call the out-of-core path. `grm matrix --column-blocks N`
+(since 15 Nov 2026; below, "The column-block switch") keeps every kset, so it
+is not the disk-sparse sequence. `grm matrix --disk-sparse` and
+`grm pipeline --disk-sparse` (below, "Pipeline wiring") delete each block's
+ksets once its partial verifies. Without either flag, `grm matrix` and
+`grm pipeline` call `build`.
 
 The wide key removes the packed **algorithmic** ceiling, not the downstream
 safety gate. Every public build/merge entry point, and `FeatureMatrix::load`,
@@ -701,15 +706,14 @@ out a difference of a few percent.
 
 ## What remains to be proven or built
 
-Fresh independent review of the wiring change comes before any biological
-run. After that, at minimum:
+At minimum:
 
-- **Biological pilot.** The pipeline wiring is implemented, but only
-  synthetic fixtures have run. On a newly frozen, small biological cohort,
-  first compare wired partial output with stock `build`, then test
-  catalog/assembly invalidation and interrupted resume. A cap-4000 pilot
-  follows only after those checks and resource measurement. No biological
-  pilot has run, and no real 4k or 8k resource claim is established.
+- **Biological runs.** The small frozen biological pilot of the MTB plan
+  passed on 2026-10-29 under the plan's revision 5, and the 6 Nov 2026 run
+  built four MTB matrices of 2,000 and 4,000 genomes
+  (`scripts/mtb-4k/4k-execution-plan.md`, sections 4 and 5;
+  `scripts/mtb-4k/README.md`). That plan permits no 8k stage, and no 8k
+  resource claim is established.
 - **Other probe panels.** Count caches and structure are handled: a sparse
   count stores the bottom-sketch with each kset digest, and structure rereads a
   real kset when present but uses that bound sketch after sparse deletion.
@@ -721,11 +725,14 @@ run. After that, at minimum:
   annotation, and reports were not reviewed or tested past 4,096 columns.
   Lifting the gate requires an explicit reviewed code change and downstream
   evidence, not a test helper, benchmark flag, or larger `ulimit`.
-- **Real-data pilot measurements.** Per-genome kset size (24 MB is the
-  scale-up estimate), distinct k-mers per block, full-row share, and partial
-  size on real MTB ksets are unmeasured. The disk table above rests on
-  assumed D_block values; the old synthetic block benchmark was not rerun
-  after these integrity changes.
+- **Real-data measurements.** The MTB plan's section 3 gives an earlier
+  run's measured matrix stage (its section 5 receipt): 57 min 10 s for four
+  matrices with their checks and the duplicate screen, a
+  peak disk growth of 6,226,591,744 B during the full matrix, and a kept
+  full matrix of 367,757,922 B. Distinct k-mers per block, full-row share
+  and partial size on real MTB ksets are not recorded here. The disk table
+  above rests on assumed D_block values; the old synthetic block benchmark
+  was not rerun after these integrity changes.
 - **Final matrix size.** `patterns.bin` is n_patterns x ceil(n/64) x 8
   bytes and `kmers.bin` is 8 B per kept k-mer. How many patterns and kept
   k-mers real 4k or 8k MTB data gives is unknown, so the matrix's own disk
