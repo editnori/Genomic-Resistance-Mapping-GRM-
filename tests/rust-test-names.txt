@@ -117,6 +117,7 @@ src/lib.rs analysis::tests::learn_recomputes_a_current_report_whose_audit_is_inv
 src/lib.rs analysis::tests::learn_refuses_a_structure_or_matrix_not_built_from_the_counts
 src/lib.rs analysis::tests::learn_refuses_counts_recorded_before_kset_digests
 src/lib.rs analysis::tests::learn_refuses_gene_calls_from_another_catalog_or_one_that_no_longer_loads
+src/lib.rs analysis::tests::learn_writes_reports_only_through_real_directories_below_the_root
 src/lib.rs analysis::tests::mutant_majority_cohorts_keep_wild_type_calls
 src/lib.rs analysis::tests::probe_assays_fail_instead_of_dropping_their_panel_without_ksets
 src/lib.rs analysis::tests::probe_assays_fail_on_a_kset_counted_at_another_k
@@ -196,6 +197,8 @@ src/lib.rs cluster::tests::pcoa_ignores_negative_eigenvalues
 src/lib.rs cluster::tests::pcoa_preserves_a_line
 src/lib.rs cluster::tests::short_sketches_count_the_whole_union
 src/lib.rs cluster::tests::tied_distances_still_form_one_tree
+src/lib.rs confine::tests::lane_directories_are_real_and_stay_below_the_root
+src/lib.rs confine::tests::writes_never_follow_or_replace_links
 src/lib.rs curate::tests::a_singleton_group_leaves_every_other_groups_draws_alone
 src/lib.rs curate::tests::breakpoint_respects_censoring
 src/lib.rs curate::tests::curated_files_without_min_class_read_as_the_old_learn_gate_of_25
@@ -254,6 +257,9 @@ src/lib.rs kset::tests::open_rejects_unsupported_k
 src/lib.rs kset::tests::radix_sort_matches_std_sort
 src/lib.rs kset::tests::read_bucket_rejects_a_repeated_kmer
 src/lib.rs kset::tests::read_bucket_rejects_corrupt_payload
+src/lib.rs kset::tests::the_size_bound_holds_for_the_widest_gaps_at_every_k
+src/lib.rs kset::tests::write_checked_preflights_exact_bytes_before_creating_a_file
+src/lib.rs kset::tests::writes_refuse_links_at_the_kset_and_its_temporary
 src/lib.rs learn::eval::tests::a_boosted_model_that_keeps_no_tree_is_a_null_fit_without_a_call
 src/lib.rs learn::eval::tests::a_copy_pair_among_unused_samples_cannot_change_a_folds_fits
 src/lib.rs learn::eval::tests::a_failed_lasso_fit_is_reported_with_its_trace_before_it_is_returned
@@ -541,6 +547,37 @@ src/lib.rs serve::tests::refuses_paths_that_leave_the_root
 src/lib.rs serve::tests::rejects_methods_other_than_get_and_head
 src/lib.rs serve::tests::serves_bounded_single_byte_ranges
 src/lib.rs serve::tests::symlinks_cannot_escape_either_root
+src/lib.rs species::sparse_tests::a_linked_data_root_is_resolved_once_and_a_linked_kept_kset_is_only_read
+src/lib.rs species::sparse_tests::a_stock_count_refuses_linked_lane_files_before_any_work
+src/lib.rs species::sparse_tests::a_stock_count_that_counts_no_genome_records_the_failures_as_main_does
+src/lib.rs species::sparse_tests::a_stock_count_writes_counted_json_and_sidecars_without_sketches
+src/lib.rs species::sparse_tests::an_interrupted_cleanups_empty_run_directory_is_removed
+src/lib.rs species::sparse_tests::column_blocks_leave_an_unfinished_sparse_run_alone
+src/lib.rs species::sparse_tests::disk_sparse_matches_stock_and_structure_after_kset_deletion
+src/lib.rs species::sparse_tests::mtb_probe_panels_do_not_read_deleted_ksets
+src/lib.rs species::sparse_tests::parallel_writes_share_one_reserve
+src/lib.rs species::sparse_tests::sparse_cleans_an_initial_manifest_temp_but_not_unowned_files
+src/lib.rs species::sparse_tests::sparse_keeps_partials_when_matrix_save_fails
+src/lib.rs species::sparse_tests::sparse_kill_after_partial_probe [ignored]
+src/lib.rs species::sparse_tests::sparse_merge_under_an_open_file_limit_that_stops_stock_build
+src/lib.rs species::sparse_tests::sparse_never_rewrites_a_kset_it_did_not_create
+src/lib.rs species::sparse_tests::sparse_open_file_limit_probe [ignored]
+src/lib.rs species::sparse_tests::sparse_preserves_preexisting_ksets
+src/lib.rs species::sparse_tests::sparse_rebuilds_at_another_min_support_and_adopts_a_complete_stock_count
+src/lib.rs species::sparse_tests::sparse_recreates_old_missing_sketches_even_when_matrix_is_current
+src/lib.rs species::sparse_tests::sparse_refuses_a_forged_partial_whose_receipt_matches_it
+src/lib.rs species::sparse_tests::sparse_refuses_links_in_its_run_directory_on_resume
+src/lib.rs species::sparse_tests::sparse_refuses_links_where_it_writes_before_any_work
+src/lib.rs species::sparse_tests::sparse_refuses_to_orphan_another_runs_partials
+src/lib.rs species::sparse_tests::sparse_rejects_a_stale_folded_block_without_recreating_it
+src/lib.rs species::sparse_tests::sparse_reserve_and_partial_failure_happen_before_kset_deletion
+src/lib.rs species::sparse_tests::sparse_resume_after_kill_before_kset_delete
+src/lib.rs species::sparse_tests::sparse_resume_binds_genome_order_and_kset_digests
+src/lib.rs species::sparse_tests::sparse_resume_cleans_orphans_and_refuses_unknown_files
+src/lib.rs species::sparse_tests::sparse_rewrites_a_mixed_k_all_empty_active_block
+src/lib.rs species::sparse_tests::sparse_saved_digest_gates_cleanup_and_interrupted_cleanup_resumes
+src/lib.rs species::sparse_tests::structure_prefers_real_ksets_and_validates_cache_only_when_absent
+src/lib.rs species::sparse_tests::the_block_preflight_bounds_the_ksets_it_writes
 src/lib.rs species::tests::a_failed_column_block_merge_leaves_the_old_matrix_and_no_partials
 src/lib.rs species::tests::a_failed_removal_after_the_save_keeps_the_new_matrix_and_names_the_folder
 src/lib.rs species::tests::a_partials_folder_another_run_removed_counts_as_removed
@@ -599,6 +636,8 @@ src/main.rs tests::curate_draws_round_robin_across_mlst_groups_and_records_the_p
 src/main.rs tests::curate_records_the_legacy_rule_and_its_cap_without_changing_its_choice
 src/main.rs tests::data_written_before_kset_digests_is_recounted_and_rebuilt
 src/main.rs tests::direct_learn_refuses_added_removed_and_reordered_genome_selections
+src/main.rs tests::disk_sparse_matrix_command_counts_a_fresh_cohort_without_learning
+src/main.rs tests::disk_sparse_matrix_passes_the_catalog_gate_before_counting_or_deleting
 src/main.rs tests::export_files_hold_what_learn_evaluates_on_a_synthetic_species
 src/main.rs tests::export_of_a_species_without_a_matrix_names_the_commands_to_run
 src/main.rs tests::export_stops_as_learn_does_when_genomes_txt_changed_after_counting
