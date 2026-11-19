@@ -2136,11 +2136,13 @@ mod tests {
                     stats: SeqStats::default(),
                     catalog_version: String::new(),
                     kset_digest: Some(format!("{g:016x}")),
+                    sketch: None,
                     genes: Vec::new(),
                 })
                 .collect(),
             missing_fasta: Vec::new(),
             failed: Vec::new(),
+            pending: Vec::new(),
         };
         std::fs::create_dir_all(layout.species_dir("s")).unwrap();
         std::fs::write(

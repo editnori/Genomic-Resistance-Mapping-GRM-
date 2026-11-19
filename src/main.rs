@@ -3164,7 +3164,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let stock = fixture(&dir.path().join("stock"));
         let sparse = fixture(&dir.path().join("sparse"));
-        count_to_matrix(&stock, SLUG).unwrap();
+        count_to_matrix(&stock, SLUG, PIPELINE_K).unwrap();
         let data = sparse.root.to_str().unwrap();
         let cli = Cli::try_parse_from([
             "grm",
@@ -3274,7 +3274,7 @@ mod tests {
         // without it, flag or no flag.
         let other = tempfile::tempdir().unwrap();
         let layout = fixture(other.path());
-        count_to_matrix(&layout, SLUG).unwrap();
+        count_to_matrix(&layout, SLUG, PIPELINE_K).unwrap();
         let ksets = layout.kset_dir(SLUG);
         let kept = std::fs::read_dir(&ksets).unwrap().count();
         let before = std::fs::read(layout.species_dir(SLUG).join("counted.json")).unwrap();

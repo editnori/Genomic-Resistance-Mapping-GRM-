@@ -93,7 +93,7 @@ fn disk_sparse_matches_stock_and_structure_after_kset_deletion() {
     let stock = fixture(&dir.path().join("stock"), 70, false);
     let sparse_layout = fixture(&dir.path().join("sparse"), 70, false);
     count(&stock, SLUG, 7, None).unwrap();
-    build_matrix(&stock, SLUG, 1).unwrap();
+    build_matrix(&stock, SLUG, 1, None).unwrap();
     let stock_structure = structure(&stock, SLUG).unwrap();
     sparse(&sparse_layout, 7).unwrap();
     assert_same_matrix(&stock, &sparse_layout);
@@ -123,7 +123,7 @@ fn sparse_preserves_preexisting_ksets() {
     let stock = fixture(&dir.path().join("stock"), 64, false);
     let existing = fixture(&dir.path().join("existing"), 64, false);
     count(&stock, SLUG, 7, None).unwrap();
-    build_matrix(&stock, SLUG, 1).unwrap();
+    build_matrix(&stock, SLUG, 1, None).unwrap();
     count(&existing, SLUG, 7, None).unwrap();
     sparse(&existing, 7).unwrap();
     assert_same_matrix(&stock, &existing);
@@ -221,7 +221,7 @@ fn sparse_rewrites_a_mixed_k_all_empty_active_block() {
     let stock = fixture(&dir.path().join("stock"), 65, true);
     let layout = fixture(&dir.path().join("sparse"), 65, true);
     count(&stock, SLUG, 31, None).unwrap();
-    build_matrix(&stock, SLUG, 1).unwrap();
+    build_matrix(&stock, SLUG, 1, None).unwrap();
     assert!(sparse_hook(&layout, 31, "after_partial:0").is_err());
     let kdir = layout.kset_dir(SLUG);
     let paths: Vec<PathBuf> = (0..64)
@@ -262,7 +262,7 @@ fn sparse_recreates_old_missing_sketches_even_when_matrix_is_current() {
     let dir = tempfile::tempdir().unwrap();
     let layout = fixture(dir.path(), 64, false);
     count(&layout, SLUG, 7, None).unwrap();
-    build_matrix(&layout, SLUG, 1).unwrap();
+    build_matrix(&layout, SLUG, 1, None).unwrap();
     let expected = matrix_files(&layout);
     let counted_path = layout.species_dir(SLUG).join("counted.json");
     let mut counted = load_counted(&layout, SLUG).unwrap();
@@ -436,7 +436,7 @@ fn sparse_resume_after_kill_before_kset_delete() {
     let stock = fixture(&dir.path().join("stock"), 65, false);
     let sparse_layout = fixture(&dir.path().join("sparse"), 65, false);
     count(&stock, SLUG, 7, None).unwrap();
-    build_matrix(&stock, SLUG, 1).unwrap();
+    build_matrix(&stock, SLUG, 1, None).unwrap();
     let marker = dir.path().join("partial-verified");
     let exe = std::env::current_exe().unwrap();
     let mut child = Command::new(exe)
@@ -500,7 +500,7 @@ fn sparse_merge_under_an_open_file_limit_that_stops_stock_build() {
     let stock = fixture(&dir.path().join("stock"), 200, false);
     let sparse_layout = fixture(&dir.path().join("sparse"), 200, false);
     count(&stock, SLUG, 7, None).unwrap();
-    build_matrix(&stock, SLUG, 1).unwrap();
+    build_matrix(&stock, SLUG, 1, None).unwrap();
     let exe = std::env::current_exe().unwrap();
     let status = Command::new("/bin/sh")
         .arg("-c")
@@ -530,7 +530,7 @@ fn sparse_at(layout: &Layout, min_support: u32, width: usize) -> Result<matrix::
 fn stock_matrix(root: &Path, n: usize, min_support: u32) -> Layout {
     let stock = fixture(root, n, false);
     count(&stock, SLUG, 7, None).unwrap();
-    build_matrix(&stock, SLUG, min_support).unwrap();
+    build_matrix(&stock, SLUG, min_support, None).unwrap();
     stock
 }
 
