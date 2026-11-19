@@ -59,8 +59,10 @@ def build_root(base: Path, n=70, seed=5):
 
 
 def count_and_matrix(root: Path, min_support=2):
-    subprocess.run([grm(), "--data", str(root), "count", "--species", SLUG, "--allow-missing-catalog"], check=True, capture_output=True)
-    subprocess.run([grm(), "--data", str(root), "matrix", "--species", SLUG, "--min-support", str(min_support)],
+    # As the run built its matrices: a disk-sparse matrix counts too, and only
+    # its count records the sketches the validator reads (a stock count does not).
+    subprocess.run([grm(), "--data", str(root), "matrix", "--species", SLUG, "--min-support", str(min_support),
+                    "--disk-sparse", "--block-width", "64", "--allow-missing-catalog"],
                    check=True, capture_output=True)
 
 
