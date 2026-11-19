@@ -155,7 +155,14 @@ fn a_stock_count_writes_counted_json_and_sidecars_without_sketches() {
         k.sort();
         k
     };
-    let genome = ["catalog_version", "genes", "genome_id", "kset_digest", "n_kmers", "stats"];
+    let genome = [
+        "catalog_version",
+        "genes",
+        "genome_id",
+        "kset_digest",
+        "n_kmers",
+        "stats",
+    ];
     let counted: serde_json::Value = serde_json::from_slice(
         &std::fs::read(stock.species_dir(SLUG).join("counted.json")).unwrap(),
     )
