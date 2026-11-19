@@ -3616,9 +3616,7 @@ mod tests {
         );
     }
 
-    /// `--exp-tie-out` may name a folder outside the data root, as before
-    /// the disk-sparse merge: only reports in the species' results/ go
-    /// through the data root's real directories (`confine`).
+    /// `--exp-tie-out` may name a folder outside the data root.
     #[test]
     fn an_exact_learn_writes_to_a_folder_outside_the_data_root() {
         let dir = tempfile::tempdir().unwrap();

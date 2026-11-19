@@ -1339,15 +1339,7 @@ pub fn analyze_species_in(
     let (input, catalog) = load_inputs(layout, slug)?;
     let digest = matrix_digest(&input.matrix);
     let client = Client::new();
-    if dir == layout.results_dir(slug) {
-        // Reports in results/ go only through real directories below the
-        // data root (see `confine`), so a linked results directory cannot
-        // send them elsewhere. A draw's folder or --exp-tie-out's is made
-        // as given.
-        crate::confine::Lane::new(&layout.root)?.create_dir_all(dir, false)?;
-    } else {
-        std::fs::create_dir_all(dir)?;
-    }
+    std::fs::create_dir_all(dir)?;
     let mut specs: Vec<&DatasetSpec> = input
         .datasets
         .iter()
@@ -1435,10 +1427,11 @@ fn best_learner_words(splits: &[SplitResult]) -> Result<String> {
 }
 
 /// Readers such as scheduled report rebuilds see the old file or the new
-/// one, never a partial write, and a link at the report or its temporary
-/// is refused rather than written through (see `confine::write_atomic`).
+/// one, never a partial write.
 fn write_atomic(path: &std::path::Path, bytes: &[u8]) -> Result<()> {
-    crate::confine::write_atomic(path, bytes, false)
+    let tmp = path.with_extension("json.tmp");
+    std::fs::write(&tmp, bytes).with_context(|| format!("write {}", tmp.display()))?;
+    std::fs::rename(&tmp, path).with_context(|| format!("replace {}", path.display()))
 }
 
 /// Bits helper for tests and callers that hold a raw row.
@@ -2146,30 +2139,53 @@ mod tests {
         write_atomic(&path, b"{}").unwrap();
         assert_eq!(std::fs::read(&path).unwrap(), b"{}");
         assert!(!dir.path().join("d.json.tmp").exists());
-        assert!(!dir.path().join("d.json.part").exists());
-        // A link where the report belongs is refused, and its target kept.
-        let victim = dir.path().join("victim.json");
-        std::fs::write(&victim, b"outside").unwrap();
-        let linked = dir.path().join("linked.json");
-        std::os::unix::fs::symlink(&victim, &linked).unwrap();
-        assert!(write_atomic(&linked, b"{}").is_err());
-        assert_eq!(std::fs::read(&victim).unwrap(), b"outside");
+        // The temporary is `<report>.json.tmp`: one left by an interrupted
+        // write is written over and renamed away, and no other is made.
+        std::fs::write(dir.path().join("d.json.tmp"), b"torn").unwrap();
+        write_atomic(&path, b"[]").unwrap();
+        assert_eq!(std::fs::read(&path).unwrap(), b"[]");
+        assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 1);
     }
 
+    /// `grm learn` writes its reports through a linked results directory,
+    /// or a linked species directory, as it always has: the link checks
+    /// hold on the `--disk-sparse` path only.
     #[test]
-    fn learn_writes_reports_only_through_real_directories_below_the_root() {
-        let dir = tempfile::tempdir().unwrap();
-        let layout = Layout::new(dir.path());
-        let input = inputs();
-        write_inputs(&layout, &input, "");
-        let outside = tempfile::tempdir().unwrap();
-        std::os::unix::fs::symlink(outside.path(), layout.results_dir("fixture")).unwrap();
-        let err = learn(&layout).unwrap_err();
-        assert!(
-            format!("{err:#}").contains("symlinked directory"),
-            "{err:#}"
-        );
-        assert_eq!(std::fs::read_dir(outside.path()).unwrap().count(), 0);
+    fn learn_writes_reports_through_a_linked_results_or_species_directory() {
+        for linked in ["results", "species"] {
+            let dir = tempfile::tempdir().unwrap();
+            let layout = Layout::new(dir.path());
+            let mut input = reported_inputs(&layout);
+            input.contigs = input
+                .matrix
+                .summary
+                .genomes
+                .iter()
+                .map(|g| (g.clone(), 1))
+                .collect();
+            input.datasets = vec![reported_dataset()];
+            write_inputs(&layout, &input, "");
+            let outside = tempfile::tempdir().unwrap();
+            let at = match linked {
+                "results" => layout.results_dir("fixture"),
+                _ => layout.species_dir("fixture"),
+            };
+            let target = outside.path().join("moved");
+            if at.exists() {
+                std::fs::rename(&at, &target).unwrap();
+            } else {
+                std::fs::create_dir(&target).unwrap();
+            }
+            std::os::unix::fs::symlink(&target, &at).unwrap();
+            let id = "fixture__meropenem";
+            assert_eq!(learn(&layout).unwrap(), [id], "{linked}");
+            assert!(at.is_symlink(), "{linked}");
+            let report = match linked {
+                "results" => target.join(format!("{id}.json")),
+                _ => target.join(format!("results/{id}.json")),
+            };
+            assert!(report.is_file(), "{linked}");
+        }
     }
 
     #[test]
