@@ -731,6 +731,84 @@ fn a_stock_count_reads_and_writes_through_linked_lane_files_as_before() {
     assert_eq!(tree(&store.kset_dir(SLUG)), before);
 }
 
+/// A stock count's sidecar and kset writes follow links as main's do, and
+/// no genome fails: a linked sidecar without its kset digest is redone
+/// through the link; a linked kset counted again at another k gives way to a
+/// regular kset and the file it pointed to stays; with the kset gone, a
+/// linked `<id>.kset.part` is written through and renamed into the kset's
+/// place. Synthetic.
+#[test]
+fn a_stock_count_redoes_linked_sidecars_and_ksets_as_main_does() {
+    use std::os::unix::fs::symlink;
+    let dir = tempfile::tempdir().unwrap();
+    let store = dir.path().join("store");
+    std::fs::create_dir_all(&store).unwrap();
+
+    let layout = fixture(&dir.path().join("sidecar"), 3, false);
+    count(&layout, SLUG, 7, None).unwrap();
+    let at = layout.kset_dir(SLUG).join("g0001.json");
+    let target = store.join("g0001.json");
+    let mut old: serde_json::Value = serde_json::from_slice(&std::fs::read(&at).unwrap()).unwrap();
+    old.as_object_mut().unwrap().remove("kset_digest");
+    std::fs::write(&target, serde_json::to_vec(&old).unwrap()).unwrap();
+    std::fs::remove_file(&at).unwrap();
+    symlink(&target, &at).unwrap();
+    let counted = count(&layout, SLUG, 7, None).unwrap();
+    assert!(counted.failed.is_empty(), "{:?}", counted.failed);
+    assert_eq!(std::fs::read_link(&at).unwrap(), target);
+    let redone: Counted = serde_json::from_slice(&std::fs::read(&target).unwrap()).unwrap();
+    assert!(redone.kset_digest.is_some());
+    assert_eq!(redone.kset_digest, counted.genomes[1].kset_digest);
+
+    let layout = fixture(&dir.path().join("kset"), 3, false);
+    count(&layout, SLUG, 7, None).unwrap();
+    let at = layout.kset_dir(SLUG).join("g0001.kset");
+    let target = store.join("g0001.kset");
+    std::fs::rename(&at, &target).unwrap();
+    symlink(&target, &at).unwrap();
+    let kept = std::fs::read(&target).unwrap();
+    let counted = count(&layout, SLUG, 9, None).unwrap();
+    assert!(counted.failed.is_empty(), "{:?}", counted.failed);
+    assert!(!at.is_symlink());
+    assert_eq!(KsetReader::open(&at).unwrap().k, 9);
+    assert_eq!(std::fs::read(&target).unwrap(), kept);
+
+    let layout = fixture(&dir.path().join("kset-part"), 3, false);
+    count(&layout, SLUG, 7, None).unwrap();
+    let kset = layout.kset_dir(SLUG).join("g0001.kset");
+    let part = layout.kset_dir(SLUG).join("g0001.kset.part");
+    let expected = std::fs::read(&kset).unwrap();
+    std::fs::remove_file(&kset).unwrap();
+    let target = store.join("g0001.kset.part");
+    std::fs::write(&target, b"outside").unwrap();
+    symlink(&target, &part).unwrap();
+    let counted = count(&layout, SLUG, 7, None).unwrap();
+    assert!(counted.failed.is_empty(), "{:?}", counted.failed);
+    assert_eq!(std::fs::read_link(&kset).unwrap(), target);
+    assert_eq!(std::fs::read(&target).unwrap(), expected);
+    assert!(std::fs::symlink_metadata(&part).is_err());
+}
+
+/// A stock `grm structure` writes structure.json through a link that leads
+/// outside the data root, as main's does. Synthetic.
+#[test]
+fn a_stock_structure_writes_through_a_linked_structure_json() {
+    use std::os::unix::fs::symlink;
+    let dir = tempfile::tempdir().unwrap();
+    let layout = fixture(&dir.path().join("root"), 4, false);
+    count(&layout, SLUG, 7, None).unwrap();
+    let outside = dir.path().join("outside-structure.json");
+    std::fs::write(&outside, b"{}").unwrap();
+    let at = layout.species_dir(SLUG).join("structure.json");
+    symlink(&outside, &at).unwrap();
+    let s = structure(&layout, SLUG).unwrap();
+    assert_eq!(std::fs::read_link(&at).unwrap(), outside);
+    assert_eq!(
+        std::fs::read(&outside).unwrap(),
+        serde_json::to_vec(&s).unwrap()
+    );
+}
+
 /// A stock count records no sketch, also from sidecars a disk-sparse run
 /// wrote beside ksets it kept: not on a cache hit (review note N3), and not
 /// when it redoes a sidecar from its kset (N4). Synthetic.
