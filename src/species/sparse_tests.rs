@@ -118,6 +118,47 @@ fn disk_sparse_matches_stock_and_structure_after_kset_deletion() {
 }
 
 #[test]
+fn a_stock_count_writes_counted_json_and_sidecars_without_sketches() {
+    // main's stock count wrote these keys and no others; a sparse count adds
+    // the sketch. Synthetic.
+    let dir = tempfile::tempdir().unwrap();
+    let stock = fixture(&dir.path().join("stock"), 3, false);
+    count(&stock, SLUG, 7, None).unwrap();
+    let keys = |v: &serde_json::Value| -> Vec<String> {
+        let mut k: Vec<String> = v.as_object().unwrap().keys().cloned().collect();
+        k.sort();
+        k
+    };
+    let genome = ["catalog_version", "genes", "genome_id", "kset_digest", "n_kmers", "stats"];
+    let counted: serde_json::Value = serde_json::from_slice(
+        &std::fs::read(stock.species_dir(SLUG).join("counted.json")).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(keys(&counted), ["failed", "genomes", "k", "missing_fasta"]);
+    for g in counted["genomes"].as_array().unwrap() {
+        assert_eq!(keys(g), genome);
+    }
+    for g in 0..3 {
+        let sidecar: serde_json::Value = serde_json::from_slice(
+            &std::fs::read(stock.kset_dir(SLUG).join(format!("g{g:04}.json"))).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(keys(&sidecar), genome);
+    }
+    // A second stock count is a cache hit and writes the same bytes.
+    let before = std::fs::read(stock.species_dir(SLUG).join("counted.json")).unwrap();
+    count(&stock, SLUG, 7, None).unwrap();
+    assert_eq!(
+        std::fs::read(stock.species_dir(SLUG).join("counted.json")).unwrap(),
+        before
+    );
+    let sparse_layout = fixture(&dir.path().join("sparse"), 3, false);
+    sparse(&sparse_layout, 7).unwrap();
+    let counted = load_counted(&sparse_layout, SLUG).unwrap();
+    assert!(counted.genomes.iter().all(|g| g.sketch.is_some()));
+}
+
+#[test]
 fn sparse_preserves_preexisting_ksets() {
     let dir = tempfile::tempdir().unwrap();
     let stock = fixture(&dir.path().join("stock"), 64, false);

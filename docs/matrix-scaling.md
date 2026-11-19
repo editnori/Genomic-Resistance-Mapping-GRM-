@@ -285,9 +285,12 @@ matrix finishes its cleanup at that matrix's min_support before another is
 built. Resuming a saved run syncs the matrix files, `run.json` and their
 directories again before any partial is removed.
 
-`Counted` also stores the bottom-sketch of the same counted values. Structure
-uses real ksets whenever they exist and these k/digest-bound sketches after
-sparse deletion. All current MTB probe assays are unsupported before any
+A disk-sparse count's `Counted` also stores the bottom-sketch of the same
+counted values. A stock `grm count` stores none, so its `counted.json` and
+sidecars keep the bytes they had before sketches; a sparse run that adopts
+a stock count adds the sketches from the kept ksets. Structure uses real
+ksets whenever they exist and these k/digest-bound sketches after sparse
+deletion. All current MTB probe assays are unsupported before any
 kset read. A species with kset-backed assays stops with an explicit error in
 sparse mode rather than triggering the stock all-genome recount.
 
@@ -701,8 +704,8 @@ run. After that, at minimum:
   catalog/assembly invalidation and interrupted resume. A cap-4000 pilot
   follows only after those checks and resource measurement. No biological
   pilot has run, and no real 4k or 8k resource claim is established.
-- **Other probe panels.** Count caches and structure are handled: counting
-  stores the bottom-sketch with each kset digest, and structure rereads a
+- **Other probe panels.** Count caches and structure are handled: a sparse
+  count stores the bottom-sketch with each kset digest, and structure rereads a
   real kset when present but uses that bound sketch after sparse deletion.
   Every current MTB assay reports unsupported before reading ksets. Other
   species with kset-backed probe assays stop with an explicit error instead

@@ -105,8 +105,9 @@ pub struct Counted {
     /// before digests.
     #[serde(default)]
     pub kset_digest: Option<String>,
-    /// Bottom-sketch of the same values. `None` only in old counts; `Some([])`
-    /// is a valid sketch for an all-empty kset.
+    /// Bottom-sketch of the same values, recorded by a disk-sparse count
+    /// (which deletes the kset later). `None` in a stock count and in old
+    /// counts; `Some([])` is a valid sketch for an all-empty kset.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub sketch: Option<Vec<u64>>,
     pub genes: Vec<FamilyHit>,
@@ -194,7 +195,7 @@ fn count_one(
 ) -> Result<Counted> {
     let reserve = Reserve::new(reserve);
     count_one_with(
-        id, fasta, kset_path, sidecar, space, catalog, buffers, &reserve, false,
+        id, fasta, kset_path, sidecar, space, catalog, buffers, &reserve, false, false,
     )
 }
 
@@ -202,6 +203,11 @@ fn count_one(
 /// `kset_path` is an input that this count did not create: it is read, and
 /// may get a new sidecar, but is never rewritten. One at another k, or one
 /// that differs from a fresh count of its FASTA, is refused instead.
+///
+/// With `sparse` (a disk-sparse count, which deletes the kset later), the
+/// sidecar also records the kset's bottom-sketch, and a sidecar without one
+/// is no cache hit. A stock count records none, so its sidecars and
+/// counted.json keep the bytes they had before sketches.
 #[allow(clippy::too_many_arguments)]
 fn count_one_with(
     id: &str,
@@ -213,6 +219,7 @@ fn count_one_with(
     (values, scratch): &mut (Vec<u64>, Vec<u64>),
     reserve: &Reserve,
     keep: bool,
+    sparse: bool,
 ) -> Result<Counted> {
     let version = catalog.map_or(String::new(), Catalog::calls_version);
     // The sidecar is GRM's own file: never read or written through a link.
@@ -239,7 +246,10 @@ fn count_one_with(
         && let Ok(bytes) = std::fs::read(sidecar)
         && let Ok(c) = serde_json::from_slice::<Counted>(&bytes)
     {
-        if c.catalog_version == version && c.kset_digest.is_some() && c.sketch.is_some() {
+        if c.catalog_version == version
+            && c.kset_digest.is_some()
+            && (c.sketch.is_some() || !sparse)
+        {
             return Ok(c);
         }
         // Catalog changed, or the sidecar predates kset digests/sketches:
@@ -253,7 +263,8 @@ fn count_one_with(
             n_kmers: values.len() as u64,
             catalog_version: version,
             kset_digest: Some(kset::digest(&values)),
-            sketch: Some(values.iter().copied().take(SKETCH).collect()),
+            sketch: (sparse || c.sketch.is_some())
+                .then(|| values.iter().copied().take(SKETCH).collect()),
             genes,
             ..c
         };
@@ -291,7 +302,7 @@ fn count_one_with(
         stats,
         catalog_version: version,
         kset_digest: Some(kset::digest(values)),
-        sketch: Some(values.iter().copied().take(SKETCH).collect()),
+        sketch: sparse.then(|| values.iter().copied().take(SKETCH).collect()),
         genes,
     };
     write_sidecar(sidecar, &c, reserve)?;
@@ -1142,6 +1153,7 @@ fn count_sparse_block(
                     buffers,
                     reserve,
                     kept.contains(id.as_str()),
+                    true,
                 );
                 (id.clone(), result)
             },
