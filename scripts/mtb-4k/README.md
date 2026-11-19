@@ -1,9 +1,10 @@
 # The M. tuberculosis 4,000-genome run of 6 Nov 2026
 
 The scripts here ran the M. tuberculosis run published as release
-`data-mtb4k-r12-20261106`. They reached `main` unchanged from branch
-`mtb-r12/merge`, and `4k-execution-plan.md` (revision 7) is the plan that run
-followed. The matrix code it needs is on `main` too, behind
+`data-mtb4k-r12-20261106`. 37 of the 38 reached `main` unchanged from branch
+`mtb-r12/merge`; the one that changed is `tests/test_validate_matrix.py` (see
+the end of this file). `4k-execution-plan.md` (revision 7) is the plan that
+run followed. The matrix code it needs is on `main` too, behind
 `grm matrix --disk-sparse` (`docs/matrix-scaling.md`, "Pipeline wiring").
 
 ## What the run was
