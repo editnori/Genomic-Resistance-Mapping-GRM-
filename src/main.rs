@@ -548,7 +548,12 @@ fn run(cli: Cli) -> Result<()> {
                     },
                 )?;
                 count_to_matrix_with_mode(&layout, slug, k, sparse, allow_missing_catalog)?;
-                if let Err(e) = learn(&layout, slug, &[], false, &cfg) {
+                let learned = if disk_sparse {
+                    learn_disk_sparse(&layout, slug, &cfg)
+                } else {
+                    learn(&layout, slug, &[], false, &cfg)
+                };
+                if let Err(e) = learned {
                     if !e.is::<grm::probes::KsetsUnreadable>() {
                         return Err(e);
                     }
@@ -989,6 +994,20 @@ fn learn(
     cfg: &grm::learn::eval::EvalConfig,
 ) -> Result<()> {
     learn_in(layout, slug, only, force, cfg, None)
+}
+
+/// `learn` as `grm pipeline --disk-sparse` runs it: the reports' directory
+/// and each report are written only through real directories below the data
+/// root (`grm::analysis::analyze_species_disk_sparse`).
+fn learn_disk_sparse(
+    layout: &Layout,
+    slug: &str,
+    cfg: &grm::learn::eval::EvalConfig,
+) -> Result<()> {
+    grm::species::ensure_selection_counted(layout, slug)?;
+    let written = grm::analysis::analyze_species_disk_sparse(layout, slug, &[], false, cfg)?;
+    eprintln!("{}", learn_end_line(layout, slug, written.len(), cfg));
+    Ok(())
 }
 
 /// `learn`, with the reports in `out` when `grm learn --exp-tie-out` names
@@ -3103,6 +3122,48 @@ mod tests {
                 Err("No such file or directory (os error 2)".to_string()),
                 "sparse {sparse}"
             );
+        }
+    }
+
+    /// `grm pipeline` with `species/<slug>/results` linked outside the data
+    /// root: the stock run makes and writes it through the link as `main`
+    /// does and goes on to the report step, while `--disk-sparse` stops at
+    /// learn with nothing written behind the link. Synthetic fixture.
+    #[test]
+    fn only_the_disk_sparse_pipeline_refuses_a_linked_results_directory() {
+        for sparse in [false, true] {
+            let dir = tempfile::tempdir().unwrap();
+            let layout = fixture(dir.path());
+            let outside = tempfile::tempdir().unwrap();
+            let results = layout.results_dir(SLUG);
+            ensure_parent(&results).unwrap();
+            std::os::unix::fs::symlink(outside.path(), &results).unwrap();
+            let data = dir.path().to_str().unwrap();
+            let mut args = vec![
+                "grm",
+                "--data",
+                data,
+                "pipeline",
+                "--species",
+                SLUG,
+                "--k",
+                "21",
+            ];
+            if sparse {
+                args.extend(["--disk-sparse", "--block-width", "64"]);
+            }
+            let ran = run(Cli::try_parse_from(args).unwrap()).map_err(|e| format!("{e:#}"));
+            if sparse {
+                let err = ran.unwrap_err();
+                assert!(err.contains("symlinked directory"), "{err}");
+            } else {
+                assert_eq!(
+                    ran,
+                    Err("No such file or directory (os error 2)".to_string())
+                );
+            }
+            assert!(results.is_symlink());
+            assert_eq!(std::fs::read_dir(outside.path()).unwrap().count(), 0);
         }
     }
 
