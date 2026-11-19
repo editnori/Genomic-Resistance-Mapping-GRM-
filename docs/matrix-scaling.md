@@ -317,11 +317,12 @@ The switch refuses, before anything is read or written:
   written at its target, and the removal would remove only the link. The
   message says it is a link, and the link and its target are left as
   they are.
-- a `matrix-partials` that holds a folder. The switch writes only files
-  there, so a folder is a `--disk-sparse` run's, whose blocks can be the
-  only copy of genomes whose ksets that run deleted; the switch's removal
-  at its end, failed or not, would delete them. The message names the
-  folder and says to finish that run first.
+- a `matrix-partials` that holds a `--disk-sparse` run, a folder named by
+  that run's 64-digit config digest. Its blocks can be the only copy of
+  genomes whose ksets that run deleted, and the switch's removal at its
+  end, failed or not, would delete them. The message names the folder and
+  says to finish that run first. Other leftovers there are a stopped
+  column-block run's and are removed as before.
 
 Once `counted.json` is read, and before any block is written, it refuses
 more than `REVIEWED_COLUMNS` (4,096) genomes with the default path's

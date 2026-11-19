@@ -645,10 +645,12 @@ fn refuse_linked_partials(dir: &Path) -> Result<()> {
     }
 }
 
-/// Refuses a partials folder that holds a folder. `--column-blocks` writes
-/// only files there, so a folder is a `--disk-sparse` run's: its blocks can
-/// be the only copy of genomes whose ksets that run deleted, and the switch
-/// removes the whole partials folder when it ends, failed or not.
+/// Refuses a partials folder that holds a `--disk-sparse` run: a folder
+/// named by the run's 64-digit config digest (see `sparse_run_dir`). Its
+/// blocks can be the only copy of genomes whose ksets that run deleted, and
+/// `--column-blocks` removes the whole partials folder when it ends, failed
+/// or not. Any other entry is a stopped column-block run's and is left to
+/// that cleanup, as before.
 fn refuse_sparse_runs(dir: &Path) -> Result<()> {
     let entries = match std::fs::read_dir(dir) {
         Ok(entries) => entries,
@@ -657,7 +659,7 @@ fn refuse_sparse_runs(dir: &Path) -> Result<()> {
     };
     for entry in entries {
         let entry = entry.with_context(|| format!("read {}", dir.display()))?;
-        if entry.file_type()?.is_dir() {
+        if entry.file_type()?.is_dir() && is_run_name(&entry.file_name().to_string_lossy()) {
             anyhow::bail!(
                 "{} holds {}, a `grm matrix --disk-sparse` run whose blocks may stand in for ksets it deleted; --column-blocks removes {} when it ends, so finish that run with `grm matrix --disk-sparse`, or review and remove its folder, first",
                 dir.display(),
