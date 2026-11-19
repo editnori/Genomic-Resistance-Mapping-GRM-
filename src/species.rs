@@ -410,16 +410,6 @@ pub fn count(
         &serde_json::to_vec(&summary)?,
         false,
     )?;
-    // counted.json keeps the failures; a count that counted nothing is still
-    // an error, not an empty success.
-    if summary.genomes.is_empty()
-        && let Some((id, why)) = summary.failed.first()
-    {
-        anyhow::bail!(
-            "{slug}: no genome counted; all {} selected genomes with FASTA failed, first {id}: {why}",
-            summary.failed.len()
-        );
-    }
     Ok(summary)
 }
 

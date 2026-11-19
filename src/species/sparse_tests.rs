@@ -750,7 +750,10 @@ fn a_stock_count_refuses_linked_lane_files_before_any_work() {
 }
 
 #[test]
-fn a_stock_count_that_counts_no_genome_fails() {
+fn a_stock_count_that_counts_no_genome_records_the_failures_as_main_does() {
+    // main's grm count returns with every genome in counted.json's failed
+    // list, and the pipeline stops in count_to_matrix; this branch keeps
+    // that. Synthetic.
     let dir = tempfile::tempdir().unwrap();
     let layout = fixture(&dir.path().join("unreadable"), 3, false);
     // Every FASTA is a directory, so every genome fails to count.
@@ -759,17 +762,10 @@ fn a_stock_count_that_counts_no_genome_fails() {
         std::fs::remove_file(&path).unwrap();
         std::fs::create_dir(&path).unwrap();
     }
-    let err = count(&layout, SLUG, 7, None).unwrap_err();
-    assert!(format!("{err:#}").contains("no genome counted"), "{err:#}");
-    // counted.json still records the failures.
+    let summary = count(&layout, SLUG, 7, None).unwrap();
+    assert_eq!((summary.genomes.len(), summary.failed.len()), (0, 3));
     let counted = load_counted(&layout, SLUG).unwrap();
     assert_eq!((counted.genomes.len(), counted.failed.len()), (0, 3));
-    // One genome that counts is enough for the count to succeed.
-    let path = fasta_path(&layout.fasta_dir(), "g0001");
-    std::fs::remove_dir(&path).unwrap();
-    std::fs::write(&path, format!(">contig\n{}\n", sequence(1))).unwrap();
-    let summary = count(&layout, SLUG, 7, None).unwrap();
-    assert_eq!((summary.genomes.len(), summary.failed.len()), (1, 2));
 }
 
 #[test]
