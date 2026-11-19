@@ -22,6 +22,7 @@
 //! that, downstream stages have not been reviewed.
 
 use crate::bits::{self, BitMatrix, Bits, words_for};
+use crate::confine::Writes;
 use crate::dna::{MAX_K, MIN_K};
 use crate::fnv::Fnv;
 use crate::kset::{BUCKET_BITS, BUCKETS, KsetReader, radix_sort};
@@ -646,6 +647,30 @@ fn create_dir_durably(dir: &Path, hook: SyncHook) -> Result<()> {
     missing.iter().rev().try_for_each(|d| sync_parent(d, hook))
 }
 
+/// `dir` is a real directory, not a link to one.
+fn ensure_real_dir(dir: &Path) -> Result<()> {
+    ensure!(
+        ensure_real_dir_if_present(dir)?,
+        "{} does not exist",
+        dir.display()
+    );
+    Ok(())
+}
+
+/// As `ensure_real_dir`, but a missing `dir` is Ok(false).
+fn ensure_real_dir_if_present(dir: &Path) -> Result<bool> {
+    match std::fs::symlink_metadata(dir) {
+        Ok(m) if m.file_type().is_symlink() => anyhow::bail!(
+            "refusing symlinked matrix directory {}: matrix files are written only into a real directory",
+            dir.display()
+        ),
+        Ok(m) if m.is_dir() => Ok(true),
+        Ok(_) => anyhow::bail!("{} is not a directory", dir.display()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(false),
+        Err(e) => Err(e).with_context(|| format!("inspect {}", dir.display())),
+    }
+}
+
 /// A temporary file that is removed when dropped unless kept, so that an
 /// error at any point after creating it leaves nothing behind.
 struct TempFile {
@@ -664,17 +689,38 @@ impl Drop for TempFile {
 /// Writes `bytes` to `path` through `<path>.part`: synced, renamed, and
 /// the directory synced. An error from that last sync leaves the file in
 /// place; the caller decides whether to remove it.
-fn write_durably(path: &Path, bytes: &[u8], hook: SyncHook) -> Result<()> {
+///
+/// `Writes::Confined` creates the temporary with `confine::create_part`
+/// (never through a link) and replaces `path` only when it is a regular
+/// file or absent.
+fn write_durably(path: &Path, bytes: &[u8], hook: SyncHook, writes: Writes) -> Result<()> {
     let part = with_suffix(path, ".part");
+    // A confined temporary exists before the guard that removes it on
+    // failure, so a link refused at its name is never removed.
+    let confined = match writes {
+        Writes::Stock => None,
+        Writes::Confined => {
+            crate::confine::regular_or_absent(path)?;
+            Some(crate::confine::create_part(&part)?)
+        }
+    };
     let mut tmp = TempFile {
         path: part.clone(),
         keep: false,
     };
-    let mut file = File::create(&part).with_context(|| format!("create {}", part.display()))?;
+    let mut file = match confined {
+        Some(file) => file,
+        None => File::create(&part).with_context(|| format!("create {}", part.display()))?,
+    };
     file.write_all(bytes)?;
     sync_file(&file, &part, hook)?;
     drop(file);
-    std::fs::rename(&part, path).with_context(|| format!("rename to {}", path.display()))?;
+    match writes {
+        Writes::Stock => {
+            std::fs::rename(&part, path).with_context(|| format!("rename to {}", path.display()))?
+        }
+        Writes::Confined => crate::confine::replace_with(&part, path)?,
+    }
     tmp.keep = true;
     sync_parent(path, hook)
 }
@@ -731,12 +777,13 @@ fn ensure_free_with(
 
 /// What one partial write may use: the columns downstream stages are
 /// reviewed for, and the disk it must leave free, measured by `free`.
-/// `sync` sees every sync it makes.
+/// `sync` sees every sync it makes, and `writes` says how it treats links.
 struct Limits<'a> {
     max_columns: usize,
     reserve: u64,
     free: &'a dyn Fn(&Path) -> Result<u64>,
     sync: SyncHook<'a>,
+    writes: Writes,
 }
 
 fn put_varint(out: &mut Vec<u8>, mut v: u64) {
@@ -822,11 +869,54 @@ pub fn write_partial(
     threads_chunk: usize,
     reserve_bytes: u64,
 ) -> Result<PartialReceipt> {
+    write_partial_as(
+        kset_paths,
+        columns,
+        first_col,
+        out,
+        threads_chunk,
+        reserve_bytes,
+        Writes::Stock,
+    )
+}
+
+/// `write_partial` for the `--disk-sparse` path: the partial, its
+/// temporary and its receipt are never written through, or put over, a link
+/// or directory (see `confine`).
+pub fn write_partial_confined(
+    kset_paths: &[PathBuf],
+    columns: &[Column],
+    first_col: usize,
+    out: &Path,
+    threads_chunk: usize,
+    reserve_bytes: u64,
+) -> Result<PartialReceipt> {
+    write_partial_as(
+        kset_paths,
+        columns,
+        first_col,
+        out,
+        threads_chunk,
+        reserve_bytes,
+        Writes::Confined,
+    )
+}
+
+fn write_partial_as(
+    kset_paths: &[PathBuf],
+    columns: &[Column],
+    first_col: usize,
+    out: &Path,
+    threads_chunk: usize,
+    reserve_bytes: u64,
+    writes: Writes,
+) -> Result<PartialReceipt> {
     let limits = Limits {
         max_columns: REVIEWED_COLUMNS,
         reserve: reserve_bytes,
         free: &free_bytes,
         sync: &no_fault,
+        writes,
     };
     write_partial_with(kset_paths, columns, first_col, out, threads_chunk, &limits)
 }
@@ -888,6 +978,11 @@ fn write_partial_with(
     // block is left to merge.
     let receipt_at = receipt_path(out);
     for old in [receipt_at.as_path(), out] {
+        // Confined, a link or directory where a block file belongs is
+        // refused, never removed or written through.
+        if limits.writes == Writes::Confined {
+            crate::confine::regular_or_absent(old)?;
+        }
         remove_if_present(old).with_context(|| format!("remove {}", old.display()))?;
     }
     sync_parent(out, limits.sync)?;
@@ -902,12 +997,19 @@ fn write_partial_with(
         limits.reserve,
     )?;
     let part = with_suffix(out, ".part");
+    // As in `write_durably`, a confined temporary exists before its guard.
+    let confined = match limits.writes {
+        Writes::Stock => None,
+        Writes::Confined => Some(crate::confine::create_part(&part)?),
+    };
     let mut tmp = TempFile {
         path: part.clone(),
         keep: false,
     };
-    let mut w =
-        BufWriter::new(File::create(&part).with_context(|| format!("create {}", part.display()))?);
+    let mut w = BufWriter::new(match confined {
+        Some(file) => file,
+        None => File::create(&part).with_context(|| format!("create {}", part.display()))?,
+    });
     w.write_all(PART_MAGIC)?;
     w.write_all(&[k as u8, BUCKET_BITS as u8, 0, 0, 0, 0, 0, 0])?;
     w.write_all(&(first_col as u64).to_le_bytes())?;
@@ -966,12 +1068,17 @@ fn write_partial_with(
     drop(read);
     drop(file);
     let receipt_json = serde_json::to_vec_pretty(&receipt)?;
-    std::fs::rename(&part, out).with_context(|| format!("rename to {}", out.display()))?;
+    match limits.writes {
+        Writes::Stock => {
+            std::fs::rename(&part, out).with_context(|| format!("rename to {}", out.display()))?
+        }
+        Writes::Confined => crate::confine::replace_with(&part, out)?,
+    }
     tmp.keep = true;
     // Without its receipt the partial is refused, but it would hold its
     // disk until rewritten, so a failure from here on removes it again.
     sync_parent(out, limits.sync)
-        .and_then(|()| write_durably(&receipt_at, &receipt_json, limits.sync))
+        .and_then(|()| write_durably(&receipt_at, &receipt_json, limits.sync, limits.writes))
         .map_err(|err| retract_partial(out, &receipt_at, limits.sync, err))?;
     Ok(receipt)
 }
@@ -1210,7 +1317,129 @@ impl PartialReader {
         );
         Ok(reader)
     }
+}
 
+/// Verifies one durable partial/receipt pair against the exact block a caller
+/// expects. This is the caller's gate before deleting that block's ksets.
+///
+/// The receipt only binds the file to what its writer produced: a partial
+/// edited together with its receipt still matches it. So the content is
+/// checked against the counts as well. A partial holds every k-mer of its
+/// block (nothing is filtered yet), so each column's k-mers, read back in
+/// order, must number `n_kmers[i]` and hash to `columns[i].kset_digest`,
+/// exactly as `kset::digest` hashed that genome's kset when it was counted.
+pub fn verify_partial(
+    path: &Path,
+    columns: &[Column],
+    n_kmers: &[u64],
+    first_col: usize,
+    k: usize,
+) -> Result<()> {
+    ensure!(
+        n_kmers.len() == columns.len(),
+        "{} k-mer counts for {} expected columns",
+        n_kmers.len(),
+        columns.len()
+    );
+    let r = verify_partial_header(path, columns, first_col, k)?;
+    let found = column_contents(&r)?;
+    for (i, ((count, digest), (c, &want))) in
+        found.iter().zip(columns.iter().zip(n_kmers)).enumerate()
+    {
+        let digest = Fnv(*digest).hex();
+        ensure!(
+            *count == want && digest == c.kset_digest,
+            "{}: column {} ({}) holds {count} k-mers with digest {digest}, but counted.json records {want} with digest {}: the partial does not hold that genome's kset",
+            path.display(),
+            first_col + i,
+            c.name,
+            c.kset_digest
+        );
+    }
+    Ok(())
+}
+
+/// Each column's k-mer count and `kset::digest` over its k-mers, in value
+/// order. Buckets are read in order; within one, groups of eight columns
+/// are hashed in parallel.
+fn column_contents(r: &PartialReader) -> Result<Vec<(u64, u64)>> {
+    const GROUP: usize = 8;
+    let words = r.full_row.len();
+    let mut groups: Vec<Vec<(u64, Fnv)>> = (0..r.width.div_ceil(GROUP))
+        .map(|g| {
+            (g * GROUP..((g + 1) * GROUP).min(r.width))
+                .map(|_| (0, Fnv::new()))
+                .collect()
+        })
+        .collect();
+    let (mut bytes, mut kmers, mut slots, mut rows) =
+        (Vec::new(), Vec::new(), Vec::new(), Vec::new());
+    for bucket in 0..BUCKETS {
+        kmers.clear();
+        slots.clear();
+        rows.clear();
+        r.read_bucket(bucket, &mut bytes, &mut kmers, &mut slots, &mut rows)?;
+        groups.par_iter_mut().enumerate().for_each(|(g, states)| {
+            let (word, shift) = (g * GROUP / 64, (g * GROUP % 64) as u32);
+            for (&value, &slot) in kmers.iter().zip(&slots) {
+                let row = match slot {
+                    FULL => r.full_row[word],
+                    s => rows[s as usize * words + word],
+                };
+                let mut members = (row >> shift) & ((1u64 << GROUP) - 1);
+                while members != 0 {
+                    let (count, h) = &mut states[members.trailing_zeros() as usize];
+                    *count += 1;
+                    h.u64(value);
+                    members &= members - 1;
+                }
+            }
+        });
+    }
+    Ok(groups
+        .into_iter()
+        .flatten()
+        .map(|(count, h)| (count, h.0))
+        .collect())
+}
+
+/// The receipt, k, block start, and column checks of `verify_partial`.
+fn verify_partial_header(
+    path: &Path,
+    columns: &[Column],
+    first_col: usize,
+    k: usize,
+) -> Result<PartialReader> {
+    let r = PartialReader::open_with_receipt(path, REVIEWED_COLUMNS)?;
+    ensure!(
+        r.k == k,
+        "{} is stale: it was written at k = {}, but k = {k} is expected",
+        path.display(),
+        r.k
+    );
+    ensure!(
+        r.first_col == first_col && r.width == columns.len(),
+        "{} holds columns from {} with width {}, but column {first_col} with width {} is expected",
+        path.display(),
+        r.first_col,
+        r.width,
+        columns.len()
+    );
+    if let Some(i) = (0..r.width).find(|&i| r.columns[i] != columns[i]) {
+        anyhow::bail!(
+            "{} is stale: column {} holds {} (kset {}), but {} (kset {}) is expected",
+            path.display(),
+            first_col + i,
+            r.columns[i].name,
+            r.columns[i].kset_digest,
+            columns[i].name,
+            columns[i].kset_digest
+        );
+    }
+    Ok(r)
+}
+
+impl PartialReader {
     /// Appends bucket `bucket`'s k-mers to `kmers` and, for each, a slot to
     /// `slots`: FULL, or the index of its row (words_for(width) words) in
     /// `rows`. Full rows are not expanded, so `rows` takes no more memory
@@ -1478,7 +1707,12 @@ impl FeatureMatrix {
     /// and `load` refuses the directory.
     pub fn save(&self, dir: &Path) -> Result<()> {
         create_dir_durably(dir, &no_fault)?;
-        self.write_files(dir, &serde_json::to_vec_pretty(&self.summary)?, &no_fault)
+        self.write_files(
+            dir,
+            &serde_json::to_vec_pretty(&self.summary)?,
+            &no_fault,
+            Writes::Stock,
+        )
     }
 
     /// `save`, refused before anything is written or removed when the save
@@ -1488,6 +1722,15 @@ impl FeatureMatrix {
         self.save_checked(dir, reserve_bytes, &free_bytes, &no_fault)
     }
 
+    /// `save_with_reserve` for the `--disk-sparse` path: a linked `dir`, or
+    /// a link or directory where a matrix file belongs, is refused, and each
+    /// binary is unlinked and created anew rather than truncated, so no
+    /// other name for an old file (a hard link) is rewritten. A missing
+    /// output directory may be created before the free-space refusal.
+    pub fn save_confined(&self, dir: &Path, reserve_bytes: u64) -> Result<()> {
+        self.save_checked_as(dir, reserve_bytes, &free_bytes, &no_fault, Writes::Confined)
+    }
+
     fn save_checked(
         &self,
         dir: &Path,
@@ -1495,6 +1738,20 @@ impl FeatureMatrix {
         free: &dyn Fn(&Path) -> Result<u64>,
         sync: SyncHook,
     ) -> Result<()> {
+        self.save_checked_as(dir, reserve, free, sync, Writes::Stock)
+    }
+
+    fn save_checked_as(
+        &self,
+        dir: &Path,
+        reserve: u64,
+        free: &dyn Fn(&Path) -> Result<u64>,
+        sync: SyncHook,
+        writes: Writes,
+    ) -> Result<()> {
+        if writes == Writes::Confined {
+            ensure_real_dir_if_present(dir)?;
+        }
         create_dir_durably(dir, sync)?;
         let summary = serde_json::to_vec_pretty(&self.summary)?;
         let old = |name: &str| {
@@ -1505,7 +1762,7 @@ impl FeatureMatrix {
         };
         let peak = self.save_peak(summary.len() as u64, old);
         ensure_free_with(free, dir, peak, reserve)?;
-        self.write_files(dir, &summary, sync)
+        self.write_files(dir, &summary, sync, writes)
     }
 
     /// The binary files of a save, in the order `write_files` writes them.
@@ -1537,18 +1794,42 @@ impl FeatureMatrix {
         peak.max(held) as u64
     }
 
-    fn write_files(&self, dir: &Path, summary_json: &[u8], sync: SyncHook) -> Result<()> {
+    fn write_files(
+        &self,
+        dir: &Path,
+        summary_json: &[u8],
+        sync: SyncHook,
+        writes: Writes,
+    ) -> Result<()> {
+        let summary = dir.join("matrix.json");
+        if writes == Writes::Confined {
+            // Nothing is written through a link: a linked directory, or a
+            // link or directory where a matrix file belongs, is refused.
+            ensure_real_dir(dir)?;
+            crate::confine::regular_or_absent(&summary)?;
+        }
         // A summary left from an earlier save would mark half-written
         // binaries as a complete matrix, so it goes, durably, before they
         // are touched.
-        let summary = dir.join("matrix.json");
         remove_if_present(&summary).with_context(|| format!("remove {}", summary.display()))?;
         sync_dir(dir, sync)?;
         for (name, body) in self.binaries() {
             let path = dir.join(name);
-            let mut w = BufWriter::new(
-                File::create(&path).with_context(|| format!("create {}", path.display()))?,
-            );
+            let file = match writes {
+                Writes::Stock => {
+                    File::create(&path).with_context(|| format!("create {}", path.display()))?
+                }
+                Writes::Confined => {
+                    // Unlinked and created anew, rather than truncated, so
+                    // that no other name for the old file (a hard link) is
+                    // rewritten.
+                    crate::confine::regular_or_absent(&path)?;
+                    remove_if_present(&path)
+                        .with_context(|| format!("remove {}", path.display()))?;
+                    crate::confine::create_new(&path)?
+                }
+            };
+            let mut w = BufWriter::new(file);
             body.write_to(&mut w)
                 .and_then(|()| w.flush())
                 .with_context(|| format!("write {}", path.display()))?;
@@ -1557,7 +1838,7 @@ impl FeatureMatrix {
         // Every binary and its directory entry are durable before the
         // summary, last, marks the matrix complete.
         sync_dir(dir, sync)?;
-        if let Err(err) = write_durably(&summary, summary_json, sync) {
+        if let Err(err) = write_durably(&summary, summary_json, sync, writes) {
             // Only the final directory sync fails with the summary in
             // place. A failed save leaves no summary; were its removal
             // lost in a crash, the files it marks are all synced.
@@ -2339,6 +2620,7 @@ mod tests {
             reserve: 0,
             free: &free_bytes,
             sync: &no_fault,
+            writes: Writes::Stock,
         }
     }
 
@@ -2946,6 +3228,7 @@ mod tests {
             reserve: 1,
             free: &filling,
             sync: &no_fault,
+            writes: Writes::Stock,
         };
         let err = write_partial_with(
             &paths[128..192],
@@ -2969,6 +3252,52 @@ mod tests {
             digest_of(&build_from_partials(&p, &new_columns, 31, 1, 64).unwrap()),
             after
         );
+    }
+
+    /// A stock save writes as every command without `--disk-sparse` always
+    /// has: through a linked matrix directory, and into each binary in
+    /// place, so another hard link to an old file sees the new bytes. The
+    /// disk-sparse save refuses the linked directory and gives each binary
+    /// a new file, so that other name keeps the old bytes.
+    #[test]
+    fn a_stock_save_writes_through_links_and_in_place_and_a_confined_save_does_not() {
+        let dir = tempfile::tempdir().unwrap();
+        let paths = write_cohort(dir.path(), 31, &cohort(31, 64));
+        let (a, b) = (build(&paths, 1, 8).unwrap(), build(&paths, 2, 8).unwrap());
+        let bytes = |p: &Path| std::fs::read(p).unwrap();
+
+        let outside = dir.path().join("outside");
+        std::fs::create_dir(&outside).unwrap();
+        let linked = dir.path().join("linked");
+        std::os::unix::fs::symlink(&outside, &linked).unwrap();
+        a.save(&linked).unwrap();
+        assert!(linked.is_symlink());
+        assert_eq!(
+            digest_of(&FeatureMatrix::load(&outside).unwrap()),
+            digest_of(&a)
+        );
+        let err = b.save_confined(&linked, 0).unwrap_err();
+        assert!(
+            format!("{err:#}").contains("refusing symlinked matrix directory"),
+            "{err:#}"
+        );
+        assert_eq!(
+            digest_of(&FeatureMatrix::load(&outside).unwrap()),
+            digest_of(&a)
+        );
+
+        let real = dir.path().join("real");
+        a.save(&real).unwrap();
+        let first = bytes(&real.join("patterns.bin"));
+        let other = dir.path().join("other.bin");
+        std::fs::hard_link(real.join("patterns.bin"), &other).unwrap();
+        b.save(&real).unwrap();
+        let second = bytes(&real.join("patterns.bin"));
+        assert_ne!(first, second);
+        assert_eq!(bytes(&other), second);
+        a.save_confined(&real, 0).unwrap();
+        assert_eq!(bytes(&real.join("patterns.bin")), first);
+        assert_eq!(bytes(&other), second);
     }
 
     #[test]
@@ -3250,6 +3579,7 @@ mod tests {
             reserve: 0,
             free: &free_bytes,
             sync,
+            writes: Writes::Stock,
         }
     }
 
@@ -3316,6 +3646,19 @@ mod tests {
         let msg = format!("{err:#}");
         assert!(
             msg.contains("were removed") && msg.contains(&format!("create {}", blocker.display())),
+            "{msg}"
+        );
+        assert!(!out.exists() && !receipt_path(&out).exists());
+        assert!(!with_suffix(&out, ".part").exists());
+        // The disk-sparse writer refuses the directory before creating the
+        // receipt's temporary, and retracts the partial the same way.
+        let err = write_partial_confined(&paths, &columns, 0, &out, 8, 0)
+            .err()
+            .unwrap();
+        let msg = format!("{err:#}");
+        assert!(
+            msg.contains("were removed")
+                && msg.contains(&format!("non-regular-file {}", blocker.display())),
             "{msg}"
         );
         assert!(!out.exists() && !receipt_path(&out).exists());

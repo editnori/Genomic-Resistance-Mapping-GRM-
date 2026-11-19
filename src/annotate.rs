@@ -16,11 +16,12 @@
 use crate::bits;
 use crate::bvbrc::{self, Client, Feature};
 use crate::catalog::Catalog;
+use crate::confine::{self, Writes};
 use crate::dna::KmerSpace;
 use crate::fasta;
 use crate::layout::Layout;
 use crate::matrix::{Dataset, FeatureMatrix};
-use anyhow::Result;
+use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeSet, HashMap};
 
@@ -119,12 +120,42 @@ fn in_order(mut features: Vec<Feature>) -> Vec<Feature> {
     features
 }
 
-fn load_features(layout: &Layout, client: &Client, genome_id: &str) -> Result<Vec<Feature>> {
+/// A fetched annotation would be cached through a link in
+/// `grm pipeline --disk-sparse`: the data root's `bvbrc` or `bvbrc/features`
+/// points elsewhere, such as into a frozen, shared input store. `annotate`
+/// stops on this, rather than record it as one locus's annotation error, so
+/// that run never writes into that store.
+#[derive(Debug)]
+pub struct FeatureCacheOutsideRoot;
+
+impl std::fmt::Display for FeatureCacheOutsideRoot {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("fetched annotations are cached only in real directories below the data root; give this root its own bvbrc/features directory")
+    }
+}
+
+fn load_features(
+    layout: &Layout,
+    client: &Client,
+    genome_id: &str,
+    writes: Writes,
+) -> Result<Vec<Feature>> {
     let path = layout.features_dir().join(format!("{genome_id}.json"));
     if let Ok(bytes) = std::fs::read(&path)
         && let Ok(f) = serde_json::from_slice(&bytes)
     {
         return Ok(in_order(f));
+    }
+    if writes == Writes::Confined {
+        // Checked before fetching, so a refused cache costs no download.
+        let dir = layout.features_dir();
+        let lane = confine::Lane::new(&layout.root).context(FeatureCacheOutsideRoot)?;
+        lane.create_dir_all(&dir, false)
+            .and_then(|()| lane.check_file(&path))
+            .context(FeatureCacheOutsideRoot)?;
+        let features = in_order(client.fetch_features(genome_id)?);
+        confine::write_atomic(&path, &serde_json::to_vec(&features)?, false)?;
+        return Ok(features);
     }
     let features = in_order(client.fetch_features(genome_id)?);
     std::fs::create_dir_all(layout.features_dir())?;
@@ -146,6 +177,32 @@ pub fn annotate(
     features: &BTreeSet<u32>,
     catalog: Option<&Catalog>,
     contigs_of: &HashMap<String, u32>,
+) -> Result<Vec<FeatureNote>> {
+    annotate_as(
+        layout,
+        client,
+        matrix,
+        ds,
+        features,
+        catalog,
+        contigs_of,
+        Writes::Stock,
+    )
+}
+
+/// `annotate`, caching a fetched annotation as `writes` says: `Stock` as
+/// `grm learn` always has, `Confined` (`grm pipeline --disk-sparse`) only
+/// in a real `bvbrc/features` below the data root.
+#[allow(clippy::too_many_arguments)]
+pub fn annotate_as(
+    layout: &Layout,
+    client: &Client,
+    matrix: &FeatureMatrix,
+    ds: &Dataset,
+    features: &BTreeSet<u32>,
+    catalog: Option<&Catalog>,
+    contigs_of: &HashMap<String, u32>,
+    writes: Writes,
 ) -> Result<Vec<FeatureNote>> {
     let space = KmerSpace::new(matrix.summary.k);
     let mut kmers_of: HashMap<u32, Vec<u64>> = HashMap::new();
@@ -270,8 +327,10 @@ pub fn annotate(
         // Each records why, `grm learn` recomputes the report (see
         // `analysis::stale_reason`), and nothing is cached, so that run
         // downloads the annotation again.
-        let (annotation, annotation_error) = match load_features(layout, client, &genome_id) {
+        let (annotation, annotation_error) = match load_features(layout, client, &genome_id, writes)
+        {
             Ok(features) => (features, None),
+            Err(e) if e.is::<FeatureCacheOutsideRoot>() => return Err(e),
             Err(e) => {
                 eprintln!(
                     "    {genome_id}: no PATRIC annotation, so its loci have no gene or product: {e:#}"
@@ -452,6 +511,61 @@ mod tests {
         let annotated = locus();
         assert_eq!(annotated["gene"], "blaX");
         assert!(annotated.get("annotation_error").is_none(), "{annotated}");
+    }
+
+    /// A root whose `bvbrc` links to a frozen store reads cached annotations
+    /// through the link either way. On a miss `grm learn` goes on as it
+    /// always has (here the download fails and the locus records it), while
+    /// `grm pipeline --disk-sparse` stops before fetching into that store.
+    #[test]
+    fn only_the_disk_sparse_pipeline_refuses_to_cache_annotations_through_a_link() {
+        let dir = tempfile::tempdir().unwrap();
+        let (layout, matrix, ds) = accessory_fixture(dir.path());
+        let frozen = dir.path().join("frozen-bvbrc");
+        std::fs::create_dir_all(frozen.join("features")).unwrap();
+        std::fs::write(
+            frozen.join("features/g0.json"),
+            r#"[{"accession": "c", "start": 1, "end": 200, "strand": "+", "gene": "blaX"}]"#,
+        )
+        .unwrap();
+        let bvbrc = layout.root.join("bvbrc");
+        if bvbrc.exists() {
+            std::fs::remove_dir_all(&bvbrc).unwrap();
+        }
+        std::os::unix::fs::symlink(&frozen, &bvbrc).unwrap();
+        let run = |writes| {
+            annotate_as(
+                &layout,
+                &Client::offline(),
+                &matrix,
+                &ds,
+                &BTreeSet::from([0]),
+                None,
+                &HashMap::new(),
+                writes,
+            )
+        };
+        for writes in [Writes::Stock, Writes::Confined] {
+            let notes = run(writes).unwrap();
+            assert_eq!(
+                serde_json::to_value(&notes[0].locus).unwrap()["gene"],
+                "blaX"
+            );
+        }
+        std::fs::remove_file(frozen.join("features/g0.json")).unwrap();
+        let notes = run(Writes::Stock).unwrap();
+        let locus = serde_json::to_value(&notes[0].locus).unwrap();
+        assert!(locus["annotation_error"].is_string(), "{locus}");
+        let err = run(Writes::Confined).unwrap_err();
+        assert!(err.is::<FeatureCacheOutsideRoot>(), "{err:#}");
+        assert!(
+            format!("{err:#}").contains("symlinked directory"),
+            "{err:#}"
+        );
+        assert_eq!(
+            std::fs::read_dir(frozen.join("features")).unwrap().count(),
+            0
+        );
     }
 
     #[test]

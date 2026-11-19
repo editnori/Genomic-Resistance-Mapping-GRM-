@@ -284,6 +284,7 @@ dependencies = [
  "anyhow",
  "clap",
  "flate2",
+ "libc",
  "rand",
  "rand_chacha",
  "rayon",

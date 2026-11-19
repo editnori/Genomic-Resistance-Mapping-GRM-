@@ -7,6 +7,7 @@ use crate::annotate::{self, FeatureNote};
 use crate::bits::{BitMatrix, Bits};
 use crate::bvbrc::{self, Client, GenomeRecord};
 use crate::catalog::{self, Catalog, FamilyHit};
+use crate::confine::Writes;
 use crate::curate::{Breakpoint, Call, Censor, DatasetSpec, Mic, Phenotype, Selection};
 use crate::dna::KmerSpace;
 use crate::fnv::Fnv;
@@ -370,6 +371,11 @@ pub fn load_inputs(layout: &Layout, slug: &str) -> Result<(SpeciesInputs, Option
     let t = Instant::now();
     let matrix = FeatureMatrix::load(&layout.matrix_dir(slug))?;
     let counted = species::load_counted(layout, slug)?;
+    anyhow::ensure!(
+        counted.pending.is_empty(),
+        "counted.json has {} selected genomes pending from a disk-sparse run; resume `grm pipeline --disk-sparse` before learning",
+        counted.pending.len()
+    );
     if let Some(g) = counted.undigested() {
         anyhow::bail!(
             "counted.json records no kset digest for {} (it predates them); rerun `grm count --species {slug}`",
@@ -632,6 +638,33 @@ pub fn analyze_dataset(
     probe_cache: &mut ProbeCache,
     fingerprint: String,
 ) -> Result<Option<DatasetReport>> {
+    analyze_dataset_as(
+        layout,
+        client,
+        input,
+        spec,
+        catalog,
+        cfg,
+        probe_cache,
+        fingerprint,
+        Writes::Stock,
+    )
+}
+
+/// `analyze_dataset`, caching fetched annotations as `writes` says (see
+/// `annotate::annotate_as`).
+#[allow(clippy::too_many_arguments)]
+fn analyze_dataset_as(
+    layout: &Layout,
+    client: &Client,
+    input: &SpeciesInputs,
+    spec: &DatasetSpec,
+    catalog: Option<&Catalog>,
+    cfg: &EvalConfig,
+    probe_cache: &mut ProbeCache,
+    fingerprint: String,
+    writes: Writes,
+) -> Result<Option<DatasetReport>> {
     let started = Instant::now();
     let Some(EvalInputs {
         cohort:
@@ -815,7 +848,7 @@ pub fn analyze_dataset(
     }
 
     let wanted = model_features(&out.finals);
-    let notes = annotate::annotate(
+    let notes = annotate::annotate_as(
         layout,
         client,
         &input.matrix,
@@ -823,6 +856,7 @@ pub fn analyze_dataset(
         &wanted,
         catalog,
         &input.contigs,
+        writes,
     )?;
     let features = notes
         .into_iter()
@@ -1331,10 +1365,41 @@ pub fn analyze_species_in(
     cfg: &EvalConfig,
     dir: &std::path::Path,
 ) -> Result<Vec<String>> {
+    analyze_species_as(layout, slug, only, force, cfg, dir, Writes::Stock)
+}
+
+/// `analyze_species` as `grm pipeline --disk-sparse` runs it: the reports'
+/// directory is made only through real directories below the data root,
+/// each report goes through a no-follow `<report>.json.part` that refuses a
+/// link where the report belongs, and a fetched annotation is cached only
+/// in a real `bvbrc/features` (see `confine`).
+pub fn analyze_species_disk_sparse(
+    layout: &Layout,
+    slug: &str,
+    only: &[String],
+    force: bool,
+    cfg: &EvalConfig,
+) -> Result<Vec<String>> {
+    let dir = reports_dir(layout, slug, cfg);
+    analyze_species_as(layout, slug, only, force, cfg, &dir, Writes::Confined)
+}
+
+fn analyze_species_as(
+    layout: &Layout,
+    slug: &str,
+    only: &[String],
+    force: bool,
+    cfg: &EvalConfig,
+    dir: &std::path::Path,
+    writes: Writes,
+) -> Result<Vec<String>> {
     let (input, catalog) = load_inputs(layout, slug)?;
     let digest = matrix_digest(&input.matrix);
     let client = Client::new();
-    std::fs::create_dir_all(dir)?;
+    match writes {
+        Writes::Stock => std::fs::create_dir_all(dir)?,
+        Writes::Confined => crate::confine::Lane::new(&layout.root)?.create_dir_all(dir, false)?,
+    }
     let mut specs: Vec<&DatasetSpec> = input
         .datasets
         .iter()
@@ -1353,7 +1418,7 @@ pub fn analyze_species_in(
                 Some(reason) => eprintln!("    {}: {reason}; recomputing report", spec.id),
             }
         }
-        match analyze_dataset(
+        match analyze_dataset_as(
             layout,
             &client,
             &input,
@@ -1362,9 +1427,14 @@ pub fn analyze_species_in(
             cfg,
             &mut probe_cache,
             fingerprint,
+            writes,
         )? {
             Some(report) => {
-                write_atomic(&path, &serde_json::to_vec(&report)?)?;
+                let bytes = serde_json::to_vec(&report)?;
+                match writes {
+                    Writes::Stock => write_atomic(&path, &bytes)?,
+                    Writes::Confined => crate::confine::write_atomic(&path, &bytes, false)?,
+                }
                 eprintln!(
                     "{}",
                     done_line(&spec.id, report.seconds, &report.evaluation, &report.splits)?
@@ -2134,6 +2204,102 @@ mod tests {
         write_atomic(&path, b"{}").unwrap();
         assert_eq!(std::fs::read(&path).unwrap(), b"{}");
         assert!(!dir.path().join("d.json.tmp").exists());
+        // The temporary is `<report>.json.tmp`: one left by an interrupted
+        // write is written over and renamed away, and no other is made.
+        std::fs::write(dir.path().join("d.json.tmp"), b"torn").unwrap();
+        write_atomic(&path, b"[]").unwrap();
+        assert_eq!(std::fs::read(&path).unwrap(), b"[]");
+        assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 1);
+    }
+
+    /// `grm learn` writes its reports through a linked results directory,
+    /// or a linked species directory, as it always has: the link checks
+    /// hold on the `--disk-sparse` path only.
+    #[test]
+    fn learn_writes_reports_through_a_linked_results_or_species_directory() {
+        for linked in ["results", "species"] {
+            let dir = tempfile::tempdir().unwrap();
+            let layout = Layout::new(dir.path());
+            let mut input = reported_inputs(&layout);
+            input.contigs = input
+                .matrix
+                .summary
+                .genomes
+                .iter()
+                .map(|g| (g.clone(), 1))
+                .collect();
+            input.datasets = vec![reported_dataset()];
+            write_inputs(&layout, &input, "");
+            let outside = tempfile::tempdir().unwrap();
+            let at = match linked {
+                "results" => layout.results_dir("fixture"),
+                _ => layout.species_dir("fixture"),
+            };
+            let target = outside.path().join("moved");
+            if at.exists() {
+                std::fs::rename(&at, &target).unwrap();
+            } else {
+                std::fs::create_dir(&target).unwrap();
+            }
+            std::os::unix::fs::symlink(&target, &at).unwrap();
+            let id = "fixture__meropenem";
+            assert_eq!(learn(&layout).unwrap(), [id], "{linked}");
+            assert!(at.is_symlink(), "{linked}");
+            let report = match linked {
+                "results" => target.join(format!("{id}.json")),
+                _ => target.join(format!("results/{id}.json")),
+            };
+            assert!(report.is_file(), "{linked}");
+        }
+    }
+
+    /// `grm pipeline --disk-sparse` keeps learn's link checks: a linked
+    /// results directory is refused before anything is written, and so is a
+    /// link where a report belongs, whose target keeps its bytes.
+    #[test]
+    fn the_disk_sparse_learn_writes_reports_only_through_real_directories() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path());
+        let mut input = reported_inputs(&layout);
+        input.contigs = input
+            .matrix
+            .summary
+            .genomes
+            .iter()
+            .map(|g| (g.clone(), 1))
+            .collect();
+        input.datasets = vec![reported_dataset()];
+        write_inputs(&layout, &input, "");
+        let cfg = EvalConfig::default();
+        let sparse = || analyze_species_disk_sparse(&layout, "fixture", &[], false, &cfg);
+        let results = layout.results_dir("fixture");
+        let outside = tempfile::tempdir().unwrap();
+        if results.exists() {
+            std::fs::remove_dir_all(&results).unwrap();
+        }
+        std::os::unix::fs::symlink(outside.path(), &results).unwrap();
+        let err = sparse().unwrap_err();
+        assert!(
+            format!("{err:#}").contains("symlinked directory"),
+            "{err:#}"
+        );
+        assert_eq!(std::fs::read_dir(outside.path()).unwrap().count(), 0);
+
+        std::fs::remove_file(&results).unwrap();
+        std::fs::create_dir(&results).unwrap();
+        // A stale report (no evaluation recorded) behind a link.
+        let victim = outside.path().join("victim.json");
+        std::fs::write(&victim, b"{}").unwrap();
+        let report = results.join("fixture__meropenem.json");
+        std::os::unix::fs::symlink(&victim, &report).unwrap();
+        let err = sparse().unwrap_err();
+        assert!(format!("{err:#}").contains("symlink"), "{err:#}");
+        assert_eq!(std::fs::read(&victim).unwrap(), b"{}");
+        assert!(!results.join("fixture__meropenem.json.part").exists());
+
+        std::fs::remove_file(&report).unwrap();
+        assert_eq!(sparse().unwrap(), ["fixture__meropenem"]);
+        assert!(report.is_file());
     }
 
     #[test]
@@ -2970,11 +3136,13 @@ mod tests {
                     },
                     catalog_version: calls.into(),
                     kset_digest: Some(digest.clone()),
+                    sketch: Some(vec![]),
                     genes: input.hits.get(g).cloned().unwrap_or_default(),
                 })
                 .collect(),
             missing_fasta: vec![],
             failed: vec![],
+            pending: vec![],
         };
         let dir = layout.species_dir("fixture");
         std::fs::write(

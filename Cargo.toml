@@ -10,6 +10,9 @@ default-run = "grm"
 anyhow = "1"
 clap = { version = "4", features = ["derive", "env"] }
 flate2 = "1"
+# O_NOFOLLOW for writes confined to the data root (see confine.rs); already
+# built for ring and rustix.
+libc = "0.2"
 rayon = "1"
 serde = { version = "1", features = ["derive"] }
 # Saved predictions must round-trip at the precision used by metrics.

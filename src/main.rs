@@ -110,6 +110,17 @@ enum Command {
         /// counted.json (docs/matrix-scaling.md).
         #[arg(long, value_parser = parse_column_blocks)]
         column_blocks: Option<usize>,
+        /// Count and merge one column block at a time, keeping 30 GiB free.
+        #[arg(long, conflicts_with = "column_blocks")]
+        disk_sparse: bool,
+        /// Genomes per sparse block; a multiple of 64 (default 256).
+        #[arg(long, requires = "disk_sparse", value_parser = parse_block_width)]
+        block_width: Option<usize>,
+        /// With --disk-sparse, count without catalog gene calls when the
+        /// AMRFinderPlus catalog does not load, instead of stopping (see
+        /// `grm count`). The sparse run counts, then deletes, its ksets.
+        #[arg(long, requires = "disk_sparse")]
+        allow_missing_catalog: bool,
     },
     /// Cross-validate every learner on each species x drug dataset, fit the
     /// final models, annotate their features, and write one report each.
@@ -222,8 +233,14 @@ enum Command {
         screened_features: usize,
         /// Delete each species' ksets after its datasets are learned, to cap
         /// disk use at one species' ksets (re-creatable with `grm count`).
-        #[arg(long)]
+        #[arg(long, conflicts_with = "disk_sparse")]
         drop_ksets: bool,
+        /// Count and merge one column block at a time, keeping 30 GiB free.
+        #[arg(long)]
+        disk_sparse: bool,
+        /// Genomes per sparse block; a multiple of 64 (default 256).
+        #[arg(long, requires = "disk_sparse", value_parser = parse_block_width)]
+        block_width: Option<usize>,
         /// Count without catalog gene calls when the AMRFinderPlus catalog
         /// does not load, instead of stopping (see `grm count`).
         #[arg(long)]
@@ -437,9 +454,21 @@ fn run(cli: Cli) -> Result<()> {
             species,
             min_support,
             column_blocks,
-        } => species
-            .iter()
-            .try_for_each(|s| matrix_with(&layout, s, min_support, column_blocks)),
+            disk_sparse,
+            block_width,
+            allow_missing_catalog,
+        } => {
+            if disk_sparse {
+                let width = block_width.unwrap_or(256);
+                species.iter().try_for_each(|s| {
+                    matrix_sparse(&layout, s, min_support, width, allow_missing_catalog)
+                })
+            } else {
+                species
+                    .iter()
+                    .try_for_each(|s| matrix_with(&layout, s, min_support, column_blocks))
+            }
+        }
         Command::Learn {
             species,
             force,
@@ -490,6 +519,8 @@ fn run(cli: Cli) -> Result<()> {
             k,
             screened_features,
             drop_ksets,
+            disk_sparse,
+            block_width,
             allow_missing_catalog,
         } => {
             require_catalog(&layout, k, allow_missing_catalog)?;
@@ -499,6 +530,7 @@ fn run(cli: Cli) -> Result<()> {
             } else {
                 species
             };
+            let sparse = disk_sparse.then_some(block_width.unwrap_or(256));
             // The pipeline is the release's command: it always draws at the
             // release's seed and breaks ties by production's rule.
             let cfg = grm::learn::eval::EvalConfig {
@@ -515,10 +547,20 @@ fn run(cli: Cli) -> Result<()> {
                         workers,
                     },
                 )?;
-                count_to_matrix(&layout, slug, k)?;
-                if let Err(e) = learn(&layout, slug, &[], false, &cfg) {
+                count_to_matrix_with_mode(&layout, slug, k, sparse, allow_missing_catalog)?;
+                let learned = if disk_sparse {
+                    learn_disk_sparse(&layout, slug, &cfg)
+                } else {
+                    learn(&layout, slug, &[], false, &cfg)
+                };
+                if let Err(e) = learned {
                     if !e.is::<grm::probes::KsetsUnreadable>() {
                         return Err(e);
+                    }
+                    if disk_sparse {
+                        return Err(e.context(
+                            "disk-sparse ksets were deleted after the matrix save; this species has kset-backed probe assays, so its probe wiring still needs a reviewed cache rather than an unbounded stock recount",
+                        ));
                     }
                     eprintln!("{slug}: recounting ksets: {e:#}");
                     count(&layout, slug, k)?;
@@ -679,9 +721,63 @@ fn learn_config(
     }
 }
 
+/// Bytes a disk-sparse run keeps free: `DISK_SPARSE_RESERVE` in every build
+/// but this binary's own tests, which keep none, so that they pass with
+/// little free space under `TMPDIR`.
+const SPARSE_RESERVE: u64 = if cfg!(test) {
+    0
+} else {
+    grm::species::DISK_SPARSE_RESERVE
+};
+
+fn parse_block_width(raw: &str) -> std::result::Result<usize, String> {
+    let width: usize = raw
+        .parse()
+        .map_err(|_| format!("block width must be an integer, not {raw:?}"))?;
+    if width >= 64 && width.is_multiple_of(64) && width <= grm::matrix::REVIEWED_COLUMNS {
+        Ok(width)
+    } else {
+        Err(format!(
+            "block width must be a multiple of 64 in 64..={}, not {width}",
+            grm::matrix::REVIEWED_COLUMNS
+        ))
+    }
+}
+
 /// Count, structure, and matrix at `k`, each rerun only when `stale_stages`
 /// finds its output out of date.
 fn count_to_matrix(layout: &Layout, slug: &str, k: usize) -> Result<()> {
+    count_to_matrix_with_mode(layout, slug, k, None, false)
+}
+
+/// `count_to_matrix`, or with `sparse` (`grm pipeline --disk-sparse`) the
+/// disk-sparse matrix at that block width and then the structure.
+fn count_to_matrix_with_mode(
+    layout: &Layout,
+    slug: &str,
+    k: usize,
+    sparse: Option<usize>,
+    allow_missing_catalog: bool,
+) -> Result<()> {
+    if let Some(width) = sparse {
+        let catalog = sparse_catalog(layout, k, allow_missing_catalog)?;
+        matrix_sparse_with_catalog(
+            layout,
+            slug,
+            PIPELINE_MIN_SUPPORT,
+            k,
+            catalog.as_ref(),
+            width,
+        )?;
+        let stale =
+            grm::species::stale_stages(layout, slug, catalog.as_ref(), k, PIPELINE_MIN_SUPPORT);
+        if stale.structure {
+            structure_disk_sparse(layout, slug, SPARSE_RESERVE)?;
+        } else {
+            eprintln!("{slug}: structure matches the counted genomes, k, and ksets; reusing it");
+        }
+        return Ok(());
+    }
     let catalog = load_catalog(layout, k);
     let stale_stages =
         || grm::species::stale_stages(layout, slug, catalog.as_ref(), k, PIPELINE_MIN_SUPPORT);
@@ -741,12 +837,13 @@ fn load_catalog(layout: &Layout, k: usize) -> Option<Catalog> {
 /// unless `allow_missing_catalog`: counting without it records no gene calls.
 fn require_catalog(layout: &Layout, k: usize, allow_missing_catalog: bool) -> Result<()> {
     if !allow_missing_catalog {
-        Catalog::load(&layout.catalog_dir(), &grm::dna::KmerSpace::new(k)).context(
-            "the AMRFinderPlus catalog does not load, and counting without it records no gene calls, which leaves reports without the catalog baseline and gene panel detections; pass --allow-missing-catalog to count anyway",
-        )?;
+        Catalog::load(&layout.catalog_dir(), &grm::dna::KmerSpace::new(k))
+            .context(CATALOG_REQUIRED)?;
     }
     Ok(())
 }
+
+const CATALOG_REQUIRED: &str = "the AMRFinderPlus catalog does not load, and counting without it records no gene calls, which leaves reports without the catalog baseline and gene panel detections; pass --allow-missing-catalog to count anyway";
 
 /// Stops `grm pipeline` before it counts anything when the Kover comparison
 /// at `path` doesn't load: each species ends in `grm report`, which would
@@ -771,6 +868,20 @@ fn count_with(layout: &Layout, slug: &str, k: usize, catalog: Option<&Catalog>) 
 fn structure(layout: &Layout, slug: &str) -> Result<()> {
     let started = std::time::Instant::now();
     let s = grm::species::structure(layout, slug)?;
+    log_structure(slug, &s, started);
+    Ok(())
+}
+
+/// `structure` in `grm pipeline --disk-sparse` (see
+/// `grm::species::structure_disk_sparse`).
+fn structure_disk_sparse(layout: &Layout, slug: &str, reserve: u64) -> Result<()> {
+    let started = std::time::Instant::now();
+    let s = grm::species::structure_disk_sparse(layout, slug, reserve)?;
+    log_structure(slug, &s, started);
+    Ok(())
+}
+
+fn log_structure(slug: &str, s: &grm::species::Structure, started: std::time::Instant) {
     eprintln!(
         "{slug}: {} genomes, {} lineage clusters at Mash distance {} (largest {:.0}%) in {:.0}s",
         s.genomes.len(),
@@ -779,7 +890,6 @@ fn structure(layout: &Layout, slug: &str) -> Result<()> {
         s.lineages.largest_share * 100.0,
         started.elapsed().as_secs_f64()
     );
-    Ok(())
 }
 
 /// `grm matrix --column-blocks`: a width `build_matrix` accepts.
@@ -801,6 +911,69 @@ fn matrix_with(
 ) -> Result<()> {
     let started = std::time::Instant::now();
     let s = grm::species::build_matrix(layout, slug, min_support, column_blocks)?;
+    log_matrix(slug, &s, started);
+    Ok(())
+}
+
+fn matrix_sparse(
+    layout: &Layout,
+    slug: &str,
+    min_support: u32,
+    width: usize,
+    allow_missing_catalog: bool,
+) -> Result<()> {
+    // A fresh sparse matrix builds counted.json incrementally. Existing
+    // manifests keep their k; only a new one uses the count/pipeline default.
+    let k = grm::species::load_counted(layout, slug).map_or(PIPELINE_K, |c| c.k);
+    // A sparse matrix counts, so it passes the catalog gate `grm count` does
+    // before anything is counted, written or deleted.
+    require_catalog(layout, k, allow_missing_catalog)?;
+    let catalog = sparse_catalog(layout, k, allow_missing_catalog)?;
+    matrix_sparse_with_catalog(layout, slug, min_support, k, catalog.as_ref(), width)
+}
+
+/// The catalog a disk-sparse count calls genes with. The sparse stages
+/// delete the ksets they count, so a catalog that does not load is an error
+/// here too, as in `require_catalog`, unless `allow_missing_catalog`: never
+/// a silent count without gene calls.
+fn sparse_catalog(
+    layout: &Layout,
+    k: usize,
+    allow_missing_catalog: bool,
+) -> Result<Option<Catalog>> {
+    match Catalog::load(&layout.catalog_dir(), &grm::dna::KmerSpace::new(k)) {
+        Ok(c) => Ok(Some(c)),
+        Err(e) if allow_missing_catalog => {
+            eprintln!("no catalog gene calls: {e:#}");
+            Ok(None)
+        }
+        Err(e) => Err(e.context(CATALOG_REQUIRED)),
+    }
+}
+
+fn matrix_sparse_with_catalog(
+    layout: &Layout,
+    slug: &str,
+    min_support: u32,
+    k: usize,
+    catalog: Option<&Catalog>,
+    width: usize,
+) -> Result<()> {
+    let started = std::time::Instant::now();
+    let s = grm::species::build_matrix_disk_sparse(
+        layout,
+        slug,
+        k,
+        catalog,
+        min_support,
+        width,
+        SPARSE_RESERVE,
+    )?;
+    log_matrix(slug, &s, started);
+    Ok(())
+}
+
+fn log_matrix(slug: &str, s: &grm::matrix::MatrixSummary, started: std::time::Instant) {
     eprintln!(
         "{slug}: {} genomes, {} distinct k-mers, {} kept in {} patterns ({} rare, {} core) in {:.0}s",
         s.genomes.len(),
@@ -811,7 +984,6 @@ fn matrix_with(
         s.kmers_core,
         started.elapsed().as_secs_f64()
     );
-    Ok(())
 }
 
 fn learn(
@@ -822,6 +994,20 @@ fn learn(
     cfg: &grm::learn::eval::EvalConfig,
 ) -> Result<()> {
     learn_in(layout, slug, only, force, cfg, None)
+}
+
+/// `learn` as `grm pipeline --disk-sparse` runs it: the reports' directory
+/// and each report are written only through real directories below the data
+/// root (`grm::analysis::analyze_species_disk_sparse`).
+fn learn_disk_sparse(
+    layout: &Layout,
+    slug: &str,
+    cfg: &grm::learn::eval::EvalConfig,
+) -> Result<()> {
+    grm::species::ensure_selection_counted(layout, slug)?;
+    let written = grm::analysis::analyze_species_disk_sparse(layout, slug, &[], false, cfg)?;
+    eprintln!("{}", learn_end_line(layout, slug, written.len(), cfg));
+    Ok(())
 }
 
 /// `learn`, with the reports in `out` when `grm learn --exp-tie-out` names
@@ -1722,6 +1908,66 @@ mod tests {
             panic!("parsed another command");
         };
         assert_eq!(column_blocks, None);
+    }
+
+    /// Without `--disk-sparse`, `grm matrix` and `grm pipeline` parse to the
+    /// stock path. The sparse flags need `--disk-sparse`, and `--disk-sparse`
+    /// refuses `--column-blocks` and `--drop-ksets`.
+    #[test]
+    fn matrix_and_pipeline_keep_the_stock_path_unless_disk_sparse_is_given() {
+        use clap::error::ErrorKind::{ArgumentConflict, MissingRequiredArgument};
+        let parse = |args: &[&str]| Cli::try_parse_from(args.iter().copied());
+        let Command::Matrix {
+            column_blocks,
+            disk_sparse,
+            block_width,
+            allow_missing_catalog,
+            ..
+        } = parse(&["grm", "matrix", "--species", "s"]).unwrap().command
+        else {
+            panic!("parsed another command");
+        };
+        assert_eq!(
+            (
+                column_blocks,
+                disk_sparse,
+                block_width,
+                allow_missing_catalog
+            ),
+            (None, false, None, false)
+        );
+        let Command::Pipeline {
+            drop_ksets,
+            disk_sparse,
+            block_width,
+            ..
+        } = parse(&["grm", "pipeline"]).unwrap().command
+        else {
+            panic!("parsed another command");
+        };
+        assert_eq!((drop_ksets, disk_sparse, block_width), (false, false, None));
+        let kind = |args: &[&str]| parse(args).err().map(|e| e.kind());
+        for args in [
+            &["grm", "matrix", "--species", "s", "--block-width", "128"][..],
+            &["grm", "matrix", "--species", "s", "--allow-missing-catalog"][..],
+            &["grm", "pipeline", "--block-width", "128"][..],
+        ] {
+            assert_eq!(kind(args), Some(MissingRequiredArgument), "{args:?}");
+        }
+        for args in [
+            &[
+                "grm",
+                "matrix",
+                "--species",
+                "s",
+                "--disk-sparse",
+                "--column-blocks",
+                "64",
+            ][..],
+            &["grm", "pipeline", "--disk-sparse", "--drop-ksets"][..],
+        ] {
+            assert_eq!(kind(args), Some(ArgumentConflict), "{args:?}");
+        }
     }
 
     /// `grm matrix` from its parsed arguments through `run`: the switch and
@@ -2836,6 +3082,91 @@ mod tests {
         assert_eq!(counted.k, 21);
     }
 
+    /// `grm pipeline --k 21` from its parsed arguments through `run`, on the
+    /// stock path and with `--disk-sparse`: counts, structure and matrix
+    /// each record 21. A dispatch that passed another k on (the merge's
+    /// `src/main.rs` hunk) would count at 31. Synthetic fixture.
+    #[test]
+    fn the_pipeline_command_counts_at_the_k_it_is_given() {
+        for sparse in [false, true] {
+            let dir = tempfile::tempdir().unwrap();
+            let layout = fixture(dir.path());
+            let data = dir.path().to_str().unwrap();
+            let mut args = vec![
+                "grm",
+                "--data",
+                data,
+                "pipeline",
+                "--species",
+                SLUG,
+                "--k",
+                "21",
+            ];
+            if sparse {
+                args.extend(["--disk-sparse", "--block-width", "64"]);
+            }
+            let ran = run(Cli::try_parse_from(args).unwrap()).map_err(|e| format!("{e:#}"));
+            let counted = grm::species::load_counted(&layout, SLUG).unwrap();
+            assert_eq!(counted.k, 21, "sparse {sparse}: {ran:?}");
+            let (input, _) = grm::analysis::load_inputs(&layout, SLUG).unwrap();
+            assert_eq!(
+                (input.structure.k, input.matrix.summary.k),
+                (21, 21),
+                "sparse {sparse}: {ran:?}"
+            );
+            // The fixture has no curated/funnel.json, so the run ends at
+            // the report step, after count, structure, matrix and learn.
+            assert!(!layout.curated().join("funnel.json").exists());
+            assert_eq!(
+                ran,
+                Err("No such file or directory (os error 2)".to_string()),
+                "sparse {sparse}"
+            );
+        }
+    }
+
+    /// `grm pipeline` with `species/<slug>/results` linked outside the data
+    /// root: the stock run makes and writes it through the link as `main`
+    /// does and goes on to the report step, while `--disk-sparse` stops at
+    /// learn with nothing written behind the link. Synthetic fixture.
+    #[test]
+    fn only_the_disk_sparse_pipeline_refuses_a_linked_results_directory() {
+        for sparse in [false, true] {
+            let dir = tempfile::tempdir().unwrap();
+            let layout = fixture(dir.path());
+            let outside = tempfile::tempdir().unwrap();
+            let results = layout.results_dir(SLUG);
+            ensure_parent(&results).unwrap();
+            std::os::unix::fs::symlink(outside.path(), &results).unwrap();
+            let data = dir.path().to_str().unwrap();
+            let mut args = vec![
+                "grm",
+                "--data",
+                data,
+                "pipeline",
+                "--species",
+                SLUG,
+                "--k",
+                "21",
+            ];
+            if sparse {
+                args.extend(["--disk-sparse", "--block-width", "64"]);
+            }
+            let ran = run(Cli::try_parse_from(args).unwrap()).map_err(|e| format!("{e:#}"));
+            if sparse {
+                let err = ran.unwrap_err();
+                assert!(err.contains("symlinked directory"), "{err}");
+            } else {
+                assert_eq!(
+                    ran,
+                    Err("No such file or directory (os error 2)".to_string())
+                );
+            }
+            assert!(results.is_symlink());
+            assert_eq!(std::fs::read_dir(outside.path()).unwrap().count(), 0);
+        }
+    }
+
     fn curated_json(layout: &Layout, file: &str) -> serde_json::Value {
         serde_json::from_slice(&std::fs::read(layout.curated().join(file)).unwrap()).unwrap()
     }
@@ -3016,6 +3347,150 @@ mod tests {
         let failures = check.failures();
         let failed: Vec<&str> = failures.keys().map(String::as_str).collect();
         assert_eq!(failed, FOREIGN);
+    }
+
+    #[test]
+    fn disk_sparse_matrix_command_counts_a_fresh_cohort_without_learning() {
+        let dir = tempfile::tempdir().unwrap();
+        let stock = fixture(&dir.path().join("stock"));
+        let sparse = fixture(&dir.path().join("sparse"));
+        count_to_matrix(&stock, SLUG, PIPELINE_K).unwrap();
+        let data = sparse.root.to_str().unwrap();
+        let cli = Cli::try_parse_from([
+            "grm",
+            "--data",
+            data,
+            "matrix",
+            "--species",
+            SLUG,
+            "--min-support",
+            "2",
+            "--disk-sparse",
+            "--block-width",
+            "64",
+        ])
+        .unwrap();
+        run(cli).unwrap();
+        for name in [
+            "matrix.json",
+            "patterns.bin",
+            "support.bin",
+            "kmer_offsets.bin",
+            "kmers.bin",
+        ] {
+            assert_eq!(
+                std::fs::read(sparse.matrix_dir(SLUG).join(name)).unwrap(),
+                std::fs::read(stock.matrix_dir(SLUG).join(name)).unwrap(),
+                "{name}"
+            );
+        }
+        let counted = grm::species::load_counted(&sparse, SLUG).unwrap();
+        assert!(counted.pending.is_empty());
+        assert!(counted.failed.is_empty());
+        assert!(!sparse.kset_dir(SLUG).join("g0.kset").exists());
+        assert!(!sparse.species_dir(SLUG).join("structure.json").exists());
+        assert!(!sparse.results_dir(SLUG).exists());
+        assert!(
+            Cli::try_parse_from([
+                "grm",
+                "matrix",
+                "--species",
+                SLUG,
+                "--disk-sparse",
+                "--block-width",
+                "65",
+            ])
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn disk_sparse_matrix_passes_the_catalog_gate_before_counting_or_deleting() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = fixture(dir.path());
+        let data = layout.root.to_str().unwrap().to_string();
+        let parse = |extra: &[&str]| {
+            let mut args = vec![
+                "grm",
+                "--data",
+                &data,
+                "matrix",
+                "--species",
+                SLUG,
+                "--disk-sparse",
+                "--block-width",
+                "64",
+            ];
+            args.extend_from_slice(extra);
+            Cli::try_parse_from(args).unwrap()
+        };
+        let species = layout.species_dir(SLUG);
+        let entries = || {
+            let mut names: Vec<String> = std::fs::read_dir(&species)
+                .unwrap()
+                .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+                .collect();
+            names.sort();
+            names
+        };
+        // The catalog stops loading, as when its link target moves. Stock
+        // `grm count` refuses; so does the sparse matrix, before it writes.
+        std::fs::remove_file(layout.catalog_dir().join("AMR_CDS.fa")).unwrap();
+        let count = Cli::try_parse_from(["grm", "--data", &data, "count", "--species", SLUG]);
+        assert!(run(count.unwrap()).is_err());
+        let err = run(parse(&[])).unwrap_err();
+        assert!(
+            format!("{err:#}").contains("--allow-missing-catalog"),
+            "{err:#}"
+        );
+        assert_eq!(entries(), ["genomes.txt"]);
+        // As with `grm count --allow-missing-catalog`, the flag counts without
+        // gene calls.
+        run(parse(&["--allow-missing-catalog"])).unwrap();
+        let counted = grm::species::load_counted(&layout, SLUG).unwrap();
+        assert!(counted.genomes.iter().all(|g| g.catalog_version.is_empty()));
+        assert!(
+            Cli::try_parse_from([
+                "grm",
+                "matrix",
+                "--species",
+                SLUG,
+                "--allow-missing-catalog"
+            ])
+            .is_err()
+        );
+
+        // Ksets counted with the catalog are never deleted for a count
+        // without it, flag or no flag.
+        let other = tempfile::tempdir().unwrap();
+        let layout = fixture(other.path());
+        count_to_matrix(&layout, SLUG, PIPELINE_K).unwrap();
+        let ksets = layout.kset_dir(SLUG);
+        let kept = std::fs::read_dir(&ksets).unwrap().count();
+        let before = std::fs::read(layout.species_dir(SLUG).join("counted.json")).unwrap();
+        std::fs::remove_file(layout.catalog_dir().join("AMR_CDS.fa")).unwrap();
+        let data = layout.root.to_str().unwrap();
+        for extra in [&[][..], &["--allow-missing-catalog"]] {
+            let mut args = vec![
+                "grm",
+                "--data",
+                data,
+                "matrix",
+                "--species",
+                SLUG,
+                "--disk-sparse",
+                "--block-width",
+                "64",
+            ];
+            args.extend_from_slice(extra);
+            assert!(run(Cli::try_parse_from(args).unwrap()).is_err());
+            assert_eq!(std::fs::read_dir(&ksets).unwrap().count(), kept);
+            assert_eq!(
+                std::fs::read(layout.species_dir(SLUG).join("counted.json")).unwrap(),
+                before
+            );
+            assert!(!layout.species_dir(SLUG).join("matrix-partials").exists());
+        }
     }
 
     #[test]
@@ -3269,6 +3744,26 @@ mod tests {
             production["input_fingerprint"],
             read(out.join(&file))["input_fingerprint"]
         );
+    }
+
+    /// `--exp-tie-out` may name a folder outside the data root.
+    #[test]
+    fn an_exact_learn_writes_to_a_folder_outside_the_data_root() {
+        let dir = tempfile::tempdir().unwrap();
+        let elsewhere = tempfile::tempdir().unwrap();
+        replay_fixture(dir.path());
+        let data = dir.path().to_str().unwrap();
+        let grm = |args: &[&str]| {
+            let all = [&["grm", "--data", data][..], args].concat();
+            run(Cli::try_parse_from(all).unwrap()).map_err(|e| format!("{e:#}"))
+        };
+        grm(&["count", "--species", SLUG]).unwrap();
+        grm(&["structure", "--species", SLUG]).unwrap();
+        grm(&["matrix", "--species", SLUG]).unwrap();
+        let out = elsewhere.path().join("exact");
+        let exact = ["learn", "--species", SLUG, "--exp-tie-rule", "exact"];
+        grm(&[&exact[..], &["--exp-tie-out", out.to_str().unwrap()]].concat()).unwrap();
+        assert!(out.join(format!("{SLUG}__fixturemycin.json")).exists());
     }
 
     /// From the review of pull request 128: with a relative --data and
