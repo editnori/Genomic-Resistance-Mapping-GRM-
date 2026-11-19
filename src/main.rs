@@ -716,6 +716,15 @@ fn learn_config(
     }
 }
 
+/// Bytes a disk-sparse run keeps free: `DISK_SPARSE_RESERVE` in every build
+/// but this binary's own tests, which keep none, so that they pass with
+/// little free space under `TMPDIR`.
+const SPARSE_RESERVE: u64 = if cfg!(test) {
+    0
+} else {
+    grm::species::DISK_SPARSE_RESERVE
+};
+
 fn parse_block_width(raw: &str) -> std::result::Result<usize, String> {
     let width: usize = raw
         .parse()
@@ -758,7 +767,7 @@ fn count_to_matrix_with_mode(
         let stale =
             grm::species::stale_stages(layout, slug, catalog.as_ref(), k, PIPELINE_MIN_SUPPORT);
         if stale.structure {
-            structure_disk_sparse(layout, slug, grm::species::DISK_SPARSE_RESERVE)?;
+            structure_disk_sparse(layout, slug, SPARSE_RESERVE)?;
         } else {
             eprintln!("{slug}: structure matches the counted genomes, k, and ksets; reusing it");
         }
@@ -946,7 +955,15 @@ fn matrix_sparse_with_catalog(
     width: usize,
 ) -> Result<()> {
     let started = std::time::Instant::now();
-    let s = grm::species::build_matrix_disk_sparse(layout, slug, k, catalog, min_support, width)?;
+    let s = grm::species::build_matrix_disk_sparse(
+        layout,
+        slug,
+        k,
+        catalog,
+        min_support,
+        width,
+        SPARSE_RESERVE,
+    )?;
     log_matrix(slug, &s, started);
     Ok(())
 }

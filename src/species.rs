@@ -1209,7 +1209,9 @@ fn count_sparse_block(
 }
 
 /// Counts, folds, merges and saves a matrix while holding at most one new
-/// block of ksets. Production always leaves `DISK_SPARSE_RESERVE` bytes free.
+/// block of ksets, leaving `reserve` bytes free. `grm` always passes
+/// `DISK_SPARSE_RESERVE`; only its own tests pass 0, so that they run on a
+/// small temporary filesystem.
 pub fn build_matrix_disk_sparse(
     layout: &Layout,
     slug: &str,
@@ -1217,6 +1219,7 @@ pub fn build_matrix_disk_sparse(
     catalog: Option<&Catalog>,
     min_support: u32,
     block_width: usize,
+    reserve: u64,
 ) -> Result<matrix::MatrixSummary> {
     build_matrix_disk_sparse_with(
         layout,
@@ -1225,7 +1228,7 @@ pub fn build_matrix_disk_sparse(
         catalog,
         min_support,
         block_width,
-        DISK_SPARSE_RESERVE,
+        reserve,
         |_| Ok(()),
     )
 }
