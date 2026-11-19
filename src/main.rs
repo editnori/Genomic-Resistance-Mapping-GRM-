@@ -1883,7 +1883,12 @@ mod tests {
             panic!("parsed another command");
         };
         assert_eq!(
-            (column_blocks, disk_sparse, block_width, allow_missing_catalog),
+            (
+                column_blocks,
+                disk_sparse,
+                block_width,
+                allow_missing_catalog
+            ),
             (None, false, None, false)
         );
         let Command::Pipeline {
@@ -1905,7 +1910,15 @@ mod tests {
             assert_eq!(kind(args), Some(MissingRequiredArgument), "{args:?}");
         }
         for args in [
-            &["grm", "matrix", "--species", "s", "--disk-sparse", "--column-blocks", "64"][..],
+            &[
+                "grm",
+                "matrix",
+                "--species",
+                "s",
+                "--disk-sparse",
+                "--column-blocks",
+                "64",
+            ][..],
             &["grm", "pipeline", "--disk-sparse", "--drop-ksets"][..],
         ] {
             assert_eq!(kind(args), Some(ArgumentConflict), "{args:?}");
