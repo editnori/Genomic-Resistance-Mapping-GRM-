@@ -118,6 +118,32 @@ fn disk_sparse_matches_stock_and_structure_after_kset_deletion() {
 }
 
 #[test]
+fn column_blocks_leave_an_unfinished_sparse_run_alone() {
+    // --column-blocks writes its blocks in the same matrix-partials folder
+    // and removes it when it ends, failed or not. A sparse run stopped after
+    // its last fold has counted every genome (nothing pending) and holds the
+    // only copy of them all. Synthetic.
+    let dir = tempfile::tempdir().unwrap();
+    let layout = fixture(&dir.path().join("sparse"), 130, false);
+    assert!(sparse_hook(&layout, 7, "after_fold:128").is_err());
+    assert!(load_counted(&layout, SLUG).unwrap().pending.is_empty());
+    let run = run_dir(&layout);
+    let partial = run.join("block-00000.partial");
+    let before = std::fs::read(&partial).unwrap();
+    assert!(!ksets_remain(&layout, 0..130));
+    let err = build_matrix(&layout, SLUG, 1, Some(64)).unwrap_err();
+    assert!(format!("{err:#}").contains("--disk-sparse"), "{err:#}");
+    assert_eq!(std::fs::read(&partial).unwrap(), before);
+    assert!(run.join("run.json").exists());
+    // The run then finishes as if nothing had happened.
+    let stock = fixture(&dir.path().join("stock"), 130, false);
+    count(&stock, SLUG, 7, None).unwrap();
+    build_matrix(&stock, SLUG, 1, None).unwrap();
+    sparse(&layout, 7).unwrap();
+    assert_same_matrix(&stock, &layout);
+}
+
+#[test]
 fn a_stock_count_writes_counted_json_and_sidecars_without_sketches() {
     // main's stock count wrote these keys and no others; a sparse count adds
     // the sketch. Synthetic.

@@ -565,12 +565,14 @@ fn build_matrix_with(
     column_blocks: Option<usize>,
     remove_partials: &dyn Fn(&Path) -> std::io::Result<()>,
 ) -> Result<matrix::MatrixSummary> {
-    // A bad width or a linked partials folder is refused before anything
-    // is read, written or removed.
+    // A bad width, a linked partials folder, or one that holds a
+    // disk-sparse run is refused before anything is read, written or
+    // removed.
     let dir = layout.partials_dir(slug);
     if let Some(width) = column_blocks {
         check_column_blocks(width)?;
         refuse_linked_partials(&dir)?;
+        refuse_sparse_runs(&dir)?;
     }
     let counted = load_counted(layout, slug)?;
     let digests = counted.kset_digests("matrix")?;
@@ -651,6 +653,30 @@ fn refuse_linked_partials(dir: &Path) -> Result<()> {
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
         Err(e) => Err(e).with_context(|| format!("inspect {}", dir.display())),
     }
+}
+
+/// Refuses a partials folder that holds a folder. `--column-blocks` writes
+/// only files there, so a folder is a `--disk-sparse` run's: its blocks can
+/// be the only copy of genomes whose ksets that run deleted, and the switch
+/// removes the whole partials folder when it ends, failed or not.
+fn refuse_sparse_runs(dir: &Path) -> Result<()> {
+    let entries = match std::fs::read_dir(dir) {
+        Ok(entries) => entries,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(e) => return Err(e).with_context(|| format!("read {}", dir.display())),
+    };
+    for entry in entries {
+        let entry = entry.with_context(|| format!("read {}", dir.display()))?;
+        if entry.file_type()?.is_dir() {
+            anyhow::bail!(
+                "{} holds {}, a `grm matrix --disk-sparse` run whose blocks may stand in for ksets it deleted; --column-blocks removes {} when it ends, so finish that run with `grm matrix --disk-sparse`, or review and remove its folder, first",
+                dir.display(),
+                entry.path().display(),
+                dir.display()
+            );
+        }
+    }
+    Ok(())
 }
 
 /// Writes one partial per `width` columns into `dir`, then merges them.
