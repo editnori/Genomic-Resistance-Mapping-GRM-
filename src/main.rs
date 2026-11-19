@@ -1865,6 +1865,53 @@ mod tests {
         assert_eq!(column_blocks, None);
     }
 
+    /// Without `--disk-sparse`, `grm matrix` and `grm pipeline` parse to the
+    /// stock path. The sparse flags need `--disk-sparse`, and `--disk-sparse`
+    /// refuses `--column-blocks` and `--drop-ksets`.
+    #[test]
+    fn matrix_and_pipeline_keep_the_stock_path_unless_disk_sparse_is_given() {
+        use clap::error::ErrorKind::{ArgumentConflict, MissingRequiredArgument};
+        let parse = |args: &[&str]| Cli::try_parse_from(args.iter().copied());
+        let Command::Matrix {
+            column_blocks,
+            disk_sparse,
+            block_width,
+            allow_missing_catalog,
+            ..
+        } = parse(&["grm", "matrix", "--species", "s"]).unwrap().command
+        else {
+            panic!("parsed another command");
+        };
+        assert_eq!(
+            (column_blocks, disk_sparse, block_width, allow_missing_catalog),
+            (None, false, None, false)
+        );
+        let Command::Pipeline {
+            drop_ksets,
+            disk_sparse,
+            block_width,
+            ..
+        } = parse(&["grm", "pipeline"]).unwrap().command
+        else {
+            panic!("parsed another command");
+        };
+        assert_eq!((drop_ksets, disk_sparse, block_width), (false, false, None));
+        let kind = |args: &[&str]| parse(args).err().map(|e| e.kind());
+        for args in [
+            &["grm", "matrix", "--species", "s", "--block-width", "128"][..],
+            &["grm", "matrix", "--species", "s", "--allow-missing-catalog"][..],
+            &["grm", "pipeline", "--block-width", "128"][..],
+        ] {
+            assert_eq!(kind(args), Some(MissingRequiredArgument), "{args:?}");
+        }
+        for args in [
+            &["grm", "matrix", "--species", "s", "--disk-sparse", "--column-blocks", "64"][..],
+            &["grm", "pipeline", "--disk-sparse", "--drop-ksets"][..],
+        ] {
+            assert_eq!(kind(args), Some(ArgumentConflict), "{args:?}");
+        }
+    }
+
     /// `grm matrix` from its parsed arguments through `run`: the switch and
     /// `--min-support` reach the block merge. Only `main`'s `Cli::parse` of
     /// the process arguments and the printing of an error are left out.
@@ -3554,6 +3601,28 @@ mod tests {
             production["input_fingerprint"],
             read(out.join(&file))["input_fingerprint"]
         );
+    }
+
+    /// `--exp-tie-out` may name a folder outside the data root, as before
+    /// the disk-sparse merge: only reports in the species' results/ go
+    /// through the data root's real directories (`confine`).
+    #[test]
+    fn an_exact_learn_writes_to_a_folder_outside_the_data_root() {
+        let dir = tempfile::tempdir().unwrap();
+        let elsewhere = tempfile::tempdir().unwrap();
+        replay_fixture(dir.path());
+        let data = dir.path().to_str().unwrap();
+        let grm = |args: &[&str]| {
+            let all = [&["grm", "--data", data][..], args].concat();
+            run(Cli::try_parse_from(all).unwrap()).map_err(|e| format!("{e:#}"))
+        };
+        grm(&["count", "--species", SLUG]).unwrap();
+        grm(&["structure", "--species", SLUG]).unwrap();
+        grm(&["matrix", "--species", SLUG]).unwrap();
+        let out = elsewhere.path().join("exact");
+        let exact = ["learn", "--species", SLUG, "--exp-tie-rule", "exact"];
+        grm(&[&exact[..], &["--exp-tie-out", out.to_str().unwrap()]].concat()).unwrap();
+        assert!(out.join(format!("{SLUG}__fixturemycin.json")).exists());
     }
 
     /// From the review of pull request 128: with a relative --data and
