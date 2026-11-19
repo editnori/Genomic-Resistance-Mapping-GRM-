@@ -687,73 +687,82 @@ fn sparse_refuses_links_where_it_writes_before_any_work() {
     }
 }
 
+/// A stock count reads and writes through links where it always has: ksets
+/// and sidecars linked into a shared store are read as cache hits and left
+/// as they are, and a linked counted.json is written through. The link
+/// checks hold on the disk-sparse path only. Synthetic.
 #[test]
-fn a_stock_count_refuses_linked_lane_files_before_any_work() {
+fn a_stock_count_reads_and_writes_through_linked_lane_files_as_before() {
     use std::os::unix::fs::symlink;
     let dir = tempfile::tempdir().unwrap();
     // A shared store of ksets and sidecars from an earlier count.
     let store = fixture(&dir.path().join("store"), 6, false);
     count(&store, SLUG, 7, None).unwrap();
     let before = tree(&store.kset_dir(SLUG));
-    type Plant = fn(&Layout, &Layout);
-    let cases: [(&str, Plant); 4] = [
-        // The re-review's layout: a real ksets/ whose ksets and sidecars
-        // all link into the store.
-        ("linked-ksets-and-sidecars", |l, s| {
-            std::fs::create_dir_all(l.kset_dir(SLUG)).unwrap();
-            for g in 0..6 {
-                for ext in ["kset", "json"] {
-                    let name = format!("g{g:04}.{ext}");
-                    symlink(s.kset_dir(SLUG).join(&name), l.kset_dir(SLUG).join(&name)).unwrap();
-                }
-            }
-        }),
-        ("sidecar-temporary", |l, s| {
-            std::fs::create_dir_all(l.kset_dir(SLUG)).unwrap();
+    let stored = std::fs::read(store.species_dir(SLUG).join("counted.json")).unwrap();
+    // A real ksets/ whose ksets and sidecars all link into the store.
+    let linked = fixture(&dir.path().join("linked-ksets-and-sidecars"), 6, false);
+    std::fs::create_dir_all(linked.kset_dir(SLUG)).unwrap();
+    for g in 0..6 {
+        for ext in ["kset", "json"] {
+            let name = format!("g{g:04}.{ext}");
             symlink(
-                s.kset_dir(SLUG).join("g0003.json"),
-                l.kset_dir(SLUG).join("g0003.json.part"),
+                store.kset_dir(SLUG).join(&name),
+                linked.kset_dir(SLUG).join(&name),
             )
             .unwrap();
-        }),
-        ("kset-temporary", |l, s| {
-            std::fs::create_dir_all(l.kset_dir(SLUG)).unwrap();
-            symlink(
-                s.kset_dir(SLUG).join("g0003.kset"),
-                l.kset_dir(SLUG).join("g0003.kset.part"),
-            )
-            .unwrap();
-        }),
-        ("counted-json", |l, s| {
-            symlink(
-                s.species_dir(SLUG).join("counted.json"),
-                l.species_dir(SLUG).join("counted.json"),
-            )
-            .unwrap();
-        }),
-    ];
-    for (name, plant) in cases {
-        let layout = fixture(&dir.path().join(name), 6, false);
-        plant(&layout, &store);
-        let err = count(&layout, SLUG, 7, None).unwrap_err();
-        assert!(format!("{err:#}").contains("symlink"), "{name}: {err:#}");
-        // Nothing was counted, written or followed.
-        assert_eq!(tree(&store.kset_dir(SLUG)), before, "{name}");
-        assert!(
-            std::fs::symlink_metadata(layout.species_dir(SLUG).join("counted.json"))
-                .is_ok_and(|m| m.file_type().is_symlink())
-                || !layout.species_dir(SLUG).join("counted.json").exists(),
-            "{name}"
-        );
-        if name != "linked-ksets-and-sidecars" {
-            assert!(!layout.kset_dir(SLUG).join("g0000.kset").exists(), "{name}");
         }
     }
-    // A wholly linked ksets/ directory is still read in stock mode.
-    let linked = fixture(&dir.path().join("linked-ksets-dir"), 6, false);
-    symlink(store.kset_dir(SLUG), linked.kset_dir(SLUG)).unwrap();
     assert_eq!(count(&linked, SLUG, 7, None).unwrap().genomes.len(), 6);
     assert_eq!(tree(&store.kset_dir(SLUG)), before);
+    // A counted.json that links outside the root is written through.
+    let outside = dir.path().join("outside-counted.json");
+    std::fs::write(&outside, b"stale").unwrap();
+    let at = linked.species_dir(SLUG).join("counted.json");
+    std::fs::remove_file(&at).unwrap();
+    symlink(&outside, &at).unwrap();
+    count(&linked, SLUG, 7, None).unwrap();
+    assert!(at.is_symlink());
+    assert_eq!(std::fs::read(&outside).unwrap(), stored);
+    // A wholly linked ksets/ directory is read as well.
+    let whole = fixture(&dir.path().join("linked-ksets-dir"), 6, false);
+    symlink(store.kset_dir(SLUG), whole.kset_dir(SLUG)).unwrap();
+    assert_eq!(count(&whole, SLUG, 7, None).unwrap().genomes.len(), 6);
+    assert_eq!(tree(&store.kset_dir(SLUG)), before);
+}
+
+/// A stock count records no sketch, also from sidecars a disk-sparse run
+/// wrote beside ksets it kept: not on a cache hit (review note N3), and not
+/// when it redoes a sidecar from its kset (N4). Synthetic.
+#[test]
+fn a_stock_count_records_no_sketch_from_sidecars_a_sparse_run_wrote() {
+    let dir = tempfile::tempdir().unwrap();
+    let layout = fixture(&dir.path().join("mixed"), 3, false);
+    let counted_json = layout.species_dir(SLUG).join("counted.json");
+    count(&layout, SLUG, 7, None).unwrap();
+    let stock = std::fs::read(&counted_json).unwrap();
+    // The sparse run keeps the ksets it found and gives their sidecars
+    // sketches.
+    sparse(&layout, 7).unwrap();
+    assert!(ksets_remain(&layout, 0..3));
+    let sidecar = |g: usize| layout.kset_dir(SLUG).join(format!("g{g:04}.json"));
+    let read = |p: &Path| -> serde_json::Value {
+        serde_json::from_slice(&std::fs::read(p).unwrap()).unwrap()
+    };
+    assert!((0..3).all(|g| read(&sidecar(g)).get("sketch").is_some()));
+    // Every genome a cache hit.
+    let counted = count(&layout, SLUG, 7, None).unwrap();
+    assert!(counted.genomes.iter().all(|g| g.sketch.is_none()));
+    assert_eq!(std::fs::read(&counted_json).unwrap(), stock);
+    // A sidecar from before kset digests is redone from its kset.
+    let mut old = read(&sidecar(1));
+    old.as_object_mut().unwrap().remove("kset_digest");
+    std::fs::write(sidecar(1), serde_json::to_vec(&old).unwrap()).unwrap();
+    let counted = count(&layout, SLUG, 7, None).unwrap();
+    assert!(counted.genomes.iter().all(|g| g.sketch.is_none()));
+    assert!(read(&sidecar(1)).get("sketch").is_none());
+    assert!(read(&sidecar(1)).get("kset_digest").is_some());
+    assert_eq!(std::fs::read(&counted_json).unwrap(), stock);
 }
 
 #[test]

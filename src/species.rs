@@ -9,7 +9,7 @@
 use crate::bvbrc::fasta_path;
 use crate::catalog::{self, Catalog, FamilyHit};
 use crate::cluster;
-use crate::confine::{self, sync_dir};
+use crate::confine::{self, Writes, sync_dir};
 use crate::dna::KmerSpace;
 use crate::fasta::SeqStats;
 use crate::kset::{self, KsetReader};
@@ -182,7 +182,17 @@ fn write_sidecar(path: &Path, counted: &Counted, reserve: &Reserve) -> Result<()
     confine::write_atomic(path, &bytes, false)
 }
 
-#[allow(clippy::too_many_arguments)]
+/// A disk-sparse count's sidecar goes through `write_sidecar`; a stock
+/// count writes its sidecar in place, as it always has.
+fn put_sidecar(path: &Path, counted: &Counted, reserve: &Reserve, sparse: bool) -> Result<()> {
+    if sparse {
+        write_sidecar(path, counted, reserve)
+    } else {
+        std::fs::write(path, serde_json::to_vec(counted)?)?;
+        Ok(())
+    }
+}
+
 fn count_one(
     id: &str,
     fasta: &Path,
@@ -191,11 +201,18 @@ fn count_one(
     space: &KmerSpace,
     catalog: Option<&Catalog>,
     buffers: &mut (Vec<u64>, Vec<u64>),
-    reserve: u64,
 ) -> Result<Counted> {
-    let reserve = Reserve::new(reserve);
     count_one_with(
-        id, fasta, kset_path, sidecar, space, catalog, buffers, &reserve, false, false,
+        id,
+        fasta,
+        kset_path,
+        sidecar,
+        space,
+        catalog,
+        buffers,
+        &Reserve::new(0),
+        false,
+        false,
     )
 }
 
@@ -206,8 +223,11 @@ fn count_one(
 ///
 /// With `sparse` (a disk-sparse count, which deletes the kset later), the
 /// sidecar also records the kset's bottom-sketch, and a sidecar without one
-/// is no cache hit. A stock count records none, so its sidecars and
-/// counted.json keep the bytes they had before sketches.
+/// is no cache hit; the sidecar and kset are never read or written through
+/// a link (see `confine`). A stock count records no sketch, also when it
+/// reuses a sidecar a disk-sparse count wrote, so its sidecars and
+/// counted.json keep the bytes they had before sketches, and it reads and
+/// writes the kset and sidecar as it always has.
 #[allow(clippy::too_many_arguments)]
 fn count_one_with(
     id: &str,
@@ -222,8 +242,9 @@ fn count_one_with(
     sparse: bool,
 ) -> Result<Counted> {
     let version = catalog.map_or(String::new(), Catalog::calls_version);
-    // The sidecar is GRM's own file: never read or written through a link.
-    let has_sidecar = confine::regular_or_absent(sidecar)?;
+    // In a disk-sparse count the sidecar is never read or written through
+    // a link.
+    let has_sidecar = !sparse || confine::regular_or_absent(sidecar)?;
     let kept = keep && std::fs::symlink_metadata(kset_path).is_ok();
     if kept {
         let reader = KsetReader::open(kset_path).with_context(|| {
@@ -250,7 +271,11 @@ fn count_one_with(
             && c.kset_digest.is_some()
             && (c.sketch.is_some() || !sparse)
         {
-            return Ok(c);
+            return Ok(if sparse {
+                c
+            } else {
+                Counted { sketch: None, ..c }
+            });
         }
         // Catalog changed, or the sidecar predates kset digests/sketches:
         // redo those from the stored kset, with its k-mer count. A sidecar
@@ -263,12 +288,11 @@ fn count_one_with(
             n_kmers: values.len() as u64,
             catalog_version: version,
             kset_digest: Some(kset::digest(&values)),
-            sketch: (sparse || c.sketch.is_some())
-                .then(|| values.iter().copied().take(SKETCH).collect()),
+            sketch: sparse.then(|| values.iter().copied().take(SKETCH).collect()),
             genes,
             ..c
         };
-        write_sidecar(sidecar, &c, reserve)?;
+        put_sidecar(sidecar, &c, reserve, sparse)?;
         return Ok(c);
     }
     let stats = kset::count_into(fasta, space, 1, values, scratch)?;
@@ -287,11 +311,13 @@ fn count_one_with(
             kset_path.display(),
             fasta.display()
         );
-    } else {
+    } else if sparse {
         let dir = kset_path.parent().unwrap_or(Path::new("."));
         kset::write_checked(kset_path, id, space, values, |_, need| {
             reserve.claim(dir, need)
         })?;
+    } else {
+        kset::write(kset_path, id, space, values)?;
     }
     let genes = catalog.map_or(vec![], |cat| {
         catalog::family_calls(cat, &cat.detect(values, catalog::CALL_CONTAINMENT))
@@ -305,7 +331,7 @@ fn count_one_with(
         sketch: sparse.then(|| values.iter().copied().take(SKETCH).collect()),
         genes,
     };
-    write_sidecar(sidecar, &c, reserve)?;
+    put_sidecar(sidecar, &c, reserve, sparse)?;
     Ok(c)
 }
 
@@ -338,32 +364,6 @@ pub fn count(
     let space = KmerSpace::new(k);
     let (present, missing) = selection(layout, slug)?;
     let kdir = layout.kset_dir(slug);
-    // A link where a file this count writes belongs stops it before any
-    // work, as in disk-sparse mode (see `confine`): otherwise every genome
-    // with a linked sidecar would fail on its own and the count would end
-    // with nothing counted. Anything else in the way is left to the write
-    // that meets it, which fails that genome alone. The ksets, and the ksets
-    // directory, may still be links; they are only read on a cache hit.
-    let refuse_link = |path: &Path| -> Result<()> {
-        anyhow::ensure!(
-            !std::fs::symlink_metadata(path).is_ok_and(|m| m.file_type().is_symlink()),
-            "refusing to write through symlink {}: a file GRM writes must be a regular file",
-            path.display()
-        );
-        Ok(())
-    };
-    for name in ["counted.json", "counted.json.part"] {
-        refuse_link(&layout.species_dir(slug).join(name))?;
-    }
-    for id in &present {
-        for name in [
-            format!("{id}.json"),
-            format!("{id}.json.part"),
-            format!("{id}.kset.part"),
-        ] {
-            refuse_link(&kdir.join(name))?;
-        }
-    }
     std::fs::create_dir_all(&kdir)?;
     let fasta_dir = layout.fasta_dir();
     let done = AtomicUsize::new(0);
@@ -380,7 +380,6 @@ pub fn count(
                     &space,
                     catalog,
                     buffers,
-                    0,
                 );
                 let d = done.fetch_add(1, Ordering::Relaxed) + 1;
                 if d.is_multiple_of(200) || d == present.len() {
@@ -405,10 +404,9 @@ pub fn count(
         failed,
         pending: vec![],
     };
-    confine::write_atomic(
-        &layout.species_dir(slug).join("counted.json"),
-        &serde_json::to_vec(&summary)?,
-        false,
+    std::fs::write(
+        layout.species_dir(slug).join("counted.json"),
+        serde_json::to_vec(&summary)?,
     )?;
     Ok(summary)
 }
@@ -441,12 +439,25 @@ pub struct Structure {
     pub sketch_size: usize,
 }
 
+/// Lineage structure from each genome's bottom-sketch, written to
+/// structure.json as every command without `--disk-sparse` always has. A
+/// genome whose kset is gone but whose sketch counted.json records (only a
+/// disk-sparse count records one, and that run deletes the kset) is
+/// sketched from that record, so `grm structure` runs after
+/// `grm matrix --disk-sparse`; any other missing kset fails as before.
 pub fn structure(layout: &Layout, slug: &str) -> Result<Structure> {
-    structure_with_reserve(layout, slug, 0)
+    structure_as(layout, slug, Writes::Stock, 0)
 }
 
-/// `structure` with a free-disk preflight for its JSON output.
-pub fn structure_with_reserve(layout: &Layout, slug: &str, reserve: u64) -> Result<Structure> {
+/// `structure` on the `--disk-sparse` path: each kset read must hold the
+/// counted k, structure.json goes through a no-follow temporary (see
+/// `confine`), and with a nonzero `reserve` the write must leave that many
+/// bytes free.
+pub fn structure_disk_sparse(layout: &Layout, slug: &str, reserve: u64) -> Result<Structure> {
+    structure_as(layout, slug, Writes::Confined, reserve)
+}
+
+fn structure_as(layout: &Layout, slug: &str, writes: Writes, reserve: u64) -> Result<Structure> {
     let counted = load_counted(layout, slug)?;
     let kset_digests = counted.kset_digests("structure")?;
     let kdir = layout.kset_dir(slug);
@@ -455,8 +466,25 @@ pub fn structure_with_reserve(layout: &Layout, slug: &str, reserve: u64) -> Resu
         .par_iter()
         .map(|g| {
             let path = kdir.join(format!("{}.kset", g.genome_id));
-            if std::fs::symlink_metadata(&path).is_ok() {
-                let reader = KsetReader::open(&path)?;
+            if std::fs::symlink_metadata(&path).is_err() {
+                match (&g.sketch, writes) {
+                    (Some(sketch), _) => {
+                        anyhow::ensure!(
+                            sketch.len() as u64 == g.n_kmers.min(SKETCH as u64),
+                            "counted.json has the wrong sketch length for {}",
+                            g.genome_id
+                        );
+                        return Ok(sketch.clone());
+                    }
+                    (None, Writes::Confined) => {
+                        anyhow::bail!("no kset or cached sketch for {}", g.genome_id)
+                    }
+                    // Fails opening the kset, as before.
+                    (None, Writes::Stock) => {}
+                }
+            }
+            let reader = KsetReader::open(&path)?;
+            if writes == Writes::Confined {
                 anyhow::ensure!(
                     reader.k == counted.k,
                     "{} holds {}-mers, not the counted {}-mers",
@@ -464,18 +492,8 @@ pub fn structure_with_reserve(layout: &Layout, slug: &str, reserve: u64) -> Resu
                     reader.k,
                     counted.k
                 );
-                return reader.sketch(SKETCH);
             }
-            let sketch = g
-                .sketch
-                .as_ref()
-                .with_context(|| format!("no kset or cached sketch for {}", g.genome_id))?;
-            anyhow::ensure!(
-                sketch.len() as u64 == g.n_kmers.min(SKETCH as u64),
-                "counted.json has the wrong sketch length for {}",
-                g.genome_id
-            );
-            Ok(sketch.clone())
+            reader.sketch(SKETCH)
         })
         .collect::<Result<_>>()?;
     let n = sketches.len();
@@ -507,14 +525,19 @@ pub fn structure_with_reserve(layout: &Layout, slug: &str, reserve: u64) -> Resu
     };
     let out = layout.species_dir(slug).join("structure.json");
     let bytes = serde_json::to_vec(&s)?;
-    if reserve != 0 {
-        matrix::ensure_free_space(
-            out.parent().unwrap_or(Path::new(".")),
-            bytes.len() as u64,
-            reserve,
-        )?;
+    match writes {
+        Writes::Stock => std::fs::write(out, bytes)?,
+        Writes::Confined => {
+            if reserve != 0 {
+                matrix::ensure_free_space(
+                    out.parent().unwrap_or(Path::new(".")),
+                    bytes.len() as u64,
+                    reserve,
+                )?;
+            }
+            confine::write_atomic(&out, &bytes, false)?;
+        }
     }
-    confine::write_atomic(&out, &bytes, false)?;
     Ok(s)
 }
 
@@ -1821,17 +1844,7 @@ mod tests {
         let mut buffers = (Vec::new(), Vec::new());
         let mut count = |k| {
             let space = KmerSpace::new(k);
-            count_one(
-                "g",
-                &fasta,
-                &kset_path,
-                &json,
-                &space,
-                None,
-                &mut buffers,
-                0,
-            )
-            .unwrap()
+            count_one("g", &fasta, &kset_path, &json, &space, None, &mut buffers).unwrap()
         };
         let k21 = count(21);
         let k31 = count(31);
@@ -1853,16 +1866,7 @@ mod tests {
         let mut buffers = (Vec::new(), Vec::new());
         let mut count = |k| {
             let space = KmerSpace::new(k);
-            count_one(
-                "g",
-                &fasta,
-                &kset_path,
-                &json,
-                &space,
-                None,
-                &mut buffers,
-                0,
-            )
+            count_one("g", &fasta, &kset_path, &json, &space, None, &mut buffers)
         };
         let k21 = count(21).unwrap();
         // A directory where `kset::write` creates its temporary file stops a
@@ -1889,17 +1893,7 @@ mod tests {
         let mut buffers = (Vec::new(), Vec::new());
         let mut count = |k| {
             let space = KmerSpace::new(k);
-            count_one(
-                "g",
-                &fasta,
-                &kset_path,
-                &json,
-                &space,
-                None,
-                &mut buffers,
-                0,
-            )
-            .unwrap()
+            count_one("g", &fasta, &kset_path, &json, &space, None, &mut buffers).unwrap()
         };
         let k21 = count(21);
         let mut old: serde_json::Value =
@@ -2423,7 +2417,7 @@ mod tests {
                 dir.path().join(format!("{id}.kset")),
                 dir.path().join(format!("{id}.json")),
             );
-            count_one(id, &fasta, &kset_path, &json, &space, None, &mut buffers, 0).unwrap()
+            count_one(id, &fasta, &kset_path, &json, &space, None, &mut buffers).unwrap()
         };
         // One base changed: the 21 k-mers over it give way to 21 others.
         let mut other = SEQ.to_string();
@@ -2444,18 +2438,7 @@ mod tests {
         let (kset_path, json) = (dir.path().join("g.kset"), dir.path().join("g.json"));
         let space = KmerSpace::new(21);
         let mut buffers = (Vec::new(), Vec::new());
-        let mut count = || {
-            count_one(
-                "g",
-                &fasta,
-                &kset_path,
-                &json,
-                &space,
-                None,
-                &mut buffers,
-                0,
-            )
-        };
+        let mut count = || count_one("g", &fasta, &kset_path, &json, &space, None, &mut buffers);
         let counted = count().unwrap();
         // The sidecar as `grm count` wrote it before kset digests.
         let mut old: serde_json::Value =

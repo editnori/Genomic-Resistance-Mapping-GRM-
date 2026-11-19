@@ -18,6 +18,9 @@
 //!   rather than silently replaced.
 //!
 //! The data root itself may be a link; it is resolved once.
+//!
+//! These checks hold on the `--disk-sparse` path only. A writer that the
+//! stock commands share with it takes a `Writes` mode from its caller.
 
 use anyhow::{Context, Result, bail, ensure};
 use std::fs::{File, OpenOptions};

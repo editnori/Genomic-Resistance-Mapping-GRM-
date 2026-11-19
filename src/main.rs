@@ -758,7 +758,7 @@ fn count_to_matrix_with_mode(
         let stale =
             grm::species::stale_stages(layout, slug, catalog.as_ref(), k, PIPELINE_MIN_SUPPORT);
         if stale.structure {
-            structure_with_reserve(layout, slug, grm::species::DISK_SPARSE_RESERVE)?;
+            structure_disk_sparse(layout, slug, grm::species::DISK_SPARSE_RESERVE)?;
         } else {
             eprintln!("{slug}: structure matches the counted genomes, k, and ksets; reusing it");
         }
@@ -852,12 +852,22 @@ fn count_with(layout: &Layout, slug: &str, k: usize, catalog: Option<&Catalog>) 
 }
 
 fn structure(layout: &Layout, slug: &str) -> Result<()> {
-    structure_with_reserve(layout, slug, 0)
+    let started = std::time::Instant::now();
+    let s = grm::species::structure(layout, slug)?;
+    log_structure(slug, &s, started);
+    Ok(())
 }
 
-fn structure_with_reserve(layout: &Layout, slug: &str, reserve: u64) -> Result<()> {
+/// `structure` in `grm pipeline --disk-sparse` (see
+/// `grm::species::structure_disk_sparse`).
+fn structure_disk_sparse(layout: &Layout, slug: &str, reserve: u64) -> Result<()> {
     let started = std::time::Instant::now();
-    let s = grm::species::structure_with_reserve(layout, slug, reserve)?;
+    let s = grm::species::structure_disk_sparse(layout, slug, reserve)?;
+    log_structure(slug, &s, started);
+    Ok(())
+}
+
+fn log_structure(slug: &str, s: &grm::species::Structure, started: std::time::Instant) {
     eprintln!(
         "{slug}: {} genomes, {} lineage clusters at Mash distance {} (largest {:.0}%) in {:.0}s",
         s.genomes.len(),
@@ -866,7 +876,6 @@ fn structure_with_reserve(layout: &Layout, slug: &str, reserve: u64) -> Result<(
         s.lineages.largest_share * 100.0,
         started.elapsed().as_secs_f64()
     );
-    Ok(())
 }
 
 /// `grm matrix --column-blocks`: a width `build_matrix` accepts.

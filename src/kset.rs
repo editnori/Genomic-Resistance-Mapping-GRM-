@@ -152,13 +152,23 @@ fn get_varint(data: &[u8], pos: &mut usize) -> Result<u64> {
 /// Writes sorted, distinct mixed k-mers. Writes to `<path>.part` and renames,
 /// so an interrupted run never leaves a truncated kset behind.
 pub fn write(path: &Path, name: &str, space: &KmerSpace, values: &[u64]) -> Result<()> {
-    write_checked(path, name, space, values, |_, _| Ok(()))
+    let (offsets, counts, data) = encode(space, values);
+    let part = path.with_extension("kset.part");
+    let mut w =
+        BufWriter::new(File::create(&part).with_context(|| format!("create {}", part.display()))?);
+    write_body(&mut w, name, space, values.len(), &offsets, &counts, &data)?;
+    // No fsync: a kset is a re-creatable cache, and the rename below
+    // already keeps an interrupted run from leaving a truncated file.
+    w.into_inner()?;
+    std::fs::rename(&part, path)?;
+    Ok(())
 }
 
-/// `write` with an exact-length preflight before creating the temporary file.
-/// The old kset, if any, remains until the rename, so `bytes` is also the peak
-/// additional file length this write needs. What the preflight returns (a
-/// reserve claim, say) is held until the kset is renamed into place.
+/// `write` for the `--disk-sparse` count, with an exact-length preflight
+/// before creating the temporary file. The old kset, if any, remains until
+/// the rename, so `bytes` is also the peak additional file length this write
+/// needs. What the preflight returns (a reserve claim, say) is held until the
+/// kset is renamed into place.
 ///
 /// The temporary is created with `confine::create_part`, never through a
 /// link, and the kset only replaces a regular file or nothing.
@@ -169,6 +179,27 @@ pub fn write_checked<G>(
     values: &[u64],
     preflight: impl FnOnce(&Path, u64) -> Result<G>,
 ) -> Result<()> {
+    let (offsets, counts, data) = encode(space, values);
+    let _claim = preflight(path, encoded_len(name, data.len()))?;
+
+    let part = path.with_extension("kset.part");
+    crate::confine::regular_or_absent(path)?;
+    let mut w = BufWriter::new(crate::confine::create_part(&part)?);
+    let written = (|| -> Result<()> {
+        write_body(&mut w, name, space, values.len(), &offsets, &counts, &data)?;
+        // No fsync, as in `write`.
+        w.flush()?;
+        crate::confine::replace_with(&part, path)
+    })();
+    drop(w);
+    if written.is_err() && crate::confine::regular_or_absent(&part).unwrap_or(false) {
+        let _ = std::fs::remove_file(&part);
+    }
+    written
+}
+
+/// Each bucket's offset into the varint data, its k-mer count, and the data.
+fn encode(space: &KmerSpace, values: &[u64]) -> (Vec<u64>, Vec<u32>, Vec<u8>) {
     debug_assert!(values.windows(2).all(|w| w[0] < w[1]));
     let bits = space.bits();
     let mut data = Vec::with_capacity(values.len() * 6);
@@ -186,34 +217,32 @@ pub fn write_checked<G>(
         }
     }
     offsets[BUCKETS] = data.len() as u64;
-    let _claim = preflight(path, encoded_len(name, data.len()))?;
+    (offsets, counts, data)
+}
 
-    let part = path.with_extension("kset.part");
-    crate::confine::regular_or_absent(path)?;
-    let mut w = BufWriter::new(crate::confine::create_part(&part)?);
-    let written = (|| -> Result<()> {
-        w.write_all(MAGIC)?;
-        w.write_all(&[space.k as u8, BUCKET_BITS as u8, 0, 0])?;
-        w.write_all(&(values.len() as u64).to_le_bytes())?;
-        w.write_all(&(name.len() as u32).to_le_bytes())?;
-        w.write_all(name.as_bytes())?;
-        for o in &offsets {
-            w.write_all(&o.to_le_bytes())?;
-        }
-        for c in &counts {
-            w.write_all(&c.to_le_bytes())?;
-        }
-        w.write_all(&data)?;
-        // No fsync: a kset is a re-creatable cache, and the rename below
-        // already keeps an interrupted run from leaving a truncated file.
-        w.flush()?;
-        crate::confine::replace_with(&part, path)
-    })();
-    drop(w);
-    if written.is_err() && crate::confine::regular_or_absent(&part).unwrap_or(false) {
-        let _ = std::fs::remove_file(&part);
+/// The kset file's bytes, in order, from `encode`'s parts.
+fn write_body(
+    w: &mut impl Write,
+    name: &str,
+    space: &KmerSpace,
+    n_values: usize,
+    offsets: &[u64],
+    counts: &[u32],
+    data: &[u8],
+) -> Result<()> {
+    w.write_all(MAGIC)?;
+    w.write_all(&[space.k as u8, BUCKET_BITS as u8, 0, 0])?;
+    w.write_all(&(n_values as u64).to_le_bytes())?;
+    w.write_all(&(name.len() as u32).to_le_bytes())?;
+    w.write_all(name.as_bytes())?;
+    for o in offsets {
+        w.write_all(&o.to_le_bytes())?;
     }
-    written
+    for c in counts {
+        w.write_all(&c.to_le_bytes())?;
+    }
+    w.write_all(data)?;
+    Ok(())
 }
 
 /// Bytes of a kset file whose name is `name` and whose varint data takes
@@ -465,20 +494,21 @@ mod tests {
     fn writes_refuse_links_at_the_kset_and_its_temporary() {
         let dir = tempfile::tempdir().unwrap();
         let space = KmerSpace::new(21);
+        let checked = |path: &Path| write_checked(path, "g", &space, &[1, 2], |_, _| Ok(()));
         let victim = dir.path().join("victim");
         std::fs::write(&victim, "shared store").unwrap();
         let linked = dir.path().join("linked.kset");
         std::os::unix::fs::symlink(&victim, &linked).unwrap();
-        assert!(write(&linked, "g", &space, &[1, 2]).is_err());
+        assert!(checked(&linked).is_err());
         let part_linked = dir.path().join("part.kset");
         std::os::unix::fs::symlink(&victim, part_linked.with_extension("kset.part")).unwrap();
-        assert!(write(&part_linked, "g", &space, &[1, 2]).is_err());
+        assert!(checked(&part_linked).is_err());
         assert_eq!(std::fs::read(&victim).unwrap(), b"shared store");
         assert!(linked.is_symlink() && !part_linked.exists());
         // A stale regular temporary from an interrupted write is replaced.
         let stale = dir.path().join("stale.kset");
         std::fs::write(stale.with_extension("kset.part"), "torn").unwrap();
-        write(&stale, "g", &space, &[1, 2]).unwrap();
+        checked(&stale).unwrap();
         assert_eq!(
             KsetReader::open(&stale).unwrap().read_all().unwrap(),
             [1, 2]
