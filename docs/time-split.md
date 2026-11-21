@@ -1,22 +1,22 @@
 # First-public-day split
 
-This page compares two ways of choosing training genomes. The past arm trains only on genomes public in BV-BRC by each dataset's cut day. The random arm trains on a random draw of the same size and class balance. Both are scored on the same later genomes of studies absent from training, in 24 datasets of 4 species at evaluation revision 14. This is a split by first-public day inside one database, BV-BRC. It is not a prospective test and not external validation.
+This page compares two ways of choosing training genomes. The past arm trains only on genomes public in BV-BRC by each dataset's cut day. The random arm trains on a random draw of the same size and class balance. Both are scored on the same later genomes of studies new after each dataset's cut day, in 24 datasets of 4 species at evaluation revision 14. This is a split by first-public day inside one database, BV-BRC. It is not a prospective test and not external validation.
 
-Five learners fit each arm: scm, cart, rf, gbt and lasso. As the test genomes are later genomes of new studies, this is a retrospective test on newly deposited studies from the same database. Every figure on this page comes from the rerun after the review, which the section Review describes.
+Five learners fit each arm: scm, cart, rf, gbt and lasso. As the test genomes are later genomes of new studies, this is a retrospective test on newly deposited studies from the same database. Every figure on this page comes from the rerun after the review, which the section Review describes, except where that section gives what the fix changed.
 
 ## Reading
 
-In 24 datasets of 4 species, scored on later genomes of studies absent from training, training only on genomes public by each dataset's cut day read worse than a random draw of the same size on log loss for 5 of 5 learners and on balanced accuracy for 5 of 5, and on recall for 2 of 5 (rf and lasso; not shown for scm, cart and gbt); no learner read better on any measure or contrast.
+In 24 datasets of 4 species, scored on later genomes of studies new after each dataset's cut day, training only on genomes public by each dataset's cut day read worse than a random draw of the same size on log loss for 5 of 5 learners and on balanced accuracy for 5 of 5, and on recall for 2 of 5 (rf and lasso; not shown for scm, cart and gbt); no learner read better on any measure or contrast.
 
-Median differences over the 24 datasets, past minus random, in recall and log loss were -0.0306 and +0.2107 for scm, -0.0116 and +0.1727 for cart, -0.0173 and +0.0905 for rf, -0.0381 and +0.0921 for gbt, and -0.0311 and +0.0677 for lasso.
+Median differences over the 24 datasets, training on the past alone minus a random draw of the same size, in recall and log loss: -0.0306 and +0.2107 for scm, -0.0116 and +0.1727 for cart, -0.0173 and +0.0905 for rf, -0.0381 and +0.0921 for gbt, and -0.0311 and +0.0677 for lasso.
 
-scm scores only 0 or 1, so its log loss is a count of wrong calls at the clip: 738 of 3,390 tested pairs in the past arm against 567 of 3,390 in the random arm.
+scm scores only 0 or 1, so its log loss moves only with its wrong calls, each adding about 9.21 to the sum: it called 738 of 3,390 genome and dataset pairs wrong in the past arm against 567 in the random arm, and its recall was 1,251 of 1,729 resistant pairs against 1,419.
 
-The plan's rule, fixed before any fit, reads cost shown, with a cost for 5 of 5 learners; the interval resamples only the 4 species, so it is coarse.
+The rule fixed before any fit finds a cost of training on the past alone for 5 of 5 learners, through log loss for all 5 and recall for rf and lasso; the interval resamples only the 4 species, so it is coarse.
 
 ## Plan and order
 
-The plan was hashed with its analysis script (sha256 `d415dbd4`) before any fold file, fit or result of the experiment existed, by its hash list's own note. It fixed the design, the rule that admits a dataset, recall and log loss per learner on three contrasts, the species interval and the rule for a cost.
+The plan (sha256 `d415dbd4`) was hashed with its analysis script (sha256 `3264c0f6`) before any fold file, fit or result of the experiment existed, by its hash list's own note. It fixed the design, the rule that admits a dataset, recall and log loss per learner on three contrasts, the species interval and the rule for a cost.
 
 The plan named specificity and balanced accuracy as supporting figures and gave them no rule. The table layout script was hashed after the first result and, by its hash list's own note, before any score was read.
 
@@ -39,18 +39,18 @@ The rerun's plan (sha256 `5b886192`) was written after the results of 14 Nov and
 A dataset is one species and one antibiotic, and its cohort is the genomes `grm learn` evaluates for it. A genome's day is the day its record entered BV-BRC, so it is first public inside this database. A genome's study is its BV-BRC BioProject.
 
 - **Cut day.** The earliest day by which at least 60% of the cohort was public. Past genomes have a day on or before it, later genomes a day after it.
-- **Test studies.** A study is new when none of its genomes of the species is public by the cut day. A keyed hash of the accession picks half of the new studies with a later genome; the choice depends on no dataset and no label.
+- **Test studies.** A study is new when none of its genomes of the species is public by the cut day. A keyed hash of the accession picks about half of the new studies with a later genome; the choice depends on no dataset and no label.
 - **Test set.** A keyed hash picks two in three of the later genomes of the test studies. The rest are the reserve. All three arms are scored on exactly this test set.
 - **Arms.** past trains on the past genomes. study-out draws from the past genomes and later genomes of other studies, with no genome of a test study. random draws from the study-out pool and the reserve, so it holds genomes of the test genomes' own studies and period.
 - **Size.** Each arm trains on as many resistant and as many susceptible genomes as the past arm.
 - **Left out.** A later genome with no recorded study is in no pool and no test set. A copy of a test genome, with identical inputs, is in no pool.
-- **Entry.** A dataset enters when its test set holds at least 20 genomes of each class and each arm trains on at least 25 of each class.
+- **Entry.** A dataset enters when its test set holds at least 20 genomes of each class, each arm trains on at least 25 of each class, and at least 20 reserve genomes and 20 later genomes of other studies remain in the pools.
 - **Datasets.** 24 datasets in 4 species enter: 6 of *Escherichia coli*, 8 of *Klebsiella pneumoniae*, 2 of *Pseudomonas aeruginosa* and 8 of *Salmonella enterica*.
 - **Fits.** Each arm is one fold file for `grm learn --fold-file` ([fold-file.md](fold-file.md)), with the default settings of `grm learn` (seed 42, 4,000 screened features, 3 inner folds). Each fit selects candidate features and tunes its settings inside its own training genomes.
 
 Three contrasts compare the arms, each a paired difference on one dataset's test genomes. total is past minus random, the plan's question. study is study-out minus random: the test genomes' own studies absent from training against present. time is past minus study-out: later genomes of other studies absent against present. The plan gave the study and time contrasts no rule.
 
-A score of 0.5 or more calls resistant. Log loss clips each score to [0.0001, 1 - 0.0001], so one wrong call at the clip adds 9.21 to a sum over the test genomes. scm scores only 0 or 1, so its log loss is a count of wrong calls at the clip.
+A score of 0.5 or more calls resistant, and recall is the share of resistant genomes called resistant. Log loss, unlike recall, reads the score itself: it clips each score to [0.0001, 1 - 0.0001], so one wrong call at the clip adds 9.21 to a sum over the test genomes. scm scores only 0 or 1, so its log loss is about 9.21 times its share of wrong calls, the calls its recall and specificity count.
 
 Each contrast is read as its median over the 24 datasets, with a 95% interval: 10,000 draws of the 4 species with replacement (seed 20261114), each the median over the datasets of the drawn species, from the 251st to the 9,750th sorted draw.
 
@@ -58,7 +58,7 @@ Each contrast is read as its median over the 24 datasets, with a 95% interval: 1
 
 A median reads worse when its interval lies wholly on the worse side of zero, better when it lies wholly on the other side, and not shown otherwise. Worse is lower recall, balanced accuracy or specificity, or a higher log loss.
 
-For one learner the total contrast shows a cost when recall or log loss reads worse and neither reads better. The experiment shows a cost when at least 3 of 5 learners show one and none reads better, on at least 12 datasets in 3 species.
+For one learner the total contrast shows a cost when recall or log loss reads worse and neither reads better. The experiment shows a cost when at least 3 of 5 learners show one and no learner reads better on recall or log loss, on at least 12 datasets in 3 species.
 
 ## Total contrast
 
@@ -89,9 +89,9 @@ Study is study-out minus random, and time is past minus study-out.
 | lasso | study | -0.0392 [-0.0660, +0.0000] not shown | +0.0666 [+0.0150, +0.0797] worse | -0.0127 [-0.0478, +0.0019] not shown | +0.0000 [-0.0323, +0.0194] not shown |
 | lasso | time | +0.0000 [-0.0446, +0.0278] not shown | +0.0163 [+0.0119, +0.0699] worse | -0.0071 [-0.0348, -0.0031] worse | +0.0000 [-0.0221, +0.0000] not shown |
 
-Exploratory, in the review's narrower form: on log loss the study contrast's median is larger than the time contrast's for 5 of 5 learners. The time contrast reads worse on log loss for lasso alone, on balanced accuracy for rf and lasso and on specificity for rf, and not shown everywhere else; on 4 species, not shown is weak evidence either way.
+Exploratory, in the review's narrower form: the study contrast's median is larger than the time contrast's on log loss for 5 of 5 learners and lower on recall for 4 of 5 (equal for scm, 0 in both). The study contrast reads worse on recall for rf alone and the time contrast for none; the time contrast reads worse on log loss for lasso alone, on balanced accuracy for rf and lasso and on specificity for rf alone, and not shown everywhere else; on 4 species, not shown is weak evidence either way.
 
-The study contrast takes the test genomes' own studies out of training, and it also raises the share of past genomes in training from 76.19% in the random arm to 81.47% in the study-out arm. So it moves study membership and the mix of periods together. Later genomes also differ from past ones in place, laboratory and method, and the design separates none of these.
+The study contrast takes the test genomes' own studies out of training, and it also raises the share of past genomes in training from 76.19% in the random arm to 81.47% in the study-out arm. So it moves study membership and the mix of periods together. Later genomes can also differ from past ones in place, laboratory and method, and the design separates none of these.
 
 | Arm | Training genomes | Past | Later, other studies | Later, test studies | Share past |
 |---|---|---|---|---|---|
@@ -101,7 +101,7 @@ The study contrast takes the test genomes' own studies out of training, and it a
 
 ## Per arm
 
-Test genomes of the 24 datasets added up per learner and arm, as the table layout script adds them; a genome tested in several datasets of a species counts once per dataset. These sums are a description, and the plan's summary is the median over datasets above. The last column is exploratory: the share of the pooled log loss from wrong calls at the clip. scm's share is 100.0% at one decimal, as a right call at the clip adds about 0.0001 to the sum.
+Test genomes of the 24 datasets added up per learner and arm, as the table layout script adds them; a genome tested in several datasets of a species counts once per dataset. These sums are a description, and the plan's summary is the median over datasets above. The last column is exploratory: the share of the pooled log loss from wrong calls at the clip, to read beside recall. scm's share is 100.0% at one decimal, as a right call at the clip adds about 0.0001 to the sum.
 
 | Learner | Arm | Resistant called resistant | Recall | Susceptible called susceptible | Specificity | Wrong calls | Log loss from wrong calls at the clip |
 |---|---|---|---|---|---|---|---|
@@ -125,7 +125,7 @@ Test genomes of the 24 datasets added up per learner and arm, as the table layou
 
 The test sets hold 3,390 genome and dataset pairs, 1,729 of them resistant, from 828 distinct genomes. A genome tested in several datasets of its species is one pair per dataset and one distinct genome. A test set holds 54 to 230 genomes (median 138.5), and each arm trains on 478 to 1,207 genomes (median 815.5), the same number in all three arms of a dataset.
 
-The tested genomes come from 22 distinct studies. The per-species counts below add up to 26, as 4 studies have tested genomes in two species. A test set holds genomes of 1 to 6 studies (1 to 7 drawn), and 3 datasets hold one. In 6 datasets a drawn study has no tested genome, since all its later genomes went to the reserve.
+The tested genomes come from 22 distinct studies. The per-species counts below add up to 26, as 4 studies have tested genomes in two species. A test set holds genomes of 1 to 6 studies (1 to 7 drawn), and 3 datasets hold one. In 6 datasets a drawn study has no tested genome; the rerun's report, not the record, gives the reason: all its later genomes went to the reserve.
 
 | Species | Datasets | Tested pairs | Resistant pairs | Distinct tested genomes | Test studies | Genomes of the largest test study |
 |---|---|---|---|---|---|---|
@@ -154,12 +154,13 @@ The review also found that the test sets hold genomes of 22 distinct studies whe
 
 - One database, BV-BRC, with one curation of its labels and studies. Training and test genomes take their labels from the same kind of record.
 - The day is the day a genome entered BV-BRC, which can differ from the day its sample became public in the sequence archives. A split on the archive day could order genomes differently.
-- Later genomes differ from past ones in study, place, laboratory and method all at once. The design separates study membership from the rest and nothing finer, and the study contrast also changes the mix of periods.
+- Later genomes can differ from past ones in study, place, laboratory and method all at once. The study contrast takes the test studies out of training and also raises the share of past genomes, so the design does not separate study membership from the mix of periods, nor either from place, laboratory or method.
 - Past genomes with no recorded study train in every arm, and later ones are left out.
+- Two in three of each test study's later genomes are tested, so the random arm holds a smaller share of a test genome's study than a five-fold random split would, which trains on four in five.
 - One draw per arm, one cut per dataset and 4 species: read the direction as shown and the size as coarse.
 - The interval resamples species only. It holds nothing of the draw, the seed or other species and datasets.
 - Recall and specificity rest on one cutoff: a score of 0.5 or more calls resistant.
-- scm's log loss is a count of wrong calls at the clip.
+- scm's log loss follows only its count of wrong calls at the clip, so it says nothing more about scm's scores than recall and specificity do.
 - The page gives no figure for a single dataset, and it names no feature and no study.
 
 ## Files
@@ -168,7 +169,7 @@ The review also found that the test sets hold genomes of 22 distinct studies whe
 - The record holds rows per dataset, species, arm and learner, and single counts. It holds no genome id, label or score per genome, no fold file and no list of test-set studies.
 - `checks.tsv` gives 0 as the count of the input set's genome ids found in the record.
 - The input set holds the result files, whose scores are per genome, so the repository does not hold it. `--check` alone derives every derived file from the row files.
-- `tests/time_split` rebuilds the section Reading and every table of this page from the record, and finds every other number of the page in the record.
+- `tests/time_split` rebuilds the section Reading, the exploratory reading of the study and time contrasts and every table of this page from the record, holds every other paragraph and list item word for word, and checks that each other number in figures stands somewhere in the record.
 
 ```sh
 python3 -I scripts/time-split/record.py --check reference/time-split

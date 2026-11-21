@@ -1,11 +1,13 @@
-"""docs/time-split.md against the committed record: the limit sentence, the section Reading, every table, the
-sentences that carry the record's counts, and every other number of the page."""
+"""docs/time-split.md against the committed record: the limit sentence, the section Reading, the exploratory
+paragraph under the study and time table, every table, the sentences that carry the record's counts, every other
+paragraph and list item word for word, and every other number of the page."""
 
 import re
 import unittest
 
 from tests.time_split import lines
 from tests.time_split.common import ARMS, PAGE, RECORD
+from tests.time_split.held import HELD
 from tests.time_split.lines import n
 
 LIMIT = ("This is a split by first-public day inside one database, BV-BRC. "
@@ -34,6 +36,20 @@ def outside_code(text):
     return out
 
 
+def blocks(text):
+    """The page's paragraphs and list items outside code, tables and headers, one string each, in page order."""
+    out = []
+    for para in "\n".join(outside_code(text)).split("\n\n"):
+        para = para.strip("\n")
+        if not para or para.startswith(("#", "|")):
+            continue
+        if para.startswith("- "):
+            out += ["- " + x for x in para[2:].split("\n- ")]
+        else:
+            out.append(para)
+    return out
+
+
 def section(text, title):
     return text.split(f"\n## {title}\n", 1)[1].split("\n## ", 1)[0]
 
@@ -58,17 +74,21 @@ def counted(rec):
     species += f" and {rec.species[-1]['datasets']} of {lines.species_name(rec.species[-1]['species'])}"
     scm = rec.arms[("scm", "past")]
     return [
-        f"Both are scored on the same later genomes of studies absent from training, in {s['datasets']} datasets of "
+        f"Both are scored on the same later genomes of studies new after each dataset's cut day, in {s['datasets']} "
+        f"datasets of "
         f"{s['species']} species at evaluation revision {st['evaluation_revision']}.",
         f"The earliest day by which at least {pct(st['cut_share'])}% of the cohort was public.",
-        f"A dataset enters when its test set holds at least {st['min_test_class']} genomes of each class and each arm "
-        f"trains on at least {st['min_train_class']} of each class.",
+        f"A dataset enters when its test set holds at least {st['min_test_class']} genomes of each class, each arm "
+        f"trains on at least {st['min_train_class']} of each class, and at least {st['min_reserve']} reserve genomes "
+        f"and {st['min_later_other_studies']} later genomes of other studies remain in the pools.",
         f"Datasets. {s['datasets']} datasets in {s['species']} species enter: {species}.",
         f"with the default settings of `grm learn` (seed {st['seed']}, {n(st['screened_features'])} screened features, "
         f"{st['inner_folds']} inner folds).",
-        f"A score of {st['cutoff']} or more calls resistant. Log loss clips each score to [{st['clip']}, 1 - "
+        f"A score of {st['cutoff']} or more calls resistant, and recall is the share of resistant genomes called "
+        f"resistant. Log loss, unlike recall, reads the score itself: it clips each score to [{st['clip']}, 1 - "
         f"{st['clip']}], so one wrong call at the clip adds {float(st['loss_of_a_wrong_call_at_the_clip']):.2f} to a "
-        f"sum over the test genomes.",
+        f"sum over the test genomes. scm scores only 0 or 1, so its log loss is about "
+        f"{float(st['loss_of_a_wrong_call_at_the_clip']):.2f} times its share of wrong calls,",
         f"Each contrast is read as its median over the {s['datasets']} datasets, with a {pct(st['interval_level'])}% "
         f"interval: {n(st['resamples'])} draws of the {s['species']} species with replacement (seed "
         f"{st['resample_seed']}), each the median over the datasets of the drawn species, from the {st['low_draw']}st "
@@ -78,10 +98,9 @@ def counted(rec):
         f"Over all {s['ordered_species_draws']} ordered draws the same two quantiles give the same reading in "
         f"{s['exact_readings_agree']} of {s['readings']} readings.",
         f"The experiment shows a cost when at least {st['min_learners_with_cost']} of {s['learners']} learners show "
-        f"one and none reads better, on at least {st['min_datasets']} datasets in {st['min_species']} species.",
+        f"one and no learner reads better on recall or log loss, on at least {st['min_datasets']} datasets in "
+        f"{st['min_species']} species.",
         f"Past minus random. Each cell gives the median over {s['datasets']} datasets, the interval and the reading.",
-        f"on log loss the study contrast's median is larger than the time contrast's for "
-        f"{s['study_log_loss_median_above_time']} of {s['learners']} learners.",
         f"raises the share of past genomes in training from {100 * float(mix['random']['past_share']):.2f}% in the "
         f"random arm to {100 * float(mix['study-out']['past_share']):.2f}% in the study-out arm.",
         f"Test genomes of the {s['datasets']} datasets added up per learner and arm",
@@ -130,7 +149,7 @@ class Page(unittest.TestCase):
         self.assertTrue(first.startswith("This page compares two ways of choosing training genomes. The past arm trains "
                                          "only on genomes public in BV-BRC by each dataset's cut day. The random arm "
                                          "trains on a random draw of the same size and class balance. Both are scored on "
-                                         "the same later genomes of studies absent from training"))
+                                         "the same later genomes of studies new after each dataset's cut day"))
 
     def test_sections_in_order(self):
         body = outside_code(self.text)
@@ -157,8 +176,29 @@ class Page(unittest.TestCase):
         self.assertIn(f"In {s['datasets']} datasets of {s['species']} species", body)
         for l in ("scm", "cart", "rf", "gbt", "lasso"):
             self.assertIn(f" for {l}", body)
-        self.assertIn(f"of {n(s['tested_pairs'])} tested pairs", body)
+        self.assertIn(f"of {n(s['tested_pairs'])} genome and dataset pairs", body)
+        self.assertIn(f"of {n(s['resistant_pairs'])} resistant pairs", body)
         self.assertIn(f"the interval resamples only the {s['species']} species", body)
+
+    def test_study_and_time_paragraph_is_rebuilt_from_the_record(self):
+        body = section(self.text, "Study and time contrasts")
+        built = lines.study_time(self.rec)
+        for para in built:
+            self.assertEqual(blocks(body).count(para), 1, para)
+        self.assertEqual([b for b in blocks(body) if b.startswith("Exploratory")], built)
+
+    def test_every_paragraph_and_list_item_is_built_or_held(self):
+        known = set(lines.reading(self.rec)) | set(lines.study_time(self.rec)) | set(HELD)
+        self.assertEqual([b for b in blocks(self.text) if b not in known], [])
+
+    def test_held_lines_stand_once_and_in_order(self):
+        self.assertEqual(len(HELD), len(set(HELD)))
+        found = blocks(self.text)
+        for line in HELD:
+            self.assertEqual(found.count(line), 1, line)
+        self.assertEqual([b for b in found if b in set(HELD)], HELD)
+        built = set(lines.reading(self.rec)) | set(lines.study_time(self.rec))
+        self.assertFalse(built & set(HELD), "a held line is also rebuilt")
 
     def test_every_table_is_built_from_the_record(self):
         built = lines.tables(self.rec)
@@ -182,8 +222,9 @@ class Page(unittest.TestCase):
     def test_hashes_are_the_records(self):
         st = self.rec.settings
         order = section(self.text, "Plan and order")
-        self.assertIn(f"The plan was hashed with its analysis script (sha256 `{st['plan_sha256'][:8]}`) before any fold "
-                      "file, fit or result of the experiment existed, by its hash list's own note.", order)
+        self.assertIn(f"The plan (sha256 `{st['plan_sha256'][:8]}`) was hashed with its analysis script (sha256 "
+                      f"`{st['analysis_sha256'][:8]}`) before any fold file, fit or result of the experiment existed, by "
+                      "its hash list's own note.", order)
         self.assertIn(f"The rerun's plan (sha256 `{st['rerun_plan_sha256'][:8]}`)", order)
         _, hashes = lines.values(RECORD)
         for h in re.findall(r"`([0-9a-f]{6,64})`", self.text):
@@ -210,7 +251,8 @@ class Page(unittest.TestCase):
                        "**Exploratory.** Every figure the plan did not fix is exploratory and enters no rule:",
                        "Exploratory, in the review's narrower form:",
                        "The last column is exploratory:",
-                       "scm scores only 0 or 1, so its log loss is a count of wrong calls at the clip.",
+                       "scm scores only 0 or 1, so its log loss is about 9.21 times its share of wrong calls, the "
+                       "calls its recall and specificity count.",
                        "total is past minus random, the plan's question."):
             self.assertIn(phrase, self.text)
 

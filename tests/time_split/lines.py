@@ -50,17 +50,25 @@ def species_name(slug):
     return "*" + slug.replace("_", " ").capitalize() + "*"
 
 
+def alone(items):
+    """Learners as a sentence names them: none, one alone, or several joined."""
+    items = list(items)
+    if not items:
+        return "none"
+    return items[0] + " alone" if len(items) == 1 else joined(items)
+
+
 def reading(rec):
     """The four sentences of the section Reading, one paragraph each."""
-    s, L = rec.summary, len(LEARNERS)
+    s, st, L = rec.summary, rec.settings, len(LEARNERS)
     worse = lambda m: [l for l in LEARNERS if rec.readings[(l, "total", m)]["reading"] == "worse"]
     recall = worse("recall")
     others = [l for l in LEARNERS if l not in recall]
     better = int(s["readings_better"])
-    first = (f"In {s['datasets']} datasets of {s['species']} species, scored on later genomes of studies absent from "
-             f"training, training only on genomes public by each dataset's cut day read worse than a random draw of the "
-             f"same size on log loss for {len(worse('log_loss'))} of {L} learners and on balanced accuracy for "
-             f"{len(worse('balanced_accuracy'))} of {L}, and on recall for {len(recall)} of {L} ({joined(recall)}; "
+    first = (f"In {s['datasets']} datasets of {s['species']} species, scored on later genomes of studies new after each "
+             f"dataset's cut day, training only on genomes public by each dataset's cut day read worse than a random "
+             f"draw of the same size on log loss for {len(worse('log_loss'))} of {L} learners and on balanced accuracy "
+             f"for {len(worse('balanced_accuracy'))} of {L}, and on recall for {len(recall)} of {L} ({joined(recall)}; "
              f"not shown for {joined(others)}).")
     if better == 0:
         first = first[:-1] + "; no learner read better on any measure or contrast."
@@ -68,15 +76,58 @@ def reading(rec):
     for l in LEARNERS:
         rc, ll = rec.readings[(l, "total", "recall")], rec.readings[(l, "total", "log_loss")]
         pieces.append("%+.4f and %+.4f for %s" % (float(rc["median"]), float(ll["median"]), l))
-    second = (f"Median differences over the {s['datasets']} datasets, past minus random, in recall and log loss were "
-              + ", ".join(pieces[:-1]) + ", and " + pieces[-1] + ".")
+    second = (f"Median differences over the {s['datasets']} datasets, training on the past alone minus a random draw of "
+              f"the same size, in recall and log loss: " + ", ".join(pieces[:-1]) + ", and " + pieces[-1] + ".")
     past, rand = rec.arms[("scm", "past")], rec.arms[("scm", "random")]
-    third = (f"scm scores only 0 or 1, so its log loss is a count of wrong calls at the clip: {n(past['wrong_calls'])} "
-             f"of {n(past['tested_pairs'])} tested pairs in the past arm against {n(rand['wrong_calls'])} of "
-             f"{n(rand['tested_pairs'])} in the random arm.")
-    fourth = (f"The plan's rule, fixed before any fit, reads {s['answer']}, with a cost for {s['learners_with_cost']} of "
-              f"{s['learners']} learners; the interval resamples only the {s['species']} species, so it is coarse.")
+    third = (f"scm scores only 0 or 1, so its log loss moves only with its wrong calls, each adding about "
+             f"{float(st['loss_of_a_wrong_call_at_the_clip']):.2f} to the sum: it called {n(past['wrong_calls'])} of "
+             f"{n(past['tested_pairs'])} genome and dataset pairs wrong in the past arm against {n(rand['wrong_calls'])} "
+             f"in the random arm, and its recall was {n(past['tp'])} of {n(past['resistant_pairs'])} resistant pairs "
+             f"against {n(rand['tp'])}.")
+    if (past["tested_pairs"], past["resistant_pairs"]) != (rand["tested_pairs"], rand["resistant_pairs"]):
+        raise ValueError("the two arms test other pairs, so one denominator no longer serves both")
+    if s["answer"] != "cost shown":
+        raise ValueError("the rule's answer is not cost shown; the fourth sentence needs other words")
+    cost = [l for l in LEARNERS if rec.rule[l]["rule"] == "cost"]
+    by_loss = [l for l in cost if rec.rule[l]["log_loss"] == "worse"]
+    by_recall = [l for l in cost if rec.rule[l]["recall"] == "worse"]
+    fourth = (f"The rule fixed before any fit finds a cost of training on the past alone for {s['learners_with_cost']} "
+              f"of {s['learners']} learners, through log loss for "
+              f"{('all ' + str(L)) if len(by_loss) == L else joined(by_loss)} and recall for {joined(by_recall)}; the "
+              f"interval resamples only the {s['species']} species, so it is coarse.")
+    if len(cost) != int(s["learners_with_cost"]):
+        raise ValueError("rule.tsv and summary.tsv count other learners with a cost")
     return [first, second, third, fourth]
+
+
+MEASURE_WORDS = {"recall": "recall", "log_loss": "log loss", "balanced_accuracy": "balanced accuracy",
+                 "specificity": "specificity"}
+
+
+def study_time(rec):
+    """The exploratory paragraph under the study and time table, from readings.tsv."""
+    s, L = rec.summary, len(LEARNERS)
+    med = lambda l, c, m: float(rec.readings[(l, c, m)]["median"])
+    worse = lambda c, m: [l for l in LEARNERS if rec.readings[(l, c, m)]["reading"] == "worse"]
+    loss_above = [l for l in LEARNERS if med(l, "study", "log_loss") > med(l, "time", "log_loss")]
+    recall_below = [l for l in LEARNERS if med(l, "study", "recall") < med(l, "time", "recall")]
+    level = [l for l in LEARNERS if l not in recall_below]
+    if len(loss_above) != int(s["study_log_loss_median_above_time"]) or len(loss_above) != L:
+        raise ValueError("the study contrast's log loss median is not above the time contrast's for every learner")
+    if any(med(l, "study", "recall") != 0 or med(l, "time", "recall") != 0 for l in level):
+        raise ValueError("a learner whose study recall median is not below its time median is not 0 in both")
+    if any(rec.readings[(l, c, m)]["reading"] == "better" for l in LEARNERS for c in ("study", "time")
+           for m in MEASURES):
+        raise ValueError("a study or time reading reads better")
+    time_worse = [f"on {MEASURE_WORDS[m]} for {alone(worse('time', m))}" for m in MEASURES[1:] if worse("time", m)]
+    level_words = f" (equal for {joined(level)}, 0 in both)" if level else ""
+    first = (f"Exploratory, in the review's narrower form: the study contrast's median is larger than the time "
+             f"contrast's on log loss for {len(loss_above)} of {L} learners and lower on recall for {len(recall_below)} "
+             f"of {L}{level_words}.")
+    second = (f"The study contrast reads worse on recall for {alone(worse('study', 'recall'))} and the time contrast for "
+              f"{alone(worse('time', 'recall'))}; the time contrast reads worse {joined(time_worse)}, and not shown "
+              f"everywhere else; on {s['species']} species, not shown is weak evidence either way.")
+    return [first + " " + second]
 
 
 def total_table(rec):

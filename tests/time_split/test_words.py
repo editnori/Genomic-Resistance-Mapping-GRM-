@@ -138,9 +138,12 @@ class Words(unittest.TestCase):
         self.assertGreaterEqual(named, 8)
 
     def test_recall_beside_log_loss(self):
+        found = 0
         for s in sentences(self.page):
-            if re.search(r"\blog loss\b", s) and re.search(r"[+-]0\.\d{4}", s):
-                self.assertIn("recall", s, s)
+            if re.search(r"(?i)\blog[ _]loss\b", s):
+                found += 1
+                self.assertRegex(s, r"(?i)\brecall\b", s)
+        self.assertGreaterEqual(found, 12)
 
     def test_names_no_sequence_or_determinant(self):
         for name, text in list(self.texts.items()) + list(record_files().items()):
