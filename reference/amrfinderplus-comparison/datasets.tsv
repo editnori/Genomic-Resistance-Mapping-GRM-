@@ -1,0 +1,254 @@
+dataset	species	drug_class	organism_option	lineage_split	read_before_the_plan	served_learner
+acinetobacter_baumannii__amikacin	acinetobacter_baumannii	aminoglycoside	yes	yes	no	cart
+acinetobacter_baumannii__ampicillin_sulbactam	acinetobacter_baumannii	penicillin + inhibitor	yes	yes	no	cart
+acinetobacter_baumannii__cefepime	acinetobacter_baumannii	cephalosporin (4th gen)	yes	yes	no	cart
+acinetobacter_baumannii__cefotaxime	acinetobacter_baumannii	cephalosporin (3rd gen)	yes	yes	no	scm
+acinetobacter_baumannii__ceftazidime	acinetobacter_baumannii	cephalosporin (3rd gen)	yes	yes	no	cart
+acinetobacter_baumannii__ceftriaxone	acinetobacter_baumannii	cephalosporin (3rd gen)	yes	yes	no	scm
+acinetobacter_baumannii__ciprofloxacin	acinetobacter_baumannii	quinolone	yes	yes	no	gbt
+acinetobacter_baumannii__doripenem	acinetobacter_baumannii	carbapenem	yes	yes	no	gbt
+acinetobacter_baumannii__doxycycline	acinetobacter_baumannii	tetracycline	yes	yes	no	rf
+acinetobacter_baumannii__gentamicin	acinetobacter_baumannii	aminoglycoside	yes	yes	no	cart
+acinetobacter_baumannii__imipenem	acinetobacter_baumannii	carbapenem	yes	yes	no	rf
+acinetobacter_baumannii__levofloxacin	acinetobacter_baumannii	quinolone	yes	yes	no	gbt
+acinetobacter_baumannii__meropenem	acinetobacter_baumannii	carbapenem	yes	yes	no	cart
+acinetobacter_baumannii__minocycline	acinetobacter_baumannii	tetracycline	yes	yes	no	lasso
+acinetobacter_baumannii__moxifloxacin	acinetobacter_baumannii	quinolone	yes	yes	no	cart
+acinetobacter_baumannii__sulfamethoxazole_trimethoprim	acinetobacter_baumannii	folate pathway combination	yes	yes	no	cart
+acinetobacter_baumannii__tetracycline	acinetobacter_baumannii	tetracycline	yes	yes	no	cart
+acinetobacter_baumannii__tobramycin	acinetobacter_baumannii	aminoglycoside	yes	yes	no	scm
+campylobacter_coli__azithromycin	campylobacter_coli	macrolide	yes	yes	no	lasso
+campylobacter_coli__ciprofloxacin	campylobacter_coli	quinolone	yes	yes	no	lasso
+campylobacter_coli__clindamycin	campylobacter_coli	lincosamide	yes	yes	no	scm
+campylobacter_coli__erythromycin	campylobacter_coli	macrolide	yes	yes	no	cart
+campylobacter_coli__gentamicin	campylobacter_coli	aminoglycoside	yes	yes	no	scm
+campylobacter_coli__nalidixic_acid	campylobacter_coli	quinolone	yes	yes	no	lasso
+campylobacter_coli__tetracycline	campylobacter_coli	tetracycline	yes	yes	no	gbt
+campylobacter_jejuni__ciprofloxacin	campylobacter_jejuni	quinolone	yes	yes	no	cart
+campylobacter_jejuni__clindamycin	campylobacter_jejuni	lincosamide	yes	yes	no	scm
+campylobacter_jejuni__nalidixic_acid	campylobacter_jejuni	quinolone	yes	yes	no	cart
+campylobacter_jejuni__tetracycline	campylobacter_jejuni	tetracycline	yes	yes	no	lasso
+clostridioides_difficile__azithromycin	clostridioides_difficile	macrolide	yes	yes	no	gbt
+clostridioides_difficile__ceftriaxone	clostridioides_difficile	cephalosporin (3rd gen)	yes	yes	no	cart
+clostridioides_difficile__clarithromycin	clostridioides_difficile	macrolide	yes	yes	no	lasso
+clostridioides_difficile__moxifloxacin	clostridioides_difficile	quinolone	yes	yes	no	gbt
+corynebacterium_diphtheriae__sulfamethoxazole_trimethoprim	corynebacterium_diphtheriae	folate pathway combination	yes	yes	no	cart
+corynebacterium_diphtheriae__tetracycline	corynebacterium_diphtheriae	tetracycline	yes	yes	no	lasso
+corynebacterium_diphtheriae__trimethoprim	corynebacterium_diphtheriae	trimethoprim	yes	yes	no	lasso
+enterobacter_cloacae__cefepime	enterobacter_cloacae	cephalosporin (4th gen)	yes	yes	no	cart
+enterobacter_cloacae__ciprofloxacin	enterobacter_cloacae	quinolone	yes	yes	no	gbt
+enterobacter_cloacae__gentamicin	enterobacter_cloacae	aminoglycoside	yes	yes	no	gbt
+enterobacter_cloacae__imipenem	enterobacter_cloacae	carbapenem	yes	yes	no	cart
+enterobacter_cloacae__levofloxacin	enterobacter_cloacae	quinolone	yes	yes	no	lasso
+enterobacter_cloacae__meropenem	enterobacter_cloacae	carbapenem	yes	yes	no	lasso
+enterobacter_cloacae__sulfamethoxazole_trimethoprim	enterobacter_cloacae	folate pathway combination	yes	yes	no	cart
+enterobacter_cloacae__tobramycin	enterobacter_cloacae	aminoglycoside	yes	yes	no	gbt
+enterobacter_cloacae__trimethoprim	enterobacter_cloacae	trimethoprim	yes	yes	no	cart
+enterococcus_faecium__ampicillin	enterococcus_faecium	penicillin	yes	yes	no	gbt
+enterococcus_faecium__chloramphenicol	enterococcus_faecium	phenicol	yes	no	no	gbt
+enterococcus_faecium__clindamycin	enterococcus_faecium	lincosamide	yes	yes	no	lasso
+enterococcus_faecium__dalfopristin_quinupristin	enterococcus_faecium	streptogramin	yes	yes	no	cart
+enterococcus_faecium__daptomycin	enterococcus_faecium	lipopeptide	yes	yes	no	gbt
+enterococcus_faecium__doxycycline	enterococcus_faecium	tetracycline	yes	yes	no	gbt
+enterococcus_faecium__erythromycin	enterococcus_faecium	macrolide	yes	yes	no	scm
+enterococcus_faecium__gentamicin	enterococcus_faecium	aminoglycoside	yes	yes	no	gbt
+enterococcus_faecium__kanamycin	enterococcus_faecium	aminoglycoside	yes	yes	no	cart
+enterococcus_faecium__linezolid	enterococcus_faecium	oxazolidinone	yes	yes	no	gbt
+enterococcus_faecium__streptomycin	enterococcus_faecium	aminoglycoside	yes	yes	no	rf
+enterococcus_faecium__teicoplanin	enterococcus_faecium	glycopeptide	yes	yes	no	gbt
+enterococcus_faecium__tetracycline	enterococcus_faecium	tetracycline	yes	yes	no	gbt
+enterococcus_faecium__vancomycin	enterococcus_faecium	glycopeptide	yes	yes	no	scm
+escherichia_coli__amikacin	escherichia_coli	aminoglycoside	yes	yes	no	lasso
+escherichia_coli__amoxicillin_clavulanate	escherichia_coli	penicillin + inhibitor	yes	yes	no	scm
+escherichia_coli__ampicillin	escherichia_coli	penicillin	yes	yes	no	scm
+escherichia_coli__ampicillin_sulbactam	escherichia_coli	penicillin + inhibitor	yes	yes	no	lasso
+escherichia_coli__aztreonam	escherichia_coli	monobactam	yes	yes	no	lasso
+escherichia_coli__cefazolin	escherichia_coli	cephalosporin (1st-2nd gen)	yes	yes	no	lasso
+escherichia_coli__cefepime	escherichia_coli	cephalosporin (4th gen)	yes	yes	no	gbt
+escherichia_coli__cefotaxime	escherichia_coli	cephalosporin (3rd gen)	yes	yes	no	scm
+escherichia_coli__cefoxitin	escherichia_coli	cephalosporin (1st-2nd gen)	yes	yes	no	rf
+escherichia_coli__cefpodoxime	escherichia_coli	cephalosporin (3rd gen)	yes	yes	no	scm
+escherichia_coli__cefpodoxime_clavulanate	escherichia_coli	cephalosporin + inhibitor	yes	yes	no	scm
+escherichia_coli__ceftazidime	escherichia_coli	cephalosporin (3rd gen)	yes	yes	no	gbt
+escherichia_coli__ceftiofur	escherichia_coli	cephalosporin (3rd gen)	yes	yes	no	scm
+escherichia_coli__ceftriaxone	escherichia_coli	cephalosporin (3rd gen)	yes	yes	no	scm
+escherichia_coli__cefuroxime	escherichia_coli	cephalosporin (1st-2nd gen)	yes	yes	no	rf
+escherichia_coli__cephalothin	escherichia_coli	cephalosporin (1st-2nd gen)	yes	yes	no	lasso
+escherichia_coli__chloramphenicol	escherichia_coli	phenicol	yes	yes	no	gbt
+escherichia_coli__ciprofloxacin	escherichia_coli	quinolone	yes	yes	no	rf
+escherichia_coli__colistin	escherichia_coli	polymyxin	yes	yes	no	cart
+escherichia_coli__doxycycline	escherichia_coli	tetracycline	yes	yes	no	cart
+escherichia_coli__ertapenem	escherichia_coli	carbapenem	yes	yes	no	scm
+escherichia_coli__erythromycin	escherichia_coli	macrolide	yes	yes	no	lasso
+escherichia_coli__gentamicin	escherichia_coli	aminoglycoside	yes	yes	no	scm
+escherichia_coli__imipenem	escherichia_coli	carbapenem	yes	yes	no	scm
+escherichia_coli__levofloxacin	escherichia_coli	quinolone	yes	yes	no	lasso
+escherichia_coli__meropenem	escherichia_coli	carbapenem	yes	yes	no	gbt
+escherichia_coli__nalidixic_acid	escherichia_coli	quinolone	yes	yes	no	lasso
+escherichia_coli__nitrofurantoin	escherichia_coli	nitrofuran	yes	yes	no	lasso
+escherichia_coli__norfloxacin	escherichia_coli	quinolone	yes	yes	no	lasso
+escherichia_coli__piperacillin_tazobactam	escherichia_coli	penicillin + inhibitor	yes	yes	no	scm
+escherichia_coli__streptomycin	escherichia_coli	aminoglycoside	yes	yes	no	scm
+escherichia_coli__sulfamethoxazole	escherichia_coli	sulfonamide	yes	yes	no	cart
+escherichia_coli__sulfamethoxazole_trimethoprim	escherichia_coli	folate pathway combination	yes	yes	no	rf
+escherichia_coli__tetracycline	escherichia_coli	tetracycline	yes	yes	no	lasso
+escherichia_coli__tobramycin	escherichia_coli	aminoglycoside	yes	yes	no	scm
+escherichia_coli__trimethoprim	escherichia_coli	trimethoprim	yes	yes	no	scm
+klebsiella_aerogenes__ertapenem	klebsiella_aerogenes	carbapenem	yes	yes	no	rf
+klebsiella_aerogenes__imipenem	klebsiella_aerogenes	carbapenem	yes	yes	no	rf
+klebsiella_aerogenes__meropenem	klebsiella_aerogenes	carbapenem	yes	yes	no	lasso
+klebsiella_oxytoca__cefotaxime	klebsiella_oxytoca	cephalosporin (3rd gen)	yes	yes	no	lasso
+klebsiella_oxytoca__cefoxitin	klebsiella_oxytoca	cephalosporin (1st-2nd gen)	yes	yes	no	rf
+klebsiella_oxytoca__cefpodoxime	klebsiella_oxytoca	cephalosporin (3rd gen)	yes	yes	no	scm
+klebsiella_oxytoca__ertapenem	klebsiella_oxytoca	carbapenem	yes	yes	no	rf
+klebsiella_pneumoniae__amikacin	klebsiella_pneumoniae	aminoglycoside	yes	yes	no	gbt
+klebsiella_pneumoniae__amoxicillin_clavulanate	klebsiella_pneumoniae	penicillin + inhibitor	yes	yes	no	scm
+klebsiella_pneumoniae__ampicillin_sulbactam	klebsiella_pneumoniae	penicillin + inhibitor	yes	yes	no	lasso
+klebsiella_pneumoniae__aztreonam	klebsiella_pneumoniae	monobactam	yes	yes	no	rf
+klebsiella_pneumoniae__cefazolin	klebsiella_pneumoniae	cephalosporin (1st-2nd gen)	yes	yes	no	lasso
+klebsiella_pneumoniae__cefepime	klebsiella_pneumoniae	cephalosporin (4th gen)	yes	yes	no	gbt
+klebsiella_pneumoniae__cefotetan	klebsiella_pneumoniae	cephalosporin (1st-2nd gen)	yes	yes	no	rf
+klebsiella_pneumoniae__cefoxitin	klebsiella_pneumoniae	cephalosporin (1st-2nd gen)	yes	yes	no	scm
+klebsiella_pneumoniae__cefpodoxime	klebsiella_pneumoniae	cephalosporin (3rd gen)	yes	yes	no	scm
+klebsiella_pneumoniae__cefpodoxime_clavulanate	klebsiella_pneumoniae	cephalosporin + inhibitor	yes	yes	no	cart
+klebsiella_pneumoniae__ceftazidime	klebsiella_pneumoniae	cephalosporin (3rd gen)	yes	yes	no	gbt
+klebsiella_pneumoniae__ceftazidime_avibactam	klebsiella_pneumoniae	cephalosporin + inhibitor	yes	yes	no	lasso
+klebsiella_pneumoniae__ceftriaxone	klebsiella_pneumoniae	cephalosporin (3rd gen)	yes	yes	no	lasso
+klebsiella_pneumoniae__cefuroxime	klebsiella_pneumoniae	cephalosporin (1st-2nd gen)	yes	yes	no	lasso
+klebsiella_pneumoniae__chloramphenicol	klebsiella_pneumoniae	phenicol	yes	yes	no	lasso
+klebsiella_pneumoniae__ciprofloxacin	klebsiella_pneumoniae	quinolone	yes	yes	no	gbt
+klebsiella_pneumoniae__colistin	klebsiella_pneumoniae	polymyxin	yes	yes	no	scm
+klebsiella_pneumoniae__doripenem	klebsiella_pneumoniae	carbapenem	yes	yes	no	cart
+klebsiella_pneumoniae__doxycycline	klebsiella_pneumoniae	tetracycline	yes	yes	no	lasso
+klebsiella_pneumoniae__ertapenem	klebsiella_pneumoniae	carbapenem	yes	yes	no	scm
+klebsiella_pneumoniae__fosfomycin	klebsiella_pneumoniae	fosfomycin	yes	yes	no	lasso
+klebsiella_pneumoniae__gentamicin	klebsiella_pneumoniae	aminoglycoside	yes	yes	no	gbt
+klebsiella_pneumoniae__imipenem	klebsiella_pneumoniae	carbapenem	yes	yes	no	scm
+klebsiella_pneumoniae__levofloxacin	klebsiella_pneumoniae	quinolone	yes	yes	no	rf
+klebsiella_pneumoniae__meropenem	klebsiella_pneumoniae	carbapenem	yes	yes	no	scm
+klebsiella_pneumoniae__nitrofurantoin	klebsiella_pneumoniae	nitrofuran	yes	yes	no	rf
+klebsiella_pneumoniae__norfloxacin	klebsiella_pneumoniae	quinolone	yes	yes	no	scm
+klebsiella_pneumoniae__ofloxacin	klebsiella_pneumoniae	quinolone	yes	yes	no	lasso
+klebsiella_pneumoniae__piperacillin_tazobactam	klebsiella_pneumoniae	penicillin + inhibitor	yes	yes	no	cart
+klebsiella_pneumoniae__polymyxin_b	klebsiella_pneumoniae	polymyxin	yes	yes	no	scm
+klebsiella_pneumoniae__streptomycin	klebsiella_pneumoniae	aminoglycoside	yes	yes	no	cart
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	klebsiella_pneumoniae	folate pathway combination	yes	yes	no	gbt
+klebsiella_pneumoniae__tetracycline	klebsiella_pneumoniae	tetracycline	yes	yes	no	scm
+klebsiella_pneumoniae__ticarcillin_clavulanate	klebsiella_pneumoniae	penicillin + inhibitor	yes	yes	no	lasso
+klebsiella_pneumoniae__tigecycline	klebsiella_pneumoniae	glycylcycline	yes	yes	no	gbt
+klebsiella_pneumoniae__tobramycin	klebsiella_pneumoniae	aminoglycoside	yes	yes	no	gbt
+klebsiella_pneumoniae__trimethoprim	klebsiella_pneumoniae	trimethoprim	yes	yes	no	rf
+klebsiella_quasipneumoniae__cefotaxime	klebsiella_quasipneumoniae	cephalosporin (3rd gen)	yes	yes	no	rf
+klebsiella_quasipneumoniae__ceftazidime	klebsiella_quasipneumoniae	cephalosporin (3rd gen)	yes	yes	no	rf
+klebsiella_quasipneumoniae__sulfamethoxazole_trimethoprim	klebsiella_quasipneumoniae	folate pathway combination	yes	yes	no	gbt
+mycobacterium_tuberculosis__amikacin	mycobacterium_tuberculosis	aminoglycoside	no	yes	no	gbt
+mycobacterium_tuberculosis__amoxicillin	mycobacterium_tuberculosis	penicillin	no	yes	no	gbt
+mycobacterium_tuberculosis__ciprofloxacin	mycobacterium_tuberculosis	quinolone	no	yes	no	lasso
+mycobacterium_tuberculosis__kanamycin	mycobacterium_tuberculosis	aminoglycoside	no	yes	no	lasso
+mycobacterium_tuberculosis__levofloxacin	mycobacterium_tuberculosis	quinolone	no	yes	no	lasso
+mycobacterium_tuberculosis__linezolid	mycobacterium_tuberculosis	oxazolidinone	no	yes	no	gbt
+mycobacterium_tuberculosis__moxifloxacin	mycobacterium_tuberculosis	quinolone	no	yes	no	gbt
+mycobacterium_tuberculosis__ofloxacin	mycobacterium_tuberculosis	quinolone	no	yes	no	lasso
+mycobacterium_tuberculosis__streptomycin	mycobacterium_tuberculosis	aminoglycoside	no	yes	no	cart
+neisseria_gonorrhoeae__azithromycin	neisseria_gonorrhoeae	macrolide	yes	yes	no	gbt
+neisseria_gonorrhoeae__cefixime	neisseria_gonorrhoeae	cephalosporin (3rd gen)	yes	yes	no	lasso
+neisseria_gonorrhoeae__ceftriaxone	neisseria_gonorrhoeae	cephalosporin (3rd gen)	yes	yes	no	gbt
+neisseria_gonorrhoeae__ciprofloxacin	neisseria_gonorrhoeae	quinolone	yes	yes	yes	scm
+neisseria_gonorrhoeae__erythromycin	neisseria_gonorrhoeae	macrolide	yes	yes	no	cart
+neisseria_gonorrhoeae__penicillin	neisseria_gonorrhoeae	penicillin	yes	yes	no	gbt
+neisseria_gonorrhoeae__tetracycline	neisseria_gonorrhoeae	tetracycline	yes	yes	no	lasso
+pseudomonas_aeruginosa__amikacin	pseudomonas_aeruginosa	aminoglycoside	yes	yes	no	lasso
+pseudomonas_aeruginosa__aztreonam	pseudomonas_aeruginosa	monobactam	yes	yes	no	rf
+pseudomonas_aeruginosa__cefepime	pseudomonas_aeruginosa	cephalosporin (4th gen)	yes	yes	no	rf
+pseudomonas_aeruginosa__ceftazidime	pseudomonas_aeruginosa	cephalosporin (3rd gen)	yes	yes	no	gbt
+pseudomonas_aeruginosa__ceftazidime_avibactam	pseudomonas_aeruginosa	cephalosporin + inhibitor	yes	yes	no	scm
+pseudomonas_aeruginosa__ceftolozane_tazobactam	pseudomonas_aeruginosa	cephalosporin + inhibitor	yes	yes	no	gbt
+pseudomonas_aeruginosa__ciprofloxacin	pseudomonas_aeruginosa	quinolone	yes	yes	no	gbt
+pseudomonas_aeruginosa__gentamicin	pseudomonas_aeruginosa	aminoglycoside	yes	yes	no	gbt
+pseudomonas_aeruginosa__imipenem	pseudomonas_aeruginosa	carbapenem	yes	yes	no	rf
+pseudomonas_aeruginosa__levofloxacin	pseudomonas_aeruginosa	quinolone	yes	yes	no	cart
+pseudomonas_aeruginosa__meropenem	pseudomonas_aeruginosa	carbapenem	yes	yes	no	cart
+pseudomonas_aeruginosa__piperacillin_tazobactam	pseudomonas_aeruginosa	penicillin + inhibitor	yes	yes	no	gbt
+pseudomonas_aeruginosa__tobramycin	pseudomonas_aeruginosa	aminoglycoside	yes	yes	no	rf
+salmonella_enterica__amoxicillin_clavulanate	salmonella_enterica	penicillin + inhibitor	yes	yes	no	scm
+salmonella_enterica__ampicillin	salmonella_enterica	penicillin	yes	yes	no	gbt
+salmonella_enterica__ampicillin_sulbactam	salmonella_enterica	penicillin + inhibitor	yes	yes	no	scm
+salmonella_enterica__azithromycin	salmonella_enterica	macrolide	yes	yes	no	rf
+salmonella_enterica__cefazolin	salmonella_enterica	cephalosporin (1st-2nd gen)	yes	yes	no	gbt
+salmonella_enterica__cefotaxime	salmonella_enterica	cephalosporin (3rd gen)	yes	yes	no	rf
+salmonella_enterica__cefoxitin	salmonella_enterica	cephalosporin (1st-2nd gen)	yes	yes	no	rf
+salmonella_enterica__ceftazidime	salmonella_enterica	cephalosporin (3rd gen)	yes	yes	no	scm
+salmonella_enterica__ceftiofur	salmonella_enterica	cephalosporin (3rd gen)	yes	yes	no	cart
+salmonella_enterica__ceftriaxone	salmonella_enterica	cephalosporin (3rd gen)	yes	yes	no	cart
+salmonella_enterica__chloramphenicol	salmonella_enterica	phenicol	yes	yes	no	scm
+salmonella_enterica__ciprofloxacin	salmonella_enterica	quinolone	yes	yes	yes	cart
+salmonella_enterica__gentamicin	salmonella_enterica	aminoglycoside	yes	yes	no	gbt
+salmonella_enterica__kanamycin	salmonella_enterica	aminoglycoside	yes	yes	no	scm
+salmonella_enterica__nalidixic_acid	salmonella_enterica	quinolone	yes	yes	no	gbt
+salmonella_enterica__spectinomycin	salmonella_enterica	aminoglycoside	yes	yes	no	scm
+salmonella_enterica__streptomycin	salmonella_enterica	aminoglycoside	yes	yes	no	lasso
+salmonella_enterica__sulfamethoxazole	salmonella_enterica	sulfonamide	yes	yes	no	scm
+salmonella_enterica__sulfamethoxazole_trimethoprim	salmonella_enterica	folate pathway combination	yes	yes	no	gbt
+salmonella_enterica__sulfathiazole	salmonella_enterica	sulfonamide	yes	yes	no	scm
+salmonella_enterica__sulfisoxazole	salmonella_enterica	sulfonamide	yes	yes	no	scm
+salmonella_enterica__tetracycline	salmonella_enterica	tetracycline	yes	yes	no	scm
+salmonella_enterica__trimethoprim	salmonella_enterica	trimethoprim	yes	yes	no	cart
+shigella_flexneri__ampicillin	shigella_flexneri	penicillin	yes	yes	no	lasso
+shigella_flexneri__azithromycin	shigella_flexneri	macrolide	yes	yes	no	gbt
+shigella_flexneri__ciprofloxacin	shigella_flexneri	quinolone	yes	yes	no	cart
+shigella_flexneri__trimethoprim	shigella_flexneri	trimethoprim	yes	yes	no	cart
+shigella_sonnei__amikacin	shigella_sonnei	aminoglycoside	yes	yes	no	cart
+shigella_sonnei__ampicillin	shigella_sonnei	penicillin	yes	yes	no	rf
+shigella_sonnei__azithromycin	shigella_sonnei	macrolide	yes	yes	no	rf
+shigella_sonnei__cefoperazone	shigella_sonnei	cephalosporin (3rd gen)	yes	yes	no	scm
+shigella_sonnei__cefotaxime	shigella_sonnei	cephalosporin (3rd gen)	yes	yes	no	scm
+shigella_sonnei__cefoxitin	shigella_sonnei	cephalosporin (1st-2nd gen)	yes	yes	no	gbt
+shigella_sonnei__ceftazidime	shigella_sonnei	cephalosporin (3rd gen)	yes	yes	no	gbt
+shigella_sonnei__ceftriaxone	shigella_sonnei	cephalosporin (3rd gen)	yes	yes	no	cart
+shigella_sonnei__ciprofloxacin	shigella_sonnei	quinolone	yes	yes	no	gbt
+shigella_sonnei__colistin	shigella_sonnei	polymyxin	yes	yes	no	lasso
+shigella_sonnei__ertapenem	shigella_sonnei	carbapenem	yes	yes	no	gbt
+shigella_sonnei__gentamicin	shigella_sonnei	aminoglycoside	yes	yes	no	gbt
+shigella_sonnei__nalidixic_acid	shigella_sonnei	quinolone	yes	yes	no	scm
+shigella_sonnei__streptomycin	shigella_sonnei	aminoglycoside	yes	yes	no	gbt
+shigella_sonnei__sulfamethoxazole_trimethoprim	shigella_sonnei	folate pathway combination	yes	yes	no	cart
+shigella_sonnei__tetracycline	shigella_sonnei	tetracycline	yes	yes	no	scm
+shigella_sonnei__tobramycin	shigella_sonnei	aminoglycoside	yes	yes	no	gbt
+shigella_sonnei__trimethoprim	shigella_sonnei	trimethoprim	yes	yes	no	gbt
+staphylococcus_aureus__cefoxitin	staphylococcus_aureus	cephalosporin (1st-2nd gen)	yes	yes	no	cart
+staphylococcus_aureus__chloramphenicol	staphylococcus_aureus	phenicol	yes	yes	no	lasso
+staphylococcus_aureus__ciprofloxacin	staphylococcus_aureus	quinolone	yes	yes	no	lasso
+staphylococcus_aureus__clindamycin	staphylococcus_aureus	lincosamide	yes	yes	no	gbt
+staphylococcus_aureus__daptomycin	staphylococcus_aureus	lipopeptide	yes	yes	no	lasso
+staphylococcus_aureus__erythromycin	staphylococcus_aureus	macrolide	yes	yes	no	scm
+staphylococcus_aureus__fusidic_acid	staphylococcus_aureus	fusidane	yes	yes	no	scm
+staphylococcus_aureus__gentamicin	staphylococcus_aureus	aminoglycoside	yes	yes	no	gbt
+staphylococcus_aureus__levofloxacin	staphylococcus_aureus	quinolone	yes	no	no	lasso
+staphylococcus_aureus__moxifloxacin	staphylococcus_aureus	quinolone	yes	no	no	cart
+staphylococcus_aureus__mupirocin	staphylococcus_aureus	mupirocin	yes	yes	no	gbt
+staphylococcus_aureus__oxacillin	staphylococcus_aureus	penicillin	yes	yes	no	lasso
+staphylococcus_aureus__penicillin	staphylococcus_aureus	penicillin	yes	yes	no	lasso
+staphylococcus_aureus__sulfamethoxazole_trimethoprim	staphylococcus_aureus	folate pathway combination	yes	yes	no	rf
+staphylococcus_aureus__tetracycline	staphylococcus_aureus	tetracycline	yes	yes	no	lasso
+staphylococcus_aureus__vancomycin	staphylococcus_aureus	glycopeptide	yes	no	no	gbt
+staphylococcus_haemolyticus__ciprofloxacin	staphylococcus_haemolyticus	quinolone	no	yes	no	lasso
+staphylococcus_haemolyticus__fusidic_acid	staphylococcus_haemolyticus	fusidane	no	yes	no	lasso
+staphylococcus_haemolyticus__tetracycline	staphylococcus_haemolyticus	tetracycline	no	yes	no	rf
+streptococcus_agalactiae__clindamycin	streptococcus_agalactiae	lincosamide	yes	yes	no	cart
+streptococcus_agalactiae__erythromycin	streptococcus_agalactiae	macrolide	yes	yes	no	cart
+streptococcus_agalactiae__tetracycline	streptococcus_agalactiae	tetracycline	yes	yes	no	lasso
+streptococcus_pneumoniae__azithromycin	streptococcus_pneumoniae	macrolide	yes	yes	no	lasso
+streptococcus_pneumoniae__cefepime	streptococcus_pneumoniae	cephalosporin (4th gen)	yes	yes	no	scm
+streptococcus_pneumoniae__cefotaxime	streptococcus_pneumoniae	cephalosporin (3rd gen)	yes	yes	no	lasso
+streptococcus_pneumoniae__ceftriaxone	streptococcus_pneumoniae	cephalosporin (3rd gen)	yes	yes	no	scm
+streptococcus_pneumoniae__cefuroxime	streptococcus_pneumoniae	cephalosporin (1st-2nd gen)	yes	yes	no	lasso
+streptococcus_pneumoniae__chloramphenicol	streptococcus_pneumoniae	phenicol	yes	yes	no	lasso
+streptococcus_pneumoniae__clindamycin	streptococcus_pneumoniae	lincosamide	yes	yes	no	cart
+streptococcus_pneumoniae__erythromycin	streptococcus_pneumoniae	macrolide	yes	yes	no	lasso
+streptococcus_pneumoniae__meropenem	streptococcus_pneumoniae	carbapenem	yes	yes	no	scm
+streptococcus_pneumoniae__penicillin	streptococcus_pneumoniae	penicillin	yes	yes	no	lasso
+streptococcus_pneumoniae__sulfamethoxazole_trimethoprim	streptococcus_pneumoniae	folate pathway combination	yes	yes	no	lasso
+streptococcus_pneumoniae__tetracycline	streptococcus_pneumoniae	tetracycline	yes	yes	no	scm
+vibrio_cholerae__nalidixic_acid	vibrio_cholerae	quinolone	yes	yes	no	lasso
+vibrio_cholerae__sulfamethoxazole	vibrio_cholerae	sulfonamide	yes	yes	no	rf
+vibrio_cholerae__trimethoprim	vibrio_cholerae	trimethoprim	yes	yes	no	lasso

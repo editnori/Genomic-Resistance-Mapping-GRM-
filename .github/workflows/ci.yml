@@ -254,6 +254,9 @@ jobs:
           # SYNTHETIC inputs built in the test, the committed record under reference/tbprofiler-comparison and docs/tbprofiler-comparison.md.
           - suite: tests/tbprofiler_comparison
             top: .
+          # SYNTHETIC inputs built in the test, the committed record under reference/amrfinderplus-comparison and docs/amrfinderplus-comparison.md.
+          - suite: tests/amrfinderplus_comparison
+            top: .
     env:
       SUITE: ${{ matrix.suite }}
       TOP: ${{ matrix.top }}
