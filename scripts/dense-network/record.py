@@ -555,6 +555,21 @@ def check(files, directory):
     return sorted(set(bad))
 
 
+def earlier_record(out, files):
+    """Whether a directory holds nothing, or an earlier record of this script and nothing else."""
+    found = list(out.iterdir())
+    if not found:
+        return True
+    if any(not p.is_file() for p in found) or {p.name for p in found} - set(files):
+        return False
+    sums, readme = out / "SHA256SUMS", out / "README.md"
+    if not (sums.is_file() and readme.is_file()):
+        return False
+    listed = {ln.split("  ", 1)[-1] for ln in sums.read_text(encoding="utf-8", errors="replace").splitlines()}
+    first = readme.read_text(encoding="utf-8", errors="replace").split("\n", 1)[0]
+    return "README.md" in listed and first == files["README.md"].split("\n", 1)[0]
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--source", help="the experiment's output directory")
@@ -579,6 +594,10 @@ def main(argv=None):
         return 1
     if args.out:
         out = pathlib.Path(args.out)
+        if out.exists() and not (out.is_dir() and earlier_record(out, files)):
+            print("record.py: stopped: %s holds files that are not an earlier record of this script" % out,
+                  file=sys.stderr)
+            return 1
         out.mkdir(parents=True, exist_ok=True)
         for name, text in files.items():
             (out / name).write_bytes(text.encode("utf-8"))

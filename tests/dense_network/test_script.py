@@ -146,12 +146,17 @@ class Synthetic(unittest.TestCase):
         again = os.path.join(self.tmp, "again")
         self.assertEqual(run("--source", self.run_dir, "--review", self.review, "--out", again)[0], 0)
         self.assertEqual(files(again), files(self.out))
+        # Without -I, which would drop PYTHONHASHSEED; -s and -P keep site-packages and the cwd out.
+        seen = set()
         for seed in ("0", "4242"):
             other = os.path.join(self.tmp, "seed" + seed)
-            env = {"PYTHONHASHSEED": seed, "PATH": os.environ.get("PATH", "/usr/bin:/bin")}
-            subprocess.run([sys.executable, "-I", str(SCRIPT), "--source", self.run_dir, "--review", self.review,
-                            "--out", other], check=True, env=env, cwd=ROOT, capture_output=True)
+            env = {"PYTHONHASHSEED": seed, "PATH": "/usr/bin:/bin"}
+            subprocess.run([sys.executable, "-s", "-P", "-B", str(SCRIPT), "--source", self.run_dir, "--review",
+                            self.review, "--out", other], check=True, env=env, cwd=ROOT, capture_output=True)
             self.assertEqual(files(other), files(self.out), seed)
+            seen.add(subprocess.run([sys.executable, "-s", "-P", "-c", "print(hash('dense network'))"], env=env,
+                                    check=True, capture_output=True, text=True).stdout)
+        self.assertEqual(len(seen), 2, "the two seeds gave one hash")
 
     def test_check_passes_on_its_own_output(self):
         self.assertEqual(run("--check", self.out), (0, ""))
@@ -177,6 +182,41 @@ class Synthetic(unittest.TestCase):
             rc, err = run("--check", copy)
             self.assertEqual(rc, 1, (name, change))
             self.assertIn("record.py:", err)
+
+    def test_out_writes_only_into_an_empty_directory_or_an_earlier_record(self):
+        src = ("--source", self.run_dir, "--review", self.review)
+        notes = "SYNTHETIC notes\n"
+        foreign = pathlib.Path(self.tmp, "foreign")
+        foreign.mkdir()
+        (foreign / "README.md").write_text("# Another record\n", encoding="utf-8")
+        (foreign / "notes.txt").write_text(notes, encoding="utf-8")
+        mixed = pathlib.Path(self.tmp, "mixed")
+        shutil.copytree(self.out, mixed)
+        (mixed / "notes.txt").write_text(notes, encoding="utf-8")
+        other = pathlib.Path(self.tmp, "other")
+        other.mkdir()
+        (other / "README.md").write_text("# Another record\n", encoding="utf-8")
+        (other / "SHA256SUMS").write_text("0" * 64 + "  README.md\n", encoding="utf-8")
+        a_file = pathlib.Path(self.tmp, "a-file")
+        a_file.write_text(notes, encoding="utf-8")
+        for target in (foreign, mixed, other):
+            before = files(target)
+            rc, err = run(*src, "--out", str(target))
+            self.assertEqual(rc, 1, target.name)
+            self.assertIn("not an earlier record of this script", err)
+            self.assertEqual(files(target), before, target.name)
+        self.assertEqual(run(*src, "--out", str(a_file))[0], 1)
+        self.assertEqual(a_file.read_text(encoding="utf-8"), notes)
+        # An earlier record of its own, a cell changed, is written over; so is an empty directory.
+        earlier = pathlib.Path(self.tmp, "earlier")
+        shutil.copytree(self.out, earlier)
+        path = earlier / "summary.tsv"
+        path.write_text(path.read_text(encoding="utf-8").replace("\t", "\t9", 1), encoding="utf-8")
+        empty = pathlib.Path(self.tmp, "empty")
+        empty.mkdir()
+        for target in (earlier, empty):
+            self.assertEqual(run(*src, "--out", str(target)), (0, ""), target.name)
+            self.assertEqual(files(target), files(self.out), target.name)
 
 
 class Stops(unittest.TestCase):
