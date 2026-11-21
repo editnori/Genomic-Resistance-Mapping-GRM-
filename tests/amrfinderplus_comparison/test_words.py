@@ -165,9 +165,10 @@ class Words(unittest.TestCase):
             self.assertIsNone(re.search(ACCESSION, text), name)
         for name, text in dict(self.texts, **record_files()).items():
             self.assertIsNone(re.search(GENOME_ID, text), name)
-        self.assertIsNotNone(re.search(GENOME_ID, "a genome 1280.12345 here"))
+        # Made-up ids of the genome-id shape: no real id starts with 0.
+        self.assertIsNotNone(re.search(GENOME_ID, "a genome 00099.12345 here"))
         self.assertIsNone(re.search(GENOME_ID, "-0.104287 and 0.0001"))
-        self.assertIsNotNone(re.search(GENOME_ID, "a genome 1280.12 here"))
+        self.assertIsNotNone(re.search(GENOME_ID, "a genome 00099.12 here"))
         self.assertIsNone(re.search(GENOME_ID, "database 2026-08-07.1"))
         self.assertIn('GENOME_ID = re.compile(r"%s")' % GENOME_ID, SCRIPT.read_text(encoding="utf-8"))
         # Built at run time, so that this file holds no run of the four letters, in either case.

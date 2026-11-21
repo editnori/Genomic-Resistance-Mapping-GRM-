@@ -239,11 +239,12 @@ class Script(unittest.TestCase):
             elif rel == "PLAN.md":
                 edit(path, "A made-up plan", "A made-up plan, edited")
             elif kind == "genome":
-                edit_gz(path, "\t0.100000\t", "\t1280.12345\t")
+                # Made-up ids of the genome-id shape: no real id starts with 0.
+                edit_gz(path, "\t0.100000\t", "\t00099.12345\t")
             elif kind == "bases":
                 edit_gz(path, "\t0.100000\t", "\t" + "acgt" * 6 + "a\t")
             elif kind == "short":
-                edit_gz(path, "\t0.100000\t", "\t1280.12\t")
+                edit_gz(path, "\t0.100000\t", "\t00099.12\t")
             elif kind == "rate":
                 edit_gz(path, "\t0.900000\t", "\t1.900000\t")
             elif rel.endswith(".json"):
