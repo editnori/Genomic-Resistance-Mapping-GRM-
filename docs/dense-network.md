@@ -70,7 +70,7 @@ The first 12 rows are the largest gaps, in the plan's order, and the last 12 the
 
 The five's calls are the release's saved out-of-fold scores, called resistant at 0.5 or above; no learner is fitted again. The comparators are each of the five; the best of the five in hindsight, the plan's comparator; the site's best, the learner the release names best, chosen on the random split; the mean of four, the scores of `cart`, `rf`, `gbt` and `lasso` averaged per genome; the lineage baseline, which calls by lineage identity inside the release's own outer folds and has balanced accuracy only; and the catalog rule, on the 20 of 24 datasets where the release scores it.
 
-The plan named balanced accuracy, recall on the resistant class, specificity, log loss with probabilities clipped to [1e-4, 1 - 1e-4], and AUROC, each over a dataset's genomes; the experiment's report gives figures over datasets for the first, second and fourth only, and those three are the measures here.
+The plan named balanced accuracy, recall on the resistant class, specificity, log loss with probabilities clipped to [1e-4, 1 - 1e-4], and AUROC, each over a dataset's genomes; the experiment's report gives figures over datasets for the first, second and fourth only. The record works out the same figures for specificity from the experiment's rows per dataset, by the same draw, so these four are the measures here.
 
 A figure over datasets is the median of the network minus the comparator, with the 2.5% and 97.5% percentiles of that median over 2,000 resamples of the 12 species, each taking every dataset of each drawn species, at seed 20261115.
 
@@ -93,33 +93,35 @@ The network minus each comparator: the median over the 24 datasets (20 for the c
 
 Lineage split:
 
-| Comparator | Balanced accuracy | Recall | Log loss | Network higher |
-|---|---|---|---|---|
-| `scm` | +0.003 (-0.086 to +0.049) | -0.121 (-0.248 to -0.079) | -2.650 (-3.299 to -1.545) | 12 of 24 |
-| `cart` | -0.012 (-0.052 to -0.001) | -0.024 (-0.134 to +0.007) | -0.291 (-0.407 to -0.203) | 7 of 24 |
-| `rf` | -0.016 (-0.032 to +0.009) | +0.018 (-0.034 to +0.072) | +0.132 (+0.057 to +0.229) | 8 of 24 |
-| `gbt` | -0.012 (-0.035 to +0.069) | -0.006 (-0.070 to +0.101) | +0.056 (+0.001 to +0.193) | 10 of 24 |
-| `lasso` | +0.015 (-0.007 to +0.071) | -0.002 (-0.014 to +0.105) | -0.002 (-0.027 to +0.113) | 15 of 24 |
-| best of the five | -0.059 (-0.132 to -0.044) | -0.102 (-0.356 to 0.000) | +0.021 (-0.262 to +0.209) | 1 of 24 |
-| site's best | -0.036 (-0.097 to +0.008) | -0.035 (-0.265 to +0.017) | +0.026 (-0.179 to +0.226) | 7 of 24 |
-| mean of four | -0.007 (-0.019 to +0.014) | +0.027 (-0.042 to +0.128) | +0.127 (+0.042 to +0.241) | 10 of 24 |
-| lineage baseline | +0.115 (+0.050 to +0.189) | not scored | not scored | 23 of 24 |
-| catalog rule | +0.007 (-0.058 to +0.024) | -0.116 (-0.277 to +0.102) | -1.860 (-2.836 to -0.675) | 11 of 20 |
+| Comparator | Balanced accuracy | Recall | Log loss | Specificity | Network higher |
+|---|---|---|---|---|---|
+| `scm` | +0.003 (-0.086 to +0.049) | -0.121 (-0.248 to -0.079) | -2.650 (-3.299 to -1.545) | +0.054 (-0.061 to +0.265) | 12 of 24 |
+| `cart` | -0.012 (-0.052 to -0.001) | -0.024 (-0.134 to +0.007) | -0.291 (-0.407 to -0.203) | +0.019 (-0.028 to +0.093) | 7 of 24 |
+| `rf` | -0.016 (-0.032 to +0.009) | +0.018 (-0.034 to +0.072) | +0.132 (+0.057 to +0.229) | -0.038 (-0.099 to +0.010) | 8 of 24 |
+| `gbt` | -0.012 (-0.035 to +0.069) | -0.006 (-0.070 to +0.101) | +0.056 (+0.001 to +0.193) | -0.003 (-0.054 to +0.063) | 10 of 24 |
+| `lasso` | +0.015 (-0.007 to +0.071) | -0.002 (-0.014 to +0.105) | -0.002 (-0.027 to +0.113) | +0.003 (-0.037 to +0.090) | 15 of 24 |
+| best of the five | -0.059 (-0.132 to -0.044) | -0.102 (-0.356 to 0.000) | +0.021 (-0.262 to +0.209) | +0.025 (-0.106 to +0.181) | 1 of 24 |
+| site's best | -0.036 (-0.097 to +0.008) | -0.035 (-0.265 to +0.017) | +0.026 (-0.179 to +0.226) | +0.025 (-0.106 to +0.084) | 7 of 24 |
+| mean of four | -0.007 (-0.019 to +0.014) | +0.027 (-0.042 to +0.128) | +0.127 (+0.042 to +0.241) | -0.031 (-0.068 to +0.010) | 10 of 24 |
+| lineage baseline | +0.115 (+0.050 to +0.189) | not scored | not scored | not scored | 23 of 24 |
+| catalog rule | +0.007 (-0.058 to +0.024) | -0.116 (-0.277 to +0.102) | -1.860 (-2.836 to -0.675) | -0.037 (-0.127 to +0.237) | 11 of 20 |
 
 Random split:
 
-| Comparator | Balanced accuracy | Recall | Log loss | Network higher |
-|---|---|---|---|---|
-| `scm` | -0.011 (-0.027 to +0.002) | +0.025 (-0.075 to +0.043) | -1.610 (-2.923 to -0.821) | 9 of 24 |
-| `cart` | -0.004 (-0.031 to +0.010) | +0.004 (-0.032 to +0.040) | -0.257 (-0.332 to -0.160) | 12 of 24 |
-| `rf` | -0.021 (-0.042 to -0.007) | -0.001 (-0.015 to +0.005) | +0.097 (+0.037 to +0.158) | 5 of 24 |
-| `gbt` | -0.026 (-0.055 to -0.018) | -0.005 (-0.077 to +0.021) | +0.064 (+0.016 to +0.107) | 4 of 24 |
-| `lasso` | -0.017 (-0.057 to -0.004) | -0.002 (-0.096 to +0.016) | +0.050 (-0.039 to +0.101) | 4 of 24 |
-| best of the five | -0.043 (-0.064 to -0.026) | -0.015 (-0.093 to +0.003) | +0.037 (-0.134 to +0.100) | 1 of 24 |
-| site's best | -0.043 (-0.064 to -0.026) | -0.015 (-0.093 to +0.003) | +0.037 (-0.134 to +0.100) | 1 of 24 |
-| mean of four | -0.041 (-0.058 to -0.019) | -0.014 (-0.055 to +0.001) | +0.085 (+0.031 to +0.130) | 4 of 24 |
-| lineage baseline | +0.066 (+0.032 to +0.120) | not scored | not scored | 19 of 24 |
-| catalog rule | +0.115 (-0.015 to +0.174) | -0.028 (-0.039 to +0.370) | -2.459 (-3.175 to -0.773) | 14 of 20 |
+| Comparator | Balanced accuracy | Recall | Log loss | Specificity | Network higher |
+|---|---|---|---|---|---|
+| `scm` | -0.011 (-0.027 to +0.002) | +0.025 (-0.075 to +0.043) | -1.610 (-2.923 to -0.821) | -0.043 (-0.118 to +0.031) | 9 of 24 |
+| `cart` | -0.004 (-0.031 to +0.010) | +0.004 (-0.032 to +0.040) | -0.257 (-0.332 to -0.160) | -0.016 (-0.057 to +0.040) | 12 of 24 |
+| `rf` | -0.021 (-0.042 to -0.007) | -0.001 (-0.015 to +0.005) | +0.097 (+0.037 to +0.158) | -0.053 (-0.088 to -0.018) | 5 of 24 |
+| `gbt` | -0.026 (-0.055 to -0.018) | -0.005 (-0.077 to +0.021) | +0.064 (+0.016 to +0.107) | -0.038 (-0.110 to +0.007) | 4 of 24 |
+| `lasso` | -0.017 (-0.057 to -0.004) | -0.002 (-0.096 to +0.016) | +0.050 (-0.039 to +0.101) | -0.021 (-0.065 to +0.036) | 4 of 24 |
+| best of the five | -0.043 (-0.064 to -0.026) | -0.015 (-0.093 to +0.003) | +0.037 (-0.134 to +0.100) | -0.062 (-0.116 to -0.014) | 1 of 24 |
+| site's best | -0.043 (-0.064 to -0.026) | -0.015 (-0.093 to +0.003) | +0.037 (-0.134 to +0.100) | -0.062 (-0.116 to -0.014) | 1 of 24 |
+| mean of four | -0.041 (-0.058 to -0.019) | -0.014 (-0.055 to +0.001) | +0.085 (+0.031 to +0.130) | -0.032 (-0.081 to -0.017) | 4 of 24 |
+| lineage baseline | +0.066 (+0.032 to +0.120) | not scored | not scored | not scored | 19 of 24 |
+| catalog rule | +0.115 (-0.015 to +0.174) | -0.028 (-0.039 to +0.370) | -2.459 (-3.175 to -0.773) | -0.027 (-0.134 to +0.314) | 14 of 20 |
+
+Exploratory: against the best of the five on the lineage split, the network's lower balanced accuracy sits in recall, -0.102 (-0.356 to 0.000), and not in specificity, +0.025 (-0.106 to +0.181), where the network is higher on 13 of the 24 datasets.
 
 ## Review
 
@@ -139,7 +141,7 @@ On the random split the intervals for `rf`, `gbt`, `lasso`, the best of the five
 - The datasets are not a sample of the release: 12 were chosen for the largest gap, and 12 drawn once from those with a gap of 0.05 or more.
 - The interval resamples 12 species with 1 to 5 datasets each, so it reflects few species.
 - The review did not fit the network again. It read the network's scores as written and checked the bookkeeping of all 720 fits.
-- The plan named specificity and AUROC among the measures. The experiment's report gives no figure over datasets for either, and the record holds neither.
+- The plan named specificity and AUROC among the measures. The experiment's report gives no figure over datasets for either. The record's specificity figures are its own, and it holds no AUROC.
 - File times show the order of the plan and the results, but they do not prove a file's content at a past time.
 - Every dataset comes from one public database, so this is not external validation.
 

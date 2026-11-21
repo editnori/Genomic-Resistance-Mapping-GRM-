@@ -205,7 +205,8 @@ def page(rec=None):
     add("")
     add("The plan named balanced accuracy, recall on the resistant class, specificity, log loss with probabilities "
         "clipped to [1e-4, 1 - 1e-4], and AUROC, each over a dataset's genomes; the experiment's report gives figures "
-        "over datasets for the first, second and fourth only, and those three are the measures here.")
+        "over datasets for the first, second and fourth only. The record works out the same figures for specificity "
+        "from the experiment's rows per dataset, by the same draw, so these four are the measures here.")
     add("")
     add("A figure over datasets is the median of the network minus the comparator, with the 2.5%% and 97.5%% percentiles of that "
         "median over %s resamples of the %s species, each taking every dataset of each drawn species, at seed %s."
@@ -239,14 +240,20 @@ def page(rec=None):
     for split, word in (("lineage", "Lineage split"), ("random", "Random split")):
         add(word + ":")
         add("")
-        add(cells(["Comparator", "Balanced accuracy", "Recall", "Log loss", "Network higher"]))
-        add("|---|---|---|---|---|")
+        add(cells(["Comparator", "Balanced accuracy", "Recall", "Log loss", "Specificity", "Network higher"]))
+        add("|---|---|---|---|---|---|")
         for who in ROWS:
             r = rec.summary[(split, who, "balanced_accuracy")]
             figures = [rec.diff(split, who, k) if (split, who, k) in rec.summary else "not scored"
-                       for k in ("balanced_accuracy", "recall", "log_loss")]
+                       for k in ("balanced_accuracy", "recall", "log_loss", "specificity")]
             add(cells([table_name(who)] + figures + ["%s of %s" % (r["positive"], r["datasets"])]))
         add("")
+    spec = rec.summary[("lineage", "best5", "specificity")]
+    add("Exploratory: against the best of the five on the lineage split, the network's lower balanced accuracy sits "
+        "in recall, %s, and not in specificity, %s, where the network is higher on %s of the %s datasets."
+        % (rec.diff("lineage", "best5", "recall"), rec.diff("lineage", "best5", "specificity"), spec["positive"],
+           spec["datasets"]))
+    add("")
 
     add("## Review")
     add("")
@@ -290,7 +297,7 @@ def page(rec=None):
     add("- The review did not fit the network again. It read the network's scores as written and checked the "
         "bookkeeping of all %s fits." % n(rec.cost["fits"]))
     add("- The plan named specificity and AUROC among the measures. The experiment's report gives no figure over "
-        "datasets for either, and the record holds neither.")
+        "datasets for either. The record's specificity figures are its own, and it holds no AUROC.")
     add("- File times show the order of the plan and the results, but they do not prove a file's content at a past "
         "time.")
     add("- Every dataset comes from one public database, so this is not external validation.")

@@ -8,7 +8,9 @@ interval of width 0, and each derived cell can be worked by hand:
 - balanced accuracy: rf is the best of the five on every dataset (the network is 0.08 below it), and the
   site's best is cart on both splits, so it is never the best of the five;
 - the lineage baseline is 0.20 below the network, so rule 2 compares 0.20 with 0.28;
-- the catalog rule is scored on 3 of the 4 datasets.
+- the catalog rule is scored on 3 of the 4 datasets;
+- specificity: the network is 0.06 above rf; the summary file gives no figure over datasets for it, as the
+  experiment's gives none.
 
 lift=True turns every offset of the five around, so the network is 0.05 above the best of the five and
 the rule adopts it. None of it is data.
@@ -35,23 +37,24 @@ DATASETS = [  # dataset, species, group, genomes, resistant, gap
     ("genus_alpha__drugthree", "genus_alpha", "drawn", 50, 25, 0.10),
     ("genus_beta__drugfour", "genus_beta", "drawn", 80, 40, 0.06),
 ]
-NETWORK = {  # balanced accuracy, recall, log loss
-    "genus_alpha__drugone": (0.70, 0.60, 0.60),
-    "genus_beta__drugtwo": (0.80, 0.70, 0.50),
-    "genus_alpha__drugthree": (0.60, 0.50, 0.70),
-    "genus_beta__drugfour": (0.75, 0.65, 0.40),
+NETWORK = {  # balanced accuracy, recall, log loss, specificity
+    "genus_alpha__drugone": (0.70, 0.60, 0.60, 0.80),
+    "genus_beta__drugtwo": (0.80, 0.70, 0.50, 0.90),
+    "genus_alpha__drugthree": (0.60, 0.50, 0.70, 0.70),
+    "genus_beta__drugfour": (0.75, 0.65, 0.40, 0.85),
 }
-# The network minus each comparator, per measure: balanced accuracy, recall, log loss.
+# The network minus each comparator, per measure: balanced accuracy, recall, log loss, specificity.
 DELTA = {
-    "scm": (0.02, 0.0, -0.5), "cart": (-0.04, -0.05, 0.1), "rf": (-0.08, -0.10, 0.2),
-    "gbt": (-0.02, 0.05, 0.0), "lasso": (0.04, 0.10, -0.1),
-    "mean4": (-0.03, -0.01, 0.05), "baseline": (0.20, None, None), "catalog": (0.10, 0.02, -0.2),
+    "scm": (0.02, 0.0, -0.5, 0.03), "cart": (-0.04, -0.05, 0.1, -0.02), "rf": (-0.08, -0.10, 0.2, 0.06),
+    "gbt": (-0.02, 0.05, 0.0, -0.04), "lasso": (0.04, 0.10, -0.1, 0.0),
+    "mean4": (-0.03, -0.01, 0.05, 0.01), "baseline": (0.20, None, None, None), "catalog": (0.10, 0.02, -0.2, -0.05),
 }
-LIFT = {"scm": (0.09, 0.0, -0.5), "cart": (0.07, -0.005, 0.1), "rf": (0.05, 0.0, 0.2),
-        "gbt": (0.11, 0.05, 0.0), "lasso": (0.13, 0.10, -0.1)}
+LIFT = {"scm": (0.09, 0.0, -0.5, 0.03), "cart": (0.07, -0.005, 0.1, -0.02), "rf": (0.05, 0.0, 0.2, 0.06),
+        "gbt": (0.11, 0.05, 0.0, -0.04), "lasso": (0.13, 0.10, -0.1, 0.0)}
 NO_CATALOG = "genus_beta__drugfour"
 SITE_BEST = "cart"
-KEYS = ["ba", "recall", "log_loss"]
+KEYS = ["ba", "recall", "log_loss", "specificity"]
+REPORTED_KEYS = ["ba", "recall", "log_loss"]  # the summary file's figures over datasets, as the experiment's
 
 
 def plan_text():
@@ -95,7 +98,7 @@ def summary(lift=False):
         paired[split], medians[split] = {}, {}
         for who in record.COMPARATORS:
             paired[split][who], medians[split][who] = {}, {}
-            for k in KEYS:
+            for k in REPORTED_KEYS:
                 have = [r for r in rows if who in r[split] and k in r[split][who]]
                 diffs = [r[split]["candidate"][k] - r[split][who][k] for r in have]
                 if not diffs:
@@ -155,7 +158,7 @@ def make(root, plan=None, lift=False, stated=None, review=None, change=None):
 
 # Cells worked by hand from DELTA (the network minus the comparator, lineage split).
 BY_HAND = {
-    "best5_balanced_accuracy": -0.08, "best5_recall": -0.10, "best5_log_loss": 0.2,
+    "best5_balanced_accuracy": -0.08, "best5_recall": -0.10, "best5_log_loss": 0.2, "best5_specificity": 0.06,
     "site_best_balanced_accuracy": -0.04, "baseline_balanced_accuracy": 0.20, "catalog_datasets": 3,
     "margin_candidate": 0.20, "margin_best5": 0.28,
     # how far each of the five sits below the best of the five

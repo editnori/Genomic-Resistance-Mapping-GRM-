@@ -92,7 +92,8 @@ class Synthetic(unittest.TestCase):
         h = synthetic.BY_HAND
         for split in record.SPLITS:
             for who, k in (("best5", "balanced_accuracy"), ("best5", "recall"), ("best5", "log_loss"),
-                           ("site_best", "balanced_accuracy"), ("baseline", "balanced_accuracy")):
+                           ("best5", "specificity"), ("site_best", "balanced_accuracy"),
+                           ("baseline", "balanced_accuracy")):
                 row = self.summary[(split, who, k)]
                 want = record.f6(h["%s_%s" % (who, k)])
                 self.assertEqual((row["difference_median"], row["low"], row["high"]), (want, want, want), (split, who, k))
@@ -103,6 +104,7 @@ class Synthetic(unittest.TestCase):
             self.assertEqual(self.summary[(split, "catalog", "balanced_accuracy")]["datasets"], "3")
         # The baseline has balanced accuracy only.
         self.assertNotIn(("lineage", "baseline", "recall"), self.summary)
+        self.assertNotIn(("lineage", "baseline", "specificity"), self.summary)
 
     def test_rule_by_hand(self):
         h = synthetic.BY_HAND

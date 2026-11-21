@@ -35,8 +35,10 @@ SPLITS = ["lineage", "random"]
 FIVE = ["scm", "cart", "rf", "gbt", "lasso"]
 COMPARATORS = FIVE + ["best5", "site_best", "mean4", "baseline", "catalog"]
 LEARNERS = ["candidate"] + COMPARATORS
-MEASURES = ["balanced_accuracy", "recall", "log_loss"]
-SOURCE_KEY = {"balanced_accuracy": "ba", "recall": "recall", "log_loss": "log_loss"}
+MEASURES = ["balanced_accuracy", "recall", "log_loss", "specificity"]
+# The measures the experiment's report gives figures over datasets for; specificity's are the record's own.
+REPORTED = ["balanced_accuracy", "recall", "log_loss"]
+SOURCE_KEY = {"balanced_accuracy": "ba", "recall": "recall", "log_loss": "log_loss", "specificity": "specificity"}
 B = 2000  # resamples of species
 SEED = 20261115
 MARGIN = 0.02
@@ -47,7 +49,7 @@ CLOSE = 1e-12  # a derived figure differs from the experiment's own when they pa
 
 COLUMNS = {
     "datasets.tsv": ["order", "dataset", "species", "group", "genomes", "resistant", "lineage_gap", "gate_a", "gate_b"],
-    "measures.tsv": ["dataset", "split", "learner", "picks", "balanced_accuracy", "recall", "log_loss"],
+    "measures.tsv": ["dataset", "split", "learner", "picks", "balanced_accuracy", "recall", "log_loss", "specificity"],
     "cost.tsv": ["key", "value"],
     "order.tsv": ["utc", "event", "sha256"],
     "settings.tsv": ["key", "value"],
@@ -77,7 +79,7 @@ SETTINGS = [
     ("datasets", "the 12 lineage datasets with the largest gap, and 12 drawn with seed 20261115 from the other 113 with a gap of 0.05 or more"),
     ("gap", "on the lineage split, the balanced accuracy of calls right wherever any of the five is right, minus that of the best of the five"),
     ("comparator", "the best of the five in hindsight: per dataset, the learner with the highest lineage balanced accuracy"),
-    ("measures", "balanced accuracy, recall on the resistant class, specificity, log loss with probabilities clipped to [1e-4, 1 - 1e-4], and AUROC, as the plan named them; the experiment's report gives figures over datasets for balanced accuracy, recall and log loss only, and the record carries those three"),
+    ("measures", "balanced accuracy, recall on the resistant class, specificity, log loss with probabilities clipped to [1e-4, 1 - 1e-4], and AUROC, as the plan named them; the experiment's report gives figures over datasets for balanced accuracy, recall and log loss only; the record carries those three, and specificity worked out from the experiment's rows per dataset by the same draw"),
     ("interval", "2000 resamples of the species present, each taking every dataset of each drawn species; the median over the drawn datasets; 2.5% and 97.5% percentiles; seed 20261115"),
     ("rule_1", "median network minus comparator balanced accuracy at least 0.02, and the interval's lower end above 0"),
     ("rule_2", "median network minus baseline balanced accuracy at least the comparator's median minus baseline"),
@@ -345,7 +347,7 @@ README_ROWS = {
     "SHA256SUMS": "the sha256 of every other file of this directory",
     "cost.tsv": "the network's fits and processes, its CPU seconds (user plus system) and the peak memory of a process",
     "datasets.tsv": "the 24 datasets in the plan's order: species, group, genomes, resistant genomes, lineage gap and whether the export passed gates A and B",
-    "measures.tsv": "one row per dataset, split and learner: balanced accuracy, recall and log loss over the dataset's genomes; best5 and site_best name the learner they pick",
+    "measures.tsv": "one row per dataset, split and learner: balanced accuracy, recall, log loss and specificity over the dataset's genomes; best5 and site_best name the learner they pick",
     "order.tsv": "the plan's file time and sha256, the fitting script's last change, the first network result, the analysis run on the first datasets, and the analysis script's last change",
     "rule.tsv": "derived: the four parts of the plan's rule, the value each takes and whether it holds",
     "settings.tsv": "the network, its inputs and fitting, the datasets, the comparator, the measures, the interval and the rule, as the plan fixed them",
@@ -388,7 +390,8 @@ def readme(files):
         "- **Over datasets.** `summary.tsv` gives the median over datasets of the network minus the comparator, with the 2.5% and 97.5% percentiles of that median over 2,000 resamples of species at seed 20261115, drawn as the experiment drew them.",
         "- **Draw.** Each resample takes every dataset of each drawn species.",
         "- **Log loss.** It is clipped at 0.0001; a positive log loss difference means the network's is higher.",
-        "- **Readings.** The plan fixed the rule on the lineage split against `best5`. Every other comparator, the random split, recall and log loss are reported beside the rule and do not enter it.",
+        "- **Specificity.** The experiment's report gives no specificity figure over datasets. `summary.tsv` works them out from the rows of `measures.tsv` by the same draw.",
+        "- **Readings.** The plan fixed the rule on the lineage split against `best5`. Every other comparator, the random split, recall, log loss and specificity are reported beside the rule and do not enter it.",
         "- **Exploratory.** `below_best5_lineage_*` in `totals.tsv` and the counts of `site_best` were read by the review after the results, so they are exploratory.",
         "",
         "## Commands",
@@ -398,7 +401,7 @@ def readme(files):
         "python3 -I scripts/dense-network/record.py --source \"$RUN\" --review \"$REVIEW\" --check reference/dense-network",
         "```",
         "",
-        "The first rebuilds the derived files, this README and `SHA256SUMS` from the row files. The second rebuilds every file from the experiment's and the review's output directories, which are not public, and fails if a derived figure parts from the experiment's own by more than 1e-12.",
+        "The first rebuilds the derived files, this README and `SHA256SUMS` from the row files. The second rebuilds every file from the experiment's and the review's output directories, which are not public, and fails if a derived figure of balanced accuracy, recall or log loss parts from the experiment's own by more than 1e-12.",
         "",
     ]
     return "\n".join(lines)
@@ -507,6 +510,8 @@ def from_sources(run, review):
 def against_experiment(stats, extra, summary):
     """Fail unless every derived figure equals the experiment's own within CLOSE."""
     for (split, who, k), iv in stats.items():
+        if k not in REPORTED:
+            continue
         theirs = summary["paired"][split][who]
         theirs = theirs.get(SOURCE_KEY[k]) if theirs else None
         if theirs is None:

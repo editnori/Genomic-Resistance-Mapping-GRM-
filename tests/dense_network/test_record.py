@@ -131,6 +131,12 @@ class Record(unittest.TestCase):
         below = {w: "%.4f" % float(totals["below_best5_lineage_" + w]) for w in record.FIVE}
         self.assertEqual(below, {"rf": "0.0242", "cart": "0.0475", "scm": "0.0517", "gbt": "0.0847", "lasso": "0.0876"})
         self.assertEqual((totals["site_best_is_best5_random"], totals["site_best_is_best5_lineage"]), ("24", "14"))
+        # The record's own specificity figure, which the second review counted at +0.025 (-0.106 to +0.181).
+        summary = {(r["split"], r["comparator"], r["measure"]): r for r in read_tsv(RECORD / "summary.tsv")}
+        spec = summary[("lineage", "best5", "specificity")]
+        self.assertEqual(tuple("%+.3f" % float(spec[c]) for c in ("difference_median", "low", "high")),
+                         ("+0.025", "-0.106", "+0.181"))
+        self.assertEqual((spec["positive"], spec["datasets"]), ("13", "24"))
         order = {r["event"]: r["utc"] for r in read_tsv(RECORD / "order.tsv")}
         self.assertEqual(order["plan_file_time"], "2026-11-15T12:19:40Z")
         self.assertEqual(order["first_network_result"], "2026-11-15T12:21:31Z")
