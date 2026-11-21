@@ -12,7 +12,7 @@ from tests.time_split.common import ARMS, LEARNERS, RECORD, load_script, pairs, 
 record = load_script()
 MAX_BYTES = 3 * 1024 * 1024
 # The sha256 of SHA256SUMS as committed. Any change to a file of the record changes it.
-PINNED = "093037620c3e4ce00c54f40a7cabb35d24f82fcdb1ec9b54cec197922a26613c"
+PINNED = "ce0ec6f2ae0c183b88ea017af2c7c4679726d5c90e6209140b44c12612858567"
 DATASETS, SPECIES, CONTRASTS, MEASURES = 24, 4, 3, 4
 ROWS = {"fits.tsv": DATASETS * len(ARMS) * len(LEARNERS), "datasets.tsv": DATASETS, "species.tsv": SPECIES,
         "review.tsv": len(LEARNERS), "order.tsv": 7, "contrasts.tsv": DATASETS * len(LEARNERS) * CONTRASTS,

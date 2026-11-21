@@ -716,67 +716,67 @@ DESCRIBE = {
     "mix.tsv": "Derived. One row per arm: where its training genomes come from",
     "summary.tsv": "Derived. Single figures the page quotes",
 }
-# Each file's columns, named by their headers; readme() fails if a header of the file is not named here.
-COLUMN_TEXT = {
-    "fits.tsv": "`dataset`, `species`, `arm` and `learner` name the fit. `test` and `test_resistant` count its test "
-                "genomes and the resistant ones, and `train` and `train_resistant` its training genomes and the "
-                "resistant ones. `tp`, `fn`, `tn` and `fp` count resistant genomes called resistant and called "
-                "susceptible, and susceptible genomes called susceptible and called resistant, at a score of 0.5. "
-                "`wrong_at_clip` counts wrong calls at the clip and `scores_0_or_1` scores of exactly 0 or 1. "
-                "`loss_sum` is the sum of clipped log loss over the test genomes and `clip_loss_sum` the part of it "
-                "from wrong calls at the clip. `null_fit` is 1 for a gbt or lasso fit of complexity 0.",
-    "datasets.tsv": "`dataset`, `species` and `antibiotic` name the dataset. `cohort` and `cohort_resistant` count the "
-                    "genomes `grm learn` evaluates for it and the resistant ones. `cut_day` is its cut day and "
-                    "`share_public_by_cut` the share of the cohort public by that day. `drawn_test_studies` counts the "
-                    "test studies drawn and `studies_with_a_tested_genome` those with a tested genome. `test`, "
-                    "`test_resistant`, `train` and `train_resistant` count the test and training genomes and the "
-                    "resistant ones. `past_from_past`, `past_from_later_other_studies` and "
-                    "`past_from_later_test_studies` count the past arm's training genomes that are past, later genomes "
-                    "of other studies and later genomes of the test studies. `random_from_past`, "
-                    "`random_from_later_other_studies`, `random_from_later_test_studies`, `study_out_from_past`, "
-                    "`study_out_from_later_other_studies` and `study_out_from_later_test_studies` count the same for "
-                    "the random and study-out arms.",
-    "species.tsv": "`species` names the species and `datasets` counts its datasets. `tested_pairs` and "
-                   "`tested_resistant_pairs` count its tested genome and dataset pairs and the resistant ones, "
-                   "`distinct_test_genomes` its distinct tested genomes, `distinct_test_studies` its distinct test "
-                   "studies, and `largest_study_tested_genomes` the tested genomes of its largest test study.",
-    "review.tsv": "`learner` names the learner. `fits` and `fits_changed` count its fits and those in which the "
-                  "review's fix changed a score, and `scores` and `scores_changed` its scores and those that changed. "
-                  "`readings` and `readings_changed` count its readings and those that changed, and `changed_readings` "
-                  "names each changed one by contrast and measure, with `;` between them.",
-    "totals.tsv": "`name` names a count over all datasets and `value` gives it.",
-    "order.tsv": "`event` names the event, `time` gives its UTC time and `source` the file it is read from.",
-    "settings.tsv": "`name` names a setting and `value` gives it: the design's `cut_share`, its class minimums "
-                    "`min_test_class` and `min_train_class`, its pool minimums `min_reserve` and "
-                    "`min_later_other_studies`, the fits' `seed`, `screened_features` and `inner_folds`, the settings "
-                    "the script applies, and the sha256 of the two plans and two scripts.",
-    "checks.tsv": "`check` names a check the build ran on the input set and `count` gives how many passed it. "
-                  "`genome_ids_of_the_inputs_in_the_record` gives the count of the input set's genome ids found in the "
-                  "record.",
-    "inputs.sha256": "Each line gives the sha256 of a file of the input set and its path there.",
-    "contrasts.tsv": "`dataset`, `species`, `learner` and `contrast` name the row. `d_recall`, `d_log_loss`, "
-                     "`d_specificity` and `d_balanced_accuracy` give the paired difference in each measure.",
-    "readings.tsv": "`learner`, `contrast` and `measure` name the reading, and `minuend` and `subtrahend` the two arms "
-                    "of the contrast. `median` is the median difference over datasets, `low` and `high` its interval "
-                    "from 10,000 species draws, and `reading` what that interval reads. `exact_low`, `exact_high` and "
-                    "`exact_reading` give the same over every ordered species draw. `datasets` counts the datasets, and "
-                    "`worse`, `better` and `equal` those whose difference is on each side of zero or at zero. "
-                    "`minuend_median` and `subtrahend_median` give each arm's median, and `plan` what the plan fixed.",
-    "species-medians.tsv": "`learner`, `contrast`, `measure` and `species` name the row. `datasets` counts the "
-                           "species' datasets and `median` gives their median difference.",
-    "rule.tsv": "`learner` names the learner. `recall` and `log_loss` give its total contrast readings, and `rule` "
-                "what the plan's rule makes of them.",
-    "arms.tsv": "`learner` and `arm` name the row and `datasets` counts its datasets. `tested_pairs` and "
-                "`resistant_pairs` count the pooled test pairs and the resistant ones, and `tp`, `fn`, `tn` and `fp` "
-                "the pooled confusion counts. `recall` and `specificity` follow from them, and `wrong_calls` is `fn` "
-                "plus `fp`. `wrong_at_clip`, `scores_0_or_1` and `null_fits` add up the fits' cells. "
-                "`pooled_log_loss` is the summed `loss_sum` divided by the summed `test`, and `clip_share` the share "
-                "of it from wrong calls at the clip.",
-    "mix.tsv": "`arm` names the arm and `datasets` counts the datasets. `train` counts its training genomes over all "
-               "datasets, `from_past`, `from_later_other_studies` and `from_later_test_studies` how many are past, "
-               "later genomes of other studies and later genomes of the test studies, and `past_share` the share that "
-               "is past.",
-    "summary.tsv": "`name` names a single figure the page quotes and `value` gives it.",
+# What each column gives, by its header; (file, header) entries take the place of the shared ones. readme() fails if a
+# column of the record has no entry here.
+GLOSS = {
+    "dataset": "the dataset, as species and antibiotic", "species": "the species", "arm": "past, random or study-out",
+    "learner": "scm, cart, rf, gbt or lasso", "contrast": "total, study or time", "measure": "the measure read",
+    "test": "test genomes", "test_resistant": "resistant test genomes", "train": "training genomes",
+    "train_resistant": "resistant training genomes", "tp": "resistant genomes called resistant at a score of 0.5",
+    "fn": "resistant genomes called susceptible", "tn": "susceptible genomes called susceptible",
+    "fp": "susceptible genomes called resistant", "wrong_at_clip": "wrong calls at the clip",
+    "scores_0_or_1": "scores of exactly 0 or 1", "loss_sum": "the sum of clipped log loss over the test genomes",
+    "clip_loss_sum": "the part of `loss_sum` from wrong calls at the clip",
+    "null_fit": "1 for a gbt or lasso fit of complexity 0", "antibiotic": "the antibiotic",
+    "cohort": "genomes `grm learn` evaluates for the dataset", "cohort_resistant": "resistant genomes of the cohort",
+    "cut_day": "the cut day", "share_public_by_cut": "the share of the cohort public by the cut day",
+    "drawn_test_studies": "test studies drawn", "studies_with_a_tested_genome": "test studies with a tested genome",
+    "datasets": "datasets", "tested_pairs": "tested genome and dataset pairs",
+    "tested_resistant_pairs": "resistant tested pairs", "resistant_pairs": "resistant tested pairs",
+    "distinct_test_genomes": "distinct tested genomes", "distinct_test_studies": "distinct test studies",
+    "largest_study_tested_genomes": "tested genomes of the largest test study", "fits": "fits",
+    "fits_changed": "fits in which the review's fix changed a score", "scores": "scores",
+    "scores_changed": "scores the fix changed", "readings": "readings", "readings_changed": "readings the fix changed",
+    "changed_readings": "each changed reading as contrast and measure, with `;` between them",
+    "name": "the name of the figure", "value": "the figure", "event": "the event", "time": "its UTC time",
+    "source": "the file the time is read from", "check": "a check the build ran on the input set",
+    "count": "how many passed it", "minuend": "the arm the contrast takes from",
+    "subtrahend": "the arm the contrast subtracts", "median": "the median difference over datasets",
+    "low": "the 251st of 10,000 sorted species draws", "high": "the 9,750th of 10,000 sorted species draws",
+    "reading": "worse, better or not shown, from `low` and `high`",
+    "exact_low": "the same quantile as `low` over every ordered species draw",
+    "exact_high": "the same quantile as `high` over every ordered species draw",
+    "exact_reading": "the reading from `exact_low` and `exact_high`",
+    "worse": "datasets whose difference is on the worse side of zero",
+    "better": "datasets whose difference is on the other side", "equal": "datasets whose difference is zero",
+    "minuend_median": "the median of the measure in the first arm",
+    "subtrahend_median": "the median of the measure in the second arm",
+    "plan": "rule, fixed or supporting: what the plan fixed for this reading",
+    "rule": "cost, benefit, mixed or not shown, by the plan's rule",
+    "wrong_calls": "`fn` plus `fp`", "pooled_log_loss": "the summed `loss_sum` over the summed `test`",
+    "clip_share": "the share of the pooled log loss from wrong calls at the clip",
+    "null_fits": "fits with `null_fit` 1",
+    "from_past": "past genomes in training", "from_later_other_studies": "later genomes of other studies in training",
+    "from_later_test_studies": "later genomes of the test studies in training",
+    "past_share": "the share of training genomes that are past",
+}
+for _a, _arm in (("past", "past"), ("random", "random"), ("study_out", "study-out")):
+    GLOSS[f"{_a}_from_past"] = f"past genomes in the {_arm} arm's training"
+    GLOSS[f"{_a}_from_later_other_studies"] = f"later genomes of other studies in the {_arm} arm's training"
+    GLOSS[f"{_a}_from_later_test_studies"] = f"later genomes of the test studies in the {_arm} arm's training"
+for _m in ("recall", "log_loss", "specificity", "balanced_accuracy"):
+    GLOSS["d_" + _m] = "the paired difference in " + _m.replace("_", " ")
+GLOSS_BY_FILE = {
+    ("species.tsv", "datasets"): "datasets of the species", ("mix.tsv", "datasets"): "datasets pooled",
+    ("arms.tsv", "datasets"): "datasets pooled", ("readings.tsv", "datasets"): "datasets the median is over",
+    ("species-medians.tsv", "datasets"): "datasets of the species",
+    ("mix.tsv", "train"): "training genomes, all datasets",
+    ("species-medians.tsv", "median"): "the median difference over the species' datasets",
+    ("arms.tsv", "recall"): "`tp` over `tp` plus `fn`", ("arms.tsv", "specificity"): "`tn` over `tn` plus `fp`",
+    ("rule.tsv", "recall"): "the total contrast's recall reading",
+    ("rule.tsv", "log_loss"): "the total contrast's log loss reading",
+    ("totals.tsv", "name"): "the name of a count over all datasets", ("settings.tsv", "name"): "the name of a setting",
+    ("settings.tsv", "value"): "the setting", ("summary.tsv", "name"): "the name of a figure the page quotes",
 }
 
 
@@ -798,12 +798,14 @@ def readme(out):
     for n in ROW_FILES + DERIVED_FILES:
         lines.append(f"| `{n}` | {count(n):,} | {DESCRIBE[n]} |")
     lines += ["", "`SHA256SUMS` gives the sha256 of every other file, and this README is what the script writes.", "",
-              "## Columns", ""]
+              "## Columns", "",
+              "Each line of `inputs.sha256` gives the sha256 of a file of the input set and its path there. The other "
+              "files' columns, in file order:", "", "| File | Column | Gives |", "|---|---|---|"]
     for n in ROW_FILES + DERIVED_FILES:
-        if n in COLUMNS:
-            missing = [c for c in COLUMNS[n] if f"`{c}`" not in COLUMN_TEXT[n]]
-            need(not missing, f"README: the columns {missing} of {n} are not named")
-        lines += [f"- `{n}`: {COLUMN_TEXT[n]}"]
+        for c in COLUMNS.get(n, []):
+            gloss = GLOSS_BY_FILE.get((n, c), GLOSS.get(c))
+            need(gloss is not None, f"README: no words for the column {c} of {n}")
+            lines.append(f"| `{n}` | `{c}` | {gloss} |")
     lines += ["", "## Rules", "",
               "**Measures.** A score at or above 0.5 calls resistant. Recall and specificity are fractions of the "
               "confusion counts and balanced accuracy is their mean. Log loss clips the score given to the true class "
@@ -826,16 +828,16 @@ def readme(out):
               f"{one_study} datasets have one drawn and one tested study (`drawn_test_studies` and "
               "`studies_with_a_tested_genome` are 1), so their rows in `fits.tsv`, `contrasts.tsv` and `datasets.tsv` "
               "are results on one unnamed study. In `species.tsv`, `largest_study_tested_genomes` is the count of the "
-              "tested genomes of one unnamed study. The result files hold no study, so the study counts rest on the input "
-              "set's study count file alone. `--check` alone cannot hold a row file to the result files; that needs "
-              "the input set.", "",
+              "tested genomes of one unnamed study.", "",
+              "The result files hold no study, so the study counts rest on the input set's study count file alone. "
+              "`--check` alone cannot hold a row file to the result files; that needs the input set.", "",
               "## Guards", "",
               "`--check` with the input set rebuilds every file and fails on any byte that differs. `--check` alone "
               "reads the row files, derives every derived file and this README again, and fails on any byte that "
               "differs or on a file that differs from `SHA256SUMS`. The input set is not in the repository: it holds "
-              "the result files, whose scores are per genome. `--out` writes only to a new path, an empty directory or "
-              "an earlier record of this script whose files agree with its own `SHA256SUMS`, and refuses a symlink.",
-              "",
+              "the result files, whose scores are per genome.", "",
+              "`--out` writes only to a new path, an empty directory or an earlier record of this script whose files "
+              "agree with its own `SHA256SUMS`, and refuses a symlink.", "",
               "## Commands", "", "```sh",
               "python3 -I scripts/time-split/record.py --inputs <dir> --out reference/time-split",
               "python3 -I scripts/time-split/record.py --inputs <dir> --check reference/time-split",
