@@ -1,0 +1,4 @@
+arm	datasets	train	from_past	from_later_other_studies	from_later_test_studies	past_share
+past	24	20968	20968	0	0	1.0
+random	24	20968	15976	3747	1245	0.7619229301793209
+study-out	24	20968	17082	3886	0	0.8146699732926364

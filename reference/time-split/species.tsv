@@ -1,0 +1,5 @@
+species	datasets	tested_pairs	tested_resistant_pairs	distinct_test_genomes	distinct_test_studies	largest_study_tested_genomes
+escherichia_coli	6	645	253	257	6	84
+klebsiella_pneumoniae	8	1148	736	269	10	107
+pseudomonas_aeruginosa	2	136	63	72	6	26
+salmonella_enterica	8	1461	677	230	4	155
