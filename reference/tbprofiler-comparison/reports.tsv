@@ -1,0 +1,23 @@
+dataset	antibiotic	kind	tool_drugs	graded	genomes	catalog_row
+mycobacterium_tuberculosis__amikacin	amikacin	primary	amikacin	yes	1813	yes
+mycobacterium_tuberculosis__amoxicillin	amoxicillin	not named	-	-	57	yes
+mycobacterium_tuberculosis__capreomycin	capreomycin	primary	capreomycin	yes	670	no
+mycobacterium_tuberculosis__ciprofloxacin	ciprofloxacin	proxy	levofloxacin,moxifloxacin	-	101	yes
+mycobacterium_tuberculosis__clofazimine	clofazimine	primary	clofazimine	yes	1303	no
+mycobacterium_tuberculosis__cycloserine	cycloserine	primary	cycloserine	no	401	no
+mycobacterium_tuberculosis__delamanid	delamanid	primary	delamanid	yes	1248	no
+mycobacterium_tuberculosis__ethambutol	ethambutol	primary	ethambutol	yes	1947	no
+mycobacterium_tuberculosis__ethionamide	ethionamide	primary	ethionamide	yes	1774	no
+mycobacterium_tuberculosis__isoniazid	isoniazid	primary	isoniazid	yes	1954	no
+mycobacterium_tuberculosis__kanamycin	kanamycin	primary	kanamycin	yes	1800	yes
+mycobacterium_tuberculosis__levofloxacin	levofloxacin	primary	levofloxacin	yes	1248	yes
+mycobacterium_tuberculosis__linezolid	linezolid	primary	linezolid	yes	1248	yes
+mycobacterium_tuberculosis__moxifloxacin	moxifloxacin	primary	moxifloxacin	yes	1524	yes
+mycobacterium_tuberculosis__nicotinamide	nicotinamide	not named	-	-	166	no
+mycobacterium_tuberculosis__ofloxacin	ofloxacin	proxy	levofloxacin,moxifloxacin	-	643	yes
+mycobacterium_tuberculosis__para_aminosalicylic_acid	para-aminosalicylic acid	primary	para-aminosalicylic_acid	no	1650	no
+mycobacterium_tuberculosis__prothionamide	prothionamide	proxy	ethionamide	-	170	no
+mycobacterium_tuberculosis__pyrazinamide	pyrazinamide	primary	pyrazinamide	yes	492	no
+mycobacterium_tuberculosis__rifabutin	rifabutin	proxy	rifampicin	-	1317	no
+mycobacterium_tuberculosis__rifampin	rifampin	primary	rifampicin	yes	1967	no
+mycobacterium_tuberculosis__streptomycin	streptomycin	primary	streptomycin	yes	698	yes

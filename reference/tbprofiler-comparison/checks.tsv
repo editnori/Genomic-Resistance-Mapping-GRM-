@@ -1,0 +1,5 @@
+check	count
+reports_whose_genomes_equal_the_call_file	20
+plans_match_their_hash	2
+call_rows_read	23968
+genome_ids_of_the_inputs_in_the_record	0
