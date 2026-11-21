@@ -5,7 +5,7 @@ import pathlib
 import re
 import unittest
 
-from tests.public_words.rules import CI_DOC, ROOT, SUITE, WORKFLOW
+from tests.public_words.rules import CI_DOC, EXTRA, ROOT, SUITE, WORKFLOW
 
 
 def suite_count():
@@ -21,6 +21,14 @@ class Wiring(unittest.TestCase):
                               rf"            top: \.\n")
         self.assertEqual(job.count(f"suite: {SUITE}\n"), 1)
 
+    def test_the_workflow_gives_the_extra_words_to_this_suite_alone(self):
+        text = WORKFLOW.read_text(encoding="utf-8")
+        job = text.split("\n  python:\n", 1)[1].split("\n  deployment:\n", 1)[0]
+        self.assertEqual(text.count("secrets." + EXTRA), 1)
+        self.assertIn(f"\n      {EXTRA}: ${{{{ matrix.suite == '{SUITE}' && secrets.{EXTRA} || '' }}}}\n", job)
+        # env -i clears the environment, so the line that runs the seeds names the variable itself.
+        self.assertEqual(job.count(f' ${{{EXTRA}:+{EXTRA}="${EXTRA}"}} \\\n'), 1)
+
     def test_python_row_gives_the_count(self):
         rows = [line for line in CI_DOC.read_text(encoding="utf-8").split("\n") if line.startswith("| `python`")]
         self.assertEqual(len(rows), 1)
@@ -33,7 +41,8 @@ class Wiring(unittest.TestCase):
         self.assertEqual(text.count(f"The `{SUITE}` suite"), 1)
 
     def test_the_suite_uses_the_standard_library_only(self):
-        allowed = {"ast", "collections", "hashlib", "pathlib", "re", "subprocess", "sys", "unittest", "tests"}
+        allowed = {"ast", "collections", "contextlib", "hashlib", "io", "os", "pathlib", "re", "subprocess", "sys",
+                   "tempfile", "unittest", "tests"}
         for path in sorted(pathlib.Path(ROOT / SUITE).glob("*.py")):
             tree = ast.parse(path.read_text(encoding="utf-8"))
             imports = {a.name.split(".")[0] for n in ast.walk(tree) if isinstance(n, ast.Import) for a in n.names}
