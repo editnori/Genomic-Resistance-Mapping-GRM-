@@ -1,0 +1,8 @@
+rule	statistic	value	needs	holds
+1	median network minus comparator balanced accuracy	-0.059308	at least 0.02	no
+1	lower end of its interval	-0.132285	above 0	no
+2	median network minus baseline balanced accuracy	0.115388	at least 0.203049, the comparator's	no
+3	median network minus comparator recall	-0.101960	at least -0.01	no
+4	CPU-hours of network fitting	1.838383	at most 8.0	yes
+4	peak memory of a network process, kB	299972	at most 12582912	yes
+all	outcome	no gain established	all four	no
