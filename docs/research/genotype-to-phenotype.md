@@ -1,5 +1,7 @@
 # Genotype-to-phenotype assessment for antimicrobial resistance
 
+> **Historical snapshot (October 2026, evaluation revision 7).** This review predates evaluation revisions 8 through 14, the loss of the Vast host, and the Cloudflare R2 migration. Paths under `/root/` and `data/research/` are historical. For current Revision 14 figures and evaluations, see [README.md](../../README.md), [docs/release-summary.md](../release-summary.md), [docs/study-split.md](../study-split.md), [docs/outside-study-results.md](../outside-study-results.md), and [docs/other-database-test.md](../other-database-test.md).
+
 Literature reviewed 23 October 2026; implementation and release evidence reconciled to revision 7 on 27 October 2026. Focus: computational prediction of antimicrobial susceptibility from public BV-BRC genomes and the evidence needed for diagnostic and surveillance validation. This review contains no resistance engineering, new assay targets, primer designs, or sequence-level intervention recommendations.
 
 The useful product is a species–antibiotic prediction with an explicit evidence source, uncertainty, and a route to confirmatory antimicrobial susceptibility testing (AST). Whole-genome sequencing can support an inferred antibiogram, surveillance, and investigation of disagreement between genetic findings and laboratory measurements. A good retrospective classifier alone does not establish that a susceptible call can safely guide treatment.
