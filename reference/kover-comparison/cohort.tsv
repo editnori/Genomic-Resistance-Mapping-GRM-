@@ -1,0 +1,9 @@
+measure	chosen	eligible
+datasets	12	268
+resistant_share_median	0.563	0.477
+resistant_majority	7	123
+lineages_median	38.5	93
+genome_dataset_entries	1118	215319
+genomes_median	85.5	693.5
+species	12	23
+grm_lineage_scm_balanced_accuracy_median	0.913	0.871

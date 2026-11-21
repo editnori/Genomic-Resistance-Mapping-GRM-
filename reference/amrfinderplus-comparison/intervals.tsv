@@ -1,0 +1,104 @@
+set	contrast	measure	median_species_lo	median_species_hi	mean_species_lo	mean_species_hi	share_species_lo	share_species_hi
+primary-new-235	program_minus_known_gene_rule	ba	0.000000	0.000000	0.025387	0.107015		
+primary-new-235	program_minus_known_gene_rule	sens	0.000000	0.001249	0.088857	0.228621		
+primary-new-235	program_minus_known_gene_rule	spec	0.000000	0.000000	-0.126736	0.082907		
+primary-new-235	learner_minus_program:lineage:scm	ba	-0.006254	0.046566	0.024203	0.099464	0.442786	0.650246
+primary-new-235	learner_minus_program:lineage:scm	sens	-0.105556	-0.023998	-0.120298	0.037572	0.748936	0.878689
+primary-new-235	learner_minus_program:lineage:scm	spec	0.000000	0.120772	0.079804	0.263499	0.375000	0.639241
+primary-new-235	learner_minus_program:lineage:cart	ba	-0.017355	0.025388	0.005778	0.090374	0.495652	0.684887
+primary-new-235	learner_minus_program:lineage:cart	sens	-0.118753	-0.033533	-0.152935	0.037274	0.744898	0.885965
+primary-new-235	learner_minus_program:lineage:cart	spec	0.000000	0.103093	0.061790	0.253508	0.357143	0.646226
+primary-new-235	learner_minus_program:lineage:rf	ba	-0.036132	0.003907	-0.039479	0.050896	0.568182	0.747934
+primary-new-235	learner_minus_program:lineage:rf	sens	-0.150071	-0.035200	-0.213316	-0.048213	0.796954	0.902222
+primary-new-235	learner_minus_program:lineage:rf	spec	0.000000	0.088624	0.045121	0.251533	0.360190	0.629167
+primary-new-235	learner_minus_program:lineage:gbt	ba	-0.028410	0.021785	-0.015247	0.072764	0.497561	0.712121
+primary-new-235	learner_minus_program:lineage:gbt	sens	-0.115044	-0.030973	-0.181280	0.000758	0.770925	0.904040
+primary-new-235	learner_minus_program:lineage:gbt	spec	-0.003876	0.110222	0.052428	0.252532	0.343066	0.636752
+primary-new-235	learner_minus_program:lineage:lasso	ba	-0.016346	0.013997	-0.002511	0.084750	0.511111	0.699605
+primary-new-235	learner_minus_program:lineage:lasso	sens	-0.123894	-0.029108	-0.160648	0.019988	0.741935	0.897119
+primary-new-235	learner_minus_program:lineage:lasso	spec	-0.003632	0.121644	0.057656	0.251067	0.366379	0.653465
+primary-new-235	learner_minus_program:lineage:served_best	ba	-0.008135	0.041124	0.021222	0.100076	0.468599	0.661157
+primary-new-235	learner_minus_program:lineage:served_best	sens	-0.104976	-0.023256	-0.147209	0.036144	0.730769	0.868644
+primary-new-235	learner_minus_program:lineage:served_best	spec	0.000000	0.115525	0.084637	0.274942	0.337278	0.603659
+primary-new-235	learner_minus_program:lineage:highest_of_five	ba	0.000407	0.108059	0.051210	0.134272	0.375610	0.616667
+primary-new-235	learner_minus_program:lineage:highest_of_five	sens	-0.070175	-0.018998	-0.079168	0.084281	0.716981	0.850394
+primary-new-235	learner_minus_program:lineage:highest_of_five	spec	0.000000	0.120548	0.098365	0.287849	0.339207	0.607287
+primary-new-235	learner_minus_program:random:scm	ba	0.005655	0.128215	0.078946	0.169511	0.299242	0.571429
+primary-new-235	learner_minus_program:random:scm	sens	-0.052058	-0.007005	-0.031325	0.122723	0.683230	0.840376
+primary-new-235	learner_minus_program:random:scm	spec	0.000000	0.129480	0.111921	0.315571	0.327684	0.594872
+primary-new-235	learner_minus_program:random:cart	ba	0.004085	0.127196	0.066667	0.165707	0.308989	0.584071
+primary-new-235	learner_minus_program:random:cart	sens	-0.057952	-0.012821	-0.038811	0.117958	0.677419	0.830721
+primary-new-235	learner_minus_program:random:cart	spec	0.000000	0.138756	0.101967	0.304486	0.335664	0.617647
+primary-new-235	learner_minus_program:random:rf	ba	0.000359	0.121028	0.055933	0.152938	0.310811	0.587444
+primary-new-235	learner_minus_program:random:rf	sens	-0.050702	-0.009625	-0.053078	0.088130	0.694175	0.845638
+primary-new-235	learner_minus_program:random:rf	spec	0.000000	0.130240	0.091934	0.301155	0.309963	0.591398
+primary-new-235	learner_minus_program:random:gbt	ba	0.004751	0.145353	0.074475	0.169464	0.298755	0.566929
+primary-new-235	learner_minus_program:random:gbt	sens	-0.044544	-0.011364	-0.024688	0.117762	0.675497	0.841584
+primary-new-235	learner_minus_program:random:gbt	spec	0.000000	0.135593	0.101953	0.312186	0.319502	0.596026
+primary-new-235	learner_minus_program:random:lasso	ba	0.007015	0.134615	0.076692	0.172976	0.288538	0.551282
+primary-new-235	learner_minus_program:random:lasso	sens	-0.043291	-0.016000	-0.022602	0.124146	0.682796	0.837423
+primary-new-235	learner_minus_program:random:lasso	spec	0.000000	0.144330	0.100779	0.314000	0.332317	0.610811
+primary-new-235	learner_minus_program:random:served_best	ba	0.012731	0.168084	0.091932	0.188617	0.255639	0.532407
+primary-new-235	learner_minus_program:random:served_best	sens	-0.033662	-0.002174	-0.012060	0.136161	0.663755	0.815534
+primary-new-235	learner_minus_program:random:served_best	spec	0.003621	0.148959	0.122924	0.337052	0.288991	0.561475
+primary-new-235	learner_minus_program:random:highest_of_five	ba	0.013086	0.168084	0.092532	0.188125	0.260684	0.530516
+primary-new-235	learner_minus_program:random:highest_of_five	sens	-0.033898	-0.002174	-0.012098	0.135065	0.663507	0.816000
+primary-new-235	learner_minus_program:random:highest_of_five	spec	0.003621	0.148959	0.124344	0.337516	0.287879	0.563107
+primary-237	program_minus_known_gene_rule	ba	0.000000	0.000000	0.027032	0.109520		
+primary-237	program_minus_known_gene_rule	sens	0.000000	0.001443	0.092453	0.237524		
+primary-237	program_minus_known_gene_rule	spec	0.000000	0.000000	-0.124499	0.085310		
+primary-237	learner_minus_program:lineage:scm	ba	-0.007916	0.045372	0.023186	0.097779	0.444915	0.652778
+primary-237	learner_minus_program:lineage:cart	ba	-0.016912	0.025388	0.005004	0.089937	0.493671	0.684211
+primary-237	learner_minus_program:lineage:rf	ba	-0.029089	0.003950	-0.038644	0.050313	0.566502	0.747863
+primary-237	learner_minus_program:lineage:gbt	ba	-0.026337	0.013726	-0.012520	0.071999	0.502564	0.708738
+primary-237	learner_minus_program:lineage:lasso	ba	-0.015873	0.014133	-0.001069	0.084436	0.510417	0.702381
+primary-237	learner_minus_program:lineage:served_best	ba	-0.005528	0.041124	0.020861	0.099051	0.470874	0.660000
+primary-237	learner_minus_program:lineage:highest_of_five	ba	0.000676	0.095003	0.051745	0.133127	0.378995	0.619772
+primary-237	learner_minus_program:random:served_best	ba	0.014286	0.163889	0.092516	0.188188	0.250980	0.523605
+rule-M-quinolone-28	program_minus_known_gene_rule	ba	0.161171	0.416382	0.169000	0.386953		
+rule-M-quinolone-28	learner_minus_program:lineage:scm	ba	0.000000	0.155777	0.009990	0.158539	0.285714	0.760000
+rule-M-quinolone-28	learner_minus_program:lineage:cart	ba	0.000000	0.070465	0.014194	0.125373	0.352941	0.769231
+rule-M-quinolone-28	learner_minus_program:lineage:rf	ba	-0.057543	0.049475	-0.054712	0.083447	0.481481	0.818182
+rule-M-quinolone-28	learner_minus_program:lineage:gbt	ba	-0.000948	0.065880	0.017012	0.120326	0.384615	0.785714
+rule-M-quinolone-28	learner_minus_program:lineage:lasso	ba	-0.001194	0.072312	0.010950	0.116207	0.375000	0.750000
+rule-M-quinolone-28	learner_minus_program:lineage:served_best	ba	-0.000597	0.072312	0.017443	0.121143	0.400000	0.800000
+rule-M-quinolone-28	learner_minus_program:lineage:highest_of_five	ba	0.000000	0.217172	0.029646	0.184235	0.266667	0.714286
+rule-M-quinolone-28	learner_minus_program:random:served_best	ba	0.006393	0.229669	0.043936	0.228901	0.214286	0.600000
+rule-M-quinolone-new-26	program_minus_known_gene_rule	ba	0.013019	0.415657	0.158042	0.388355		
+rule-M-quinolone-new-26	learner_minus_program:lineage:scm	ba	0.000000	0.190460	0.008990	0.170249	0.280000	0.789474
+rule-M-quinolone-new-26	learner_minus_program:lineage:cart	ba	-0.005093	0.072312	0.013291	0.131821	0.352941	0.782609
+rule-M-quinolone-new-26	learner_minus_program:lineage:rf	ba	-0.063101	0.029172	-0.063183	0.088706	0.500000	0.840000
+rule-M-quinolone-new-26	learner_minus_program:lineage:gbt	ba	-0.007783	0.088361	0.014467	0.125839	0.393939	0.800000
+rule-M-quinolone-new-26	learner_minus_program:lineage:lasso	ba	-0.002853	0.080639	0.009993	0.117182	0.387097	0.761905
+rule-M-quinolone-new-26	learner_minus_program:lineage:served_best	ba	-0.001895	0.085334	0.018702	0.129067	0.406250	0.809524
+rule-M-quinolone-new-26	learner_minus_program:lineage:highest_of_five	ba	0.000000	0.217172	0.030399	0.192330	0.264706	0.714286
+rule-M-quinolone-new-26	learner_minus_program:random:served_best	ba	0.004425	0.373316	0.041256	0.239776	0.233333	0.681818
+quinolone-organism-option-30	program_minus_known_gene_rule	ba	0.208354	0.431575	0.177812	0.397436		
+quinolone-organism-option-30	learner_minus_program:lineage:scm	ba	-0.000190	0.174813	0.010068	0.160163	0.285714	0.750000
+quinolone-organism-option-30	learner_minus_program:lineage:cart	ba	0.000000	0.071388	0.014439	0.126881	0.354839	0.769231
+quinolone-organism-option-30	learner_minus_program:lineage:rf	ba	-0.057543	0.049475	-0.052641	0.085488	0.480000	0.826087
+quinolone-organism-option-30	learner_minus_program:lineage:gbt	ba	-0.000948	0.065880	0.017330	0.122212	0.392857	0.789474
+quinolone-organism-option-30	learner_minus_program:lineage:lasso	ba	-0.001194	0.072312	0.011463	0.115504	0.375000	0.740741
+quinolone-organism-option-30	learner_minus_program:lineage:served_best	ba	-0.000597	0.072312	0.018615	0.123650	0.400000	0.791667
+quinolone-organism-option-30	learner_minus_program:lineage:highest_of_five	ba	0.000000	0.217172	0.029508	0.182807	0.264706	0.720000
+quinolone-organism-option-30	learner_minus_program:random:served_best	ba	0.005720	0.212351	0.039861	0.221324	0.233333	0.666667
+carbapenem-20	program_minus_known_gene_rule	ba	-0.071353	0.014566	-0.067408	0.013925		
+carbapenem-20	learner_minus_program:lineage:scm	ba	-0.086653	0.220871	-0.074858	0.176853	0.190476	0.818182
+carbapenem-20	learner_minus_program:lineage:cart	ba	-0.127451	0.220027	-0.106527	0.179653	0.263158	0.869565
+carbapenem-20	learner_minus_program:lineage:rf	ba	-0.127074	0.195965	-0.117086	0.134545	0.238095	0.800000
+carbapenem-20	learner_minus_program:lineage:gbt	ba	-0.153114	0.175791	-0.122601	0.150445	0.266667	0.863636
+carbapenem-20	learner_minus_program:lineage:lasso	ba	-0.203571	0.326143	-0.120348	0.186469	0.260870	0.863636
+carbapenem-20	learner_minus_program:lineage:served_best	ba	-0.126502	0.220027	-0.080008	0.187015	0.166667	0.750000
+carbapenem-20	learner_minus_program:lineage:highest_of_five	ba	-0.086538	0.326143	-0.033363	0.230017	0.181818	0.750000
+carbapenem-20	learner_minus_program:random:served_best	ba	-0.013983	0.428946	0.030386	0.288163	0.086957	0.666667
+no-organism-option-12	program_minus_known_gene_rule	ba						
+no-organism-option-12	learner_minus_program:lineage:scm	ba						
+no-organism-option-12	learner_minus_program:lineage:cart	ba						
+no-organism-option-12	learner_minus_program:lineage:rf	ba						
+no-organism-option-12	learner_minus_program:lineage:gbt	ba						
+no-organism-option-12	learner_minus_program:lineage:lasso	ba						
+no-organism-option-12	learner_minus_program:lineage:served_best	ba						
+no-organism-option-12	learner_minus_program:lineage:highest_of_five	ba						
+no-organism-option-12	learner_minus_program:random:served_best	ba						
+organism-option-no-lineage-split-4	program_minus_known_gene_rule	ba						
+organism-option-no-lineage-split-4	learner_minus_program:random:served_best	ba						

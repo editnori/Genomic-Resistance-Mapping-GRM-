@@ -1,0 +1,12 @@
+name	value
+result_files_with_a_note	4
+entries_set_aside	1
+dataset	kanamycin
+tp_as_run	489
+fp_as_run	44
+tn_as_run	1027
+fn_as_run	117
+tp_counted	489
+fp_counted	45
+tn_counted	1026
+fn_counted	117

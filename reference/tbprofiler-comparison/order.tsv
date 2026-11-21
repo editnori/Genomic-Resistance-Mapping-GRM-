@@ -1,0 +1,6 @@
+event	time	source
+plan_hashed	2026-11-14T16:42:57Z	the plan's hash list
+addendum_hashed	2026-11-14T16:51:41Z	the plan's hash list
+hashes_checked	2026-11-14T17:28:38Z	the log of the scoring run
+last_step_before_scoring	2026-11-14T17:28:42Z	the log of the scoring run
+scoring_done	2026-11-14T17:29:39Z	the log of the scoring run

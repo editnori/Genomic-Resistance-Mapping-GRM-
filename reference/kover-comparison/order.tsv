@@ -1,0 +1,9 @@
+utc	event	file	sha256
+2026-11-15T12:05:29Z	plan_hashed	PLAN.md	e9bd5114556f1a8507d5ab1adecae5f5b6861796378597770588b9e4886b26f8
+2026-11-15T12:05:29Z	plan_hashed	results/datasets.tsv	af4139c50a9d0f1518f136f4571603a120b2a86ed06f55b542a51b1e4b398095
+2026-11-15T12:05:29Z	plan_hashed	scripts/select_datasets.py	8be679bf64fec8ff8a0edadcda4ea567b9de8c27b8774221b5c83afcccb4b542
+2026-11-15T12:05:29Z	plan_hashed	scripts/build_kmer_tools.sh	cd8311072190c39216378a4a9d92fe70711b5fccf7863fbd491874d4af0343dd
+2026-11-15T12:05:29Z	plan_hashed	scripts/smoke_synthetic.sh	b3907d21f79b55c35be3767dd81bd48af0a92f5b04a74fd14422f031e740aec9
+2026-11-15T12:13:08Z	first_kover_fit	results/run_all.log	
+2026-11-15T16:02:53Z	review_plan_hashed	PLAN.md	e5f5ce08f51f0728ac343472dd6574b725493ffc6b30f540eeefcfab7874b0bf
+2026-11-15T16:45:54Z	review_tie_summary	results/fold_ties_summary_exploratory.txt	

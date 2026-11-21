@@ -1,0 +1,11 @@
+check	count
+result_files	72
+fold_file_hash_matches_design	72
+arms_test_the_same_genomes	72
+training_counts_match_design	72
+fits_match_evaluator_counts	360
+before_result_files	72
+plans_match_their_hash	2
+scripts_match_their_hash	2
+rerun_runs_exit_0	72
+genome_ids_of_the_inputs_in_the_record	0

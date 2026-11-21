@@ -1,0 +1,20 @@
+key	value
+grm_release	rev14-274-20261112
+evaluation_revision	14
+release_datasets	274
+dataset_rule	for each species, the dataset with the fewest genomes whose scm row has a lineage entry, ties by dataset id, kept at 150 genomes or fewer
+reading_rule	a measured difference when the 95% interval over datasets lies wholly above or below 0, no difference shown when it contains 0, and no equivalence claimed either way
+grm_learner	scm
+grm_calls	the released lineage scm row: one 0 or 1 call per genome, from the fold that did not train on it
+folds	the release's lineage split test_fold: fold k tests the genomes with test_fold == k and trains on the others
+kover_version	Kover 2.0.7 (core-2.0.7, cli-2.0.1)
+kmer_tools	GATB-core 1.2.2
+kover_dataset	kover dataset create from-contigs --kmer-size 31 --n-cpu 4
+kover_split	kover dataset split --id lineage_fold<k> --train-ids <train> --test-ids <test> --folds 3 --random-seed 42
+kover_learn	kover learn scm --model-type conjunction disjunction --p 0.1 0.316 0.562 1.0 1.778 3.162 10.0 --max-rules 6 --hp-choice cv --n-cpu 1 --random-seed 42
+kover_singletons	left out (--singleton-kmers not given)
+kover_calls	a genome in test_correct gets its label, one in test_errors the other class
+log_loss_clip	0.0001
+bootstrap	10000 resamples of whole datasets, 95% percentile interval
+t_interval	per dataset, over its 5 fold differences, t quantile 0.975 on 4 degrees of freedom
+equal_within	1e-12
