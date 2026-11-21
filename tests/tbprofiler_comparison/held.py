@@ -29,17 +29,18 @@ HELD = [
      "whose drug the database grades as a second set beside the plan's 16, and changed no figure the plan "
      'defines.'),
     ('TBProfiler read each assembly with the database it ships, `tbdb` commit `3ed1cb99`, whose graded entries '
-     'come from the source WHO catalogue v2. The tool names 18 drugs. A report is primary when the tool has a '
+     'carry the source label "WHO catalogue v2". The tool names 18 drugs. A report is primary when the tool has a '
      'drug of the same name, with rifampin read as rifampicin. The four ways of reading its output:'),
     ('- **who_assoc**, the primary way: resistant when the tool reports an entry graded Assoc w R or Assoc w R '
      '- Interim for the drug.'),
     '- **who_assoc_only**: resistant on an entry graded Assoc w R alone.',
     ("- **tool_default**: resistant on any entry the tool reports for the drug, the database's own ungraded and "
      'Uncertain significance entries included, as its printed report does.'),
-    ('- **who_assoc_small**: as who_assoc, leaving out large insertions, deletions and losses, which a contig '
-     'end of an assembly can mimic.'),
-    ('Each genome and report gets one call: resistant, susceptible or no call, the last where an assembly did '
-     'not cover a target region in full. A no call is never read as susceptible. Each learner and the catalog '
+    ('- **who_assoc_small**: as who_assoc, leaving out an insertion or deletion of 50 bases or more or the '
+     'loss of a whole coding region, which a contig end of an assembly can mimic.'),
+    ('Each genome and report gets one call: resistant, susceptible or no call, the last where the way of reading '
+     'finds no resistant entry and an assembly did not cover a target region in full; a resistant call stands '
+     'whatever the coverage. A no call is never read as susceptible. Each learner and the catalog '
      'row are scored on the same genomes, those where the tool has a call.'),
     ('A learner calls resistant at a report score of 0.5 or more, on the lineage split and the random split. '
      'Each learner was scored only on genomes held out of its fit, and production selects its settings inside '
@@ -50,6 +51,7 @@ HELD = [
     ("Each of the 2,000 resamples draws 881 group numbers with Python's "
      '`random.Random(20261114).randrange(881)`, one call per draw, with the groups numbered in the text order '
      "of their smallest genome id. The interval's ends are the 51st and the 1,950th of the 2,000 sorted values."),
+    'An interval needs at least 40 resamples with a value; every interval here had a value in all 2,000.',
     ("The groups are the reports' own lineage ids, joined across the 22 reports: two genomes share a group when "
      'any report puts them in one lineage. A resample takes every genome of each group drawn. A figure has no '
      'value in a resample where a class has no genome, and a median skips a report without one. Brackets on '
@@ -69,12 +71,15 @@ HELD = [
      'adapted research screen the plan proposed and no one has adopted, and it is never an applicable FDA '
      'validation criterion.'),
     ("Per learner and split: on how many reports the tool's balanced accuracy is higher or lower, on how many "
-     'the learner is at most 0.02 ahead or behind, the median of the learner minus the tool with its lineage '
+     'the tool is ahead or the learner at most 0.02 ahead, the median of the learner minus the tool with its lineage '
      'interval, and the genome-drug rows only one of the two gets right, summed over the set.'),
     ("The best lineage learner on each report of the plan's set is picked after the fact, which favours the "
      "learners. Gap is its balanced accuracy minus the tool's."),
     ("The tool's medians and ranges under each way of reading over each set, and the screen's count. "
-     '`who_assoc` is the primary way; the other three show how the calls move with the grades counted.'),
+     "`who_assoc` is the primary way and the only one the plan's screen reads; the other three show how the "
+     'calls move with the grades counted or with large changes left out; their counts in the last column are '
+     'exploratory, and the plan named no screen for them. The screen and its label stand in the section '
+     'Learners beside the tool.'),
     ('Under `who_assoc`, per primary report: the resistant calls on a susceptible genome by the grade they rest '
      'on, the susceptible calls on a resistant genome by what the tool reported for the drug, and the genomes '
      'with no call by label. An entry of another grade is one the tool reports that `who_assoc` does not count.'),
@@ -104,8 +109,9 @@ HELD = [
     ("- A no call leaves a genome out for every caller. The section Exploratory gives the tool's bounds on "
      'every genome.'),
     "- One cutoff: a learner's score of 0.5 or more calls resistant.",
-    ('- The record leaves out three figures the plan named: the exact per-report interval, which treats related '
-     'genomes as independent, and the McNemar and sign tests.'),
+    ('- The record leaves out these figures the plan named: the exact per-report interval, which treats related '
+     'genomes as independent, the McNemar and sign tests, the quartiles of the differences, the per-fold '
+     'measures, and sensitivity and specificity over all genome-drug rows taken together.'),
     '- One database release, `tbdb` commit `3ed1cb99`, and one tool version.',
     '- The page gives no figure for a single genome, and it names no genome.',
     ('- `reference/tbprofiler-comparison/` holds the record: 20 files that '

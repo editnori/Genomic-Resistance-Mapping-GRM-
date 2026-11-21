@@ -10,7 +10,11 @@ record = load_script()
 BANNED = (r"\b(validated|generalis|generaliz|robust|reliab|real-world|real world|carrier|carries|provenance|receipt|"
           r"manifest|folder|safe|help|explain|caus|due to|clinic|patient|scope|transfer|threshold|confer|proves?|proof|"
           r"guarantee|pass(es|ed|ing)?|reference method|october|rented|work program|test isolate|seconds|minutes?|"
-          r"hours?|core-hours?|cpu|wall[- ]?clock|run ?time|isolate'?s name|sample name)\b")
+          r"hours?|core-hours?|cpu|wall[- ]?clock|run ?time|isolate'?s name|sample name)\w*\b")
+# A timing figure. It stays out of BANNED: with \w* after the group it would match "2 sets".
+TIMING = r"\b\d+(\.\d+)? ?(s|ms|min|h)\b"
+# The plan fixed the 16 and the addendum added the 14; these spellings would swap them.
+SWAPPED = ("plan's 14", "addendum's 16", "addendum fixed", "plan added")
 # A run of bases, in either case. The test checks the pattern on runs it builds, so this file holds none.
 SEQUENCE = r"(?i)[acgt]{20,}"
 # Words for the people, places and tools of the work, written so that this file holds none of them.
@@ -25,14 +29,14 @@ FILE_VERBS = ("gives", "give", "lists", "list", "shows", "show", "holds", "hold"
 # Words that would give a biological reason for a call.
 BIOLOGY = (r"\b(efflux|pumps?|promoters?|operons?|plasmids?|enzymes?|proteins?|binding|compensat\w*|heteroresist\w*|"
            r"intrinsic\w*|express\w*|frameshifts?|epista\w*|target sites?|loss of function|silent|synonymous|"
-           r"lineage-specific|fitness|mechanis\w*)\b")
+           r"lineage-specific|fitness|mechanis\w*|reflect\w*|aris\w*|driven)\b")
 TB_GENE = (r"\b(kat|rpo|inh|emb|pnc|gyr|eth|rpl|ddn|fbi|fgd|atp|mmp|tly|gid|thy|fol|rib|ald|eis|ahp|fab|ubi|pep|msh|"
            r"whi|Rv)[A-Z0-9]|\brr[sl]\b")
 SCREEN = ("the 0.02 margin is an adapted research screen the plan proposed and no one has adopted, and it is never an "
           "applicable FDA validation criterion")
 CATALOG = "GRM's own reader of the AMRFinderPlus catalog"
 NO_MECHANISM = "a call is a marker read against a phenotype and establishes no mechanism"
-BECAUSE = "because its database grades no entry for the other 2 drugs and it calls neither resistant"
+BECAUSE = "whose drug its database grades (none for the other 2)"
 SETTINGS = "production selects its settings inside each fit"
 
 
@@ -97,6 +101,12 @@ class Words(unittest.TestCase):
     def test_banned_words(self):
         for name, text in self.texts.items():
             self.assertIsNone(re.search(BANNED, text, re.I), name)
+            self.assertIsNone(re.search(TIMING, text), name)
+
+    def test_the_plans_16_and_the_addendums_14_are_not_swapped(self):
+        for words in SWAPPED:
+            self.assertNotIn(words, self.page)
+        self.assertIn("The plan fixed the set of 16, and the addendum added the 14.", self.page)
 
     def test_no_name_of_the_work_its_hosts_or_a_vendor(self):
         for name, text in self.everything():
@@ -109,14 +119,16 @@ class Words(unittest.TestCase):
             self.assertIsNone(re.search(LABEL, text), name)
 
     def test_external_validation_only_denied(self):
-        found = 0
+        found = external = 0
         for name, text in self.texts.items():
+            external += len(re.findall(r"(?i)\bexternal\b", text))
             for s in sentences(text):
                 for m in re.finditer(r"external validation", s, re.I):
                     found += 1
                     self.assertRegex(s[: m.start()], r"(?i)\b(no|not|never)\b", s)
                 self.assertIsNone(re.search(r"(?i)clinical validation", s), s)
         self.assertEqual(found, 1)
+        self.assertEqual(external, 1)
 
     def test_prospective_only_in_the_limit_sentence(self):
         found = [s for s in sentences(self.page) if re.search(r"(?i)\bprospective", s)]
@@ -143,11 +155,10 @@ class Words(unittest.TestCase):
         for name, text in self.texts.items():
             self.assertIsNone(re.search(BIOLOGY, without(text, NO_MECHANISM), re.I), name)
         self.assertEqual(self.page.count(NO_MECHANISM), 1)
-        # The one reason the page gives for a zero sensitivity is the database's grade table.
+        # The page gives no reason for a zero sensitivity; the Reading states the database's grade table as a fact.
         for s in sentences(self.page):
-            if re.search(r"(?i)\b(because|since|owing|reason|why)\b", s):
-                self.assertIn(BECAUSE, s)
-        self.assertEqual(self.page.count("because"), 1)
+            self.assertIsNone(re.search(r"(?i)\b(because|since|owing|reasons?|why)\b", s), s)
+        self.assertEqual(self.page.count(BECAUSE), 1)
 
     def test_marks(self):
         for name, text in self.everything():
@@ -196,9 +207,13 @@ class Words(unittest.TestCase):
                 if re.search(r"(?i)\bsensitivit", s):
                     found += 1
                     self.assertRegex(s, r"(?i)\bspecificit", s)
+                if re.search(r"(?i)\bspecificit", s):
+                    self.assertRegex(s, r"(?i)\bsensitivit", s)
             for head in tables(text):
                 if re.search(r"(?i)sensitivit", head):
                     self.assertRegex(head, r"(?i)specificit", head)
+                if re.search(r"(?i)specificit", head):
+                    self.assertRegex(head, r"(?i)sensitivit", head)
         self.assertGreaterEqual(found, 6)
 
     def test_the_base_run_pattern_checks_itself(self):

@@ -15,6 +15,8 @@ ORDER_LABELS = {
     "last_step_before_scoring": "Last step before the evaluator read a phenotype",
     "scoring_done": "Scoring done",
 }
+# The catalogue's possible overlap with these genomes, beside every Reading sentence that sets the tool beside a learner.
+OVERLAP_CLAUSE = "its catalogue may include some of these genomes, which would favour it"
 BOUND_WORDS = (("sensitivity_lower", "Sensitivity, no call counted wrong"),
                ("sensitivity_upper", "Sensitivity, no call counted right"),
                ("specificity_lower", "Specificity, no call counted wrong"),
@@ -117,33 +119,31 @@ def reading(rec):
     m = lambda key, measure: rec.medians[(WAY, key, "tool", measure)]
     ns, np_, gs, gp = (m("by_name", "sensitivity"), m("by_name", "specificity"), m("graded", "sensitivity"),
                        m("graded", "specificity"))
-    first = (f"GRM ran TBProfiler {st['tool_version']}, a public catalogue-based caller, with the database it ships on "
+    first = (f"GRM ran TBProfiler {st['tool_version']}, a public catalogue-based caller, with its shipped database on "
              f"assemblies of the {n(t['distinct_genomes'])} genomes in its {t['reports_of_the_species']} revision 14 "
-             f"M. tuberculosis reports and counted its calls against the phenotypes those reports record on the {a} "
-             f"reports whose drug it names, beside the calls each of the five learners made on the same genomes when "
-             f"those genomes sat outside its fit.")
+             f"M. tuberculosis reports, and counted its calls against the recorded phenotypes on the {a} reports whose "
+             f"drug it names, beside each of the five learners' calls on the same genomes held out of that learner's "
+             f"fit.")
     second = (f"On the {a} M. tuberculosis reports whose drug it names, TBProfiler made a call on "
               f"{n(s['by_name_rows_with_call'])} of {n(s['by_name_rows'])} genome-drug rows and none on the other "
-              f"{n(s['by_name_rows_without_call'])}, with median sensitivity {f3(ns['median'])} (range {f3(ns['min'])} "
+              f"{n(s['by_name_rows_without_call'])}, with median sensitivity {f3(ns['median'])} ({f3(ns['min'])} "
               f"to {f3(ns['max'])}) beside median specificity {f3(np_['median'])} ({f3(np_['min'])} to "
-              f"{f3(np_['max'])}), and on the {b} within these {a} whose drug its database grades, with a call on "
-              f"{n(s['graded_rows_with_call'])} of {n(s['graded_rows'])} rows, the two medians were {f3(gs['median'])} "
-              f"({f3(gs['min'])} to {f3(gs['max'])}) and {f3(gp['median'])} ({f3(gp['min'])} to {f3(gp['max'])}), "
-              f"because its database grades no entry for the other {s['ungraded_in_by_name']} drugs and it calls "
-              f"neither resistant.")
+              f"{f3(np_['max'])}); on the {b} within these {a} whose drug its database grades (none for the other "
+              f"{s['ungraded_in_by_name']}), with a call on {n(s['graded_rows_with_call'])} of {n(s['graded_rows'])} "
+              f"rows, they were {f3(gs['median'])} ({f3(gs['min'])} to {f3(gs['max'])}) and {f3(gp['median'])} "
+              f"({f3(gp['min'])} to {f3(gp['max'])}).")
     rows = [rec.comparisons[(WAY, "graded", f"{l}:lineage")] for l in LEARNERS]
     for r in rows:
         if r["equal"] != "0" or int(r["tool_higher"]) + int(r["tool_lower"]) != int(b):
             raise ValueError("a learner ties the tool on a graded report; 'lower on the rest' no longer holds")
     pieces = [f"{l}'s on {r['tool_higher']}" for l, r in zip(LEARNERS, rows)]
     third = (f"On the lineage split and the same genomes, TBProfiler's balanced accuracy was higher than "
-             f"{LEARNERS[0]}'s on {rows[0]['tool_higher']} of the {b} graded M. tuberculosis reports, "
-             + ", ".join(pieces[1:-1]) + f" and {pieces[-1]}, and lower on the rest.")
-    fourth = (f"These TBProfiler figures are retrospective counts from assemblies, which cannot show a mixed population "
-              f"and left {n(s['graded_rows_without_call'])} of the {n(s['graded_rows'])} rows of the {b} graded reports "
-              f"without a call, so they say nothing about the tool on sequencing reads, and its catalogue drew on public "
-              f"isolates with recorded phenotypes that may include some of these genomes, which would favour it, while "
-              f"each learner saw only genomes held out of its fit.")
+             f"{LEARNERS[0]}'s on {rows[0]['tool_higher']} of the {b} M. tuberculosis reports whose drug its database "
+             f"grades, " + ", ".join(pieces[1:-1]) + f" and {pieces[-1]}, and lower on the rest; {OVERLAP_CLAUSE}.")
+    fourth = (f"TBProfiler's figures are retrospective counts from assemblies, which cannot show a mixed population and "
+              f"left {n(s['graded_rows_without_call'])} of {n(s['graded_rows'])} rows of the {b} graded reports without "
+              f"a call, so they say nothing about the tool on sequencing reads; {OVERLAP_CLAUSE}, and each learner saw "
+              f"only genomes held out of its fit.")
     return [first, second, third, fourth]
 
 
@@ -179,8 +179,8 @@ def set_aside(rec):
     tp2, fp2, tn2, fn2 = (int(a[f"{k}_counted"]) for k in ("tp", "fp", "tn", "fn"))
     if (tp, fn) != (tp2, fn2):
         raise ValueError("the set-aside entry moves a resistant genome; the paragraph says it does not")
-    return (f"**Exploratory.** The tool's rule set aside {a['entries_set_aside']} entry, noted in "
-            f"{a['result_files_with_a_note']} result files, on the {a['dataset']} report. As run, the tool called "
+    return (f"**Exploratory.** On the {a['dataset']} report, the tool's rule left its note in "
+            f"{a['result_files_with_a_note']} result files and set aside {a['entries_set_aside']} entry. As run, the tool called "
             f"{n(tp)} of {n(tp + fn)} resistant genomes resistant and {n(tn)} of {n(tn + fp)} susceptible genomes "
             f"susceptible (sensitivity {'%.4f' % float(s['set_aside_sensitivity_as_run'])}, specificity "
             f"{'%.4f' % float(s['set_aside_specificity_as_run'])}). With the entry counted it calls {n(tn2)} of "

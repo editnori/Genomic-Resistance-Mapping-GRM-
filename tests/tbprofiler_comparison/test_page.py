@@ -136,20 +136,26 @@ class Page(unittest.TestCase):
         self.assertIn(f"on the {s['by_name_endpoints']} reports whose drug it names", body[0])
         self.assertIn(f"made a call on {n(s['by_name_rows_with_call'])} of {n(s['by_name_rows'])} genome-drug rows and "
                       f"none on the other {n(s['by_name_rows_without_call'])}", body[1])
-        self.assertIn("median sensitivity %s (range %s to %s)" % three("by_name", "sensitivity"), body[1])
+        self.assertIn("median sensitivity %s (%s to %s)" % three("by_name", "sensitivity"), body[1])
         self.assertIn("beside median specificity %s (%s to %s)" % three("by_name", "specificity"), body[1])
-        self.assertIn("the two medians were %s (%s to %s)" % three("graded", "sensitivity") +
+        self.assertIn("they were %s (%s to %s)" % three("graded", "sensitivity") +
                       " and %s (%s to %s)" % three("graded", "specificity"), body[1])
         self.assertIn(f"with a call on {n(s['graded_rows_with_call'])} of {n(s['graded_rows'])} rows", body[1])
         self.assertIn(f"on the {s['graded_endpoints']} within these {s['by_name_endpoints']}", body[1])
-        self.assertIn(f"for the other {s['ungraded_in_by_name']} drugs", body[1])
+        self.assertIn(f"whose drug its database grades (none for the other {s['ungraded_in_by_name']})", body[1])
         cmp_ = {(r["set"], r["caller"]): r for r in read_tsv(RECORD / "comparisons.tsv") if r["way"] == WAY}
         higher = [cmp_[("graded", f"{l}:lineage")]["tool_higher"] for l in LEARNERS]
-        self.assertIn(f"higher than scm's on {higher[0]} of the {s['graded_endpoints']} graded", body[2])
+        self.assertIn(f"higher than scm's on {higher[0]} of the {s['graded_endpoints']} M. tuberculosis reports whose "
+                      f"drug its database grades,", body[2])
         self.assertIn(", ".join(f"{l}'s on {h}" for l, h in zip(LEARNERS[1:-1], higher[1:-1])) +
-                      f" and {LEARNERS[-1]}'s on {higher[-1]}, and lower on the rest.", body[2])
-        self.assertIn(f"left {n(s['graded_rows_without_call'])} of the {n(s['graded_rows'])} rows of the "
+                      f" and {LEARNERS[-1]}'s on {higher[-1]}, and lower on the rest;", body[2])
+        self.assertIn(f"left {n(s['graded_rows_without_call'])} of {n(s['graded_rows'])} rows of the "
                       f"{s['graded_endpoints']} graded reports without a call", body[3])
+        # Read alone, the sentence that sets the tool beside the learners keeps the catalogue's possible overlap.
+        self.assertTrue(body[2].endswith("; its catalogue may include some of these genomes, which would favour it."),
+                        body[2])
+        self.assertIn("; its catalogue may include some of these genomes, which would favour it, and each learner saw "
+                      "only genomes held out of its fit.", body[3])
 
     def test_reading_states_how_the_counts_relate(self):
         body = section(self.text, "Reading")
@@ -187,9 +193,9 @@ class Page(unittest.TestCase):
             self.assertIn(TABLE_SECTION[name], OVERLAP_SECTIONS, name)
         self.assertIn("best lineage learner minus the tool", lines.set_aside(self.rec))
         self.assertIn(BUILT_SECTION[2], OVERLAP_SECTIONS)
-        self.assertIn("its catalogue drew on public isolates with recorded phenotypes that may include some of these "
-                      "genomes, which would favour it, while each learner saw only genomes held out of its fit.",
-                      section(self.text, "Reading"))
+        reading = section(self.text, "Reading").strip().split("\n\n")
+        for k in (2, 3):
+            self.assertIn("its catalogue may include some of these genomes, which would favour it", reading[k])
 
     def test_the_reviews_sentences_are_kept(self):
         for name, words in KEPT.items():
@@ -215,6 +221,9 @@ class Page(unittest.TestCase):
                          ("2026-11-14T16:51:41Z", "2026-11-14T17:28:42Z"))
         ungraded = sorted(r["tool_drug"] for r in self.rec.grades if r["counted_grade_entries"] == "0")
         self.assertEqual(ungraded, ["cycloserine", "para-aminosalicylic_acid"])
+        # Every interval had a value in all of its resamples, as the Method says.
+        self.assertEqual(st["min_resamples_with_value"], "40")
+        self.assertEqual({r["resamples_with_value"] for r in read_tsv(RECORD / "intervals.tsv")}, {st["resamples"]})
 
     def test_every_table_is_built_from_the_record(self):
         built = lines.tables(self.rec)

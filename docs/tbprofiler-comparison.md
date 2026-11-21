@@ -6,13 +6,13 @@ This is a diagnostic comparison of a published catalogue-based caller: a call is
 
 ## Reading
 
-GRM ran TBProfiler 6.6.3, a public catalogue-based caller, with the database it ships on assemblies of the 2,000 genomes in its 22 revision 14 M. tuberculosis reports and counted its calls against the phenotypes those reports record on the 16 reports whose drug it names, beside the calls each of the five learners made on the same genomes when those genomes sat outside its fit.
+GRM ran TBProfiler 6.6.3, a public catalogue-based caller, with its shipped database on assemblies of the 2,000 genomes in its 22 revision 14 M. tuberculosis reports, and counted its calls against the recorded phenotypes on the 16 reports whose drug it names, beside each of the five learners' calls on the same genomes held out of that learner's fit.
 
-On the 16 M. tuberculosis reports whose drug it names, TBProfiler made a call on 20,918 of 21,737 genome-drug rows and none on the other 819, with median sensitivity 0.779 (range 0.000 to 0.961) beside median specificity 0.848 (0.684 to 1.000), and on the 14 within these 16 whose drug its database grades, with a call on 18,869 of 19,686 rows, the two medians were 0.802 (0.009 to 0.961) and 0.829 (0.684 to 0.997), because its database grades no entry for the other 2 drugs and it calls neither resistant.
+On the 16 M. tuberculosis reports whose drug it names, TBProfiler made a call on 20,918 of 21,737 genome-drug rows and none on the other 819, with median sensitivity 0.779 (0.000 to 0.961) beside median specificity 0.848 (0.684 to 1.000); on the 14 within these 16 whose drug its database grades (none for the other 2), with a call on 18,869 of 19,686 rows, they were 0.802 (0.009 to 0.961) and 0.829 (0.684 to 0.997).
 
-On the lineage split and the same genomes, TBProfiler's balanced accuracy was higher than scm's on 8 of the 14 graded M. tuberculosis reports, cart's on 9, rf's on 13, gbt's on 10 and lasso's on 10, and lower on the rest.
+On the lineage split and the same genomes, TBProfiler's balanced accuracy was higher than scm's on 8 of the 14 M. tuberculosis reports whose drug its database grades, cart's on 9, rf's on 13, gbt's on 10 and lasso's on 10, and lower on the rest; its catalogue may include some of these genomes, which would favour it.
 
-These TBProfiler figures are retrospective counts from assemblies, which cannot show a mixed population and left 817 of the 19,686 rows of the 14 graded reports without a call, so they say nothing about the tool on sequencing reads, and its catalogue drew on public isolates with recorded phenotypes that may include some of these genomes, which would favour it, while each learner saw only genomes held out of its fit.
+TBProfiler's figures are retrospective counts from assemblies, which cannot show a mixed population and left 817 of 19,686 rows of the 14 graded reports without a call, so they say nothing about the tool on sequencing reads; its catalogue may include some of these genomes, which would favour it, and each learner saw only genomes held out of its fit.
 
 ## Plan and order
 
@@ -32,20 +32,22 @@ The shipped database grades no entry for cycloserine or para-aminosalicylic acid
 
 ## Method
 
-TBProfiler read each assembly with the database it ships, `tbdb` commit `3ed1cb99`, whose graded entries come from the source WHO catalogue v2. The tool names 18 drugs. A report is primary when the tool has a drug of the same name, with rifampin read as rifampicin. The four ways of reading its output:
+TBProfiler read each assembly with the database it ships, `tbdb` commit `3ed1cb99`, whose graded entries carry the source label "WHO catalogue v2". The tool names 18 drugs. A report is primary when the tool has a drug of the same name, with rifampin read as rifampicin. The four ways of reading its output:
 
 - **who_assoc**, the primary way: resistant when the tool reports an entry graded Assoc w R or Assoc w R - Interim for the drug.
 - **who_assoc_only**: resistant on an entry graded Assoc w R alone.
 - **tool_default**: resistant on any entry the tool reports for the drug, the database's own ungraded and Uncertain significance entries included, as its printed report does.
-- **who_assoc_small**: as who_assoc, leaving out large insertions, deletions and losses, which a contig end of an assembly can mimic.
+- **who_assoc_small**: as who_assoc, leaving out an insertion or deletion of 50 bases or more or the loss of a whole coding region, which a contig end of an assembly can mimic.
 
-Each genome and report gets one call: resistant, susceptible or no call, the last where an assembly did not cover a target region in full. A no call is never read as susceptible. Each learner and the catalog row are scored on the same genomes, those where the tool has a call.
+Each genome and report gets one call: resistant, susceptible or no call, the last where the way of reading finds no resistant entry and an assembly did not cover a target region in full; a resistant call stands whatever the coverage. A no call is never read as susceptible. Each learner and the catalog row are scored on the same genomes, those where the tool has a call.
 
 A learner calls resistant at a report score of 0.5 or more, on the lineage split and the random split. Each learner was scored only on genomes held out of its fit, and production selects its settings inside each fit.
 
 A report is scored when at least 25 resistant and 25 susceptible genomes have a call. Sensitivity is the share of resistant genomes called resistant, specificity the share of susceptible genomes called susceptible, and balanced accuracy their mean.
 
 Each of the 2,000 resamples draws 881 group numbers with Python's `random.Random(20261114).randrange(881)`, one call per draw, with the groups numbered in the text order of their smallest genome id. The interval's ends are the 51st and the 1,950th of the 2,000 sorted values.
+
+An interval needs at least 40 resamples with a value; every interval here had a value in all 2,000.
 
 The groups are the reports' own lineage ids, joined across the 22 reports: two genomes share a group when any report puts them in one lineage. A resample takes every genome of each group drawn. A figure has no value in a resample where a class has no genome, and a median skips a report without one. Brackets on this page give this 95% lineage interval.
 
@@ -147,7 +149,7 @@ On the lineage split and the same genomes, TBProfiler's balanced accuracy was ah
 
 The catalogue behind TBProfiler was built from public isolates with recorded phenotypes, and some of these 2,000 genomes may be among them, which would favour the tool; the overlap was not checked, and each learner was scored only on genomes held out of its fit.
 
-Per learner and split: on how many reports the tool's balanced accuracy is higher or lower, on how many the learner is at most 0.02 ahead or behind, the median of the learner minus the tool with its lineage interval, and the genome-drug rows only one of the two gets right, summed over the set.
+Per learner and split: on how many reports the tool's balanced accuracy is higher or lower, on how many the tool is ahead or the learner at most 0.02 ahead, the median of the learner minus the tool with its lineage interval, and the genome-drug rows only one of the two gets right, summed over the set.
 
 | Learner | Set | Tool higher | Tool lower | Tool ahead or within 0.02 | Learner minus tool, median | Right only for the learner | Right only for the tool |
 |---|---|---|---|---|---|---|---|
@@ -199,7 +201,7 @@ GRM's own reader of the AMRFinderPlus catalog has a row on 6 of the 16 reports. 
 
 The catalogue behind TBProfiler was built from public isolates with recorded phenotypes, and some of these 2,000 genomes may be among them, which would favour the tool; the overlap was not checked, and each learner was scored only on genomes held out of its fit.
 
-The tool's medians and ranges under each way of reading over each set, and the screen's count. `who_assoc` is the primary way; the other three show how the calls move with the grades counted.
+The tool's medians and ranges under each way of reading over each set, and the screen's count. `who_assoc` is the primary way and the only one the plan's screen reads; the other three show how the calls move with the grades counted or with large changes left out; their counts in the last column are exploratory, and the plan named no screen for them. The screen and its label stand in the section Learners beside the tool.
 
 | Way of reading | Set | TBProfiler sensitivity | TBProfiler specificity | Ahead of or within 0.02 of the best lineage learner |
 |---|---|---|---|---|
@@ -246,7 +248,7 @@ Counting each no call as wrong or as right gives bounds on every genome. Reading
 | the plan's 16 | 0.764 (0.000 to 0.947) | 0.784 (0.000 to 0.961) | 0.836 (0.640 to 0.999) | 0.855 (0.704 to 1.000) |
 | the addendum's 14 | 0.790 (0.009 to 0.947) | 0.805 (0.025 to 0.961) | 0.818 (0.640 to 0.968) | 0.847 (0.704 to 0.998) |
 
-**Exploratory.** The tool's rule set aside 1 entry, noted in 4 result files, on the kanamycin report. As run, the tool called 489 of 606 resistant genomes resistant and 1,027 of 1,071 susceptible genomes susceptible (sensitivity 0.8069, specificity 0.9589). With the entry counted it calls 1,026 of 1,071 susceptible genomes susceptible (sensitivity 0.8069, specificity 0.9580), and the best lineage learner minus the tool moves from +0.0161 to +0.0165.
+**Exploratory.** On the kanamycin report, the tool's rule left its note in 4 result files and set aside 1 entry. As run, the tool called 489 of 606 resistant genomes resistant and 1,027 of 1,071 susceptible genomes susceptible (sensitivity 0.8069, specificity 0.9589). With the entry counted it calls 1,026 of 1,071 susceptible genomes susceptible (sensitivity 0.8069, specificity 0.9580), and the best lineage learner minus the tool moves from +0.0161 to +0.0165.
 
 The catalogue behind TBProfiler was built from public isolates with recorded phenotypes, and some of these 2,000 genomes may be among them, which would favour the tool; the overlap was not checked, and each learner was scored only on genomes held out of its fit.
 
@@ -270,7 +272,7 @@ An independent review recounted every row of the first report's table from the c
 - The best of the five learners is picked per report after the fact, which favours the learners.
 - A no call leaves a genome out for every caller. The section Exploratory gives the tool's bounds on every genome.
 - One cutoff: a learner's score of 0.5 or more calls resistant.
-- The record leaves out three figures the plan named: the exact per-report interval, which treats related genomes as independent, and the McNemar and sign tests.
+- The record leaves out these figures the plan named: the exact per-report interval, which treats related genomes as independent, the McNemar and sign tests, the quartiles of the differences, the per-fold measures, and sensitivity and specificity over all genome-drug rows taken together.
 - One database release, `tbdb` commit `3ed1cb99`, and one tool version.
 - The page gives no figure for a single genome, and it names no genome.
 
