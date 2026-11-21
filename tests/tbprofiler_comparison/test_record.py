@@ -17,7 +17,7 @@ from tests.tbprofiler_comparison.common import LEARNERS, RECORD, SPLITS, WAY, lo
 record = load_script()
 MAX_BYTES = 3 * 1024 * 1024
 # The sha256 of SHA256SUMS as committed. Any change to a file of the record changes it.
-PINNED = "789e1165cf25dfc6a3cf92a4169747157554df427fb8834edac6821974fe64b2"
+PINNED = "f12da2a4eb62698b22224d131f58d4e04ffabedaad2cbc7ce283820831ff1e09"
 REPORTS, NAMED, PROXIES, WAYS, TOOL_DRUGS = 22, 20, 4, 4, 18
 CALLERS = 1 + len(LEARNERS) * len(SPLITS)
 SETS, MEASURES = 2, 3

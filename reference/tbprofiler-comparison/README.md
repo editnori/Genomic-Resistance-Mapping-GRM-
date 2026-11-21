@@ -168,7 +168,9 @@ Each line of `inputs.sha256` gives the sha256 of a file of the input set and its
 
 ## Limits
 
-No row is about one genome, and no cell names a genome. The tool's raw output and the assemblies no longer exist; the call file, kept outside the repository, is the lowest layer the counts are rebuilt from. `set-aside.tsv` and the counts behind it rest on the raw output alone and cannot be rebuilt. `--check` alone cannot hold a row file to the input set; that needs the input set.
+No row is about one genome, and no cell names a genome. Where one genome of a label has no call on a report, a cell counts that one genome, and the counts set beside the scores per genome that the reports publish can show which genome it is.
+
+The tool's raw output and the assemblies no longer exist; the call file, kept outside the repository, is the lowest layer the counts are rebuilt from. `set-aside.tsv` and the counts behind it rest on the raw output alone and cannot be rebuilt. `--check` alone cannot hold a row file to the input set; that needs the input set.
 
 ## Guards
 

@@ -272,7 +272,7 @@ An independent review recounted every row of the first report's table from the c
 - One cutoff: a learner's score of 0.5 or more calls resistant.
 - The record leaves out these figures the plan named: the exact per-report interval, which treats related genomes as independent, the McNemar and sign tests, the quartiles of the differences, the per-fold measures, and sensitivity and specificity over all genome-drug rows taken together.
 - One database release, `tbdb` commit `3ed1cb99`, and one tool version.
-- The page gives no figure for a single genome, and it names no genome.
+- The page names no genome. Where one genome of a label has no call on a report, the counts set beside the scores per genome that the reports publish can show which genome it is.
 
 - `reference/tbprofiler-comparison/` holds the record: 20 files that `scripts/tbprofiler-comparison/record.py` writes from the input set. Its README lists each file and its columns, and `SHA256SUMS` gives each file's sha256.
 - The record holds rows per report and caller, per way of reading, per tool drug, per grade and per learner, and single counts. It holds no genome id, label, call or score per genome.
