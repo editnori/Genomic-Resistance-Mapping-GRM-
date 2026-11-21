@@ -1370,6 +1370,27 @@ mod tests {
     }
 
     #[test]
+    fn a_full_page_that_holds_only_the_bound_stops_the_download() {
+        // Synthetic: one record a page, and a `gt` that returns its bound, so
+        // the second page holds only the record already written and the
+        // cursor cannot move. The download stops there and does not ask
+        // for the same page again.
+        let dir = tempfile::tempdir().unwrap();
+        let out = dir.path().join("genome_amr.jsonl");
+        let mut stub = StubPages::new(synthetic_amr_table(3), 1, true);
+        let err = write_amr_pages(&out, 1, |after| {
+            if stub.asked.len() == 10 {
+                bail!("still asking after 10 pages");
+            }
+            stub.next(after)
+        })
+        .unwrap_err();
+        assert!(format!("{err:#}").contains("held no new record"), "{err:#}");
+        assert_eq!(stub.asked, vec![None, stub.id(0)]);
+        assert!(!out.exists());
+    }
+
+    #[test]
     fn an_http_error_mid_way_stops_the_download_and_keeps_the_earlier_file() {
         let dir = tempfile::tempdir().unwrap();
         let out = dir.path().join("genome_amr.jsonl");

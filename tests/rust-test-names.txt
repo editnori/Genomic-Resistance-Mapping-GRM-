@@ -173,6 +173,7 @@ src/lib.rs baselines::tests::the_summary_pins_the_index_bytes_and_each_report_an
 src/lib.rs baselines::tests::write_covers_the_indexed_datasets_writes_the_same_bytes_twice_and_leaves_reports_untouched
 src/lib.rs baselines::tests::write_waits_while_another_writer_holds_the_report_directory_s_lock
 src/lib.rs bits::tests::set_algebra_and_counts
+src/lib.rs bvbrc::tests::a_full_page_that_holds_only_the_bound_stops_the_download
 src/lib.rs bvbrc::tests::a_repeated_id_is_written_once_and_an_id_out_of_order_stops_the_download
 src/lib.rs bvbrc::tests::a_run_after_a_failed_one_starts_again_from_the_first_page
 src/lib.rs bvbrc::tests::a_synthetic_genome_response_is_written_with_its_collection_dates
