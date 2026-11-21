@@ -257,6 +257,9 @@ jobs:
           # SYNTHETIC inputs built in the test, the committed record under reference/amrfinderplus-comparison and docs/amrfinderplus-comparison.md.
           - suite: tests/amrfinderplus_comparison
             top: .
+          # Reads every tracked file of the tree and docs/ci.md; it builds nothing.
+          - suite: tests/public_words
+            top: .
     env:
       SUITE: ${{ matrix.suite }}
       TOP: ${{ matrix.top }}
