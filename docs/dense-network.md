@@ -70,7 +70,9 @@ The first 12 rows are the largest gaps, in the plan's order, and the last 12 the
 
 The five's calls are the release's saved out-of-fold scores, called resistant at 0.5 or above; no learner is fitted again. The comparators are each of the five; the best of the five in hindsight, the plan's comparator; the site's best, the learner the release names best, chosen on the random split; the mean of four, the scores of `cart`, `rf`, `gbt` and `lasso` averaged per genome; the lineage baseline, which calls by lineage identity inside the release's own outer folds and has balanced accuracy only; and the catalog rule, on the 20 of 24 datasets where the release scores it.
 
-The measures are balanced accuracy, recall on the resistant class, log loss with probabilities clipped to [1e-4, 1 - 1e-4], each over a dataset's genomes. A figure over datasets is the median of the network minus the comparator, with the 2.5% and 97.5% percentiles of that median over 2,000 resamples of the 12 species, each taking every dataset of each drawn species, at seed 20261115.
+The plan named balanced accuracy, recall on the resistant class, specificity, log loss with probabilities clipped to [1e-4, 1 - 1e-4], and AUROC, each over a dataset's genomes; the experiment's report gives figures over datasets for the first, second and fourth only, and those three are the measures here.
+
+A figure over datasets is the median of the network minus the comparator, with the 2.5% and 97.5% percentiles of that median over 2,000 resamples of the 12 species, each taking every dataset of each drawn species, at seed 20261115.
 
 The plan's rule, on the lineage split:
 
@@ -137,7 +139,7 @@ On the random split the intervals for `rf`, `gbt`, `lasso`, the best of the five
 - The datasets are not a sample of the release: 12 were chosen for the largest gap, and 12 drawn once from those with a gap of 0.05 or more.
 - The interval resamples 12 species with 1 to 5 datasets each, so it reflects few species.
 - The review did not fit the network again. It read the network's scores as written and checked the bookkeeping of all 720 fits.
-- The plan named AUROC among the figures reported beside the rule. The experiment's report gives no AUROC figure, and the record holds none.
+- The plan named specificity and AUROC among the measures. The experiment's report gives no figure over datasets for either, and the record holds neither.
 - File times show the order of the plan and the results, but they do not prove a file's content at a past time.
 - Every dataset comes from one public database, so this is not external validation.
 

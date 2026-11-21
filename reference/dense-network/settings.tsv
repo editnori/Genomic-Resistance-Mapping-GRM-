@@ -13,7 +13,7 @@ reported	beside the rule and outside it: each of the five, the site's best (chos
 datasets	the 12 lineage datasets with the largest gap, and 12 drawn with seed 20261115 from the other 113 with a gap of 0.05 or more
 gap	on the lineage split, the balanced accuracy of calls right wherever any of the five is right, minus that of the best of the five
 comparator	the best of the five in hindsight: per dataset, the learner with the highest lineage balanced accuracy
-measures	balanced accuracy, recall on the resistant class, log loss with probabilities clipped to [1e-4, 1 - 1e-4]
+measures	balanced accuracy, recall on the resistant class, specificity, log loss with probabilities clipped to [1e-4, 1 - 1e-4], and AUROC, as the plan named them; the experiment's report gives figures over datasets for balanced accuracy, recall and log loss only, and the record carries those three
 interval	2000 resamples of the species present, each taking every dataset of each drawn species; the median over the drawn datasets; 2.5% and 97.5% percentiles; seed 20261115
 rule_1	median network minus comparator balanced accuracy at least 0.02, and the interval's lower end above 0
 rule_2	median network minus baseline balanced accuracy at least the comparator's median minus baseline

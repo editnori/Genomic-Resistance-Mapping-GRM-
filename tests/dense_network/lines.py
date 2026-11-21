@@ -203,9 +203,13 @@ def page(rec=None):
         "inside the release's own outer folds and has balanced accuracy only; and the catalog rule, on the %s of %s "
         "datasets where the release scores it." % (sentence_start(s["calls"]), t["catalog_datasets"], D))
     add("")
-    add("The measures are %s, each over a dataset's genomes. A figure over datasets is the median of the network minus "
-        "the comparator, with the 2.5%% and 97.5%% percentiles of that median over %s resamples of the %s species, each "
-        "taking every dataset of each drawn species, at seed %s." % (s["measures"], n(resamples), S, seed))
+    add("The plan named balanced accuracy, recall on the resistant class, specificity, log loss with probabilities "
+        "clipped to [1e-4, 1 - 1e-4], and AUROC, each over a dataset's genomes; the experiment's report gives figures "
+        "over datasets for the first, second and fourth only, and those three are the measures here.")
+    add("")
+    add("A figure over datasets is the median of the network minus the comparator, with the 2.5%% and 97.5%% percentiles of that "
+        "median over %s resamples of the %s species, each taking every dataset of each drawn species, at seed %s."
+        % (n(resamples), S, seed))
     add("")
     add("The plan's rule, on the lineage split:")
     add("")
@@ -285,8 +289,8 @@ def page(rec=None):
     add("- The interval resamples %s species with %s to %s datasets each, so it reflects few species." % (S, lo_sp, hi_sp))
     add("- The review did not fit the network again. It read the network's scores as written and checked the "
         "bookkeeping of all %s fits." % n(rec.cost["fits"]))
-    add("- The plan named AUROC among the figures reported beside the rule. The experiment's report gives no AUROC "
-        "figure, and the record holds none.")
+    add("- The plan named specificity and AUROC among the measures. The experiment's report gives no figure over "
+        "datasets for either, and the record holds neither.")
     add("- File times show the order of the plan and the results, but they do not prove a file's content at a past "
         "time.")
     add("- Every dataset comes from one public database, so this is not external validation.")

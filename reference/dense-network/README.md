@@ -32,9 +32,13 @@ Every file is plain text, and each TSV has a header row. A file holds measures p
 
 ## Rules
 
-- **Learners.** `candidate` is the network, the mean of its 3 repeats. `best5` is the best of the five in hindsight on that split, the plan's comparator on the lineage split; `site_best` is the learner the release names best, chosen on the random split; `mean4` averages the scores of `cart`, `rf`, `gbt` and `lasso`; `baseline` calls by lineage identity alone and has balanced accuracy only; `catalog` is the catalog rule, on the datasets where the release scores it.
-- **Over datasets.** `summary.tsv` gives the median over datasets of the network minus the comparator, with the 2.5% and 97.5% percentiles of that median over 2,000 resamples of species, each taking every dataset of each drawn species, at seed 20261115, drawn as the experiment drew them. Log loss is clipped at 0.0001; a positive log loss difference means the network's is higher.
-- **Readings.** The plan fixed the rule on the lineage split against `best5`. Every other comparator, the random split, recall beside it and log loss are reported beside the rule and do not enter it. `below_best5_lineage_*` in `totals.tsv` and the counts of `site_best` were read by the review after the results, so they are exploratory.
+- **Network and comparator.** `candidate` is the network, the mean of its 3 repeats. `best5` is the best of the five in hindsight on that split, the plan's comparator on the lineage split.
+- **Other comparators.** `site_best` is the learner the release names best, chosen on the random split; `mean4` averages the scores of `cart`, `rf`, `gbt` and `lasso`; `baseline` calls by lineage identity and has balanced accuracy only; `catalog` is the catalog rule, where the release scores it.
+- **Over datasets.** `summary.tsv` gives the median over datasets of the network minus the comparator, with the 2.5% and 97.5% percentiles of that median over 2,000 resamples of species at seed 20261115, drawn as the experiment drew them.
+- **Draw.** Each resample takes every dataset of each drawn species.
+- **Log loss.** It is clipped at 0.0001; a positive log loss difference means the network's is higher.
+- **Readings.** The plan fixed the rule on the lineage split against `best5`. Every other comparator, the random split, recall and log loss are reported beside the rule and do not enter it.
+- **Exploratory.** `below_best5_lineage_*` in `totals.tsv` and the counts of `site_best` were read by the review after the results, so they are exploratory.
 
 ## Commands
 
