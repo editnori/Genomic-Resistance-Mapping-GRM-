@@ -226,7 +226,7 @@ const framed = (section: Element, label: string) => section.querySelector(`[role
 const passing: Manifest = { ...base, evaluation_revision: 7, datasets: base.datasets.map((d) => ({ ...d, evaluation: { revision: 7, valid: true, reasons: [] } })) };
 
 describe("What GRM found", () => {
-  it("reads as a report: a plain title, what the site asks, a plain status line, takeaways, the primer, and twelve numbered sections", async () => {
+  it("reads as a report: a plain title, what the site asks, a plain status line, takeaways, the primer, and thirteen numbered sections", async () => {
     const host = await mount(passing, fakeNav().nav);
     expect(host.querySelector("h1")?.textContent).toBe("What GRM found");
     // The question comes in words before any chart.
@@ -245,8 +245,9 @@ describe("What GRM found", () => {
       "8 Newly deposited genomes",
       "9 Holding out whole studies",
       "10 Another public database",
-      "11 Input settings against the default",
-      "12 Limits",
+      "11 Further stress tests and tool comparisons",
+      "12 Input settings against the default",
+      "13 Limits",
     ]);
     const scope = host.querySelector<HTMLAnchorElement>('header a[href="#limits"]');
     expect(scope?.textContent).toBe("Tested within one public database only");

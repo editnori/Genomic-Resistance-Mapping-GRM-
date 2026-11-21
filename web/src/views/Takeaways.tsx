@@ -1,18 +1,22 @@
 // Executive summary at the top of Overview: one plain bottom-line lead,
-// six scannable takeaway cards that link to their full sections below,
-// the supports / does-not-support boundary, and a four-chapter jump bar.
+// an expandable plain-English start-to-finish walkthrough, six scannable
+// takeaway cards that link to their full sections below, the supports /
+// does-not-support boundary, and a four-chapter jump bar.
 // Every dynamic number is derived from the manifest, optional baselines
 // summary, and bundled reference JSON files at render time.
 
+import { useId, useState } from "react";
+import { ChevronDown } from "lucide-react";
 import type { Manifest } from "../data/schema";
 import { int, pct, plural, points } from "../data/format";
 import { micBaselineSummary, type MicConstant } from "../data/baselines";
-import { catalogSummary, micSummary, splitSummary } from "../data/derive/overview";
+import { catalogSummary, micSummary, speciesCount, splitSummary } from "../data/derive/overview";
 import { barSummary, learnerSummary, ruleBands, wordingSummary } from "../data/derive/evidence";
 import { armById, inputSummary } from "../data/derive/inputs";
 import { populationById, populationSummary } from "../data/derive/outside";
 import { studySplitSummary } from "../data/derive/studySplit";
 import { otherDatabaseSummary } from "../data/derive/otherDatabase";
+import { ADDITIONAL_STUDIES } from "../data/derive/additionalStudies";
 import { FOCUS_RING } from "../ui/primitives";
 import { LINK, showSection } from "./findings";
 import { ScopeFigure } from "./primer";
@@ -31,7 +35,7 @@ export interface TakeawayCard {
 const CHAPTERS = [
   { id: "corpus", label: "Cohort & core scores" },
   { id: "catalog", label: "Rules, panels & MIC" },
-  { id: "outside", label: "Studies & another database" },
+  { id: "outside", label: "Studies, NCBI & tools" },
   { id: "inputs", label: "Inputs & limits" },
 ] as const;
 
@@ -79,6 +83,7 @@ export const takeawayCards = (m: Manifest, constants?: ReadonlyMap<string, MicCo
   const inp = inputSummary();
   const cap1000 = armById("cap-1000").all;
   const budget1000 = armById("budget-1000").all;
+  const extra = ADDITIONAL_STUDIES;
 
   const lineageVmes = rows
     .map((r) => r.learners.find((l) => l.learner === r.best_learner)?.lineage?.vme)
@@ -92,14 +97,14 @@ export const takeawayCards = (m: Manifest, constants?: ReadonlyMap<string, MicCo
   return [
     {
       id: "shift",
-      kicker: "Unseen lineages and studies",
+      kicker: "Unseen lineages, studies & dates",
       stat: s.medianGap === null ? "–" : `${points(s.medianGap)} median loss`,
       body:
         s.nLineage === 0 || s.medianGap === null
           ? `In a retrospective split by study inside BV-BRC (${int(st.datasets)} datasets, ${int(st.species)} species), folds keeping BioProjects whole score worse than random folds for ${int(st.costShown)} of 5 learners.`
-          : `Holding whole lineages out costs the best learner a median ${points(s.medianGap)} on ${int(s.nLineage)} datasets (${int(s.nLargeGap)} lose more than 5 points). Holding whole BioProjects out in BV-BRC (${int(st.datasets)} datasets, ${int(st.species)} species) worsens log loss and specificity for ${int(st.logLossWorse)} of 5 learners, and on ${int(outPrimary.frozen)} newly deposited unseen-study genomes SCM holds on ${int(outPrimary.holds.scm.holds)} of ${int(outPrimary.holds.scm.read)} datasets.`,
+          : `Holding whole lineages out costs the best learner a median ${points(s.medianGap)} on ${int(s.nLineage)} datasets (${int(s.nLargeGap)} lose more than 5 points). Holding whole BioProjects out (${int(st.datasets)} datasets) or training only on earlier public dates (${int(extra.time_split.datasets)} datasets) worsens log loss for ${int(st.logLossWorse)} of 5 learners, and on ${int(outPrimary.frozen)} newly deposited unseen-study genomes SCM holds on ${int(outPrimary.holds.scm.holds)} of ${int(outPrimary.holds.scm.read)}.`,
       target: "study-split",
-      linkLabel: "See lineage and study splits",
+      linkLabel: "See study and date splits",
     },
     {
       id: "screen",
@@ -114,25 +119,25 @@ export const takeawayCards = (m: Manifest, constants?: ReadonlyMap<string, MicCo
     },
     {
       id: "learners",
-      kicker: "Learners and inputs",
+      kicker: "Learners, neural net & inputs",
       stat: scmRow?.medianLineage == null ? "–" : `${pct(scmRow.medianLineage)} SCM alone`,
       body:
         scmRow?.medianLineage == null || cartRow?.medianLineage == null || rfRow?.medianLineage == null
           ? `In the 4-species input comparison (${int(inp.answered)} of ${int(inp.datasets)} datasets answered), no changed input was shown better than the default.`
-          : `With lineages held out, median balanced accuracy is ${pct(scmRow.medianLineage)} for SCM and ${pct(cartRow.medianLineage)} for the decision tree against ${pct(rfRow.medianLineage)} for the random forest (${int(scmRow.n)} datasets each). Across ${int(inp.species)} species (${int(inp.answered)} of ${int(inp.datasets)} datasets answered), no input change was shown better than the default, while 1,000 genomes (${int(cap1000.worse)} of ${int(cap1000.datasets)}) and 1,000 features (${int(budget1000.worse)} of ${int(budget1000.datasets)}) read worse.`,
+          : `With lineages held out, median balanced accuracy is ${pct(scmRow.medianLineage)} for SCM and ${pct(cartRow.medianLineage)} for the decision tree against ${pct(rfRow.medianLineage)} for the random forest (${int(scmRow.n)} datasets). Neither a dense neural network (${int(extra.dense_network.datasets)} datasets: ${extra.dense_network.outcome}) nor any single input change across ${int(inp.species)} species beat the default, while 1,000 genomes (${int(cap1000.worse)} of ${int(cap1000.datasets)}) and 1,000 features (${int(budget1000.worse)} of ${int(budget1000.datasets)}) read worse.`,
       target: "learners",
-      linkLabel: "See learners and inputs",
+      linkLabel: "See learners and comparisons",
     },
     {
       id: "known-gene",
-      kicker: "Known-gene rules",
+      kicker: "Known-gene rules & public callers",
       stat: cat.nCompared === 0 ? "–" : `${int(cat.within.get(0.02) ?? 0)} of ${int(cat.nCompared)} within 2 pts`,
       body:
         cat.nCompared === 0
           ? "No dataset has both a known-gene rule and a lineage-held-out result yet."
-          : `Fitted on nothing, the known-gene rule is ahead of the best learner or within 2 points with lineages held out on ${int(cat.within.get(0.02) ?? 0)} of ${int(cat.nCompared)} datasets${highBand && highBand.compared > 0 ? ` (${int(highBand.ruleHolds)} of ${int(highBand.compared)} where the rule itself scores 85% or more)` : ""}. The learner is ahead by more than 2 points on ${int(cat.regions.behind)} of ${int(cat.nCompared)}.`,
-      target: "catalog",
-      linkLabel: "See known-gene comparison",
+          : `Fitted on nothing, GRM's known-gene rule is ahead or within 2 points of the best learner on ${int(cat.within.get(0.02) ?? 0)} of ${int(cat.nCompared)} datasets${highBand && highBand.compared > 0 ? ` (${int(highBand.ruleHolds)} of ${int(highBand.compared)} where the rule itself scores 85% or more)` : ""}. The full AMRFinderPlus program leads GRM's rule on ${int(extra.amrfinderplus.program_vs_known_gene_rule.ahead)} of ${int(extra.amrfinderplus.datasets)} datasets and roughly ties the 5 learners on lineage splits, while TBProfiler leads SCM on ${int(extra.tbprofiler.graded_vs_learners_lineage.scm.tool_higher)} of ${int(extra.tbprofiler.graded_endpoints)} graded TB drugs.`,
+      target: "comparisons",
+      linkLabel: "See public tool comparisons",
     },
     {
       id: "other-db",
@@ -156,6 +161,72 @@ export const takeawayCards = (m: Manifest, constants?: ReadonlyMap<string, MicCo
       linkLabel: "See MIC results",
     },
   ];
+};
+
+/** Plain-English start-to-finish walkthrough of what GRM built, tested, and learned. */
+const StartToFinishGuide = ({ manifest }: { manifest: Manifest }) => {
+  const [open, setOpen] = useState(false);
+  const panelId = useId();
+  const analyzed = manifest.species.reduce((a, s) => a + s.genomes_analyzed, 0);
+  const s = splitSummary(manifest.datasets);
+  const b = barSummary(manifest.datasets, "best", "lineage");
+  const st = studySplitSummary();
+  const od = otherDatabaseSummary();
+  const extra = ADDITIONAL_STUDIES;
+
+  return (
+    <div className="mt-4">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={open ? panelId : undefined}
+        onClick={() => setOpen((v) => !v)}
+        className={`inline-flex min-h-11 items-center gap-1.5 rounded-sm text-control font-medium text-blue transition-colors duration-fast ease-out hover:text-ink ${FOCUS_RING}`}
+      >
+        {open ? "Hide the plain-English start-to-finish guide" : "Read the plain-English start-to-finish guide"}
+        <ChevronDown size={14} strokeWidth={1.75} aria-hidden="true" className={`transition-transform duration-fast ease-out ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open ? (
+        <div id={panelId} data-start-to-finish="" className="mt-3 grid grid-cols-1 gap-4 rounded-md border border-hair bg-paper-pure p-5 md:grid-cols-2">
+          <div>
+            <h3 className="text-control font-semibold text-ink">1. What we built from scratch</h3>
+            <p className="mt-1.5 text-note text-ink">
+              GRM is a self-contained Rust engine built without external machine-learning libraries. It reads bacterial DNA assemblies, slices each genome into canonical 31-letter
+              DNA words (k-mers), merges k-mers that always appear in the same genomes into one pattern, and trains five classical learners by hand: a set covering machine (SCM),
+              a decision tree (CART), a random forest, gradient boosted trees, and L1 logistic regression (lasso). It also scores a zero-training known-gene catalog rule, simulated
+              PCR panels, and quantitative MIC models.
+            </p>
+          </div>
+          <div>
+            <h3 className="text-control font-semibold text-ink">2. What data and splits we tested</h3>
+            <p className="mt-1.5 text-note text-ink">
+              The main release covers {plural(manifest.datasets.length, "dataset")} across {plural(speciesCount(manifest), "species", "species")} using {int(analyzed)} genomes
+              selected from {int(manifest.funnel.genomes_passing_qc)} QC-passing public BV-BRC genomes (capped at 2,000 per species in this run). Beyond random cross-validation,
+              GRM stress-tested the same models on unseen bacterial lineages ({int(s.nLineage)} datasets), held-out BioProject studies ({int(st.datasets)} datasets), newly
+              deposited BV-BRC genomes, earlier-vs-later public dates ({int(extra.time_split.datasets)} datasets), and {int(od.totalGenomes)} NCBI Pathogen Detection genomes.
+            </p>
+          </div>
+          <div>
+            <h3 className="text-control font-semibold text-ink">3. What held up and what broke</h3>
+            <p className="mt-1.5 text-note text-ink">
+              Simple rule and tree models (SCM and CART) held up best under lineage shifts and matched or beat both Kover 2.0.7 ({int(extra.kover.datasets)} small datasets) and a
+              dense neural network ({int(extra.dense_network.datasets)} datasets). However, every harder split lowered accuracy: {int(b.meets)} of {int(b.n)} lineage-held-out
+              datasets were shown to meet both strict limits of the adapted research error screen, holding out whole studies or earlier dates hurt log loss for all 5 learners, and
+              full public callers (AMRFinderPlus 4.2.7 and TBProfiler 6.6.3) remained competitive or ahead where curated point mutations matter.
+            </p>
+          </div>
+          <div>
+            <h3 className="text-control font-semibold text-ink">4. How to read the rest of this report</h3>
+            <p className="mt-1.5 text-note text-ink">
+              Every number below is retrospective on public data, never clinical validation. Use the chapter links above to jump to core scores, known-gene rules and MIC,
+              generalization tests and external tool comparisons, or input settings and limits. Open the 5-step guide right below if you want visual definitions of k-mers,
+              random vs. lineage splits, VME, and ME, or switch to Datasets and Species in the top bar to inspect any single antibiotic.
+            </p>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
 };
 
 export const Takeaways = ({ manifest, micConstants }: { manifest: Manifest; micConstants?: ReadonlyMap<string, MicConstant> }) => {
@@ -184,6 +255,8 @@ export const Takeaways = ({ manifest, micConstants }: { manifest: Manifest; micC
       </div>
 
       <p className="prose-measure mt-2 text-body text-ink">{bottomLineLead(manifest)}</p>
+
+      <StartToFinishGuide manifest={manifest} />
 
       <ol className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {cards.map((c) => (

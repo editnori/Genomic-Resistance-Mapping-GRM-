@@ -1463,11 +1463,11 @@ async function interactions(page, tag, width) {
   // A tree with no dataset to count draws no tiles.
   check(tag + ' overview bar outcomes add up', expected.stats.barsCounted === 0 ? barTiles.length === 0 : barTiles.length === 4 && barTiles[0].value === expected.stats.barsCounted && barTiles[1].value + barTiles[2].value + barTiles[3].value === barTiles[0].value, { barTiles, counted: expected.stats.barsCounted });
   await wordingCheck(page, tag);
-  // Takeaways and primer are sections of their own above the twelve numbered
+  // Takeaways and primer are sections of their own above the thirteen numbered
   // ones, each under the same hairline.
   const rules = await page.evaluate(() => { const blocks = [...document.querySelectorAll('[data-view-scroll] section[id]')]; return blocks.map(b => ({ id: b.id, rule: getComputedStyle(b).borderTopStyle })); });
   const numbered = rules.filter(r => r.id !== 'takeaways' && r.id !== 'primer');
-  check(tag + ' one hairline between findings', numbered.length === 12 && rules.length === 14 && rules[0].id === 'takeaways' && rules[1].id === 'primer' && rules.every(r => r.rule === 'solid'), rules);
+  check(tag + ' one hairline between findings', numbered.length === 13 && rules.length === 15 && rules[0].id === 'takeaways' && rules[1].id === 'primer' && rules.every(r => r.rule === 'solid'), rules);
   await page.goto(BASE);
   await page.locator('#corpus').waitFor();
   await headerCheck(page, tag + ' overview', 'What GRM found');
@@ -1477,7 +1477,7 @@ async function interactions(page, tag, width) {
   const marks = await page.evaluate(() => { const c = document.querySelector('#lineage svg circle[data-dataset]'); return c ? getComputedStyle(c).fill : null; });
   const blue = await page.evaluate(() => { const d = document.createElement('div'); d.style.color = getComputedStyle(document.documentElement).getPropertyValue('--series-s'); document.body.append(d); const c = getComputedStyle(d).color; d.remove(); return c; });
   check(tag + ' chart marks in the blue series', marks === blue, { marks, blue });
-  for (const id of ['takeaways', 'lineage', 'learners', 'bars', 'catalog', 'panels', 'mic', 'outside', 'study-split', 'other-database', 'inputs']) { await scrollTo(page, '#' + id); await shot(page, tag + '-overview-' + id); }
+  for (const id of ['takeaways', 'lineage', 'learners', 'bars', 'catalog', 'panels', 'mic', 'outside', 'study-split', 'other-database', 'comparisons', 'inputs']) { await scrollTo(page, '#' + id); await shot(page, tag + '-overview-' + id); }
   await outsideCheck(page, tag);
   await inputsCheck(page, tag);
   const extraSections = await page.evaluate(() => ({
@@ -1485,8 +1485,10 @@ async function interactions(page, tag, width) {
     studyLead: document.querySelector('#study-split h2 + p')?.textContent ?? '',
     otherRows: document.querySelectorAll('#other-database tbody tr').length,
     otherLead: document.querySelector('#other-database h2 + p')?.textContent ?? '',
+    compRows: document.querySelectorAll('#comparisons tbody tr').length,
+    compLead: document.querySelector('#comparisons h2 + p')?.textContent ?? '',
   }));
-  check(tag + ' study-split and other-database sections render their tables', extraSections.studyRows === 5 && extraSections.studyLead.includes('70 datasets') && extraSections.otherRows === 3 && extraSections.otherLead.includes('13,377 NCBI Pathogen Detection'), extraSections);
+  check(tag + ' study-split, other-database and comparisons sections render their tables', extraSections.studyRows === 5 && extraSections.studyLead.includes('70 datasets') && extraSections.otherRows === 3 && extraSections.otherLead.includes('13,377 NCBI Pathogen Detection') && extraSections.compRows === 5 && extraSections.compLead.includes('AMRFinderPlus 4.2.7'), extraSections);
 
   const micId = expected.mic[0].id;
   const micReport = JSON.parse(fs.readFileSync(path.join(FIXTURE, 'datasets', micId + '.json')));
@@ -1575,12 +1577,12 @@ async function present(page, tag, width, height) {
   await settle(page);
   await slideSelect.click();
   let slideCount = 0, previousCount = -1, stableCounts = 0;
-  // Title, five primer steps, eleven findings, the rule: eighteen slides, plus
+  // Title, five primer steps, twelve findings, the rule: nineteen slides, plus
   // the extra pages of any figure too dense for the viewport (the outline
   // labels each page "(k of n)"). Which figures continue depends on the
   // viewport and on the report's row counts, so the count is checked
   // against the labels the deck shows.
-  const BASE_SLIDES = 18;
+  const BASE_SLIDES = 19;
   for (let attempt = 0; attempt < 200; attempt++) {
     slideCount = await dialog.getByRole('option').count();
     if (slideCount === previousCount) stableCounts++;
@@ -1740,7 +1742,7 @@ async function present(page, tag, width, height) {
     runs[runs.length - 1].pages.push([Number(p[1]), Number(p[2])]);
   });
   const wellFormed = runs.every(r => r.pages.length === r.pages[0][1] && r.pages.every(([k, n], i) => k === i + 1 && n === r.pages[0][1]));
-  check(tag + ' expected slide count: eighteen slides plus each figure page past the first, labelled in order', slideCount === BASE_SLIDES + pages.filter(p => p[1] !== '1').length && wellFormed, { slideCount, labels });
+  check(tag + ' expected slide count: nineteen slides plus each figure page past the first, labelled in order', slideCount === BASE_SLIDES + pages.filter(p => p[1] !== '1').length && wellFormed, { slideCount, labels });
   // The copies decide those pages, so the check holds them on every page
   // past the title. There is one per figure slide: the fifteen slides after
   // the title, by the ids the live slides carry. Each lays out as wide as

@@ -69,12 +69,25 @@ import {
 import { ONE_STUDY_ALL, OUTSIDE_LEARNERS, OUTSIDE_STUDY, outsidePoints, populationById, populationSummary, type Learner as OutsideLearner, type PopulationSummary } from "../data/derive/outside";
 import { STUDY_LEARNERS, STUDY_SPLIT, studySplitSummary, type StudyContrast } from "../data/derive/studySplit";
 import { OTHER_DATABASE, OTHER_DB_LEARNERS, otherDatabaseSummary } from "../data/derive/otherDatabase";
+import { ADDITIONAL_STUDIES, COMPARISON_LEARNERS } from "../data/derive/additionalStudies";
 import { FOCUS_RING, ScrollFrame, type Fit } from "../ui/primitives";
 import { micBaselineSummary, type MicBaselineSummary, type MicConstant } from "../data/baselines";
 import { AUDIT_READING, AUDIT_SCOPE } from "../ui/EvaluationNotice";
 import { PanelEvidence } from "./PanelEvidence";
 
-export type FindingId = "corpus" | "lineage" | "learners" | "bars" | "catalog" | "panels" | "mic" | "outside" | "study-split" | "other-database" | "inputs";
+export type FindingId =
+  | "corpus"
+  | "lineage"
+  | "learners"
+  | "bars"
+  | "catalog"
+  | "panels"
+  | "mic"
+  | "outside"
+  | "study-split"
+  | "other-database"
+  | "comparisons"
+  | "inputs";
 
 /** What a deck gives a figure that may continue onto further slides: the
  *  measured box, the page to draw and the page count, and, while the deck
@@ -1801,6 +1814,190 @@ export const otherDatabaseFinding = (_m: Manifest, opts: FindingOptions): Findin
   };
 };
 
+// ---- further stress tests and tool comparisons -----------------------------------------
+
+const ComparisonsSummaryTable = ({ page }: { page: boolean }) => {
+  const d = ADDITIONAL_STUDIES;
+  const rows = [
+    {
+      key: "time-split",
+      name: "First-public-day split",
+      cells: page
+        ? [
+            `${int(d.time_split.datasets)} datasets (${int(d.time_split.species)} species)`,
+            `Worse on log loss & BA for ${int(d.time_split.total_log_loss_worse)} of 5 learners; recall worse for ${int(d.time_split.total_recall_worse)} of 5`,
+            "Retrospective split inside BV-BRC",
+          ]
+        : [
+            `${int(d.time_split.datasets)} sets`,
+            `Log loss & BA worse (${int(d.time_split.total_log_loss_worse)}/5)`,
+            "BV-BRC dates only",
+          ],
+    },
+    {
+      key: "kover",
+      name: "Kover 2.0.7 vs GRM SCM",
+      cells: page
+        ? [
+            `${int(d.kover.datasets)} smallest datasets (${int(d.kover.genomes)} genomes)`,
+            `Kover minus SCM: ${signedPoints(d.kover.balanced_accuracy.value)} pts BA (lower on ${int(d.kover.balanced_accuracy.lower)} of ${int(d.kover.datasets)})`,
+            "Small datasets (<=150 genomes)",
+          ]
+        : [
+            `${int(d.kover.datasets)} sets`,
+            `Kover ${signedPoints(d.kover.balanced_accuracy.value)} pts BA`,
+            "Smallest sets only",
+          ],
+    },
+    {
+      key: "dense-network",
+      name: "Dense neural network",
+      cells: page
+        ? [
+            `${int(d.dense_network.datasets)} datasets (${int(d.dense_network.species)} species)`,
+            `${signedPoints(d.dense_network.vs_best5.balanced_accuracy.diff)} pts vs hindsight best (${int(d.dense_network.vs_best5.balanced_accuracy.positive)} of ${int(d.dense_network.datasets)} higher); ${d.dense_network.outcome}`,
+            "One setting on 4,000 screened features",
+          ]
+        : [
+            `${int(d.dense_network.datasets)} sets`,
+            `${signedPoints(d.dense_network.vs_best5.balanced_accuracy.diff)} pts; ${d.dense_network.outcome}`,
+            "1 net, 4k screen",
+          ],
+    },
+    {
+      key: "amrfinderplus",
+      name: "AMRFinderPlus 4.2.7 program",
+      cells: page
+        ? [
+            `${int(d.amrfinderplus.datasets)} datasets (${int(d.amrfinderplus.species)} species)`,
+            `Ahead of GRM rule on ${int(d.amrfinderplus.program_vs_known_gene_rule.ahead)} of ${int(d.amrfinderplus.datasets)} (${int(d.amrfinderplus.program_vs_known_gene_rule.ahead_by_10pts)} by >=10 pts, ${int(d.amrfinderplus.program_vs_known_gene_rule.ahead_by_10pts_quinolone)} quinolones); lineage learners span 0`,
+            "Catalog may include these public isolates",
+          ]
+        : [
+            `${int(d.amrfinderplus.datasets)} sets`,
+            `Ahead of rule ${int(d.amrfinderplus.program_vs_known_gene_rule.ahead)}/${int(d.amrfinderplus.datasets)}; ties learners`,
+            "Catalog overlap possible",
+          ],
+    },
+    {
+      key: "tbprofiler",
+      name: "TBProfiler 6.6.3 (M. tuberculosis)",
+      cells: page
+        ? [
+            `${int(d.tbprofiler.by_name_endpoints)} named (${int(d.tbprofiler.graded_endpoints)} graded) TB reports`,
+            `Higher BA than SCM on ${int(d.tbprofiler.graded_vs_learners_lineage.scm.tool_higher)}/${int(d.tbprofiler.graded_endpoints)}, CART ${int(d.tbprofiler.graded_vs_learners_lineage.cart.tool_higher)}, RF ${int(d.tbprofiler.graded_vs_learners_lineage.rf.tool_higher)}, GBT & lasso ${int(d.tbprofiler.graded_vs_learners_lineage.gbt.tool_higher)}`,
+            `Assemblies not reads (${int(d.tbprofiler.by_name_rows_without_call)} no-calls)`,
+          ]
+        : [
+            `${int(d.tbprofiler.graded_endpoints)} TB drugs`,
+            `Ahead of SCM ${int(d.tbprofiler.graded_vs_learners_lineage.scm.tool_higher)}/${int(d.tbprofiler.graded_endpoints)}, RF ${int(d.tbprofiler.graded_vs_learners_lineage.rf.tool_higher)}/${int(d.tbprofiler.graded_endpoints)}`,
+            "Assemblies, not reads",
+          ],
+    },
+  ];
+  return (
+    <NumberTable
+      label="Further stress tests and external tool comparisons"
+      head={["Study", "Scale", "Headline result", "Scope limit"]}
+      groups={[{ rows }]}
+      slide={!page}
+    />
+  );
+};
+
+const TimeAndDenseTable = () => {
+  const d = ADDITIONAL_STUDIES;
+  return (
+    <>
+      <NumberTable
+        label="First-public-day split and dense neural network by learner"
+        head={["Learner", "Time split recall, pts", "Time split log loss", "Dense net minus learner BA, pts", "Dense net minus learner recall, pts", "Dense net minus learner log loss"]}
+        groups={[
+          {
+            rows: COMPARISON_LEARNERS.map((l) => {
+              const t = d.time_split.by_learner[l];
+              const n = d.dense_network.by_learner[l];
+              return {
+                key: l,
+                name: LEARNER_NAME[l],
+                cells: [
+                  `${signedPoints(t.recall.median)} (${t.recall.reading})`,
+                  `${signedDec(t.log_loss.median, 3)} (${t.log_loss.reading})`,
+                  signedPoints(n.balanced_accuracy.diff),
+                  signedPoints(n.recall.diff),
+                  signedDec(n.log_loss.diff, 3),
+                ],
+              };
+            }),
+          },
+        ]}
+      />
+      <p className="type-note mt-2">
+        Time split shows past-only training minus a size-matched random draw on {int(d.time_split.datasets)} datasets ({int(d.time_split.tested_pairs)} tested pairs). Dense net
+        shows the one-setting neural network minus each learner on lineage splits across {int(d.dense_network.datasets)} datasets ({int(d.dense_network.species)} species).
+      </p>
+    </>
+  );
+};
+
+const ToolsByLearnerTable = () => {
+  const d = ADDITIONAL_STUDIES;
+  return (
+    <>
+      <NumberTable
+        label="AMRFinderPlus 4.2.7 and TBProfiler 6.6.3 against each learner on lineage splits"
+        head={["Learner", "Learner minus AMRFinderPlus BA, pts", "Learner minus AMRFinderPlus sens, pts", "Learner minus AMRFinderPlus spec, pts", "TBProfiler higher BA (of 14)", "Learner minus TBProfiler BA, pts"]}
+        groups={[
+          {
+            rows: COMPARISON_LEARNERS.map((l) => {
+              const a = d.amrfinderplus.by_learner_lineage[l];
+              const t = d.tbprofiler.graded_vs_learners_lineage[l];
+              return {
+                key: l,
+                name: LEARNER_NAME[l],
+                cells: [
+                  signedPoints(a.ba_median),
+                  signedPoints(a.sens_median),
+                  signedPoints(a.spec_median),
+                  `${int(t.tool_higher)} of ${int(d.tbprofiler.graded_endpoints)}`,
+                  signedPoints(t.median_learner_minus_tool),
+                ],
+              };
+            }),
+          },
+        ]}
+      />
+      <p className="type-note mt-2">
+        AMRFinderPlus 4.2.7 covers {int(d.amrfinderplus.datasets)} datasets across {int(d.amrfinderplus.species)} species; every learner&apos;s 95% species interval on balanced
+        accuracy spans zero. TBProfiler 6.6.3 ran on 2,000 M. tuberculosis assemblies ({int(d.tbprofiler.graded_rows_with_call)} of {int(d.tbprofiler.graded_rows)} graded rows
+        called; {int(d.tbprofiler.graded_rows_without_call)} no-calls). Both catalogues are newer than many of these public genomes, which can favour the catalogue tools.
+      </p>
+    </>
+  );
+};
+
+export const comparisonsFinding = (_m: Manifest, opts: FindingOptions): Finding => {
+  const d = ADDITIONAL_STUDIES;
+  return {
+    id: "comparisons",
+    title: "Further stress tests and tool comparisons",
+    result: opts.page
+      ? `Five additional revision ${int(d.evaluation_revision)} records test temporal generalization and compare GRM against outside tools and a neural network. Training only on earlier public dates scores worse than a random draw on log loss and balanced accuracy for ${int(d.time_split.total_log_loss_worse)} of 5 learners (${int(d.time_split.datasets)} datasets). On lineage splits, GRM's set covering machine leads Kover 2.0.7 by ${points(Math.abs(d.kover.balanced_accuracy.value))} on ${int(d.kover.datasets)} small datasets, a dense neural network establishes no gain over the classical learners (${int(d.dense_network.datasets)} datasets), the full AMRFinderPlus 4.2.7 program beats GRM's simplified known-gene rule on ${int(d.amrfinderplus.program_vs_known_gene_rule.ahead)} of ${int(d.amrfinderplus.datasets)} datasets while roughly tying the 5 learners, and TBProfiler 6.6.3 scores higher than SCM on ${int(d.tbprofiler.graded_vs_learners_lineage.scm.tool_higher)} of ${int(d.tbprofiler.graded_endpoints)} graded M. tuberculosis drugs on assemblies.`
+      : `Five revision ${int(d.evaluation_revision)} comparisons: earlier-date training hurts all 5 learners, SCM beats Kover on ${int(d.kover.datasets)} small sets, a dense net shows no gain, AMRFinderPlus ties lineage learners on ${int(d.amrfinderplus.datasets)} sets, and TBProfiler leads SCM on ${int(d.tbprofiler.graded_vs_learners_lineage.scm.tool_higher)} of ${int(d.tbprofiler.graded_endpoints)} TB drugs.`,
+    figure: <ComparisonsSummaryTable page={opts.page} />,
+    caption: opts.page
+      ? "Every row summarizes one committed revision 14 record. All five are retrospective comparisons on public genomes, not prospective or external validation. Catalogue tools (AMRFinderPlus and TBProfiler) use databases curated from public isolates and may overlap these cohorts; TBProfiler was run on assemblies rather than sequencing reads."
+      : "Five committed revision 14 records on public genomes (retrospective, not external validation). Catalogue tools may overlap these public isolates; TBProfiler ran on assemblies.",
+    span: "unit",
+    more: opts.page
+      ? [
+          { label: "Time split and dense network by learner", body: <TimeAndDenseTable /> },
+          { label: "AMRFinderPlus and TBProfiler by learner", body: <ToolsByLearnerTable /> },
+        ]
+      : undefined,
+  };
+};
+
 export const FINDINGS = [
   corpusFinding,
   lineageFinding,
@@ -1812,5 +2009,6 @@ export const FINDINGS = [
   outsideFinding,
   studySplitFinding,
   otherDatabaseFinding,
+  comparisonsFinding,
   inputsFinding,
 ] as const;
