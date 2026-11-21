@@ -6,15 +6,13 @@ The program read the genomes of the 253 datasets of release `rev14-274-20261112`
 
 ## Reading
 
-GRM scored three callers on the same genomes and recorded labels of 235 public BV-BRC datasets with a lineage split: the AMRFinderPlus program (4.2.7, database 2026-08-07.1) read under each report's published rule, GRM's own known-gene rule, and GRM's five learners, all scored by cross-validation inside that one public database, with no test on data from outside it.
+GRM scored three callers on the same genomes and recorded labels of 235 public BV-BRC datasets with a lineage split: the AMRFinderPlus program (4.2.7, database 2026-08-07.1) read under each report's published rule, GRM's own known-gene rule, and GRM's five learners scored by cross-validation, all inside that one public database, with no test on data from outside it.
 
-In balanced accuracy, the AMRFinderPlus program read under the report's rule was ahead of GRM's known-gene rule in 94 of 235 datasets, level in 102 and behind in 39, with a median difference of +0.0000 and a mean of +0.0642 that sits above the median because the program is ahead by 0.10 or more in 48 datasets, 20 of them quinolone datasets (exploratory).
+In balanced accuracy, the AMRFinderPlus program read under the report's rule was ahead of GRM's known-gene rule in 94 of 235 datasets, level in 102 and behind in 39, with a median difference of +0.0000 and a mean of +0.0642, which sits above the median because the program was ahead by 0.10 or more in 48 of the 235, 20 of them quinolone datasets (exploratory).
 
 On the lineage split of the same 235 datasets, each GRM learner minus the program had a median balanced accuracy of +0.0048 for scm, +0.0000 for cart, -0.0068 for rf, -0.0026 for gbt and -0.0031 for lasso (each 95% species interval spans zero), with median sensitivity -0.0508, -0.0790, -0.0806, -0.0715 and -0.0631 and median specificity +0.0251, +0.0273, +0.0234, +0.0322 and +0.0266 in the same order (sensitivity and specificity exploratory).
 
-Neither the AMRFinderPlus program nor GRM's known-gene rule reads a label, but the catalog both read is newer than most of these genomes and may have been curated from the same public isolates, which favours both against the learners.
-
-A catalog row that meets a rule is a marker and an association.
+Neither the AMRFinderPlus program nor GRM's known-gene rule reads a label, but the catalog both read is newer than most of these genomes and may have been curated from the same public isolates, which favours both against the learners, and a catalog row that meets a rule is a marker and an association.
 
 ## Plan and order
 
@@ -35,12 +33,13 @@ Three addenda (sha256 `d6eda978`, `c8b8500e` and `a6239776`) change where and in
 ## Method
 
 - **Datasets.** A dataset is one species and one antibiotic of the release with a published rule. Its genomes and labels are those the release reports for it.
-- **The AMRFinderPlus program.** Version `4.2.7` with database `2026-08-07.1`, given the organism option where the species has one. A genome is called resistant when every group of the report's rule is met by at least one counted row. `tool_default`, the primary reading, counts rows of core scope; `tool_default_intact` counts no row whose method the program marks as partial or as an internal stop; `genes_core` counts gene rows of core scope only; and `genes_all_scopes` counts gene rows of core or plus scope. The record keeps all four readings per dataset, and this page reads `tool_default` alone.
+- **The AMRFinderPlus program.** Version `4.2.7` with database `2026-08-07.1`, given the organism option where the species has one. A genome is called resistant when every group of the report's rule is met by at least one counted row. `tool_default`, the primary reading, counts rows of core scope; `tool_default_intact` counts no row whose method the program marks as partial or as an internal stop; `genes_core` counts gene rows of core scope only; and `genes_all_scopes` counts gene rows of core or plus scope. The record keeps each reading's counts per dataset in `callers.tsv` and the paired differences of `tool_default` alone in `differences.tsv`, and this page reads `tool_default` alone.
 - **GRM's known-gene rule.** The call the release itself makes for each genome from the catalog. It is not the program's call, and the page never gives it the program's name.
-- **GRM's learners.** scm, cart, rf, gbt and lasso, from the scores the release's reports hold, calling resistant at a score of 0.5 or more, on the random split and on the lineage split. The learner the release serves is picked on the random split.
+- **GRM's learners.** scm, cart, rf, gbt and lasso, from the scores the release's reports hold, calling resistant at a score of 0.5 or more, on the random split, where training and test share lineages, and on the lineage split. The learner the release serves is picked on the random split.
 - **Measures.** Sensitivity, specificity and balanced accuracy, their mean, from each caller's counts on each dataset. A difference is the first caller minus the second on one dataset, exact, so level means a difference of exactly 0.
 - **Over datasets.** The counts ahead, level and behind, the median and quartiles, the mean and the exact two-sided sign test. The species interval draws the set's species with replacement, as many as it has, takes every dataset of each drawn species, and repeats 4,000 times; its ends are the 101st and the 3,900th sorted value. A set with fewer than 6 species gets none.
 - **Generator and draw.** The plan fixed the seed string and named neither the generator nor the draw. The record's script uses Python's `random.Random` seeded with that string, `randrange` over the species sorted by name and `statistics.median`, and gives the final scoring's ends at 6 decimals.
+- **Rounding.** The page prints each measure at 4 decimals, rounded from the record's cells at 6 decimals.
 
 ## The program against the known-gene rule
 
@@ -61,7 +60,7 @@ Of the 102 datasets level in balanced accuracy, 100 have the same call on every 
 
 Each row gives one learner minus the program on the lineage split of primary-new-235, in balanced accuracy with the counts ahead, level and behind, and in sensitivity beside specificity. The served learner is the learner the release serves, picked on the random split, and the highest of the five is an oracle no one can pick in advance.
 
-| Learner | Role | Ahead, level, behind | Median balanced accuracy (95% species interval) | Median sensitivity (95% species interval) | Median specificity (95% species interval) |
+| Learner | Role (balanced accuracy) | Ahead, level, behind | Median balanced accuracy (95% species interval) | Median sensitivity (95% species interval) | Median specificity (95% species interval) |
 |---|---|---|---|---|---|
 | scm | primary | 126, 5, 104 | +0.0048 (-0.0063 to +0.0466) | -0.0508 (-0.1056 to -0.0240) | +0.0251 (+0.0000 to +0.1208) |
 | cart | primary | 112, 6, 117 | +0.0000 (-0.0174 to +0.0254) | -0.0790 (-0.1188 to -0.0335) | +0.0273 (+0.0000 to +0.1031) |
@@ -108,13 +107,13 @@ These sets are drug classes of the datasets. The table gives each set's counts, 
 | carbapenem-20 | served learner minus program, lineage split | secondary | 20 | 9 | 11 | 0 | 9 | +0.0363 (-0.1265 to +0.2200) | +0.0453 (-0.0800 to +0.1870) |
 | carbapenem-20 | served learner minus program, random split: training and test share lineages, and the served learner is picked on this split | secondary | 20 | 9 | 14 | 0 | 6 | +0.0693 (-0.0140 to +0.4289) | +0.1434 (+0.0304 to +0.2882) |
 
-Rule M, a proposed screen from a review note that no one adopted, counts the quinolone datasets where the served learner is at most 0.02 ahead of the program or behind it. That was 16 of 28 where 14 were needed. Two of the 16 count only because the served learner (balanced accuracy 0.4453 and 0.3502) scored below a program at 0.5000, and the two were within 0.02 of each other in 11 of 28. It is an adapted research screen, never an applicable FDA validation criterion.
+Rule M, a proposed screen from a review note that no one adopted, counts the quinolone datasets where the served learner is at most 0.02 ahead of the program or behind it. That was 16 of 28 where 14 were needed. Two of the 16 count by the served learner scoring below a program at 0.5000 (balanced accuracy 0.4453 and 0.3502; exploratory), and the two were within 0.02 of each other in 11 of 28. It is an adapted research screen, never an applicable FDA validation criterion.
 
 ## Datasets kept apart
 
 Twelve datasets in two species for which the program has no organism option are reported apart: there the program reads gene rows only.
 
-The 4 datasets with an organism option and no lineage split are read on the random split only.
+The 4 datasets with an organism option and no lineage split are read on the random split only, where training and test share lineages.
 
 Both sets have 2 species, too few for a species interval.
 
@@ -135,13 +134,14 @@ An independent review recomputed the figures from the final scoring's tables and
 - The sentence on the catalog travels with the figures that set a learner beside the program: in the first paragraph, the section Reading and the record's README.
 - Each row and figure is labelled primary, secondary or exploratory as the plan fixed it, and the 26 quinolone datasets of primary-new-235 are named by drug class alone.
 - Every random-split figure carries the label that training and test share lineages and that the served learner is picked on that split.
-- The two disagreement tables of the final scoring stay out of the record, as some of their rows would give the program's call on one genome.
+- The two disagreement tables of the final scoring stay out of the record: their counts by the catalog's subtype and class labels, set beside a species and a drug, can read as naming how resistance forms, and some of their rows give the program's call on one genome.
 - Rule M appears only in the review's words, as a proposed screen no one adopted and never an applicable FDA validation criterion.
 
 ## What the record cannot show
 
 - The plan's sensitivity run on the newest catalog database (2026-10-29.1) was not run, so these figures hold for database 2026-08-07.1 only.
-- The program's tables per genome are gone, so its figures can be checked only at the counts per dataset and per fold. The record holds the counts per dataset.
+- The program's tables per genome are gone, so its figures can be checked only at the counts per dataset and per fold, and its paired lineage intervals not at all. The record holds the counts per dataset.
+- Joined with the release's reports, which give each genome's label and known-gene rule call, the counts per dataset give the program's call on some genomes, for example on every genome of a dataset where the two callers agree on every genome.
 - The species interval depends on a generator and a draw the plan did not name. The record holds its ends, and not the seed string the plan fixed.
 - Every caller is scored against the same recorded labels of one database, BV-BRC, with one curation.
 - The page gives no figure for a single dataset, and it names no gene and no catalog row.

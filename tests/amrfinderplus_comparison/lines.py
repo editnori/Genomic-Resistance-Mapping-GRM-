@@ -14,7 +14,9 @@ RANDOM_LABEL = "random split: training and test share lineages, and the served l
 CATALOG = ("Neither the AMRFinderPlus program nor GRM's known-gene rule reads a label, but the catalog both read is "
            "newer than most of these genomes and may have been curated from the same public isolates, which favours "
            "both against the learners.")
-MARKER = "A catalog row that meets a rule is a marker and an association."
+MARKER = "a catalog row that meets a rule is a marker and an association."
+# The fourth Reading sentence: the catalog sentence, then the marker clause.
+FOURTH = CATALOG[:-1] + ", and " + MARKER
 ORDER_LABELS = {
     "plan hashed": "The plan hashed",
     "first addendum hashed": "The first addendum hashed",
@@ -77,7 +79,7 @@ def spans_zero(r):
 # ----------------------------------------------------------------- built paragraphs
 
 def reading(rec):
-    """The five sentences of the section Reading, one paragraph each."""
+    """The four sentences of the section Reading, one paragraph each."""
     st, f = rec.settings, rec.figures
     pr = rec.summary[(NEW, PR, "ba")]
     if not float(pr["mean"]) > float(pr["median"]):
@@ -87,14 +89,14 @@ def reading(rec):
     first = (f"GRM scored three callers on the same genomes and recorded labels of {pr['datasets']} public BV-BRC "
              f"datasets with a lineage split: the AMRFinderPlus program ({st['program_version']}, database "
              f"{st['database_version']}) read under each report's published rule, GRM's own known-gene rule, and GRM's "
-             f"five learners, all scored by cross-validation inside that one public database, with no test on data from "
-             f"outside it.")
+             f"five learners scored by cross-validation, all inside that one public database, with no test on data "
+             f"from outside it.")
     second = (f"In balanced accuracy, the AMRFinderPlus program read under the report's rule was ahead of GRM's "
               f"known-gene rule in {pr['ahead']} of {pr['datasets']} datasets, level in {pr['level']} and behind in "
-              f"{pr['behind']}, with a median difference of {sg(pr['median'])} and a mean of {sg(pr['mean'])} that sits "
-              f"above the median because the program is ahead by {st['large']} or more in "
-              f"{f['program_ahead_by_0.10_or_more']} datasets, {f['of_them_quinolone']} of them quinolone datasets "
-              f"(exploratory).")
+              f"{pr['behind']}, with a median difference of {sg(pr['median'])} and a mean of {sg(pr['mean'])}, which "
+              f"sits above the median because the program was ahead by {st['large']} or more in "
+              f"{f['program_ahead_by_0.10_or_more']} of the {pr['datasets']}, {f['of_them_quinolone']} of them "
+              f"quinolone datasets (exploratory).")
     rows = {m: [rec.summary[(NEW, lin(l), m)] for l in LEARNERS] for m in ("ba", "sens", "spec")}
     if not all(spans_zero(r) for r in rows["ba"]):
         raise ValueError("a learner's species interval no longer spans zero")
@@ -106,7 +108,7 @@ def reading(rec):
              f"zero), with median sensitivity {joined(sg(r['median']) for r in rows['sens'])} and median specificity "
              f"{joined(sg(r['median']) for r in rows['spec'])} in the same order (sensitivity and specificity "
              f"exploratory).")
-    return [first, second, third, CATALOG, MARKER]
+    return [first, second, third, FOURTH]
 
 
 def program_paragraph(rec):
@@ -164,9 +166,10 @@ def rule_m_paragraph(rec):
     return [f"Rule M, a proposed screen from a review note that no one adopted, counts the quinolone datasets where the "
             f"served learner is at most {w} ahead of the program or behind it. That was "
             f"{r['learner_at_most_0.02_ahead']} of {r['datasets']} where {st['rule_m_needs']} were needed. Two of the "
-            f"{r['learner_at_most_0.02_ahead']} count only because the served learner (balanced accuracy "
-            f"{float(edge[0]):.4f} and {float(edge[1]):.4f}) scored below a program at {float(st['score_cutoff']):.4f}, "
-            f"and the two were within {w} of each other in {r['within_0.02_either_way']} of {r['datasets']}. It is an "
+            f"{r['learner_at_most_0.02_ahead']} count by the served learner scoring below a program at "
+            f"{float(st['score_cutoff']):.4f} (balanced accuracy {float(edge[0]):.4f} and {float(edge[1]):.4f}; "
+            f"exploratory), and the two were within {w} of each other in {r['within_0.02_either_way']} of "
+            f"{r['datasets']}. It is an "
             f"adapted research screen, never an applicable FDA validation criterion."]
 
 
@@ -177,7 +180,7 @@ def apart_paragraphs(rec):
     return ["Twelve datasets in two species for which the program has no organism option are reported apart: there "
             "the program reads gene rows only.",
             f"The {s4['datasets']} datasets with an organism option and no lineage split are read on the random split "
-            f"only."]
+            f"only, where training and test share lineages."]
 
 
 def built(rec):
@@ -209,7 +212,7 @@ def program_table(rec):
 
 
 def learner_table(rec):
-    out = ["| Learner | Role | Ahead, level, behind | Median balanced accuracy (95% species interval) "
+    out = ["| Learner | Role (balanced accuracy) | Ahead, level, behind | Median balanced accuracy (95% species interval) "
            "| Median sensitivity (95% species interval) | Median specificity (95% species interval) |",
            "|---|---|---|---|---|---|"]
     for p in PICKS:

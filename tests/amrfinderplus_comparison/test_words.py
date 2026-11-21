@@ -14,7 +14,22 @@ BANNED = (r"\b(validated|generali[sz]\w*|robust\w*|reliab\w*|real-world|real wor
 NAMES = (r"(?i)\b(amrf[u]ll|reca[m]r|reva[m]r|b[o]x(es)?|c[o]ntroller|thr[e]ads?|w[o]rkers?|[o]wner\d?|l[a]nes?|"
          r"sub-?[a]gents?|boa[t]|bx_\w+|scr[a]tch)\b")
 VENDOR = r"(?i)\b(cl[a]ude|anthr[o]pic|co-author[e]d-by|generated[ ]with|open[a]i|chatg[p]t|ass[i]stant|l[l]m|m[o]del name)\b"
-GENOME_ID = r"(?<![\d.])\d{2,7}\.\d{3,6}(?![\d.])"
+GENOME_ID = r"(?<![\d.\-])\d{2,7}\.\d{1,6}(?![\d.])"
+# The usual shape of a gene symbol (three lower-case letters and a capital) and of a point change (letter, place,
+# letter).
+GENE_SHAPE = r"(?<![A-Za-z0-9])[a-z]{3}[A-Z][A-Za-z0-9]*|\b[A-Z]\d{1,4}[A-Z*](?![\w])"
+# The program's name within five words of "rule" or "reader" names the known-gene rule as the program, except in
+# these spellings of the three callers.
+NEAR_RULE = r"AMRFinderPlus\W+(?:\S+\W+){0,4}?(rule|reader)s?\b"
+CALLER_LISTS = (r"AMRFinderPlus program read under (each|the) report's (published )?rule",
+                r"AMRFinderPlus program nor GRM's known-gene rule",
+                r"AMRFinderPlus program, GRM's known-gene rule and GRM's five learners",
+                r"AMRFinderPlus program is read under each report's rule")
+LIMIT = ("This is a retrospective comparison inside one public database, BV-BRC. It is not a prospective test and not "
+         "external validation.")
+LEARNER = r"\b(scm|cart|rf|gbt|lasso)\b"
+RANK = (r"\b(best|worst|outperform\w*|superior|inferior|beats?|stronger|weaker|wins?|rank\w*|top|leads?|better|worse|"
+        r"highest|lowest)\b")
 ACCESSION = r"\b(GC[AF]_\d{9}(\.\d+)?|SAM[ND]\w?\d{6,}|SAMEA\d{6,}|[SE]RR\d{6,}|PRJ[NED][AB]\d+)\b"
 SEQUENCE = r"(?i)[acgt]{20,}"
 # The program's name stands only before "program" or in the page's and the record's titles.
@@ -60,8 +75,10 @@ class Words(unittest.TestCase):
         cls.all = dict(cls.texts, **record_files(), **code_files())
 
     def test_banned_words(self):
-        for name, text in self.texts.items():
-            self.assertIsNone(re.search(BANNED, text, re.I), name)
+        # Every file of the record too, with "_" read as a break between words.
+        for name, text in dict(self.texts, **record_files()).items():
+            self.assertIsNone(re.search(BANNED, text.replace("_", " "), re.I), name)
+        self.assertIsNotNone(re.search(BANNED, "rule_m_passes".replace("_", " "), re.I))
         self.assertIsNotNone(re.search(BANNED, "A marker confers it.", re.I))
         self.assertIsNotNone(re.search(BANNED, "The rule passes.", re.I))
         self.assertIsNotNone(re.search(BANNED, "It matches or exceeds the rule.", re.I))
@@ -85,6 +102,38 @@ class Words(unittest.TestCase):
         self.assertIsNotNone(re.search(RULE_AS_PROGRAM, "GRM's known-gene rule (AMRFinderPlus) read"))
         self.assertIsNotNone(re.search(RULE_AS_PROGRAM, "the AMRFinderPlus rule"))
         self.assertIsNotNone(re.search(PROGRAM_NAME, "the AMRFinderPlus known-gene rule"))
+
+    def test_program_name_never_near_rule_or_reader(self):
+        for name, text in self.texts.items():
+            body = prose(text)
+            for allowed in CALLER_LISTS:
+                body = re.sub(allowed, "CALLERS", body)
+            self.assertIsNone(re.search(NEAR_RULE, body), (name, re.search(NEAR_RULE, body)))
+        self.assertIsNotNone(re.search(NEAR_RULE, "| Ahead of the AMRFinderPlus program's catalog reader |"))
+        self.assertIsNotNone(re.search(NEAR_RULE, "the AMRFinderPlus catalog rule"))
+
+    def test_prospective_and_external_only_in_the_limit_sentence(self):
+        for name, text in self.texts.items():
+            found = [s for s in sentences(text) if re.search(r"(?i)prospective|external", s)]
+            self.assertEqual(found, [LIMIT], name)
+
+    def test_no_learner_ranked_above_another(self):
+        named = 0
+        for s in sentences(self.page):
+            if re.search(LEARNER, s):
+                named += 1
+                self.assertIsNone(re.search(RANK, s, re.I), s)
+                self.assertIsNone(re.search(LEARNER + r"[^.;]*\b(ahead of|above|higher than|lower than|below|behind)"
+                                            r"\b[^.;]*" + LEARNER, s), s)
+        self.assertGreaterEqual(named, 3)
+
+    def test_names_no_gene_or_point_change(self):
+        for name, text in dict(self.texts, **record_files()).items():
+            self.assertIsNone(re.search(GENE_SHAPE, prose(text) if name in self.texts else text), name)
+        # Made-up tokens of those shapes; neither is a real name.
+        self.assertIsNotNone(re.search(GENE_SHAPE, "with the qzxW rows"))
+        self.assertIsNotNone(re.search(GENE_SHAPE, "a J12Z change"))
+        self.assertIsNone(re.search(GENE_SHAPE, "AMRFinderPlus, BV-BRC, scm and random.Random"))
 
     def test_external_validation_only_denied(self):
         found = 0
@@ -118,6 +167,9 @@ class Words(unittest.TestCase):
             self.assertIsNone(re.search(GENOME_ID, text), name)
         self.assertIsNotNone(re.search(GENOME_ID, "a genome 1280.12345 here"))
         self.assertIsNone(re.search(GENOME_ID, "-0.104287 and 0.0001"))
+        self.assertIsNotNone(re.search(GENOME_ID, "a genome 1280.12 here"))
+        self.assertIsNone(re.search(GENOME_ID, "database 2026-08-07.1"))
+        self.assertIn('GENOME_ID = re.compile(r"%s")' % GENOME_ID, SCRIPT.read_text(encoding="utf-8"))
         # Built at run time, so that this file holds no run of the four letters, in either case.
         self.assertIsNotNone(re.search(SEQUENCE, "kind " + "ac" + "gt" * 10))
         self.assertIsNotNone(re.search(SEQUENCE, "kind " + "AC" + "GT" * 10))
@@ -133,12 +185,17 @@ class Words(unittest.TestCase):
         self.assertIsNone(re.search(RULE_CONTENT, "the program marks a row as partial"))
 
     def test_marker_and_association_wording_and_no_cause(self):
-        self.assertIn("A catalog row that meets a rule is a marker and an association.", self.page)
+        self.assertIn(", and a catalog row that meets a rule is a marker and an association.", self.page)
         for s in sentences(self.page):
             self.assertIsNone(re.search(CAUSE, s), s)
-            # The one "because" a quinolone sentence holds is the mean's reason, a count, as the review asks.
-            if "quinolone" in s:
-                self.assertNotRegex(s, r"(?i)\bbecause\b(?! the program is ahead by 0\.10 or more in)", s)
+        # "because" stands once, in the Reading's second sentence, and gives a count as the mean's reason.
+        for name, text in self.texts.items():
+            found = [s for s in sentences(text) if re.search(r"(?i)\bbecause\b", s)]
+            self.assertEqual(len(found), name == "page", name)
+            for s in found:
+                self.assertTrue(s.startswith("In balanced accuracy, the AMRFinderPlus program read under"), s)
+                self.assertEqual(len(re.findall(r"(?i)\bbecause\b", s)), 1, s)
+                self.assertIn("because the program was ahead by 0.10 or more in ", s)
 
 
 if __name__ == "__main__":

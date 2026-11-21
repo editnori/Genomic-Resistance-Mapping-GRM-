@@ -86,8 +86,9 @@ class Page(unittest.TestCase):
         self.assertEqual(self.text.count(LIMIT), 1)
 
     def test_reading_carries_the_catalog_sentence(self):
-        self.assertIn(lines.CATALOG, section(self.text, "Reading"))
-        self.assertIn(lines.MARKER, section(self.text, "Reading"))
+        last = section(self.text, "Reading").strip().split("\n\n")[-1]
+        self.assertTrue(last.startswith(lines.CATALOG[:-1] + ", and "), last[:60])
+        self.assertTrue(last.endswith(", and a catalog row that meets a rule is a marker and an association."), last)
 
     def test_sections_in_order(self):
         body = outside_code(self.text)
@@ -99,10 +100,10 @@ class Page(unittest.TestCase):
         body = section(self.text, "Reading").strip()
         self.assertEqual(body.split("\n\n"), lines.reading(self.rec))
 
-    def test_reading_has_five_sentences(self):
+    def test_reading_has_at_most_four_sentences(self):
         body = section(self.text, "Reading").strip()
-        found = [x for p in body.split("\n\n") for x in re.split(r"(?<=[a-z)][.])\s+(?=[A-Z])", p)]
-        self.assertEqual(len(found), 5)
+        found = [x for p in body.split("\n\n") for x in re.split(r"(?<=[a-z0-9)][.])\s+(?=[A-Z0-9])", p)]
+        self.assertLessEqual(len(found), 4)
         for x in found:
             self.assertTrue(x.endswith("."), x)
 
@@ -117,6 +118,10 @@ class Page(unittest.TestCase):
         self.assertEqual(m.groups()[4:], ("%+.4f" % float(r["median"]), "%+.4f" % float(r["mean"])))
         self.assertLess(body.index(" ahead of GRM's"), body.index("median difference"))
         self.assertLess(body.index("median difference"), body.index("a mean of"))
+        big = re.search(r"ahead by 0\.10 or more in (\d+) of the (\d+), (\d+) of them quinolone datasets", body)
+        self.assertIsNotNone(big)
+        self.assertEqual(big.groups(), (self.rec.figures["program_ahead_by_0.10_or_more"], r["datasets"],
+                                        self.rec.figures["of_them_quinolone"]))
         third = [p for p in body.split("\n\n") if p.startswith("On the lineage split")][0]
         named = re.findall(r"([+-]\d\.\d{4}) for (scm|cart|rf|gbt|lasso)", third)
         self.assertEqual([l for _, l in named], list(lines.LEARNERS))
@@ -176,9 +181,19 @@ class Page(unittest.TestCase):
             self.assertIn("at most 0.02 ahead of the program, or behind it", s)
             self.assertIn("as rule M defines it", s)
         self.assertIn(f"the two were within 0.02 of each other in {two} of {n} datasets", self.text)
-        for s in sentences(self.text):
-            if re.search(r"within 0\.02", s) and "either way" not in s and "of each other" not in s:
+        rows = [line for t in page_tables(self.text) for line in t]
+        for s in sentences(self.text) + rows:
+            if re.search(r"(?i)within 0\.02", s) and "either way" not in s and "of each other" not in s:
                 self.assertRegex(s, r"at most 0\.02 ahead|as rule M defines it", s)
+
+    def test_every_random_split_sentence_carries_its_label(self):
+        # The served learner's name, "picked on the random split", gives no random-split figure.
+        named = 0
+        for s in sentences(self.text):
+            if "random split" in s.replace("picked on the random split", ""):
+                named += 1
+                self.assertIn("training and test share lineages", s)
+        self.assertGreaterEqual(named, 3)
 
     def test_served_learner_and_random_split_named_as_the_review_names_them(self):
         self.assertIn("the learner the release serves, picked on the random split", self.text)
@@ -198,7 +213,9 @@ class Page(unittest.TestCase):
         self.assertIn(f"The plan's sensitivity run on the newest catalog database ({st['newest_database_not_run']}) "
                       f"was not run, so these figures hold for database {st['database_version']} only.", body)
         self.assertIn("The program's tables per genome are gone, so its figures can be checked only at the counts per "
-                      "dataset and per fold.", body)
+                      "dataset and per fold, and its paired lineage intervals not at all.", body)
+        self.assertIn("Joined with the release's reports, which give each genome's label and known-gene rule call, the "
+                      "counts per dataset give the program's call on some genomes", body)
         self.assertIn("The species interval depends on a generator and a draw the plan did not name.", body)
         method = section(self.text, "Method")
         self.assertIn("named neither the generator nor the draw", method)

@@ -32,12 +32,14 @@ HELD = [
      "where the species has one. A genome is called resistant when every group of the report's rule is met by at "
      'least one counted row. `tool_default`, the primary reading, counts rows of core scope; `tool_default_intact` '
      'counts no row whose method the program marks as partial or as an internal stop; `genes_core` counts gene '
-     'rows of core scope only; and `genes_all_scopes` counts gene rows of core or plus scope. The record keeps all '
-     'four readings per dataset, and this page reads `tool_default` alone.'),
+     'rows of core scope only; and `genes_all_scopes` counts gene rows of core or plus scope. The record keeps each '
+     "reading's counts per dataset in `callers.tsv` and the paired differences of `tool_default` alone in "
+     '`differences.tsv`, and this page reads `tool_default` alone.'),
     ("- **GRM's known-gene rule.** The call the release itself makes for each genome from the catalog. It is not "
      "the program's call, and the page never gives it the program's name."),
     ("- **GRM's learners.** scm, cart, rf, gbt and lasso, from the scores the release's reports hold, calling "
-     'resistant at a score of 0.5 or more, on the random split and on the lineage split. The learner the release '
+     'resistant at a score of 0.5 or more, on the random split, where training and test share lineages, and on the '
+     'lineage split. The learner the release '
      'serves is picked on the random split.'),
     ("- **Measures.** Sensitivity, specificity and balanced accuracy, their mean, from each caller's counts on "
      'each dataset. A difference is the first caller minus the second on one dataset, exact, so level means a '
@@ -49,6 +51,7 @@ HELD = [
     ('- **Generator and draw.** The plan fixed the seed string and named neither the generator nor the draw. The '
      "record's script uses Python's `random.Random` seeded with that string, `randrange` over the species sorted "
      "by name and `statistics.median`, and gives the final scoring's ends at 6 decimals."),
+    "- **Rounding.** The page prints each measure at 4 decimals, rounded from the record's cells at 6 decimals.",
     ("Each row gives the program read under the report's rule minus GRM's known-gene rule over a set's datasets. "
      "primary-new-235 is the plan's headline, and primary-237 adds the 2 datasets read before the plan."),
     ('Each row gives one learner minus the program on the lineage split of primary-new-235, in balanced accuracy '
@@ -72,14 +75,18 @@ HELD = [
      'quinolone datasets of primary-new-235 are named by drug class alone.'),
     ('- Every random-split figure carries the label that training and test share lineages and that the served '
      'learner is picked on that split.'),
-    ('- The two disagreement tables of the final scoring stay out of the record, as some of their rows would give '
-     "the program's call on one genome."),
+    ("- The two disagreement tables of the final scoring stay out of the record: their counts by the catalog's "
+     'subtype and class labels, set beside a species and a drug, can read as naming how resistance forms, and some '
+     "of their rows give the program's call on one genome."),
     ("- Rule M appears only in the review's words, as a proposed screen no one adopted and never an applicable FDA "
      'validation criterion.'),
     ("- The plan's sensitivity run on the newest catalog database (2026-10-29.1) was not run, so these figures "
      'hold for database 2026-08-07.1 only.'),
     ("- The program's tables per genome are gone, so its figures can be checked only at the counts per dataset and "
-     'per fold. The record holds the counts per dataset.'),
+     'per fold, and its paired lineage intervals not at all. The record holds the counts per dataset.'),
+    ("- Joined with the release's reports, which give each genome's label and known-gene rule call, the counts per "
+     "dataset give the program's call on some genomes, for example on every genome of a dataset where the two "
+     'callers agree on every genome.'),
     ('- The species interval depends on a generator and a draw the plan did not name. The record holds its ends, '
      'and not the seed string the plan fixed.'),
     '- Every caller is scored against the same recorded labels of one database, BV-BRC, with one curation.',
