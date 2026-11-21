@@ -105,7 +105,7 @@ MEASURE_WORDS = {"recall": "recall", "log_loss": "log loss", "balanced_accuracy"
 
 
 def study_time(rec):
-    """The exploratory paragraph under the study and time table, from readings.tsv."""
+    """The two exploratory paragraphs under the study and time table, from readings.tsv."""
     s, L = rec.summary, len(LEARNERS)
     med = lambda l, c, m: float(rec.readings[(l, c, m)]["median"])
     worse = lambda c, m: [l for l in LEARNERS if rec.readings[(l, c, m)]["reading"] == "worse"]
@@ -127,7 +127,7 @@ def study_time(rec):
     second = (f"The study contrast reads worse on recall for {alone(worse('study', 'recall'))} and the time contrast for "
               f"{alone(worse('time', 'recall'))}; the time contrast reads worse {joined(time_worse)}, and not shown "
               f"everywhere else; on {s['species']} species, not shown is weak evidence either way.")
-    return [first + " " + second]
+    return [first, second]
 
 
 def total_table(rec):

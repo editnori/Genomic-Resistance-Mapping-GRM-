@@ -1,5 +1,5 @@
 """docs/time-split.md against the committed record: the limit sentence, the section Reading, the exploratory
-paragraph under the study and time table, every table, the sentences that carry the record's counts, every other
+paragraphs under the study and time table, every table, the sentences that carry the record's counts, every other
 paragraph and list item word for word, and every other number of the page."""
 
 import re
@@ -74,8 +74,7 @@ def counted(rec):
     species += f" and {rec.species[-1]['datasets']} of {lines.species_name(rec.species[-1]['species'])}"
     scm = rec.arms[("scm", "past")]
     return [
-        f"Both are scored on the same later genomes of studies new after each dataset's cut day, in {s['datasets']} "
-        f"datasets of "
+        f"Both are scored on the same later genomes of studies new after that day, in {s['datasets']} datasets of "
         f"{s['species']} species at evaluation revision {st['evaluation_revision']}.",
         f"The earliest day by which at least {pct(st['cut_share'])}% of the cohort was public.",
         f"A dataset enters when its test set holds at least {st['min_test_class']} genomes of each class, each arm "
@@ -149,7 +148,7 @@ class Page(unittest.TestCase):
         self.assertTrue(first.startswith("This page compares two ways of choosing training genomes. The past arm trains "
                                          "only on genomes public in BV-BRC by each dataset's cut day. The random arm "
                                          "trains on a random draw of the same size and class balance. Both are scored on "
-                                         "the same later genomes of studies new after each dataset's cut day"))
+                                         "the same later genomes of studies new after that day"))
 
     def test_sections_in_order(self):
         body = outside_code(self.text)
@@ -185,7 +184,8 @@ class Page(unittest.TestCase):
         built = lines.study_time(self.rec)
         for para in built:
             self.assertEqual(blocks(body).count(para), 1, para)
-        self.assertEqual([b for b in blocks(body) if b.startswith("Exploratory")], built)
+        at = blocks(body).index(built[0])
+        self.assertEqual(blocks(body)[at:at + len(built)], built)
 
     def test_every_paragraph_and_list_item_is_built_or_held(self):
         known = set(lines.reading(self.rec)) | set(lines.study_time(self.rec)) | set(HELD)

@@ -1,6 +1,6 @@
 """The paragraphs and list items of docs/time-split.md that the suite holds word for word.
 
-lines.py rebuilds the section Reading, the exploratory paragraph under the study and time table and every
+lines.py rebuilds the section Reading, the two exploratory paragraphs under the study and time table and every
 table from the record. Every other paragraph and list item of the page stands here, in page order, and
 test_page holds each to the page once. A deliberate rewording of one of them is a change here too; the
 figures in them are held to the record by test_page as well."""
@@ -8,9 +8,9 @@ figures in them are held to the record by test_page as well."""
 HELD = [
     ('This page compares two ways of choosing training genomes. The past arm trains only on genomes public in '
      "BV-BRC by each dataset's cut day. The random arm trains on a random draw of the same size and class balance. "
-     "Both are scored on the same later genomes of studies new after each dataset's cut day, in 24 datasets of 4 "
-     'species at evaluation revision 14. This is a split by first-public day inside one database, BV-BRC. It is '
-     'not a prospective test and not external validation.'),
+     'Both are scored on the same later genomes of studies new after that day, in 24 datasets of 4 species at '
+     'evaluation revision 14. This is a split by first-public day inside one database, BV-BRC. It is not a '
+     'prospective test and not external validation.'),
     ('Five learners fit each arm: scm, cart, rf, gbt and lasso. As the test genomes are later genomes of new '
      'studies, this is a retrospective test on newly deposited studies from the same database. Every figure on '
      'this page comes from the rerun after the review, which the section Review describes, except where that '
@@ -34,8 +34,8 @@ HELD = [
     ('- **Cut day.** The earliest day by which at least 60% of the cohort was public. Past genomes have a day on '
      'or before it, later genomes a day after it.'),
     ('- **Test studies.** A study is new when none of its genomes of the species is public by the cut day. A keyed '
-     'hash of the accession picks about half of the new studies with a later genome; the choice depends on no '
-     'dataset and no label.'),
+     'hash of the accession picks about half of the new studies with a later genome; it depends on no dataset or '
+     'label.'),
     ('- **Test set.** A keyed hash picks two in three of the later genomes of the test studies. The rest are the '
      'reserve. All three arms are scored on exactly this test set.'),
     ('- **Arms.** past trains on the past genomes. study-out draws from the past genomes and later genomes of '
@@ -80,9 +80,10 @@ HELD = [
      'laboratory and method, and the design separates none of these.'),
     ('Test genomes of the 24 datasets added up per learner and arm, as the table layout script adds them; a genome '
      'tested in several datasets of a species counts once per dataset. These sums are a description, and the '
-     "plan's summary is the median over datasets above. The last column is exploratory: the share of the pooled "
-     "log loss from wrong calls at the clip, to read beside recall. scm's share is 100.0% at one decimal, as a "
-     'right call at the clip adds about 0.0001 to the sum.'),
+     "plan's summary is the median over datasets above."),
+    ('The last column is exploratory: the share of the pooled log loss from wrong calls at the clip, to read '
+     "beside recall. scm's share is 100.0% at one decimal, as a right call at the clip adds about 0.0001 to the "
+     'sum.'),
     ('The test sets hold 3,390 genome and dataset pairs, 1,729 of them resistant, from 828 distinct genomes. A '
      'genome tested in several datasets of its species is one pair per dataset and one distinct genome. A test set '
      'holds 54 to 230 genomes (median 138.5), and each arm trains on 478 to 1,207 genomes (median 815.5), the same '
@@ -107,9 +108,10 @@ HELD = [
      'labels from the same kind of record.'),
     ('- The day is the day a genome entered BV-BRC, which can differ from the day its sample became public in the '
      'sequence archives. A split on the archive day could order genomes differently.'),
-    ('- Later genomes can differ from past ones in study, place, laboratory and method all at once. The study '
-     'contrast takes the test studies out of training and also raises the share of past genomes, so the design '
-     'does not separate study membership from the mix of periods, nor either from place, laboratory or method.'),
+    '- Later genomes can differ from past ones in study, place, laboratory and method all at once.',
+    ('- The study contrast takes the test studies out of training and also raises the share of past genomes, so '
+     'the design does not separate study membership from the mix of periods, nor either from place, laboratory or '
+     'method.'),
     '- Past genomes with no recorded study train in every arm, and later ones are left out.',
     ("- Two in three of each test study's later genomes are tested, so the random arm holds a smaller share of a "
      "test genome's study than a five-fold random split would, which trains on four in five."),
@@ -126,7 +128,7 @@ HELD = [
     "- `checks.tsv` gives 0 as the count of the input set's genome ids found in the record.",
     ('- The input set holds the result files, whose scores are per genome, so the repository does not hold it. '
      '`--check` alone derives every derived file from the row files.'),
-    ('- `tests/time_split` rebuilds the section Reading, the exploratory reading of the study and time contrasts '
-     'and every table of this page from the record, holds every other paragraph and list item word for word, and '
-     'checks that each other number in figures stands somewhere in the record.'),
+    ('- `tests/time_split` rebuilds the section Reading, the study and time reading and every table from the '
+     'record, holds every other paragraph and list item word for word, and checks that each other number in '
+     'figures stands in the record.'),
 ]
