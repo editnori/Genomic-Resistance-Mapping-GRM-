@@ -1450,7 +1450,7 @@ ids = [f"g{i:03d}" for i in range(50)]
 
     def test_a_seed_without_lineage_decisions_is_listed_and_counts_toward_no_row(self):
         """A seed whose summary names a dataset with no lineage decision is listed and counts toward no row; run.py
-        exits 0 on it (Layth's ruling on H-1's pilot, 2026-11-09, which replaced M3's exit 3)."""
+        exits 0 on it (the ruling on H-1's pilot, 2026-11-09, which replaced M3's exit 3)."""
         with tempfile.TemporaryDirectory() as tmp:
             self.cal_seeds(tmp, n=100)
             self.cal_seed(tmp, 100, hits={("sentinel-seed-twin", "rf"): "worse"}, no_decision=True)
@@ -1725,7 +1725,7 @@ ids = [f"g{i:03d}" for i in range(50)]
                                     for x in records if x["undefined_reason"] is not None]})
 
     def test_a_dataset_without_a_lineage_decision_is_reported_and_the_run_goes_on(self):
-        """Layth's ruling on H-1's pilot (2026-11-09), which replaced M3's exit 3: with the default's lineage plan
+        """The ruling on H-1's pilot (2026-11-09), which replaced M3's exit 3: with the default's lineage plan
         refused every lineage contrast is not produced; decisions_made is 0, the run names the dataset and doesn't
         exit, and K lists the same dataset as one the lineage test can't answer, by the same rule."""
         spec, arms = self.stub_arms()

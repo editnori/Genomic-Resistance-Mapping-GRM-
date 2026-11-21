@@ -527,7 +527,7 @@ class ResumeTests(Stub):
         self.assertEqual(list((arm.parent / "elsewhere").iterdir()), [])
 
     def test_a_cohort_arm_short_of_a_class_minimum_is_unavailable_and_the_run_goes_on(self):
-        """Layth's ruling on H-1's pilot applied to a cohort arm (NG-1's grr-v1 on cefixime, 2026-11-09): grm arm's
+        """The ruling on H-1's pilot applied to a cohort arm (NG-1's grr-v1 on cefixime, 2026-11-09): grm arm's
         class-minimum refusal of cap-10 leaves cap-10 unavailable on DS, every run with the reason and nothing the
         refused call wrote, and the record resumes."""
         os.environ["STUB_ARM_SHORT"] = "cap-10"
@@ -1200,7 +1200,7 @@ class CombineRefusalTests(unittest.TestCase):
 
 class H1SpecTests(unittest.TestCase):
     """G10: scripts/input-comparison/h1/ holds the pilot (D1), the four species' stage-1 specs with all of spec.json's
-    arms (Layth lifted register section 13 G2 on 8 Nov 2026), and the parts each runs as: main parts with every arm but
+    arms (register section 13 G2 was lifted on 8 Nov 2026), and the parts each runs as: main parts with every arm but
     k21 and k25, and one k add-on part (G2(b)) per main part and k arm. Each is spec.json with only its species,
     datasets, kset size (D2) and arms changed."""
 
@@ -1223,8 +1223,8 @@ class H1SpecTests(unittest.TestCase):
         manifest, MASTER-MANIFEST-h1.sha256, final at 7dd00779."""
         for name, s in self.specs().items():
             self.assertEqual({k: v for k, v in s["data_root"].items() if k != "reason"},
-                             {"path": "/home/layth/review/grm-h1-data-root-20261107",
-                              "manifest": "/home/layth/review/grm-h1data-20261107/stage/MASTER-MANIFEST-h1.sha256",
+                             {"path": "/home/user/review/grm-h1-data-root-20261107",
+                              "manifest": "/home/user/review/grm-h1data-20261107/stage/MASTER-MANIFEST-h1.sha256",
                               "manifest_sha256": "7dd00779bc4b538b325d947137c525afb4e723ca494bd14b607a8730b7902887"},
                              name)
             self.load(name)
@@ -1246,7 +1246,7 @@ class H1SpecTests(unittest.TestCase):
             self.assertEqual(s["pool_budget"]["default_kset_bytes"], D2[s["species"]], name)
             self.assertIn(f"{D2[s['species']]:,} B per genome", s["pool_budget"]["reason"], name)
             self.assertIn("M-2", s["decisions"], name)
-            self.assertIn("Layth lifted register section 13 G2 on 8 Nov 2026", s["decisions"], name)
+            self.assertIn("register section 13 G2 was lifted on 8 Nov 2026", s["decisions"], name)
             self.assertNotIn("left out", s["decisions"], name)
             self.assertNotIn("synthetic", s, name)
             self.assertEqual(s["arms"], [a for a in SPEC["arms"] if a in s["arms"]], name)
@@ -1267,7 +1267,7 @@ class H1SpecTests(unittest.TestCase):
                           "neisseria_gonorrhoeae": 7})
         self.assertEqual(gate["recorded"]["genome_order"]["salmonella_enterica"][:8], "5864bd5d")
         self.assertEqual(gate["recorded"]["datasets_json_sha256"][:8], "5519c61d")
-        self.assertEqual(gate["reference"]["root"], "/home/layth/review/grm-r12-run-20261105/data-root")
+        self.assertEqual(gate["reference"]["root"], "/home/user/review/grm-r12-run-20261105/data-root")
         self.assertEqual(sorted(gate["reference"]["files"]), sorted(
             ["curated/datasets.json", "curated/phenotypes.jsonl", *(f"species/{s}/genomes.txt" for s in D2)]))
         for name, s in self.specs().items():
