@@ -130,7 +130,7 @@ esac
   [[ "$(git -C "$SRC" rev-parse HEAD 2> /dev/null)" =~ ^[0-9a-f]{40}$ ]] || { echo "drive: $SRC is not a git worktree with a commit" >&2; exit 2; }
 st=$(git -C "$SRC" status --porcelain 2> /dev/null) && [ -z "$st" ] || { echo "drive: $SRC is not a clean worktree" >&2; exit 2; }
 R=${RUNNER:?} NOTES=${NOTES:?} RUN_DIR=${RUN_DIR:?}
-BOATX=${GRM_BOAT:-/mnt/c/Users/layth888/.ascii/bin/boat.exe}
+BOATX=${GRM_BOAT:-boat.exe}
 BUDGET_CAP=${BUDGET_CAP:-35} BUDGET_STOP=${BUDGET_STOP:-25} CKPT_SECS=${CKPT_SECS:-1800} POLL=${POLL:-60}
 TTL_MARGIN=${TTL_MARGIN:-900} MAX_TTL=${MAX_TTL:-21600} XL_MULT=5.56
 export GRM_NOTES=$NOTES

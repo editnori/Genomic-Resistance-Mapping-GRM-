@@ -10,7 +10,7 @@
 # usage: test-drive-l2-kit10.sh WORK DRIVE_SH
 set -u
 WK=${1:?work dir} DRV_UNDER_TEST=${2:?drive.sh to test}
-H=/home/layth/review/grm-port-r11-20261105/dryrun/drv-gates-v4.sh
+H=/home/user/review/grm-port-r11-20261105/dryrun/drv-gates-v4.sh
 mkdir -p "$WK"
 sed -n '1,/^# ---- signals/p' "$H" | sed '$d' > "$WK/setup.sh"
 grep -q '^conf()' "$WK/setup.sh" && grep -q '^drive()' "$WK/setup.sh" || { echo "FAILS 1 (no harness setup in $H)"; exit 1; }

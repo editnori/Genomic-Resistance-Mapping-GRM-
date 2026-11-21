@@ -10,10 +10,10 @@
 # Prints one "== N name: want W, got G" block per case, then "FAILS n"; exits 1 on any failure.
 # usage: test-restore-v7.sh [KIT_MTB_BOX_SH]     (default: the installed kit)
 set -u
-KIT=${1:-/home/layth/review/grm-port-r11-20261105/kit/mtb-box.sh}
-ST=/home/layth/review/grm-r12-run-20261105/stages
-DR=/home/layth/review/grm-r12-run-20261105/data-root
-S=/home/layth/review/grm-mtb-src-r12-20261106/scripts/mtb-4k
+KIT=${1:-/home/user/review/grm-port-r11-20261105/kit/mtb-box.sh}
+ST=/home/user/review/grm-r12-run-20261105/stages
+DR=/home/user/review/grm-r12-run-20261105/data-root
+S=/home/user/review/grm-mtb-src-r12-20261106/scripts/mtb-4k
 FAILS=0
 fail() { echo "  FAIL: $*"; FAILS=$((FAILS + 1)); }
 [ -f "$KIT" ] || { echo "FAIL: no kit at $KIT"; echo "FAILS 1"; exit 1; }
