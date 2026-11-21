@@ -102,11 +102,12 @@ class Page(unittest.TestCase):
     def test_reading_gives_the_figures(self):
         r = builder.reading(self.text)
         self.assertIn("over the 24 datasets is -0.059 (-0.132 to -0.044, a 95% interval over the 12 species)", r[0])
-        self.assertIn("the network is higher on 1 of the 24, and the plan's rule gives \"no gain established\".", r[0])
+        self.assertIn("which favours the five", r[0])
+        self.assertIn("the network is higher on 1 of the 24, and the rule gives \"no gain established\".", r[0])
         self.assertIn("in recall is -0.102 (-0.356 to 0.000) and in log loss +0.021 (-0.262 to +0.209)", r[1])
         self.assertIn("-0.012 (-0.052 to -0.001) for `cart`", r[2])
-        self.assertIn("so only `cart`'s interval lies below 0 and none lies above it.", r[2])
-        self.assertIn("no transformer or sequence model was fitted.", r[3])
+        self.assertIn("; only `cart`'s interval lies below 0, and none above.", r[2])
+        self.assertIn("no other architecture and no transformer or sequence model was.", r[3])
 
     def test_reading_numbers_carry_their_denominators_and_each_learner_its_effect(self):
         r = builder.reading(self.text)
@@ -163,7 +164,7 @@ class Page(unittest.TestCase):
                       review)
         for word in ("Comparator", "Site's best", "Reach", "First look", "Holdout and wording"):
             self.assertIn("- **%s.**" % word, review)
-        self.assertIn("goes beyond the figures", review)
+        self.assertIn("The figures do not show the network lower than GRM's learners.", review)
         self.assertIn("so they are exploratory", review)
 
     def test_what_it_cannot_show(self):

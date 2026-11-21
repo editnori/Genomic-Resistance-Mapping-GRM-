@@ -127,24 +127,24 @@ def page(rec=None):
 
     add("## Reading")
     add("")
-    add("Against the comparator the plan fixed, the best of the five in hindsight on each dataset, the median of the "
-        "network minus that learner in lineage balanced accuracy over the %s datasets is %s (%s to %s, a 95%% interval "
-        "over the %s species), the network is higher on %s of the %s, and the plan's rule gives %s."
+    add("Against the plan's comparator, the best of the five picked in hindsight per dataset, which favours the five, "
+        "the median network minus comparator lineage balanced accuracy over the %s datasets is %s (%s to %s, a 95%% "
+        "interval over the %s species); the network is higher on %s of the %s, and the rule gives %s."
         % (D, s3(best["difference_median"]), s3(best["low"]), s3(best["high"]), S, best["positive"], D, outcome))
     add("")
-    add("Against the same learner, the median of the network minus it in recall is %s and in log loss %s, over the "
+    add("Against the best of the five in hindsight, the median difference in recall is %s and in log loss %s, over the "
         "same %s datasets." % (rec.diff("lineage", "best5", "recall"), rec.diff("lineage", "best5", "log_loss"), D))
     add("")
     per = listing("%s for %s" % (rec.diff("lineage", w, "balanced_accuracy"), code(w)) for w in FIVE)
     below = rec.below("lineage", FIVE)
     above = rec.above("lineage", FIVE)
     tail = ("only %s's interval lies below 0" % listing(code(w) for w in below)) if below else "no interval lies below 0"
-    tail += (" and none lies above it" if not above else " and %s's above it" % listing(code(w) for w in above))
-    add("Against each of the five, which the plan reported beside its rule, the median of the network minus the "
-        "learner in lineage balanced accuracy over the %s datasets is %s, so %s." % (D, per, tail))
+    tail += (", and none above" if not above else ", and %s's above" % listing(code(w) for w in above))
+    add("Beside the rule, against each of the five, the median lineage balanced accuracy difference over the %s "
+        "datasets is %s; %s." % (D, per, tail))
     add("")
-    add("This is one network at one setting on one screen of %s rows: no other setting, no other architecture and no "
-        "transformer or sequence model was fitted." % rows)
+    add("One network at one setting on one screen of %s rows was fitted; no other setting, no other architecture and "
+        "no transformer or sequence model was." % rows)
     add("")
 
     add("## Plan")
@@ -230,8 +230,7 @@ def page(rec=None):
     add("## Results")
     add("")
     add("The network minus each comparator: the median over the %s datasets (%s for the catalog rule) with its 95%% "
-        "interval over species. Recall stands beside log loss, and a positive log loss difference means the network's "
-        "is higher." % (D, t["catalog_datasets"]))
+        "interval over species. A positive log loss difference means the network's is higher." % (D, t["catalog_datasets"]))
     add("")
     for split, word in (("lineage", "Lineage split"), ("random", "Random split")):
         add(word + ":")
@@ -261,16 +260,20 @@ def page(rec=None):
         % (t["site_best_is_best5_random"], D, t["site_best_is_best5_lineage"], D))
     fixed_below = rec.below("lineage", FIXED)
     random_below = rec.below("random", [w for w in ROWS if w not in ("baseline", "catalog")])
+    site_high = s3(rec.summary[("lineage", "site_best", "balanced_accuracy")]["high"])
     add("- **Reach.** Against the comparators that do not read the lineage results, the network is shown neither "
-        "higher nor lower on the lineage split, except %s, whose interval lies below 0; a reading that the network is "
-        "lower than GRM's learners goes beyond the figures. On the random split the intervals for %s lie below 0."
-        % (listing(text_name(w) for w in fixed_below), listing(text_name(w) for w in random_below)))
-    add("- **First look.** The analysis ran on the first datasets' results at %s, before the rest had run, and its "
-        "script was last changed at %s; the experiment's report did not say so. The review's own recompute, written "
-        "from the plan's text alone, gives the same final figures." % (clock(look["utc"]), clock(last["utc"])))
-    add("- **Holdout and wording.** No test label or test genome reaches a screen, so the holdout's part in the "
-        "screen cannot raise a test score. The plan calls its one setting a member of the dense network family; the "
-        "result is about this network on this screen, and not about the family.")
+        "higher nor lower on the lineage split, except %s, whose interval lies below 0. The figures do not show the "
+        "network lower than GRM's learners." % listing(text_name(w) for w in fixed_below))
+    add("- **First look.** The analysis ran on the first datasets' results at %s, before the rest ran, and its "
+        "script last changed at %s; the experiment's report did not say so. The review's recompute from the plan's "
+        "text gives the same figures." % (clock(look["utc"]), clock(last["utc"])))
+    add("- **Holdout and wording.** No test label or genome reaches a screen, so the holdout's part cannot raise "
+        "test scores. The plan calls its setting a member of the dense network family; the result is about this "
+        "network on this screen, and not about the family.")
+    add("")
+    add("On the random split the intervals for %s lie below 0. On the lineage split the site's best's upper end, %s, "
+        "is near enough 0 that another order of species in the draw puts it below."
+        % (listing(text_name(w) for w in random_below), site_high))
     add("")
 
     add("## Limits")

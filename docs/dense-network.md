@@ -4,13 +4,13 @@ This page compares one dense feed-forward network with GRM's five learners, `scm
 
 ## Reading
 
-Against the comparator the plan fixed, the best of the five in hindsight on each dataset, the median of the network minus that learner in lineage balanced accuracy over the 24 datasets is -0.059 (-0.132 to -0.044, a 95% interval over the 12 species), the network is higher on 1 of the 24, and the plan's rule gives "no gain established".
+Against the plan's comparator, the best of the five picked in hindsight per dataset, which favours the five, the median network minus comparator lineage balanced accuracy over the 24 datasets is -0.059 (-0.132 to -0.044, a 95% interval over the 12 species); the network is higher on 1 of the 24, and the rule gives "no gain established".
 
-Against the same learner, the median of the network minus it in recall is -0.102 (-0.356 to 0.000) and in log loss +0.021 (-0.262 to +0.209), over the same 24 datasets.
+Against the best of the five in hindsight, the median difference in recall is -0.102 (-0.356 to 0.000) and in log loss +0.021 (-0.262 to +0.209), over the same 24 datasets.
 
-Against each of the five, which the plan reported beside its rule, the median of the network minus the learner in lineage balanced accuracy over the 24 datasets is +0.003 (-0.086 to +0.049) for `scm`, -0.012 (-0.052 to -0.001) for `cart`, -0.016 (-0.032 to +0.009) for `rf`, -0.012 (-0.035 to +0.069) for `gbt` and +0.015 (-0.007 to +0.071) for `lasso`, so only `cart`'s interval lies below 0 and none lies above it.
+Beside the rule, against each of the five, the median lineage balanced accuracy difference over the 24 datasets is +0.003 (-0.086 to +0.049) for `scm`, -0.012 (-0.052 to -0.001) for `cart`, -0.016 (-0.032 to +0.009) for `rf`, -0.012 (-0.035 to +0.069) for `gbt` and +0.015 (-0.007 to +0.071) for `lasso`; only `cart`'s interval lies below 0, and none above.
 
-This is one network at one setting on one screen of 4,000 rows: no other setting, no other architecture and no transformer or sequence model was fitted.
+One network at one setting on one screen of 4,000 rows was fitted; no other setting, no other architecture and no transformer or sequence model was.
 
 ## Plan
 
@@ -87,7 +87,7 @@ All four must hold to adopt the network. Here rules 1, 2 and 3 fail, so the outc
 
 ## Results
 
-The network minus each comparator: the median over the 24 datasets (20 for the catalog rule) with its 95% interval over species. Recall stands beside log loss, and a positive log loss difference means the network's is higher.
+The network minus each comparator: the median over the 24 datasets (20 for the catalog rule) with its 95% interval over species. A positive log loss difference means the network's is higher.
 
 Lineage split:
 
@@ -125,9 +125,11 @@ A review on 15 Nov 2026 recomputed every figure of the experiment's answer with 
 
 - **Comparator.** On the lineage split each of the five sits below the best of the five by a median of 0.024 (`rf`), 0.047 (`cart`), 0.052 (`scm`), 0.085 (`gbt`) and 0.088 (`lasso`), so none of the five could have met rule 1 either. The plan fixed this comparator before the results and gave its reason; these medians were read after them, so they are exploratory.
 - **Site's best.** It has the best random-split balanced accuracy of the five on 24 of 24 datasets and the best lineage-split one on 14 of 24, so it is a comparator fixed in advance on the lineage split only.
-- **Reach.** Against the comparators that do not read the lineage results, the network is shown neither higher nor lower on the lineage split, except `cart`, whose interval lies below 0; a reading that the network is lower than GRM's learners goes beyond the figures. On the random split the intervals for `rf`, `gbt`, `lasso`, the best of the five, the site's best and the mean of four lie below 0.
-- **First look.** The analysis ran on the first datasets' results at 12:25:38Z, before the rest had run, and its script was last changed at 13:46:06Z; the experiment's report did not say so. The review's own recompute, written from the plan's text alone, gives the same final figures.
-- **Holdout and wording.** No test label or test genome reaches a screen, so the holdout's part in the screen cannot raise a test score. The plan calls its one setting a member of the dense network family; the result is about this network on this screen, and not about the family.
+- **Reach.** Against the comparators that do not read the lineage results, the network is shown neither higher nor lower on the lineage split, except `cart`, whose interval lies below 0. The figures do not show the network lower than GRM's learners.
+- **First look.** The analysis ran on the first datasets' results at 12:25:38Z, before the rest ran, and its script last changed at 13:46:06Z; the experiment's report did not say so. The review's recompute from the plan's text gives the same figures.
+- **Holdout and wording.** No test label or genome reaches a screen, so the holdout's part cannot raise test scores. The plan calls its setting a member of the dense network family; the result is about this network on this screen, and not about the family.
+
+On the random split the intervals for `rf`, `gbt`, `lasso`, the best of the five, the site's best and the mean of four lie below 0. On the lineage split the site's best's upper end, +0.008, is near enough 0 that another order of species in the draw puts it below.
 
 ## Limits
 

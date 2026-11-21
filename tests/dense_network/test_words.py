@@ -99,7 +99,7 @@ class Words(unittest.TestCase):
             for s in sentences(text):
                 self.assertIsNone(re.search(WIDER, s), s)
         self.assertIsNotNone(re.search(WIDER, "Dense networks cannot help here."))
-        self.assertIn("no transformer or sequence model was fitted", self.page)
+        self.assertIn("no transformer or sequence model was.", self.page)
         self.assertIn("and not about the family", self.page)
 
     def test_no_recheck_of_earlier_claims(self):
@@ -112,7 +112,7 @@ class Words(unittest.TestCase):
 
     def test_planned_and_exploratory_readings_named(self):
         self.assertIn("so they are exploratory", self.page)
-        self.assertIn("which the plan reported beside its rule", self.page)
+        self.assertIn("Beside the rule, against each of the five", self.page)
         self.assertIn("`below_best5_lineage_*`", self.texts["README"])
         self.assertIn("so they are exploratory", self.texts["README"])
 
