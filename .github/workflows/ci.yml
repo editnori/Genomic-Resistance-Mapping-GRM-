@@ -251,6 +251,9 @@ jobs:
           # SYNTHETIC inputs built in the test, the committed record under reference/dense-network and docs/dense-network.md.
           - suite: tests/dense_network
             top: .
+          # SYNTHETIC inputs built in the test, the committed record under reference/tbprofiler-comparison and docs/tbprofiler-comparison.md.
+          - suite: tests/tbprofiler_comparison
+            top: .
     env:
       SUITE: ${{ matrix.suite }}
       TOP: ${{ matrix.top }}
