@@ -1,0 +1,15 @@
+name	value
+tool_version	6.6.3
+database_commit	3ed1cb99
+min_class	25
+cutoff	0.5
+margin	0.02
+interval_level	0.95
+resamples	2000
+seed	20261114
+low_rank	51
+high_rank	1950
+min_resamples_with_value	40
+plan_sha256	a12a03b3baf45392c9cc61b81e107b420b39b538d8b550ef7c96cf3e120c308c
+addendum_sha256	099af3737959506046ef6f4c0d663787f9f731557e96c5d86a40dba0bad5fb03
+compact_sha256	623a1c4d15268a5f6dcd101a52643a9621bc33fc8d8a76611544270c5cc93a30
