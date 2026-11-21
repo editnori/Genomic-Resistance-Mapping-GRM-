@@ -84,14 +84,6 @@ class Record:
         return out
 
 
-def direction(r):
-    if float(r["high"]) < 0:
-        return "lower"
-    if float(r["low"]) > 0:
-        return "higher"
-    return "not shown to differ in"
-
-
 def page(rec=None):
     rec = rec or Record()
     t, s, c = rec.totals, rec.settings, rec.cohort
@@ -116,6 +108,7 @@ def page(rec=None):
     cap = re.search(r"kept at (\d+) genomes", s["dataset_rule"]).group(1)
     hist = rec.historical()
     words = {2: "Two", 3: "Three"}
+    folds_word = {5: "five"}
 
     out = []
     add = out.append
@@ -131,21 +124,19 @@ def page(rec=None):
 
     add("## Reading")
     add("")
-    add(f"On these {D} datasets, Kover's held-out calls have {direction(bar)} balanced accuracy than the released lineage "
-        f"calls of GRM's `scm` learner, and the size of the gap turns on how Kover breaks exact ties: Kover minus GRM is "
-        f"{ba} ({ba_lo} to {ba_hi}, a {level}% interval over the {D} datasets) as run, and {te} ({te_lo} to {te_hi}) in "
-        f"an exploratory reading that counts each tied first rule equally in Kover's {t['kover_one_rule_folds']} "
+    add(f"On these {D} datasets, under the plan's settings, Kover minus GRM's `scm` in balanced accuracy is {ba} "
+        f"({ba_lo} to {ba_hi}, a {level}% interval over the {D} datasets) as run and {te} ({te_lo} to {te_hi}) when "
+        f"each tied first rule counts equally, an exploratory reading of Kover's {t['kover_one_rule_folds']} "
         f"one-rule folds of {F}.")
     add("")
-    add(f"The gap is in specificity, {sp} ({sp_lo} to {sp_hi}), and not in recall, {rc} ({rc_lo} to {rc_hi}); "
-        f"log loss, {ll} ({ll_lo} to {ll_hi}), counts the same errors, since every call is 0 or 1.")
+    add(f"Kover's balanced accuracy gap is in specificity, {sp} ({sp_lo} to {sp_hi}), not recall, {rc} ({rc_lo} to "
+        f"{rc_hi}); log loss, {ll} ({ll_lo} to {ll_hi}), counts the same errors because every call is 0 or 1.")
     add("")
-    excl = int(t["datasets_t_interval_excludes_0"])
-    tail = "in no single dataset does its t interval exclude 0" if excl == 0 else f"in {excl} datasets its t interval excludes 0"
     add(f"Kover's balanced accuracy is lower in {bar['datasets_lower']} of the {D} datasets, equal in "
-        f"{bar['datasets_equal']} and higher in {bar['datasets_higher']}, and {tail}.")
+        f"{bar['datasets_equal']} and higher in {bar['datasets_higher']}.")
     add("")
-    add("Which differences between the two runs make the gap is not separated, and the result is not shown to carry to larger datasets.")
+    add(f"Which differences between the runs make the gap is not separated, and the result, from the smallest eligible "
+        f"dataset of each of {t['species']} species, is not shown to carry to larger datasets.")
     add("")
 
     add("## Plan")
@@ -167,8 +158,12 @@ def page(rec=None):
 
     add("## Datasets")
     add("")
-    add(f"Each difference is Kover minus GRM, the mean over the dataset's {rec.per_dataset[rec.datasets[0]['dataset']]['folds']} "
-        f"lineage folds; the interval for balanced accuracy is a {level}% t interval over those folds.")
+    folds = rec.per_dataset[rec.datasets[0]["dataset"]]["folds"]
+    excl = int(t["datasets_t_interval_excludes_0"])
+    add(f"Each difference is Kover minus GRM, the mean over the dataset's {folds} lineage folds; the interval for "
+        f"balanced accuracy is a {level}% t interval over those folds, shown and not used for the reading, because the "
+        f"{folds_word.get(int(folds), folds)} folds of one dataset share genomes; it excludes 0 in "
+        f"{'none' if excl == 0 else excl} of the {D}.")
     add("")
     add(cells(["Dataset", "Genomes", "Resistant", "Balanced accuracy", "Recall", "Log loss", "Specificity"]))
     add("|---|---|---|---|---|---|---|")
@@ -213,7 +208,7 @@ def page(rec=None):
     add("## Results")
     add("")
     add(f"Over the {D} datasets: the mean of Kover minus GRM with its {level}% bootstrap interval, and the datasets and "
-        f"folds where Kover is higher, equal and lower. Recall stands beside log loss.")
+        f"folds where Kover is higher, equal and lower.")
     add("")
     add(cells(["Measure", "Kover minus GRM", "Interval", "Datasets", "Folds", "Reading"]))
     add("|---|---|---|---|---|---|")
@@ -223,7 +218,7 @@ def page(rec=None):
         add(cells([label, s3(r["value"]), f"{s3(r['low'])} to {s3(r['high'])}",
                    f"{r['datasets_higher']}, {r['datasets_equal']}, {r['datasets_lower']}",
                    f"{r['folds_higher']}, {r['folds_equal']}, {r['folds_lower']}",
-                   "planned" if r["reading"] == "fixed" else "exploratory"]))
+                   r["reading"]]))
     add("")
     ag = rec.summary["agreeing"]
     add(f"The two make the same call on a mean share of {f3(ag['value'])} of each dataset's genomes "
@@ -264,7 +259,9 @@ def page(rec=None):
     add(f"- Log loss. With calls of 0 or 1, log loss is {clip} plus {mult} times the error rate, so {ll} is the error "
         f"rate higher by {f3(rec.summary['error_rate']['value'])} ({f3(rec.summary['error_rate']['low'])} to "
         f"{f3(rec.summary['error_rate']['high'])}), the same result in other units.")
-    add("- Seeds. Each measure's bootstrap uses the seed the code gives it, which `summary.tsv` lists, and no interval changes.")
+    add(f"- Seeds. The plan named one bootstrap seed, {rec.summary['balanced_accuracy']['seed']}, for every measure; the "
+        f"code gives each measure its own, which `summary.tsv` lists. Under the plan's seed the intervals for recall, "
+        f"specificity and log loss move in the third decimal, and no reading changes.")
     add("")
 
     add("## Limits")

@@ -98,7 +98,7 @@ class Words(unittest.TestCase):
             self.assertIsNone(re.search(r"(?i)\b(causes resistance|drives resistance|explains resistance)\b", s), s)
 
     def test_planned_and_exploratory_readings_named(self):
-        self.assertIn("in an exploratory reading", self.page)
+        self.assertIn("an exploratory reading of Kover's", self.page)
         self.assertIn("so they are exploratory", self.page)
         self.assertIn("| Error rate |", self.page)
         row = [x for x in self.page.split("\n") if x.startswith("| Error rate |")][0]

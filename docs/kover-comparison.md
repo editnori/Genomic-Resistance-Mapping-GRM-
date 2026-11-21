@@ -4,13 +4,13 @@ This page compares Kover 2.0.7 with GRM's `scm` learner on 12 public BV-BRC data
 
 ## Reading
 
-On these 12 datasets, Kover's held-out calls have lower balanced accuracy than the released lineage calls of GRM's `scm` learner, and the size of the gap turns on how Kover breaks exact ties: Kover minus GRM is -0.052 (-0.094 to -0.018, a 95% interval over the 12 datasets) as run, and -0.035 (-0.060 to -0.013) in an exploratory reading that counts each tied first rule equally in Kover's 41 one-rule folds of 60.
+On these 12 datasets, under the plan's settings, Kover minus GRM's `scm` in balanced accuracy is -0.052 (-0.094 to -0.018, a 95% interval over the 12 datasets) as run and -0.035 (-0.060 to -0.013) when each tied first rule counts equally, an exploratory reading of Kover's 41 one-rule folds of 60.
 
-The gap is in specificity, -0.104 (-0.215 to -0.022), and not in recall, +0.001 (-0.047 to +0.046); log loss, +0.374 (+0.071 to +0.748), counts the same errors, since every call is 0 or 1.
+Kover's balanced accuracy gap is in specificity, -0.104 (-0.215 to -0.022), not recall, +0.001 (-0.047 to +0.046); log loss, +0.374 (+0.071 to +0.748), counts the same errors because every call is 0 or 1.
 
-Kover's balanced accuracy is lower in 8 of the 12 datasets, equal in 2 and higher in 2, and in no single dataset does its t interval exclude 0.
+Kover's balanced accuracy is lower in 8 of the 12 datasets, equal in 2 and higher in 2.
 
-Which differences between the two runs make the gap is not separated, and the result is not shown to carry to larger datasets.
+Which differences between the runs make the gap is not separated, and the result, from the smallest eligible dataset of each of 12 species, is not shown to carry to larger datasets.
 
 ## Plan
 
@@ -24,7 +24,7 @@ An independent review hashed its own plan at 16:02:53Z and recomputed every figu
 
 ## Datasets
 
-Each difference is Kover minus GRM, the mean over the dataset's 5 lineage folds; the interval for balanced accuracy is a 95% t interval over those folds.
+Each difference is Kover minus GRM, the mean over the dataset's 5 lineage folds; the interval for balanced accuracy is a 95% t interval over those folds, shown and not used for the reading, because the five folds of one dataset share genomes; it excludes 0 in none of the 12.
 
 | Dataset | Genomes | Resistant | Balanced accuracy | Recall | Log loss | Specificity |
 |---|---|---|---|---|---|---|
@@ -78,16 +78,16 @@ The rows marked no are known sources of difference, and the plan does not separa
 
 ## Results
 
-Over the 12 datasets: the mean of Kover minus GRM with its 95% bootstrap interval, and the datasets and folds where Kover is higher, equal and lower. Recall stands beside log loss.
+Over the 12 datasets: the mean of Kover minus GRM with its 95% bootstrap interval, and the datasets and folds where Kover is higher, equal and lower.
 
 | Measure | Kover minus GRM | Interval | Datasets | Folds | Reading |
 |---|---|---|---|---|---|
-| Balanced accuracy | -0.052 | -0.094 to -0.018 | 2, 2, 8 | 9, 29, 22 | planned |
-| Recall | +0.001 | -0.047 to +0.046 | 5, 4, 3 | 13, 39, 8 | planned |
-| Log loss | +0.374 | +0.071 to +0.748 | 6, 2, 4 | 17, 32, 11 | planned |
-| Specificity | -0.104 | -0.215 to -0.022 | 1, 3, 8 | 5, 38, 17 | planned |
+| Balanced accuracy | -0.052 | -0.094 to -0.018 | 2, 2, 8 | 9, 29, 22 | fixed |
+| Recall | +0.001 | -0.047 to +0.046 | 5, 4, 3 | 13, 39, 8 | fixed |
+| Log loss | +0.374 | +0.071 to +0.748 | 6, 2, 4 | 17, 32, 11 | fixed |
+| Specificity | -0.104 | -0.215 to -0.022 | 1, 3, 8 | 5, 38, 17 | fixed |
 | Error rate | +0.041 | +0.008 to +0.081 | 6, 2, 4 | 17, 32, 11 | exploratory |
-| Rules per fold | -0.317 | -0.683 to -0.033 | 2, 4, 6 | 9, 35, 16 | planned |
+| Rules per fold | -0.317 | -0.683 to -0.033 | 2, 4, 6 | 9, 35, 16 | fixed |
 
 The two make the same call on a mean share of 0.874 of each dataset's genomes (0.799 to 0.939).
 
@@ -111,7 +111,7 @@ The review reproduced every figure, given the seed the code gives each measure. 
 - First step. Where the patterns differ, in 3 datasets, the first step is an exact tie on both sides, and Kover's rule has the pattern of a rule GRM lists as tied in 3 of 3.
 - Reach. The first report said its results do not carry to large datasets. The data show only that they are not shown to carry.
 - Log loss. With calls of 0 or 1, log loss is 0.0001 plus 9.2102 times the error rate, so +0.374 is the error rate higher by 0.041 (0.008 to 0.081), the same result in other units.
-- Seeds. Each measure's bootstrap uses the seed the code gives it, which `summary.tsv` lists, and no interval changes.
+- Seeds. The plan named one bootstrap seed, 20261115, for every measure; the code gives each measure its own, which `summary.tsv` lists. Under the plan's seed the intervals for recall, specificity and log loss move in the third decimal, and no reading changes.
 
 ## Limits
 

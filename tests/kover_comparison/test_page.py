@@ -107,10 +107,13 @@ class Page(unittest.TestCase):
 
     def test_reading_gives_the_review_s_figures(self):
         r = builder.reading(self.text)
-        self.assertIn("-0.052 (-0.094 to -0.018, a 95% interval over the 12 datasets) as run", r[0])
-        self.assertIn("-0.035 (-0.060 to -0.013) in an exploratory reading", r[0])
-        self.assertIn("specificity, -0.104 (-0.215 to -0.022), and not in recall, +0.001 (-0.047 to +0.046)", r[1])
+        self.assertIn("under the plan's settings", r[0])
+        self.assertIn("-0.052 (-0.094 to -0.018, a 95% interval over the 12 datasets) as run and", r[0])
+        self.assertIn("-0.035 (-0.060 to -0.013) when each tied first rule counts equally, an exploratory reading", r[0])
+        self.assertIn("specificity, -0.104 (-0.215 to -0.022), not recall, +0.001 (-0.047 to +0.046)", r[1])
         self.assertIn("lower in 8 of the 12 datasets", r[2])
+        # The plan kept the per-dataset t interval out of the reading.
+        self.assertNotIn("t interval", " ".join(r))
         # Recall stands beside log loss.
         self.assertIn("log loss", r[1])
 
