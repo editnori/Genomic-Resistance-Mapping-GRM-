@@ -95,4 +95,4 @@ The learners' `seconds` of B against D per learner, summed over datasets, with t
 
 ## What the result means
 
-"The release's figures do not depend on the tie rule" means: for cart, rf and gbt each, zero of the datasets run change any released measure above in either split. If trees or fold models differ but no measure changes, the reading is that the trees depend on the rule and the released figures do not. If any measure changes, the reading is a dependence, sized by the counts above. A result on the smaller species does not speak for the species left unrun. Either way the default stays as it is: the decision belongs to Layth.
+"The release's figures do not depend on the tie rule" means: for cart, rf and gbt each, zero of the datasets run change any released measure above in either split. If trees or fold models differ but no measure changes, the reading is that the trees depend on the rule and the released figures do not. If any measure changes, the reading is a dependence, sized by the counts above. A result on the smaller species does not speak for the species left unrun. Either way the default stays as it is: the decision belongs to the project owner.

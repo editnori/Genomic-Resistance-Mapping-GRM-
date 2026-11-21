@@ -2,7 +2,9 @@
 
 This folder holds the record behind [docs/tie-rule.md](../../docs/tie-rule.md). The experiment fitted 169 datasets of release `rev14-274-20261112` (evaluation revision 14) twice, once with the present rule that the tree learners use to break ties between equal splits and once with an exact rule, and an independent review recomputed its figures on the same day. A change under the exact rule is a sensitivity of a figure to the tie rule. It does not show that either rule is more accurate. Every figure is cross-validated on public BV-BRC genomes.
 
-`scripts/tie-rule/record.py` wrote every file here but this README, `PLAN.md` and `PLAN.sha256` (which it copies unchanged from the experiment's output and checks against each other) and `SHA256SUMS`, which it writes last, over every other file. It reads the five arms' reports and traces and the release's index, and fits nothing. The reports and traces are not here; `inputs.sha256` gives the sha256 of each.
+`scripts/tie-rule/record.py` wrote every file here but this README, `PLAN.md` and `PLAN.sha256` (which it copies from the experiment's output after checking them against each other, with the one change to the plan given below) and `SHA256SUMS`, which it writes last, over every other file. It reads the five arms' reports and traces and the release's index, and fits nothing. The reports and traces are not here; `inputs.sha256` gives the sha256 of each.
+
+`PLAN.md` here differs from the plan as fixed in one sentence, where a person's name was replaced by a role after the run. The plan as fixed has sha256 `66d9b483c5b0dc7df1b4c4196b6b81c245ec074ffd6cda0a24b19397b9144d22`, and the repository's history holds it. `PLAN.sha256` gives the sha256 of the copy here.
 
 ## The arms
 
@@ -44,7 +46,7 @@ The row files hold what the script reads from the reports and traces. Every othe
 | `paired.tsv` | derived | tree learner, split and measure: the mean change, exact minus present, with its 95% interval from a species bootstrap |
 | `summary.tsv` | derived | figure: every count, share, median and largest change the page quotes, by key |
 | `settings.tsv` | fixed | setting: the commits, binaries and test settings, as the script holds them |
-| `PLAN.md`, `PLAN.sha256` | copied | the experiment's plan, fixed before any run, and its sha256 |
+| `PLAN.md`, `PLAN.sha256` | copied, one name replaced | the experiment's plan, fixed before any run, and the sha256 of the copy here |
 
 A held-out call is a score at or above 0.5. Log loss is the mean over held-out genomes of the negative log likelihood of the score clamped to [1e-12, 1 - 1e-12]. The best learner is the index's rule (`src/report.rs`, `best_learner`): the highest balanced accuracy, a tie to the later learner of scm, cart, rf, gbt and lasso. The trace counts come from the branch's own counters, one line per fit: nodes searched, nodes with more than one candidate at the best exact impurity (`exact_tied`), and nodes where the exact pick differs from the present one, as an exact tie (`differ_tie`), a strictly better exact split (`differ_order`) or, for gbt, a lower candidate with the same two groups (`differ_partition`).
 

@@ -1,6 +1,6 @@
 # Tie rule
 
-When two candidate splits are equally good, the decision tree (cart), the random forest (rf) and the boosted trees (gbt) keep one of them by a rule. This page says what the rule is, and how much the figures of release `rev14-274-20261112` move when that rule alone changes. The present rule stays the production rule of evaluation revision 14. Whether a later revision adopts another rule is Layth's decision: the options are at the end, and this page recommends none.
+When two candidate splits are equally good, the decision tree (cart), the random forest (rf) and the boosted trees (gbt) keep one of them by a rule. This page says what the rule is, and how much the figures of release `rev14-274-20261112` move when that rule alone changes. The present rule stays the production rule of evaluation revision 14. Whether a later revision adopts another rule is the project owner's decision: the options are at the end, and this page recommends none.
 
 A change under the exact rule is a sensitivity of a figure to the tie rule. It does not show that either rule is more accurate. Every figure is cross-validated on public BV-BRC genomes, and none is a clinical validation. A feature is a row of the matrix, and this page names none.
 

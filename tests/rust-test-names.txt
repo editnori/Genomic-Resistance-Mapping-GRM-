@@ -206,6 +206,7 @@ src/lib.rs curate::tests::breakpoint_respects_censoring
 src/lib.rs curate::tests::curated_files_without_min_class_read_as_the_old_learn_gate_of_25
 src/lib.rs curate::tests::datasets_admit_a_class_of_exactly_min_class
 src/lib.rs curate::tests::evaluation_targets_require_unconflicted_reported_labels
+src/lib.rs curate::tests::every_call_pattern_under_every_label_rule
 src/lib.rs curate::tests::group_plans_are_deterministic_and_ignore_input_order
 src/lib.rs curate::tests::group_plans_draw_a_pinned_order_on_the_recorded_generator
 src/lib.rs curate::tests::group_plans_handle_full_caps_one_group_huge_groups_and_no_input
@@ -217,11 +218,16 @@ src/lib.rs curate::tests::mic_inferred_labels_do_not_admit_a_dataset
 src/lib.rs curate::tests::pair_provenance_covers_the_records_the_phenotype_consolidates
 src/lib.rs curate::tests::parses_mics_and_rejects_zone_diameters
 src/lib.rs curate::tests::permuting_labels_moves_legacy_selection_but_not_the_group_plan
+src/lib.rs curate::tests::reported_calls_against_the_mic_are_counted_and_kept
 src/lib.rs curate::tests::selection_prefers_rare_reported_class_carriers
+src/lib.rs curate::tests::set_aside_pairs_get_no_mic_label
 src/lib.rs curate::tests::smaller_caps_select_a_prefix_of_larger_caps
 src/lib.rs curate::tests::species_check_failures_are_excluded_before_qc_and_from_class_counts
 src/lib.rs curate::tests::target_drugs_come_from_the_requested_species_datasets_only
 src/lib.rs curate::tests::the_always_included_stratum_is_always_selected_and_recorded
+src/lib.rs curate::tests::the_default_label_rule_is_not_written_and_old_files_read_as_it
+src/lib.rs curate::tests::the_funnel_groups_and_the_call_patterns_each_add_up_to_the_pairs
+src/lib.rs curate::tests::the_label_rule_moves_the_class_counts_and_the_dataset_gate
 src/lib.rs curate::tests::the_recorded_generator_matches_cargo_lock
 src/lib.rs curate::tests::the_species_check_exclusion_comes_before_the_no_species_qc
 src/lib.rs curate::tests::timestamps_order_by_time
@@ -621,6 +627,7 @@ src/lib.rs species_check::tests::the_sketch_is_the_bottom_s_of_every_mixed_canon
 src/lib.rs species_check::tests::the_two_known_genomes_fail_the_tuberculosis_check
 src/main.rs tests::a_catalog_that_no_longer_loads_stops_learning_and_recounting
 src/main.rs tests::a_count_at_another_k_is_redone_and_rebuilds_only_stages_built_at_that_k
+src/main.rs tests::a_curate_run_under_another_label_rule_records_it_in_qc_json
 src/main.rs tests::a_failed_matrix_resave_is_rebuilt_on_the_next_run
 src/main.rs tests::a_genome_that_fails_to_count_stops_the_pipeline_until_a_full_count
 src/main.rs tests::a_new_catalog_redoes_gene_calls_and_keeps_structure_and_matrix
@@ -652,6 +659,7 @@ src/main.rs tests::export_of_a_species_without_a_matrix_names_the_commands_to_ru
 src/main.rs tests::export_stops_as_learn_does_when_genomes_txt_changed_after_counting
 src/main.rs tests::export_stops_at_a_dataset_directory_that_exists_unless_forced
 src/main.rs tests::export_stops_on_an_only_name_that_matches_no_dataset
+src/main.rs tests::label_rule_names_on_the_command_line_are_the_names_qc_json_records
 src/main.rs tests::learn_ends_with_the_release_line_and_a_draw_with_a_line_of_its_own
 src/main.rs tests::learn_evaluates_with_the_budget_and_seeds_its_flags_give
 src/main.rs tests::learn_refuses_a_fold_file_beside_either_seed_flag

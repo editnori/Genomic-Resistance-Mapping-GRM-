@@ -503,6 +503,9 @@ def summarize(rows, by, splits, order):
 # ---------------------------------------------------------------- writing
 
 
+PLAN_NAME = re.compile(rb"the decision belongs to \w+\.")
+PLAN_ROLE = b"the decision belongs to the project owner."
+
 def render(rows, derived, plan_dir):
     files = {}
     files["datasets.tsv"] = table("datasets.tsv", rows["datasets"])
@@ -517,11 +520,14 @@ def render(rows, derived, plan_dir):
     files["summary.tsv"] = table("summary.tsv", derived["summary"])
     files["settings.tsv"] = table("settings.tsv", [dict(key=k, value=v) for k, v in SETTINGS])
     plan = pathlib.Path(plan_dir)
-    files["PLAN.md"] = (plan / "PLAN.md").read_bytes()
-    files["PLAN.sha256"] = (plan / "PLAN.sha256").read_bytes()
-    digest, name = files["PLAN.sha256"].decode("utf-8").split()[:2]
-    if name != "PLAN.md" or hashlib.sha256(files["PLAN.md"]).hexdigest() != digest:
+    fixed = (plan / "PLAN.md").read_bytes()
+    digest, name = (plan / "PLAN.sha256").read_bytes().decode("utf-8").split()[:2]
+    if name != "PLAN.md" or hashlib.sha256(fixed).hexdigest() != digest:
         raise SystemExit("PLAN.md does not have the sha256 PLAN.sha256 gives")
+    # The record gives the plan with one change: a person's name in one sentence becomes a role.
+    # PLAN.sha256 in the record is the sha256 of the text given there; the README names the plan as fixed.
+    files["PLAN.md"] = PLAN_NAME.sub(PLAN_ROLE, fixed)
+    files["PLAN.sha256"] = f"{hashlib.sha256(files['PLAN.md']).hexdigest()}  PLAN.md\n".encode("utf-8")
     return {k: v if isinstance(v, bytes) else v.encode("utf-8") for k, v in files.items()}
 
 

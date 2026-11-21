@@ -4,9 +4,9 @@
 # synthetic master is made here by box/gen-port-master.sh from PORT's gen-root.py. Round 2 pushes no data set: no
 # restore sets, no revision 12 curated/ or catalog/, no MTB source (the restore step is skipped this round).
 set -eu
-L=/home/layth/review H=/home/user/k10
+L=/home/user/review H=/home/user/k10
 [ -e /home/user/.mirror-done ] && { echo "mirror already set up"; exit 0; }
-sudo -n mkdir -p "$L"; sudo -n chown -R "$(id -u):$(id -g)" /home/layth
+sudo -n mkdir -p "$L"; sudo -n chown -R "$(id -u):$(id -g)" "$L"
 P=$L/grm-port-r11-20261105
 mkdir -p "$P/dryrun" "$P/drive" "$P/synth" "$L/grm-kit9-20261106/live"
 cp -a "$H/port/dryrun/." "$P/dryrun/"; cp -a "$H/port/kit" "$P/kit"; cp -a "$H/live/drive.sh" "$P/drive/drive.sh"

@@ -4,8 +4,8 @@
 # docs/input-comparison-runner.md (H-1 specs); kinds, types and the combine rows follow drive.sh's header (a combine
 # box is type default and waits for its parts' DONE); TTL_H is the slow estimate + 0.5 h (G6, no resume) and at most
 # 6 h (MAX_TTL). KIT12: each main part leaves out k21 and k25, and each runs on its own addon box (column 10 names the
-# main part; G2(b), Layth's ruling of 8 Nov 2026 lifting register section 13 G2); each species' combine takes its
-# main parts and their add-ons. MTB is in (Layth, 8 Nov 2026: all four species). No hour estimate, SLOW_OK or run-box
+# main part; G2(b), the ruling of 8 Nov 2026 lifting register section 13 G2); each species' combine takes its
+# main parts and their add-ons. MTB is in (ruling of 8 Nov 2026: all four species). No hour estimate, SLOW_OK or run-box
 # ordering is on this controller, so those are placeholders.
 P1	pilot	xlarge	@@P1_EST_FAST_H@@	@@P1_EST_SLOW_H@@	@@P1_SLOW_OK@@	-	scripts/input-comparison/h1/pilot.json	@@P1_TTL_H@@	-
 SAL-1	s1	xlarge	@@SAL1_EST_FAST_H@@	@@SAL1_EST_SLOW_H@@	@@SAL1_SLOW_OK@@	@@SAL1_NEEDS@@	scripts/input-comparison/h1/h1-salmonella_enterica-part1.json	@@SAL1_TTL_H@@	-

@@ -18,9 +18,11 @@ The laptop runs the kit from these paths. `install/install-kit10.sh` puts this s
 
 | Here | On the laptop |
 |---|---|
-| `runner/grm-boat.sh` | `/home/layth/review/grm-boat-runner-20261031/grm-boat.sh` |
-| `drive/drive.sh` | `/home/layth/review/grm-port-r11-20261105/drive/drive.sh` |
-| `kit/*` | `/home/layth/review/grm-port-r11-20261105/kit/` |
+| `runner/grm-boat.sh` | `/home/user/review/grm-boat-runner-20261031/grm-boat.sh` |
+| `drive/drive.sh` | `/home/user/review/grm-port-r11-20261105/drive/drive.sh` |
+| `kit/*` | `/home/user/review/grm-port-r11-20261105/kit/` |
+
+The paths give the home directory in a neutral form, `/home/user`, and the boat binary as `boat.exe` on the `PATH`. On a machine with another home directory, set `GRM_BOAT`, `GRM_LANES_MD` and `GRM_STAGE_WIN` for the runner and the drive, and `KIT10_D` and `KIT10_R` for the installer.
 
 ## Running from the T3 controller
 

@@ -51,6 +51,16 @@ enum Command {
         /// without one is its own singleton group).
         #[arg(long, value_enum, default_value_t = SelectionRule::Legacy)]
         selection: SelectionRule,
+        /// How a genome and drug's reported calls become one call when its
+        /// records mix categories: `r-or-s-wins` (the default, every release
+        /// so far: S with I is S, I with R is R, R with S no call),
+        /// `intermediate-aside` (a pair with an Intermediate and an R or S
+        /// record gets no call), `most-resistant` (R over I over S, so R with
+        /// S is R) or `intermediate-class` (a pair with an Intermediate
+        /// record is I unless it holds both R and S). A rule other than the
+        /// default is written to qc.json.
+        #[arg(long, value_enum, default_value_t = LabelRuleArg::ROrSWins)]
+        label_rule: LabelRuleArg,
         /// Seed of the group draw; required with `group-round-robin-v1`.
         #[arg(long)]
         selection_seed: Option<u64>,
@@ -434,11 +444,19 @@ fn run(cli: Cli) -> Result<()> {
             min_class,
             sigdrug_vocabulary,
             selection,
+            label_rule,
             selection_seed,
             stratum,
         } => {
             let rule = selection_rule(selection, selection_seed, stratum)?;
-            run_curate_with(&layout, cap, min_class, sigdrug_vocabulary, &rule)
+            run_curate_with(
+                &layout,
+                cap,
+                min_class,
+                sigdrug_vocabulary,
+                &rule,
+                label_rule.into(),
+            )
         }
         Command::SpeciesCheck { sketch_only, reset } => species_check(&layout, sketch_only, reset),
         Command::Count {
@@ -1402,6 +1420,30 @@ enum SelectionRule {
     GroupRoundRobinV1,
 }
 
+/// `curate::LabelRule` on the command line, with the same names as in qc.json.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, clap::ValueEnum)]
+enum LabelRuleArg {
+    #[value(name = "r-or-s-wins")]
+    ROrSWins,
+    #[value(name = "intermediate-aside")]
+    IntermediateAside,
+    #[value(name = "most-resistant")]
+    MostResistant,
+    #[value(name = "intermediate-class")]
+    IntermediateClass,
+}
+
+impl From<LabelRuleArg> for curate::LabelRule {
+    fn from(arg: LabelRuleArg) -> Self {
+        match arg {
+            LabelRuleArg::ROrSWins => curate::LabelRule::ROrSWins,
+            LabelRuleArg::IntermediateAside => curate::LabelRule::IntermediateAside,
+            LabelRuleArg::MostResistant => curate::LabelRule::MostResistant,
+            LabelRuleArg::IntermediateClass => curate::LabelRule::IntermediateClass,
+        }
+    }
+}
+
 /// A selection rule with its inputs, checked before curation reads anything.
 enum Selector {
     Legacy,
@@ -1529,7 +1571,14 @@ fn run_curate(
     min_class: usize,
     sigdrug: Option<PathBuf>,
 ) -> Result<()> {
-    run_curate_with(layout, cap, min_class, sigdrug, &Selector::Legacy)
+    run_curate_with(
+        layout,
+        cap,
+        min_class,
+        sigdrug,
+        &Selector::Legacy,
+        curate::LabelRule::default(),
+    )
 }
 
 fn run_curate_with(
@@ -1538,6 +1587,7 @@ fn run_curate_with(
     min_class: usize,
     sigdrug: Option<PathBuf>,
     selector: &Selector,
+    label_rule: curate::LabelRule,
 ) -> Result<()> {
     // `grm learn` gates each dataset at this minimum; below the outer fold
     // count, a random-split fold lacks a class and `grm learn` stops with an
@@ -1557,6 +1607,7 @@ fn run_curate_with(
         .collect();
     let cfg = QcConfig {
         min_class,
+        label_rule,
         ..Default::default()
     };
     let vocab = match &sigdrug {
@@ -1869,6 +1920,42 @@ mod tests {
     use rand::{Rng, SeedableRng};
     use rand_chacha::ChaCha8Rng;
     use std::path::Path;
+
+    #[test]
+    fn label_rule_names_on_the_command_line_are_the_names_qc_json_records() {
+        use clap::ValueEnum;
+        for arg in LabelRuleArg::value_variants() {
+            let name = arg.to_possible_value().unwrap().get_name().to_string();
+            let rule: curate::LabelRule = (*arg).into();
+            assert_eq!(serde_json::to_value(rule).unwrap(), name);
+        }
+        let cli = Cli::try_parse_from(["grm", "curate"]).unwrap();
+        let Command::Curate { label_rule, .. } = cli.command else {
+            panic!("not curate")
+        };
+        assert!(curate::LabelRule::from(label_rule).is_default());
+    }
+
+    #[test]
+    fn a_curate_run_under_another_label_rule_records_it_in_qc_json() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path());
+        species_check_fixture(dir.path());
+        let folds = grm::learn::eval::EvalConfig::default().folds;
+        let qc = |layout: &Layout| curated_json(layout, "qc.json");
+        run_curate(&layout, 30, folds, None).unwrap();
+        assert!(qc(&layout)[0].get("label_rule").is_none());
+        run_curate_with(
+            &layout,
+            30,
+            folds,
+            None,
+            &Selector::Legacy,
+            curate::LabelRule::IntermediateAside,
+        )
+        .unwrap();
+        assert_eq!(qc(&layout)[0]["label_rule"], "intermediate-aside");
+    }
 
     #[test]
     fn count_takes_only_a_k_the_kmer_space_supports() {
@@ -3234,7 +3321,15 @@ mod tests {
         .unwrap();
         let rule =
             selection_rule(SelectionRule::GroupRoundRobinV1, Some(7), Some(stratum)).unwrap();
-        run_curate_with(&layout, 30, folds, None, &rule).unwrap();
+        run_curate_with(
+            &layout,
+            30,
+            folds,
+            None,
+            &rule,
+            curate::LabelRule::default(),
+        )
+        .unwrap();
         let species_dir = layout.species_dir("escherichia_coli");
         let plan: curate::GroupSamplingPlan =
             serde_json::from_slice(&std::fs::read(species_dir.join("selection.json")).unwrap())

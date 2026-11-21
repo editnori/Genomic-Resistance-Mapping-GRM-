@@ -74,7 +74,7 @@ Bend and Lean are not cargo dependencies and nothing in `cargo test` runs them. 
 | Lean 4.34.0 `lean-4.34.0-linux.zip` | `5f14e0f3762058a529b1598f4355e6787c5f155be1bcce72ae288b9c35e3adb4` |
 | `bendtt` kernel | `e943466a914ee7eb0ca53c8d720ff57ed07c55c4026a861362fe17faaba3e05f` |
 
-The model files were in `/root/grm-bend2-foldmask-20261026/{source,vectors}` and the toolchain in `/root/grm-bend2-pilot-20261026`. Both folders are historical: they were on the Vast host, which was destroyed on 2026-10-31, and are no longer available (the toolchain folder had already been deleted on 2026-10-29, after a verified laptop copy; see [`work-program-20261027.md`](work-program-20261027.md)). To check a run, verify those hashes, copy each book's `VECTORS.bend` and `cases_*.bend` into a fresh `bendcheck/BOOK/` beside a copy of `CHECK.bend`, put `MODEL.bend` in `bendcheck/source/`, make the copies read-only, and run each step for `PROOF.bend` and for `bendcheck/{ext45,rand}/VECTORS.bend`:
+The model files were in `/root/grm-bend2-foldmask-20261026/{source,vectors}` and the toolchain in `/root/grm-bend2-pilot-20261026`. Both folders are historical: they were on the Vast host, which was destroyed on 2026-10-31, and are no longer available. To check a run, verify those hashes, copy each book's `VECTORS.bend` and `cases_*.bend` into a fresh `bendcheck/BOOK/` beside a copy of `CHECK.bend`, put `MODEL.bend` in `bendcheck/source/`, make the copies read-only, and run each step for `PROOF.bend` and for `bendcheck/{ext45,rand}/VECTORS.bend`:
 
 ```bash
 bend FILE                                  # check
