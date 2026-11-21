@@ -461,6 +461,11 @@ README_ROWS = {
 }
 
 
+def column_lines():
+    """Each TSV of the record and its columns, in order."""
+    return ["- `%s`: %s." % (name, ", ".join("`%s`" % c for c in COLUMNS[name])) for name in sorted(COLUMNS)]
+
+
 def readme(files):
     lines = [
         "# Kover comparison record",
@@ -480,6 +485,10 @@ def readme(files):
     lines += [
         "",
         "Every file is plain text, and each TSV has a header row. All differences are Kover minus GRM. A file holds counts and measures per dataset, per fold, per greedy step or per measure: no genome, no sequence, no rule and no importance value.",
+        "",
+        "## Columns",
+        "",
+    ] + column_lines() + [
         "",
         "## Rules",
         "",

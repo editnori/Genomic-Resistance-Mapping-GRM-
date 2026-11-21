@@ -41,6 +41,15 @@ class Record(unittest.TestCase):
                 self.assertEqual(len(row), len(cols), name)
                 self.assertNotIn(None, row.values(), name)
 
+    def test_readme_names_each_file_and_its_columns(self):
+        readme = (RECORD / "README.md").read_text(encoding="utf-8")
+        self.assertEqual(sorted(record.COLUMNS), sorted(n for n in record_files() if n.endswith(".tsv")))
+        for name in record_files():
+            self.assertIn("| `%s` |" % name, readme)
+            if name.endswith(".tsv"):
+                cols = read_tsv(RECORD / name, header_only=True)
+                self.assertIn("\n- `%s`: %s.\n" % (name, ", ".join("`%s`" % c for c in cols)), readme)
+
     def test_record_is_what_the_script_writes(self):
         try:
             files = record.assemble(record.from_record(RECORD))

@@ -168,16 +168,16 @@ class Synthetic(unittest.TestCase):
             shutil.copytree(self.out, copy)
             path = os.path.join(copy, name)
             if change == "cell":
-                text = open(path, encoding="utf-8").read()
+                text = pathlib.Path(path).read_text(encoding="utf-8")
                 lines = text.split("\n")
                 cells = lines[1].split("\t")
                 cells[3] = cells[3] + "1"
                 lines[1] = "\t".join(cells)
-                open(path, "w", encoding="utf-8").write("\n".join(lines))
+                pathlib.Path(path).write_text("\n".join(lines), encoding="utf-8")
             elif change == "drop":
                 os.remove(path)
             else:
-                open(path, "w", encoding="utf-8").write("genome\tcall\nSYNTHETIC\t1\n")
+                pathlib.Path(path).write_text("genome\tcall\nSYNTHETIC\t1\n", encoding="utf-8")
             rc, err = run("--check", copy)
             self.assertEqual(rc, 1, (name, change))
             self.assertIn("record.py:", err)
@@ -198,9 +198,9 @@ class Stops(unittest.TestCase):
         self.assertFalse(os.path.exists(os.path.join(self.tmp, "out")))
 
     def edit(self, path, old, new):
-        text = open(path, encoding="utf-8").read()
+        text = pathlib.Path(path).read_text(encoding="utf-8")
         self.assertIn(old, text)
-        open(path, "w", encoding="utf-8").write(text.replace(old, new, 1))
+        pathlib.Path(path).write_text(text.replace(old, new, 1), encoding="utf-8")
 
     def test_datasets_changed_after_the_plan_hashed_them(self):
         k, r = synthetic.make(os.path.join(self.tmp, "in"), datasets_after_hash="order\tdataset\n")

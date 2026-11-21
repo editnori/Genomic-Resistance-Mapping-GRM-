@@ -24,6 +24,20 @@ It is not `reference/kover-summary.json`. That file holds the 73 historical Kove
 
 Every file is plain text, and each TSV has a header row. All differences are Kover minus GRM. A file holds counts and measures per dataset, per fold, per greedy step or per measure: no genome, no sequence, no rule and no importance value.
 
+## Columns
+
+- `cohort.tsv`: `measure`, `chosen`, `eligible`.
+- `datasets.tsv`: `order`, `dataset`, `species`, `genomes`, `resistant`, `susceptible`, `lineages`, `lineage_folds`, `genomes_listed_in_data_root`, `fold_sizes`.
+- `folds.tsv`: `dataset`, `fold`, `test_genomes`, `resistant`, `susceptible`, `grm_tp`, `grm_fn`, `grm_tn`, `grm_fp`, `grm_rules`, `kover_tp`, `kover_fn`, `kover_tn`, `kover_fp`, `kover_rules`, `kover_kind`, `kover_p`, `agreeing`.
+- `mapping.tsv`: `setting`, `grm`, `kover`, `same`.
+- `order.tsv`: `utc`, `event`, `file`, `sha256`.
+- `per_dataset.tsv`: `dataset`, `genomes`, `folds`, `balanced_accuracy`, `balanced_accuracy_t_low`, `balanced_accuracy_t_high`, `recall`, `specificity`, `log_loss`, `error_rate`, `rules`, `agreeing_share`.
+- `settings.tsv`: `key`, `value`.
+- `steps.tsv`: `dataset`, `step`, `kind`, `p`, `grm_covered`, `grm_lost`, `kover_covered`, `kover_lost`, `grm_listed_tied`, `counts_equal`, `pattern_equal`, `kover_equals_a_listed_tied`.
+- `summary.tsv`: `measure`, `reading`, `value`, `low`, `high`, `seed`, `datasets_higher`, `datasets_equal`, `datasets_lower`, `folds_higher`, `folds_equal`, `folds_lower`.
+- `ties.tsv`: `dataset`, `fold`, `rules_tied`, `rules_kept`, `patterns`, `first_index_equals_run`, `first_index_test_balanced_accuracy`, `tied_test_balanced_accuracy`.
+- `totals.tsv`: `key`, `value`.
+
 ## Rules
 
 - **Measures.** From each fold's confusion counts: balanced accuracy is the mean of recall and specificity, and log loss takes each 0 or 1 call as a probability clipped to [0.0001, 0.9999], so it is 0.0001 plus 9.2102 times the error rate.
