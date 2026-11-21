@@ -204,20 +204,19 @@ class NeverHeld(unittest.TestCase):
 
 CATALOG_NAMES = {"catalog_endpoints", "catalog_rows", "catalog_tool_only_right", "catalog_only_right",
                  "tool_minus_catalog_median"}
-# The tool's own counts per report that are 1 or a class less 1: genomes without a call by label, the grade a call rests
-# on, and the one entry the tool's rule set aside. They are counted here, so that no new one enters unseen.
-OPEN_SMALL = {"tool genomes with a call": 12, "tool resistant genomes with a call": 11,
-              "tool susceptible genomes with a call": 12, "tool genomes without a call, by label": 9,
-              "grade split of a call": 5, "set-aside entry": 1}
+# The groups of 1 the record gives outside the catalog row: the genomes without a call of 3 reports, by label, under
+# each way in callers.tsv and under the primary way in disagreements.tsv. The public release names no such group by
+# itself. They are counted here, so that no other group of 1 enters unseen.
+GROUPS_OF_ONE = {"tool genomes without a call, by label": 30}
 
 
 def small_cells(root=RECORD):
-    """Every count of the record with the class the record gives it. A cell describes one genome when it is a count of
-    1 in a class of 1, or a count that equals its class less 1. Returns the count of such cells by kind."""
+    """Every count of the record with the group the record gives it. A cell describes one genome when the group it
+    counts has one member: a count of 1, or of 0, in a group of 1. Returns the count of such cells by kind."""
     found = collections.Counter()
 
     def check(kind, count, klass):
-        if klass >= 1 and ((count == 1 and klass == 1) or count == klass - 1):
+        if klass == 1:
             found[kind] += 1
 
     for r in read_tsv(root / "callers.tsv"):
@@ -230,6 +229,8 @@ def small_cells(root=RECORD):
             check("tool genomes with a call", c["with_call"], c["genomes"])
             check("tool resistant genomes with a call", res, res + c["no_call_resistant"])
             check("tool susceptible genomes with a call", sus, sus + c["no_call_susceptible"])
+            for k in ("no_call_resistant", "no_call_susceptible"):
+                check("tool genomes without a call, by label", c[k], c["no_call_resistant"] + c["no_call_susceptible"])
         else:
             # A pair count is drawn from the genomes the tool called, which the learner's row is on.
             for k in ("caller_only_right", "tool_only_right"):
@@ -286,12 +287,10 @@ class SmallCells(unittest.TestCase):
                       "because on three reports a per-report count of it would describe one genome.", readme)
 
     def test_no_cell_describes_one_genome(self):
-        found = small_cells()
-        self.assertEqual({k: v for k, v in found.items() if k not in OPEN_SMALL}, {})
-        self.assertEqual({k: found.get(k, 0) for k in OPEN_SMALL}, OPEN_SMALL)
+        self.assertEqual(dict(small_cells()), GROUPS_OF_ONE)
 
     def test_the_small_cell_check_finds_its_cells(self):
-        # The check itself, on cells made up here: a count of 1 in a class of 1, and a count of its class less 1.
+        # The check itself, on cells made up here: a count of 1 in a group of 1.
         tmp = tempfile.mkdtemp(prefix="small-cells-")
         try:
             dest = pathlib.Path(shutil.copytree(RECORD, f"{tmp}/rec"))
