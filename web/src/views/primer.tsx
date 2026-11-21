@@ -6,8 +6,8 @@
 // and the two drawings that are not data say so. Overview shows the steps
 // as one section above the findings; Present shows one step per slide.
 
-import type { ReactNode } from "react";
-import { Check, X } from "lucide-react";
+import { useId, useState, type ReactNode } from "react";
+import { Check, ChevronDown, X } from "lucide-react";
 import type { CatalogRow, LearnerLite, Manifest } from "../data/schema";
 import { datasetTitle, int, pct } from "../data/format";
 import { BARS, barLabel } from "../data/metrics";
@@ -255,7 +255,7 @@ const NOT_SUPPORTED = [
   "That a marked gene or k-mer causes resistance",
 ];
 
-const ScopeFigure = () => (
+export const ScopeFigure = () => (
   <figure data-primer-figure="scope" className="m-0 grid w-full max-w-[40rem] grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2">
     <div>
       <p className="text-control font-semibold text-ink">Supports</p>
@@ -409,10 +409,22 @@ export const primerSteps = (m: Manifest, ex: PrimerExample | null = primerExampl
 /** The anchor of the primer on Overview. */
 export const PRIMER_ANCHOR = "primer";
 
-/** The primer as one section above the findings: a heading, the example
- *  report it reads from, then each step as text beside its figure. A link
- *  skips ahead to the findings for a reader who already knows the terms. */
-export const PrimerSection = ({ manifest, nav, firstFinding }: { manifest: Manifest; nav: Navigator; firstFinding: string }) => {
+/** The primer as one collapsible section above the findings: collapsed by
+ *  default on Overview so readers reach the findings immediately, and open on
+ *  click or arrival via #primer / #primer-*. */
+export const PrimerSection = ({
+  manifest,
+  nav,
+  firstFinding,
+  initialOpen = false,
+}: {
+  manifest: Manifest;
+  nav: Navigator;
+  firstFinding: string;
+  initialOpen?: boolean;
+}) => {
+  const [open, setOpen] = useState(initialOpen);
+  const bodyId = useId();
   const ex = primerExample(manifest);
   const steps = primerSteps(manifest, ex);
   return (
@@ -421,20 +433,32 @@ export const PrimerSection = ({ manifest, nav, firstFinding }: { manifest: Manif
         <h2 id={`${PRIMER_ANCHOR}-title`} tabIndex={-1} className={`rounded-sm text-headline font-semibold tracking-tight text-ink ${FOCUS_RING}`}>
           How to read this report
         </h2>
-        <a
-          href={`#${firstFinding}`}
-          onClick={(e) => {
-            e.preventDefault();
-            showSection(firstFinding, true);
-          }}
-          className={`inline-flex min-h-11 items-center gap-1.5 text-control font-medium ${LINK}`}
-        >
-          Skip to the findings
-          <span aria-hidden="true">↓</span>
-        </a>
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
+          <button
+            type="button"
+            aria-expanded={open}
+            aria-controls={open ? bodyId : undefined}
+            onClick={() => setOpen((v) => !v)}
+            className={`inline-flex min-h-11 items-center gap-1.5 rounded-sm text-control font-medium text-blue transition-colors duration-fast ease-out hover:text-ink ${FOCUS_RING}`}
+          >
+            {open ? "Hide the 5-step guide" : "Show the 5-step guide"}
+            <ChevronDown size={14} strokeWidth={1.75} aria-hidden="true" className={`transition-transform duration-fast ease-out ${open ? "rotate-180" : ""}`} />
+          </button>
+          <a
+            href={`#${firstFinding}`}
+            onClick={(e) => {
+              e.preventDefault();
+              showSection(firstFinding, true);
+            }}
+            className={`inline-flex min-h-11 items-center gap-1.5 text-control font-medium ${LINK}`}
+          >
+            Skip to the findings
+            <span aria-hidden="true">↓</span>
+          </a>
+        </div>
       </div>
       <p className="prose-measure mt-2 text-body text-ink">
-        Five short steps explain the words the findings use.
+        New to the terms? Five short steps explain datasets, k-mer features, lineage splits, error rates, and what the numbers support.
         {ex === null ? null : (
           <>
             {" "}
@@ -446,28 +470,30 @@ export const PrimerSection = ({ manifest, nav, firstFinding }: { manifest: Manif
           </>
         )}
       </p>
-      <ol className="mt-6">
-        {steps.map((s) => (
-          <li
-            key={s.id}
-            id={s.id}
-            className="grid grid-cols-1 gap-x-10 gap-y-4 border-t border-hair py-6 first:border-t-0 first:pt-0 lg:grid-cols-[minmax(0,34rem)_minmax(0,1fr)]"
-          >
-            <div className="min-w-0">
-              <h3 id={`${s.id}-title`} className="text-body font-semibold text-ink">
-                {s.title}
-              </h3>
-              <div className="prose-measure mt-1.5 text-body text-ink">{s.body}</div>
-            </div>
-            {s.figure === null ? null : (
-              <div className="min-w-0 self-center">
-                {s.figure}
-                <p className="prose-measure mt-3 text-note text-muted-text">{s.caption}</p>
+      {open ? (
+        <ol id={bodyId} className="mt-6">
+          {steps.map((s) => (
+            <li
+              key={s.id}
+              id={s.id}
+              className="grid grid-cols-1 gap-x-10 gap-y-4 border-t border-hair py-6 first:border-t-0 first:pt-0 lg:grid-cols-[minmax(0,34rem)_minmax(0,1fr)]"
+            >
+              <div className="min-w-0">
+                <h3 id={`${s.id}-title`} className="text-body font-semibold text-ink">
+                  {s.title}
+                </h3>
+                <div className="prose-measure mt-1.5 text-body text-ink">{s.body}</div>
               </div>
-            )}
-          </li>
-        ))}
-      </ol>
+              {s.figure === null ? null : (
+                <div className="min-w-0 self-center">
+                  {s.figure}
+                  <p className="prose-measure mt-3 text-note text-muted-text">{s.caption}</p>
+                </div>
+              )}
+            </li>
+          ))}
+        </ol>
+      ) : null}
     </section>
   );
 };

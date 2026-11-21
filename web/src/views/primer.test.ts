@@ -166,7 +166,7 @@ const motion = (reduced: boolean) =>
   vi.stubGlobal("matchMedia", (query: string) => ({ matches: reduced && query.includes("prefers-reduced-motion"), media: query, addEventListener: () => {}, removeEventListener: () => {} }));
 
 describe("the primer on Overview", () => {
-  it("sits above the numbered findings with its five steps, a real report link, and a skip link that moves focus", async () => {
+  it("sits collapsed above the numbered findings and expands to its five steps, a real report link, and a skip link that moves focus", async () => {
     motion(true);
     const { nav, calls } = fakeNav();
     const host = document.createElement("div");
@@ -175,9 +175,20 @@ describe("the primer on Overview", () => {
     await act(async () => root!.render(createElement(OverviewView, { manifest: base, nav })));
     const primer = host.querySelector(`#${PRIMER_ANCHOR}`)!;
     expect(primer.compareDocumentPosition(host.querySelector("#corpus")!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const toggle = primer.querySelector<HTMLButtonElement>("button[aria-expanded]")!;
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    expect(toggle.textContent?.trim()).toBe("Show the 5-step guide");
+    expect(primer.querySelectorAll("h3")).toHaveLength(0);
+    await act(async () => toggle.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 })));
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    expect(toggle.textContent?.trim()).toBe("Hide the 5-step guide");
     expect([...primer.querySelectorAll("h3")].map((h) => h.textContent)).toEqual(["A dataset", "A genome feature", "Two tests", "Reading one result", "What the numbers support"]);
-    // The primer adds no tab stop beyond its two links.
-    expect([...primer.querySelectorAll("a, button, [tabindex='0']")].map((e) => e.textContent?.trim())).toEqual(["Skip to the findings↓", datasetTitle(primerExample(base)!.row)]);
+    // The primer adds no tab stop beyond its toggle and two links.
+    expect([...primer.querySelectorAll("a, button, [tabindex='0']")].map((e) => e.textContent?.trim())).toEqual([
+      "Hide the 5-step guide",
+      "Skip to the findings↓",
+      datasetTitle(primerExample(base)!.row),
+    ]);
     const example = [...primer.querySelectorAll<HTMLAnchorElement>("a")][1]!;
     await act(async () => example.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 })));
     expect(calls.open).toEqual([primerExample(base)!.row.id]);
@@ -186,6 +197,19 @@ describe("the primer on Overview", () => {
     expect(document.activeElement).toBe(host.querySelector("#corpus-title"));
     // No figure animates: the primer is static on the page.
     expect(primer.querySelector('[class*="motion-"], [class*="animate-"]')).toBeNull();
+  });
+
+  it("opens on arrival when linked to #primer", async () => {
+    motion(true);
+    window.history.replaceState(null, "", `/#${PRIMER_ANCHOR}`);
+    const host = document.createElement("div");
+    document.body.append(host);
+    root = createRoot(host);
+    await act(async () => root!.render(createElement(OverviewView, { manifest: base, nav: fakeNav().nav })));
+    const primer = host.querySelector(`#${PRIMER_ANCHOR}`)!;
+    expect(primer.querySelector("button[aria-expanded]")?.getAttribute("aria-expanded")).toBe("true");
+    expect(primer.querySelectorAll("h3")).toHaveLength(5);
+    window.history.replaceState(null, "", "/");
   });
 });
 

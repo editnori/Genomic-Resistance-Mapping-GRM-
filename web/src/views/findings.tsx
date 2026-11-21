@@ -67,12 +67,14 @@ import {
   type LearnerCounts,
 } from "../data/derive/inputs";
 import { ONE_STUDY_ALL, OUTSIDE_LEARNERS, OUTSIDE_STUDY, outsidePoints, populationById, populationSummary, type Learner as OutsideLearner, type PopulationSummary } from "../data/derive/outside";
+import { STUDY_LEARNERS, STUDY_SPLIT, studySplitSummary, type StudyContrast } from "../data/derive/studySplit";
+import { OTHER_DATABASE, OTHER_DB_LEARNERS, otherDatabaseSummary } from "../data/derive/otherDatabase";
 import { FOCUS_RING, ScrollFrame, type Fit } from "../ui/primitives";
 import { micBaselineSummary, type MicBaselineSummary, type MicConstant } from "../data/baselines";
 import { AUDIT_READING, AUDIT_SCOPE } from "../ui/EvaluationNotice";
 import { PanelEvidence } from "./PanelEvidence";
 
-export type FindingId = "corpus" | "lineage" | "learners" | "bars" | "catalog" | "panels" | "mic" | "outside" | "inputs";
+export type FindingId = "corpus" | "lineage" | "learners" | "bars" | "catalog" | "panels" | "mic" | "outside" | "study-split" | "other-database" | "inputs";
 
 /** What a deck gives a figure that may continue onto further slides: the
  *  measured box, the page to draw and the page count, and, while the deck
@@ -1574,4 +1576,241 @@ export const inputsFinding = (_m: Manifest, opts: FindingOptions): Finding => {
   };
 };
 
-export const FINDINGS = [corpusFinding, lineageFinding, learnersFinding, barsFinding, catalogFinding, panelsFinding, micFinding, outsideFinding, inputsFinding] as const;
+// ---- holding out whole studies (BioProjects) -------------------------------------------
+
+const signedDec = (v: number, digits = 3): string => `${v < 0 ? "−" : "+"}${Math.abs(v).toFixed(digits)}`;
+
+const contrastCell = (c: StudyContrast, asPoints = false): string => {
+  const val = asPoints ? signedPoints(c.median) : signedDec(c.median, 3);
+  return `${val} (${c.reading})`;
+};
+
+const StudySplitTable = ({ page }: { page: boolean }) => (
+  <NumberTable
+    label="Study folds minus random folds, first experiment"
+    head={page ? ["Learner", "Recall, points", "Specificity, points", "Log loss", "Plan reading"] : ["Learner", "Recall, points", "Specificity, points", "Log loss"]}
+    groups={[
+      {
+        rows: STUDY_LEARNERS.map((l) => {
+          const r = STUDY_SPLIT.first[l];
+          const base = [contrastCell(r.recall, true), contrastCell(r.specificity, true), contrastCell(r.log_loss, false)];
+          return { key: l, name: LEARNER_NAME[l], cells: page ? [...base, r.rule === "cost" ? `cost (${r.keep} of 9 species leave-outs)` : r.rule] : base };
+        }),
+      },
+    ]}
+    slide={!page}
+  />
+);
+
+const StudySplitRepeatedTable = () => (
+  <>
+    <NumberTable
+      label="Second experiment across repeated fold draws"
+      head={["Learner", "Contrast", "Recall, points", "Specificity, points", "Loss", "Draw pairs showing cost"]}
+      groups={[
+        {
+          rows: STUDY_LEARNERS.flatMap((l) =>
+            (
+              [
+                ["SR", "Study − random"],
+                ["SM", "Study − matched"],
+                ["MR", "Matched − random"],
+              ] as const
+            ).map(([fam, label]) => {
+              const e = STUDY_SPLIT.second[l][fam];
+              return {
+                key: `${l}-${fam}`,
+                name: `${LEARNER_NAME[l]}`,
+                cells: [label, contrastCell(e.recall, true), contrastCell(e.specificity, true), contrastCell(e.loss, false), `${e.cost} of ${e.pairs} (${e.answer})`],
+              };
+            }),
+          ),
+        },
+      ]}
+    />
+    <p className="type-note mt-2">
+      Loss is the error rate for the set covering machine and log loss for the other four learners. Matched random folds copy each study draw&apos;s fold sizes and resistant counts.
+    </p>
+  </>
+);
+
+const StudyVsLineageTable = () => (
+  <>
+    <NumberTable
+      label="Study folds minus lineage split"
+      head={["Learner", "Recall, points", "Specificity, points", "Log loss"]}
+      groups={[
+        {
+          rows: STUDY_LEARNERS.map((l) => {
+            const e = STUDY_SPLIT.vs_lineage[l];
+            return {
+              key: l,
+              name: LEARNER_NAME[l],
+              cells: [contrastCell(e.recall, true), contrastCell(e.specificity, true), contrastCell(e.log_loss, false)],
+            };
+          }),
+        },
+      ]}
+    />
+    <p className="type-note mt-2">
+      Over the {int(STUDY_SPLIT.lineage_datasets)} datasets that have a lineage split, study minus lineage is not shown on log loss for 4 of 5 learners; the first plan gave these contrasts no rule.
+    </p>
+  </>
+);
+
+export const studySplitFinding = (_m: Manifest, opts: FindingOptions): Finding => {
+  const s = studySplitSummary();
+  return {
+    id: "study-split",
+    title: "Holding out whole studies",
+    result: opts.page
+      ? `In a retrospective split by study inside one database, BV-BRC (${int(s.datasets)} datasets, ${int(s.species)} species, ${int(s.pairs)} genome-drug pairs), folds that keep each BioProject whole score worse than random folds on the same genomes. Log loss and specificity read worse for ${int(s.logLossWorse)} of 5 learners; recall reads worse for the random forest and boosted trees, and is lower but not shown for the set covering machine, decision tree and lasso.`
+      : `In BV-BRC (${int(s.datasets)} datasets, ${int(s.species)} species), folds holding whole BioProjects out score worse than random folds on log loss and specificity for ${int(s.logLossWorse)} of 5 learners.`,
+    figure: <StudySplitTable page={opts.page} />,
+    caption: opts.page
+      ? "Each cell is the median paired difference (study folds minus random folds) over 70 datasets, with its reading against an exact 95% species bootstrap interval over 9 species. A BioProject stands in for a study. This is a retrospective split by study inside one database and never external validation."
+      : "Median paired difference (study minus random) over 70 datasets in 9 species, read against exact 95% species intervals. Retrospective split inside BV-BRC, never external validation.",
+    note: opts.page ? (
+      <div className="prose-measure mt-3 space-y-1.5 text-note text-ink">
+        <p>
+          Across five repeated study assignments and five random draws (25 study-random draw pairs), every learner shows a cost in 25 of 25 study-random draw pairs and in 5 of 5 study-matched draw pairs (matched folds copy each study fold&apos;s size and resistant count).
+        </p>
+        <p>
+          The design does not separate study from lineage: study folds keep every study mate out of training and roughly half of lineage-cluster mates as well. Of the {int(s.pairs)} pairs, {int(STUDY_SPLIT.no_study_pairs)} have no BioProject.
+        </p>
+      </div>
+    ) : undefined,
+    span: "unit",
+    more: opts.page
+      ? [
+          { label: "Repeated draws and matched fold shapes", body: <StudySplitRepeatedTable /> },
+          { label: "Compared with the lineage split", body: <StudyVsLineageTable /> },
+        ]
+      : undefined,
+  };
+};
+
+// ---- another public database (NCBI Pathogen Detection) ---------------------------------
+
+const OtherDatabaseSummaryTable = ({ page }: { page: boolean }) => {
+  const s = otherDatabaseSummary();
+  return (
+    <NumberTable
+      label="Released Revision 14 models on NCBI Pathogen Detection genomes"
+      head={
+        page
+          ? ["Learner", "Species meeting plan (of 8)", "Datasets holding (8 species)", "Recall below", "Log loss worse", "E. coli pilot holding"]
+          : ["Learner", "Species met (of 8)", "Datasets holding", "E. coli pilot"]
+      }
+      groups={[
+        {
+          rows: OTHER_DB_LEARNERS.map((l) => {
+            const t = s.totals[l];
+            const p = s.pilot[l];
+            const sp = t.plan_not_assessable > 0 ? `${t.plan_meets} of ${t.assessable} assessable (${t.plan_not_assessable} n/a)` : `${t.plan_meets} of ${t.species}`;
+            return {
+              key: l,
+              name: LEARNER_NAME[l],
+              cells: page
+                ? [sp, `${t.holds} of ${t.estimable}`, int(t.recall_below), int(t.log_loss_worse), `${p.holds} of ${p.estimable}`]
+                : [sp, `${t.holds} of ${t.estimable}`, `${p.holds} of ${p.estimable}`],
+            };
+          }),
+        },
+      ]}
+      slide={!page}
+    />
+  );
+};
+
+const OtherDatabaseSpeciesTable = () => {
+  const bySp = new Map<string, Record<string, { holds: number; estimable: number; rule: string }>>();
+  for (const r of OTHER_DATABASE.by_species) {
+    const cur = bySp.get(r.species) ?? {};
+    cur[r.learner] = { holds: r.holds, estimable: r.estimable, rule: r.rule };
+    bySp.set(r.species, cur);
+  }
+  const fmt = (entry: { holds: number; estimable: number; rule: string } | undefined) =>
+    entry === undefined || entry.estimable === 0 ? "n/a" : `${entry.holds} of ${entry.estimable} (${entry.rule})`;
+  return (
+    <>
+      <NumberTable
+        label="NCBI Pathogen Detection results by species and BioProject overlap"
+        head={["Species", "Scored genomes", "Shared BioProject", "SCM", "Decision tree", "Lasso"]}
+        groups={[
+          {
+            title: "Eight species (plan fixed before labels)",
+            rows: OTHER_DATABASE.species
+              .filter((s) => s.part === "eight")
+              .map((s) => {
+                const m = bySp.get(s.slug) ?? {};
+                return {
+                  key: s.slug,
+                  name: s.name,
+                  cells: [int(s.scored), `${int(s.shared_bioproject)} (${pct(s.shared_bioproject / s.scored)})`, fmt(m.scm), fmt(m.cart), fmt(m.lasso)],
+                };
+              }),
+          },
+          {
+            title: "Pilot (exploratory)",
+            rows: OTHER_DATABASE.species
+              .filter((s) => s.part === "pilot")
+              .map((s) => {
+                const m = bySp.get(s.slug) ?? {};
+                return {
+                  key: s.slug,
+                  name: s.name,
+                  cells: [int(s.scored), `${int(s.shared_bioproject)} (${pct(s.shared_bioproject / s.scored)})`, fmt(m.scm), fmt(m.cart), fmt(m.lasso)],
+                };
+              }),
+          },
+        ]}
+      />
+      <p className="type-note mt-2">
+        Shared BioProject counts scored genomes in a BioProject that also contains training genomes (a lower bound). Random forest and boosted trees were not scored because published reports hold feature importances only.
+      </p>
+    </>
+  );
+};
+
+export const otherDatabaseFinding = (_m: Manifest, opts: FindingOptions): Finding => {
+  const s = otherDatabaseSummary();
+  const sEnterica = OTHER_DATABASE.species.find((sp) => sp.slug === "salmonella_enterica");
+  const cColi = OTHER_DATABASE.species.find((sp) => sp.slug === "campylobacter_coli");
+  return {
+    id: "other-database",
+    title: "Another public database",
+    result: opts.page
+      ? `The released revision ${int(OTHER_DATABASE.evaluation_revision)} models were scored on ${int(s.totalGenomes)} NCBI Pathogen Detection genomes outside BV-BRC's labelled set by BioSample and assembly accession. This is a test on data from another public database that shares isolates with the training database and never external validation. Under the plan's rule, the set covering machine meets in ${int(s.totals.scm.plan_meets)} of ${int(s.eightSpecies)} species (${int(s.totals.scm.holds)} of ${int(s.totals.scm.estimable)} datasets; recall below in ${int(s.totals.scm.recall_below)}, log loss worse in ${int(s.totals.scm.log_loss_worse)}), the decision tree in ${int(s.totals.cart.plan_meets)} of ${int(s.eightSpecies)} (${int(s.totals.cart.holds)} of ${int(s.totals.cart.estimable)}), and the lasso in ${int(s.totals.lasso.plan_meets)} of the ${int(s.totals.lasso.assessable)} species where it can be read (${int(s.totals.lasso.holds)} of its ${int(s.totals.lasso.estimable)} datasets across the eight). In the E. coli pilot, SCM holds on ${int(s.pilot.scm.holds)} of ${int(s.pilot.scm.estimable)} datasets and the decision tree on ${int(s.pilot.cart.holds)} of ${int(s.pilot.cart.estimable)}.`
+      : `On ${int(s.totalGenomes)} NCBI Pathogen Detection genomes (not external validation), SCM meets the plan's rule in ${int(s.totals.scm.plan_meets)} of ${int(s.eightSpecies)} species, CART in ${int(s.totals.cart.plan_meets)} of ${int(s.eightSpecies)}, and lasso in ${int(s.totals.lasso.plan_meets)} of ${int(s.totals.lasso.assessable)} species where it can be read.`,
+    figure: <OtherDatabaseSummaryTable page={opts.page} />,
+    caption: opts.page
+      ? "A dataset holds under the plan's rule when recall is not below and log loss is not worse than the release's lineage split (by 95% intervals). A learner meets in a species when it holds on more than half of at least 3 estimable datasets. The rule reads recall and log loss only, so a dataset can hold while a learner calls every susceptible genome resistant."
+      : "Test on data from another public database (NCBI Pathogen Detection), not external validation. The rule reads recall and log loss only and does not read specificity.",
+    note: opts.page ? (
+      <div className="prose-measure mt-3 space-y-1.5 text-note text-ink">
+        <p>
+          In <em>S. enterica</em> ({sEnterica ? `${int(sEnterica.shared_bioproject)} of ${int(sEnterica.scored)}` : "most"}) and <em>C. coli</em> (
+          {cColi ? `${int(cColi.shared_bioproject)} of ${int(cColi.scored)}` : "most"}), most scored genomes come from a BioProject that also contains training genomes. Intervals
+          over genomes treat related genomes as independent, and random forest and boosted trees were not scored.
+        </p>
+      </div>
+    ) : undefined,
+    span: "unit",
+    more: opts.page ? { label: "By species and BioProject overlap", body: <OtherDatabaseSpeciesTable /> } : undefined,
+  };
+};
+
+export const FINDINGS = [
+  corpusFinding,
+  lineageFinding,
+  learnersFinding,
+  barsFinding,
+  catalogFinding,
+  panelsFinding,
+  micFinding,
+  outsideFinding,
+  studySplitFinding,
+  otherDatabaseFinding,
+  inputsFinding,
+] as const;

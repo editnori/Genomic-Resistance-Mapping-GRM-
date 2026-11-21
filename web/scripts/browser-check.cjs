@@ -360,10 +360,26 @@ async function edgeCheck(page, tag, selector) {
   check(tag + ' left edge ' + selector, !applies || (edges.brand !== undefined && edges.first !== undefined && Math.abs(edges.brand - edges.first) <= 1), edges);
 }
 
-/** The Overview primer: five steps above the numbered findings,
- *  a real report as its example, and a skip link that lands focus on the
- *  first finding's heading. */
+/** The Overview takeaways and collapsible primer: six takeaway cards above
+ *  the primer, and five primer steps revealed by one control with a real
+ *  report as its example and a skip link that lands focus on the first
+ *  finding's heading. */
 async function primerCheck(page, tag) {
+  const tk = await page.evaluate(() => {
+    const t = document.getElementById('takeaways');
+    const primer = document.getElementById('primer');
+    return {
+      heading: t?.querySelector('h2')?.textContent ?? null,
+      cards: t ? t.querySelectorAll('[data-takeaway-card]').length : 0,
+      chapters: t ? t.querySelectorAll('nav[aria-label="Report chapters"] a').length : 0,
+      scope: t?.querySelector('[data-primer-figure="scope"]') !== null,
+      beforePrimer: t && primer ? Boolean(t.compareDocumentPosition(primer) & Node.DOCUMENT_POSITION_FOLLOWING) : false,
+    };
+  });
+  check(tag + ' takeaways: six cards, four chapter links and scope box above the primer', tk.heading === 'At a glance' && tk.cards === 6 && tk.chapters === 4 && tk.scope && tk.beforePrimer, tk);
+  const toggle = page.locator('#primer button[aria-expanded]');
+  const collapsed = await toggle.getAttribute('aria-expanded');
+  if (collapsed === 'false') await toggle.click();
   const p = await page.evaluate(() => {
     const primer = document.getElementById('primer');
     const corpus = document.getElementById('corpus');
@@ -375,7 +391,7 @@ async function primerCheck(page, tag) {
       example: example?.getAttribute('href') ?? null,
     };
   });
-  check(tag + ' primer: five steps above the findings', p.before && JSON.stringify(p.steps) === JSON.stringify(['A dataset', 'A genome feature', 'Two tests', 'Reading one result', 'What the numbers support']), p);
+  check(tag + ' primer: collapsed on arrival and opens to five steps above the findings', collapsed === 'false' && p.before && JSON.stringify(p.steps) === JSON.stringify(['A dataset', 'A genome feature', 'Two tests', 'Reading one result', 'What the numbers support']), { collapsed, ...p });
   check(tag + ' primer figures stay inside the view', p.figures.length >= 3 && p.figures.every(f => f.right <= f.view + 1), p.figures);
   check(tag + ' primer example opens a real report', p.example !== null && manifest.datasets.some(d => p.example.includes('dataset=' + d.id)), p.example);
   await splitTracks(page, tag + ' primer', '#primer');
@@ -1447,11 +1463,11 @@ async function interactions(page, tag, width) {
   // A tree with no dataset to count draws no tiles.
   check(tag + ' overview bar outcomes add up', expected.stats.barsCounted === 0 ? barTiles.length === 0 : barTiles.length === 4 && barTiles[0].value === expected.stats.barsCounted && barTiles[1].value + barTiles[2].value + barTiles[3].value === barTiles[0].value, { barTiles, counted: expected.stats.barsCounted });
   await wordingCheck(page, tag);
-  // The primer is a section of its own above the ten numbered ones, under
-  // the same hairline.
+  // Takeaways and primer are sections of their own above the twelve numbered
+  // ones, each under the same hairline.
   const rules = await page.evaluate(() => { const blocks = [...document.querySelectorAll('[data-view-scroll] section[id]')]; return blocks.map(b => ({ id: b.id, rule: getComputedStyle(b).borderTopStyle })); });
-  const numbered = rules.filter(r => r.id !== 'primer');
-  check(tag + ' one hairline between findings', numbered.length === 10 && rules.length === 11 && rules[0].id === 'primer' && rules.every(r => r.rule === 'solid'), rules);
+  const numbered = rules.filter(r => r.id !== 'takeaways' && r.id !== 'primer');
+  check(tag + ' one hairline between findings', numbered.length === 12 && rules.length === 14 && rules[0].id === 'takeaways' && rules[1].id === 'primer' && rules.every(r => r.rule === 'solid'), rules);
   await page.goto(BASE);
   await page.locator('#corpus').waitFor();
   await headerCheck(page, tag + ' overview', 'What GRM found');
@@ -1461,9 +1477,16 @@ async function interactions(page, tag, width) {
   const marks = await page.evaluate(() => { const c = document.querySelector('#lineage svg circle[data-dataset]'); return c ? getComputedStyle(c).fill : null; });
   const blue = await page.evaluate(() => { const d = document.createElement('div'); d.style.color = getComputedStyle(document.documentElement).getPropertyValue('--series-s'); document.body.append(d); const c = getComputedStyle(d).color; d.remove(); return c; });
   check(tag + ' chart marks in the blue series', marks === blue, { marks, blue });
-  for (const id of ['lineage', 'learners', 'bars', 'catalog', 'panels', 'mic', 'outside', 'inputs']) { await scrollTo(page, '#' + id); await shot(page, tag + '-overview-' + id); }
+  for (const id of ['takeaways', 'lineage', 'learners', 'bars', 'catalog', 'panels', 'mic', 'outside', 'study-split', 'other-database', 'inputs']) { await scrollTo(page, '#' + id); await shot(page, tag + '-overview-' + id); }
   await outsideCheck(page, tag);
   await inputsCheck(page, tag);
+  const extraSections = await page.evaluate(() => ({
+    studyRows: document.querySelectorAll('#study-split tbody tr').length,
+    studyLead: document.querySelector('#study-split h2 + p')?.textContent ?? '',
+    otherRows: document.querySelectorAll('#other-database tbody tr').length,
+    otherLead: document.querySelector('#other-database h2 + p')?.textContent ?? '',
+  }));
+  check(tag + ' study-split and other-database sections render their tables', extraSections.studyRows === 5 && extraSections.studyLead.includes('70 datasets') && extraSections.otherRows === 3 && extraSections.otherLead.includes('13,377 NCBI Pathogen Detection'), extraSections);
 
   const micId = expected.mic[0].id;
   const micReport = JSON.parse(fs.readFileSync(path.join(FIXTURE, 'datasets', micId + '.json')));
@@ -1552,12 +1575,12 @@ async function present(page, tag, width, height) {
   await settle(page);
   await slideSelect.click();
   let slideCount = 0, previousCount = -1, stableCounts = 0;
-  // Title, five primer steps, nine findings, the rule: sixteen slides, plus
+  // Title, five primer steps, eleven findings, the rule: eighteen slides, plus
   // the extra pages of any figure too dense for the viewport (the outline
   // labels each page "(k of n)"). Which figures continue depends on the
   // viewport and on the report's row counts, so the count is checked
   // against the labels the deck shows.
-  const BASE_SLIDES = 16;
+  const BASE_SLIDES = 18;
   for (let attempt = 0; attempt < 200; attempt++) {
     slideCount = await dialog.getByRole('option').count();
     if (slideCount === previousCount) stableCounts++;
@@ -1717,7 +1740,7 @@ async function present(page, tag, width, height) {
     runs[runs.length - 1].pages.push([Number(p[1]), Number(p[2])]);
   });
   const wellFormed = runs.every(r => r.pages.length === r.pages[0][1] && r.pages.every(([k, n], i) => k === i + 1 && n === r.pages[0][1]));
-  check(tag + ' expected slide count: sixteen slides plus each figure page past the first, labelled in order', slideCount === BASE_SLIDES + pages.filter(p => p[1] !== '1').length && wellFormed, { slideCount, labels });
+  check(tag + ' expected slide count: eighteen slides plus each figure page past the first, labelled in order', slideCount === BASE_SLIDES + pages.filter(p => p[1] !== '1').length && wellFormed, { slideCount, labels });
   // The copies decide those pages, so the check holds them on every page
   // past the title. There is one per figure slide: the fifteen slides after
   // the title, by the ids the live slides carry. Each lays out as wide as
