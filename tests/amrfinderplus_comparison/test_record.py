@@ -3,15 +3,17 @@ headline figures."""
 
 import hashlib
 import io
+import re
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 
-from tests.amrfinderplus_comparison.common import LEARNERS, RECORD, load_script, pairs, read_tsv
+from tests.amrfinderplus_comparison.common import LEARNERS, PAGE, RECORD, ROOT, SCRIPT, SUITE, load_script, pairs, read_tsv
 
 record = load_script()
+SUITE_DIR = ROOT / SUITE
 
 # The sha256 of SHA256SUMS: a change to any file of the record changes it.
-SHA256SUMS_SHA256 = "9689e78f7d2afd3289fb15eab5e2cbf765b5317b30c0761fb15c45d89651cdf9"
+SHA256SUMS_SHA256 = "e22daa423ccb2fc0026a728db6fdc6e5833995e3e88d1b543cb410f1e927aef1"
 FILES = {"README.md", "SHA256SUMS", "callers.tsv", "datasets.tsv", "differences.tsv", "figures.tsv", "intervals.tsv",
          "order.tsv", "settings.tsv", "sets.tsv", "summary.tsv"}
 BUDGET = 3 * 1024 * 1024
@@ -52,6 +54,28 @@ class Record(unittest.TestCase):
         with redirect_stderr(err), redirect_stdout(out):
             code = record.main(["--check", str(RECORD)])
         self.assertEqual(code, 0, err.getvalue())
+
+    def test_shares_between_0_and_1_and_differences_between_minus_1_and_1(self):
+        # Held apart from record.RANGES: every column that names a measure, an end or a share.
+        share = re.compile(r"(sensitivity|specificity|balanced_accuracy|_exact_|_lineage_lo|_lineage_hi|_p$|^share_)")
+        diff = re.compile(r"^(first_minus_second|lineage_lo|lineage_hi|median|q1|q3|mean|median_species_\w+|"
+                          r"mean_species_\w+)$")
+        checked = 0
+        for name in ("callers.tsv", "differences.tsv", "intervals.tsv", "summary.tsv"):
+            for r in read_tsv(RECORD / name):
+                for col, cell in r.items():
+                    lo = 0 if share.search(col) else -1 if diff.match(col) else None
+                    if lo is not None and cell != "":
+                        checked += 1
+                        self.assertTrue(lo <= float(cell) <= 1, (name, col, cell))
+        self.assertGreater(checked, 50000)
+
+    def test_text_files_end_with_one_newline(self):
+        for p in [PAGE, SCRIPT] + sorted(RECORD.iterdir()) + sorted(SUITE_DIR.glob("*.py")):
+            text = p.read_text(encoding="utf-8")
+            if text:
+                self.assertTrue(text.endswith("\n") and not text.endswith("\n\n"), p.name)
+                self.assertNotIn("\r", text, p.name)
 
     def test_size(self):
         total = 0

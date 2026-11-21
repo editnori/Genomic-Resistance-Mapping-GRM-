@@ -9,6 +9,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from fractions import Fraction
 
 from tests.amrfinderplus_comparison import synthetic
 from tests.amrfinderplus_comparison.common import ROOT, SCRIPT, load_script, read_tsv
@@ -128,6 +129,43 @@ class Script(unittest.TestCase):
         (mixed / "extra.tsv").write_text("a\n", encoding="utf-8")
         self.assertEqual(run("--source", self.final, "--out", mixed)[0], 1)
 
+    def test_out_refuses_a_symlink_in_the_record(self):
+        rec = pathlib.Path(self.tmp) / "with-link"
+        shutil.copytree(self.out, rec)
+        target = pathlib.Path(self.tmp) / "elsewhere.tsv"
+        target.write_text("outside\n", encoding="utf-8")
+        (rec / "callers.tsv").unlink()
+        (rec / "callers.tsv").symlink_to(target)
+        code, err = run("--source", self.final, "--out", rec)
+        self.assertEqual(code, 1, err)
+        self.assertIn("not an earlier record", err)
+        self.assertTrue((rec / "callers.tsv").is_symlink())
+        self.assertEqual(target.read_text(encoding="utf-8"), "outside\n")
+
+    def test_out_refuses_a_symlink_as_the_record(self):
+        rec = pathlib.Path(self.tmp) / "linked-record"
+        shutil.copytree(self.out, rec)
+        link = pathlib.Path(self.tmp) / "link"
+        link.symlink_to(rec, target_is_directory=True)
+        code, err = run("--source", self.final, "--out", link)
+        self.assertEqual(code, 1, err)
+        self.assertIn("a symlink", err)
+
+    def test_one_datasets_measures_by_hand(self):
+        r = record.rates({"tp": "3", "fn": "1", "tn": "1", "fp": "3"})
+        self.assertEqual((r["sens"], r["spec"], r["ba"]), (Fraction(3, 4), Fraction(1, 4), Fraction(1, 2)))
+        # An empty class gives 0.
+        self.assertEqual(record.rates({"tp": "0", "fn": "0", "tn": "2", "fp": "0"})["ba"], Fraction(1, 2))
+
+    def test_one_summary_cell_by_hand(self):
+        d = record.describe([Fraction(1, 10), Fraction(1, 5), Fraction(0), Fraction(3, 10)])
+        self.assertEqual((d["ahead"], d["level"], d["behind"]), (3, 1, 0))
+        self.assertAlmostEqual(d["median"], 0.15, places=12)
+        self.assertAlmostEqual(d["mean"], 0.15, places=12)
+        self.assertAlmostEqual(d["q1"], 0.075, places=12)
+        self.assertAlmostEqual(d["q3"], 0.225, places=12)
+        self.assertEqual(d["sign_test_p"], "0.25")  # 3 ahead, 0 behind: 2 * (1/8)
+
     def test_out_needs_source(self):
         code, err = run("--out", pathlib.Path(self.tmp) / "nowhere")
         self.assertEqual(code, 2)
@@ -172,6 +210,8 @@ class Script(unittest.TestCase):
             ("the seed string", "PLAN.md", "seed"),
             ("a genome id in a cell", "results/final/by-dataset-callers.tsv.gz", "genome"),
             ("a base run in a cell", "results/final/by-dataset-callers.tsv.gz", "bases"),
+            ("a short genome id in a cell", "results/final/by-dataset-callers.tsv.gz", "short"),
+            ("a rate above 1", "results/final/by-dataset-callers.tsv.gz", "rate"),
             ("the program version", "results/final/run-manifest.json", None),
             ("the final scoring's start", "results/logs/analyze-final.log", None),
         ]
@@ -202,6 +242,10 @@ class Script(unittest.TestCase):
                 edit_gz(path, "\t0.100000\t", "\t1280.12345\t")
             elif kind == "bases":
                 edit_gz(path, "\t0.100000\t", "\t" + "acgt" * 6 + "a\t")
+            elif kind == "short":
+                edit_gz(path, "\t0.100000\t", "\t1280.12\t")
+            elif kind == "rate":
+                edit_gz(path, "\t0.900000\t", "\t1.900000\t")
             elif rel.endswith(".json"):
                 edit(path, "4.2.7", "4.2.8")
             else:
@@ -211,8 +255,10 @@ class Script(unittest.TestCase):
             self.assertEqual(code, 1, label)
             self.assertIn("stopped", err, label)
             self.assertFalse(out.exists(), label)
-            if kind in ("genome", "bases"):
+            if kind in ("genome", "bases", "short"):
                 self.assertIn("base run", err, label)
+            if kind == "rate":
+                self.assertIn("outside 0 to 1", err, label)
 
 
 def read_tsv_gz(path):

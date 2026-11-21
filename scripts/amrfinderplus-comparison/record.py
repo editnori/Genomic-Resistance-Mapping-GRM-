@@ -49,8 +49,19 @@ FEWEST_SPECIES = 6
 LOW_RANK = round(0.025 * (RESAMPLES - 1))  # 100: the 101st and the 3900th of the sorted draws
 
 # Shapes that never belong in the record: a genome id and a run of 20 or more bases.
-GENOME_ID = re.compile(r"(?<![\d.])\d{2,7}\.\d{3,6}(?![\d.])")
+GENOME_ID = re.compile(r"(?<![\d.\-])\d{2,7}\.\d{1,6}(?![\d.])")
 BASES = re.compile(r"(?i)[acgt]{20,}")
+# The cells that hold a share or a difference of shares, and the range each must stand in.
+RANGES = {
+    "callers.tsv": {c: (0, 1) for c in ("sensitivity", "sens_exact_lo", "sens_exact_hi", "sens_lineage_lo",
+                                        "sens_lineage_hi", "specificity", "spec_exact_lo", "spec_exact_hi",
+                                        "spec_lineage_lo", "spec_lineage_hi", "balanced_accuracy", "ba_lineage_lo",
+                                        "ba_lineage_hi")},
+    "differences.tsv": {"first_minus_second": (-1, 1), "lineage_lo": (-1, 1), "lineage_hi": (-1, 1),
+                        "mcnemar_p": (0, 1)},
+    "intervals.tsv": {"median_species_lo": (-1, 1), "median_species_hi": (-1, 1), "mean_species_lo": (-1, 1),
+                      "mean_species_hi": (-1, 1), "share_species_lo": (0, 1), "share_species_hi": (0, 1)},
+}
 
 COLUMNS = {
     "datasets.tsv": ["dataset", "species", "drug_class", "organism_option", "lineage_split",
@@ -341,6 +352,9 @@ def validate(tables):
             for cell in r.values():
                 if GENOME_ID.search(cell) or BASES.search(cell):
                     raise Stop("%s: a cell has the shape of a genome id or of a base run" % name)
+            for col, (lo, hi) in RANGES.get(name, {}).items():
+                if r[col] != "" and not lo <= float(r[col]) <= hi:
+                    raise Stop("%s: %s %s is outside %d to %d" % (name, col, r[col], lo, hi))
     ds_rows = tables["datasets.tsv"]
     ids = [d["dataset"] for d in ds_rows]
     if not ids or ids != sorted(set(ids)):
@@ -548,6 +562,10 @@ def readme(files):
         "and not external validation. Neither the AMRFinderPlus program nor GRM's known-gene rule reads a label, "
         "but the catalog both read is newer than most of these genomes and may have been curated from the same "
         "public isolates, which favours both against the learners.",
+        "",
+        "Joined with the release's reports, which give each genome's label and known-gene rule call, the counts per "
+        "dataset give the program's call on some genomes, for example on every genome of a dataset where the two "
+        "callers agree on every genome.",
         "",
         "## Files",
         "",
@@ -784,7 +802,7 @@ def earlier_record(out, files):
     found = list(out.iterdir())
     if not found:
         return True
-    if any(not p.is_file() for p in found) or {p.name for p in found} - set(files):
+    if any(p.is_symlink() or not p.is_file() for p in found) or {p.name for p in found} - set(files):
         return False
     sums, readme_file = out / "SHA256SUMS", out / "README.md"
     if not (sums.is_file() and readme_file.is_file()):
@@ -811,6 +829,9 @@ def main(argv=None):
         return 1
     if args.out:
         out = pathlib.Path(args.out)
+        if out.is_symlink():
+            print("record.py: stopped: %s is a symlink" % out, file=sys.stderr)
+            return 1
         if out.exists() and not (out.is_dir() and earlier_record(out, files)):
             print("record.py: stopped: %s holds files that are not an earlier record of this script" % out,
                   file=sys.stderr)

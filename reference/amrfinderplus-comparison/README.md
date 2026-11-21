@@ -4,6 +4,8 @@ This directory is the record behind [`docs/amrfinderplus-comparison.md`](../../d
 
 This is a retrospective comparison inside one public database, BV-BRC. It is not a prospective test and not external validation. Neither the AMRFinderPlus program nor GRM's known-gene rule reads a label, but the catalog both read is newer than most of these genomes and may have been curated from the same public isolates, which favours both against the learners.
 
+Joined with the release's reports, which give each genome's label and known-gene rule call, the counts per dataset give the program's call on some genomes, for example on every genome of a dataset where the two callers agree on every genome.
+
 ## Files
 
 | File | Rows | Contents |
