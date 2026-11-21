@@ -130,8 +130,9 @@ def build(top):
             scored = here[first]["scored"]
             a = rng.randint(0, scored // 3)
             b = rng.randint(0, scored // 3)
-            lo = float(d) - 0.05 - rng.random() * 0.1
-            hi = float(d) + 0.05 + rng.random() * 0.1
+            # A difference of two shares and its ends stand between -1 and 1.
+            lo = max(-1.0, float(d) - 0.05 - rng.random() * 0.1)
+            hi = min(1.0, float(d) + 0.05 + rng.random() * 0.1)
             diffs.append({"dataset_id": ds, "variant": variant, "contrast": con, "measure": m, "first": first,
                           "second": second, "first_minus_second": f6(d), "lineage_lo": f6(lo), "lineage_hi": f6(hi),
                           "first_only_right": a, "second_only_right": b, "mcnemar_p": "0.5", "calls_agree": scored - a - b,
