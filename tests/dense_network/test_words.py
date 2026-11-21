@@ -15,10 +15,10 @@ NAMES = (r"(?i)\b(reck[o]v|revarc[h]|fixarc[h]|arc[h]|b[o]x(es)?|c[o]ntroller|th
 VENDOR = r"(?i)\b(cl[a]ude|anthr[o]pic|co-author[e]d-by|generated[ ]with|open[a]i|chatg[p]t|ass[i]stant|l[l]m|m[o]del name)\b"
 GENOME_ID = r"(?<![\d.])\d{2,7}\.\d{3,6}(?![\d.])"
 ACCESSION = r"\b(GC[AF]_\d{9}(\.\d+)?|SAM[ND]\w?\d{6,}|SAMEA\d{6,}|[SE]RR\d{6,}|PRJ[NED][AB]\d+)\b"
-SEQUENCE = r"[ACGT]{20,}"
+SEQUENCE = r"(?i)[acgt]{20,}"
 # What the experiment cannot carry: a claim about networks in general, or a gain ruled out.
 WIDER = (r"(?i)\b(dense networks|neural networks|networks (do|does|did|can|cannot)|cannot help|does not help|"
-         r"no network|rules? out (a|any|the) gain|shows? no gain|worse than GRM)\b")
+         r"no network|rules? out (a|any|the) gain|shows? no gain|worse than GRM|adds? nothing|no use|of no value|useless)\b")
 RECHECK = r"(?i)(re-?check|23 of 27|earlier claims)"
 
 
@@ -93,12 +93,15 @@ class Words(unittest.TestCase):
             self.assertIsNone(re.search(GENOME_ID, text), name)
         self.assertIsNotNone(re.search(GENOME_ID, "a genome 1280.12345 here"))
         self.assertIsNone(re.search(GENOME_ID, "-0.059308 and 0.0001"))
+        # Built at run time, so that this file holds no run of the four letters.
+        self.assertIsNotNone(re.search(SEQUENCE, "event " + "ac" + "gt" * 10))
 
     def test_no_reading_wider_than_the_experiment(self):
         for name, text in self.texts.items():
             for s in sentences(text):
                 self.assertIsNone(re.search(WIDER, s), s)
         self.assertIsNotNone(re.search(WIDER, "Dense networks cannot help here."))
+        self.assertIsNotNone(re.search(WIDER, "The network adds nothing to GRM's learners."))
         self.assertIn("no transformer or sequence model was.", self.page)
         self.assertIn("and not about the family", self.page)
 

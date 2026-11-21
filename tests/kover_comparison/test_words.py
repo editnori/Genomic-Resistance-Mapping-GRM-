@@ -7,14 +7,15 @@ from tests.kover_comparison.common import PAGE, RECORD, ROOT, SCRIPT, SUITE
 
 BANNED = (r"\b(validated|generali[sz]\w*|robust\w*|reliab\w*|real-world|real world|carriers?|provenance|receipts?|"
           r"manifests?|folders?|no tuning|prospective\w*|clinic\w*|patients?|mechanisms?|determinants?|genes?|alleles?|"
-          r"mutations?|variants?|resistance arises|confers?|equivalent to|as good as|on par)\b")
+          r"mutations?|variants?|resistance arises|confers?|equivalent to|as good as|on par|better program|in general|"
+          r"outperform\w*|superior|inferior)\b")
 # The names of the work's parts and of the hosts it ran on, written so that this file holds none of them.
 NAMES = (r"(?i)\b(reck[o]v|revk[o]ver|k[o]ver2|b[o]x(es)?|c[o]ntroller|thr[e]ads?|w[o]rkers?|[o]wner\d?|l[a]nes?|"
          r"sub-?[a]gents?|boa[t]|bx_\w+)\b")
 VENDOR = r"(?i)\b(cl[a]ude|anthr[o]pic|co-author[e]d-by|generated[ ]with|open[a]i|chatg[p]t|ass[i]stant|l[l]m|m[o]del name)\b"
 GENOME_ID = r"(?<![\d.])\d{2,7}\.\d{3,6}(?![\d.])"
 ACCESSION = r"\b(GC[AF]_\d{9}(\.\d+)?|SAM[ND]\w?\d{6,}|SAMEA\d{6,}|[SE]RR\d{6,}|PRJ[NED][AB]\d+)\b"
-SEQUENCE = r"[ACGT]{20,}"
+SEQUENCE = r"(?i)[acgt]{20,}"
 
 
 def prose(text):
@@ -54,6 +55,7 @@ class Words(unittest.TestCase):
         for name, text in self.texts.items():
             self.assertIsNone(re.search(BANNED, text, re.I), name)
         self.assertIsNotNone(re.search(BANNED, "A gene confers it.", re.I))
+        self.assertIsNotNone(re.search(BANNED, "GRM's scm is the better program in general.", re.I))
 
     def test_no_name_of_the_work_or_vendor(self):
         for name, text in self.all.items():
@@ -87,6 +89,8 @@ class Words(unittest.TestCase):
             self.assertIsNone(re.search(GENOME_ID, text), name)
         self.assertIsNotNone(re.search(GENOME_ID, "a genome 1280.12345 here"))
         self.assertIsNone(re.search(GENOME_ID, "-0.104287 and 0.0001"))
+        # Built at run time, so that this file holds no run of the four letters.
+        self.assertIsNotNone(re.search(SEQUENCE, "kind " + "ac" + "gt" * 10))
 
     def test_no_rule_or_weight_content(self):
         for name, text in dict(self.texts, **record_files()).items():

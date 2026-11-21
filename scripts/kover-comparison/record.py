@@ -314,6 +314,8 @@ def validate(tables):
     for st in tables["steps.tsv"]:
         if st["dataset"] not in order:
             raise Stop("steps.tsv: %s is not one of the datasets" % st["dataset"])
+        if st["kind"] not in ("conjunction", "disjunction"):
+            raise Stop("steps.tsv: %s step %s kind %r" % (st["dataset"], st["step"], st["kind"]))
         equal = (st["grm_covered"], st["grm_lost"]) == (st["kover_covered"], st["kover_lost"])
         if st["counts_equal"] != yes(equal):
             raise Stop("steps.tsv: %s step %s counts_equal does not follow from the counts" % (st["dataset"], st["step"]))

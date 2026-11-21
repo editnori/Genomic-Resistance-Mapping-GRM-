@@ -12,6 +12,18 @@ from tests.kover_comparison.common import LEGACY, PAGE, RECORD
 HEADERS = ["# Kover comparison", "## Reading", "## Plan", "## Datasets", "## Method", "## Results", "## Review",
            "## Limits", "## Files"]
 TOKEN = re.compile(r"(?<![\w.])[-+]?\d[\d,]*(?:\.\d+)?")
+# The Reading as committed, word for word: a rewording of the page and builder must change this too.
+READING = [
+    ("On these 12 datasets, under the plan's settings, Kover minus GRM's `scm` in balanced accuracy is "
+     '-0.052 (-0.094 to -0.018, a 95% interval over the 12 datasets) as run and -0.035 (-0.060 to -0.013) '
+     "when each tied first rule counts equally, an exploratory reading of Kover's 41 one-rule folds of 60."),
+    ("Kover's balanced accuracy gap is in specificity, -0.104 (-0.215 to -0.022), not recall, +0.001 "
+     '(-0.047 to +0.046); log loss, +0.374 (+0.071 to +0.748), counts the same errors because every call '
+     'is 0 or 1.'),
+    ("Kover's balanced accuracy is lower in 8 of the 12 datasets, equal in 2 and higher in 2."),
+    ('Which differences between the runs make the gap is not separated, and the result, from the smallest '
+     'eligible dataset of each of 12 species, is not shown to carry to larger datasets.'),
+]
 
 
 def record_numbers():
@@ -116,6 +128,9 @@ class Page(unittest.TestCase):
         self.assertNotIn("t interval", " ".join(r))
         # Recall stands beside log loss.
         self.assertIn("log loss", r[1])
+
+    def test_reading_word_for_word(self):
+        self.assertEqual(builder.reading(self.text), READING)
 
     def test_reading_numbers_carry_their_denominators(self):
         r = builder.reading(self.text)

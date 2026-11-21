@@ -10,6 +10,21 @@ from tests.dense_network.common import PAGE, RECORD
 HEADERS = ["# Dense network", "## Reading", "## Plan", "## Network", "## Datasets", "## Method", "## Results",
            "## Review", "## Limits", "## Files"]
 TOKEN = re.compile(r"(?<![\w.])[-+]?\d[\d,]*(?:\.\d+)?")
+# The Reading as committed, word for word: a rewording of the page and builder must change this too.
+READING = [
+    ("Against the plan's comparator, the best of the five picked in hindsight per dataset, which favours "
+     'the five, the median network minus comparator lineage balanced accuracy over the 24 datasets is '
+     '-0.059 (-0.132 to -0.044, a 95% interval over the 12 species); the network is higher on 1 of the 24, '
+     'and the rule gives "no gain established".'),
+    ('Against the best of the five in hindsight, the median difference in recall is -0.102 (-0.356 to '
+     '0.000) and in log loss +0.021 (-0.262 to +0.209), over the same 24 datasets.'),
+    ('Beside the rule, against each of the five, the median lineage balanced accuracy difference over the '
+     '24 datasets is +0.003 (-0.086 to +0.049) for `scm`, -0.012 (-0.052 to -0.001) for `cart`, -0.016 '
+     '(-0.032 to +0.009) for `rf`, -0.012 (-0.035 to +0.069) for `gbt` and +0.015 (-0.007 to +0.071) for '
+     "`lasso`; only `cart`'s interval lies below 0, and none above."),
+    ('One network at one setting on one screen of 4,000 rows was fitted; no other setting, no other '
+     'architecture and no transformer or sequence model was.'),
+]
 
 
 def record_numbers():
@@ -98,6 +113,9 @@ class Page(unittest.TestCase):
             # One sentence per line: no stop followed by a capital inside a line.
             self.assertIsNone(re.search(r"[.!?] [A-Z]", s), s)
             self.assertTrue(s.endswith("."), s)
+
+    def test_reading_word_for_word(self):
+        self.assertEqual(builder.reading(self.text), READING)
 
     def test_reading_gives_the_figures(self):
         r = builder.reading(self.text)
