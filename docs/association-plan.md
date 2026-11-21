@@ -6,7 +6,7 @@ A k-mer pattern or catalog family in this plan is a marker with an association t
 
 The plan was fixed on 14 Nov 2026, before any association run on a revision 14 cohort. Nothing has been run under it. A run follows it as written, records its sha256 before reading any association statistic, and lists every deviation. Anything decided after a statistic is read is labelled exploratory. A change to the plan is a dated section added at its end, before the run it applies to reads a statistic, and the text above it stays as it is.
 
-The first run under it reruns the October 2026 question on *E. coli* and tobramycin. That run does not reproduce the October numbers: no list of the October cohort's genomes and no copy of its result file is in the repository.
+The first run under it reruns the October 2026 question on *E. coli* and tobramycin. That run does not reproduce the October numbers. The October record gives a cohort of 350 genomes and names no revision, no list of its genomes survives, and no copy of its result file has been found.
 
 ## What the plan fixes
 
