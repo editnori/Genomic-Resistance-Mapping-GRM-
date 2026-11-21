@@ -1,0 +1,13 @@
+setting	grm	kover	same
+k-mer	canonical 31-mers	canonical 31-mers (DSK)	yes
+Features offered	training patterns with support 3 to n_train - 3, one per distinct training pattern	every k-mer in at least 2 genomes of the whole dataset; presence and absence rules	no
+Model-size limit	6 rules	--max-rules 6	yes
+Kinds	conjunction, disjunction	both	yes
+p values	0.1, 0.316, 0.562, 1.0, 1.778, 3.162, 10.0	the same 7 (Kover's default list adds 999999.0; not used)	yes
+Utility	covered - p * lost	the same	yes
+Rule tie	fewer lost, lower index, presence first	equal within np.isclose, then lowest training error of the rule alone, then the first in Kover's k-mer order	no
+Inner folds	3, whole lineages placed to balance the classes	3, drawn at random by Kover, not grouped, not stratified	no
+Selection criterion	mean balanced error	mean error rate	no
+Selection tie	keep earlier (conjunction, smaller p, fewer rules)	fewer rules, then p nearer 1, then arrival order (--n-cpu 1 fixes it)	no
+Fewest rules	1	0 (an empty model) is allowed	no
+Seeds	42 plus 101 times the fold	42	number only; the draws differ

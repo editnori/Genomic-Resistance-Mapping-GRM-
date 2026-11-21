@@ -1,0 +1,22 @@
+key	value
+grm_release	rev14-274-20261112
+network	dense feed-forward: 4,000 inputs, 256 ReLU units, 64 ReLU units, 1 sigmoid output
+inputs	per outer fold, the 4,000 rows of the forest's chi-square screen over that fold's training candidates, on its training samples; each sample a 0/1 vector over those rows
+start	He-normal, zero biases
+loss	binary cross-entropy, unweighted, plus L2 decay 1e-4, biases left out
+optimiser	Adam, learning rate 1e-3, beta 0.9 and 0.999, epsilon 1e-8; minibatches of 64 in a fresh shuffle each epoch
+stopping	at most 300 epochs; log loss on the fold's boosting holdout, about 1/7 of the training samples, lineage-grouped on the lineage split; stop after 20 epochs without improvement, keep the best epoch
+repeats	3 per fold, each with its own seed; a dataset's value is the mean over the 3
+splits	the release's lineage split and random split, 5 outer folds each; the five learners were not fitted again
+calls	the five's calls are the release's saved out-of-fold scores, called resistant at 0.5 or above; no learner is fitted again
+reported	beside the rule and outside it: each of the five, the site's best (chosen on the random split), the mean of the four probability learners, the lineage baseline (lineage identity inside the release's own outer folds), the catalog rule where the release scores it, the random split, log loss and AUROC
+datasets	the 12 lineage datasets with the largest gap, and 12 drawn with seed 20261115 from the other 113 with a gap of 0.05 or more
+gap	on the lineage split, the balanced accuracy of calls right wherever any of the five is right, minus that of the best of the five
+comparator	the best of the five in hindsight: per dataset, the learner with the highest lineage balanced accuracy
+measures	balanced accuracy, recall on the resistant class, specificity, log loss with probabilities clipped to [1e-4, 1 - 1e-4], and AUROC, as the plan named them; the experiment's report gives figures over datasets for balanced accuracy, recall and log loss only; the record carries those three, and specificity worked out from the experiment's rows per dataset by the same draw
+interval	2000 resamples of the species present, each taking every dataset of each drawn species; the median over the drawn datasets; 2.5% and 97.5% percentiles; seed 20261115
+rule_1	median network minus comparator balanced accuracy at least 0.02, and the interval's lower end above 0
+rule_2	median network minus baseline balanced accuracy at least the comparator's median minus baseline
+rule_3	median network minus comparator recall at least -0.01
+rule_4	at most 8 CPU-hours of network fitting and no process above 12 GB peak memory
+adopt	only when all four hold; otherwise no gain established

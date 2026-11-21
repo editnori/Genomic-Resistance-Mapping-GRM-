@@ -245,6 +245,12 @@ jobs:
           # SYNTHETIC inputs built in the test, the committed record under reference/time-split and docs/time-split.md.
           - suite: tests/time_split
             top: .
+          # SYNTHETIC inputs built in the test, the committed record under reference/kover-comparison and docs/kover-comparison.md.
+          - suite: tests/kover_comparison
+            top: .
+          # SYNTHETIC inputs built in the test, the committed record under reference/dense-network and docs/dense-network.md.
+          - suite: tests/dense_network
+            top: .
     env:
       SUITE: ${{ matrix.suite }}
       TOP: ${{ matrix.top }}
