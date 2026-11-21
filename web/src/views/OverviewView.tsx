@@ -90,7 +90,7 @@ const Limits = ({ n, manifest, nav }: { n: number; manifest: Manifest; nav: Navi
       </SectionHeading>
       <ul className="prose-measure mt-3 list-disc space-y-2 pl-5 text-body text-ink">
         <li>
-          Every number here, except those on newly deposited genomes and another public database, is internal cross-validation on public BV-BRC genomes: learners train on part of
+          Every number here, except those on newly deposited genomes, earlier-vs-later public dates, and another public database, is internal cross-validation on public BV-BRC genomes: learners train on part of
           the genomes and are scored on the rest, against the resistant and susceptible calls BV-BRC reports.
         </li>
         <li>
