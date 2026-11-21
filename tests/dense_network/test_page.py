@@ -184,6 +184,7 @@ class Page(unittest.TestCase):
             self.assertIn("- **%s.**" % word, review)
         self.assertIn("The figures do not show the network lower than GRM's learners.", review)
         self.assertIn("so they are exploratory", review)
+        self.assertIn("is near enough 0 that another order of species in the draw puts it below.", self.text)
 
     def test_what_it_cannot_show(self):
         limits = self.text.split("\n## Limits\n", 1)[1].split("\n## ", 1)[0]
@@ -191,6 +192,8 @@ class Page(unittest.TestCase):
         self.assertIn("The datasets are not a sample of the release", limits)
         self.assertIn("so this is not external validation", limits)
         self.assertIn("The review did not fit the network again.", limits)
+        self.assertIn("- The plan named specificity and AUROC among the measures.", limits)
+        self.assertIn("it holds no AUROC.", limits)
 
 
 if __name__ == "__main__":

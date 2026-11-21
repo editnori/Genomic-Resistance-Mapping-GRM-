@@ -107,6 +107,11 @@ class Words(unittest.TestCase):
         self.assertIn("| Error rate |", self.page)
         row = [x for x in self.page.split("\n") if x.startswith("| Error rate |")][0]
         self.assertTrue(row.endswith("| exploratory |"))
+        # The Results table says fixed or exploratory, the words summary.tsv uses.
+        for name in ("Balanced accuracy", "Recall", "Log loss", "Specificity"):
+            row = [x for x in self.page.split("\n") if x.startswith("| %s |" % name)][0]
+            self.assertTrue(row.endswith("| fixed |"), name)
+        self.assertNotIn("| planned |", self.page)
 
     def test_recall_beside_log_loss(self):
         rows = [x.split(" | ")[0][2:] for x in self.page.split("\n") if x.startswith("| ") and " to " in x

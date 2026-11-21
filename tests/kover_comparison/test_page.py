@@ -165,6 +165,10 @@ class Page(unittest.TestCase):
         self.assertIn("The spread over seeds is not measured.", limits)
         self.assertIn("not comparable", limits)
         self.assertIn("not shown to carry to larger datasets", self.text)
+        # The first review's seed finding as it found it: the intervals move, and no reading changes.
+        self.assertIn("Under the plan's seed the intervals for recall, specificity and log loss move in the third "
+                      "decimal, and no reading changes.", self.text)
+        self.assertNotIn("no interval changes", self.text)
 
 
 if __name__ == "__main__":
