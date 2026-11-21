@@ -9,3 +9,8 @@ distinct_genomes	2000
 lineage_groups	881
 tool_drugs	18
 graded_tool_drugs	16
+catalog_endpoints	6
+catalog_rows	7858
+catalog_tool_only_right	2386
+catalog_only_right	541
+tool_minus_catalog_median	0.325

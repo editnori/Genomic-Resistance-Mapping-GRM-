@@ -58,6 +58,7 @@ RESAMPLES = 2000
 SEED = 20261114
 LOW_RANK, HIGH_RANK = 51, 1950  # the 51st and the 1,950th of 2,000 sorted values
 MIN_VALUES = 40
+CATALOG_COUNTS = ("catalog_endpoints", "catalog_rows", "catalog_tool_only_right", "catalog_only_right")
 TOOL_VERSION = "6.6.3"
 DATABASE_COMMIT = "3ed1cb99"
 FIELD = 32  # bits per count in the packed bootstrap vectors
@@ -385,14 +386,41 @@ def lineage_groups(reports):
 # ----------------------------------------------------------------- build
 
 def callers_of(d):
-    """{caller: calls on every genome of the report}: each learner's scores at the cutoff, and the catalog row."""
+    """{caller: calls on every genome of the report}: each learner's scores at the cutoff. The catalog row is read
+    apart, by catalog_figures, and has no row per report."""
     out = {}
     for s in SPLITS:
         for l in LEARNERS:
             out[f"{l}:{s}"] = [x >= CUTOFF for x in d["splits"][s]["scores"][l]]
-    if d["catalog_resistant"] and d["catalog_resistant"][0] is not None:
-        out["catalog"] = list(d["catalog_resistant"])
     return out
+
+
+def catalog_figures(reports, calls, members):
+    """The catalog row over the reports of the plan's set that have one, under the primary way, on the genomes with a
+    call: reports, rows, the rows only the tool and only the catalog row get right, and the median of the tool's
+    balanced accuracy minus the catalog row's, to 3 decimals. On three reports a count of the catalog row per report
+    would describe one genome, and the median in full would show whether one of them had a call."""
+    diffs, rows, only_t, only_c = [], 0, 0, 0
+    for dataset in sorted(members):
+        d = reports[dataset]
+        cat = d["catalog_resistant"]
+        if not cat or cat[0] is None:
+            continue
+        entry = calls[dataset]
+        truth, tool, catalog = [], [], []
+        for g, y, c in zip(d["sid"], d["y"], cat):
+            t = CALLS[entry["rows"][g][PRIMARY_WAY]]
+            if t is not None:
+                truth.append(bool(y))
+                tool.append(t)
+                catalog.append(c)
+        rows += len(truth)
+        only_t += sum(1 for y, a, b in zip(truth, tool, catalog) if a == y and b != y)
+        only_c += sum(1 for y, a, b in zip(truth, tool, catalog) if b == y and a != y)
+        diffs.append(rates(*confusion(truth, tool))[2] - rates(*confusion(truth, catalog))[2])
+    med = "%.3f" % median(diffs) if diffs else "-"
+    return [("catalog_endpoints", len(diffs)), ("catalog_rows", rows), ("catalog_tool_only_right", only_t),
+            ("catalog_only_right", only_c), ("tool_minus_catalog_median", med)]
 
 
 def score(dataset, d, entry, way, others):
@@ -409,7 +437,7 @@ def score(dataset, d, entry, way, others):
             "no_call_susceptible": sum(1 for i, c in enumerate(tool_all) if c is None and not truth_all[i])}
     rows = []
     callers = {"tool": tool}
-    for name in LEARNER_CALLERS + ("catalog",):
+    for name in LEARNER_CALLERS:
         if name in others:
             callers[name] = [others[name][i] for i in keep]
     for name, calls in callers.items():
@@ -563,6 +591,7 @@ def build(I):
               ("primary_reports", kinds["primary"]), ("proxy_reports", kinds["proxy"]),
               ("not_named_reports", kinds["not named"]), ("call_rows", call_rows), ("distinct_genomes", len(ids)),
               ("lineage_groups", n_groups), ("tool_drugs", len(grades)), ("graded_tool_drugs", len(graded_drugs))]
+    totals += catalog_figures(reports, calls, sets["by_name"])
     rows_text = {
         "reports.tsv": tsv("reports.tsv", report_rows),
         "callers.tsv": tsv("callers.tsv", sorted(caller_rows, key=lambda r: (WAYS.index(r["way"]), r["dataset"]))),
@@ -596,8 +625,7 @@ def check_rows(rows):
     want = []
     for w in WAYS:
         for r in named:
-            names = ("tool",) + LEARNER_CALLERS + (("catalog",) if r["catalog_row"] == "yes" else ())
-            want += [(w, r["dataset"], c) for c in names]
+            want += [(w, r["dataset"], c) for c in ("tool",) + LEARNER_CALLERS]
     have = [(r["way"], r["dataset"], r["caller"]) for r in rows["callers.tsv"]]
     need(have == want, "callers.tsv: not one row per way, report and caller")
     genomes = {r["dataset"]: int(r["genomes"]) for r in reps}
@@ -649,6 +677,12 @@ def check_rows(rows):
          == int(tot["reports_of_the_species"]) == len(reps), "totals.tsv: the reports do not add up")
     need(int(tot["reports_with_calls"]) == len(named), "totals.tsv: reports with calls")
     need(int(tot["call_rows"]) == sum(int(r["genomes"]) for r in named), "totals.tsv: the call rows are not the genomes")
+    for k in CATALOG_COUNTS:
+        need(re.fullmatch(r"0|[1-9]\d*", tot.get(k, "")) is not None, f"totals.tsv: {k} is not a count")
+    need(re.fullmatch(r"-|-?\d\.\d{3}", tot.get("tool_minus_catalog_median", "")) is not None,
+         "totals.tsv: the catalog row's median is not given to 3 decimals")
+    need(int(tot["catalog_tool_only_right"]) + int(tot["catalog_only_right"]) <= int(tot["catalog_rows"]),
+         "totals.tsv: the catalog row's pair counts exceed its rows")
     sa = pairs(rows["set-aside.tsv"])
     t = first[(PRIMARY_WAY, SPECIES + "__" + sa["dataset"])]
     need([int(sa[f"{k}_as_run"]) for k in ("tp", "fp", "tn", "fn")] == [t["tp"], t["fp"], t["tn"], t["fn"]],
@@ -774,13 +808,18 @@ def summarize(rows, by, members, rate, margin, endrow):
             ("not_named_endpoints", sum(r["kind"] == "not named" for r in reps)),
             ("graded_tool_drugs_in_by_name", len(members[(w, "graded")])),
             ("ungraded_in_by_name", len(members[(w, "by_name")]) - len(members[(w, "graded")]))]
-    cat = [d for d in members[(w, "by_name")] if (w, d, "catalog") in by]
-    diffs = [rate[(w, d, "tool")][2] - rate[(w, d, "catalog")][2] for d in cat]
-    out += [("catalog_endpoints", len(cat)), ("tool_minus_catalog_median", median(diffs) if diffs else None),
-            ("catalog_rows", sum(by[(w, d, "catalog")]["with_call"] for d in cat)),
-            ("catalog_tool_only_right", sum(by[(w, d, "catalog")]["tool_only_right"] for d in cat)),
-            ("catalog_only_right", sum(by[(w, d, "catalog")]["caller_only_right"] for d in cat))]
-    out.append(("catalog_calls_agree", out[-3][1] - out[-2][1] - out[-1][1]))
+    tot = pairs(rows["totals.tsv"])
+    reps = {r["dataset"]: r for r in rows["reports.tsv"]}
+    cat = [d for d in members[(w, "by_name")] if reps[d]["catalog_row"] == "yes"]
+    need(int(tot["catalog_endpoints"]) == len(cat), "totals.tsv: the catalog row's reports are not those of the plan's "
+                                                   "set with a catalog row")
+    need(int(tot["catalog_rows"]) == sum(by[(w, d, "tool")]["with_call"] for d in cat),
+         "totals.tsv: the catalog row's rows are not the tool's rows with a call on its reports")
+    out += [("catalog_endpoints", tot["catalog_endpoints"]), ("tool_minus_catalog_median", tot["tool_minus_catalog_median"]),
+            ("catalog_rows", tot["catalog_rows"]), ("catalog_tool_only_right", tot["catalog_tool_only_right"]),
+            ("catalog_only_right", tot["catalog_only_right"])]
+    out.append(("catalog_calls_agree", int(tot["catalog_rows"]) - int(tot["catalog_tool_only_right"])
+                - int(tot["catalog_only_right"])))
     sa = pairs(rows["set-aside.tsv"])
     d = SPECIES + "__" + sa["dataset"]
     best = endrow[(w, d)]["best_lineage_balanced_accuracy"]
@@ -833,7 +872,8 @@ DESCRIBE = {
     "order.tsv": "Row file. One row per event of the plan and the scoring run",
     "settings.tsv": "Row file. The settings the script applies and the sha256 of the plan, the addendum and the "
                     "compact file",
-    "totals.tsv": "Row file. Counts over all reports",
+    "totals.tsv": "Row file. Counts over all reports, and the catalog row's figures over the reports of the plan's set "
+                  "that have one",
     "set-aside.tsv": "Row file. Exploratory: the counts both ways for the one entry the tool's rule set aside",
     "checks.tsv": "The checks the build ran on the input set",
     "inputs.sha256": "The sha256 of each file of the input set",
@@ -851,7 +891,7 @@ GLOSS = {
     "tool_drugs": "the tool drug or drugs read, with `,` between them", "graded": "yes when the shipped database "
     "grades at least one entry of the tool drug, no when it grades none, `-` for a report that is not primary",
     "genomes": "genomes of the report", "catalog_row": "yes when the report has a catalog row",
-    "way": "the way of reading the tool's output", "caller": "tool, a learner and split, or catalog",
+    "way": "the way of reading the tool's output", "caller": "tool, or a learner and split",
     "with_call": "genomes with a call of the tool", "no_call_resistant": "genomes without a call, recorded resistant",
     "no_call_susceptible": "genomes without a call, recorded susceptible",
     "tp": "resistant genomes called resistant", "fp": "susceptible genomes called resistant",
@@ -910,7 +950,8 @@ GLOSS_BY_FILE = {
     ("intervals.tsv", "measure"): "sensitivity, specificity, balanced_accuracy or minus_tool",
     ("bounds.tsv", "median"): "the median over the set's reports",
     ("settings.tsv", "name"): "the name of a setting", ("settings.tsv", "value"): "the setting",
-    ("totals.tsv", "name"): "the name of a count over all reports", ("summary.tsv", "name"): "the name of a figure",
+    ("totals.tsv", "name"): "the name of a count over all reports or of a catalog row figure",
+    ("summary.tsv", "name"): "the name of a figure",
     ("set-aside.tsv", "name"): "the name of a count", ("set-aside.tsv", "value"): "the count",
 }
 
@@ -925,7 +966,8 @@ def readme(out):
              "those reports record and with the five learners on the same genomes. The page that reads it is "
              "[`docs/tbprofiler-comparison.md`](../../docs/tbprofiler-comparison.md). "
              "`scripts/tbprofiler-comparison/record.py` writes every file here from the input set, and its `--check` "
-             "mode fails on any byte it would not write.", "",
+             "mode fails on any byte it would not write. The input set is the call file of the TBProfiler run on assemblies of "
+             "public BV-BRC genomes, with GRM's revision 14 M. tuberculosis reports.", "",
              "## Files", "", "| File | Rows | Contents |", "|---|---|---|"]
     for n in ROW_FILES + DERIVED_FILES:
         lines.append(f"| `{n}` | {count(n):,} | {DESCRIBE[n]} |")
@@ -945,6 +987,10 @@ def readme(out):
               "never read as susceptible: every caller is counted on the genomes where the tool has a call.", "",
               "**Learners.** A learner calls resistant at a report score of 0.5 or more, on the lineage and the "
               "random split. The catalog row is GRM's own reader of the AMRFinderPlus catalog.", "",
+              "**Catalog row.** The catalog row appears only as six-report totals, in `totals.tsv` and again in "
+              "`summary.tsv`, because on three reports a per-report count of it would describe one genome. Its median "
+              "is given to 3 decimals for the same reason: in full, with the other totals, it would show whether one of "
+              "those genomes had a call.", "",
               "**Sets.** A primary report is scored when at least 25 resistant and 25 susceptible genomes have a "
               "call. `by_name` holds the scored primary reports, the plan's set; `graded` holds those whose tool "
               "drug the database grades, the addendum's set. Proxy reports enter no set.", "",
@@ -955,7 +1001,8 @@ def readme(out):
               "genome. `low` and `high` are the values at sorted index int(0.025 n) and n - 1 - int(0.025 n) of the "
               "n resamples with a value: the 51st and the 1,950th when n is 2,000. Medians skip a report without "
               "a value.", "",
-              "**Rounding.** Every figure here is the full value. The page rounds each one once.", "",
+              "**Rounding.** Every figure here is the full value, apart from the catalog row's median. The page rounds each "
+              "one once.", "",
               "## Limits", "",
               "No row is about one genome, and no cell names a genome. The tool's raw output and the assemblies "
               "no longer exist; the call file, kept outside the repository, is the lowest layer the counts are "

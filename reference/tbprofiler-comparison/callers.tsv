@@ -10,7 +10,6 @@ who_assoc	mycobacterium_tuberculosis__amikacin	cart:random	1813	1683	6	124	444	8
 who_assoc	mycobacterium_tuberculosis__amikacin	rf:random	1813	1683	6	124	426	61	1080	116	64	89
 who_assoc	mycobacterium_tuberculosis__amikacin	gbt:random	1813	1683	6	124	458	75	1066	84	56	63
 who_assoc	mycobacterium_tuberculosis__amikacin	lasso:random	1813	1683	6	124	452	87	1054	90	49	74
-who_assoc	mycobacterium_tuberculosis__amikacin	catalog	1813	1683	6	124	0	0	1141	542	42	432
 who_assoc	mycobacterium_tuberculosis__capreomycin	tool	670	652	14	4	347	39	205	61	0	0
 who_assoc	mycobacterium_tuberculosis__capreomycin	scm:lineage	670	652	14	4	322	27	217	86	21	34
 who_assoc	mycobacterium_tuberculosis__capreomycin	cart:lineage	670	652	14	4	323	29	215	85	36	50
@@ -33,7 +32,6 @@ who_assoc	mycobacterium_tuberculosis__ciprofloxacin	cart:random	101	101	0	0	63	1
 who_assoc	mycobacterium_tuberculosis__ciprofloxacin	rf:random	101	101	0	0	70	10	18	3	10	9
 who_assoc	mycobacterium_tuberculosis__ciprofloxacin	gbt:random	101	101	0	0	67	8	20	6	8	8
 who_assoc	mycobacterium_tuberculosis__ciprofloxacin	lasso:random	101	101	0	0	68	8	20	5	5	4
-who_assoc	mycobacterium_tuberculosis__ciprofloxacin	catalog	101	101	0	0	73	28	0	0	8	22
 who_assoc	mycobacterium_tuberculosis__clofazimine	tool	1303	1249	5	49	5	13	1048	183	0	0
 who_assoc	mycobacterium_tuberculosis__clofazimine	scm:lineage	1303	1249	5	49	115	605	456	73	115	597
 who_assoc	mycobacterium_tuberculosis__clofazimine	cart:lineage	1303	1249	5	49	90	385	676	98	97	384
@@ -111,7 +109,6 @@ who_assoc	mycobacterium_tuberculosis__kanamycin	cart:random	1800	1677	11	112	503
 who_assoc	mycobacterium_tuberculosis__kanamycin	rf:random	1800	1677	11	112	460	47	1024	146	50	82
 who_assoc	mycobacterium_tuberculosis__kanamycin	gbt:random	1800	1677	11	112	503	55	1016	103	39	36
 who_assoc	mycobacterium_tuberculosis__kanamycin	lasso:random	1800	1677	11	112	520	58	1013	86	36	19
-who_assoc	mycobacterium_tuberculosis__kanamycin	catalog	1800	1677	11	112	1	0	1071	605	44	488
 who_assoc	mycobacterium_tuberculosis__levofloxacin	tool	1248	1171	31	46	442	95	354	280	0	0
 who_assoc	mycobacterium_tuberculosis__levofloxacin	scm:lineage	1248	1171	31	46	443	103	346	279	14	21
 who_assoc	mycobacterium_tuberculosis__levofloxacin	cart:lineage	1248	1171	31	46	439	102	347	283	10	20
@@ -123,7 +120,6 @@ who_assoc	mycobacterium_tuberculosis__levofloxacin	cart:random	1248	1171	31	46	4
 who_assoc	mycobacterium_tuberculosis__levofloxacin	rf:random	1248	1171	31	46	550	221	228	172	123	141
 who_assoc	mycobacterium_tuberculosis__levofloxacin	gbt:random	1248	1171	31	46	464	122	327	258	40	45
 who_assoc	mycobacterium_tuberculosis__levofloxacin	lasso:random	1248	1171	31	46	453	103	346	269	23	20
-who_assoc	mycobacterium_tuberculosis__levofloxacin	catalog	1248	1171	31	46	722	449	0	0	280	354
 who_assoc	mycobacterium_tuberculosis__linezolid	tool	1248	1183	9	56	24	8	982	169	0	0
 who_assoc	mycobacterium_tuberculosis__linezolid	scm:lineage	1248	1183	9	56	126	518	472	67	116	524
 who_assoc	mycobacterium_tuberculosis__linezolid	cart:lineage	1248	1183	9	56	116	460	530	77	99	459
@@ -135,7 +131,6 @@ who_assoc	mycobacterium_tuberculosis__linezolid	cart:random	1248	1183	9	56	144	5
 who_assoc	mycobacterium_tuberculosis__linezolid	rf:random	1248	1183	9	56	15	19	971	178	20	40
 who_assoc	mycobacterium_tuberculosis__linezolid	gbt:random	1248	1183	9	56	103	346	644	90	85	344
 who_assoc	mycobacterium_tuberculosis__linezolid	lasso:random	1248	1183	9	56	70	195	795	123	54	195
-who_assoc	mycobacterium_tuberculosis__linezolid	catalog	1248	1183	9	56	0	0	990	193	8	24
 who_assoc	mycobacterium_tuberculosis__moxifloxacin	tool	1524	1447	11	66	597	132	593	125	0	0
 who_assoc	mycobacterium_tuberculosis__moxifloxacin	scm:lineage	1524	1447	11	66	594	137	588	128	25	33
 who_assoc	mycobacterium_tuberculosis__moxifloxacin	cart:lineage	1524	1447	11	66	593	136	589	129	23	31
@@ -147,7 +142,6 @@ who_assoc	mycobacterium_tuberculosis__moxifloxacin	cart:random	1524	1447	11	66	6
 who_assoc	mycobacterium_tuberculosis__moxifloxacin	rf:random	1524	1447	11	66	584	135	590	138	40	56
 who_assoc	mycobacterium_tuberculosis__moxifloxacin	gbt:random	1524	1447	11	66	595	128	597	127	30	28
 who_assoc	mycobacterium_tuberculosis__moxifloxacin	lasso:random	1524	1447	11	66	596	140	585	126	20	29
-who_assoc	mycobacterium_tuberculosis__moxifloxacin	catalog	1524	1447	11	66	722	725	0	0	125	593
 who_assoc	mycobacterium_tuberculosis__ofloxacin	tool	643	643	0	0	321	22	266	34	0	0
 who_assoc	mycobacterium_tuberculosis__ofloxacin	scm:lineage	643	643	0	0	314	18	270	41	6	9
 who_assoc	mycobacterium_tuberculosis__ofloxacin	cart:lineage	643	643	0	0	314	16	272	41	6	7
@@ -159,7 +153,6 @@ who_assoc	mycobacterium_tuberculosis__ofloxacin	cart:random	643	643	0	0	314	16	2
 who_assoc	mycobacterium_tuberculosis__ofloxacin	rf:random	643	643	0	0	319	34	254	36	18	32
 who_assoc	mycobacterium_tuberculosis__ofloxacin	gbt:random	643	643	0	0	313	25	263	42	9	20
 who_assoc	mycobacterium_tuberculosis__ofloxacin	lasso:random	643	643	0	0	314	16	272	41	6	7
-who_assoc	mycobacterium_tuberculosis__ofloxacin	catalog	643	643	0	0	355	288	0	0	34	266
 who_assoc	mycobacterium_tuberculosis__para_aminosalicylic_acid	tool	1650	1649	0	1	0	0	1220	429	0	0
 who_assoc	mycobacterium_tuberculosis__para_aminosalicylic_acid	scm:lineage	1650	1649	0	1	216	162	1058	213	216	162
 who_assoc	mycobacterium_tuberculosis__para_aminosalicylic_acid	cart:lineage	1650	1649	0	1	341	412	808	88	341	412
@@ -226,7 +219,6 @@ who_assoc	mycobacterium_tuberculosis__streptomycin	cart:random	698	697	1	0	456	1
 who_assoc	mycobacterium_tuberculosis__streptomycin	rf:random	698	697	1	0	496	64	95	42	42	63
 who_assoc	mycobacterium_tuberculosis__streptomycin	gbt:random	698	697	1	0	458	30	129	80	34	59
 who_assoc	mycobacterium_tuberculosis__streptomycin	lasso:random	698	697	1	0	457	32	127	81	32	60
-who_assoc	mycobacterium_tuberculosis__streptomycin	catalog	698	697	1	0	0	0	159	538	42	495
 who_assoc_only	mycobacterium_tuberculosis__amikacin	tool	1813	1682	7	124	413	30	1111	128	0	0
 who_assoc_only	mycobacterium_tuberculosis__amikacin	scm:lineage	1813	1682	7	124	448	55	1086	93	46	36
 who_assoc_only	mycobacterium_tuberculosis__amikacin	cart:lineage	1813	1682	7	124	430	66	1075	111	34	53
@@ -238,7 +230,6 @@ who_assoc_only	mycobacterium_tuberculosis__amikacin	cart:random	1813	1682	7	124	
 who_assoc_only	mycobacterium_tuberculosis__amikacin	rf:random	1813	1682	7	124	425	61	1080	116	57	76
 who_assoc_only	mycobacterium_tuberculosis__amikacin	gbt:random	1813	1682	7	124	457	75	1066	84	54	55
 who_assoc_only	mycobacterium_tuberculosis__amikacin	lasso:random	1813	1682	7	124	451	87	1054	90	47	66
-who_assoc_only	mycobacterium_tuberculosis__amikacin	catalog	1813	1682	7	124	0	0	1141	541	30	413
 who_assoc_only	mycobacterium_tuberculosis__capreomycin	tool	670	652	14	4	347	39	205	61	0	0
 who_assoc_only	mycobacterium_tuberculosis__capreomycin	scm:lineage	670	652	14	4	322	27	217	86	21	34
 who_assoc_only	mycobacterium_tuberculosis__capreomycin	cart:lineage	670	652	14	4	323	29	215	85	36	50
@@ -261,7 +252,6 @@ who_assoc_only	mycobacterium_tuberculosis__ciprofloxacin	cart:random	101	101	0	0
 who_assoc_only	mycobacterium_tuberculosis__ciprofloxacin	rf:random	101	101	0	0	70	10	18	3	11	9
 who_assoc_only	mycobacterium_tuberculosis__ciprofloxacin	gbt:random	101	101	0	0	67	8	20	6	9	8
 who_assoc_only	mycobacterium_tuberculosis__ciprofloxacin	lasso:random	101	101	0	0	68	8	20	5	6	4
-who_assoc_only	mycobacterium_tuberculosis__ciprofloxacin	catalog	101	101	0	0	73	28	0	0	9	22
 who_assoc_only	mycobacterium_tuberculosis__clofazimine	tool	1303	1249	5	49	5	12	1049	183	0	0
 who_assoc_only	mycobacterium_tuberculosis__clofazimine	scm:lineage	1303	1249	5	49	115	605	456	73	115	598
 who_assoc_only	mycobacterium_tuberculosis__clofazimine	cart:lineage	1303	1249	5	49	90	385	676	98	96	384
@@ -339,7 +329,6 @@ who_assoc_only	mycobacterium_tuberculosis__kanamycin	cart:random	1800	1677	11	11
 who_assoc_only	mycobacterium_tuberculosis__kanamycin	rf:random	1800	1677	11	112	460	47	1024	146	50	82
 who_assoc_only	mycobacterium_tuberculosis__kanamycin	gbt:random	1800	1677	11	112	503	55	1016	103	39	36
 who_assoc_only	mycobacterium_tuberculosis__kanamycin	lasso:random	1800	1677	11	112	520	58	1013	86	36	19
-who_assoc_only	mycobacterium_tuberculosis__kanamycin	catalog	1800	1677	11	112	1	0	1071	605	44	488
 who_assoc_only	mycobacterium_tuberculosis__levofloxacin	tool	1248	1170	31	47	438	92	356	284	0	0
 who_assoc_only	mycobacterium_tuberculosis__levofloxacin	scm:lineage	1248	1170	31	47	443	103	345	279	12	18
 who_assoc_only	mycobacterium_tuberculosis__levofloxacin	cart:lineage	1248	1170	31	47	439	102	346	283	8	17
@@ -351,7 +340,6 @@ who_assoc_only	mycobacterium_tuberculosis__levofloxacin	cart:random	1248	1170	31
 who_assoc_only	mycobacterium_tuberculosis__levofloxacin	rf:random	1248	1170	31	47	550	221	227	172	125	142
 who_assoc_only	mycobacterium_tuberculosis__levofloxacin	gbt:random	1248	1170	31	47	464	122	326	258	40	44
 who_assoc_only	mycobacterium_tuberculosis__levofloxacin	lasso:random	1248	1170	31	47	453	103	345	269	22	18
-who_assoc_only	mycobacterium_tuberculosis__levofloxacin	catalog	1248	1170	31	47	722	448	0	0	284	356
 who_assoc_only	mycobacterium_tuberculosis__linezolid	tool	1248	1183	9	56	18	6	984	175	0	0
 who_assoc_only	mycobacterium_tuberculosis__linezolid	scm:lineage	1248	1183	9	56	126	518	472	67	117	521
 who_assoc_only	mycobacterium_tuberculosis__linezolid	cart:lineage	1248	1183	9	56	116	460	530	77	101	457
@@ -363,7 +351,6 @@ who_assoc_only	mycobacterium_tuberculosis__linezolid	cart:random	1248	1183	9	56	
 who_assoc_only	mycobacterium_tuberculosis__linezolid	rf:random	1248	1183	9	56	15	19	971	178	18	34
 who_assoc_only	mycobacterium_tuberculosis__linezolid	gbt:random	1248	1183	9	56	103	346	644	90	85	340
 who_assoc_only	mycobacterium_tuberculosis__linezolid	lasso:random	1248	1183	9	56	70	195	795	123	52	189
-who_assoc_only	mycobacterium_tuberculosis__linezolid	catalog	1248	1183	9	56	0	0	990	193	6	18
 who_assoc_only	mycobacterium_tuberculosis__moxifloxacin	tool	1524	1446	12	66	586	126	599	135	0	0
 who_assoc_only	mycobacterium_tuberculosis__moxifloxacin	scm:lineage	1524	1446	12	66	594	137	588	127	22	25
 who_assoc_only	mycobacterium_tuberculosis__moxifloxacin	cart:lineage	1524	1446	12	66	593	136	589	128	20	23
@@ -375,7 +362,6 @@ who_assoc_only	mycobacterium_tuberculosis__moxifloxacin	cart:random	1524	1446	12
 who_assoc_only	mycobacterium_tuberculosis__moxifloxacin	rf:random	1524	1446	12	66	584	135	590	137	39	50
 who_assoc_only	mycobacterium_tuberculosis__moxifloxacin	gbt:random	1524	1446	12	66	595	128	597	126	28	21
 who_assoc_only	mycobacterium_tuberculosis__moxifloxacin	lasso:random	1524	1446	12	66	596	140	585	125	19	23
-who_assoc_only	mycobacterium_tuberculosis__moxifloxacin	catalog	1524	1446	12	66	721	725	0	0	135	599
 who_assoc_only	mycobacterium_tuberculosis__ofloxacin	tool	643	643	0	0	319	17	271	36	0	0
 who_assoc_only	mycobacterium_tuberculosis__ofloxacin	scm:lineage	643	643	0	0	314	18	270	41	1	7
 who_assoc_only	mycobacterium_tuberculosis__ofloxacin	cart:lineage	643	643	0	0	314	16	272	41	1	5
@@ -387,7 +373,6 @@ who_assoc_only	mycobacterium_tuberculosis__ofloxacin	cart:random	643	643	0	0	314
 who_assoc_only	mycobacterium_tuberculosis__ofloxacin	rf:random	643	643	0	0	319	34	254	36	13	30
 who_assoc_only	mycobacterium_tuberculosis__ofloxacin	gbt:random	643	643	0	0	313	25	263	42	4	18
 who_assoc_only	mycobacterium_tuberculosis__ofloxacin	lasso:random	643	643	0	0	314	16	272	41	1	5
-who_assoc_only	mycobacterium_tuberculosis__ofloxacin	catalog	643	643	0	0	355	288	0	0	36	271
 who_assoc_only	mycobacterium_tuberculosis__para_aminosalicylic_acid	tool	1650	1649	0	1	0	0	1220	429	0	0
 who_assoc_only	mycobacterium_tuberculosis__para_aminosalicylic_acid	scm:lineage	1650	1649	0	1	216	162	1058	213	216	162
 who_assoc_only	mycobacterium_tuberculosis__para_aminosalicylic_acid	cart:lineage	1650	1649	0	1	341	412	808	88	341	412
@@ -454,7 +439,6 @@ who_assoc_only	mycobacterium_tuberculosis__streptomycin	cart:random	698	697	1	0	
 who_assoc_only	mycobacterium_tuberculosis__streptomycin	rf:random	698	697	1	0	496	64	95	42	45	64
 who_assoc_only	mycobacterium_tuberculosis__streptomycin	gbt:random	698	697	1	0	458	30	129	80	33	56
 who_assoc_only	mycobacterium_tuberculosis__streptomycin	lasso:random	698	697	1	0	457	32	127	81	32	58
-who_assoc_only	mycobacterium_tuberculosis__streptomycin	catalog	698	697	1	0	0	0	159	538	41	492
 tool_default	mycobacterium_tuberculosis__amikacin	tool	1813	1683	6	124	432	42	1099	110	0	0
 tool_default	mycobacterium_tuberculosis__amikacin	scm:lineage	1813	1683	6	124	449	55	1086	93	29	25
 tool_default	mycobacterium_tuberculosis__amikacin	cart:lineage	1813	1683	6	124	431	66	1075	111	43	68
@@ -466,7 +450,6 @@ tool_default	mycobacterium_tuberculosis__amikacin	cart:random	1813	1683	6	124	44
 tool_default	mycobacterium_tuberculosis__amikacin	rf:random	1813	1683	6	124	426	61	1080	116	64	89
 tool_default	mycobacterium_tuberculosis__amikacin	gbt:random	1813	1683	6	124	458	75	1066	84	56	63
 tool_default	mycobacterium_tuberculosis__amikacin	lasso:random	1813	1683	6	124	452	87	1054	90	49	74
-tool_default	mycobacterium_tuberculosis__amikacin	catalog	1813	1683	6	124	0	0	1141	542	42	432
 tool_default	mycobacterium_tuberculosis__capreomycin	tool	670	652	14	4	347	39	205	61	0	0
 tool_default	mycobacterium_tuberculosis__capreomycin	scm:lineage	670	652	14	4	322	27	217	86	21	34
 tool_default	mycobacterium_tuberculosis__capreomycin	cart:lineage	670	652	14	4	323	29	215	85	36	50
@@ -489,7 +472,6 @@ tool_default	mycobacterium_tuberculosis__ciprofloxacin	cart:random	101	101	0	0	6
 tool_default	mycobacterium_tuberculosis__ciprofloxacin	rf:random	101	101	0	0	70	10	18	3	8	9
 tool_default	mycobacterium_tuberculosis__ciprofloxacin	gbt:random	101	101	0	0	67	8	20	6	6	8
 tool_default	mycobacterium_tuberculosis__ciprofloxacin	lasso:random	101	101	0	0	68	8	20	5	3	4
-tool_default	mycobacterium_tuberculosis__ciprofloxacin	catalog	101	101	0	0	73	28	0	0	6	22
 tool_default	mycobacterium_tuberculosis__clofazimine	tool	1303	1249	5	49	5	13	1048	183	0	0
 tool_default	mycobacterium_tuberculosis__clofazimine	scm:lineage	1303	1249	5	49	115	605	456	73	115	597
 tool_default	mycobacterium_tuberculosis__clofazimine	cart:lineage	1303	1249	5	49	90	385	676	98	97	384
@@ -567,7 +549,6 @@ tool_default	mycobacterium_tuberculosis__kanamycin	cart:random	1800	1682	9	109	5
 tool_default	mycobacterium_tuberculosis__kanamycin	rf:random	1800	1682	9	109	460	49	1025	148	47	91
 tool_default	mycobacterium_tuberculosis__kanamycin	gbt:random	1800	1682	9	109	505	58	1016	103	25	33
 tool_default	mycobacterium_tuberculosis__kanamycin	lasso:random	1800	1682	9	109	522	61	1013	86	21	15
-tool_default	mycobacterium_tuberculosis__kanamycin	catalog	1800	1682	9	109	1	0	1074	607	51	505
 tool_default	mycobacterium_tuberculosis__levofloxacin	tool	1248	1173	30	45	446	101	349	277	0	0
 tool_default	mycobacterium_tuberculosis__levofloxacin	scm:lineage	1248	1173	30	45	443	103	347	280	19	24
 tool_default	mycobacterium_tuberculosis__levofloxacin	cart:lineage	1248	1173	30	45	439	102	348	284	15	23
@@ -579,7 +560,6 @@ tool_default	mycobacterium_tuberculosis__levofloxacin	cart:random	1248	1173	30	4
 tool_default	mycobacterium_tuberculosis__levofloxacin	rf:random	1248	1173	30	45	550	221	229	173	126	142
 tool_default	mycobacterium_tuberculosis__levofloxacin	gbt:random	1248	1173	30	45	464	122	328	259	44	47
 tool_default	mycobacterium_tuberculosis__levofloxacin	lasso:random	1248	1173	30	45	453	103	347	270	28	23
-tool_default	mycobacterium_tuberculosis__levofloxacin	catalog	1248	1173	30	45	723	450	0	0	277	349
 tool_default	mycobacterium_tuberculosis__linezolid	tool	1248	1183	9	56	24	8	982	169	0	0
 tool_default	mycobacterium_tuberculosis__linezolid	scm:lineage	1248	1183	9	56	126	518	472	67	116	524
 tool_default	mycobacterium_tuberculosis__linezolid	cart:lineage	1248	1183	9	56	116	460	530	77	99	459
@@ -591,7 +571,6 @@ tool_default	mycobacterium_tuberculosis__linezolid	cart:random	1248	1183	9	56	14
 tool_default	mycobacterium_tuberculosis__linezolid	rf:random	1248	1183	9	56	15	19	971	178	20	40
 tool_default	mycobacterium_tuberculosis__linezolid	gbt:random	1248	1183	9	56	103	346	644	90	85	344
 tool_default	mycobacterium_tuberculosis__linezolid	lasso:random	1248	1183	9	56	70	195	795	123	54	195
-tool_default	mycobacterium_tuberculosis__linezolid	catalog	1248	1183	9	56	0	0	990	193	8	24
 tool_default	mycobacterium_tuberculosis__moxifloxacin	tool	1524	1449	10	65	605	140	586	118	0	0
 tool_default	mycobacterium_tuberculosis__moxifloxacin	scm:lineage	1524	1449	10	65	594	137	589	129	32	40
 tool_default	mycobacterium_tuberculosis__moxifloxacin	cart:lineage	1524	1449	10	65	593	136	590	130	30	38
@@ -603,7 +582,6 @@ tool_default	mycobacterium_tuberculosis__moxifloxacin	cart:random	1524	1449	10	6
 tool_default	mycobacterium_tuberculosis__moxifloxacin	rf:random	1524	1449	10	65	584	135	591	139	45	61
 tool_default	mycobacterium_tuberculosis__moxifloxacin	gbt:random	1524	1449	10	65	595	128	598	128	37	35
 tool_default	mycobacterium_tuberculosis__moxifloxacin	lasso:random	1524	1449	10	65	596	140	586	127	27	36
-tool_default	mycobacterium_tuberculosis__moxifloxacin	catalog	1524	1449	10	65	723	726	0	0	118	586
 tool_default	mycobacterium_tuberculosis__ofloxacin	tool	643	643	0	0	324	25	263	31	0	0
 tool_default	mycobacterium_tuberculosis__ofloxacin	scm:lineage	643	643	0	0	314	18	270	41	9	12
 tool_default	mycobacterium_tuberculosis__ofloxacin	cart:lineage	643	643	0	0	314	16	272	41	9	10
@@ -615,7 +593,6 @@ tool_default	mycobacterium_tuberculosis__ofloxacin	cart:random	643	643	0	0	314	1
 tool_default	mycobacterium_tuberculosis__ofloxacin	rf:random	643	643	0	0	319	34	254	36	17	31
 tool_default	mycobacterium_tuberculosis__ofloxacin	gbt:random	643	643	0	0	313	25	263	42	11	22
 tool_default	mycobacterium_tuberculosis__ofloxacin	lasso:random	643	643	0	0	314	16	272	41	9	10
-tool_default	mycobacterium_tuberculosis__ofloxacin	catalog	643	643	0	0	355	288	0	0	31	263
 tool_default	mycobacterium_tuberculosis__para_aminosalicylic_acid	tool	1650	1649	0	1	153	37	1183	276	0	0
 tool_default	mycobacterium_tuberculosis__para_aminosalicylic_acid	scm:lineage	1650	1649	0	1	216	162	1058	213	73	135
 tool_default	mycobacterium_tuberculosis__para_aminosalicylic_acid	cart:lineage	1650	1649	0	1	341	412	808	88	203	390
@@ -682,7 +659,6 @@ tool_default	mycobacterium_tuberculosis__streptomycin	cart:random	698	697	1	0	45
 tool_default	mycobacterium_tuberculosis__streptomycin	rf:random	698	697	1	0	496	64	95	42	33	62
 tool_default	mycobacterium_tuberculosis__streptomycin	gbt:random	698	697	1	0	458	30	129	80	30	63
 tool_default	mycobacterium_tuberculosis__streptomycin	lasso:random	698	697	1	0	457	32	127	81	30	66
-tool_default	mycobacterium_tuberculosis__streptomycin	catalog	698	697	1	0	0	0	159	538	47	508
 who_assoc_small	mycobacterium_tuberculosis__amikacin	tool	1813	1683	6	124	432	42	1099	110	0	0
 who_assoc_small	mycobacterium_tuberculosis__amikacin	scm:lineage	1813	1683	6	124	449	55	1086	93	29	25
 who_assoc_small	mycobacterium_tuberculosis__amikacin	cart:lineage	1813	1683	6	124	431	66	1075	111	43	68
@@ -694,7 +670,6 @@ who_assoc_small	mycobacterium_tuberculosis__amikacin	cart:random	1813	1683	6	124
 who_assoc_small	mycobacterium_tuberculosis__amikacin	rf:random	1813	1683	6	124	426	61	1080	116	64	89
 who_assoc_small	mycobacterium_tuberculosis__amikacin	gbt:random	1813	1683	6	124	458	75	1066	84	56	63
 who_assoc_small	mycobacterium_tuberculosis__amikacin	lasso:random	1813	1683	6	124	452	87	1054	90	49	74
-who_assoc_small	mycobacterium_tuberculosis__amikacin	catalog	1813	1683	6	124	0	0	1141	542	42	432
 who_assoc_small	mycobacterium_tuberculosis__capreomycin	tool	670	652	14	4	347	39	205	61	0	0
 who_assoc_small	mycobacterium_tuberculosis__capreomycin	scm:lineage	670	652	14	4	322	27	217	86	21	34
 who_assoc_small	mycobacterium_tuberculosis__capreomycin	cart:lineage	670	652	14	4	323	29	215	85	36	50
@@ -717,7 +692,6 @@ who_assoc_small	mycobacterium_tuberculosis__ciprofloxacin	cart:random	101	101	0	
 who_assoc_small	mycobacterium_tuberculosis__ciprofloxacin	rf:random	101	101	0	0	70	10	18	3	10	9
 who_assoc_small	mycobacterium_tuberculosis__ciprofloxacin	gbt:random	101	101	0	0	67	8	20	6	8	8
 who_assoc_small	mycobacterium_tuberculosis__ciprofloxacin	lasso:random	101	101	0	0	68	8	20	5	5	4
-who_assoc_small	mycobacterium_tuberculosis__ciprofloxacin	catalog	101	101	0	0	73	28	0	0	8	22
 who_assoc_small	mycobacterium_tuberculosis__clofazimine	tool	1303	1249	5	49	5	13	1048	183	0	0
 who_assoc_small	mycobacterium_tuberculosis__clofazimine	scm:lineage	1303	1249	5	49	115	605	456	73	115	597
 who_assoc_small	mycobacterium_tuberculosis__clofazimine	cart:lineage	1303	1249	5	49	90	385	676	98	97	384
@@ -795,7 +769,6 @@ who_assoc_small	mycobacterium_tuberculosis__kanamycin	cart:random	1800	1677	11	1
 who_assoc_small	mycobacterium_tuberculosis__kanamycin	rf:random	1800	1677	11	112	460	47	1024	146	50	82
 who_assoc_small	mycobacterium_tuberculosis__kanamycin	gbt:random	1800	1677	11	112	503	55	1016	103	39	36
 who_assoc_small	mycobacterium_tuberculosis__kanamycin	lasso:random	1800	1677	11	112	520	58	1013	86	36	19
-who_assoc_small	mycobacterium_tuberculosis__kanamycin	catalog	1800	1677	11	112	1	0	1071	605	44	488
 who_assoc_small	mycobacterium_tuberculosis__levofloxacin	tool	1248	1171	31	46	442	95	354	280	0	0
 who_assoc_small	mycobacterium_tuberculosis__levofloxacin	scm:lineage	1248	1171	31	46	443	103	346	279	14	21
 who_assoc_small	mycobacterium_tuberculosis__levofloxacin	cart:lineage	1248	1171	31	46	439	102	347	283	10	20
@@ -807,7 +780,6 @@ who_assoc_small	mycobacterium_tuberculosis__levofloxacin	cart:random	1248	1171	3
 who_assoc_small	mycobacterium_tuberculosis__levofloxacin	rf:random	1248	1171	31	46	550	221	228	172	123	141
 who_assoc_small	mycobacterium_tuberculosis__levofloxacin	gbt:random	1248	1171	31	46	464	122	327	258	40	45
 who_assoc_small	mycobacterium_tuberculosis__levofloxacin	lasso:random	1248	1171	31	46	453	103	346	269	23	20
-who_assoc_small	mycobacterium_tuberculosis__levofloxacin	catalog	1248	1171	31	46	722	449	0	0	280	354
 who_assoc_small	mycobacterium_tuberculosis__linezolid	tool	1248	1183	9	56	24	8	982	169	0	0
 who_assoc_small	mycobacterium_tuberculosis__linezolid	scm:lineage	1248	1183	9	56	126	518	472	67	116	524
 who_assoc_small	mycobacterium_tuberculosis__linezolid	cart:lineage	1248	1183	9	56	116	460	530	77	99	459
@@ -819,7 +791,6 @@ who_assoc_small	mycobacterium_tuberculosis__linezolid	cart:random	1248	1183	9	56
 who_assoc_small	mycobacterium_tuberculosis__linezolid	rf:random	1248	1183	9	56	15	19	971	178	20	40
 who_assoc_small	mycobacterium_tuberculosis__linezolid	gbt:random	1248	1183	9	56	103	346	644	90	85	344
 who_assoc_small	mycobacterium_tuberculosis__linezolid	lasso:random	1248	1183	9	56	70	195	795	123	54	195
-who_assoc_small	mycobacterium_tuberculosis__linezolid	catalog	1248	1183	9	56	0	0	990	193	8	24
 who_assoc_small	mycobacterium_tuberculosis__moxifloxacin	tool	1524	1447	11	66	597	132	593	125	0	0
 who_assoc_small	mycobacterium_tuberculosis__moxifloxacin	scm:lineage	1524	1447	11	66	594	137	588	128	25	33
 who_assoc_small	mycobacterium_tuberculosis__moxifloxacin	cart:lineage	1524	1447	11	66	593	136	589	129	23	31
@@ -831,7 +802,6 @@ who_assoc_small	mycobacterium_tuberculosis__moxifloxacin	cart:random	1524	1447	1
 who_assoc_small	mycobacterium_tuberculosis__moxifloxacin	rf:random	1524	1447	11	66	584	135	590	138	40	56
 who_assoc_small	mycobacterium_tuberculosis__moxifloxacin	gbt:random	1524	1447	11	66	595	128	597	127	30	28
 who_assoc_small	mycobacterium_tuberculosis__moxifloxacin	lasso:random	1524	1447	11	66	596	140	585	126	20	29
-who_assoc_small	mycobacterium_tuberculosis__moxifloxacin	catalog	1524	1447	11	66	722	725	0	0	125	593
 who_assoc_small	mycobacterium_tuberculosis__ofloxacin	tool	643	643	0	0	321	22	266	34	0	0
 who_assoc_small	mycobacterium_tuberculosis__ofloxacin	scm:lineage	643	643	0	0	314	18	270	41	6	9
 who_assoc_small	mycobacterium_tuberculosis__ofloxacin	cart:lineage	643	643	0	0	314	16	272	41	6	7
@@ -843,7 +813,6 @@ who_assoc_small	mycobacterium_tuberculosis__ofloxacin	cart:random	643	643	0	0	31
 who_assoc_small	mycobacterium_tuberculosis__ofloxacin	rf:random	643	643	0	0	319	34	254	36	18	32
 who_assoc_small	mycobacterium_tuberculosis__ofloxacin	gbt:random	643	643	0	0	313	25	263	42	9	20
 who_assoc_small	mycobacterium_tuberculosis__ofloxacin	lasso:random	643	643	0	0	314	16	272	41	6	7
-who_assoc_small	mycobacterium_tuberculosis__ofloxacin	catalog	643	643	0	0	355	288	0	0	34	266
 who_assoc_small	mycobacterium_tuberculosis__para_aminosalicylic_acid	tool	1650	1649	0	1	0	0	1220	429	0	0
 who_assoc_small	mycobacterium_tuberculosis__para_aminosalicylic_acid	scm:lineage	1650	1649	0	1	216	162	1058	213	216	162
 who_assoc_small	mycobacterium_tuberculosis__para_aminosalicylic_acid	cart:lineage	1650	1649	0	1	341	412	808	88	341	412
@@ -910,4 +879,3 @@ who_assoc_small	mycobacterium_tuberculosis__streptomycin	cart:random	698	697	1	0
 who_assoc_small	mycobacterium_tuberculosis__streptomycin	rf:random	698	697	1	0	496	64	95	42	87	65
 who_assoc_small	mycobacterium_tuberculosis__streptomycin	gbt:random	698	697	1	0	458	30	129	80	78	60
 who_assoc_small	mycobacterium_tuberculosis__streptomycin	lasso:random	698	697	1	0	457	32	127	81	80	65
-who_assoc_small	mycobacterium_tuberculosis__streptomycin	catalog	698	697	1	0	0	0	159	538	31	441

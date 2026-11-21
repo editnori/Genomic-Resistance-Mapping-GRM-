@@ -1,11 +1,15 @@
 """The committed record under reference/tbprofiler-comparison: its files and sums, its columns and rows, its size,
 the two sets and the proxies, what it must never hold, and the script's --check mode on it."""
 
+import collections
 import contextlib
 import hashlib
 import io
+import pathlib
 import re
+import shutil
 import statistics
+import tempfile
 import unittest
 
 from tests.tbprofiler_comparison.common import LEARNERS, RECORD, SPLITS, WAY, load_script, pairs, read_tsv
@@ -13,13 +17,13 @@ from tests.tbprofiler_comparison.common import LEARNERS, RECORD, SPLITS, WAY, lo
 record = load_script()
 MAX_BYTES = 3 * 1024 * 1024
 # The sha256 of SHA256SUMS as committed. Any change to a file of the record changes it.
-PINNED = "57f2bb8fbcc6cfcc1af955ca2006f683676d4e9444af7424bf8fac899ed03ee5"
-REPORTS, NAMED, PROXIES, CATALOG, WAYS, TOOL_DRUGS = 22, 20, 4, 8, 4, 18
+PINNED = "a98a5a6eea8ec2e61141a008d60e7b24911109f00380fe3097bb4636afd1af2a"
+REPORTS, NAMED, PROXIES, WAYS, TOOL_DRUGS = 22, 20, 4, 4, 18
 CALLERS = 1 + len(LEARNERS) * len(SPLITS)
 SETS, MEASURES = 2, 3
-ROWS = {"reports.tsv": REPORTS, "callers.tsv": WAYS * (NAMED * CALLERS + CATALOG),
+ROWS = {"reports.tsv": REPORTS, "callers.tsv": WAYS * NAMED * CALLERS,
         "intervals.tsv": NAMED * (CALLERS * MEASURES + CALLERS - 1) + SETS * (CALLERS * MEASURES + CALLERS - 1),
-        "disagreements.tsv": NAMED, "grades.tsv": TOOL_DRUGS, "order.tsv": 5, "measures.tsv": WAYS * (NAMED * CALLERS + CATALOG),
+        "disagreements.tsv": NAMED, "grades.tsv": TOOL_DRUGS, "order.tsv": 5, "measures.tsv": WAYS * NAMED * CALLERS,
         "endpoints.tsv": WAYS * NAMED, "medians.tsv": WAYS * SETS * CALLERS * MEASURES,
         "comparisons.tsv": WAYS * SETS * (CALLERS - 1), "screen.tsv": WAYS * SETS, "bounds.tsv": WAYS * SETS * 4}
 # Column names that would mean a row per genome, or the content of a call or a catalogue entry. A column named
@@ -92,7 +96,7 @@ class Tables(unittest.TestCase):
     def test_one_row_per_way_report_and_caller(self):
         named = [r for r in self.reports if r["kind"] != "not named"]
         want = [(w, r["dataset"], c) for w in record.WAYS for r in named
-                for c in ("tool",) + record.LEARNER_CALLERS + (("catalog",) if r["catalog_row"] == "yes" else ())]
+                for c in ("tool",) + record.LEARNER_CALLERS]
         self.assertEqual([(r["way"], r["dataset"], r["caller"]) for r in self.callers], want)
         for r in self.reports:
             self.assertRegex(r["dataset"], r"^mycobacterium_tuberculosis__[a-z0-9_]+$")
@@ -175,9 +179,17 @@ class NeverHeld(unittest.TestCase):
                 self.assertIsNone(re.search(shape, text), (p.name, shape))
 
     def test_no_row_per_genome(self):
+        # No file has more rows than the record's own shape allows: a row per way, report and caller, or per report
+        # and set, caller and measure with the difference; far fewer than the genomes.
         genomes = int(pairs(RECORD / "totals.tsv")["distinct_genomes"])
+        named = sum(1 for r in read_tsv(RECORD / "reports.tsv") if r["kind"] != "not named")
+        callers = 1 + len(record.LEARNER_CALLERS)
+        shape = max(len(record.WAYS) * named * callers,
+                    (named + len(record.SETS)) * callers * (len(record.MEASURES) + 1))
+        self.assertLess(shape, genomes)
         for p in sorted(RECORD.glob("*.tsv")):
-            self.assertLess(len(read_tsv(p)), genomes, p.name)
+            self.assertLessEqual(len(read_tsv(p)), shape, p.name)
+        self.assertEqual(len(read_tsv(RECORD / "callers.tsv")), len(record.WAYS) * named * callers)
 
     def test_inputs_are_the_named_files(self):
         lines = (RECORD / "inputs.sha256").read_text(encoding="utf-8").rstrip("\n").split("\n")
@@ -188,6 +200,113 @@ class NeverHeld(unittest.TestCase):
             self.assertIsNone(BANNED_PATH.search(name), name)
             names.append(name)
         self.assertEqual(names, INPUT_NAMES)
+
+
+CATALOG_NAMES = {"catalog_endpoints", "catalog_rows", "catalog_tool_only_right", "catalog_only_right",
+                 "tool_minus_catalog_median"}
+# The tool's own counts per report that are 1 or a class less 1: genomes without a call by label, the grade a call rests
+# on, and the one entry the tool's rule set aside. They are counted here, so that no new one enters unseen.
+OPEN_SMALL = {"tool genomes with a call": 12, "tool resistant genomes with a call": 11,
+              "tool susceptible genomes with a call": 12, "tool genomes without a call, by label": 9,
+              "grade split of a call": 5, "set-aside entry": 1}
+
+
+def small_cells(root=RECORD):
+    """Every count of the record with the class the record gives it. A cell describes one genome when it is a count of
+    1 in a class of 1, or a count that equals its class less 1. Returns the count of such cells by kind."""
+    found = collections.Counter()
+
+    def check(kind, count, klass):
+        if klass >= 1 and ((count == 1 and klass == 1) or count == klass - 1):
+            found[kind] += 1
+
+    for r in read_tsv(root / "callers.tsv"):
+        c = {k: int(r[k]) for k in record.COUNT_COLS + ["caller_only_right", "tool_only_right"]}
+        res, sus = c["tp"] + c["fn"], c["tn"] + c["fp"]
+        who = "tool" if r["caller"] == "tool" else "learner"
+        for k, klass in (("tp", res), ("fn", res), ("tn", sus), ("fp", sus)):
+            check(f"{who} {k}", c[k], klass)
+        if who == "tool":
+            check("tool genomes with a call", c["with_call"], c["genomes"])
+            check("tool resistant genomes with a call", res, res + c["no_call_resistant"])
+            check("tool susceptible genomes with a call", sus, sus + c["no_call_susceptible"])
+        else:
+            # A pair count is drawn from the genomes the tool called, which the learner's row is on.
+            for k in ("caller_only_right", "tool_only_right"):
+                check(f"learner {k}", c[k], c["with_call"])
+    for r in read_tsv(root / "disagreements.tsv"):
+        c = {k: int(v) for k, v in r.items() if k != "dataset"}
+        for a, b in (("tool_r_label_s_assoc", "tool_r_label_s_interim"), ("tool_s_label_r_other", "tool_s_label_r_none"),
+                     ("both_r_assoc", "both_r_interim"), ("both_s_other", "both_s_none")):
+            for k in (a, b):
+                check("grade split of a call", c[k], c[a] + c[b])
+        for k in ("no_call_label_r", "no_call_label_s"):
+            check("tool genomes without a call, by label", c[k], c["no_call_label_r"] + c["no_call_label_s"])
+    for r in read_tsv(root / "comparisons.tsv"):
+        for k in ("caller_only_right", "tool_only_right"):
+            check(f"comparison {k}", int(r[k]), int(r["caller_only_right"]) + int(r["tool_only_right"]))
+    s = pairs(root / "summary.tsv")
+    for key in ("by_name", "graded"):
+        check("rows with a call", int(s[f"{key}_rows_with_call"]), int(s[f"{key}_rows"]))
+        check("rows without a call", int(s[f"{key}_rows_without_call"]), int(s[f"{key}_rows"]))
+        check("rows without a call, resistant", int(s[f"{key}_rows_without_call_label_resistant"]),
+              int(s[f"{key}_rows_without_call"]))
+    for k in ("catalog_calls_agree", "catalog_tool_only_right", "catalog_only_right"):
+        check(f"catalog {k}", int(s[k]), int(s["catalog_rows"]))
+    a = pairs(root / "set-aside.tsv")
+    for name in ("as_run", "counted"):
+        tp, fp, tn, fn = (int(a[f"{k}_{name}"]) for k in ("tp", "fp", "tn", "fn"))
+        for k, v, klass in (("tp", tp, tp + fn), ("fn", fn, tp + fn), ("tn", tn, tn + fp), ("fp", fp, tn + fp)):
+            check(f"set-aside {k}", v, klass)
+    check("set-aside entry", int(a["tn_counted"]), int(a["tn_as_run"]))
+    return found
+
+
+class SmallCells(unittest.TestCase):
+    def test_no_catalog_row_per_report(self):
+        # The catalog row stands only as figures over the plan's set: no caller row of it in any file.
+        for p in sorted(RECORD.glob("*.tsv")):
+            rows = read_tsv(p)
+            if rows and "caller" in rows[0]:
+                self.assertEqual({r["caller"] for r in rows} - {"tool", "-"}, set(record.LEARNER_CALLERS), p.name)
+        for name in ("totals.tsv", "summary.tsv"):
+            found = {k for k in pairs(RECORD / name) if "catalog" in k}
+            self.assertEqual(found, CATALOG_NAMES | ({"catalog_calls_agree"} if name == "summary.tsv" else set()), name)
+        for p in sorted(RECORD.iterdir()):
+            if p.name in ("totals.tsv", "summary.tsv", "README.md", "reports.tsv"):
+                continue
+            self.assertNotIn("catalog", p.read_text(encoding="utf-8"), p.name)
+        self.assertEqual({r["catalog_row"] for r in read_tsv(RECORD / "reports.tsv")}, {"yes", "no"})
+        # The median is given to 3 decimals: in full it would show whether one genome had a call.
+        self.assertRegex(pairs(RECORD / "totals.tsv")["tool_minus_catalog_median"], r"^-?\d\.\d{3}$")
+        self.assertEqual(pairs(RECORD / "summary.tsv")["tool_minus_catalog_median"],
+                         pairs(RECORD / "totals.tsv")["tool_minus_catalog_median"])
+        readme = (RECORD / "README.md").read_text(encoding="utf-8")
+        self.assertIn("The catalog row appears only as six-report totals, in `totals.tsv` and again in `summary.tsv`, "
+                      "because on three reports a per-report count of it would describe one genome.", readme)
+
+    def test_no_cell_describes_one_genome(self):
+        found = small_cells()
+        self.assertEqual({k: v for k, v in found.items() if k not in OPEN_SMALL}, {})
+        self.assertEqual({k: found.get(k, 0) for k in OPEN_SMALL}, OPEN_SMALL)
+
+    def test_the_small_cell_check_finds_its_cells(self):
+        # The check itself, on cells made up here: a count of 1 in a class of 1, and a count of its class less 1.
+        tmp = tempfile.mkdtemp(prefix="small-cells-")
+        try:
+            dest = pathlib.Path(shutil.copytree(RECORD, f"{tmp}/rec"))
+            p = dest / "summary.tsv"
+            text = p.read_text(encoding="utf-8")
+            s = pairs(p)
+            text = text.replace(f"by_name_rows_without_call\t{s['by_name_rows_without_call']}\n",
+                                "by_name_rows_without_call\t1\n")
+            text = text.replace(f"by_name_rows_without_call_label_resistant\t"
+                                f"{s['by_name_rows_without_call_label_resistant']}\n",
+                                "by_name_rows_without_call_label_resistant\t1\n")
+            p.write_text(text, encoding="utf-8")
+            self.assertEqual(small_cells(dest)["rows without a call, resistant"], 1)
+        finally:
+            shutil.rmtree(tmp)
 
 
 if __name__ == "__main__":

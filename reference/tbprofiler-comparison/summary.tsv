@@ -16,7 +16,7 @@ not_named_endpoints	2
 graded_tool_drugs_in_by_name	14
 ungraded_in_by_name	2
 catalog_endpoints	6
-tool_minus_catalog_median	0.32518106165577354
+tool_minus_catalog_median	0.325
 catalog_rows	7858
 catalog_tool_only_right	2386
 catalog_only_right	541
