@@ -1,6 +1,8 @@
 # TBProfiler comparison record
 
-This directory holds the record of the comparison of TBProfiler 6.6.3, run with the database it ships on assemblies of the genomes of the revision 14 M. tuberculosis reports, with the phenotypes those reports record and with the five learners on the same genomes. The page that reads it is [`docs/tbprofiler-comparison.md`](../../docs/tbprofiler-comparison.md). `scripts/tbprofiler-comparison/record.py` writes every file here from the input set, and its `--check` mode fails on any byte it would not write. The input set is the call file of the TBProfiler run on assemblies of public BV-BRC genomes, with GRM's revision 14 M. tuberculosis reports.
+This directory holds the record of the comparison of TBProfiler 6.6.3, run with the database it ships on assemblies of the genomes of the revision 14 M. tuberculosis reports, with the phenotypes those reports record and with the five learners on the same genomes. The page that reads it is [`docs/tbprofiler-comparison.md`](../../docs/tbprofiler-comparison.md). `scripts/tbprofiler-comparison/record.py` writes every file here from the input set, and its `--check` mode fails on any byte it would not write.
+
+The input set is the call file of the TBProfiler run on assemblies of public BV-BRC genomes, with GRM's revision 14 M. tuberculosis reports.
 
 ## Files
 

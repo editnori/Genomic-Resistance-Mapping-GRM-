@@ -83,7 +83,7 @@ HELD = [
     ('Under `who_assoc`, per primary report: the resistant calls on a susceptible genome by the grade they rest '
      'on, the susceptible calls on a resistant genome by what the tool reported for the drug, and the genomes '
      'with no call by label. An entry of another grade is one the tool reports that `who_assoc` does not count.'),
-    '**Exploratory.** The figures in this section were read after the outcomes and are in no plan.',
+    '**Exploratory.** These figures were read after the outcomes and are in no plan.',
     ('Counting each no call as wrong or as right gives bounds on every genome. Reading a no call as '
      "susceptible, as the tool's printed report does, gives the lower sensitivity bound and the upper "
      'specificity bound.'),

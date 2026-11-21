@@ -13,13 +13,12 @@ from tests.tbprofiler_comparison.lines import f3, n
 TITLE = "# TBProfiler comparison"
 LIMIT = ("This is a retrospective comparison on assemblies of public BV-BRC genomes. "
          "It is not a prospective test and not external validation.")
-SECTIONS = ["Reading", "Plan and order", "Method", "Primary reports", "Proxy reports", "Medians",
-            "Learners beside the tool", "Ways of reading", "Disagreements by grade", "Exploratory", "Review", "Limits",
-            "Files"]
-TABLE_SECTION = {"order": "Plan and order", "grades": "Method", "primary": "Primary reports", "proxy": "Proxy reports",
+SECTIONS = ["Reading", "Plan and order", "Method", "Reports", "Medians", "Learners beside the tool", "Ways of reading",
+            "Disagreements by grade", "Exploratory", "Review", "Limits and the record"]
+TABLE_SECTION = {"order": "Plan and order", "grades": "Method", "primary": "Reports", "proxy": "Reports",
                  "medians": "Medians", "comparison": "Learners beside the tool", "gap": "Learners beside the tool",
                  "ways": "Ways of reading", "disagreement": "Disagreements by grade", "bounds": "Exploratory"}
-BUILT_SECTION = ["Proxy reports", "Learners beside the tool", "Exploratory"]
+BUILT_SECTION = ["Reports", "Learners beside the tool", "Exploratory"]
 # The review's sentence on the catalogue's overlap, beside every figure that sets the tool beside a learner.
 OVERLAP = ("The catalogue behind TBProfiler was built from public isolates with recorded phenotypes, and some of these "
            "2,000 genomes may be among them, which would favour the tool; the overlap was not checked, and each learner "
@@ -206,7 +205,7 @@ class Page(unittest.TestCase):
         self.assertIn(KEPT["interval"], section(self.text, "Method"))
         self.assertIn(KEPT["screen"], section(self.text, "Learners beside the tool"))
         self.assertIn(KEPT["two drugs"], section(self.text, "Plan and order"))
-        self.assertIn(KEPT["lowest layer"], section(self.text, "Limits"))
+        self.assertIn(KEPT["lowest layer"], section(self.text, "Limits and the record"))
 
     def test_review_figures_are_the_records(self):
         s, st = self.rec.summary, self.rec.settings

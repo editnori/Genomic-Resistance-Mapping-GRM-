@@ -76,7 +76,7 @@ The shipped database's entries of the two counted grades, per tool drug:
 | rifampicin | 26 | 113 | 139 |
 | streptomycin | 19 | 144 | 163 |
 
-## Primary reports
+## Reports
 
 TBProfiler under `who_assoc` on the 16 primary reports, with the lineage interval in brackets. Graded says whether the database grades an entry for the report's drug.
 
@@ -98,8 +98,6 @@ TBProfiler under `who_assoc` on the 16 primary reports, with the lineage interva
 | pyrazinamide | yes | 486 of 492 | 321 of 377 | 0.851 [0.798, 0.898] | 83 of 109 | 0.761 [0.660, 0.874] | 0.806 [0.747, 0.868] |
 | rifampin | yes | 1,830 of 1,967 | 1,293 of 1,346 | 0.961 [0.940, 0.974] | 395 of 484 | 0.816 [0.756, 0.866] | 0.888 [0.862, 0.910] |
 | streptomycin | yes | 697 of 698 | 495 of 538 | 0.920 [0.871, 0.951] | 117 of 159 | 0.736 [0.598, 0.871] | 0.828 [0.761, 0.893] |
-
-## Proxy reports
 
 The plan read 4 reports from another drug with a shared name stem, and the call is resistant when any drug read is. They enter no set and no median.
 
@@ -239,7 +237,7 @@ Under `who_assoc`, per primary report: the resistant calls on a susceptible geno
 
 ## Exploratory
 
-**Exploratory.** The figures in this section were read after the outcomes and are in no plan.
+**Exploratory.** These figures were read after the outcomes and are in no plan.
 
 Counting each no call as wrong or as right gives bounds on every genome. Reading a no call as susceptible, as the tool's printed report does, gives the lower sensitivity bound and the upper specificity bound.
 
@@ -264,7 +262,7 @@ An independent review recounted every row of the first report's table from the c
 - The first report's account of how the two drugs without a graded entry were found rests on an unlogged run. This page gives the fact from the database's grade table.
 - The catalogue's possible overlap with these genomes goes beside every figure that sets the tool beside a learner.
 
-## Limits
+## Limits and the record
 
 - The tool's raw output and the assemblies it read no longer exist; the per-genome call file, kept outside this repository, is the lowest layer these counts can be rebuilt from.
 - The tool read assemblies. It is built for sequencing reads, and an assembly cannot show a mixed population.
@@ -275,8 +273,6 @@ An independent review recounted every row of the first report's table from the c
 - The record leaves out these figures the plan named: the exact per-report interval, which treats related genomes as independent, the McNemar and sign tests, the quartiles of the differences, the per-fold measures, and sensitivity and specificity over all genome-drug rows taken together.
 - One database release, `tbdb` commit `3ed1cb99`, and one tool version.
 - The page gives no figure for a single genome, and it names no genome.
-
-## Files
 
 - `reference/tbprofiler-comparison/` holds the record: 20 files that `scripts/tbprofiler-comparison/record.py` writes from the input set. Its README lists each file and its columns, and `SHA256SUMS` gives each file's sha256.
 - The record holds rows per report and caller, per way of reading, per tool drug, per grade and per learner, and single counts. It holds no genome id, label, call or score per genome.
