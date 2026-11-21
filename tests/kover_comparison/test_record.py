@@ -10,6 +10,9 @@ from tests.kover_comparison.common import LEGACY, RECORD, load_script, read_tsv
 record = load_script()
 # reference/kover-summary.json as it stands on main; the record leaves it alone.
 LEGACY_SHA256 = "4197fa5cca20bb21a68a891e02832fa53f3908b559e1a76f815a77842637e902"
+# The sha256 of the committed SHA256SUMS: CI holds no sources, so a row changed with the derived files, the README,
+# SHA256SUMS and the page rebuilt to match would pass every other test.
+SHA256SUMS_SHA256 = "ef5eec67b3e2b1e79f8448b1b48542ed8a9188875ccc737a02b66a2a36a3eae4"
 
 
 def record_files():
@@ -17,6 +20,9 @@ def record_files():
 
 
 class Record(unittest.TestCase):
+    def test_the_record_is_the_committed_one(self):
+        self.assertEqual(hashlib.sha256((RECORD / "SHA256SUMS").read_bytes()).hexdigest(), SHA256SUMS_SHA256)
+
     def test_sha256sums_whole(self):
         lines = (RECORD / "SHA256SUMS").read_text(encoding="utf-8").rstrip("\n").split("\n")
         listed = {}

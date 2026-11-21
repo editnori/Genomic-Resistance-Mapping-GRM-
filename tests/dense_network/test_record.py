@@ -8,6 +8,9 @@ import unittest
 from tests.dense_network.common import RECORD, load_script, read_tsv
 
 record = load_script()
+# The sha256 of the committed SHA256SUMS: CI holds no sources, so a row changed with the derived files, the README,
+# SHA256SUMS and the page rebuilt to match would pass every other test.
+SHA256SUMS_SHA256 = "5e7f1a2100522cb103bbaf2298ef840374f070870853781171c65efa146f627a"
 
 
 def record_files():
@@ -19,6 +22,9 @@ def keyed(name):
 
 
 class Record(unittest.TestCase):
+    def test_the_record_is_the_committed_one(self):
+        self.assertEqual(hashlib.sha256((RECORD / "SHA256SUMS").read_bytes()).hexdigest(), SHA256SUMS_SHA256)
+
     def test_sha256sums_whole(self):
         lines = (RECORD / "SHA256SUMS").read_text(encoding="utf-8").rstrip("\n").split("\n")
         listed = {}
