@@ -1,6 +1,6 @@
 # Input configuration: today's values and what sets them
 
-Layth specified a full-pipeline comparison over the input data: genome and cohort count, which genomes are included, k-mer length, feature families and the retained-feature budget. Each input now has a setting that reaches `grm`, and [input-comparison-runner.md](input-comparison-runner.md) runs the comparison main decided under Layth's 5 Nov 2026 delegation (DECISIONS V-1). It has run on synthetic data only; real cohorts are H-1's. This page gives each input's default, the flag that sets it, and what records it.
+A full-pipeline comparison over the input data was asked for: genome and cohort count, which genomes are included, k-mer length, feature families and the retained-feature budget. Each input now has a setting that reaches `grm`, and [input-comparison-runner.md](input-comparison-runner.md) runs the comparison main decided on 5 Nov 2026 (DECISIONS V-1). It has run on synthetic data only; real cohorts are H-1's. This page gives each input's default, the flag that sets it, and what records it.
 
 | Input | Default | Flag | Recorded in | Arms (V-1) |
 |---|---|---|---|---|
