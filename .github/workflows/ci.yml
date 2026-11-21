@@ -242,6 +242,9 @@ jobs:
           # SYNTHETIC inputs built in the test, the committed record under reference/study-split and docs/study-split.md.
           - suite: tests/study_split
             top: .
+          # SYNTHETIC inputs built in the test, the committed record under reference/time-split and docs/time-split.md.
+          - suite: tests/time_split
+            top: .
           # SYNTHETIC inputs built in the test, the committed record under reference/kover-comparison and docs/kover-comparison.md.
           - suite: tests/kover_comparison
             top: .
