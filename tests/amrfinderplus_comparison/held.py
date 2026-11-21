@@ -13,7 +13,7 @@ HELD = [
      'read is newer than most of these genomes and may have been curated from the same public isolates, which '
      'favours both against the learners.'),
     ('The program read the genomes of the 253 datasets of release `rev14-274-20261112` that have a published rule, '
-     '23,751 genomes in all. The headline set, primary-new-235, is the 235 datasets with an organism option and a '
+     '23,751 genomes in all. The primary set, primary-new-235, is the 235 datasets with an organism option and a '
      'lineage split whose calls were not read before the plan was hashed. Every figure on this page comes from the '
      'final scoring of 16 Nov, and the section Review gives what an independent review narrowed.'),
     ('The plan (sha256 `5cae853c`) was hashed on 14 Nov, while the program ran and before any call of the datasets '
@@ -30,26 +30,28 @@ HELD = [
      'genomes and labels are those the release reports for it.'),
     ('- **The AMRFinderPlus program.** Version `4.2.7` with database `2026-08-07.1`, given the organism option '
      "where the species has one. A genome is called resistant when every group of the report's rule is met by at "
-     'least one counted row. `tool_default`, the primary reading, counts rows of core scope; `tool_default_intact` '
-     'counts no row whose method the program marks as partial or as an internal stop; `genes_core` counts gene '
-     'rows of core scope only; and `genes_all_scopes` counts gene rows of core or plus scope. The record keeps each '
-     "reading's counts per dataset in `callers.tsv` and the paired differences of `tool_default` alone in "
-     '`differences.tsv`, and this page reads `tool_default` alone.'),
+     'least one counted row.'),
+    ('- **Readings.** `tool_default`, the primary reading, counts the rows the program marks core; '
+     '`tool_default_intact` counts no row whose method the program marks as partial or as an internal stop; '
+     '`genes_core` counts gene rows marked core; and `genes_all_scopes` counts gene rows marked core or plus.'),
+    ("- **Readings kept.** The record keeps each reading's counts per dataset in `callers.tsv` and the paired "
+     'differences of `tool_default` alone in `differences.tsv`, and this page reads `tool_default` alone.'),
     ("- **GRM's known-gene rule.** The call the release itself makes for each genome from the catalog. It is not "
      "the program's call, and the page never gives it the program's name."),
     ("- **GRM's learners.** scm, cart, rf, gbt and lasso, from the scores the release's reports hold, calling "
      'resistant at a score of 0.5 or more, on the random split, where training and test share lineages, and on the '
-     'lineage split. The learner the release '
-     'serves is picked on the random split.'),
+     'lineage split.'),
+    '- **Served learner.** The learner the release serves, picked on the random split.',
     ("- **Measures.** Sensitivity, specificity and balanced accuracy, their mean, from each caller's counts on "
      'each dataset. A difference is the first caller minus the second on one dataset, exact, so level means a '
      'difference of exactly 0.'),
     ('- **Over datasets.** The counts ahead, level and behind, the median and quartiles, the mean and the exact '
-     "two-sided sign test. The species interval draws the set's species with replacement, as many as it has, takes "
-     'every dataset of each drawn species, and repeats 4,000 times; its ends are the 101st and the 3,900th sorted '
-     'value. A set with fewer than 6 species gets none.'),
+     'two-sided sign test.'),
+    ("- **Species interval.** It draws the set's species with replacement, as many as it has, takes every dataset "
+     'of each drawn species, and repeats 4,000 times; its ends are the 101st and the 3,900th sorted value. A set '
+     'under 6 species gets none.'),
     ('- **Generator and draw.** The plan fixed the seed string and named neither the generator nor the draw. The '
-     "record's script uses Python's `random.Random` seeded with that string, `randrange` over the species sorted "
+     "script uses `random.Random` seeded with that string, `randrange` over the species sorted "
      "by name and `statistics.median`, and gives the final scoring's ends at 6 decimals."),
     "- **Rounding.** The page prints each measure at 4 decimals, rounded from the record's cells at 6 decimals.",
     ("Each row gives the program read under the report's rule minus GRM's known-gene rule over a set's datasets. "

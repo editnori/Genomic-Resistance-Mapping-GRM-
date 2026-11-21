@@ -12,15 +12,15 @@ from tests.amrfinderplus_comparison.held import HELD
 TITLE = "# AMRFinderPlus comparison"
 LIMIT = ("This is a retrospective comparison inside one public database, BV-BRC. "
          "It is not a prospective test and not external validation.")
-SECTIONS = ["Reading", "Plan and order", "Method", "The program against the known-gene rule",
+SECTIONS = ["Reading", "Plan and order", "Method", "Program against the known-gene rule",
             "Learners against the program", "Quinolone and carbapenem datasets", "Datasets kept apart", "Review",
-            "What the record cannot show", "Files"]
-TABLE_SECTION = {"order": "Plan and order", "program": "The program against the known-gene rule",
+            "Limits", "Files"]
+TABLE_SECTION = {"order": "Plan and order", "program": "Program against the known-gene rule",
                  "learners": "Learners against the program", "random": "Learners against the program",
                  "sets": "Quinolone and carbapenem datasets", "apart": "Datasets kept apart"}
 # The review's label for every random-split figure, held here apart from lines.py so that a builder cannot drop it.
 RANDOM_LABEL = "random split: training and test share lineages, and the served learner is picked on this split"
-BUILT_SECTION = [("program_paragraph", "The program against the known-gene rule"),
+BUILT_SECTION = [("program_paragraph", "Program against the known-gene rule"),
                  ("learner_paragraphs", "Learners against the program"),
                  ("rule_m_paragraph", "Quinolone and carbapenem datasets"),
                  ("apart_paragraphs", "Datasets kept apart")]
@@ -208,7 +208,7 @@ class Page(unittest.TestCase):
                       "is picked on it", self.text)
 
     def test_what_the_record_cannot_show(self):
-        body = section(self.text, "What the record cannot show")
+        body = section(self.text, "Limits")
         st = self.rec.settings
         self.assertIn(f"The plan's sensitivity run on the newest catalog database ({st['newest_database_not_run']}) "
                       f"was not run, so these figures hold for database {st['database_version']} only.", body)

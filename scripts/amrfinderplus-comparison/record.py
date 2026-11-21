@@ -558,6 +558,8 @@ def readme(files):
         "recorded labels of public BV-BRC datasets. `scripts/amrfinderplus-comparison/record.py` writes every "
         "file of it, and its `--check` mode fails on any byte it would not write.",
         "",
+        "## Limits",
+        "",
         "This is a retrospective comparison inside one public database, BV-BRC. It is not a prospective test "
         "and not external validation. Neither the AMRFinderPlus program nor GRM's known-gene rule reads a label, "
         "but the catalog both read is newer than most of these genomes and may have been curated from the same "
@@ -585,23 +587,31 @@ def readme(files):
     ]
     for name in COLUMNS:
         lines.append("- `%s`: %s." % (name, ", ".join("`%s`" % c for c in COLUMNS[name])))
-    lines += [""] + ["- `%s`: %s" % (name, note) for name, note in COLUMN_NOTES] + [
+    for name, note in COLUMN_NOTES:
+        lines += ["", "In `%s`, %s" % (name, note)]
+    lines += [
         "",
         "## Rules",
         "",
-        "- **Three callers.** The AMRFinderPlus program is read under each report's rule. `tool_default` is the "
+        "**Three callers.** The AMRFinderPlus program is read under each report's rule. `tool_default` is the "
         "primary reading; `tool_default_intact` counts no row whose method the program marks as partial or as an "
-        "internal stop, `genes_core` only gene rows of core scope, and `genes_all_scopes` gene rows of core or plus scope. GRM's known-gene "
-        "rule is the release's own call from the catalog, and a learner calls resistant at a score of 0.5 or more.",
-        "- **Measures.** Sensitivity and specificity come from each caller's counts, with 0 for an empty class, "
+        "internal stop, `genes_core` only gene rows marked core, and `genes_all_scopes` gene rows marked core or "
+        "plus. GRM's known-gene rule is the release's own call from the catalog, and a learner calls resistant at "
+        "a score of 0.5 or more.",
+        "",
+        "**Measures.** Sensitivity and specificity come from each caller's counts, with 0 for an empty class, "
         "and balanced accuracy is their mean. Differences are exact, so level means a difference of exactly 0.",
-        "- **Over datasets.** The median, quartiles and mean of the per-dataset differences, and the exact "
-        "two-sided sign test on ahead against behind. The species interval resamples the set's species with "
-        "replacement and takes every dataset of a drawn species. The plan fixed 4,000 resamples and the seed "
-        "string, and named neither the generator nor the draw: the source modes use `random.Random` seeded with "
-        "the string, `randrange` over the species sorted by name and `statistics.median`, which give the final "
-        "scoring's ends. `intervals.tsv` holds the ends; the record does not hold the seed string.",
-        "- **Roles.** `primary` rows are the plan's headline: the program against the known-gene rule on "
+        "",
+        "**Over datasets.** The median, quartiles and mean of the per-dataset differences, and the exact "
+        "two-sided sign test on ahead against behind.",
+        "",
+        "**Species interval.** It resamples the set's species with replacement and takes every dataset of a drawn "
+        "species. The plan fixed 4,000 resamples and the seed string, and named neither the generator nor the "
+        "draw: the source modes use `random.Random` seeded with the string, `randrange` over the species sorted by "
+        "name and `statistics.median`, which give the final scoring's ends. `intervals.tsv` holds the ends; the "
+        "record does not hold the seed string.",
+        "",
+        "**Roles.** `primary` rows are the plan's headline: the program against the known-gene rule on "
         "primary-new-235 in each measure, and each learner and the served learner against the program in "
         "balanced accuracy on its lineage split. `secondary` rows are those the plan listed beside it. "
         "`exploratory` rows and figures were chosen after the results were read.",

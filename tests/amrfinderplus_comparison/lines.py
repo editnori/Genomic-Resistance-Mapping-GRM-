@@ -147,13 +147,14 @@ def learner_paragraphs(rec):
               f"program in {r['ahead']} of {r['datasets']} datasets, level in {r['level']} and behind in {r['behind']}, "
               f"with a median difference of {sg(r['median'])} (species {float(st['interval_level']) * 100:.0f}% "
               f"{sg(r['median_species_lo'])} to {sg(r['median_species_hi'])}); the two were within {w} of each other in "
-              f"{r['within_0.02_either_way']} of {r['datasets']} datasets. It was at most {w} ahead of the program, or "
-              f"behind it, in {r['learner_at_most_0.02_ahead']} of {r['datasets']}, which is within {w} as rule M "
-              f"defines it (the learner at most {w} ahead). Both counts at {w} are exploratory.")
+              f"{r['within_0.02_either_way']} of {r['datasets']} datasets.")
+    one_sided = (f"The served learner was at most {w} ahead of the program, or behind it, in "
+                 f"{r['learner_at_most_0.02_ahead']} of {r['datasets']} datasets, which is within {w} as rule M defines it "
+                 f"(the learner at most {w} ahead). Both counts at {w} are exploratory.")
     third = (f"The served learner has the highest lineage balanced accuracy of the five in "
              f"{rec.figures['served_learner_highest_of_five_on_the_lineage_split']} of {r['datasets']} datasets "
              f"(exploratory).")
-    return [first, second, third]
+    return [first, second, one_sided, third]
 
 
 def rule_m_paragraph(rec):
@@ -165,12 +166,12 @@ def rule_m_paragraph(rec):
     edge = [f["served_learner_balanced_accuracy_%d_of_them" % i] for i in (1, 2)]
     return [f"Rule M, a proposed screen from a review note that no one adopted, counts the quinolone datasets where the "
             f"served learner is at most {w} ahead of the program or behind it. That was "
-            f"{r['learner_at_most_0.02_ahead']} of {r['datasets']} where {st['rule_m_needs']} were needed. Two of the "
-            f"{r['learner_at_most_0.02_ahead']} count by the served learner scoring below a program at "
-            f"{float(st['score_cutoff']):.4f} (balanced accuracy {float(edge[0]):.4f} and {float(edge[1]):.4f}; "
-            f"exploratory), and the two were within {w} of each other in {r['within_0.02_either_way']} of "
-            f"{r['datasets']}. It is an "
-            f"adapted research screen, never an applicable FDA validation criterion."]
+            f"{r['learner_at_most_0.02_ahead']} of {r['datasets']} where {st['rule_m_needs']} were needed. It is an "
+            f"adapted research screen and never an applicable FDA validation criterion.",
+            f"Under rule M, two of the {r['learner_at_most_0.02_ahead']} count by the served learner scoring below a "
+            f"program at {float(st['score_cutoff']):.4f} (balanced accuracy {float(edge[0]):.4f} and "
+            f"{float(edge[1]):.4f}; exploratory). The served learner and the program were within {w} of each other "
+            f"in {r['within_0.02_either_way']} of the {r['datasets']} datasets."]
 
 
 def apart_paragraphs(rec):

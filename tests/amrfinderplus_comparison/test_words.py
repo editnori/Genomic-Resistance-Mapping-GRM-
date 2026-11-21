@@ -149,7 +149,7 @@ class Words(unittest.TestCase):
         body = [s for s in sentences(self.page) if s.startswith("Rule M")]
         self.assertTrue(body)
         self.assertIn("Rule M, a proposed screen from a review note that no one adopted,", self.page)
-        self.assertIn("It is an adapted research screen, never an applicable FDA validation criterion.", self.page)
+        self.assertIn("It is an adapted research screen and never an applicable FDA validation criterion.", self.page)
         for s in sentences(self.page):
             if "FDA" in s:
                 self.assertRegex(s, r"never an applicable FDA validation criterion", s)

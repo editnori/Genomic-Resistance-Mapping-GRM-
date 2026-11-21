@@ -13,7 +13,7 @@ record = load_script()
 SUITE_DIR = ROOT / SUITE
 
 # The sha256 of SHA256SUMS: a change to any file of the record changes it.
-SHA256SUMS_SHA256 = "e22daa423ccb2fc0026a728db6fdc6e5833995e3e88d1b543cb410f1e927aef1"
+SHA256SUMS_SHA256 = "a0cdfccfd7979b3e6367932c62a85a98aec940bc95fc02fd0c566dce8a63a7db"
 FILES = {"README.md", "SHA256SUMS", "callers.tsv", "datasets.tsv", "differences.tsv", "figures.tsv", "intervals.tsv",
          "order.tsv", "settings.tsv", "sets.tsv", "summary.tsv"}
 BUDGET = 3 * 1024 * 1024
