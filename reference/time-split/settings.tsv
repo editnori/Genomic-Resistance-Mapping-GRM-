@@ -2,6 +2,8 @@ name	value
 cut_share	0.6
 min_test_class	20
 min_train_class	25
+min_reserve	20
+min_later_other_studies	20
 seed	42
 screened_features	4000
 inner_folds	3

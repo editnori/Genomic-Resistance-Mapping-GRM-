@@ -12,7 +12,7 @@ from tests.time_split.common import ARMS, LEARNERS, RECORD, load_script, pairs, 
 record = load_script()
 MAX_BYTES = 3 * 1024 * 1024
 # The sha256 of SHA256SUMS as committed. Any change to a file of the record changes it.
-PINNED = "2658559809866a2f3f1bbbb791c88a5395a10d44cdd2d332acbcec87ffc659a8"
+PINNED = "093037620c3e4ce00c54f40a7cabb35d24f82fcdb1ec9b54cec197922a26613c"
 DATASETS, SPECIES, CONTRASTS, MEASURES = 24, 4, 3, 4
 ROWS = {"fits.tsv": DATASETS * len(ARMS) * len(LEARNERS), "datasets.tsv": DATASETS, "species.tsv": SPECIES,
         "review.tsv": len(LEARNERS), "order.tsv": 7, "contrasts.tsv": DATASETS * len(LEARNERS) * CONTRASTS,
@@ -103,6 +103,8 @@ class Tables(unittest.TestCase):
         for k, v in record.FIXED_SETTINGS.items():
             self.assertEqual(s[k], v, k)
         self.assertEqual((s["seed"], s["screened_features"], s["inner_folds"]), ("42", "4000", "3"))
+        self.assertEqual((s["min_test_class"], s["min_train_class"], s["min_reserve"], s["min_later_other_studies"]),
+                         ("20", "25", "20", "20"))
         for k in ("plan_sha256", "analysis_sha256", "layout_sha256", "rerun_plan_sha256"):
             self.assertRegex(s[k], r"^[0-9a-f]{64}$")
 

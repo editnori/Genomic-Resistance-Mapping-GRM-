@@ -166,12 +166,18 @@ class Synthetic(unittest.TestCase):
         self.assertIn("18 files rebuilt from the input set, byte for byte", out)
 
     def test_same_bytes_at_other_hash_seeds(self):
+        # Without -I, which would drop PYTHONHASHSEED; -s and -P keep site-packages and the cwd out.
+        seen = set()
         for seed in ("0", "4242"):
             out = self.tmp / f"seed-{seed}"
             env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "PYTHONHASHSEED": seed}
-            subprocess.run([sys.executable, "-I", str(SCRIPT), "--inputs", str(self.inputs), "--out", str(out)],
-                           check=True, env=env, capture_output=True)
+            subprocess.run([sys.executable, "-s", "-P", "-B", str(SCRIPT), "--inputs", str(self.inputs), "--out",
+                            str(out)], check=True, env=env, capture_output=True)
             self.assertEqual({p.name: p.read_text(encoding="utf-8") for p in out.iterdir()}, self.files, seed)
+            seen.add(subprocess.run([sys.executable, "-s", "-P", "-c", "import sys; print(sys.flags.ignore_environment, "
+                                     "hash('time split'))"], env=env, check=True, capture_output=True, text=True).stdout)
+        self.assertEqual(len(seen), 2, "the two seeds gave one hash")
+        self.assertTrue(all(x.startswith("0 ") for x in seen), seen)
 
     def test_check_alone(self):
         code, out, err = run("--check", self.out)
@@ -185,6 +191,50 @@ class Synthetic(unittest.TestCase):
         code, _, err = run("--inputs", self.inputs, "--out", other)
         self.assertEqual(code, 1)
         self.assertIn("holds files this script did not write", err)
+
+    def test_out_rewrites_an_earlier_record(self):
+        rec = self.copy_record()
+        code, _, err = run("--inputs", self.inputs, "--out", rec)
+        self.assertEqual(code, 0, err)
+        self.assertEqual({p.name: p.read_text(encoding="utf-8") for p in rec.iterdir()}, self.files)
+
+    def test_out_refuses_other_files_of_the_records_names(self):
+        rec = self.copy_record()
+        for p in rec.iterdir():
+            p.write_text(f"not the record's {p.name}\n", encoding="utf-8")
+        before = {p.name: p.read_bytes() for p in rec.iterdir()}
+        code, _, err = run("--inputs", self.inputs, "--out", rec)
+        self.assertEqual(code, 1, err)
+        self.assertIn("SHA256SUMS", err)
+        self.assertEqual({p.name: p.read_bytes() for p in rec.iterdir()}, before)
+
+    def test_out_refuses_a_file_changed_since_its_sums(self):
+        rec = self.copy_record()
+        (rec / "mix.tsv").write_text("arm\nnot the record's\n", encoding="utf-8")
+        code, _, err = run("--inputs", self.inputs, "--out", rec)
+        self.assertEqual(code, 1, err)
+        self.assertIn("changed since: mix.tsv", err)
+        self.assertEqual((rec / "mix.tsv").read_text(encoding="utf-8"), "arm\nnot the record's\n")
+
+    def test_out_refuses_a_symlink_in_the_record(self):
+        rec = self.copy_record()
+        target = rec.parent / "elsewhere.tsv"
+        target.write_text(self.files["mix.tsv"], encoding="utf-8")
+        (rec / "mix.tsv").unlink()
+        (rec / "mix.tsv").symlink_to(target)
+        code, _, err = run("--inputs", self.inputs, "--out", rec)
+        self.assertEqual(code, 1, err)
+        self.assertIn("mix.tsv: a symlink or not a plain file", err)
+        self.assertTrue((rec / "mix.tsv").is_symlink())
+        self.assertEqual(target.read_text(encoding="utf-8"), self.files["mix.tsv"])
+
+    def test_out_refuses_a_symlink_as_the_record(self):
+        rec = self.copy_record()
+        link = rec.parent / "link"
+        link.symlink_to(rec, target_is_directory=True)
+        code, _, err = run("--inputs", self.inputs, "--out", link)
+        self.assertEqual(code, 1, err)
+        self.assertIn("a symlink", err)
 
     # ------------------------------------------------------------- faults that stop the build
 

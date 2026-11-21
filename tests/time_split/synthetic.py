@@ -37,7 +37,8 @@ def design(n_per_species=4, test_n=8, test_resistant=4, train_r=30, train_s=40):
                 "fold_files": {a: {"file": f"{did}.{a}.json", "sha256": sha(f"{did}|{a}".encode())} for a in ARMS},
             })
     datasets.append({"id": "gamma_species__drug_none", "species_slug": "gamma_species", "eligible": False})
-    return {"cut_share": 0.6, "min_test_class": 20, "min_train_class": 25, "datasets": datasets}
+    return {"cut_share": 0.6, "min_test_class": 20, "min_train_class": 25, "min_mates": 20, "min_other_later": 20,
+            "datasets": datasets}
 
 
 def genome_ids(d, k, n):
