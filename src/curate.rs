@@ -9,6 +9,12 @@
 //! threshold that best reproduces the reported calls on records that have
 //! both. The threshold is used only when it reproduces at least 95% of them.
 //!
+//! When a pair's records report more than one category, `LabelRule` makes
+//! them one call. The default, the rule of every release so far, lets R or S
+//! win over Intermediate (S with I is S, I with R is R) and gives R with S no
+//! call. The funnel counts the pairs of every pattern of reported categories
+//! (`CallPatterns`), whichever rule ran.
+//!
 //! Only unconflicted reported R/S calls count toward a dataset's class
 //! minimum and the download ranking. MIC-inferred labels stay in the curated
 //! phenotypes, marked `label_from_mic`, and are counted per dataset.
@@ -35,6 +41,109 @@ pub fn parse_call(text: &str) -> Option<Call> {
         "susceptible" => Some(Call::S),
         "intermediate" | "susceptible-dose dependent" | "reduced susceptibility" => Some(Call::I),
         _ => None,
+    }
+}
+
+/// How the reported calls of one genome and drug become one call when the
+/// records mix categories. `grm curate --label-rule` picks one; which rule a
+/// release uses is a decision for the project, not for the code.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum LabelRule {
+    /// R or S wins over Intermediate: S with I is S, I with R is R. R with S,
+    /// with or without I, is a conflict and gets no call. Only
+    /// Intermediate is I. The rule of every release so far.
+    #[default]
+    ROrSWins,
+    /// A pair with an Intermediate record and an R or S record gets no call
+    /// and no MIC label: it is set aside from R and S. R with S is a
+    /// conflict; only Intermediate is I.
+    IntermediateAside,
+    /// The most resistant reported call wins, R over I over S: R with S is
+    /// R, S with I is I. No pair is a conflict.
+    MostResistant,
+    /// Intermediate is a third class: a pair with an Intermediate record is
+    /// I unless it holds both R and S, which stays a conflict.
+    IntermediateClass,
+}
+
+impl LabelRule {
+    pub fn is_default(&self) -> bool {
+        *self == LabelRule::default()
+    }
+
+    /// The pair's consolidated call, and whether it is a conflict: records
+    /// of both R and S that the rule leaves without a call.
+    pub fn consolidate(self, calls: &BTreeSet<Call>) -> (Option<Call>, bool) {
+        let (r, s, i) = (
+            calls.contains(&Call::R),
+            calls.contains(&Call::S),
+            calls.contains(&Call::I),
+        );
+        if r && s && self != LabelRule::MostResistant {
+            return (None, true);
+        }
+        let call = match self {
+            LabelRule::ROrSWins => [(r, Call::R), (s, Call::S), (i, Call::I)]
+                .into_iter()
+                .find_map(|(has, c)| has.then_some(c)),
+            LabelRule::IntermediateAside => match (i, r || s) {
+                (true, true) => None,
+                (true, false) => Some(Call::I),
+                (false, _) if r => Some(Call::R),
+                (false, _) => s.then_some(Call::S),
+            },
+            LabelRule::MostResistant => [(r, Call::R), (i, Call::I), (s, Call::S)]
+                .into_iter()
+                .find_map(|(has, c)| has.then_some(c)),
+            LabelRule::IntermediateClass => [(i, Call::I), (r, Call::R), (s, Call::S)]
+                .into_iter()
+                .find_map(|(has, c)| has.then_some(c)),
+        };
+        (call, false)
+    }
+}
+
+/// Genome and drug pairs by the categories their reported calls hold, the
+/// same under every `LabelRule`. The eight add up to `Funnel::pairs`.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CallPatterns {
+    #[serde(rename = "S")]
+    pub s: usize,
+    #[serde(rename = "R")]
+    pub r: usize,
+    #[serde(rename = "I")]
+    pub i: usize,
+    #[serde(rename = "S+I")]
+    pub s_i: usize,
+    #[serde(rename = "I+R")]
+    pub i_r: usize,
+    #[serde(rename = "S+R")]
+    pub s_r: usize,
+    #[serde(rename = "S+I+R")]
+    pub s_i_r: usize,
+    /// No reported call, only an MIC.
+    pub none: usize,
+}
+
+impl CallPatterns {
+    pub fn add(&mut self, calls: &BTreeSet<Call>) {
+        let has = |c| calls.contains(&c);
+        let cell = match (has(Call::S), has(Call::I), has(Call::R)) {
+            (true, false, false) => &mut self.s,
+            (false, false, true) => &mut self.r,
+            (false, true, false) => &mut self.i,
+            (true, true, false) => &mut self.s_i,
+            (false, true, true) => &mut self.i_r,
+            (true, false, true) => &mut self.s_r,
+            (true, true, true) => &mut self.s_i_r,
+            (false, false, false) => &mut self.none,
+        };
+        *cell += 1;
+    }
+
+    pub fn total(&self) -> usize {
+        self.s + self.r + self.i + self.s_i + self.i_r + self.s_r + self.s_i_r + self.none
     }
 }
 
@@ -184,6 +293,11 @@ pub struct QcConfig {
     /// Minimum genomes with a reported call in each class for a dataset to
     /// exist.
     pub min_class: usize,
+    /// How mixed reported calls become one call. Written to qc.json only when
+    /// it is not the default, so a default curation writes the bytes it wrote
+    /// before the rule could be chosen.
+    #[serde(default, skip_serializing_if = "LabelRule::is_default")]
+    pub label_rule: LabelRule,
 }
 
 impl Default for QcConfig {
@@ -194,6 +308,7 @@ impl Default for QcConfig {
             max_contamination: 10.0,
             length_tolerance: 0.25,
             min_class: 25,
+            label_rule: LabelRule::default(),
         }
     }
 }
@@ -204,9 +319,11 @@ pub struct Phenotype {
     pub genome_id: String,
     pub species: String,
     pub antibiotic: String,
-    /// Consolidated reported call; None when absent or contradictory.
+    /// Consolidated reported call under the label rule; None when absent,
+    /// contradictory, or set aside by `LabelRule::IntermediateAside`.
     pub reported: Option<Call>,
-    /// The records reported both Resistant and Susceptible.
+    /// The records reported both Resistant and Susceptible and the label rule
+    /// left the pair without a call (every rule but `MostResistant`).
     pub conflict: bool,
     pub mic: Option<Mic>,
     /// Spread in dilution steps among exact MICs for this pair.
@@ -370,6 +487,24 @@ pub struct Funnel {
     pub pairs_reported: usize,
     pub pairs_labeled_from_mic: usize,
     pub pairs_unlabeled: usize,
+    /// Pairs with an R or S record that the label rule takes out of R and S
+    /// because a record is Intermediate: no call under `IntermediateAside`,
+    /// I under `MostResistant` (S with I) and `IntermediateClass`. None
+    /// under the default. With the five groups above it adds up to `pairs`.
+    #[serde(default)]
+    pub pairs_intermediate_mixed: usize,
+    /// Pairs by the categories their reported calls hold, whatever the rule
+    /// did with them. A second split of `pairs`, across the groups above:
+    /// under the default, S, R, S+I and I+R are `pairs_reported`; S+R and
+    /// S+I+R are `pairs_conflict`; I is `pairs_intermediate_only`; none is
+    /// `pairs_labeled_from_mic` plus `pairs_unlabeled`.
+    #[serde(default)]
+    pub pairs_by_calls: CallPatterns,
+    /// Pairs in `pairs_reported` whose consolidated MIC falls clearly on the
+    /// other side of the species and drug's inferred breakpoint. The call is
+    /// kept; this only counts them.
+    #[serde(default)]
+    pub pairs_call_against_mic: usize,
 }
 
 pub struct Curated {
@@ -562,19 +697,13 @@ pub fn curate(
         acc.sources.extend(parts(&r.source));
     }
 
+    // Each pair's reported categories, in phenotype order, for the funnel.
+    let mut call_sets: Vec<BTreeSet<Call>> = Vec::with_capacity(pairs.len());
     let (mut phenotypes, provenance): (Vec<Phenotype>, Vec<PairProvenance>) = pairs
         .into_iter()
         .map(|((genome_id, antibiotic), acc)| {
-            let conflict = acc.calls.contains(&Call::R) && acc.calls.contains(&Call::S);
-            let reported = if conflict {
-                None
-            } else if acc.calls.contains(&Call::R) {
-                Some(Call::R)
-            } else if acc.calls.contains(&Call::S) {
-                Some(Call::S)
-            } else {
-                acc.calls.iter().next().copied()
-            };
+            let (reported, conflict) = cfg.label_rule.consolidate(&acc.calls);
+            call_sets.push(acc.calls);
             let (mic, mic_spread) = consolidate_mics(&acc.mics);
             let provenance = PairProvenance {
                 genome_id: genome_id.clone(),
@@ -621,14 +750,30 @@ pub fn curate(
         .filter_map(|(key, v)| infer_breakpoint(&v).map(|b| (key, b)))
         .collect();
 
-    for p in &mut phenotypes {
+    for (p, calls) in phenotypes.iter_mut().zip(&call_sets) {
         funnel.pairs += 1;
+        funnel.pairs_by_calls.add(calls);
         if p.conflict {
             funnel.pairs_conflict += 1;
             continue;
         }
+        let r_or_s_record = calls.contains(&Call::R) || calls.contains(&Call::S);
+        if r_or_s_record && !matches!(p.reported, Some(Call::R | Call::S)) {
+            // Only an Intermediate record can keep an R or S record from
+            // its call, so the rule set this pair aside or made it I.
+            funnel.pairs_intermediate_mixed += 1;
+            continue;
+        }
         match p.reported {
-            Some(Call::R | Call::S) => funnel.pairs_reported += 1,
+            Some(call @ (Call::R | Call::S)) => {
+                funnel.pairs_reported += 1;
+                let bp = breakpoints.get(&(p.species.clone(), p.antibiotic.clone()));
+                if let (Some(mic), Some(bp)) = (p.mic, bp)
+                    && call_from_mic(mic, bp.r_above).is_some_and(|side| side != call)
+                {
+                    funnel.pairs_call_against_mic += 1;
+                }
+            }
             Some(Call::I) => funnel.pairs_intermediate_only += 1,
             None => {
                 let bp = breakpoints.get(&(p.species.clone(), p.antibiotic.clone()));
@@ -1262,6 +1407,335 @@ mod tests {
             &mut Resolver::new(Default::default()),
         )
         .unwrap()
+    }
+
+    /// Synthetic: one E. coli genome and meropenem with one record per call
+    /// in `calls` (a record with no call carries an MIC only).
+    fn one_pair(id: &str, calls: &[Option<&str>]) -> Vec<AmrRecord> {
+        calls
+            .iter()
+            .map(|call| AmrRecord {
+                genome_id: id.into(),
+                antibiotic: "meropenem".into(),
+                resistant_phenotype: call.map(Into::into),
+                measurement_value: Some("4".into()),
+                measurement_unit: Some("mg/L".into()),
+                laboratory_typing_method: Some("Broth dilution".into()),
+                ..Default::default()
+            })
+            .collect()
+    }
+
+    fn genomes_of(records: &[AmrRecord]) -> Vec<GenomeRecord> {
+        records
+            .iter()
+            .map(|r| r.genome_id.clone())
+            .collect::<BTreeSet<_>>()
+            .into_iter()
+            .map(|genome_id| GenomeRecord {
+                genome_id,
+                species: Some("Escherichia coli".into()),
+                genome_length: Some("5000000".into()),
+                ..Default::default()
+            })
+            .collect()
+    }
+
+    fn curate_with(records: &[AmrRecord], rule: LabelRule, min_class: usize) -> Curated {
+        let cfg = QcConfig {
+            min_class,
+            label_rule: rule,
+            ..Default::default()
+        };
+        curate(
+            records,
+            &genomes_of(records),
+            &cfg,
+            &BTreeMap::new(),
+            &mut Resolver::new(Default::default()),
+        )
+        .unwrap()
+    }
+
+    const RULES: [LabelRule; 4] = [
+        LabelRule::ROrSWins,
+        LabelRule::IntermediateAside,
+        LabelRule::MostResistant,
+        LabelRule::IntermediateClass,
+    ];
+
+    /// The funnel group a single pair fell in.
+    fn group_of(f: &Funnel) -> &'static str {
+        let groups = [
+            (f.pairs_reported, "reported"),
+            (f.pairs_conflict, "conflict"),
+            (f.pairs_intermediate_only, "intermediate only"),
+            (f.pairs_intermediate_mixed, "intermediate mixed"),
+            (f.pairs_labeled_from_mic, "from MIC"),
+            (f.pairs_unlabeled, "unlabeled"),
+        ];
+        let hit: Vec<_> = groups.iter().filter(|(n, _)| *n > 0).collect();
+        assert_eq!(hit.len(), 1, "{f:?}");
+        assert_eq!(hit[0].0, 1, "{f:?}");
+        hit[0].1
+    }
+
+    #[test]
+    fn every_call_pattern_under_every_label_rule() {
+        use Call::{I, R, S};
+        let (s, i, r) = (Some("Susceptible"), Some("Intermediate"), Some("Resistant"));
+        // (pattern, records, then per rule in RULES order: call, conflict, funnel group)
+        type Want = (Option<Call>, bool, &'static str);
+        type Row<'a> = (&'a str, Vec<Option<&'a str>>, [Want; 4]);
+        let rep = |c| (Some(c), false, "reported");
+        let conflict: Want = (None, true, "conflict");
+        let i_only: Want = (Some(I), false, "intermediate only");
+        let aside: Want = (None, false, "intermediate mixed");
+        let i_mixed: Want = (Some(I), false, "intermediate mixed");
+        let none: Want = (None, false, "unlabeled");
+        let table: Vec<Row> = vec![
+            ("S", vec![s, s], [rep(S), rep(S), rep(S), rep(S)]),
+            ("R", vec![r], [rep(R), rep(R), rep(R), rep(R)]),
+            ("I", vec![i], [i_only, i_only, i_only, i_only]),
+            ("S+I", vec![s, i], [rep(S), aside, i_mixed, i_mixed]),
+            ("I+R", vec![i, r, r], [rep(R), aside, rep(R), i_mixed]),
+            ("S+R", vec![s, r], [conflict, conflict, rep(R), conflict]),
+            (
+                "S+I+R",
+                vec![r, i, s],
+                [conflict, conflict, rep(R), conflict],
+            ),
+            ("none", vec![None], [none, none, none, none]),
+        ];
+        for (pattern, calls, wants) in &table {
+            let records = one_pair("562.1", calls);
+            let mut seen = Vec::new();
+            for (rule, want) in RULES.iter().zip(wants) {
+                let curated = curate_with(&records, *rule, 25);
+                let p = &curated.phenotypes[0];
+                let f = &curated.funnel;
+                let got = (p.reported, p.conflict, group_of(f));
+                assert_eq!(got, *want, "{pattern} under {rule:?}");
+                assert_eq!(p.label, p.reported, "{pattern} under {rule:?}");
+                assert!(!p.label_from_mic, "{pattern} under {rule:?}");
+                let target = p.reported_label();
+                assert_eq!(
+                    target,
+                    want.0.filter(|c| *c != I),
+                    "{pattern} under {rule:?}"
+                );
+                assert_eq!(f.pairs, 1);
+                assert_eq!(f.pairs_by_calls.total(), 1);
+                seen.push(f.pairs_by_calls.clone());
+            }
+            // The pattern count does not depend on the rule, and names the pattern.
+            assert!(seen.windows(2).all(|w| w[0] == w[1]), "{pattern}");
+            let json = serde_json::to_value(&seen[0]).unwrap();
+            assert_eq!(json[*pattern], 1, "{pattern}: {json}");
+        }
+    }
+
+    /// Synthetic: 40 resistant at 16 mg/L, 40 susceptible at 0.5 mg/L, and
+    /// a few pairs of every mixed pattern and MIC-only pairs.
+    fn mixed_cohort() -> Vec<AmrRecord> {
+        let record = |id: String, call: Option<&str>, value: &str| AmrRecord {
+            genome_id: id,
+            antibiotic: "meropenem".into(),
+            resistant_phenotype: call.map(Into::into),
+            measurement_value: Some(value.into()),
+            measurement_unit: Some("mg/L".into()),
+            laboratory_typing_method: Some("Broth dilution".into()),
+            ..Default::default()
+        };
+        let (s, i, r) = (Some("Susceptible"), Some("Intermediate"), Some("Resistant"));
+        let mut records = Vec::new();
+        for n in 0..40 {
+            records.push(record(format!("562.{n}"), r, "16"));
+            records.push(record(format!("562.{}", 100 + n), s, "0.5"));
+        }
+        let mixed: [(&[Option<&str>], usize, &str); 6] = [
+            (&[i], 3, "2"),
+            (&[s, i], 4, "1"),
+            (&[i, r], 5, "8"),
+            (&[s, r], 6, "4"),
+            (&[s, i, r], 2, "4"),
+            (&[None], 7, "16"),
+        ];
+        let mut next = 300;
+        for (calls, n, value) in mixed {
+            for _ in 0..n {
+                for call in calls {
+                    records.push(record(format!("562.{next}"), *call, value));
+                }
+                next += 1;
+            }
+        }
+        records
+    }
+
+    #[test]
+    fn the_funnel_groups_and_the_call_patterns_each_add_up_to_the_pairs() {
+        let records = mixed_cohort();
+        let mut patterns = Vec::new();
+        for rule in RULES {
+            let f = curate_with(&records, rule, 25).funnel;
+            let groups = f.pairs_reported
+                + f.pairs_conflict
+                + f.pairs_intermediate_only
+                + f.pairs_intermediate_mixed
+                + f.pairs_labeled_from_mic
+                + f.pairs_unlabeled;
+            assert_eq!(groups, f.pairs, "{rule:?}: {f:?}");
+            assert_eq!(f.pairs_by_calls.total(), f.pairs, "{rule:?}");
+            patterns.push(f.pairs_by_calls);
+        }
+        let want = CallPatterns {
+            s: 40,
+            r: 40,
+            i: 3,
+            s_i: 4,
+            i_r: 5,
+            s_r: 6,
+            s_i_r: 2,
+            none: 7,
+        };
+        assert!(patterns.iter().all(|p| *p == want), "{patterns:?}");
+        let f = curate_with(&records, LabelRule::ROrSWins, 25).funnel;
+        // Today's rule: S+I and I+R count as reported calls, nothing is mixed.
+        assert_eq!(f.pairs_reported, 40 + 40 + 4 + 5);
+        assert_eq!(f.pairs_conflict, 6 + 2);
+        assert_eq!(f.pairs_intermediate_mixed, 0);
+        let f = curate_with(&records, LabelRule::IntermediateAside, 25).funnel;
+        assert_eq!(f.pairs_intermediate_mixed, 4 + 5);
+        let f = curate_with(&records, LabelRule::MostResistant, 25).funnel;
+        assert_eq!((f.pairs_conflict, f.pairs_intermediate_mixed), (0, 4));
+        let f = curate_with(&records, LabelRule::IntermediateClass, 25).funnel;
+        assert_eq!(f.pairs_intermediate_mixed, 4 + 5);
+    }
+
+    #[test]
+    fn the_label_rule_moves_the_class_counts_and_the_dataset_gate() {
+        let records = mixed_cohort();
+        let counts = |rule| {
+            let c = curate_with(&records, rule, 25);
+            let d = &c.datasets[0];
+            (d.n_resistant, d.n_susceptible, d.n_intermediate)
+        };
+        assert_eq!(counts(LabelRule::ROrSWins), (45, 44, 3));
+        assert_eq!(counts(LabelRule::IntermediateAside), (40, 40, 3));
+        assert_eq!(
+            counts(LabelRule::MostResistant),
+            (40 + 5 + 6 + 2, 40, 3 + 4)
+        );
+        assert_eq!(counts(LabelRule::IntermediateClass), (40, 40, 3 + 4 + 5));
+        // At a class minimum of 44 only today's rule, which keeps S+I as S,
+        // admits the dataset.
+        let admitted =
+            |records: &[AmrRecord], rule| !curate_with(records, rule, 44).datasets.is_empty();
+        let admitting: Vec<_> = RULES
+            .into_iter()
+            .filter(|r| admitted(&records, *r))
+            .collect();
+        assert_eq!(admitting, [LabelRule::ROrSWins]);
+        // 43 R, 44 S and one S+R pair: only most-resistant reaches 44 R.
+        let mut records: Vec<AmrRecord> = (0..43)
+            .flat_map(|n| one_pair(&format!("562.{n}"), &[Some("Resistant")]))
+            .chain(
+                (0..44).flat_map(|n| one_pair(&format!("562.{}", 100 + n), &[Some("Susceptible")])),
+            )
+            .collect();
+        records.extend(one_pair(
+            "562.200",
+            &[Some("Susceptible"), Some("Resistant")],
+        ));
+        let admitting: Vec<_> = RULES
+            .into_iter()
+            .filter(|r| admitted(&records, *r))
+            .collect();
+        assert_eq!(admitting, [LabelRule::MostResistant]);
+    }
+
+    #[test]
+    fn set_aside_pairs_get_no_mic_label() {
+        // 8 mg/L is above the breakpoint the 80 reported pairs fit.
+        let records = mixed_cohort();
+        let c = curate_with(&records, LabelRule::IntermediateAside, 25);
+        let i_r: Vec<_> = c
+            .phenotypes
+            .iter()
+            .filter(|p| p.mic.is_some_and(|m| m.log2 == 3))
+            .collect();
+        assert_eq!(i_r.len(), 5);
+        assert!(i_r.iter().all(|p| p.label.is_none() && !p.label_from_mic));
+        assert!(c.datasets[0].breakpoint.is_some());
+    }
+
+    #[test]
+    fn reported_calls_against_the_mic_are_counted_and_kept() {
+        let mut records = mixed_cohort();
+        // Two susceptible calls at 16 mg/L, where the breakpoint says resistant.
+        records.extend(one_pair("562.900", &[Some("Susceptible")]));
+        records.extend(one_pair("562.901", &[Some("Susceptible")]));
+        for r in records
+            .iter_mut()
+            .filter(|r| r.genome_id.starts_with("562.90"))
+        {
+            r.measurement_value = Some("16".into());
+        }
+        let c = curate_with(&records, LabelRule::ROrSWins, 25);
+        assert!(c.datasets[0].breakpoint.is_some());
+        // The S+I pairs at 1 mg/L and I+R pairs at 8 mg/L fall on their call's side.
+        assert_eq!(c.funnel.pairs_call_against_mic, 2);
+        let kept = c
+            .phenotypes
+            .iter()
+            .filter(|p| p.genome_id.starts_with("562.90"));
+        assert!(
+            kept.into_iter()
+                .all(|p| p.reported_label() == Some(Call::S))
+        );
+    }
+
+    #[test]
+    fn the_default_label_rule_is_not_written_and_old_files_read_as_it() {
+        let qc = serde_json::to_value(QcConfig::default()).unwrap();
+        assert!(qc.get("label_rule").is_none(), "{qc}");
+        let other = QcConfig {
+            label_rule: LabelRule::MostResistant,
+            ..Default::default()
+        };
+        let qc = serde_json::to_value(&other).unwrap();
+        assert_eq!(qc["label_rule"], "most-resistant");
+        let back: QcConfig = serde_json::from_value(qc).unwrap();
+        assert_eq!(back.label_rule, LabelRule::MostResistant);
+        let names: Vec<_> = RULES
+            .iter()
+            .map(|r| serde_json::to_value(r).unwrap())
+            .collect();
+        assert_eq!(
+            names,
+            [
+                "r-or-s-wins",
+                "intermediate-aside",
+                "most-resistant",
+                "intermediate-class"
+            ]
+        );
+        // A funnel.json written before the new counts reads with them at zero.
+        let old = serde_json::json!({
+            "records": 1, "records_class_label": 0, "records_not_antibiotic": 0,
+            "records_unresolved_name": 0, "records_no_measure": 0,
+            "genomes_with_records": 1, "genomes_without_metadata": 0,
+            "genomes_failed_qc": {}, "genomes_passing_qc": 1, "pairs": 1,
+            "pairs_conflict": 0, "pairs_intermediate_only": 0, "pairs_reported": 1,
+            "pairs_labeled_from_mic": 0, "pairs_unlabeled": 0,
+        });
+        let f: Funnel = serde_json::from_value(old).unwrap();
+        assert_eq!(f.pairs_by_calls, CallPatterns::default());
+        assert_eq!(
+            (f.pairs_intermediate_mixed, f.pairs_call_against_mic),
+            (0, 0)
+        );
     }
 
     #[test]

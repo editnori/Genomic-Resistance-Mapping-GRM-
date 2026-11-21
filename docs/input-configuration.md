@@ -5,6 +5,7 @@ A full-pipeline comparison over the input data was asked for: genome and cohort 
 | Input | Default | Flag | Recorded in | Arms (V-1) |
 |---|---|---|---|---|
 | Genome and cohort count | at most 2,000 genomes per species; at least 25 per class per dataset | `grm curate --cap`, `--min-class` | qc.json, datasets.json and each report (`selection.cap`, `counts.min_class`) | cap 1,000 and 4,000; class minimum stays 25 |
+| Label of a genome and drug whose records mix categories | `r-or-s-wins`: S with I is S, I with R is R, R with S has no label | `grm curate --label-rule r-or-s-wins\|intermediate-aside\|most-resistant\|intermediate-class` | qc.json (`label_rule`, only when not the default); funnel.json counts the pairs of each mix (`pairs_by_calls`) under every rule | none |
 | Which genomes are included | `legacy`: `curate::select_genomes`, a label-weighted ranking | `grm curate --selection legacy\|group-round-robin-v1 --selection-seed [--stratum]` | qc.json, datasets.json and each report (`selection`), and `species/<slug>/selection.json` for a group draw | `group-round-robin-v1` |
 | k-mer length | 31 | `grm pipeline --k`, `grm count --k` (5 to 32) | counted.json, structure.json, matrix.json and each report (`counts.k`) | 21 and 25 |
 | Feature families | the K block (k-mer patterns) only | `grm arm --blocks` (K, C, H, P) | `grm arm`'s `arm.json` (block specs) and K's run manifest | k-c, k-h, k-p, k-c-h-p (blocks K+C, K+H, K+P, K+C+H+P) |
