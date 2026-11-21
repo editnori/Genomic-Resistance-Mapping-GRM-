@@ -32,7 +32,7 @@ Bengio's corrected t for gbt and the lasso (stats.compare_units). Random-split c
 estimate, interval and AUROC delta, no p and no direction. A dataset with no decision-bearing
 lineage contrast (every one not produced or undefined) can't be tested this way. summary.json names
 it under `no_decision_datasets`, the report lists it under "Datasets the per-dataset test can't
-answer", and the run says so and finishes with exit 0. This is Layth's ruling on H-1's pilot
+answer", and the run says so and finishes with exit 0. This is the ruling on H-1's pilot
 (2026-11-09), which replaced REVIEW-ICODE-PY M3's exit 3.
 
 Every data root puts its genomes in canonical order (sorted by genome id) after `grm curate` and
@@ -42,7 +42,7 @@ A cohort arm whose genome set equals the default's is not run: its runs are `ide
 with the reason, and K reports it with no contrasts (`--run-identical-cohorts` runs it anyway,
 for the order-twin proof only). A cohort arm whose own cohort leaves a dataset short of its
 class minimum, which `grm arm` refuses, has `unavailable` runs on that dataset with the reason, so
-K reports its contrasts there as not produced and the run goes on (Layth's ruling on H-1's pilot,
+K reports its contrasts there as not produced and the run goes on (the ruling on H-1's pilot,
 2026-11-09, applied to a cohort arm after NG-1's grr-v1 stopped on cefixime). The default, and any
 arm on the default's cohort, still stops the run there. The spec's `panel_floor` sets the eligible
 genomes a species needs (more than 2,000, so cap-4000 and grr-v1 change the set); the runner
@@ -90,7 +90,7 @@ RAW file each part hashed must be in the pinned master manifest. J's family C is
 over every part's lineage contrasts. Each copied arm output must match its part's resume.json, and
 the spec's data_root.manifest_sha256 pins the master manifest.
 
-The k add-on (G2(b), Layth's ruling of 8 Nov 2026 lifting register §13 G2): a k21 or k25 root is the default
+The k add-on (G2(b), the ruling of 8 Nov 2026 lifting register §13 G2): a k21 or k25 root is the default
 cohort counted again at its own k, so it shares no kset with the pool, and on one box beside the stage-1 roots it
 would pass the disk share. A k arm reads only the default arm's plans (`grm arm --reference`, k31_groups) and takes
 no grouping, so `--reference-from WORK` runs a spec of k arms alone on another box: WORK is a finished run of the
@@ -1079,7 +1079,7 @@ def pending_contrasts(spec, arms, work):
 
 def decisions_made(spec, arms, records):
     """Per dataset, its decision-bearing lineage contrasts: non-sentinel family C records with a p. A dataset
-    with none answers nothing: the run names it and goes on (Layth's ruling on H-1's pilot, 2026-11-09, which
+    with none answers nothing: the run names it and goes on (the ruling on H-1's pilot, 2026-11-09, which
     replaced M3's exit 3). The report lists it too, by K's rule (k_report.unanswered_datasets), which is this one
     for a dataset with a planned family C contrast outside the sentinels, as every H-1 confirmatory dataset has."""
     sentinels = {a["name"] for a in arms if a.get("sentinel")}
@@ -1453,7 +1453,7 @@ def write_summary(work, summary):
 def note_decisions(summary):
     """Says, after the summary and report are written, which datasets made no lineage decision. The run still
     finishes: each is one the lineage test can't answer, and the report lists it so its missing answer doesn't
-    read as "no measured difference" (Layth's ruling on H-1's pilot, 2026-11-09, which replaced M3's exit 3)."""
+    read as "no measured difference" (the ruling on H-1's pilot, 2026-11-09, which replaced M3's exit 3)."""
     if summary["no_decision_datasets"]:
         print(f"NO LINEAGE ANSWER for {', '.join(summary['no_decision_datasets'])}: every lineage contrast outside "
               "the sentinels was not produced or undefined, so the lineage test can't answer them (summary.json "

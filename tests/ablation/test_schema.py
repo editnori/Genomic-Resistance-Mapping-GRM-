@@ -1077,10 +1077,10 @@ class ClaimLevelCases(unittest.TestCase):
 
     def test_manual_path(self):
         out = schema.annotate_claim(good_feature(), "feature", "causal_supported",
-                                    ["PMID:12345678"], "Layth", "2026-10-30")
+                                    ["PMID:12345678"], "Reviewer A", "2026-10-30")
         self.assertEqual(out["claim_level"], "causal_supported")
         self.assertEqual(out["evidence_refs"], ["PMID:12345678"])
-        self.assertEqual(out["annotations"], [{"by": "Layth", "date": "2026-10-30", "level": "causal_supported",
+        self.assertEqual(out["annotations"], [{"by": "Reviewer A", "date": "2026-10-30", "level": "causal_supported",
                                                "previous_level": "association_stable"}])
         self.assertEqual(good_feature()["claim_level"], "association_stable")
         again = schema.annotate_claim(out, "feature", "mechanism_candidate", ["PMID:12345678", "doi:10.1/y"],
@@ -1093,17 +1093,17 @@ class ClaimLevelCases(unittest.TestCase):
     def test_manual_path_refusals(self):
         future = (datetime.date.today() + datetime.timedelta(days=1)).isoformat()
         cases = [
-            (("feature", "causal_supported", [], "Layth", "2026-10-30"), "requires non-empty evidence_refs"),
-            (("feature", "mechanism_candidate", [], "Layth", "2026-10-30"), "requires non-empty evidence_refs"),
-            (("feature", "association_stable", ["x"], "Layth", "2026-10-30"), "level must be one of"),
+            (("feature", "causal_supported", [], "Reviewer A", "2026-10-30"), "requires non-empty evidence_refs"),
+            (("feature", "mechanism_candidate", [], "Reviewer A", "2026-10-30"), "requires non-empty evidence_refs"),
+            (("feature", "association_stable", ["x"], "Reviewer A", "2026-10-30"), "level must be one of"),
             (("feature", "causal_supported", ["x"], "", "2026-10-30"), r"annotations\[0\].by"),
-            (("feature", "causal_supported", ["x"], "Layth", "30/10/2026"), r"annotations\[0\].date"),
-            (("feature", "causal_supported", ["x"], "Layth", future), "must not be in the future"),
-            (("feature", "causal_supported", ["x"], "Layth", "2999-12-31"), "must not be in the future"),
-            (("feature", "causal_supported", [""], "Layth", "2026-10-30"), "evidence_refs"),
-            (("feature", "causal_supported", "PMID:123", "Layth", "2026-10-30"), "must be a list of strings"),
-            (("feature", "causal_supported", ["x", 1], "Layth", "2026-10-30"), "must be a list of strings"),
-            (("pooled", "causal_supported", ["x"], "Layth", "2026-10-30"), "only features"),
+            (("feature", "causal_supported", ["x"], "Reviewer A", "30/10/2026"), r"annotations\[0\].date"),
+            (("feature", "causal_supported", ["x"], "Reviewer A", future), "must not be in the future"),
+            (("feature", "causal_supported", ["x"], "Reviewer A", "2999-12-31"), "must not be in the future"),
+            (("feature", "causal_supported", [""], "Reviewer A", "2026-10-30"), "evidence_refs"),
+            (("feature", "causal_supported", "PMID:123", "Reviewer A", "2026-10-30"), "must be a list of strings"),
+            (("feature", "causal_supported", ["x", 1], "Reviewer A", "2026-10-30"), "must be a list of strings"),
+            (("pooled", "causal_supported", ["x"], "Reviewer A", "2026-10-30"), "only features"),
         ]
         for args, message in cases:
             with self.subTest(args=args), self.assertRaisesRegex(SchemaError, message):
@@ -1134,7 +1134,7 @@ class ClaimLevelCases(unittest.TestCase):
     def test_inputs_are_not_mutated(self):
         rec = good_feature(evidence_refs=["a"])
         before = copy.deepcopy(rec)
-        out = schema.annotate_claim(rec, "feature", "causal_supported", ["x"], "Layth", "2026-10-30")
+        out = schema.annotate_claim(rec, "feature", "causal_supported", ["x"], "Reviewer A", "2026-10-30")
         self.assertEqual(rec, before)
         out["evidence_refs"].append("y")
         self.assertEqual(rec, before)

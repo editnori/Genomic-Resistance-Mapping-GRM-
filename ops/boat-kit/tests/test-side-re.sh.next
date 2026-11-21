@@ -13,9 +13,9 @@
 # Touches no box and no stage folder. Prints "CHECK name: ok|FAIL detail" lines, then "FAILS n"; exits 1 on a failure.
 # usage: test-side-re.sh [DRIVE_SH [RUNNER]]     (default: the installed drive.sh and runner)
 set -u
-DRV=${1:-/home/layth/review/grm-port-r11-20261105/drive/drive.sh}
-RUNNER=${2:-/home/layth/review/grm-boat-runner-20261031/grm-boat.sh}
-R=/home/layth/review/grm-r12-run-20261105
+DRV=${1:-/home/user/review/grm-port-r11-20261105/drive/drive.sh}
+RUNNER=${2:-/home/user/review/grm-boat-runner-20261031/grm-boat.sh}
+R=/home/user/review/grm-r12-run-20261105
 FAILS=0
 chk() { if [ "$2" = ok ]; then echo "CHECK $1: ok${3:+ ($3)}"; else echo "CHECK $1: FAIL $3"; FAILS=$((FAILS + 1)); fi; }
 sha256sum "$DRV" "$RUNNER"

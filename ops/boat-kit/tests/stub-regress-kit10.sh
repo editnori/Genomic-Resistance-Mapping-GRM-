@@ -15,7 +15,7 @@ W=${1:?work} NEW=${2:?candidate drive.sh}
 # HUP or INT (run 3 waited on D4-INT from 12:07Z), so refuse at once instead.
 ign=$(sed -n 's/^SigIgn:[[:space:]]*//p' /proc/$$/status 2> /dev/null)
 [ -n "$ign" ] && (( 0x$ign & 0x4003 )) && { echo "STUB-REGRESS FAIL: HUP, INT or TERM is ignored here (SigIgn $ign); start the chain with setsid -f, without nohup or &"; exit 1; }
-PD=/home/layth/review/grm-port-r11-20261105 V7=/home/layth/review/grm-kit9-20261106/live/drive.sh
+PD=/home/user/review/grm-port-r11-20261105 V7=/home/user/review/grm-kit9-20261106/live/drive.sh
 rm -rf "$W"; mkdir -p "$W"
 # the extend line goes in before the stub's catch-all; after the stub's shift its arguments are ID --ttl N
 EXT='  extend) echo "END $(( $(date +%s) + $3 ))"; exit 0;;'

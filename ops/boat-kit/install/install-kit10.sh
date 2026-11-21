@@ -15,7 +15,7 @@
 # after a mv still undoes that file.
 # usage: bash install-kit10.sh
 set -u
-D=${KIT10_D:-/home/layth/review/grm-port-r11-20261105} R=${KIT10_R:-/home/layth/review/grm-boat-runner-20261031}
+D=${KIT10_D:-/home/user/review/grm-port-r11-20261105} R=${KIT10_R:-/home/user/review/grm-boat-runner-20261031}
 K=$D/kit P=$PWD/pre-kit10
 # new file | target | sha256 of the copy the tests ran against ("new": no file there yet) | new sha256 | mode from
 L="next/drive.sh.next|$D/drive/drive.sh|db62192168156fc773c46fe101c188e3cfa2192312cb46d356a72a81f2d860f7|14ef9a19fa7af2f0a5e0ce00998a2b8b1d377f1ccce4511ab20deb47a77e27d2|$D/drive/drive.sh

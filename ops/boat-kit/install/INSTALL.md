@@ -6,26 +6,26 @@ install-kit10.sh installs KIT9's and KIT10's changes on the laptop in one run. K
 
 Each new file replaces the live copy that KIT10's tests ran against, which is k10/live for the drive and runner and PORT's kit for the kit files. Three kit files are new. The mode comes from the file it replaces, and a new kit file takes the mode of r11-box.sh or stage-manifest.py.
 
-    next/drive.sh.next               -> /home/layth/review/grm-port-r11-20261105/drive/drive.sh
+    next/drive.sh.next               -> /home/user/review/grm-port-r11-20261105/drive/drive.sh
       live  db62192168156fc773c46fe101c188e3cfa2192312cb46d356a72a81f2d860f7
       new   14ef9a19fa7af2f0a5e0ce00998a2b8b1d377f1ccce4511ab20deb47a77e27d2
-    next/grm-boat.sh.next            -> /home/layth/review/grm-boat-runner-20261031/grm-boat.sh
+    next/grm-boat.sh.next            -> /home/user/review/grm-boat-runner-20261031/grm-boat.sh
       live  45fb0c9ff27c7a851f13c5bcbfaa1c99388a47d61f7511ce409ba69ae05c3cd2
       new   dd3f4842c07fdf9ccc3a5da4f840066e3a1517aaea1403e4fe3ed752e9b2db5e
-    next/kit/mtb-box.sh.next         -> /home/layth/review/grm-port-r11-20261105/kit/mtb-box.sh
+    next/kit/mtb-box.sh.next         -> /home/user/review/grm-port-r11-20261105/kit/mtb-box.sh
       live  0a42c769c633435f7e1200522bfd2aaec53b61843935d225d56f0a8b4f850361
       new   f67db557c7e642efb01e4a01184cc1103424e97a16e787d2d4a997569ee5f072
-    next/kit/r11-box.sh.next         -> /home/layth/review/grm-port-r11-20261105/kit/r11-box.sh
+    next/kit/r11-box.sh.next         -> /home/user/review/grm-port-r11-20261105/kit/r11-box.sh
       live  4920a98e6066fe5b39778c293ebb43f74a7a74244065e1be6795e474100f8d56
       new   b618def77fce3d39f3d80f8ea9a6fe359850f5c77d4cdec330ff5e304b85bef1
-    next/kit/stage-manifest.py.next  -> /home/layth/review/grm-port-r11-20261105/kit/stage-manifest.py
+    next/kit/stage-manifest.py.next  -> /home/user/review/grm-port-r11-20261105/kit/stage-manifest.py
       live  36a9be604d0cc23c515f498a46ff5d1492ea5c6b8f01774cd842d542daf99699
       new   68cf7b4cd25fa4ddea2df407ddf51b118dda2a3dba6d2c8f5180d62c5e1eddc5
-    next/kit/chain-lib.sh.next       -> /home/layth/review/grm-port-r11-20261105/kit/chain-lib.sh
+    next/kit/chain-lib.sh.next       -> /home/user/review/grm-port-r11-20261105/kit/chain-lib.sh
       new   1e9514d0d3fdf705d043b3edb037bc889355871a76d2c96694601f1aafc28e3b
-    next/kit/h1-box.sh.next          -> /home/layth/review/grm-port-r11-20261105/kit/h1-box.sh
+    next/kit/h1-box.sh.next          -> /home/user/review/grm-port-r11-20261105/kit/h1-box.sh
       new   b6f32caf66bef5e12403e242ed5e2666da78828f4639212919be4b8afa98e268
-    next/kit/h1-manifest.py.next     -> /home/layth/review/grm-port-r11-20261105/kit/h1-manifest.py
+    next/kit/h1-manifest.py.next     -> /home/user/review/grm-port-r11-20261105/kit/h1-manifest.py
       new   12f93492cb482432960fd818e4cd843cf5d5f9ef86c4bba93326a1c6abe46e09
 
 The three target roots come from the harness: the drive from drv-gates-v4.sh's default, the runner from restart-chain.sh, and the kit from make-harness.sh. If one is wrong, the hash check stops the install before anything changes. diffs/next-vs-live has each change as a unified diff, and diffs/next-vs-r1 has round 2's changes to round 1's set.
@@ -66,7 +66,7 @@ The last line is "KIT10 installed: 8 files, syntax ok". The kit repo then shows 
 
 To put the live files back after an install, run this from the handback dir. Unlike the install, it copies over each live file in place, so run it only when no drive.sh, grm-boat.sh or chain is running. It removes any `.kit10-*` temp file the install left, checks the live hashes, and removes pre-kit10/ only when they all match, so the install can run again:
 
-    D=/home/layth/review/grm-port-r11-20261105 R=/home/layth/review/grm-boat-runner-20261031 P=$PWD/pre-kit10
+    D=/home/user/review/grm-port-r11-20261105 R=/home/user/review/grm-boat-runner-20261031 P=$PWD/pre-kit10
     cp -p $P/drive.sh $D/drive/drive.sh; cp -p $P/grm-boat.sh $R/grm-boat.sh
     for f in mtb-box.sh r11-box.sh stage-manifest.py; do cp -p $P/$f $D/kit/$f; done
     rm -f $D/kit/chain-lib.sh $D/kit/h1-box.sh $D/kit/h1-manifest.py
