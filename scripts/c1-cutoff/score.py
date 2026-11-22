@@ -13,37 +13,62 @@ that the scored genomes, the copies left out and the cohort sum to the
 dataset, by class; that the new lineages lie inside the scored genomes;
 that each truth scores exactly the scored genomes (all) and the new
 lineages, so no truth comes from the cohort's own folds; that each estimate
-scores exactly the cohort; the five learners in order.
+scores exactly the cohort, with the balanced accuracy of its own calls; the
+five learners in order.
 
-Scores, per result, split (lineage, and study when the cohort has one),
-truth set (all scored genomes, new lineages) and learner: the estimate (the
-split's pooled balanced accuracy) and its interval (the range of its five
-fold balanced accuracies), the truth's balanced accuracy, the error (their
-absolute difference) and whether the interval covers the truth; recall,
-specificity, the very major and the major error rate of the estimate and
-of the truth, each with its count, denominator and Wilson 95% interval, the
-error rates also with their Clopper-Pearson 95% interval, and whether the
-estimate's interval covers the truth's value; the log loss of each with
-its denominator. A figure that cannot be computed is empty.
+Scores, per result, split (lineage, random, and study when the cohort has
+one), truth set (all scored genomes, new lineages) and learner: the
+estimate (the split's pooled balanced accuracy), the truth's balanced
+accuracy, the error (their absolute difference), and two intervals on the
+estimate, each with its width and whether it covers the truth, an edge
+counting as covered:
+- the fold range, the lowest to the highest of the five fold balanced
+  accuracies, which is what a report shows;
+- the levelled interval, from the split's pooled calls: recall p_R with its
+  Wilson 95% interval (l_R, u_R), specificity p_S with (l_S, u_S),
+  b = (p_R + p_S) / 2, lower b - sqrt((p_R - l_R)^2 + (p_S - l_S)^2) / 2,
+  upper b + sqrt((u_R - p_R)^2 + (u_S - p_S)^2) / 2.
+Beside them: recall, specificity, the very major and the major error rate
+of the estimate and of the truth, each with its count, denominator and
+Wilson 95% interval, the error rates also with their Clopper-Pearson 95%
+interval, and whether the estimate's interval covers the truth's value; the
+log loss of each with its denominator. A figure that cannot be computed is
+empty.
 
 Writes <out dir>/checks.tsv, <out dir>/scores.tsv (one row per result,
 split, truth set and learner), <out dir>/lines.tsv (per dataset, split,
-truth set, learner and line: draws, draws available, mean error and
-coverage) and <out dir>/count.tsv (the count of the plan's C1 row for the
-datasets given). Prints the check counts only. Exits 1 when a check fails.
+truth set, learner and line: the draws, the available draws with each
+one's error, coverage and width, and over the available draws the mean
+error, both coverages and both median widths) and <out dir>/count.tsv (the
+count of the plan's C1 row for the datasets given). Prints the check counts
+only. Exits 1 when a check fails.
 
 The second form writes count.tsv from several species' lines.tsv files.
 
-The count: for each line against 25 (and the twin, r 25 at seed 45,
-against 25), per split, truth set and learner, a dataset enters when at
-least 3 of its draws are available at both; its value at a line is the
-mean error over that line's available draws; better, worse or same by more
-than MARGIN; the median of the differences (line less 25) and its species
-interval: species drawn with replacement RESAMPLES times, the median of
-their datasets' differences each time, read at the 101st and 3,900th
-values. A line is a candidate when that interval lies wholly below MARGIN
-and its coverage is within 0.05 of 25's. Outputs are aggregates; no genome
-id is read from a result, none is written.
+The count, for each line against 25 (and the twin, r 25 at seed 45, against
+25), per split, truth set and learner. Draw d at a line nests inside draw d
+at 25, so the lines are paired by draw. A dataset enters when at least 3 of
+its draws are available at both lines; its difference is the mean over
+those shared draws of the error at the line less the error at 25. A dataset
+that enters on fewer, or has no line at 25, is counted as not scored.
+Better, worse or same by more than MARGIN; the median of the differences
+and its species interval: species drawn with replacement RESAMPLES times,
+the median of their datasets' differences each time, read at the 101st and
+3,900th values, each row's resamples seeded from the sha256 of
+split|truth set|learner|line, so a row's interval does not move when rows
+are added. Coverage at both lines is counted over the same shared results;
+each line's own available draws and its coverage over all its own results
+are written beside. Each row is written twice, once with the levelled
+interval's coverage and once with the fold range's.
+
+A learner meets the release row when its species interval lies wholly
+below MARGIN and its coverage is within 0.05 of 25's. A line is a candidate
+when at least 3 of the 5 learners meet it. One row per line decides (the
+lead's ruling of 22 Nov 2026): the lineage split, the truth on all scored
+genomes, the levelled interval, 3 of 5 learners. Every other row is marked
+as deciding nothing: the truth on new lineages, the random and the study
+split, each learner alone, the fold range's coverage and the twin. Outputs
+are aggregates; no genome id is read from a result, none is written.
 """
 
 import csv
@@ -51,6 +76,7 @@ import hashlib
 import json
 import math
 import sys
+from fractions import Fraction
 from pathlib import Path
 
 import numpy as np
@@ -61,17 +87,21 @@ LEARNERS = ["scm", "cart", "rf", "gbt", "lasso"]
 # The study estimate's scheme as grm learn --exp-cohort writes it (src/cutoff.rs
 # STUDY_SCHEME); its rows here are named split "study".
 STUDY_SCHEME = "study-whole"
-SPLITS = {"lineage": "lineage", "study": STUDY_SCHEME}
+SPLITS = {"lineage": "lineage", "random": "random", "study": STUDY_SCHEME}
 TRUTHS = ["all", "new_lineage"]
 Z = 1.959963984540054
 MARGIN = 0.02
-COVERAGE_BAND = 0.05
+COVERAGE_BAND = Fraction(1, 20)  # 0.05, compared exactly
+LEARNERS_TO_PASS = 3
 MIN_DRAWS = 3
 RESAMPLES = 4000
 LO_INDEX, HI_INDEX = 100, 3899
-BOOT_SEED = 20261122
 BASE_LINE = "25"
 TWIN_SEED = 45
+# The one row that decides (the lead's ruling D2 of 22 Nov 2026).
+DECIDING = {"split": "lineage", "truth_set": "all", "coverage": "levelled"}
+COVERAGES = ("levelled", "fold_range")
+LINE_ROW = f"{LEARNERS_TO_PASS} of {len(LEARNERS)}"
 
 
 # ---------- intervals ----------
@@ -158,6 +188,31 @@ def balanced(c):
     return (c["tp"] / pos + c["tn"] / neg) / 2
 
 
+def levelled(c):
+    """(b, lower, upper) of the levelled interval from pooled calls (the lead's ruling D1).
+
+    b is the balanced accuracy of the calls. Each side adds the two rates'
+    Wilson 95% half-widths on that side in quadrature and halves the sum,
+    since b is the mean of the two rates. (None, None, None) when a class is
+    empty.
+    """
+    pos, neg = c["tp"] + c["fn"], c["tn"] + c["fp"]
+    if pos == 0 or neg == 0:
+        return (None, None, None)
+    pr, ps = c["tp"] / pos, c["tn"] / neg
+    lr, ur = wilson(c["tp"], pos)
+    ls, us = wilson(c["tn"], neg)
+    b = (pr + ps) / 2
+    return (b, b - math.sqrt((pr - lr) ** 2 + (ps - ls) ** 2) / 2, b + math.sqrt((ur - pr) ** 2 + (us - ps) ** 2) / 2)
+
+
+def covers(lo, hi, v):
+    """Whether [lo, hi] covers v, an edge counting as covered; None when any is missing."""
+    if lo is None or hi is None or v is None:
+        return None
+    return lo <= v <= hi
+
+
 def fmt(x):
     if x is None:
         return ""
@@ -229,6 +284,17 @@ def check(exp, doc, report, cohort_sha):
                 c = x["calls"]
                 ok = ok and c["n"] == 2 * r and c["tp"] + c["fn"] == r and len(x["fold_balanced_accuracy"]) == 5
     add("each estimate scores the cohort", ok)
+    # The levelled interval is built around the balanced accuracy of the
+    # pooled calls; grm writes the estimate from the same scores at the same
+    # cutoff (binary_metrics at 0.5, cutoff::calls at CALL_CUTOFF), so the two
+    # are one figure.
+    ok = True
+    for e in doc.get("estimates", []):
+        if e.get("unavailable") is None:
+            for x in e.get("learners", []):
+                ba, b = x.get("balanced_accuracy"), balanced(x["calls"])
+                ok = ok and isinstance(ba, (int, float)) and b is not None and abs(ba - b) <= 1e-9
+    add("each estimate is the balanced accuracy of its calls", ok)
     return out
 
 
@@ -262,13 +328,18 @@ def score_rows(exp, doc):
                 ba = None if ba is None or (isinstance(ba, float) and math.isnan(ba)) else ba
                 folds = [f for f in (ex["fold_balanced_accuracy"] if ex else []) if f is not None and not math.isnan(f)]
                 lo, hi = (min(folds), max(folds)) if ex and len(folds) == 5 else (None, None)
+                b, llo, lhi = levelled(ex["calls"]) if ex else (None, None, None)
                 tba = balanced(tc) if tc else None
-                row.update({"estimate": ba, "interval_lo": lo, "interval_hi": hi, "truth": tba,
-                            "truth_null_fit": tr["null_fit"] if tr else None})
                 avail = ba is not None and tba is not None
-                row["available"] = avail
-                row["error"] = abs(ba - tba) if avail else None
-                row["covers"] = (lo <= tba <= hi) if avail and lo is not None else None
+                row.update({"estimate": ba, "estimate_from_calls": b, "truth": tba,
+                            "truth_null_fit": tr["null_fit"] if tr else None, "available": avail,
+                            "error": abs(ba - tba) if avail else None,
+                            "levelled_lo": llo, "levelled_hi": lhi,
+                            "levelled_width": (lhi - llo) if llo is not None else None,
+                            "levelled_covers": covers(llo, lhi, tba) if avail else None,
+                            "fold_range_lo": lo, "fold_range_hi": hi,
+                            "fold_range_width": (hi - lo) if lo is not None else None,
+                            "fold_range_covers": covers(lo, hi, tba) if avail else None})
                 for who, c in (("estimate", ex["calls"] if ex else None), ("truth", tc)):
                     if c is None:
                         for name in ("recall", "specificity", "very_major", "major"):
@@ -289,7 +360,7 @@ def score_rows(exp, doc):
                     row[f"{who}_log_loss_n"] = c["n"]
                 for name in ("recall", "specificity", "very_major", "major"):
                     lo_, hi_, v = row[f"estimate_{name}_wilson_lo"], row[f"estimate_{name}_wilson_hi"], row[f"truth_{name}_value"]
-                    row[f"{name}_covers"] = (lo_ <= v <= hi_) if None not in (lo_, hi_, v) else None
+                    row[f"{name}_covers"] = covers(lo_, hi_, v)
                 rows.append(row)
     return rows
 
@@ -299,7 +370,15 @@ def line_name(r, seed):
 
 
 def lines(rows, expected):
-    """Per dataset, split, truth set, learner and line: draws, available draws, mean error, coverage."""
+    """Per dataset, split, truth set, learner and line: the draws, each available draw's figures, and their summary.
+
+    `available_draws`, `errors`, `levelled_covers`, `levelled_widths`,
+    `fold_range_covers` and `fold_range_widths` are comma lists in draw
+    order, one entry per available draw (a fold range that cannot be taken
+    leaves its entries empty). The count pairs lines on them. Every figure
+    is written as fmt writes it, so the count reads the same values from
+    memory and from the file.
+    """
     draws = {}
     for e in expected:
         draws.setdefault((e["dataset"], line_name(e["r"], e["seed"])), set()).add(int(e["draw"]))
@@ -309,67 +388,143 @@ def lines(rows, expected):
         cells.setdefault(k, []).append(row)
     out = []
     for k in sorted(cells):
-        rs = cells[k]
-        av = [r for r in rs if r["available"]]
-        cov = [r["covers"] for r in av if r["covers"] is not None]
-        out.append({
-            "dataset": k[0], "species_slug": k[1], "split": k[2], "truth_set": k[3], "learner": k[4], "line": k[5],
-            "draws": len(draws.get((k[0], k[5]), ())), "available": len(av),
-            "available_draws": ",".join(str(r["draw"]) for r in sorted(av, key=lambda r: int(r["draw"]))),
-            "mean_error": (sum(r["error"] for r in av) / len(av)) if av else None,
-            "covered": sum(cov), "coverage_n": len(cov),
-        })
+        av = sorted((r for r in cells[k] if r["available"]), key=lambda r: int(r["draw"]))
+        res = {"dataset": k[0], "species_slug": k[1], "split": k[2], "truth_set": k[3], "learner": k[4], "line": k[5],
+               "draws": len(draws.get((k[0], k[5]), ())), "available": len(av),
+               "available_draws": ",".join(str(int(r["draw"])) for r in av),
+               "errors": ",".join(fmt(r["error"]) for r in av),
+               "mean_error": (sum(r["error"] for r in av) / len(av)) if av else None}
+        for kind in COVERAGES:
+            cov = [r[f"{kind}_covers"] for r in av if r[f"{kind}_covers"] is not None]
+            widths = [r[f"{kind}_width"] for r in av if r[f"{kind}_width"] is not None]
+            res.update({f"{kind}_covers": ",".join(fmt(r[f"{kind}_covers"]) for r in av),
+                        f"{kind}_widths": ",".join(fmt(r[f"{kind}_width"]) for r in av),
+                        f"{kind}_covered": sum(cov), f"{kind}_coverage_n": len(cov),
+                        f"{kind}_median_width": float(np.median(widths)) if widths else None})
+        out.append(res)
     return out
 
 
+def per_draw(row):
+    """{draw: {"error", "levelled_covers", ...}} of one lines.tsv row, read from its comma lists."""
+    def split(name):
+        text = str(row.get(name) or "")
+        return text.split(",") if text else []
+
+    draws = [int(d) for d in split("available_draws")]
+    cols = {name: split(name) for name in ("errors",) + tuple(f"{k}_{w}" for k in COVERAGES for w in ("covers", "widths"))}
+    for name, values in cols.items():
+        if len(values) != len(draws):
+            raise ValueError(f"lines row {row.get('dataset')} {row.get('line')}: {name} has {len(values)} entries "
+                             f"for {len(draws)} available draws")
+    num = lambda v: float(v) if v != "" else None
+    return {d: {"error": float(cols["errors"][i]),
+                **{f"{k}_covers": (bool(int(cols[f"{k}_covers"][i])) if cols[f"{k}_covers"][i] != "" else None) for k in COVERAGES},
+                **{f"{k}_width": num(cols[f"{k}_widths"][i]) for k in COVERAGES}}
+            for i, d in enumerate(draws)}
+
+
+def row_seed(split, truth_set, learner, line):
+    """The seed of one count row's resamples: the sha256 of its key, so no other row moves it."""
+    return int(hashlib.sha256(f"{split}|{truth_set}|{learner}|{line}".encode()).hexdigest(), 16)
+
+
+def coverage(results, kind):
+    """(covered, n, median width) of one interval kind over per-draw results."""
+    cov = [x[f"{kind}_covers"] for x in results if x[f"{kind}_covers"] is not None]
+    widths = [x[f"{kind}_width"] for x in results if x[f"{kind}_width"] is not None]
+    return sum(cov), len(cov), (float(np.median(widths)) if widths else None)
+
+
+def within_band(covered, n, base_covered, base_n):
+    """Coverage within COVERAGE_BAND of 25's, compared exactly; False when either has no result."""
+    if not n or not base_n:
+        return False
+    return abs(Fraction(covered, n) - Fraction(base_covered, base_n)) <= COVERAGE_BAND
+
+
 def count(line_rows):
-    """The count of the plan's C1 row, per split, truth set, learner and line against 25."""
+    """The count of the plan's C1 row: per split, truth set, learner, line against 25 and coverage, then the line rows."""
     cells = {}
     for r in line_rows:
         cells[(r["split"], r["truth_set"], r["learner"], r["line"], r["dataset"])] = r
     groups = sorted({(s, t, l) for s, t, l, _, _ in cells})
     names = sorted({k[3] for k in cells if k[3] != BASE_LINE}, key=lambda x: (int(x.split("-")[0]), x))
-    rng = np.random.default_rng(BOOT_SEED)
-    out = []
+    learner_rows = []
     for s, t, l in groups:
         for line in names:
-            pairs = []
-            for (s2, t2, l2, ln, d), row in cells.items():
+            pairs = []  # (dataset, species, line row, base row or None, shared draws)
+            for (s2, t2, l2, ln, d), row in sorted(cells.items()):
                 if (s2, t2, l2, ln) != (s, t, l, line):
                     continue
                 base = cells.get((s, t, l, BASE_LINE, d))
-                if base is None:
-                    continue
-                both = set(filter(None, str(row["available_draws"]).split(","))) & set(filter(None, str(base["available_draws"]).split(",")))
-                pairs.append((d, row["species_slug"], row, base, len(both) >= MIN_DRAWS))
-            entered = [p for p in pairs if p[4]]
-            diffs = [float(p[2]["mean_error"]) - float(p[3]["mean_error"]) for p in entered]
+                own = per_draw(row)
+                bown = per_draw(base) if base is not None else {}
+                shared = sorted(set(own) & set(bown))
+                pairs.append((d, row["species_slug"], own, bown, base is not None, shared))
+            entered = [p for p in pairs if len(p[5]) >= MIN_DRAWS]
+            # Paired on draws (the lead's ruling D3): the mean over the shared
+            # draws of the error at the line less the error at 25, rounded as
+            # the files write figures so the margin reads no float noise.
+            diffs = [round(sum(p[2][d]["error"] - p[3][d]["error"] for d in p[5]) / len(p[5]), 12) for p in entered]
             better = sum(1 for x in diffs if x < -MARGIN)
             worse = sum(1 for x in diffs if x > MARGIN)
-            res = {"split": s, "truth_set": t, "learner": l, "line": line, "datasets": len(pairs), "entered": len(entered),
-                   "not_scored": len(pairs) - len(entered), "better": better, "worse": worse, "same": len(entered) - better - worse,
-                   "median_difference": float(np.median(diffs)) if diffs else None, "species": len({p[1] for p in entered}),
-                   "interval_lo": None, "interval_hi": None}
-            cov = sum(int(p[2]["covered"]) for p in entered), sum(int(p[2]["coverage_n"]) for p in entered)
-            bcov = sum(int(p[3]["covered"]) for p in entered), sum(int(p[3]["coverage_n"]) for p in entered)
-            res.update({"covered": cov[0], "coverage_n": cov[1], "base_covered": bcov[0], "base_coverage_n": bcov[1]})
+            base = {"row": "learner", "split": s, "truth_set": t, "learner": l, "line": line,
+                    "datasets": len(pairs), "no_base_line": sum(1 for p in pairs if not p[4]), "entered": len(entered),
+                    "not_scored": len(pairs) - len(entered), "better": better, "worse": worse,
+                    "same": len(entered) - better - worse,
+                    "median_difference": float(np.median(diffs)) if diffs else None,
+                    "species": len({p[1] for p in entered}), "interval_lo": None, "interval_hi": None,
+                    "shared_draws": sum(len(p[5]) for p in entered),
+                    "line_available": sum(len(p[2]) for p in pairs),
+                    "base_available": sum(len(p[3]) for p in pairs)}
             if entered:
                 by_sp = {}
                 for p, x in zip(entered, diffs):
                     by_sp.setdefault(p[1], []).append(x)
                 sps = sorted(by_sp)
+                rng = np.random.default_rng(row_seed(s, t, l, line))
                 meds = []
                 for _ in range(RESAMPLES):
                     pick = rng.integers(0, len(sps), len(sps))
                     meds.append(float(np.median(np.concatenate([by_sp[sps[i]] for i in pick]))))
                 meds.sort()
-                res["interval_lo"], res["interval_hi"] = meds[LO_INDEX], meds[HI_INDEX]
-            c_r = cov[0] / cov[1] if cov[1] else None
-            c_b = bcov[0] / bcov[1] if bcov[1] else None
-            res["candidate"] = (res["interval_hi"] is not None and res["interval_hi"] < MARGIN and c_r is not None
-                                and c_b is not None and abs(c_r - c_b) <= COVERAGE_BAND)
-            out.append(res)
+                base["interval_lo"], base["interval_hi"] = meds[LO_INDEX], meds[HI_INDEX]
+            for kind in COVERAGES:
+                res = dict(base, coverage=kind)
+                # Over the same shared results at both lines.
+                res["covered"], res["coverage_n"], res["median_width"] = coverage(
+                    [p[2][d] for p in entered for d in p[5]], kind)
+                res["base_covered"], res["base_coverage_n"], res["base_median_width"] = coverage(
+                    [p[3][d] for p in entered for d in p[5]], kind)
+                # Beside it: each line over all its own results.
+                res["line_covered"], res["line_coverage_n"], _ = coverage([x for p in pairs for x in p[2].values()], kind)
+                res["base_covered_own"], res["base_coverage_n_own"], _ = coverage(
+                    [x for p in pairs for x in p[3].values()], kind)
+                res["meets"] = (res["interval_hi"] is not None and res["interval_hi"] < MARGIN
+                                and within_band(res["covered"], res["coverage_n"], res["base_covered"], res["base_coverage_n"]))
+                res["decides"] = False
+                learner_rows.append(res)
+    out = []
+    for s, t in sorted({(s, t) for s, t, _ in groups}):
+        for line in names:
+            for kind in COVERAGES:
+                rows = [r for r in learner_rows if (r["split"], r["truth_set"], r["line"], r["coverage"]) == (s, t, line, kind)]
+                meeting = [l for l in LEARNERS if any(r["learner"] == l and r["meets"] for r in rows)]
+                out.extend(sorted(rows, key=lambda r: LEARNERS.index(r["learner"]) if r["learner"] in LEARNERS else len(LEARNERS)))
+                out.append({"row": "line", "split": s, "truth_set": t, "learner": LINE_ROW, "line": line, "coverage": kind,
+                            "learners_meeting": len(meeting), "meeting": ",".join(meeting),
+                            "candidate": len(meeting) >= LEARNERS_TO_PASS,
+                            "decides": ({"split": s, "truth_set": t, "coverage": kind} == DECIDING
+                                        and not line.endswith(f"-s{TWIN_SEED}"))})
     return out
+
+
+COUNT_COLUMNS = ["row", "split", "truth_set", "learner", "line", "coverage", "decides", "candidate", "learners_meeting",
+                 "meeting", "meets", "datasets", "no_base_line", "entered", "not_scored", "better", "worse", "same",
+                 "median_difference", "species", "interval_lo", "interval_hi", "shared_draws", "covered", "coverage_n",
+                 "base_covered", "base_coverage_n", "median_width", "base_median_width", "line_available",
+                 "line_covered", "line_coverage_n", "base_available", "base_covered_own", "base_coverage_n_own"]
 
 
 def write_tsv(path, rows, columns=None):
@@ -393,7 +548,7 @@ def main(argv):
         out = Path(argv[1])
         out.mkdir(parents=True, exist_ok=True)
         rows = [r for p in argv[2:] for r in read_tsv(p)]
-        write_tsv(out / "count.tsv", count(rows))
+        write_tsv(out / "count.tsv", count(rows), COUNT_COLUMNS)
         print(f"count: {len(rows)} line rows from {len(argv) - 2} files")
         return 0
     if len(argv) != 5:
@@ -428,7 +583,7 @@ def main(argv):
     write_tsv(out / "scores.tsv", rows)
     lr = lines(rows, expected)
     write_tsv(out / "lines.tsv", lr)
-    write_tsv(out / "count.tsv", count(lr))
+    write_tsv(out / "count.tsv", count(lr), COUNT_COLUMNS)
     print(f"checks: {len(expected) - failed} of {len(expected)} results pass every check; "
           f"{sum(1 for c in checks if not c['ok'])} failed checks of {len(checks)}")
     return 1 if failed else 0
