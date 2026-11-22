@@ -114,6 +114,11 @@ step() {  # step <name> <function>: once, timed, in a shell that stops at the fi
 export KIT SP DATASETS OUT JOBS LINES DRAWS TWIN REPO W ROOT R M GRM PLANS COH RES
 
 STEP=kit
+# grm matrix keeps one kset open per genome, up to 2,000 a species; a
+# service's soft open-file limit can be 1,024. Raise it to the hard limit.
+ulimit -n "$(ulimit -Hn)" 2>/dev/null || true
+[ "$(ulimit -n)" = unlimited ] || [ "$(ulimit -n)" -ge 4096 ] \
+  || { say "the open-file limit is $(ulimit -n), below the 4,096 grm matrix needs here"; false; }
 [ -z "$(git -C "$REPO" status --porcelain)" ] || { say "the checkout has changes; the binary must be its commit"; false; }
 pinned "$KIT/rev14-274-20261112.tar.zst" c67155f598dbb1ebe1a4ab908e793124ebc058430a33c1c67d7e2058910256de
 pinned "$M" 7dd00779bc4b538b325d947137c525afb4e723ca494bd14b607a8730b7902887
