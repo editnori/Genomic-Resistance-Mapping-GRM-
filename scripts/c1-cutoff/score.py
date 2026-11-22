@@ -207,10 +207,16 @@ def levelled(c):
 
 
 def covers(lo, hi, v):
-    """Whether [lo, hi] covers v, an edge counting as covered; None when any is missing."""
+    """Whether [lo, hi] covers v, an edge counting as covered; None when any is missing.
+
+    Compared at the 12 decimals the files write, so a truth equal to a fold's
+    balanced accuracy is not read as outside it by float noise: calls of 60 of
+    100 and 70 of 100 give (0.6 + 0.7) / 2 = 0.6499999999999999, a fold of 13
+    of 20 in each class 0.65.
+    """
     if lo is None or hi is None or v is None:
         return None
-    return lo <= v <= hi
+    return round(lo, 12) <= round(v, 12) <= round(hi, 12)
 
 
 def fmt(x):
@@ -473,7 +479,7 @@ def count(line_rows):
                     "datasets": len(pairs), "no_base_line": sum(1 for p in pairs if not p[4]), "entered": len(entered),
                     "not_scored": len(pairs) - len(entered), "better": better, "worse": worse,
                     "same": len(entered) - better - worse,
-                    "median_difference": float(np.median(diffs)) if diffs else None,
+                    "median_difference": round(float(np.median(diffs)), 12) if diffs else None,
                     "species": len({p[1] for p in entered}), "interval_lo": None, "interval_hi": None,
                     "shared_draws": sum(len(p[5]) for p in entered),
                     "line_available": sum(len(p[2]) for p in pairs),
@@ -487,7 +493,11 @@ def count(line_rows):
                 meds = []
                 for _ in range(RESAMPLES):
                     pick = rng.integers(0, len(sps), len(sps))
-                    meds.append(float(np.median(np.concatenate([by_sp[sps[i]] for i in pick]))))
+                    # Rounded like the differences: a median of two differences
+                    # whose mean is 0.02 can come out a hair below it in floating
+                    # point (-0.108 and 0.148 give 0.019999999999999997), and
+                    # "wholly below 0.02" must not read that noise.
+                    meds.append(round(float(np.median(np.concatenate([by_sp[sps[i]] for i in pick]))), 12))
                 meds.sort()
                 base["interval_lo"], base["interval_hi"] = meds[LO_INDEX], meds[HI_INDEX]
             for kind in COVERAGES:

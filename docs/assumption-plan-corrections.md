@@ -189,3 +189,35 @@ The 19 BIG datasets in M, which wait for the maintainer's label rule:
 **Restart.** A species stopped at the check goes on from its fitted reports on a later checkout when the built binary's sha256 is unchanged and the commits differ only under `scripts/refit/`, `docs/`, `tests/` and `.github/`. Any other changed path refuses, `src/` and `scripts/assumption-d0-c8/` among them. The check runs again and `binary.txt` gains a line `restart <commit> <time>`. A species with a D0 dataset now stops at the kit step without numpy 1.26.4.
 
 **Written.** This entry was written at 17:59Z on 22 Nov 2026, before any species was started again. No D0 or C8 count had been read.
+
+## C1 scorer
+
+A second review recounted the small-cohort scorer from the rulings' words on 22 Nov 2026. Its own program gave the same value as `scripts/c1-cutoff/score.py` in 230,612 of 230,618 SYNTHETIC cells, in 2,838 of 2,838 cells of *Escherichia coli* with aztreonam, and in 28,920 of 28,920 cells of *Neisseria gonorrhoeae* with ciprofloxacin, penicillin and tetracycline. The three inputs are separate, and their cell counts do not add. The two real outputs were compared for equality only.
+
+**Faults.** The review found three faults, fixed here: unrounded medians, an edge test on unrounded values, and tests that let planted faults pass.
+
+**Median.** The differences were rounded to 12 decimals, and the median difference and the 4,000 resampled medians were left as computed. Differences of -0.108 and 0.148 have the median 0.02, which floating point gives as 0.019999999999999997. A species interval ending at exactly 0.02 then read as wholly below 0.02, and the learner met the release row.
+
+**Fix.** Both medians are now rounded as the differences are. The 6 SYNTHETIC cells that differed are this fault, and with the fix 230,618 of 230,618 are equal.
+
+**Edge.** An edge counts as covered, and the edge test compared the values as computed. Calls of 60 of 100 and 70 of 100 give a truth of 0.6499999999999999, and a fold of 13 of 20 in each class gives 0.65. A truth equal to the lowest fold then read as outside the fold range. The truth and both ends are now compared at the 12 decimals the files write, for every interval the scorer counts.
+
+**Tests.** Of the 9 faults the review planted in the count, 3 failed a test. New SYNTHETIC tests pin the margin at -0.02, entry on 3 shared draws, the mean over draws, and the species interval's 101st and 3,900th values. `tests/c1_cutoff` goes from 44 tests to 50. With them, 12 of 12 planted faults fail a test: those 9 and 3 more that undo these fixes.
+
+**Rulings.** The review listed seven things the scorer does that no ruling covered. The lead ruled on them at 19:01Z on 22 Nov 2026, with no score read. Each stands as the code has it.
+
+| Item | Ruling |
+|---|---|
+| Random split | Its rows are written and decide nothing, as the plan's Rules show that split. |
+| Coverage | In the release row, coverage at a line and at 25 runs over the shared results of the datasets that enter, those with 3 or more shared draws. The difference and the coverage then speak of the same datasets. |
+| Decimals | A difference, a median and an interval's end are compared at the 12 decimals the files write. Coverage is compared with 25's in exact fractions. |
+| Fold range | A result with a fold that has no balanced accuracy has no fold range and leaves the fold range's count. That coverage can run over different results at a line and at 25. It decides nothing and is written with its count of results. |
+| Wilson | The Wilson interval is clipped to 0 and 1, which removes float noise only. |
+| Estimate | The error uses the balanced accuracy `grm` wrote, and the levelled interval is centred on b from the calls. A result where the two differ by more than 1e-9 fails its check. |
+| No dataset | A learner with no dataset entered at a line does not meet the release row. The twin's row is written and is never a candidate. |
+
+**Cost.** The "C1 design" table's Cost row gives 7.80 and 18.86 xlarge-hours, the cost at 4 downloads at once. The run fetches 8 at once, and its cost is the Cuts paragraph's: 6.90 xlarge-hours central and 17.51 upper.
+
+**Run.** The first run's 10 species started at `9945b97`, before these fixes, and their score step ran with the earlier scorer. Each species is scored again from its fitted results at the commit that holds these fixes. The counts are read from that second scoring alone.
+
+**Written.** This entry was written at 19:01Z on 22 Nov 2026. No score of any cohort run had been read.

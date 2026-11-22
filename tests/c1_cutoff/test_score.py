@@ -178,6 +178,14 @@ class Scores(unittest.TestCase):
             row = score.score_rows(common.expect_row(), common.result(folds=folds))[0]
             self.assertEqual((row["truth"], row["fold_range_covers"]), (truth, True), folds)
 
+    def test_a_truth_equal_to_a_folds_balanced_accuracy_is_covered_whatever_the_float_noise(self):
+        truth = score.balanced({"tp": 60, "fn": 40, "tn": 70, "fp": 30})  # 13/20 as (0.6 + 0.7) / 2
+        fold = score.balanced({"tp": 13, "fn": 7, "tn": 13, "fp": 7})     # 13/20 as (0.65 + 0.65) / 2
+        self.assertNotEqual(truth, fold)  # the noise this test is about
+        self.assertTrue(score.covers(fold, 0.9, truth))
+        self.assertTrue(score.covers(0.5, fold, truth))
+        self.assertFalse(score.covers(fold, 0.9, 0.6499999))
+
     def test_a_fold_with_no_balanced_accuracy_leaves_the_draw_no_fold_range(self):
         row = score.score_rows(common.expect_row(), common.result(folds=(0.7, float("nan"), 0.75, 0.9, 0.85)))[0]
         self.assertTrue(row["available"])
@@ -270,6 +278,18 @@ class Count(unittest.TestCase):
         self.assertEqual((c["datasets"], c["entered"], c["not_scored"], c["no_base_line"]), (2, 1, 1, 1))
         self.assertEqual((c["line_available"], c["base_available"]), (10, 5))
 
+    def test_an_interval_end_of_exactly_002_is_not_wholly_below_it(self):
+        # One species, two datasets: differences -0.108 and 0.148, whose median
+        # is exactly 0.02; in floating point -0.108 + 0.148 is 0.039999999999999994.
+        rows = [line("a", "25", 0.2), line("a", "10", 0.092), line("b", "25", 0.2), line("b", "10", 0.348)]
+        c = get(score.count(rows), line="10")
+        self.assertEqual(c["entered"], 2)
+        self.assertEqual((c["median_difference"], c["interval_lo"], c["interval_hi"]), (0.02, 0.02, 0.02))
+        self.assertEqual((c["covered"], c["coverage_n"], c["base_covered"], c["base_coverage_n"]), (10, 10, 10, 10))
+        self.assertFalse(c["meets"])
+        # The written row says the same: an upper end of 0.02 is not below 0.02.
+        self.assertEqual(score.fmt(c["interval_hi"]), "0.02")
+
     def test_coverage_within_005_of_25s_meets_at_the_edge(self):
         # 20 shared results: 19 covered at 10, 20 at 25, a difference of exactly 0.05.
         rows = []
@@ -313,6 +333,46 @@ class Count(unittest.TestCase):
         self.assertEqual((after["interval_lo"], after["interval_hi"]), (alone["interval_lo"], alone["interval_hi"]))
         self.assertEqual(score.row_seed("lineage", "all", "rf", "15"),
                          int(__import__("hashlib").sha256(b"lineage|all|rf|15").hexdigest(), 16))
+
+    def test_a_difference_of_exactly_minus_002_is_the_same_not_better(self):
+        c = get(score.count([line("a", "25", 0.12), line("a", "10", 0.10)]), line="10")
+        self.assertEqual((c["better"], c["same"], c["worse"]), (0, 1, 0))
+        c = get(score.count([line("a", "25", 0.13), line("a", "10", 0.10)]), line="10")
+        self.assertEqual((c["better"], c["same"], c["worse"]), (1, 0, 0))
+
+    def test_a_dataset_enters_on_3_shared_draws_and_not_on_2(self):
+        rows = [line("a", "25", 0.10), line("a", "10", 0.10, draws=[0, 1]),
+                line("b", "25", 0.10), line("b", "10", 0.10, draws=[0, 1, 2])]
+        c = get(score.count(rows), line="10")
+        self.assertEqual((c["datasets"], c["entered"], c["not_scored"], c["shared_draws"]), (2, 1, 1, 3))
+
+    def test_a_datasets_difference_is_the_mean_over_its_shared_draws(self):
+        # Draw differences 0, 0, 0, 0.1 and 0.15: the mean 0.05, not the median 0.
+        c = get(score.count([line("a", "25", 0.10), line("a", "10", [0.10, 0.10, 0.10, 0.20, 0.25])]), line="10")
+        self.assertAlmostEqual(c["median_difference"], 0.05)
+        self.assertEqual((c["worse"], c["same"]), (1, 0))
+
+    def test_the_species_interval_is_the_101st_and_3900th_of_the_rows_own_species_resamples(self):
+        # Worked apart from count(): each resample draws as many species as
+        # there are, with replacement, from the row's own stream; the medians,
+        # rounded as the files write them, are sorted and read at 101 and 3,900.
+        import numpy as np
+        rows, diffs = [], {}
+        # 90 datasets in 30 species: the 3,900th and 3,901st medians differ.
+        for k in range(90):
+            sp, d = f"sp{k % 30}", f"sp{k % 30}__drug{k}"
+            e = round(0.10 + 0.03 * math.sin(1.7 * k + 0.3), 9)
+            rows += [line(d, "25", 0.10, sp=sp), line(d, "15", e, sp=sp)]
+            diffs.setdefault(sp, []).append(round(float(score.fmt(e)) - 0.10, 12))
+        sps = sorted(diffs)
+        rng = np.random.default_rng(score.row_seed("lineage", "all", "rf", "15"))
+        meds = sorted(round(float(np.median(np.concatenate([diffs[sps[i]] for i in rng.integers(0, 30, 30)]))), 12)
+                      for _ in range(4000))
+        c = get(score.count(rows), line="15")
+        self.assertEqual(c["species"], 30)
+        self.assertEqual((c["interval_lo"], c["interval_hi"]), (meds[100], meds[3899]))
+        # Read one value later, the pair moves.
+        self.assertNotEqual((meds[100], meds[3899]), (meds[101], meds[3900]))
 
     def learners(self, good, split="lineage", truth="all", line_="10"):
         """Rows of the five learners on 3 species: those in `good` gain nothing, the rest lose 0.05."""
