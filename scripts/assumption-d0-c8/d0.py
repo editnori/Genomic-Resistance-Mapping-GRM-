@@ -667,6 +667,20 @@ def ordering(every, pairs):
     return f"no single cause holds 0.40 of {pairs} miss pairs: C4, C3, C5"
 
 
+def complete(rows, expect_datasets=None, expect_pairs=None):
+    """Gates on the rows combine reads: one row per dataset and learner, and
+    the miss set's dataset and pair counts when given (the plan's 75 and
+    204), so a species directory left out, or given twice, stops the run."""
+    keys = [(r["dataset"], r["learner"]) for r in rows]
+    gate(len(keys) == len(set(keys)), f"{len(keys) - len(set(keys))} dataset and learner rows come twice")
+    miss = [r for r in rows if r["in_miss"]]
+    if expect_datasets is not None:
+        got = len({r["dataset"] for r in miss})
+        gate(got == expect_datasets, f"{got} datasets in the miss set, expected {expect_datasets}")
+    if expect_pairs is not None:
+        gate(len(miss) == expect_pairs, f"{len(miss)} miss pairs, expected {expect_pairs}")
+
+
 def read_rows(path):
     with open(path, encoding="utf-8", newline="") as f:
         rows = list(csv.DictReader(f, delimiter="\t"))
@@ -699,6 +713,8 @@ def main(argv=None):
     c = sub.add_parser("combine")
     c.add_argument("--out", required=True)
     c.add_argument("--marks", help="intcount's cut table (datasets.tsv): adds the rows for M and not M")
+    c.add_argument("--expect-datasets", type=int, help="datasets the miss set must hold (75)")
+    c.add_argument("--expect-pairs", type=int, help="miss pairs, dataset and learner, it must hold (204)")
     c.add_argument("dirs", nargs="+", help="directories holding a d0-datasets.tsv")
     a = ap.parse_args(argv)
     if a.mode in ("dataset", "release"):
@@ -717,6 +733,7 @@ def main(argv=None):
         rows = []
         for p in a.dirs:
             rows += read_rows(os.path.join(p, "d0-datasets.tsv"))
+        complete(rows, a.expect_datasets, a.expect_pairs)
         table, every, pairs = combine(rows)
         if a.marks:
             marks = fr.read_marks(a.marks)

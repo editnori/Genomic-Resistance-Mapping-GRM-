@@ -96,9 +96,12 @@ def final_summary(rows):
         chosen = [r for r in rows if keep(r)]
         if name == "unmarked" and not chosen:
             continue
-        for learner in list(fr.LEARNERS) + ["any"]:
-            lr = [r for r in chosen if learner == "any" or r[col["learner"]] == learner]
-            if learner == "any":
+        # The last row, any_summed: its dataset columns count a dataset once
+        # when any learner qualifies it; its feature columns are summed over
+        # the five learners, so a feature two learners chose counts twice.
+        for learner in list(fr.LEARNERS) + ["any_summed"]:
+            lr = [r for r in chosen if learner == "any_summed" or r[col["learner"]] == learner]
+            if learner == "any_summed":
                 # One row per dataset: is any learner's final feature carded with a family?
                 by = {}
                 for r in lr:

@@ -12,6 +12,7 @@ import os
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
@@ -127,6 +128,21 @@ class D0Causes(unittest.TestCase):
         r = fold_row(folds, "rf", 0)
         self.assertEqual((r["chosen_agreeing"], r["chosen_agreeing_in_2"]), (1, 1))
 
+    def test_lineage_counts_two_training_clusters_and_no_test_cluster(self):
+        # Resistance in clusters 0, 1 and 2. Fold 0 tests clusters 0 and 5,
+        # so the chosen proxy lies in exactly two training clusters (1 and 2)
+        # and is Lineage at the boundary. Counting the tested cluster 0 too,
+        # or asking for fewer than two clusters, makes it Chosen.
+        three = [int(S.cluster(i) < 3) for i in ALL]
+        rows = S.noise(20, seed=13) + [three]
+        m = len(rows) - 1
+        c = Case(self.tmp.name, "two", truth=three, program=three, rows=rows,
+                 scores={"scm": S.scores_for(three, wrong_folds=(0,))}, chosen={"scm": only(0, [m])})
+        folds, data = c.read()
+        r = fold_row(folds, "scm", 0)
+        self.assertEqual((r["chosen_agreeing"], r["chosen_agreeing_in_2"]), (1, 1))
+        self.assertEqual(data["scm"]["cause"], "lineage")
+
     def test_spread_choice_is_chosen_and_absence_polarity_counts(self):
         rows = S.noise(20, seed=5) + [SPREAD, [1 - v for v in SPREAD]]
         m, neg = len(rows) - 2, len(rows) - 1
@@ -232,6 +248,29 @@ class D0Screen(unittest.TestCase):
                          S.screen(rows, SPREAD, t, t, 3, 4))
         # The matching row 5 maps to its pattern's candidate, row 0.
         self.assertEqual(sorted(int(r) for r in scan["match_rep"]), [0, 0])
+
+    def test_read_dataset_screens_boosting_and_lasso_without_their_holdouts(self):
+        # The export holds the forest's screen only, so nothing gates the
+        # other two: the fits handed to scan_fold are checked here.
+        rows = S.noise(20, seed=14) + [SPREAD]
+        miss = S.scores_for(SPREAD, wrong_folds=(0,))
+        c = Case(self.tmp.name, "holdout", truth=SPREAD, program=SPREAD, rows=rows,
+                 scores={"gbt": miss, "lasso": miss}, chosen={"gbt": only(0, [3]), "lasso": only(0, [3])})
+        seen = []
+        real = d0.scan_fold
+
+        def spy(x, train, called, program, fits, y, floor):
+            seen.append((train.copy(), {k: v.copy() for k, v in fits.items()}))
+            return real(x, train, called, program, fits, y, floor)
+
+        with mock.patch.object(d0, "scan_fold", spy):
+            c.read()
+        self.assertEqual(len(seen), 1)
+        train, fits = seen[0]
+        self.assertTrue(np.array_equal(fits["rf"], train))
+        for name, held in S.holdouts(0).items():
+            want = d0.to_words([S.TEST_FOLD[i] != 0 and i not in held for i in ALL], S.N)
+            self.assertTrue(np.array_equal(fits[name], want), name)
 
     def test_ties_at_the_cut_keep_the_lower_rows(self):
         scores = np.array([1.0, 2.0, 2.0, 2.0, 0.5])
@@ -444,6 +483,18 @@ class D0Combine(unittest.TestCase):
         self.assertIn("C3 first", d0.ordering({"absent": 2, "removed": 1, "lineage": 0, "chosen": 1, "unused": 1}, 5))
         self.assertIn("no single cause", d0.ordering({"absent": 1, "removed": 0, "lineage": 0, "chosen": 3, "unused": 0}, 4))
 
+    def test_combine_refuses_a_twice_given_or_missing_directory(self):
+        rows = [dict(self.row("scm", "absent", 0.3), dataset="a__x"),
+                dict(self.row("rf", "unused", 0.2), dataset="a__x"),
+                dict(self.row("scm", "unused", 0.1), dataset="b__y")]
+        d0.complete(rows, 2, 3)
+        with self.assertRaises(d0.Gate):
+            d0.complete(rows + rows[:1], 2, 3)
+        with self.assertRaises(d0.Gate):
+            d0.complete(rows[:2], 2, 3)
+        with self.assertRaises(d0.Gate):
+            d0.complete(rows, 2, 4)
+
     def test_combine_reads_written_tables(self):
         with tempfile.TemporaryDirectory() as tmp:
             rows = [{"dataset": "a__b", "species": "a", "learner": "scm", "program_ba": 0.9,
@@ -531,6 +582,19 @@ class C8(unittest.TestCase):
         by_pattern = fr.pairwise_by_pattern(sets, pats, S.TEST_FOLD, S.FOLDS)
         self.assertEqual(by_pattern[0], 1.0)
 
+    def test_pattern_reading_leaves_out_both_folds_test_samples(self):
+        def as_int(p):
+            return sum(1 << i for i, v in enumerate(p) if v)
+
+        sets = [{0}, {1}, set(), set(), set()]
+        for tested_by, same in ((0, True), (1, True), (2, False)):
+            i = next(i for i in ALL if S.TEST_FOLD[i] == tested_by)
+            pats = {0: as_int(SPREAD), 1: as_int(S.flip(SPREAD, (i,)))}
+            got = fr.pairwise_by_pattern(sets, pats, S.TEST_FOLD, S.FOLDS)
+            # Pair (0, 1) comes first; the two features differ only on a
+            # sample that fold `tested_by` tests.
+            self.assertEqual(got[0], 1.0 if same else 0.0, tested_by)
+
     def test_summary_counts(self):
         rows = []
         col = {h: i for i, h in enumerate(c8.DATASET_HEADER)}
@@ -570,7 +634,8 @@ class C8(unittest.TestCase):
                                "lasso": (0, 0, 0)})
         out = c8.final_summary(rows)
         h = {k: i for i, k in enumerate(c8.FINAL_SUMMARY_HEADER)}
-        anyrow = next(o for o in out if o[h["subset"]] == "all" and o[h["learner"]] == "any")
+        # Feature 2 is chosen by scm and rf and counts twice in the summed row.
+        anyrow = next(o for o in out if o[h["subset"]] == "all" and o[h["learner"]] == "any_summed")
         self.assertEqual((anyrow[h["datasets"]], anyrow[h["with_a_family_feature"]], anyrow[h["features"]],
                           anyrow[h["with_card"]], anyrow[h["with_family"]]), (1, 1, 4, 3, 2))
 
