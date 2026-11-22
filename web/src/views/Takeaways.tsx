@@ -18,7 +18,7 @@ import { studySplitSummary } from "../data/derive/studySplit";
 import { otherDatabaseSummary } from "../data/derive/otherDatabase";
 import { ADDITIONAL_STUDIES } from "../data/derive/additionalStudies";
 import { FOCUS_RING } from "../ui/primitives";
-import { LINK, showSection } from "./findings";
+import { LINK, selectionCap, showSection } from "./findings";
 import { ScopeFigure } from "./primer";
 
 export const TAKEAWAYS_ANCHOR = "takeaways";
@@ -102,7 +102,7 @@ export const takeawayCards = (m: Manifest, constants?: ReadonlyMap<string, MicCo
       body:
         s.nLineage === 0 || s.medianGap === null
           ? `In a retrospective split by study inside BV-BRC (${int(st.datasets)} datasets, ${int(st.species)} species), folds keeping BioProjects whole score worse than random folds for ${int(st.costShown)} of 5 learners.`
-          : `Holding whole lineages out costs the best learner a median ${points(s.medianGap)} on ${int(s.nLineage)} datasets (${int(s.nLargeGap)} lose more than 5 points). Holding whole BioProjects out (${int(st.datasets)} datasets) or training only on earlier public dates (${int(extra.time_split.datasets)} datasets) worsens log loss for ${int(st.logLossWorse)} of 5 learners, and on ${int(outPrimary.frozen)} newly deposited unseen-study genomes SCM holds on ${int(outPrimary.holds.scm.holds)} of ${int(outPrimary.holds.scm.read)}.`,
+          : `Holding whole lineages out costs the best learner a median ${points(s.medianGap)} on ${int(s.nLineage)} datasets (${int(s.nLargeGap)} lose more than 5 points). Holding whole BioProjects out (${int(st.datasets)} datasets) or training only on earlier public dates (${int(extra.time_split.datasets)} datasets) worsens log loss for ${int(st.logLossWorse)} of 5 learners (recall worse for RF and GBT on study splits, and for ${int(extra.time_split.total_recall_worse)} of 5 on date splits); on ${int(outPrimary.frozen)} newly deposited unseen-study genomes SCM holds on ${int(outPrimary.holds.scm.holds)} of ${int(outPrimary.holds.scm.read)}.`,
       target: "study-split",
       linkLabel: "See study and date splits",
     },
@@ -173,6 +173,7 @@ const StartToFinishGuide = ({ manifest }: { manifest: Manifest }) => {
   const st = studySplitSummary();
   const od = otherDatabaseSummary();
   const extra = ADDITIONAL_STUDIES;
+  const { cap, capped } = selectionCap(manifest);
 
   return (
     <div className="mt-4">
@@ -192,27 +193,32 @@ const StartToFinishGuide = ({ manifest }: { manifest: Manifest }) => {
             <h3 className="text-control font-semibold text-ink">1. What we built from scratch</h3>
             <p className="mt-1.5 text-note text-ink">
               GRM is a self-contained Rust engine built without external machine-learning libraries. It reads bacterial DNA assemblies, slices each genome into canonical 31-letter
-              DNA words (k-mers), merges k-mers that always appear in the same genomes into one pattern, and trains five classical learners by hand: a set covering machine (SCM),
-              a decision tree (CART), a random forest, gradient boosted trees, and L1 logistic regression (lasso). It also scores a zero-training known-gene catalog rule, simulated
-              PCR panels, and quantitative MIC models.
+              DNA words (k-mers), keeps k-mers present in at least two genomes and absent from at least two, merges k-mers with the exact same presence pattern into one feature,
+              and trains five classical learners: a set covering machine (SCM), a decision tree (CART), a random forest, gradient boosted trees, and L1 logistic regression (lasso).
+              It also scores a zero-training known-gene catalog rule, simulated PCR panels, and quantitative MIC models.
             </p>
           </div>
           <div>
             <h3 className="text-control font-semibold text-ink">2. What data and splits we tested</h3>
             <p className="mt-1.5 text-note text-ink">
               The main release covers {plural(manifest.datasets.length, "dataset")} across {plural(speciesCount(manifest), "species", "species")} using {int(analyzed)} genomes
-              selected from {int(manifest.funnel.genomes_passing_qc)} QC-passing public BV-BRC genomes (capped at 2,000 per species in this run). Beyond random cross-validation,
-              GRM stress-tested the same models on unseen bacterial lineages ({int(s.nLineage)} datasets), held-out BioProject studies ({int(st.datasets)} datasets), newly
-              deposited BV-BRC genomes, earlier-vs-later public dates ({int(extra.time_split.datasets)} datasets), and {int(od.totalGenomes)} NCBI Pathogen Detection genomes.
+              selected from {int(manifest.funnel.genomes_passing_qc)} QC-passing public BV-BRC genomes
+              {capped ? ` (capped at ${int(cap)} per species in this run)` : ""}. Beyond random cross-validation, GRM tested the same models on unseen bacterial lineages (
+              {int(s.nLineage)} datasets), held-out BioProject studies ({int(st.datasets)} datasets), newly deposited BV-BRC genomes, earlier-vs-later public dates (
+              {int(extra.time_split.datasets)} datasets), and {int(od.totalGenomes)} NCBI Pathogen Detection genomes outside BV-BRC&apos;s labelled set (not external validation).
             </p>
           </div>
           <div>
             <h3 className="text-control font-semibold text-ink">3. What held up and what broke</h3>
             <p className="mt-1.5 text-note text-ink">
-              Simple rule and tree models (SCM and CART) held up best under lineage shifts and matched or beat both Kover 2.0.7 ({int(extra.kover.datasets)} small datasets) and a
-              dense neural network ({int(extra.dense_network.datasets)} datasets). However, every harder split lowered accuracy: {int(b.meets)} of {int(b.n)} lineage-held-out
-              datasets were shown to meet both strict limits of the adapted research error screen, holding out whole studies or earlier dates hurt log loss for all 5 learners, and
-              full public callers (AMRFinderPlus 4.2.7 and TBProfiler 6.6.3) remained competitive or ahead where curated point mutations matter.
+              On lineage splits, SCM and CART had the highest medians (paired gaps from SCM to CART and to lasso do not clear zero). In separate comparisons, GRM&apos;s SCM led
+              Kover 2.0.7 on {int(extra.kover.datasets)} small datasets, and a one-setting dense neural network established no gain over the five learners across{" "}
+              {int(extra.dense_network.datasets)} datasets. Every harder split lowered scores: {int(b.meets)} of {int(b.n)} lineage-held-out datasets were shown to meet both
+              limits of the adapted research error screen, holding out whole studies or earlier dates worsened log loss for all 5 learners (with recall worse for RF and GBT on
+              study splits, and for {int(extra.time_split.total_recall_worse)} of 5 on date splits), AMRFinderPlus 4.2.7 led GRM&apos;s simplified known-gene rule on{" "}
+              {int(extra.amrfinderplus.program_vs_known_gene_rule.ahead)} of {int(extra.amrfinderplus.datasets)} datasets while roughly tying the 5 lineage learners, and TBProfiler
+              6.6.3 scored higher than SCM on {int(extra.tbprofiler.graded_vs_learners_lineage.scm.tool_higher)} of {int(extra.tbprofiler.graded_endpoints)} graded TB drugs on
+              assemblies.
             </p>
           </div>
           <div>

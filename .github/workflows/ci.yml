@@ -260,6 +260,9 @@ jobs:
           # Reads every tracked file of the tree and docs/ci.md; it builds nothing.
           - suite: tests/public_words
             top: .
+          # Reads README.md, docs/INDEX.md and committed reference/ and web/src/data/ files; it fits nothing.
+          - suite: tests/readme_summary
+            top: .
     env:
       SUITE: ${{ matrix.suite }}
       TOP: ${{ matrix.top }}
