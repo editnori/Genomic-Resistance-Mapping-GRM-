@@ -37,6 +37,7 @@ export RUSTUP_TOOLCHAIN=1.98.1 CARGO_BUILD_JOBS=$JOBS RAYON_NUM_THREADS=$JOBS PA
 STEP=start
 say() { echo "$(date -u +%FT%TZ) $*"; }
 trap 'say "FAILED at $STEP"; echo "FAILED $SP at $STEP $(date -u +%FT%TZ)" > "$OUT/FAILED"; exit 1' ERR
+trap 'say "stopped at $STEP"; echo "FAILED $SP stopped at $STEP $(date -u +%FT%TZ)" > "$OUT/FAILED"; exit 1' TERM INT
 rm -f "$OUT/FAILED"
 say "start $SP, $JOBS jobs, repo $(git -C "$REPO" rev-parse HEAD)"
 
@@ -66,7 +67,7 @@ pinned "$KIT/tool-tables.sha256" 9291b83f4c7d01a0384f35446e6de8f986dff5f659439ee
 pinned "$KIT/rev14-274-20261112.tar.zst" c67155f598dbb1ebe1a4ab908e793124ebc058430a33c1c67d7e2058910256de
 git -C "$REPO" merge-base --is-ancestor 934292c HEAD || { say "the checkout does not hold main at 934292c"; false; }
 python3 -I -B "$REPO/scripts/assumption-d0-c8/miss_sets.py" --species "$SP" --list miss > "$OUT/logs/miss.txt"
-[ -s "$OUT/logs/miss.txt" ] || { say "$SP has no dataset in the miss set"; false; }
+grep -q . "$OUT/logs/miss.txt" || { say "$SP has no dataset in the miss set"; false; }
 
 release() {
   rm -rf "$W/release"; mkdir -p "$W/release"

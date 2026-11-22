@@ -50,11 +50,11 @@ def main(argv=None):
     a, miss, close = sets(args.reference)
     keep = (lambda d: d.split("__")[0] == args.species) if args.species else (lambda d: True)
     union = sorted({d for v in miss.values() for d in v})
-    if args.list == "a":
-        print("\n".join(d for d in a if keep(d)))
-        return
-    if args.list == "miss":
-        print("\n".join(d for d in union if keep(d)))
+    if args.list:
+        # One id per line, and nothing at all for a species with none.
+        for d in a if args.list == "a" else union:
+            if keep(d):
+                print(d)
         return
     species = sorted({d.split("__")[0] for d in union})
     print(f"A: {len(a)} datasets; MISS: {len(union)} datasets in {len(species)} species "
