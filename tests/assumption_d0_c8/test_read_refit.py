@@ -111,7 +111,13 @@ class Clean(Base):
         every = by["all five (dataset and learner pairs)"]
         self.assertEqual([every[f"datasets_{c}"] for c in ("absent", "removed", "lineage", "chosen", "unused")],
                          ["2", "1", "1", "0", "2"])
-        self.assertEqual((every["miss_pairs"], every[g + "absent"]), ("6", "0.318182"))
+        # Ruling 10: the gap share pooled over the five is not on the page; d0.py combine's own table keeps it.
+        self.assertEqual(every["miss_pairs"], "6")
+        self.assertEqual({every[g + c] for c in ("absent", "removed", "lineage", "chosen", "unused")}, {"-"})
+        self.assertIn("not on the page (ruling 10)", every["reading"])
+        pooled = [r for r in table(os.path.join(self.out, "d0", "d0-summary.tsv"))
+                  if (r["subset"], r["learner"]) == ("all", "all")]
+        self.assertEqual(pooled[0]["gap_share_absent"], "0.318182")
         order = {r["cause"]: r for r in self.page("page-d0-order.tsv")}
         self.assertEqual((order["absent"]["largest_of_the_four"], order["absent"]["sets_the_order"]), ("yes", "no"))
         self.assertEqual(order["chosen"]["sets_the_order"], "never (entry D0 causes)")

@@ -79,6 +79,8 @@ AFTER = {"absent": "C3, then C4 and C5", "removed": "C4 with its floor arm first
          "lineage": "C4 with its adjusted arms first, then C3 and C5", "unused": "C5, then C4 and C3"}
 DEFAULT_ORDER = "C4, C3, C5 (the plan's default)"
 D0_NOTE = "D0's sets are chosen by their result: it orders comparisons and tests nothing"
+POOLED_SHARE = "-"
+POOLED_NOTE = "the gap share pooled over the five is not on the page (ruling 10); it is in d0/d0-summary.tsv"
 OUTPUTS = ["gates.txt", "summary.txt", "page-species.tsv", "page-d0-learners.tsv", "page-d0-order.tsv",
            "page-d0-datasets.tsv", "page-c8-summary.tsv", "page-c8-datasets.tsv", "d0", "c8"]
 
@@ -412,10 +414,16 @@ def page_tables(spp, a, names, every, line, c8_long, c8_summary):
     learners = []
     for l in list(fr.LEARNERS) + ["all"]:
         r = every[l]
+        if l == "all":
+            # Ruling 10: the plan's share is "of the learner's gap", so the share pooled over the five is not on the
+            # page. It stays in the reader's file, d0/d0-summary.tsv.
+            shares, note = [POOLED_SHARE] * len(d0.CAUSES), D0_NOTE + "; " + POOLED_NOTE
+        else:
+            shares = [None if r[f"gap_share_{c}"] == "NA" else float(r[f"gap_share_{c}"]) for c in d0.CAUSES]
+            note = D0_NOTE
         learners.append([l if l != "all" else "all five (dataset and learner pairs)", int(r["miss_datasets"])] +
-                        [int(r[f"datasets_{c}"]) for c in d0.CAUSES] +
-                        [None if r[f"gap_share_{c}"] == "NA" else float(r[f"gap_share_{c}"]) for c in d0.CAUSES] +
-                        [int(r["ties"]), int(r["no_missed_fold"]), D0_NOTE])
+                        [int(r[f"datasets_{c}"]) for c in d0.CAUSES] + shares +
+                        [int(r["ties"]), int(r["no_missed_fold"]), note])
     pairs = int(every["all"]["miss_datasets"])
     best = setter(line)
     most = max(int(every["all"][f"datasets_{c}"]) for c in d0.FOUR)
