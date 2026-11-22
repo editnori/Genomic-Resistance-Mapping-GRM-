@@ -285,6 +285,23 @@ class C8Gates(Base):
         S.seal(a)
         self.stops(r"5 pairs cannot come from 5 folds")
 
+    def test_a_split_that_did_not_run_holds_no_value(self):
+        b = self.species("synthia_beta")
+        edit(os.path.join(b, "results", "c8", "c8-datasets.tsv"), "\t0\t0\tNA\tNA\tNA\tNA\tNA\n",
+             "\t0\t0\tNA\tNA\t0\t0\t0\n")
+        S.seal(b)
+        self.stops(r"random: a split that did not run holds a value")
+
+    def test_a_c8_row_twice_stops(self):
+        a = self.species("synthia_alpha")
+        p = os.path.join(a, "results", "c8", "c8-datasets.tsv")
+        with open(p, encoding="utf-8") as f:
+            lines = f.readlines()
+        with open(p, "w", encoding="utf-8") as f:
+            f.writelines(lines[:2] + lines[1:])
+        S.seal(a)
+        self.stops(r"synthia_alpha__\w+ scm twice")
+
     def test_fewer_than_two_folds_that_chose(self):
         code, _, err = self.run_reader(c8_one_fold="zero")
         self.assertEqual(code, 0, err)
