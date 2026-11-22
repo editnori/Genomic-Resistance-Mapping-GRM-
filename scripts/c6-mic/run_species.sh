@@ -64,6 +64,9 @@ W=$OUT/work; ROOT=$W/root; R=$W/release/rev14-274-20261112; M=$KIT/MASTER-MANIFE
 GRM=$W/target/release/grm; PLANS=$W/plans
 export RUSTUP_TOOLCHAIN=1.98.1 CARGO_BUILD_JOBS=$JOBS RAYON_NUM_THREADS=$JOBS
 export PATH=$HOME/.cargo/bin:/usr/local/cargo/bin:$PATH
+# One start at a time on an OUT: a second one would share its steps and files.
+exec 9> "$OUT/run.lock"
+flock -n 9 || { echo "$(date -u +%FT%TZ) another start runs on this OUT; this one ends"; exit 1; }
 STEP=start
 say() { echo "$(date -u +%FT%TZ) $*"; }
 disk() { echo -e "$(date -u +%FT%TZ)\t$1\t$(du -sb "$OUT" | cut -f1)\t$(df -B1 --output=avail "$OUT" | tail -1 | tr -d ' ')" >> "$OUT/logs/disk.tsv"; }
