@@ -2,7 +2,7 @@
 
 Written on 21 Nov 2026. Part 1, the inventory, lists each assumption a GRM result depends on. Part 2 fixes how each one gets tested, before any fit. Nothing was fitted or compared to write it. The commit that adds this page fixes its time.
 
-Amended once, on 21 Nov 2026 at 23:48Z, before any fit: block T1, what the largest arm leaves out, Holm's family, the twin, and the label count. No arm, set, measure or cut point changes. This page is the public copy of the working plan, sha256 `2852db4bef1be2743a7f4aa7986a82707de310f284aa69c31425281556180ad9`. Roles replace names, quoted typing is tidied, and the study-split row is corrected to its source.
+Amended once, on 21 Nov 2026 at 23:48Z, before any fit: block T1, what the largest arm leaves out, Holm's family, the twin, and the label count. No arm, set, measure or cut point changes. This page is the public copy of the working plan, sha256 `2852db4bef1be2743a7f4aa7986a82707de310f284aa69c31425281556180ad9`. Roles replace names, and quoted typing is tidied. Corrections: `docs/assumption-plan-corrections.md`.
 
 **All data.** The maintainer asked to "use all data". The largest arm stops at 4,096 genomes a species, since the matrix stages past that are not reviewed. 7 species hold more, in 158 of the 274 datasets. At 4,096, 41,627 of 80,967 genomes with a scorable label are left out, and 94 of the 274 datasets lose at least one. The release's cap of 2,000 leaves out 57,206.
 
@@ -65,7 +65,7 @@ Not from Kover: the 25/25 line, the cap, the pattern grouping, the screen and th
 | Record | Datasets | Finding | Spent |
 |---|---|---|---|
 | H-1 input comparison | 72 in 4 species, 11 arms, 2 twins | No arm beats the default across the four species. P1, cohort size, failed | no |
-| Study split | 70 in 9 species | Study folds cost specificity and log loss for 5 of 5 learners, and recall for 2 | no |
+| Study split | 70 in 9 species | Study folds cost recall, specificity and log loss for 5 of 5 learners | no |
 | Time split | 24 in 4 species | Training on the past alone reads worse on log loss and balanced accuracy for 5 of 5 | no |
 | Other public database | 13,377 genomes, 8 species | SCM meets the rule in 6 to 8 of 8 species by reading, CART 5 to 7, lasso 3 to 4 of 4 | **yes, read once** |
 | Outside-study test | 7,258 genomes, 81 readable datasets | SCM holds on 32 of 81, CART on 23, lasso on 7 of 25 | **yes, read once** |
