@@ -275,6 +275,39 @@ enum Command {
         /// <dir>/<dataset>.r<r>.d<draw>.s<seed>.cohort.json.
         #[arg(long, requires = "exp_cohort")]
         exp_cohort_out: Option<PathBuf>,
+        /// Experiment, off by default (docs/served-pick.md, plan block C9):
+        /// after each dataset's evaluation, pick the served learner inside
+        /// each outer training fold of the lineage split, or with
+        /// --fold-file of the file's split, by inner folds grouped by
+        /// lineage over the five learners, and write
+        /// <dir>/<dataset>.<scheme>-s<seed>.pick.json: counts by fold and
+        /// learner, the release's pick from the same run, and no genome id.
+        /// Reports, fold results and every fit are those of a run without
+        /// it. Refused beside --learner-seed, the --exp-tie-* options,
+        /// --exp-null-refit, --exp-mic and --exp-cohort.
+        #[arg(
+            long,
+            conflicts_with_all = [
+                "learner_seed",
+                "exp_tie_rule",
+                "exp_tie_trace",
+                "exp_tie_out",
+                "exp_null_refit",
+                "exp_mic",
+                "exp_cohort",
+            ]
+        )]
+        exp_pick: Option<PathBuf>,
+        /// Inner folds per outer fold for --exp-pick: 3, the partition SCM
+        /// and CART tune on, or 0 to write the release's pick and the outer
+        /// counts with no inner fit (the twin's runs).
+        #[arg(long, default_value_t = 3, requires = "exp_pick")]
+        exp_pick_inner: usize,
+        /// Where --exp-pick sends a tie in inner balanced accuracy: the
+        /// later learner in pipeline order, as the release's pick does, or
+        /// the earlier.
+        #[arg(long, value_enum, default_value_t = PickTieArg::Later, requires = "exp_pick")]
+        exp_pick_tie: PickTieArg,
     },
     /// Run fetch, count, structure, matrix, and learn for each species, then
     /// build the report. Stages skip work that is already on disk.
@@ -588,15 +621,23 @@ fn run(cli: Cli) -> Result<()> {
             screened_features,
             fold_file: Some(fold_file),
             fold_out: Some(fold_out),
+            exp_pick,
+            exp_pick_inner,
+            exp_pick_tie,
             ..
-        } => learn_fold_file(
-            &layout,
-            &species,
-            &fold_file,
-            &fold_out,
-            force,
-            screened_features,
-        ),
+        } => {
+            if let Some(dir) = &exp_pick {
+                grm::learn::inner_pick::enable(dir, exp_pick_inner, exp_pick_tie.into())?;
+            }
+            learn_fold_file(
+                &layout,
+                &species,
+                &fold_file,
+                &fold_out,
+                force,
+                screened_features,
+            )
+        }
         Command::Learn {
             species,
             only,
@@ -608,6 +649,9 @@ fn run(cli: Cli) -> Result<()> {
             exp_tie_trace,
             exp_tie_out,
             exp_null_refit,
+            exp_pick,
+            exp_pick_inner,
+            exp_pick_tie,
             ..
         } => {
             let cfg = learn_config(screened_features, seed, learner_seed, exp_tie_rule.into());
@@ -621,6 +665,9 @@ fn run(cli: Cli) -> Result<()> {
             }
             if let Some(path) = &exp_null_refit {
                 grm::learn::null_refit::enable(path)?;
+            }
+            if let Some(dir) = &exp_pick {
+                grm::learn::inner_pick::enable(dir, exp_pick_inner, exp_pick_tie.into())?;
             }
             species
                 .iter()
@@ -1499,6 +1546,21 @@ impl From<PairingArg> for grm::ablate::arm::Pairing {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, clap::ValueEnum)]
+enum PickTieArg {
+    Later,
+    Earlier,
+}
+
+impl From<PickTieArg> for grm::report::PickTie {
+    fn from(t: PickTieArg) -> Self {
+        match t {
+            PickTieArg::Later => Self::Later,
+            PickTieArg::Earlier => Self::Earlier,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, clap::ValueEnum)]
 enum TieRuleArg {
     Float,
     Exact,
@@ -2197,6 +2259,75 @@ mod tests {
 
     /// Without `--disk-sparse`, `grm matrix` and `grm pipeline` parse to the
     /// stock path. The sparse flags need `--disk-sparse`, and `--disk-sparse`
+    /// `--exp-pick` is off unless given, its two settings need it, and it
+    /// is refused beside the experiments that change or add fits.
+    #[test]
+    fn learn_takes_the_c9_pick_only_when_asked() {
+        use clap::error::ErrorKind::{ArgumentConflict, MissingRequiredArgument};
+        let parse = |args: &[&str]| Cli::try_parse_from(args.iter().copied());
+        let Command::Learn {
+            exp_pick,
+            exp_pick_inner,
+            exp_pick_tie,
+            ..
+        } = parse(&["grm", "learn", "--species", "s"]).unwrap().command
+        else {
+            panic!("parsed another command");
+        };
+        assert_eq!(
+            (exp_pick, exp_pick_inner, exp_pick_tie),
+            (None, 3, PickTieArg::Later)
+        );
+        let Command::Learn {
+            exp_pick,
+            exp_pick_inner,
+            exp_pick_tie,
+            ..
+        } = parse(&[
+            "grm",
+            "learn",
+            "--species",
+            "s",
+            "--exp-pick",
+            "p",
+            "--exp-pick-inner",
+            "0",
+            "--exp-pick-tie",
+            "earlier",
+        ])
+        .unwrap()
+        .command
+        else {
+            panic!("parsed another command");
+        };
+        assert_eq!(
+            (exp_pick, exp_pick_inner, exp_pick_tie),
+            (Some(PathBuf::from("p")), 0, PickTieArg::Earlier)
+        );
+        let kind = |args: &[&str]| parse(args).err().map(|e| e.kind());
+        for flag in ["--exp-pick-inner", "--exp-pick-tie"] {
+            let value = if flag == "--exp-pick-tie" {
+                "later"
+            } else {
+                "3"
+            };
+            assert_eq!(
+                kind(&["grm", "learn", "--species", "s", flag, value]),
+                Some(MissingRequiredArgument)
+            );
+        }
+        for other in [
+            &["--learner-seed", "7"][..],
+            &["--exp-tie-rule", "exact"][..],
+            &["--exp-null-refit", "n"][..],
+            &["--exp-mic", "released"][..],
+        ] {
+            let mut args = vec!["grm", "learn", "--species", "s", "--exp-pick", "p"];
+            args.extend_from_slice(other);
+            assert_eq!(kind(&args), Some(ArgumentConflict), "{other:?}");
+        }
+    }
+
     /// refuses `--column-blocks` and `--drop-ksets`.
     #[test]
     fn matrix_and_pipeline_keep_the_stock_path_unless_disk_sparse_is_given() {

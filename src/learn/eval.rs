@@ -51,6 +51,7 @@
 //! They record fits `evaluate` already makes and change no score.
 
 use super::gbt::{self, GbtParams, Objective};
+use super::inner_pick;
 use super::lasso;
 use super::null_refit;
 use super::scm::{self, Kind, Rule};
@@ -913,6 +914,24 @@ fn fit_fold(
     let fold = context.outer_fold.expect("an outer fit needs its fold");
     let seed = fold_seed(cfg, fold);
     let draws = fold_draw_seed(cfg, fold);
+    fit_seeded(learner, x, y, train, groups, cfg, seed, draws, context)
+}
+
+/// `fit_fold` with its seeds given: `seed` for the fit's inner folds and
+/// tuning holdouts, `draws` for the forest's and boosting's own draws. The
+/// C9 experiment's inner fits (`inner_pick`) call it with seeds of their own.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn fit_seeded(
+    learner: &str,
+    x: &BitMatrix,
+    y: &Bits,
+    train: &Bits,
+    groups: Option<&[u32]>,
+    cfg: &EvalConfig,
+    seed: u64,
+    draws: u64,
+    context: LassoContext<'_>,
+) -> Result<(Scored, FoldModel)> {
     let inner = || training_folds(y, train, groups, cfg.inner_folds, seed);
     Ok(match learner {
         "scm" => {
@@ -1194,6 +1213,12 @@ pub fn evaluate(
         fold_models.push(models);
     }
 
+    // The C9 experiment, off by default (`inner_pick`), writes only its own
+    // file and changes no fit, score or report field.
+    if inner_pick::enabled() {
+        inner_pick::record_drawn(dataset, x, y, groups, duplicates, min_support, cfg, &splits)?;
+    }
+
     let mic_result = mic.and_then(|m| evaluate_mic(x, y, min_support, &m, cfg));
     let tuning = final_tuning(groups, duplicates);
     let finals = final_models(dataset, x, y, tuning.as_deref(), min_support, cfg)?;
@@ -1381,6 +1406,28 @@ fn check_fold_tuning(
     for fraction in [GBT_HOLDOUT, LASSO_HOLDOUT] {
         tuning_holdout(train, y, tuning, tuning_unit(scheme), fraction, seed)
             .with_context(|| format!("invalid {scheme} tuning holdout in outer fold {fi}"))?;
+    }
+    Ok(())
+}
+
+/// The partitions a fit seeded with `seed` draws inside `train`, as
+/// `check_fold_tuning` checks an outer fold's: its inner folds and both
+/// tuning holdouts. The C9 experiment checks each inner fit with it
+/// (`inner_pick`).
+pub(crate) fn check_tuning_seeded(
+    scheme: &str,
+    train: &Bits,
+    y: &Bits,
+    tuning: Option<&[u32]>,
+    cfg: &EvalConfig,
+    seed: u64,
+) -> Result<()> {
+    let inner = training_folds(y, train, tuning, cfg.inner_folds, seed);
+    validate_folds(y, train, &inner, cfg.inner_folds)
+        .with_context(|| format!("invalid {scheme} inner evaluation"))?;
+    for fraction in [GBT_HOLDOUT, LASSO_HOLDOUT] {
+        tuning_holdout(train, y, tuning, tuning_unit(scheme), fraction, seed)
+            .with_context(|| format!("invalid {scheme} tuning holdout"))?;
     }
     Ok(())
 }
@@ -1693,6 +1740,23 @@ pub fn evaluate_assigned(
                 .with_context(|| format!("{scheme} split"))
         })
         .collect::<Result<Vec<LearnerResult>>>()?;
+    // The C9 experiment, off by default (`inner_pick`), as in `evaluate`.
+    if inner_pick::enabled() {
+        inner_pick::record_assigned(
+            dataset,
+            scheme,
+            x,
+            y,
+            groups,
+            tuning.as_deref(),
+            &trains,
+            &tested,
+            &test_fold,
+            &learners,
+            min_support,
+            cfg,
+        )?;
+    }
     Ok(AssignedSplit {
         result: SplitResult {
             scheme: scheme.to_string(),
