@@ -342,3 +342,43 @@ The refit of the release's rule ended on its 23 species and 238 datasets at 20:3
 **Cost.** The inner pick took 0.19 to 0.44 of each dataset's release learning seconds. At 0.44, the first run costs 18.12 xlarge-hours central. Of those, 3.47 go to fetching genomes and building matrices again on each box, which the plan's 17 for all 268 leaves out. At the plan's 1.5 it costs 24.03.
 
 **Written.** This entry was written at 19:54Z on 22 Nov 2026, from the design fixed at 19:19Z, the lists and the pilot, and the rulings of 20:36Z were added after a review of the block. No score of any C9 run had been read.
+
+## C3 design
+
+**Block.** Plan block C3 asks whether other inputs separate the classes better than the presence of 31-mers (K31). The design was fixed at 23:22Z on 22 Nov 2026, before any code ran on real data, and `docs/input-arms.md` gives the method. No comparison result has been read.
+
+**Arms.** Five arms stand against K31, the release's rule refitted in the same run. Two are built behind `grm learn --exp-inputs`: the AMRFinderPlus program's calls alone, and those calls joined before the K31 rows. K31 plus k-mer counts, unitigs and K31 plus amino-acid k-mers of called genes are designed and wait for the lead's ruling on their tools. A program column is one element symbol of the program's Type AMR rows, kept by the cohort range K31 uses.
+
+**Folds.** Each arm hands the release's code a new matrix. The support floor, the collapse of identical patterns and the chi-square screen to 4,000 then run on each fit's own training genomes, over both blocks of a joined arm at once. What an arm builds per dataset reads no label, and its cohort range is implied by every training subset, so no outer test genome can change a fit's candidates.
+
+**Measure.** Per learner, the lineage balanced accuracy is primary, with recall, specificity, both error rates with Wilson intervals, and log loss beside it. A dataset's value is the mean of seeds 42, 43 and 44; the twin is K31 at seeds 45, 46 and 47. Each arm meets K31 on its own datasets and the same folds, which the scorer checks.
+
+**Count.** Better, worse or the same by 0.02 at 12 decimals, the arm's value less the default's, the median difference with its species interval, and the one-sided sign test. Holm runs over 30 lineage pairs, 6 arm rows by 5 learners, the twin's included. The family is fixed, so the count is taken once, after every arm has run, and `score.py --count` refuses before that.
+
+**Study.** The first-run datasets in S, 55 for the arms on L and 54 for the arms on A, get one study run per arm on their reviewed `study-whole` plans, at the release's seeds, with no twin. That departs from the plan's Rules, Draws, as C9's ruling 6 did (question 11).
+
+| Set | Datasets | Species | Less M, the first run | First run in S |
+|---|---:|---:|---:|---:|
+| L | 268 | 23 | 233 | 55 |
+| A | 237 | 21 | 204 | 54 |
+
+**Labels.** On the datasets not in M, three of the four label rules give the same labels. Of L's 233, 32 hold an S and R pair and depend on the most resistant call against the other three; of A's 204, 21 do. The rest depend on none of the four.
+
+**Questions.** The design leaves fourteen questions to the lead, each with the answer taken and the other one. Each is one argument of the code or the run script.
+
+| Question | Taken | Other |
+|---|---|---|
+| 1. Unitig graph | GRM's own compaction of the species matrix's 31-mers | Bifrost or bcalm2, version pinned at install |
+| 2. Unitig presence | every 31-mer of the unitig in the genome | any 31-mer; a share of them |
+| 3. Unitig scope | the whole cohort, with no label | each outer training fold |
+| 4. Gene caller | Prodigal 2.6.3, single mode, table 11 | Pyrodigal |
+| 5. Amino-acid k | 10, spanning 30 nucleotides | 8 or 12 |
+| 6. Counts | GRM's own counter, one bin, count of 2 or more | KMC or Jellyfish; bins 2, 3 and 5 |
+| 7. Program column | element symbol | subclass; class |
+| 8. Program rows | Type AMR, both scopes, every method | every Type; core scope only |
+| 9. Join | one candidate pass and one screen over both blocks | a screen per block |
+| 10. Collapse order | the arm's columns before K31's | K31's first |
+| 11. Study draws | one run at the release's seeds, no twin | a seed under this flag only |
+| 12. Holm | 30 pairs, the twin's included | a family per arm |
+| 13. First run | L and A less M | all of L and A |
+| 14. Default and twin | C3's own, in the same run as its arms | shared with another block's runs |
