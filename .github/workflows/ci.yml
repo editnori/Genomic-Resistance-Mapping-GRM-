@@ -280,6 +280,10 @@ jobs:
           # SYNTHETIC results, reports and dataset rows built in the test; it runs score.py, lists.py and expect.py under scripts/c9-pick and fits nothing.
           - suite: tests/c9_pick
             top: .
+          # SYNTHETIC results, inputs files, reports and dataset rows built in the test; it runs score.py, lists.py and expect.py under scripts/c3-inputs and fits nothing.
+          # test_lists.py also reads the committed lists scripts/c9-pick/l.tsv, reference/amrfinderplus-comparison/datasets.tsv and scripts/c3-inputs/lists.tsv.
+          - suite: tests/c3_inputs
+            top: .
     env:
       SUITE: ${{ matrix.suite }}
       TOP: ${{ matrix.top }}
