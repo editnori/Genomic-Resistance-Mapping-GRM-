@@ -231,7 +231,8 @@ COMBINED_HEADER = ["species", "antibiotic", "dataset", "learner", "scheme", "fol
                    "with_amrfinderplus_catalog_family", "defined"]
 COMBINED_SUMMARY_HEADER = [
     "learner", "scheme", "unit", "units", "defined", "undefined_split_not_run", "undefined_no_fold_chose",
-    "undefined_one_fold_chose", "undefined_no_learner_defined", "q1", "median", "q3", "pattern_defined",
+    "undefined_one_fold_chose", "undefined_no_learner_defined", "q1", "median", "q3",
+    "units_fewer_than_two_folds_chose", "pattern_defined",
     "pattern_median", "band_low", "band_high", "under_band_low", "over_band_high", "distinct_summed",
     "with_card_summed", "with_amrfinderplus_catalog_family_summed", "catalog_family_share_of_carded", "reads"]
 
@@ -459,13 +460,16 @@ def combine_tables(tables, one_fold, over_five, bands, names):
                         why[c[2]] += 1
                 units = len(mine)
             ran = [cells[(d, x, s)][3] for d in datasets for x in learners if cells[(d, x, s)][3]["folds"]]
+            # Ruling 1: the count of units where fewer than two folds chose (none, or one alone) is said beside
+            # the median, whether one fold alone counts 0 or is left undefined.
+            fewer = None if unit == "dataset" else sum(max(choosing(c["folds"], c["pairs"])) < 2 for c in ran)
             q = fr.quartiles(vals) or (None, None, None)
             carded = sum(c["with_card"] for c in ran)
             family = sum(c["with_family"] for c in ran)
             has_pattern = l == OVER_FIVE or l in fr.PATTERN_LEARNERS
             summary.append([
                 l, s, unit, units, len(vals), why[SPLIT_NOT_RUN], why[NO_FOLD], why[ONE_FOLD],
-                why[NO_LEARNER] if unit == "dataset" else None, q[0], q[1], q[2],
+                why[NO_LEARNER] if unit == "dataset" else None, q[0], q[1], q[2], fewer,
                 len(pvals) if has_pattern else None, fr.median(pvals) if has_pattern else None,
                 low, high, None if low is None else sum(v < low for v in vals),
                 None if high is None else sum(v > high for v in vals),

@@ -348,6 +348,12 @@ class C8Gates(Base):
         self.assertEqual((scm["q1"], scm["q3"]), ("0.225000", "0.550000"))
         cart = s[("cart", "lineage")]
         self.assertEqual((cart["defined"], cart["undefined_no_fold_chose"]), ("5", "1"))
+        # Ruling 1: the units where fewer than two folds chose are said beside the median: scm's one fold that
+        # chose (in the median at 0) and cart's unit where no fold chose; the pooled row holds both.
+        few = "units_fewer_than_two_folds_chose"
+        self.assertEqual((scm[few], cart[few], s[("over_five", "lineage")][few], s[("rf", "lineage")][few]),
+                         ("1", "1", "2", "0"))
+        self.assertEqual(s[("scm", "random")][few], "0")
         rows = {(r["dataset"], r["learner"], r["scheme"]): r for r in self.page("page-c8-datasets.tsv")}
         one = rows[("synthia_gamma__fakecillin", "scm", "lineage")]
         self.assertEqual((one["folds_choosing"], one["median_jaccard"], one["defined"]), ("1", "0.000000", "yes"))
@@ -358,6 +364,7 @@ class C8Gates(Base):
         scm = s[("scm", "lineage")]
         self.assertEqual((scm["units"], scm["defined"], scm["undefined_one_fold_chose"], scm["median"]),
                          ("6", "5", "1", "0.400000"))
+        self.assertEqual(scm["units_fewer_than_two_folds_chose"], "1")
         rows = {(r["dataset"], r["learner"], r["scheme"]): r for r in self.page("page-c8-datasets.tsv")}
         one = rows[("synthia_gamma__fakecillin", "scm", "lineage")]
         self.assertEqual((one["median_jaccard"], one["defined"]), ("NA", "one fold chose a feature"))
