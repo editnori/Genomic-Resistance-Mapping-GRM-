@@ -40,6 +40,7 @@ Every document under `docs/`, grouped by purpose. For the headline Revision 14 n
 | [species-check.md](species-check.md) | Species-identity check that drops genomes whose sequence does not fit their labelled species (revision 10). |
 | [fold-draws.md](fold-draws.md) | Repeated fold-draw design and stability checks. |
 | [fold-file.md](fold-file.md) | Supplied fold-plan file format for `grm learn --fold-file`. |
+| [mic-plan.md](mic-plan.md) | Experimental MIC models on a fold plan (`grm learn --exp-mic`, off by default), and the scripts that run and score one species. |
 | [null-fold-refit.md](null-fold-refit.md) | Experimental null-fold refit flag (off by default). |
 | [matrix-scaling.md](matrix-scaling.md) | Out-of-core partial matrix building (`--disk-sparse`) and the `REVIEWED_COLUMNS` (4,096) review gate. |
 | [lasso-layout.md](lasso-layout.md) | Machine-code layout check for `grm::learn::lasso::column_sum`. |
