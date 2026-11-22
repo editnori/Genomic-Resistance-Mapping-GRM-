@@ -12,9 +12,13 @@
 # with every report written; in mode copy it writes the release's report
 # with a fold_models of null models, which the check takes, so the run goes
 # on through C8 to DONE. Two cases make it print the first genome id of the
-# species' list on stderr, as grm does in a download retry. Prints one line
-# per case and exits 1 when any case is not as wanted. Takes about three
-# minutes.
+# species' list on stderr, as grm does in a download retry. Restart cases
+# commit a SYNTHETIC file in the scratch clone after the build: under
+# scripts/refit/ the restart goes on, under src/ or scripts/assumption-d0-c8/
+# it is refused. Two cases hide numpy with a python3 that starts without its
+# site packages (the box needs python3-numpy 1.26.4 for the others). Prints
+# one line per case and the cases as wanted of cases, and exits 1 when any
+# case is not as wanted. Takes about four minutes.
 set -uo pipefail
 KIT=$(cd "${1:?kit}" && pwd); REL=$(cd "${2:?release folder}" && pwd); H=${3:?work folder}
 REPO=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
@@ -27,6 +31,7 @@ LIST0=klebsiella_quasipneumoniae__cefotaxime,klebsiella_quasipneumoniae__ceftazi
 SPM=acinetobacter_baumannii
 LISTM=acinetobacter_baumannii__cefepime,acinetobacter_baumannii__amikacin
 G=(git -c user.name=refit-check -c user.email=refit-check@localhost)
+PY3=$(command -v python3)
 for s in "$SP" "$SP0"; do
   test -f "$REL/rev14-274-20261112/species/$s.json" || { echo "no release under $REL"; exit 2; }
 done
@@ -73,6 +78,8 @@ with open(f"{out}/{d}.json", "w") as f:
 done
 STUB
 chmod +x "$H/stub-grm"
+# A python3 that does not see the box's numpy: no site packages.
+mkdir -p "$H/no-numpy"; printf '#!/bin/sh\nexec %s -S "$@"\n' "$PY3" > "$H/no-numpy/python3"; chmod +x "$H/no-numpy/python3"
 
 # case_ <name>: a scratch clone of this checkout and a fresh OUT with the
 # release linked, the stub as the build and the data root's steps flagged done.
@@ -124,11 +131,16 @@ for f in files:
 print(n)
 ' "$H/out-$1" "$2"
 }
-bad=0
+bad=0; cases=0
 report() {  # report <case> <wanted> <seen> <ok 0/1>
   printf '%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "$([ "$4" = 1 ] && echo ok || echo NOT AS WANTED)"
-  [ "$4" = 1 ] || bad=$((bad + 1))
+  cases=$((cases + 1)); [ "$4" = 1 ] || bad=$((bad + 1))
 }
+later() {  # later <case> <path>: a SYNTHETIC commit in the case's clone that adds <path>
+  mkdir -p "$(dirname "$H/repo-$1/$2")"; echo SYNTHETIC > "$H/repo-$1/$2"
+  "${G[@]}" -C "$H/repo-$1" add "$2" && "${G[@]}" -C "$H/repo-$1" commit -q -m "SYNTHETIC later commit"
+}
+restarts() { grep -c '^restart ' "$H/out-$1/binary.txt" 2> /dev/null || true; }
 has() { [[ $1 == *"$2"* ]] && echo 1 || echo 0; }
 
 case_ none; STUB_MODE= go none
@@ -153,9 +165,35 @@ case_ no-fold-models; STUB_MODE=nofold go no-fold-models
 seen="$(failed_at no-fold-models), reports without fold_models $(grep -o 'no report with fold_models for [a-z_,]*' "$H/out-no-fold-models/logs/run.log" | head -1 | tr ',' '\n' | grep -c __)"
 report no-fold-models "at learn, reports without fold_models 3" "$seen" "$(has "$seen" "at learn, reports without fold_models 3")"
 
-case_ checkout-moved; "${G[@]}" -C "$H/repo-checkout-moved" commit -q --allow-empty -m "SYNTHETIC later commit"
-go checkout-moved; seen=$(failed_at checkout-moved)
-report checkout-moved "at build-check" "$seen" "$(has "$seen" "at build-check")"
+# A restart on a later checkout that changed scripts/refit/ only: the fits
+# are kept (the stub fails if asked to fit), the check runs again, and the
+# restart is written in binary.txt.
+case_ restart-refit; STUB_MODE=copy go restart-refit "$KIT" "$SP0" "$LIST0"; rm -f "$H/out-restart-refit/DONE"
+later restart-refit scripts/refit/SYNTHETIC-later.txt
+STUB_MODE=fail go restart-refit "$KIT" "$SP0" "$LIST0"
+seen="$(failed_at restart-refit); DONE $(ls "$H/out-restart-refit/DONE" 2> /dev/null | wc -l); learn ends $(logged restart-refit 'learn: end'), learn skipped $(logged restart-refit 'learn: every report present'); check starts $(logged restart-refit 'check: start'); restart lines $(restarts restart-refit); ids $(ids restart-refit copy)"
+report restart-refit "no FAILED file; DONE 1; learn ends 1, learn skipped 1; check starts 2; restart lines 1; ids 0" "$seen" \
+  "$(has "$seen" "no FAILED file; DONE 1; learn ends 1, learn skipped 1; check starts 2; restart lines 1; ids 0")"
+
+for c in restart-src:src/SYNTHETIC-later.txt restart-d0c8:scripts/assumption-d0-c8/SYNTHETIC-later.txt; do
+  n=${c%%:*}; case_ "$n"; later "$n" "${c#*:}"; go "$n"
+  seen="$(failed_at "$n"), refused $(logged "$n" 'changed paths outside scripts/refit/'), restart lines $(restarts "$n")"
+  report "$n" "at build-check, refused 1, restart lines 0" "$seen" "$(has "$seen" "at build-check, refused 1, restart lines 0")"
+done
+
+case_ binary-changed; later binary-changed scripts/refit/SYNTHETIC-later.txt; echo >> "$H/out-binary-changed/work/target/release/grm"
+go binary-changed; seen="$(failed_at binary-changed), refused $(logged binary-changed 'the binary changed since the build')"
+report binary-changed "at build-check, refused 1" "$seen" "$(has "$seen" "at build-check, refused 1")"
+
+case_ no-numpy-d0; PATH=$H/no-numpy:$PATH go no-numpy-d0
+seen="$(failed_at no-numpy-d0), refused $(logged no-numpy-d0 'D0 needs numpy 1.26.4'), release step $(ls "$H/out-no-numpy-d0/logs/release.log" 2> /dev/null | wc -l)"
+report no-numpy-d0 "at kit, refused 1, release step 0" "$seen" "$(has "$seen" "at kit, refused 1, release step 0")"
+
+case_ no-numpy-no-d0; STUB_MODE=copy PATH=$H/no-numpy:$PATH go no-numpy-no-d0 "$KIT" "$SP0" "$LIST0"
+dl=$(cat "$H/out-no-numpy-no-d0/DONE" 2> /dev/null || echo "no DONE file")
+seen="$(failed_at no-numpy-no-d0); $(echo "$dl" | grep -o 'd0 skipped: no MISS dataset among the listed' || echo "$dl" | cut -c1-80)"
+report no-numpy-no-d0 "no FAILED file; d0 skipped: no MISS dataset among the listed" "$seen" \
+  "$(has "$seen" "no FAILED file; d0 skipped: no MISS dataset among the listed")"
 
 case_ checkout-dirty; echo SYNTHETIC > "$H/repo-checkout-dirty/untracked-SYNTHETIC.txt"
 go checkout-dirty; seen=$(failed_at checkout-dirty)
@@ -189,5 +227,5 @@ sleep 8; STUB_MODE=slow go second-start; wait $first
 seen="starts $(logged second-start " start $SP,"), refusals $(logged second-start "another start runs on this OUT")"
 report second-start "starts 1, refusals 1" "$seen" "$(has "$seen" "starts 1, refusals 1")"
 
-echo "cases not as wanted: $bad"
+echo "cases as wanted: $((cases - bad)) of $cases"
 [ "$bad" = 0 ]

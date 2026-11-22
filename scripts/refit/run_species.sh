@@ -5,7 +5,10 @@
 # then plan diagnostic D0 and block C8 on it (docs/assumption-refit.md), on a
 # fresh box with no agent attached: no prompt, nothing read from another
 # machine but the public sources below, one log, and a restart that skips
-# every finished step. Run it from a clean checkout of this branch:
+# every finished step. Run it from a clean checkout of this branch. A restart
+# on a later checkout goes on when the binary is unchanged and the commits
+# differ only under scripts/refit/, docs/, tests/ and .github/; it skips the
+# finished fits, runs the check again and writes a restart line in binary.txt:
 #
 #   setsid nohup bash scripts/refit/run_species.sh KIT SPECIES DATASETS OUT 16 > /dev/null 2>&1 < /dev/null &
 #
@@ -150,6 +153,22 @@ if [ -e "$OUT/d0.txt" ] && ! cmp -s "$OUT/d0.txt" "$OUT/d0.txt.part"; then
 fi
 mv "$OUT/d0.txt.part" "$OUT/d0.txt"
 say "expect: $(wc -l < "$OUT/expect.txt") reports, D0 on $(wc -l < "$OUT/d0.txt")"
+# d0.py imports numpy, and a fresh box has none: refuse here, before any
+# fetch, when the species has a D0 dataset (CI installs python3-numpy by apt).
+if [ -s "$OUT/d0.txt" ]; then
+  py=$(python3 -I -c '
+import sys
+v = "%d.%d" % sys.version_info[:2]
+try:
+    import numpy
+    n = numpy.__version__
+except ImportError:
+    n = "none"
+print(f"python {v}, numpy {n}")
+sys.exit(0 if (v, n) == ("3.12", "1.26.4") else 1)
+' 2>&1) || { say "D0 needs numpy 1.26.4 on python 3.12 under python3 -I, and this box has $py; install python3-numpy by apt"; false; }
+  say "D0's python: $py"
+fi
 
 release() {
   rm -rf "$W/release"; mkdir -p "$W/release"
@@ -171,10 +190,23 @@ build() {
 }
 step build build
 STEP=build-check
-[ "$(sed -n 's/^commit //p' "$OUT/binary.txt")" = "$(git -C "$REPO" rev-parse HEAD)" ] \
-  || { say "the checkout moved since the build; use a fresh OUT"; false; }
 [ "$(sed -n 's/^grm //p' "$OUT/binary.txt")" = "$(sha256sum "$GRM" | cut -c1-64)" ] \
   || { say "the binary changed since the build"; false; }
+# A restart on another checkout goes on from the fitted reports when the
+# binary is unchanged and the commits differ only under the paths that build
+# nothing of it: scripts/refit/, docs/, tests/ and .github/. Any other path
+# (src/ and scripts/assumption-d0-c8/ among them) refuses. binary.txt keeps
+# its lines and gains one restart line each time.
+built=$(sed -n 's/^commit //p' "$OUT/binary.txt"); head=$(git -C "$REPO" rev-parse HEAD)
+if [ "$built" != "$head" ]; then
+  git -C "$REPO" cat-file -e "$built^{commit}" 2> /dev/null \
+    || { say "the checkout moved since the build and the built commit is not in it; use a fresh OUT"; false; }
+  moved=$(git -C "$REPO" diff --name-only "$built" HEAD -- . ':(exclude)scripts/refit/' ':(exclude)docs/' \
+    ':(exclude)tests/' ':(exclude).github/')
+  [ -z "$moved" ] || { say "the checkout moved since the build, $(echo "$moved" | wc -l) changed paths outside scripts/refit/, docs/, tests/ and .github/, the first $(echo "$moved" | head -1); use a fresh OUT"; false; }
+  echo "restart $head $(date -u +%FT%TZ)" >> "$OUT/binary.txt"
+  say "restart on $head, built at $built: $(git -C "$REPO" diff --name-only "$built" HEAD | wc -l) changed paths, all under scripts/refit/, docs/, tests/ or .github/"
+fi
 
 curated() {
   mkdir -p "$ROOT/curated" "$ROOT/bvbrc" "$W/specs"
