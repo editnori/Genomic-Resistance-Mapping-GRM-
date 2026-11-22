@@ -10,6 +10,7 @@ estimate is the same at every draw and for every learner, so the figures
 are worked by hand below.
 """
 
+import argparse
 import contextlib
 import csv
 import hashlib
@@ -251,7 +252,9 @@ class Reading(unittest.TestCase):
                 self.assertEqual(d["reading"], "does not meet" if line == "10" else "meets")
             row = next(x for x in dec if (x["line"], x["row"]) == (line, "line"))
             self.assertEqual(row["learners_meeting"], "0" if line == "10" else "5")
-            self.assertEqual(row["reading"], read.NOT_CANDIDATE if line == "10" else read.CANDIDATE)
+            # The twin meets on 5 of 5 here, so a line that is no candidate is "not a candidate" alone (ruling 3).
+            self.assertEqual(row["reading"], read.NOT_CANDIDATE if line == "10"
+                             else read.CANDIDATE + "; the twin: 5 of 5 learners meet")
         self.assertIn(f"line 50: 5 of 5 learners meet (scm,cart,rf,gbt,lasso): {read.CANDIDATE}",
                       (DEFAULT[0] / "out" / "summary.txt").read_text())
 
@@ -283,7 +286,7 @@ class Reading(unittest.TestCase):
         self.assertEqual((line["line"], line["learners_meeting"], line["three_or_more_meet"]), ("25-s45", "5", "1"))
         self.assertNotIn("candidate", twin[0])
         self.assertNotIn("candidate", self.out("page-other.tsv")[0])
-        self.assertEqual(line["reading"], "the count with no change; never a candidate")
+        self.assertEqual(line["reading"], "the count with no change; never a candidate; " + read.TWIN_HOLDS)
         self.assertTrue(all(r["same"] == "4" for r in twin if r["row"] == "learner"))
 
     def test_species_and_datasets_are_named_in_full(self):
@@ -377,6 +380,77 @@ class OtherAnswers(unittest.TestCase):
         self.assertEqual((r["pooled_count"], r["pooled_denominator"], r["results"]), ("621", "666", "9"))
         r = next(x for x in m if key(x) == ("lineage", "all", "rf", "50", "25", "truth", "recall"))
         self.assertEqual((r["pooled_count"], r["pooled_denominator"], r["results"]), ("828", "888", "12"))
+
+
+def count_row(**cells):
+    """One SYNTHETIC row of the scorer's count.tsv as read.py reads it: every column text, empty unless given."""
+    row = {c: "" for c in score.COUNT_COLUMNS}
+    row.update({"split": "lineage", "truth_set": "all", "coverage": "levelled"})
+    row.update({k: str(v) for k, v in cells.items()})
+    return row
+
+
+def line_rows(line, meeting, entered=4, interval_hi="0.01", covered=(9, 10), base=(9, 10)):
+    """SYNTHETIC deciding-view rows of one line: five learner rows, the first `meeting` of which meet, and its line row."""
+    rows = []
+    for i, l in enumerate(common.LEARNERS):
+        meets = i < meeting
+        rows.append(count_row(row="learner", learner=l, line=line, meets=int(meets), datasets=4, entered=entered,
+                              not_scored=4 - entered, interval_hi=interval_hi if meets else "0.05",
+                              covered=covered[0], coverage_n=covered[1], base_covered=base[0],
+                              base_coverage_n=base[1]))
+    rows.append(count_row(row="line", learner=score.LINE_ROW, line=line, learners_meeting=meeting,
+                          meeting=",".join(common.LEARNERS[:meeting]), candidate=int(meeting >= 3),
+                          decides=int(not line.endswith("-s45"))))
+    return rows
+
+
+class Rulings(unittest.TestCase):
+    """The rulings of 20:03Z against tables() and summary(), on SYNTHETIC count rows."""
+
+    def tables(self, rows, **over):
+        a = dict(line_50="beside", twin_rule="beside", dataset_differences="yes",
+                 names=str(Path(TMP.name) / "template" / "names.tsv"))
+        a.update(over)
+        ns = argparse.Namespace(**a)
+        out = read.tables(ns, [], rows, {}, ["10", "15", "25", "25-s45", "50"])
+        text = read.summary(argparse.Namespace(measures_over="shared", **a), [], [], out[0], out[7], out[6])
+        return out, text
+
+    def test_ruling_3_a_twin_that_fails_makes_a_line_not_shown_to_be_within_the_margin(self):
+        (dec, twin, *_), text = self.tables(line_rows("10", 1) + line_rows("15", 4) + line_rows("25-s45", 2)
+                                            + line_rows("50", 5))
+        reading = {r["line"]: r["reading"] for r in dec if r["row"] == "line"}
+        self.assertEqual(reading["10"], read.NOT_CANDIDATE + ": " + read.NOT_SHOWN)
+        self.assertEqual(reading["15"], read.CANDIDATE + "; the twin: 2 of 5 learners meet")
+        t = next(r for r in twin if r["row"] == "line")
+        self.assertEqual(t["reading"], "the count with no change; never a candidate; " + read.TWIN_FAILS)
+        self.assertIn("twin 25-s45: 2 of 5 learners meet; the count with no change, never a candidate; "
+                      + read.TWIN_FAILS, text)
+        self.assertNotIn("worse", text)
+
+    def test_ruling_3_a_twin_that_meets_holds_the_row_and_is_never_a_candidate(self):
+        (dec, twin, *_), text = self.tables(line_rows("10", 1) + line_rows("15", 4) + line_rows("25-s45", 3)
+                                            + line_rows("50", 5))
+        reading = {r["line"]: r["reading"] for r in dec if r["row"] == "line"}
+        self.assertEqual(reading["10"], read.NOT_CANDIDATE)
+        self.assertEqual(reading["15"], read.CANDIDATE + "; the twin: 3 of 5 learners meet")
+        t = next(r for r in twin if r["row"] == "line")
+        self.assertEqual((t["learners_meeting"], t["three_or_more_meet"]), ("3", "1"))
+        self.assertNotIn("candidate", t)
+        self.assertEqual(t["reading"], "the count with no change; never a candidate; " + read.TWIN_HOLDS)
+        twin_lines = [x for x in text.splitlines() if x.startswith("twin ")]
+        self.assertEqual(twin_lines, ["twin 25-s45: 3 of 5 learners meet; the count with no change, never a "
+                                      "candidate; " + read.TWIN_HOLDS])
+
+    def test_ruling_2_line_50_beside_is_no_candidate_in_any_cell_or_summary_line(self):
+        (dec, twin, other, *_), text = self.tables(line_rows("10", 1) + line_rows("25-s45", 3) + line_rows("50", 5))
+        self.assertFalse([r for r in dec + twin if r["line"] == "50"])
+        fifty = [r for r in other if r["line"] == "50"]
+        self.assertEqual(len(fifty), 6)
+        self.assertTrue(all(r["decides"] == "no: line 50 is not a lower line" and "candidate" not in r for r in fifty))
+        self.assertFalse([x for x in text.splitlines() if "50" in x and "candidate" in x
+                          and "never a candidate" not in x])
 
 
 class Gates(Copy):

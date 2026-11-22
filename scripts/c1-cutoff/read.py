@@ -81,6 +81,11 @@ LABELS = ("not M: the same labels under label rules (a), (b) and (d); under rule
           "a dataset holding a pair with an R and an S record is checked again")
 CANDIDATE = "candidate under the plan's release row; the maintainer then decides whether to fetch and fit"
 NOT_CANDIDATE = "not a candidate"
+# Ruling 3 of 20:03Z, the twin beside: its reading, and the words a line that
+# is not a candidate takes when a change of fold seed alone fails the row.
+TWIN_HOLDS = "the row holds against a change of fold seed alone"
+TWIN_FAILS = "a change of fold seed alone fails the row"
+NOT_SHOWN = "not shown to be within the margin"
 OUTPUTS = ["gates.txt", "summary.txt", "page-deciding.tsv", "page-twin.tsv", "page-other.tsv", "page-species.tsv",
            "page-datasets.tsv", "page-entry.tsv", "page-measures.tsv", "count"]
 
@@ -595,19 +600,24 @@ def tables(a, species, count_rows, ent, lines):
     twin_row = [c for c in count_rows if view(c) and c["row"] == "line" and c["line"] in twin_lines]
     twin_meets = any(int(c["learners_meeting"]) >= 3 for c in twin_row)
     void = a.twin_rule == "void" and twin_meets
+    # Ruling 3 (beside): the twin's reading fixes the words a line is read in.
+    twin_fails = bool(twin_row) and not twin_meets
+    beside_twin = "".join(f"; the twin: {c['learners_meeting']} of {len(LEARNERS)} learners meet" for c in twin_row)
     deciding, twin, other = [], [], []
     for c in count_rows:
         if view(c) and c["line"] in lower:
             if c["row"] == "line":
                 reading = ("decides nothing: the twin meets the release row on 3 or more learners" if void
-                           else CANDIDATE if c["candidate"] == "1" else NOT_CANDIDATE)
+                           else CANDIDATE + beside_twin if c["candidate"] == "1"
+                           else NOT_CANDIDATE + (": " + NOT_SHOWN if twin_fails else ""))
             else:
                 reading = "meets" if c["meets"] == "1" else "does not meet"
             deciding.append(deciding_row(c, reading))
         elif view(c) and c["line"] in twin_lines:
             reading = ("the count with no change; never a candidate"
                        + ("; it meets the release row on 3 or more learners, so the block decides nothing"
-                          if void else ""))
+                          if void else "; " + (TWIN_HOLDS if int(c["learners_meeting"]) >= 3 else TWIN_FAILS)
+                          if c["row"] == "line" else ""))
             t = deciding_row(c, reading if c["row"] == "line" else
                              ("meets" if c["meets"] == "1" else "does not meet"))
             t[MEET3] = t.pop("candidate")
@@ -696,7 +706,8 @@ def summary(a, species, gates, deciding, twin_row, void):
                          f"{r['reading']}")
     for r in twin_row:
         lines.append(f"twin {r['line']}: {r['learners_meeting']} of 5 learners meet; the count with no change, "
-                     f"never a candidate" + ("; under --twin-rule void the block decides nothing" if void else ""))
+                     f"never a candidate" + ("; under --twin-rule void the block decides nothing" if void else
+                                             "; " + (TWIN_HOLDS if int(r["learners_meeting"]) >= 3 else TWIN_FAILS)))
     lines += [f"labels: {LABELS}",
               "A candidate is a line the maintainer may then decide to fetch and fit. Nothing changes in the release."]
     return "\n".join(lines) + "\n"
