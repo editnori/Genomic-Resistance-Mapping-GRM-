@@ -32,7 +32,8 @@ it serves, and from them balanced accuracy, recall, specificity, the very
 major and the major error rate, each with its count, denominator and Wilson
 95% interval, and log loss with its denominator. The inner arm also counts
 its folds per served learner, its ties, its folds with no pick and its
-folds that serve the default's learner.
+folds whose inner pick is the default's learner (a fold with no pick serves
+that learner but is counted only under no pick).
 
 Writes <out dir>/checks.tsv, draws.tsv, datasets.tsv (per dataset, split
 and arm: the mean of each measure over the draws, with the draws used) and
@@ -236,13 +237,13 @@ def served(doc, default_learner, tie, no_pick):
             scores = {l["learner"]: l["balanced_accuracy"] for l in inner["learners"]}
             learner, tied = pick(scores, tie, default_learner)
             counts["ties"] += len(tied) > 1
+            counts["same_as_default"] += learner == default_learner
         else:
             if no_pick == "drop":
                 return None, counts
             learner = default_learner
             counts["no_pick"] += 1
         counts["picks_" + learner] += 1
-        counts["same_as_default"] += learner == default_learner
         c = add(c, f["outer"][LEARNERS.index(learner)])
     return c, counts
 

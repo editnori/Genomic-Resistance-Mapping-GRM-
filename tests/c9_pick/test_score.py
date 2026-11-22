@@ -190,10 +190,18 @@ class Served(unittest.TestCase):
     def test_a_fold_with_no_pick_serves_the_default_or_drops_the_draw(self):
         d = common.doc(no_pick=(1,))
         c, counts = score.served(d, "rf", "later", "default")
-        self.assertEqual((counts["no_pick"], counts["picks_rf"], counts["same_as_default"]), (1, 3, 3))
+        self.assertEqual((counts["no_pick"], counts["picks_rf"], counts["same_as_default"]), (1, 3, 2))
         self.assertEqual(c["n"], 150)
         c, counts = score.served(d, "rf", "later", "drop")
         self.assertIsNone(c)
+
+    def test_same_as_default_counts_folds_whose_inner_pick_is_the_defaults_learner(self):
+        # Design section 3: a fold with no pick serves the default's learner, counted under no_pick and not here.
+        d = common.doc(no_pick=(0, 1))
+        _, counts = score.served(d, "rf", "later", "default")
+        self.assertEqual((counts["no_pick"], counts["picks_rf"], counts["same_as_default"]), (2, 3, 1))
+        _, counts = score.served(d, "gbt", "later", "default")
+        self.assertEqual((counts["no_pick"], counts["picks_gbt"], counts["same_as_default"]), (2, 2, 0))
 
     def test_a_failed_inner_fit_does_not_compete(self):
         def inner(f, li):

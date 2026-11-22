@@ -53,9 +53,9 @@ FAULTS = [
      "    let mut rows = learner_rows(splits);\n    for l in rows.iter_mut() {\n        l.random = l.lineage;\n    }",
      "rust", "learn::inner_pick::tests::the_default_pick_reads_the_random_split_as_the_release_does"),
     ("6", "the picked learner scored on its inner folds", "scripts/c9-pick/score.py",
-     '        counts["same_as_default"] += learner == default_learner\n'
+     '        counts["picks_" + learner] += 1\n'
      '        c = add(c, f["outer"][LEARNERS.index(learner)])',
-     '        counts["same_as_default"] += learner == default_learner\n'
+     '        counts["picks_" + learner] += 1\n'
      '        inner = {l["learner"]: l for l in f["inner"]["learners"]}\n'
      '        k4 = ("tp", "fp", "tn", "fn")\n'
      '        c = add(c, dict(n=sum(inner[learner][k] for k in k4), loss_sum=0.0, **{k: inner[learner][k] for k in k4})\n'
