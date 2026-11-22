@@ -1364,9 +1364,22 @@ pub fn mic_plan_species(
             continue;
         };
         let roles = micplan::lineage_roles(&e.ds.y, &e.groups, cfg);
-        // The lineage split's own rule (`eval::check_split_plan`).
-        let refusal = (BTreeSet::from_iter(&e.groups).len() < cfg.folds * 2)
-            .then(|| "fewer than twice as many lineages as folds".to_string());
+        // The lineage split's own rules: `eval::check_split_plan`'s count of
+        // lineages, and `eval::check_inputs`' rule that k-mer-identical
+        // copies share a lineage, so that no fold tests a genome and trains
+        // on its copy. `evaluate` stops on either; here the result says why.
+        let split_copy = e.duplicates.iter().find_map(|g| {
+            g.iter()
+                .find(|&&i| e.groups[i] != e.groups[g[0]])
+                .map(|&i| (g[0], i))
+        });
+        let refusal = if BTreeSet::from_iter(&e.groups).len() < cfg.folds * 2 {
+            Some("fewer than twice as many lineages as folds".to_string())
+        } else {
+            split_copy.map(|(a, b)| {
+                format!("k-mer-identical samples {a} and {b} are in different lineages")
+            })
+        };
         let result = mic_plan_result(
             spec,
             slug,
@@ -5290,5 +5303,41 @@ mod tests {
         assert!(run(false).is_err());
         assert!(run(true).is_ok());
         assert!(!layout.results_dir("fixture").exists());
+    }
+
+    #[test]
+    fn the_mic_lineage_plan_refuses_a_copy_in_another_lineage() {
+        // Synthetic: genomes g0 (lineage 0) and g7 (lineage 1) given the same
+        // k-mer set. `evaluate` stops on such inputs (`check_inputs`); the
+        // MIC lineage route writes a result that fits nothing and says why.
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().join("data");
+        let layout = Layout::new(&root);
+        let mut input = mic_inputs();
+        for digests in [
+            &mut input.matrix.summary.kset_digests,
+            &mut input.structure.kset_digests,
+        ] {
+            digests[7] = digests[0].clone();
+        }
+        write_inputs(&layout, &input, "");
+        let out = dir.path().join("mic");
+        let written = mic_plan_species(
+            &layout,
+            "fixture",
+            &[],
+            false,
+            &fold_file_config(),
+            &[micplan::Arm::Released],
+            &out,
+        )
+        .unwrap();
+        let result: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&written[0]).unwrap()).unwrap();
+        assert_eq!(
+            result["unavailable"],
+            "k-mer-identical samples 0 and 7 are in different lineages"
+        );
+        assert!(result["tested"].as_array().unwrap().is_empty());
     }
 }
