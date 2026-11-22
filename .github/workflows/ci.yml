@@ -266,6 +266,12 @@ jobs:
           # SYNTHETIC cohorts and results built in the test; it runs the scripts under scripts/c6-mic and fits nothing.
           - suite: tests/c6_mic
             top: .
+          # SYNTHETIC reports, exports and calls built in the test; it runs the D0 and C8 readers under scripts/assumption-d0-c8 and fits nothing.
+          - suite: tests/assumption_d0_c8
+            top: .
+          # SYNTHETIC reports built in the test; it runs the refit's equality check, scripts/refit/refit_check.py, and fits nothing.
+          - suite: tests/refit
+            top: .
     env:
       SUITE: ${{ matrix.suite }}
       TOP: ${{ matrix.top }}
