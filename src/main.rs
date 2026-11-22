@@ -248,6 +248,33 @@ enum Command {
         /// result goes to --fold-out, so this is refused beside it.
         #[arg(long, requires = "exp_mic", conflicts_with = "fold_file")]
         exp_mic_out: Option<PathBuf>,
+        /// Experiment, off by default (docs/cohort-draw.md, plan block C1
+        /// part B): for each drawn cohort file in this folder
+        /// (<dataset>.r<r>.d<draw>.cohort.json) of the species' datasets, or
+        /// of --only's, run the release's rule on the cohort at --seed and
+        /// score its final models on the dataset's other genomes. Writes one
+        /// result of counts per cohort to --exp-cohort-out and no report; a
+        /// result that exists is kept unless --force. Refused beside
+        /// --fold-file, --learner-seed, the --exp-tie-* options,
+        /// --exp-null-refit and --exp-mic.
+        #[arg(
+            long,
+            requires = "exp_cohort_out",
+            conflicts_with_all = [
+                "fold_file",
+                "learner_seed",
+                "exp_tie_rule",
+                "exp_tie_trace",
+                "exp_tie_out",
+                "exp_null_refit",
+                "exp_mic",
+            ]
+        )]
+        exp_cohort: Option<PathBuf>,
+        /// Directory for the --exp-cohort results:
+        /// <dir>/<dataset>.r<r>.d<draw>.s<seed>.cohort.json.
+        #[arg(long, requires = "exp_cohort")]
+        exp_cohort_out: Option<PathBuf>,
     },
     /// Run fetch, count, structure, matrix, and learn for each species, then
     /// build the report. Stages skip work that is already on disk.
@@ -535,6 +562,25 @@ fn run(cli: Cli) -> Result<()> {
             fold_file.as_deref().zip(fold_out.as_deref()),
             exp_mic_out.as_deref(),
             &exp_mic,
+        ),
+        Command::Learn {
+            species,
+            only,
+            force,
+            screened_features,
+            seed,
+            exp_cohort: Some(cohorts),
+            exp_cohort_out: Some(out),
+            ..
+        } => learn_cohorts(
+            &layout,
+            &species,
+            &only,
+            force,
+            screened_features,
+            seed,
+            &cohorts,
+            &out,
         ),
         Command::Learn {
             species,
@@ -1253,6 +1299,41 @@ fn learn_mic(
         let written = grm::analysis::mic_plan_species(layout, slug, only, force, &cfg, &arms, out)?;
         eprintln!(
             "{slug}: {} MIC plan results written to {}",
+            written.len(),
+            out.display()
+        );
+    }
+    Ok(())
+}
+
+/// `grm learn --exp-cohort`: the drawn cohorts of each species' datasets at
+/// `seed` (`analysis::cohort_draw_species`). Ends with lines of its own,
+/// which do not begin with the release line `learn_end_line` writes.
+#[allow(clippy::too_many_arguments)]
+fn learn_cohorts(
+    layout: &Layout,
+    species: &[String],
+    only: &[String],
+    force: bool,
+    screened_features: usize,
+    seed: u64,
+    cohorts: &std::path::Path,
+    out: &std::path::Path,
+) -> Result<()> {
+    let cfg = learn_config(
+        screened_features,
+        seed,
+        None,
+        grm::learn::tie::TieRule::Float,
+    );
+    for slug in species {
+        grm::species::ensure_selection_counted(layout, slug)?;
+    }
+    for slug in species {
+        let (written, kept) =
+            grm::analysis::cohort_draw_species(layout, slug, only, force, &cfg, cohorts, out)?;
+        eprintln!(
+            "{slug}: {} cohort results written to {}, {kept} kept",
             written.len(),
             out.display()
         );
@@ -3094,6 +3175,71 @@ mod tests {
         .unwrap_err();
         assert!(format!("{error:#}").contains("--exp-mic-out"));
         assert!(!dir.path().join("data").exists());
+    }
+
+    #[test]
+    fn learn_takes_the_cohort_experiment_only_with_an_output_and_no_other_experiment() {
+        let parse = |rest: &[&str]| {
+            Cli::try_parse_from(["grm", "learn", "--species", "s"].iter().chain(rest))
+        };
+        let Command::Learn {
+            exp_cohort,
+            exp_cohort_out,
+            ..
+        } = parse(&[]).unwrap().command
+        else {
+            panic!("parsed another command");
+        };
+        assert_eq!((exp_cohort, exp_cohort_out), (None, None));
+        let Command::Learn {
+            exp_cohort,
+            exp_cohort_out,
+            seed,
+            only,
+            ..
+        } = parse(&[
+            "--exp-cohort",
+            "c",
+            "--exp-cohort-out",
+            "o",
+            "--seed",
+            "45",
+            "--only",
+            "d",
+        ])
+        .unwrap()
+        .command
+        else {
+            panic!("parsed another command");
+        };
+        assert_eq!(
+            (exp_cohort, exp_cohort_out, seed, only),
+            (
+                Some("c".into()),
+                Some("o".into()),
+                45,
+                vec!["d".to_string()]
+            )
+        );
+        let with = |extra: &[&'static str]| {
+            let mut v = vec!["--exp-cohort", "c", "--exp-cohort-out", "o"];
+            v.extend_from_slice(extra);
+            v
+        };
+        for bad in [
+            vec!["--exp-cohort", "c"],
+            vec!["--exp-cohort-out", "o"],
+            with(&["--fold-file", "f", "--fold-out", "p"]),
+            with(&["--learner-seed", "1"]),
+            with(&["--exp-tie-rule", "exact"]),
+            with(&["--exp-tie-trace", "t"]),
+            with(&["--exp-tie-out", "t"]),
+            with(&["--exp-null-refit", "t"]),
+            with(&["--exp-mic", "released"]),
+            with(&["--exp-mic", "released", "--exp-mic-out", "p"]),
+        ] {
+            assert!(parse(&bad).is_err(), "{bad:?}");
+        }
     }
 
     #[test]
