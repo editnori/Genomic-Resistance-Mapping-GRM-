@@ -17,6 +17,7 @@ use crate::learn::eval::{
     LearnerResult, MicInput, MicResult, SplitResult,
 };
 use crate::learn::gbt::GbtParams;
+use crate::learn::micplan;
 use crate::learn::tie::TieRule;
 use crate::learn::tree::ForestParams;
 use crate::learn::{BinaryMetrics, NoCall, binary_metrics};
@@ -1194,6 +1195,299 @@ pub fn evaluate_fold_file(
         split: assigned.result,
         seconds: started.elapsed().as_secs_f64(),
     };
+    std::fs::create_dir_all(out).with_context(|| format!("create {}", out.display()))?;
+    write_atomic(&path, &serde_json::to_vec(&result)?)?;
+    Ok(path)
+}
+
+/// Which folds a `MicPlanResult` was fitted on.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(tag = "kind", rename_all = "kebab-case")]
+pub enum MicPlan {
+    /// The lineage split `grm learn --seed` draws (`micplan::lineage_roles`).
+    Lineage { seed: u64 },
+    /// A fold file's outer folds.
+    FoldFile {
+        scheme: String,
+        fold_file_sha256: String,
+    },
+}
+
+/// What `grm learn --exp-mic` writes for one dataset and plan
+/// (`learn::micplan`, docs/mic-plan.md). It is not a dataset report: no
+/// report is read or written to make it, and `grm report` does not read it.
+/// `tested` holds one row per test genome with an MIC, with no genome id.
+#[derive(Serialize)]
+pub struct MicPlanResult {
+    /// `micplan::FORMAT`.
+    pub format: String,
+    pub evaluation_revision: u32,
+    /// `input_fingerprint`, as the dataset's report records it for the same
+    /// inputs and settings.
+    pub input_fingerprint: String,
+    pub eval_config: EvalConfig,
+    pub id: String,
+    pub species_slug: String,
+    pub antibiotic: String,
+    pub plan: MicPlan,
+    pub arms: Vec<micplan::Arm>,
+    pub min_support: u32,
+    /// Cohort genomes, resistant ones, and the lineages among those the
+    /// plan tests or trains.
+    pub samples: usize,
+    pub resistant: usize,
+    pub n_groups: usize,
+    /// None when every fold's test and training genomes hold both classes,
+    /// else the first fold that does not (`micplan::class_check`).
+    pub class_check: Option<String>,
+    pub n_mic: usize,
+    pub n_exact: usize,
+    pub unavailable: Option<String>,
+    pub released_unavailable: Option<String>,
+    pub ordered_unavailable: Option<String>,
+    pub median_unavailable: Option<String>,
+    pub folds: Vec<micplan::FoldFit>,
+    pub tested: Vec<micplan::TestedMic>,
+    pub seconds: f64,
+}
+
+/// Where `grm learn --exp-mic` writes the result for a dataset and plan
+/// name: `<dataset>.lineage-s<seed>.mic.json` or `<dataset>.<scheme>.mic.json`.
+pub fn mic_plan_path(out: &std::path::Path, dataset: &str, plan: &str) -> std::path::PathBuf {
+    out.join(format!("{dataset}.{plan}.mic.json"))
+}
+
+/// The arms on one plan, as a result. `refusal` makes the plan fit nothing.
+#[allow(clippy::too_many_arguments)]
+fn mic_plan_result(
+    spec: &DatasetSpec,
+    slug: &str,
+    fingerprint: String,
+    cfg: &EvalConfig,
+    plan: MicPlan,
+    arms: &[micplan::Arm],
+    e: &EvalInputs,
+    roles: &[eval::Role],
+    folds: usize,
+    refusal: Option<String>,
+    started: Instant,
+) -> MicPlanResult {
+    let mics: Vec<Option<Mic>> = e.cohort.rows.iter().map(|p| p.mic).collect();
+    let used: Vec<u32> = (0..roles.len())
+        .filter(|&i| roles[i] != eval::Role::Unused)
+        .map(|i| e.groups[i])
+        .collect();
+    let fit = match refusal {
+        None => micplan::fit_plan(
+            &e.ds.x,
+            &e.ds.y,
+            &mics,
+            roles,
+            folds,
+            e.min_support,
+            cfg,
+            arms,
+        ),
+        Some(why) => micplan::refused(why, arms, &mics, roles),
+    };
+    MicPlanResult {
+        format: micplan::FORMAT.into(),
+        evaluation_revision: EVALUATION_REVISION,
+        input_fingerprint: fingerprint,
+        eval_config: cfg.clone(),
+        id: spec.id.clone(),
+        species_slug: slug.to_string(),
+        antibiotic: spec.antibiotic.clone(),
+        plan,
+        arms: fit.arms.clone(),
+        min_support: e.min_support,
+        samples: roles.len(),
+        resistant: e.resistant.iter().filter(|&&r| r).count(),
+        n_groups: used.iter().collect::<BTreeSet<_>>().len(),
+        class_check: micplan::class_check(&e.ds.y, roles, folds),
+        n_mic: fit.n_mic,
+        n_exact: fit.n_exact,
+        tested: fit.tested(&mics, &e.ds.y),
+        unavailable: fit.unavailable,
+        released_unavailable: fit.released_unavailable,
+        ordered_unavailable: fit.ordered_unavailable,
+        median_unavailable: fit.median_unavailable,
+        folds: fit.folds,
+        seconds: started.elapsed().as_secs_f64(),
+    }
+}
+
+/// `grm learn --exp-mic` without a fold file: the MIC arms on the lineage
+/// split at `cfg.seed` for each of the species' datasets (or the named
+/// subset), on the cohort, projection and lineages `analyze_dataset`
+/// evaluates. Writes `mic_plan_path(out, dataset, "lineage-s<seed>")` and
+/// nothing else. Every result it would write is checked first: one that
+/// exists is refused unless `force`.
+pub fn mic_plan_species(
+    layout: &Layout,
+    slug: &str,
+    only: &[String],
+    force: bool,
+    cfg: &EvalConfig,
+    arms: &[micplan::Arm],
+    out: &std::path::Path,
+) -> Result<Vec<std::path::PathBuf>> {
+    let (input, catalog) = load_inputs(layout, slug)?;
+    let digest = matrix_digest(&input.matrix);
+    let specs: Vec<&DatasetSpec> = input
+        .datasets
+        .iter()
+        .filter(|d| only.is_empty() || only.iter().any(|o| *o == d.antibiotic || *o == d.id))
+        .collect();
+    let plan = format!("lineage-s{}", cfg.seed);
+    let paths: Vec<_> = specs
+        .iter()
+        .map(|s| mic_plan_path(out, &s.id, &plan))
+        .collect();
+    for path in &paths {
+        anyhow::ensure!(
+            force || !path.exists(),
+            "{} exists; pass --force to replace it",
+            path.display()
+        );
+    }
+    std::fs::create_dir_all(out).with_context(|| format!("create {}", out.display()))?;
+    let mut written = Vec::new();
+    for (spec, path) in specs.into_iter().zip(paths) {
+        let started = Instant::now();
+        let fingerprint = input_fingerprint(&input, spec, catalog.as_ref(), cfg, digest);
+        let Some(e) = eval_inputs(&input, spec)? else {
+            eprintln!(
+                "    {}: too few labeled genomes after download, skipped",
+                spec.id
+            );
+            continue;
+        };
+        let roles = micplan::lineage_roles(&e.ds.y, &e.groups, cfg);
+        // The lineage split's own rules: `eval::check_split_plan`'s count of
+        // lineages, and `eval::check_inputs`' rule that k-mer-identical
+        // copies share a lineage, so that no fold tests a genome and trains
+        // on its copy. `evaluate` stops on either; here the result says why.
+        let split_copy = e.duplicates.iter().find_map(|g| {
+            g.iter()
+                .find(|&&i| e.groups[i] != e.groups[g[0]])
+                .map(|&i| (g[0], i))
+        });
+        let refusal = if BTreeSet::from_iter(&e.groups).len() < cfg.folds * 2 {
+            Some("fewer than twice as many lineages as folds".to_string())
+        } else {
+            split_copy.map(|(a, b)| {
+                format!("k-mer-identical samples {a} and {b} are in different lineages")
+            })
+        };
+        let result = mic_plan_result(
+            spec,
+            slug,
+            fingerprint,
+            cfg,
+            MicPlan::Lineage { seed: cfg.seed },
+            arms,
+            &e,
+            &roles,
+            cfg.folds,
+            refusal,
+            started,
+        );
+        write_atomic(&path, &serde_json::to_vec(&result)?)?;
+        eprintln!("    {}: MIC plan result in {:.1}s", spec.id, result.seconds);
+        written.push(path);
+    }
+    Ok(written)
+}
+
+/// `grm learn --exp-mic --fold-file`: the MIC arms on the outer folds of the
+/// fold file, for the dataset it names. The file, the cohort, the projection
+/// at the floor of the genomes the file tests or trains, and the refusal of
+/// a fold that tests a genome and trains on its copy are
+/// `evaluate_fold_file`'s. Writes `mic_plan_path(out, dataset, scheme)` and
+/// nothing else; an existing result is replaced only with `force`.
+pub fn mic_plan_fold_file(
+    layout: &Layout,
+    slug: &str,
+    fold_file: &std::path::Path,
+    out: &std::path::Path,
+    force: bool,
+    cfg: &EvalConfig,
+    arms: &[micplan::Arm],
+) -> Result<std::path::PathBuf> {
+    let started = Instant::now();
+    let loaded = crate::learn::foldfile::load(fold_file)?;
+    let (input, catalog) = load_inputs(layout, slug)?;
+    let file = &loaded.file;
+    let spec = input
+        .datasets
+        .iter()
+        .find(|d| d.id == file.dataset)
+        .with_context(|| {
+            format!(
+                "fold file {}: {:?} is not a dataset of {slug}",
+                fold_file.display(),
+                file.dataset
+            )
+        })?;
+    let path = mic_plan_path(out, &spec.id, &file.scheme);
+    anyhow::ensure!(
+        force || !path.exists(),
+        "{} exists; pass --force to replace it",
+        path.display()
+    );
+    let fingerprint = input_fingerprint(
+        &input,
+        spec,
+        catalog.as_ref(),
+        cfg,
+        matrix_digest(&input.matrix),
+    );
+    let c = cohort(spec, &input.phenotypes, &input.matrix.summary.genomes);
+    anyhow::ensure!(
+        c.meets_min_class,
+        "{}: too few labeled genomes after download",
+        spec.id
+    );
+    let sample_ids: Vec<String> = c.rows.iter().map(|p| p.genome_id.clone()).collect();
+    let roles = file
+        .roles(&spec.id, &sample_ids)
+        .with_context(|| format!("fold file {}", fold_file.display()))?;
+    let e = project_cohort(&input, c, eval::supplied_support_floor(&roles))?;
+    for group in &e.duplicates {
+        for f in 0..file.folds() {
+            let tested = group.iter().find(|&&i| roles[i] == eval::Role::Test(f));
+            let trained = group.iter().find(|&&i| match roles[i] {
+                eval::Role::Test(g) => g != f,
+                eval::Role::Train => true,
+                eval::Role::Unused => false,
+            });
+            if let (Some(&a), Some(&b)) = (tested, trained) {
+                anyhow::bail!(
+                    "fold file {}: test fold {f} tests genome {} and trains on genome {}, its k-mer-identical copy; test both in one fold or list one under unused",
+                    fold_file.display(),
+                    sample_ids[a],
+                    sample_ids[b]
+                );
+            }
+        }
+    }
+    let result = mic_plan_result(
+        spec,
+        slug,
+        fingerprint,
+        cfg,
+        MicPlan::FoldFile {
+            scheme: file.scheme.clone(),
+            fold_file_sha256: loaded.sha256.clone(),
+        },
+        arms,
+        &e,
+        &roles,
+        file.folds(),
+        None,
+        started,
+    );
     std::fs::create_dir_all(out).with_context(|| format!("create {}", out.display()))?;
     write_atomic(&path, &serde_json::to_vec(&result)?)?;
     Ok(path)
@@ -4843,5 +5137,244 @@ mod tests {
         // `grm learn` checks the selection against the counts.
         let selection = layout.species_dir("fixture").join("genomes.txt");
         std::fs::write(selection, genomes.join("\n") + "\n").unwrap();
+    }
+
+    /// The scan fixture with an MIC for nine in ten genomes: resistant ones
+    /// exact 2 or 3, or above 3; susceptible ones exact -1 or 0, or at most
+    /// -2. Synthetic.
+    fn mic_inputs() -> SpeciesInputs {
+        let mut input = scan_inputs();
+        for (i, p) in input.phenotypes.iter_mut().enumerate() {
+            if i % 10 == 9 {
+                continue;
+            }
+            let r = p.reported == Some(Call::R);
+            p.mic = Some(match (r, i % 4) {
+                (true, 0) => Mic {
+                    log2: 3,
+                    censor: Censor::Above,
+                },
+                (true, _) => Mic {
+                    log2: 2 + (i % 2) as i32,
+                    censor: Censor::Exact,
+                },
+                (false, 1) => Mic {
+                    log2: -2,
+                    censor: Censor::AtMost,
+                },
+                (false, _) => Mic {
+                    log2: -((i % 2) as i32),
+                    censor: Censor::Exact,
+                },
+            });
+        }
+        input
+    }
+
+    #[test]
+    fn the_mic_experiment_writes_one_result_per_plan_and_nothing_else() {
+        // Synthetic: the scan fixture's 150 genomes in 30 lineages, 135 with
+        // an MIC.
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().join("data");
+        let layout = Layout::new(&root);
+        let input = mic_inputs();
+        write_inputs(&layout, &input, "");
+        let cfg = fold_file_config();
+        let arms = [micplan::Arm::Ordered, micplan::Arm::Released];
+        let out = dir.path().join("mic");
+        let before = tree(&root);
+        let read = |path: &std::path::Path| -> (serde_json::Value, String) {
+            let bytes = std::fs::read(path).unwrap();
+            (
+                serde_json::from_slice(&bytes).unwrap(),
+                String::from_utf8(bytes).unwrap(),
+            )
+        };
+        let lineage = |force: bool, cfg: &EvalConfig| {
+            mic_plan_species(&layout, "fixture", &[], force, cfg, &arms, &out)
+        };
+
+        let written = lineage(false, &cfg).unwrap();
+        let path = out.join("fixture__meropenem.lineage-s42.mic.json");
+        assert_eq!(written, vec![path.clone()]);
+        // The data root is read and not written: no report, nothing changed.
+        assert_eq!(tree(&root), before);
+        assert!(!layout.results_dir("fixture").exists());
+        let (result, text) = read(&path);
+        assert_eq!(result["format"], micplan::FORMAT);
+        assert_eq!(result["evaluation_revision"], EVALUATION_REVISION);
+        assert_eq!(
+            result["plan"],
+            serde_json::json!({"kind": "lineage", "seed": 42})
+        );
+        assert_eq!(result["arms"], serde_json::json!(["released", "ordered"]));
+        // The fingerprint the dataset's report records for these inputs.
+        let fingerprint = dataset_fingerprint(
+            &input,
+            &input.datasets[0],
+            None,
+            &cfg,
+            species_digest(&input),
+        );
+        assert_eq!(result["input_fingerprint"], fingerprint);
+        assert_eq!(
+            (result["n_mic"].clone(), result["n_groups"].clone()),
+            (135.into(), 30.into())
+        );
+        for field in [
+            "unavailable",
+            "released_unavailable",
+            "ordered_unavailable",
+            "class_check",
+        ] {
+            assert!(result[field].is_null(), "{field}: {}", result[field]);
+        }
+        // Every MIC genome is tested once, each lineage in one fold, and no
+        // genome id is written.
+        let tested = result["tested"].as_array().unwrap();
+        assert_eq!(tested.len(), 135);
+        assert!(
+            tested
+                .iter()
+                .all(|t| t["released"].is_f64() && t["ordered"].is_i64())
+        );
+        let roles = micplan::lineage_roles(
+            &Bits::from_indices(150, (0..150).filter(|i| i % 3 == 0)),
+            &input.structure.lineages.labels,
+            &cfg,
+        );
+        let want: Vec<usize> = (0..150)
+            .filter(|i| i % 10 != 9)
+            .map(|i| match roles[i] {
+                eval::Role::Test(f) => f,
+                _ => unreachable!(),
+            })
+            .collect();
+        let got: Vec<usize> = tested
+            .iter()
+            .map(|t| t["fold"].as_u64().unwrap() as usize)
+            .collect();
+        assert_eq!(got, want);
+        assert!((0..150).all(|i| !text.contains(&format!("\"g{i}\""))));
+        // An existing result is refused unless --force; another seed is
+        // another file and another plan.
+        assert!(format!("{:#}", lineage(false, &cfg).unwrap_err()).contains("pass --force"));
+        assert_eq!(lineage(true, &cfg).unwrap(), vec![path.clone()]);
+        let draw = EvalConfig {
+            seed: 43,
+            ..fold_file_config()
+        };
+        let path43 = out.join("fixture__meropenem.lineage-s43.mic.json");
+        assert_eq!(lineage(false, &draw).unwrap(), vec![path43.clone()]);
+        let (result43, _) = read(&path43);
+        assert_eq!(result43["plan"]["seed"], 43);
+        assert_ne!(result43["tested"], result["tested"]);
+
+        // The fold file route: the plan is the file's, at the release's seeds.
+        let folds: Vec<Vec<usize>> = (0..5)
+            .map(|f| (0..150).filter(|i| i % 5 == f).collect())
+            .collect();
+        let file = dir.path().join("folds.json");
+        std::fs::write(&file, fold_file_text(&folds, &[], &[])).unwrap();
+        let run = |force| mic_plan_fold_file(&layout, "fixture", &file, &out, force, &cfg, &arms);
+        let path = run(false).unwrap();
+        assert_eq!(
+            path,
+            out.join("fixture__meropenem.first-public-past.mic.json")
+        );
+        assert_eq!(tree(&root), before);
+        let (result, _) = read(&path);
+        assert_eq!(result["plan"]["kind"], "fold-file");
+        assert_eq!(result["plan"]["scheme"], "first-public-past");
+        assert_eq!(
+            result["plan"]["fold_file_sha256"],
+            crate::learn::foldfile::load(&file).unwrap().sha256
+        );
+        assert_eq!(result["input_fingerprint"], fingerprint);
+        let got: Vec<u64> = result["tested"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|t| t["fold"].as_u64().unwrap())
+            .collect();
+        let want: Vec<u64> = (0..150u64).filter(|i| i % 10 != 9).map(|i| i % 5).collect();
+        assert_eq!(got, want);
+        assert!(run(false).is_err());
+        assert!(run(true).is_ok());
+        assert!(!layout.results_dir("fixture").exists());
+    }
+
+    #[test]
+    fn the_mic_lineage_plan_refuses_a_copy_in_another_lineage() {
+        // Synthetic: genomes g0 (lineage 0) and g7 (lineage 1) given the same
+        // k-mer set. `evaluate` stops on such inputs (`check_inputs`); the
+        // MIC lineage route writes a result that fits nothing and says why.
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().join("data");
+        let layout = Layout::new(&root);
+        let mut input = mic_inputs();
+        for digests in [
+            &mut input.matrix.summary.kset_digests,
+            &mut input.structure.kset_digests,
+        ] {
+            digests[7] = digests[0].clone();
+        }
+        write_inputs(&layout, &input, "");
+        let out = dir.path().join("mic");
+        let written = mic_plan_species(
+            &layout,
+            "fixture",
+            &[],
+            false,
+            &fold_file_config(),
+            &[micplan::Arm::Released],
+            &out,
+        )
+        .unwrap();
+        let result: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&written[0]).unwrap()).unwrap();
+        assert_eq!(
+            result["unavailable"],
+            "k-mer-identical samples 0 and 7 are in different lineages"
+        );
+        assert!(result["tested"].as_array().unwrap().is_empty());
+    }
+
+    #[test]
+    fn the_mic_fold_file_route_refuses_a_copy_on_both_sides_of_a_fold() {
+        // Synthetic: genomes g0 and g1, one lineage, given the same k-mer
+        // set; the fold file tests g0 in fold 0 and g1 in fold 1.
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path().join("data"));
+        let mut input = mic_inputs();
+        for digests in [
+            &mut input.matrix.summary.kset_digests,
+            &mut input.structure.kset_digests,
+        ] {
+            digests[1] = digests[0].clone();
+        }
+        write_inputs(&layout, &input, "");
+        let folds: Vec<Vec<usize>> = (0..5)
+            .map(|f| (0..150).filter(|i| i % 5 == f).collect())
+            .collect();
+        let file = dir.path().join("folds.json");
+        std::fs::write(&file, fold_file_text(&folds, &[], &[])).unwrap();
+        let out = dir.path().join("mic");
+        let error = mic_plan_fold_file(
+            &layout,
+            "fixture",
+            &file,
+            &out,
+            false,
+            &fold_file_config(),
+            &[micplan::Arm::Released],
+        )
+        .unwrap_err();
+        assert!(
+            format!("{error:#}").contains("its k-mer-identical copy"),
+            "{error:#}"
+        );
+        assert!(!out.exists());
     }
 }

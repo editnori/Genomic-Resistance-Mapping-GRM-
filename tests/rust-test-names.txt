@@ -135,6 +135,9 @@ src/lib.rs analysis::tests::the_default_input_key_is_the_one_main_computes
 src/lib.rs analysis::tests::the_disk_sparse_learn_writes_reports_only_through_real_directories
 src/lib.rs analysis::tests::the_lasso_scan_fits_the_report_inputs_as_the_evaluator_does
 src/lib.rs analysis::tests::the_log_names_the_best_learner_scored_on_every_isolate
+src/lib.rs analysis::tests::the_mic_experiment_writes_one_result_per_plan_and_nothing_else
+src/lib.rs analysis::tests::the_mic_fold_file_route_refuses_a_copy_on_both_sides_of_a_fold
+src/lib.rs analysis::tests::the_mic_lineage_plan_refuses_a_copy_in_another_lineage
 src/lib.rs analysis::tests::unsourced_and_unsupported_probe_assays_give_a_reason_without_ksets
 src/lib.rs analysis::tests::unsupported_assays_are_listed_with_their_reason_instead_of_a_panel
 src/lib.rs analysis::tests::write_lasso_scan_fixture_root [ignored]
@@ -393,6 +396,18 @@ src/lib.rs learn::lasso::tests::the_line_search_stops_where_a_coefficient_reache
 src/lib.rs learn::lasso::tests::the_saved_real_paths_are_the_same_at_any_thread_count
 src/lib.rs learn::lasso::tests::vibrio_cholerae_fold0_converges_at_every_point
 src/lib.rs learn::lasso::tests::violators_tie_to_the_lowest_column
+src/lib.rs learn::micplan::tests::a_censored_value_enters_only_the_thresholds_it_decides
+src/lib.rs learn::micplan::tests::a_fold_without_an_mic_test_genome_is_not_fitted_and_the_gate_holds
+src/lib.rs learn::micplan::tests::fold_breakpoints_and_medians_read_no_test_genome
+src/lib.rs learn::micplan::tests::one_dilution_step_gives_its_step_and_no_threshold
+src/lib.rs learn::micplan::tests::ordered_predictions_are_steps_inside_the_training_range
+src/lib.rs learn::micplan::tests::predictions_read_no_test_genome
+src/lib.rs learn::micplan::tests::the_fits_follow_the_seed
+src/lib.rs learn::micplan::tests::the_lineage_plan_keeps_each_lineage_in_one_fold_and_follows_the_seed
+src/lib.rs learn::micplan::tests::the_read_off_is_the_median_step_of_the_monotone_sequence
+src/lib.rs learn::micplan::tests::the_released_arm_on_the_released_folds_is_evaluate_mic_bit_for_bit
+src/lib.rs learn::micplan::tests::the_training_median_is_the_lower_median
+src/lib.rs learn::micplan::tests::the_training_median_reads_exact_mics_only
 src/lib.rs learn::null_refit::tests::a_fold_of_the_tie_rule_experiment_is_refused
 src/lib.rs learn::null_refit::tests::a_null_lasso_fold_records_every_points_refit_and_both_arms
 src/lib.rs learn::null_refit::tests::a_record_counts_the_training_genomes_and_names_the_test_genomes
@@ -677,6 +692,7 @@ src/main.rs tests::learn_refuses_the_null_fold_refit_beside_a_fold_file
 src/main.rs tests::learn_refuses_the_null_fold_refit_beside_the_tie_rule_experiment
 src/main.rs tests::learn_takes_a_fold_file_only_with_its_output_directory_and_one_species
 src/main.rs tests::learn_takes_a_seed_and_a_learner_seed_and_the_pipeline_takes_neither
+src/main.rs tests::learn_takes_the_mic_experiment_only_with_an_output_and_no_other_experiment
 src/main.rs tests::learn_with_a_fold_file_screens_as_many_features_as_it_is_told
 src/main.rs tests::matrix_and_pipeline_keep_the_stock_path_unless_disk_sparse_is_given
 src/main.rs tests::matrix_column_blocks_reach_the_block_merge_through_run

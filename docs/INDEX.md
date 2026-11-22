@@ -29,7 +29,7 @@ Every document under `docs/`, grouped by purpose. For the headline Revision 14 n
 | [association-plan.md](association-plan.md) | Planned association analysis specification. |
 | [assumption-plan.md](assumption-plan.md) | Fixed plan, written on 21 November 2026 before any fit, for testing each assumption a GRM result depends on: one diagnostic, nine comparisons (cutoff, cap, inputs, screen, settings, labels and MIC, outside learners, stability, pick), and a later-records test. |
 | [assumption-plan-later-records.md](assumption-plan-later-records.md) | Counts behind the plan's later-records test: 252,148 BV-BRC lab records set aside on 21 November 2026, counted with no fit. |
-| [assumption-plan-corrections.md](assumption-plan-corrections.md) | Dated corrections to the fixed plan: the study-split row, the release's missing fold models, and the design of the MIC comparison. |
+| [assumption-plan-corrections.md](assumption-plan-corrections.md) | Dated corrections to the fixed plan: the study-split row, the release's missing fold models, the design of the MIC comparison, and four changes to its checks. |
 
 ## Methodology, pipeline, and contracts
 
@@ -40,6 +40,7 @@ Every document under `docs/`, grouped by purpose. For the headline Revision 14 n
 | [species-check.md](species-check.md) | Species-identity check that drops genomes whose sequence does not fit their labelled species (revision 10). |
 | [fold-draws.md](fold-draws.md) | Repeated fold-draw design and stability checks. |
 | [fold-file.md](fold-file.md) | Supplied fold-plan file format for `grm learn --fold-file`. |
+| [mic-plan.md](mic-plan.md) | Experimental MIC models on a fold plan (`grm learn --exp-mic`, off by default), and the scripts that run and score one species. |
 | [null-fold-refit.md](null-fold-refit.md) | Experimental null-fold refit flag (off by default). |
 | [matrix-scaling.md](matrix-scaling.md) | Out-of-core partial matrix building (`--disk-sparse`) and the `REVIEWED_COLUMNS` (4,096) review gate. |
 | [lasso-layout.md](lasso-layout.md) | Machine-code layout check for `grm::learn::lasso::column_sum`. |

@@ -263,6 +263,9 @@ jobs:
           # Reads README.md, docs/INDEX.md and committed reference/ and web/src/data/ files; it fits nothing.
           - suite: tests/readme_summary
             top: .
+          # SYNTHETIC cohorts and results built in the test; it runs the scripts under scripts/c6-mic and fits nothing.
+          - suite: tests/c6_mic
+            top: .
     env:
       SUITE: ${{ matrix.suite }}
       TOP: ${{ matrix.top }}

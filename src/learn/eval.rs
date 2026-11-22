@@ -887,7 +887,7 @@ fn fold_seed(cfg: &EvalConfig, fold: usize) -> u64 {
 
 /// The base seed of the learners' own draws: `EvalConfig::learner_seed`, or
 /// `EvalConfig::seed` when it is not set.
-fn draw_seed(cfg: &EvalConfig) -> u64 {
+pub(crate) fn draw_seed(cfg: &EvalConfig) -> u64 {
     cfg.learner_seed.unwrap_or(cfg.seed)
 }
 
@@ -1976,7 +1976,7 @@ fn final_lasso(
     )
 }
 
-fn evaluate_mic(
+pub(crate) fn evaluate_mic(
     x: &BitMatrix,
     y: &Bits,
     min_support: u32,
