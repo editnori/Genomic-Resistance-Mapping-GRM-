@@ -19,3 +19,14 @@ A result records the evaluation revision, the input fingerprint the dataset's re
 Any split here is a retrospective split inside one public database. A split by lineage or by study is not external validation, and an agreement line of 0.90 is an adapted research screen, never an applicable FDA validation criterion.
 
 Tests: `src/learn/micplan.rs`, `analysis::tests::the_mic_experiment_writes_one_result_per_plan_and_nothing_else` and `tests::learn_takes_the_mic_experiment_only_with_an_output_and_no_other_experiment` in `src/main.rs`.
+
+## Running one species
+
+`scripts/c6-mic/` runs the experiment for one species on a box of its own and scores it:
+
+- `run_species.sh KIT SPECIES LINEAGE STUDY OUT [JOBS]` takes the species' datasets on the lineage split and on the study split as comma lists (`-` for none). It builds `grm` from the checkout and records its commit and sha256, builds the species' data root from public files checked against a pinned list, writes the study plan for seed 47, fits, checks that every result exists, scores, and writes `OUT/DONE` with the sha256 of its list of output files. Any failure writes `OUT/FAILED` and exits 1. Run again, it skips finished steps and fits only missing results. It stops nothing but itself.
+- `expect.py` lists the results a run must hold. The lineage split runs at seeds 42 to 47. The study split runs the five reviewed study plans (`study-whole`, `study-d1` to `study-d4`) at seeds 42 to 46 and `c6mic-s47` at 47. Seeds 42, 43 and 44 fit `released,ordered`; seeds 45, 46 and 47, the twin, fit `released` only. Every result holds the training median.
+- `study_plans.py` writes `c6mic-s47`. A unit is the genomes all five reviewed study plans test in one fold, so a unit keeps each study whole. Units are placed by the reviewed plans' rule B, in the order of `sha256("c6mic-20261122|study-s47|" + the unit's lowest genome id)`. A plan that splits a unit or a k-mer copy group, or leaves a fold without both classes, is not written.
+- `score.py` checks each result first: format, plan and arms, the input fingerprint against the dataset's release report, the test counts of each fold, each fold's training median recounted from the other folds, and a prediction for every tested genome of an available arm. Then it writes one row per dataset, split, seed and arm (`released`, `ordered`, `median`): EA-exact, then category agreement, the very major error rate and the major error rate, each with its count and denominator. EA-exact reads MIC values only. The other three read the R and S labels, through the call and through each fold's training breakpoint. An unavailable arm, or a fold with MIC test genomes and no breakpoint, leaves the figures empty and is counted. No figure is taken over part of the folds. The scores hold no row per genome and no genome id.
+
+Tests: `tests/c6_mic`, on SYNTHETIC cohorts and results only.
