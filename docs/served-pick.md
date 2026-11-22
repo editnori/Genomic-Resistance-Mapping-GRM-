@@ -54,7 +54,8 @@ It holds counts and calls only: no genome id and no row per genome.
 - each learner's outer calls, summed over the folds, give the balanced accuracy of its split row, and each fold's calls are its test genomes';
 - each inner pick's folds cover its outer fold's training genomes exactly, its summed inner calls give its inner figures, and its pick and tied set follow from those figures under the file's tie rule;
 - a twin fits no inner fold, and a fold with no pick says why;
-- at seed 42, each learner's lineage figure and the default's random-split figure equal the release report's.
+- the default's learner is the later of its tied set, as the release breaks a tie;
+- at seed 42, each learner's lineage figure and the default's random-split figure equal the release report's, and the default's learner is the one the release serves (`best_learner` in the release's `index.json`).
 
 A failed check stops the scorer before it scores anything. It writes `checks.tsv`, `draws.tsv`, `datasets.tsv` (species and antibiotic in full), `picks.tsv` and `options.txt`, and prints its check counts only.
 

@@ -112,7 +112,8 @@ def release(d, dataset=DATASET):
 
 
 def write_run(top, docs, expect_rows, releases):
-    """Lay out a SYNTHETIC run: top/expect.tsv, top/picks/<file>, top/release/datasets/<dataset>.json."""
+    """Lay out a SYNTHETIC run: top/expect.tsv, top/picks/<file>, top/release/datasets/<dataset>.json and
+    top/release/index.json."""
     top = pathlib.Path(top)
     (top / "picks").mkdir(parents=True, exist_ok=True)
     (top / "release" / "datasets").mkdir(parents=True, exist_ok=True)
@@ -127,6 +128,14 @@ def write_run(top, docs, expect_rows, releases):
     for dataset, rep in releases.items():
         with open(top / "release" / "datasets" / f"{dataset}.json", "w") as f:
             json.dump(rep, f)
+    # The release index: the learner served is the random split's best, a tie to the later learner.
+    index = []
+    for dataset, rep in releases.items():
+        rnd = [(l["metrics"]["balanced_accuracy"], i, l["learner"]) for s in rep["splits"] if s["scheme"] == "random"
+               for i, l in enumerate(s["learners"])]
+        index.append({"id": dataset, "best_learner": max(rnd)[2] if rnd else None})
+    with open(top / "release" / "index.json", "w") as f:
+        json.dump({"datasets": index}, f)
     return top / "expect.tsv", top / "picks", top / "release", top / "score"
 
 

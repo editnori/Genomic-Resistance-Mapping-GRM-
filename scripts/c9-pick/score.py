@@ -21,10 +21,12 @@ over the folds give the balanced accuracy the split's row holds; the folds'
 test genomes sum to the tested genomes, by class; each inner pick covers
 its outer fold's training genomes exactly and nothing else; its summed
 inner calls, its inner balanced accuracy, its tied set and its pick follow
-from its inner folds under the run's tie rule; at seed 42, each learner's
-lineage balanced accuracy and the default's random-split figure equal the
-release report's. A lineage split the run found unavailable is counted, not
-failed.
+from its inner folds under the run's tie rule; the default's learner is
+the later of its tied set, as the release breaks a tie; at seed 42, each
+learner's lineage balanced accuracy and the default's random-split figure
+equal the release report's, and the default's learner is the one the
+release serves (<release dir>/index.json, best_learner). A lineage split
+the run found unavailable is counted, not failed.
 
 Scores, per dataset, split, seed and arm (default, inner, twin): the served
 calls summed over the outer folds, each fold taking the calls of the learner
@@ -139,8 +141,9 @@ def read_tsv(path):
         return list(csv.DictReader(f, delimiter="\t"))
 
 
-def check(exp, doc, release):
-    """[(check name, passed, detail)] for one result against its expect row and the release report."""
+def check(exp, doc, release, served_learner=None):
+    """[(check name, passed, detail)] for one result against its expect row, the release report and the
+    learner the release serves for the dataset (its index.json's best_learner)."""
     out = []
 
     def ok(name, cond, detail=""):
@@ -208,6 +211,8 @@ def check(exp, doc, release):
         d = doc.get("default")
         ok("a lineage result names the default's pick", d is not None and d["learner"] in LEARNERS
            and d["learner"] in d["tied"])
+        ok("the default's learner is the later of its tied set, as the release breaks a tie",
+           d is not None and bool(d["tied"]) and d["tied"][-1] == d["learner"])
         if int(exp["seed"]) == RELEASE_SEED and release is not None and d is not None:
             rel = {s["scheme"]: s for s in release["splits"]}
 
@@ -219,6 +224,8 @@ def check(exp, doc, release):
                all(r12(doc["learners"][i]["balanced_accuracy"]) == figure("lineage", l) for i, l in enumerate(LEARNERS)))
             ok("seed 42: the default's random-split figure is the release report's",
                r12(d["random_balanced_accuracy"]) == figure("random", d["learner"]))
+            ok("seed 42: the default's learner is the one the release serves",
+               served_learner is not None and d["learner"] == served_learner)
     else:
         ok("a study result names no default of its own", doc.get("default") is None)
     return out
@@ -483,6 +490,10 @@ def main(argv):
     expect_path, picks, release, out = Path(rest[0]), Path(rest[1]), Path(rest[2]), Path(rest[3])
     expect = read_tsv(expect_path)
     checks, docs, names = [], {}, {}
+    served_by = {}
+    if (release / "index.json").is_file():
+        with open(release / "index.json") as f:
+            served_by = {x["id"]: x.get("best_learner") for x in json.load(f).get("datasets", [])}
     for e in expect:
         path = picks / e["file"]
         rel_path = release / "datasets" / f"{e['dataset']}.json"
@@ -499,7 +510,7 @@ def main(argv):
         docs[e["file"]] = doc
         checks.append((e["file"], "exists", True, ""))
         checks.append((e["file"], "release report", rel is not None, ""))
-        for name, passed, detail in check(e, doc, rel):
+        for name, passed, detail in check(e, doc, rel, served_by.get(e["dataset"])):
             checks.append((e["file"], name, passed, detail))
     out.mkdir(parents=True, exist_ok=True)
     write_tsv(out / "checks.tsv", [{"file": f, "check": c, "passed": p, "detail": d} for f, c, p, d in checks],

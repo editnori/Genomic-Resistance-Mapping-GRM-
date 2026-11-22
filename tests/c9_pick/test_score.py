@@ -123,6 +123,27 @@ class Checks(unittest.TestCase):
         self.assertEqual(rc, 1)
         self.assertEqual(failed(checks), ["seed 42: the default's random-split figure is the release report's"])
 
+    def test_a_default_other_than_the_learner_the_release_serves_fails_at_seed_42(self):
+        # A default naming another learner with that learner's own random figure and tied set passes the figure
+        # checks; only the release's index, which names the learner it serves, shows it.
+        def change(r, d):
+            if r[6] == "draw":
+                d["default"] = {"learner": "gbt", "random_balanced_accuracy": 0.7, "tied": ["gbt"]}
+        rows, docs, rels = common.full_run()
+        rows2, docs2, _ = common.full_run(change=change)
+        rc, _, checks, _, _ = run(rows2, docs2, rels)
+        self.assertEqual(rc, 1)
+        self.assertEqual(failed(checks), ["seed 42: the default's learner is the one the release serves"])
+
+    def test_a_default_that_breaks_a_random_split_tie_to_the_earlier_learner_fails(self):
+        def change(r, d):
+            if r[6] == "draw":
+                d["default"] = {"learner": "rf", "random_balanced_accuracy": 0.8, "tied": ["rf", "gbt"]}
+        rows, docs, rels = common.full_run(change=change)
+        rc, _, checks, _, _ = run(rows, docs, rels)
+        self.assertEqual(rc, 1)
+        self.assertEqual(failed(checks), ["the default's learner is the later of its tied set, as the release breaks a tie"])
+
     def test_a_missing_result_fails(self):
         rows, docs, rels = common.full_run()
         del docs[rows[1][7]]
