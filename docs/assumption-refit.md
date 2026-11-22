@@ -28,28 +28,32 @@ That root holds the rebuilt revision 14 table with each dataset's breakpoint set
 
 **Equality.** `scripts/refit/refit_check.py` decides whether a refit report is the release's rule. Every top-level field of the release's report but `seconds` must be equal, with each sample's fitted fields, each split's folds, and every field but `seconds` of each learner row.
 
-**Allowed.** Three new fields pass: `fold_models`, which must hold one model per fold for each of the five learners on each split that ran, each sample's `rule_groups`, and `selection`. A sample's country, year, host and MLST type are counted apart, since the refit's genome metadata is left empty and no fit or fingerprint reads them. With those fields taken out, both reports written again in their own key order must be the same text. The check writes counts and field names only.
+**Cards.** The top-level `features` list is compared card by card, in order. A card's `kmer` and `locus` may differ: both are written after the fit from genome files and CDS lists fetched again from BV-BRC, and a file served today can differ in bytes from the one the release fetched. Every other card field, and the number and order of the cards, must be equal. `datasets.tsv` counts the cards whose `kmer` or `locus` differs in its last column, `cards_with_other_locus`. A `kmer` or `locus` key anywhere else is compared as any field.
+
+**Allowed.** Three new fields pass: `fold_models`, which must hold one model per fold for each of the five learners on each split that ran, each sample's `rule_groups`, and `selection`. A sample's country, year, host and MLST type are counted apart, since the refit's genome metadata is left empty and no fit or fingerprint reads them. With those fields taken out and each card's `kmer` and `locus` values set to one mark, both reports written again in their own key order must be the same text. The check writes counts and field names only.
 
 ## Running one species
 
 `scripts/refit/run_species.sh KIT SPECIES DATASETS OUT [JOBS]` runs on a box of its own with no agent. DATASETS is the species' datasets that are not M, as a comma list. It refuses a dataset that the label count's table marks M.
 
-Its steps up to the matrix are `scripts/c6-mic/run_species.sh`'s in the same text. The kit is pinned by sha256, OUT takes one start, and a moved checkout, build or dataset list is refused. Each step's log is copied to `OUT/logs` with every genome id written as `[genome id]`. Then:
+Its steps up to the matrix are `scripts/c6-mic/run_species.sh`'s in the same text. The kit is pinned by sha256, OUT takes one start, and a changed build or dataset list is refused. A species with a D0 dataset is refused at the kit step, before any fetch, unless `python3 -I` imports numpy 1.26.4 on python 3.12 (`python3-numpy` by apt). Each step's log is copied to `OUT/logs` with every genome id written as `[genome id]`. Then:
 
 | Step | Work |
 |---|---|
 | learn | `grm learn` over the listed datasets whose report is missing or has no `fold_models`; every listed report must then hold them |
-| check | `refit_check.py`; any difference stops the species before D0 or C8 reads a report |
+| check | `refit_check.py`; any difference but a feature card's `kmer` and `locus` stops the species before D0 or C8 reads a report |
 | C8 | `c8.py` over the species' refit reports, before the program, so a failure in the program or D0 still leaves C8's tables |
 | program | for the species' MISS datasets among the listed: the program installed from the AMRFinderPlus kit and proved on the tool's own test file, then run on every genome of the species that has a table recorded for the release, each table equal to the sha256 recorded for it. The release ran the program on the genomes of its rule datasets, so a genome in none has no table: *Staphylococcus aureus* lists 2,000 genomes and 1,994 have one |
 | D0 | per dataset, `grm export` on the same data root and `d0.py dataset` on the refit report, then `d0.py combine` with the species' own dataset and pair counts |
 
 **End.** A finished species writes `DONE <species> <time> binary <sha256> code <sha256> d0 <n> datasets SHA256SUMS <sha256>`. A species with no MISS dataset among the listed skips the program and D0, and its line says `d0 skipped: no MISS dataset among the listed` in place of `d0 <n> datasets`. Any failure writes `OUT/FAILED` naming the step and exits 1. Run again, the script skips finished steps and fits only the reports that are missing or hold no `fold_models`. It stops no process but its own.
 
+**Restart.** A restart on a later checkout goes on when the built binary's sha256 still equals `binary.txt`'s and the commits differ only under `scripts/refit/`, `docs/`, `tests/` and `.github/`. Any other changed path refuses, `src/` and `scripts/assumption-d0-c8/` among them. The restart keeps the fitted reports, runs the check again and adds a line `restart <commit> <time>` to `binary.txt`.
+
 **Copy.** The refit reports, the data root, the exports and the raw logs hold genome ids and stay on the box. After a count of genome ids over exactly these files, they may leave it: `binary.txt`, `expect.txt`, `d0.txt`, `SHA256SUMS`, `DONE`, `FAILED`, `logs/`, `check/` and `results/`. D0's tables and the program's adapter summary are under `results/d0`, and C8's are under `results/c8`.
 
 **Check.** `scripts/refit/check_run_species.sh KIT RELEASE WORK` checks the run script before a run, in a few minutes, with a stub in place of `grm` that writes SYNTHETIC reports. A run with no fault ends at the check. A copy of the release's reports with null fold models runs to `DONE` on *Klebsiella quasipneumoniae*, none of whose datasets is in MISS, and says D0 was skipped.
 
-**Faults.** The same script runs a failed fit, a missing report, a report without fold models, a moved or changed checkout, a changed dataset list or kit file, and a second start. It lists *Acinetobacter baumannii* with amikacin, which is marked M. It puts a genome id in a retry line, which must leave none in the files that may leave the box.
+**Faults.** The same script runs a failed fit, a missing report, a report without fold models, a changed checkout or binary, a changed dataset list or kit file, and a second start. A restart after a commit under `scripts/refit/` must go on and record it, and one under `src/` or `scripts/assumption-d0-c8/` must be refused. With numpy hidden, a species with a D0 dataset must stop at the kit step and one with none must run. It lists *Acinetobacter baumannii* with amikacin, which is marked M. It puts a genome id in a retry line, which must leave none in the files that may leave the box.
 
 Tests: `tests/assumption_d0_c8` and `tests/refit`, on SYNTHETIC reports, exports and calls only.
