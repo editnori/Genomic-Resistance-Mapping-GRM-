@@ -31,6 +31,7 @@ Every document under `docs/`, grouped by purpose. For the headline Revision 14 n
 | [assumption-plan-later-records.md](assumption-plan-later-records.md) | Counts behind the plan's later-records test: 252,148 BV-BRC lab records set aside on 21 November 2026, counted with no fit. |
 | [assumption-plan-corrections.md](assumption-plan-corrections.md) | Dated corrections to the fixed plan: the study-split row, the release's missing fold models, the design of the MIC comparison, four changes to its checks, and the readings of D0's causes. |
 | [mic-comparison.md](mic-comparison.md) | MIC comparison of plan block C6 part B: the released MIC model, an ordered model and the training median on lineage and study folds, 100 and 28 datasets in 12 species, read by rules fixed before any score. |
+| [cohort-result.md](cohort-result.md) | Small-cohort result of plan block C1 part B: the estimate's error at 10, 15 and 20 genomes a class against 25, on 89 datasets in 10 species, read once by rules fixed before any score. No lower line is a candidate. |
 | [assumption-refit.md](assumption-refit.md) | Refit of the release's rule with fold models saved, its check against the release, and the plan's D0 and C8 readers run on it, one species a box. |
 
 ## Methodology, pipeline, and contracts
