@@ -298,6 +298,21 @@ class D0Gates(Base):
         S.seal(a)
         self.stops(r"not read from fold models")
 
+    def test_a_cause_that_is_not_its_folds_stops(self):
+        # SYNTHETIC: synthia_alpha__drugamycin with scm has 1 absent fold; a cause column of unused does not hold.
+        a = self.species("synthia_alpha")
+        p = os.path.join(a, "results", "d0", "d0-datasets.tsv")
+        rows = table(p)
+        for r in rows:
+            if (r["dataset"], r["learner"]) == ("synthia_alpha__drugamycin", "scm"):
+                r["cause"] = "unused"
+        with open(p, "w", encoding="utf-8", newline="") as f:
+            w = csv.writer(f, delimiter="\t", lineterminator="\n")
+            w.writerow(list(rows[0]))
+            w.writerows([list(r.values()) for r in rows])
+        S.seal(a)
+        self.stops(r"not the one covering most of the missed folds")
+
     def test_a_d0_dataset_twice_stops(self):
         a = self.species("synthia_alpha")
         p = os.path.join(a, "results", "d0", "d0-datasets.tsv")

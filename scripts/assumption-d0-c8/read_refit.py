@@ -261,6 +261,15 @@ def read_d0_table(path, species, d0_list):
         for k in ["missed_folds"] + [f"folds_{c}" for c in d0.CAUSES]:
             if not r[k].isdigit():
                 raise Stop(f"{where}: {k} is not a count")
+        # Rules for D0 4: a pair goes to the cause covering most of its missed folds, a tie counts in each, and a
+        # pair with no missed fold has no cause. d0.py combine counts the cause column, so it must be its tallies'.
+        tally = {c: int(r[f"folds_{c}"]) for c in d0.CAUSES}
+        most = max(tally.values())
+        want = "+".join(c for c in d0.CAUSES if tally[c] == most and most > 0) if r["in_miss"] == "yes" else ""
+        if (r["cause"] if r["cause"] != "NA" else "") != want or (
+                r["in_miss"] == "yes" and sum(tally.values()) != int(r["missed_folds"])):
+            raise Stop(f"{where}: the cause is not the one covering most of the missed folds, or the folds do not "
+                       "add up to the missed folds")
     if seen != {(d, l) for d in d0_list for l in fr.LEARNERS}:
         raise Stop(f"{p}: does not hold the five learners of each D0 dataset")
     return rows
