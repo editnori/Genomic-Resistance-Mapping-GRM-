@@ -74,7 +74,7 @@ class Clean(Base):
         code, out, err = self.run_reader()
         self.assertEqual(code, 0, err)
         self.assertIn("no single cause holds 0.40 of 6 miss pairs: C4, C3, C5", out)
-        self.assertIn("C4, C3, C5 (the plan's default)", out)
+        self.assertIn("C4, C3, C5 (the plan's default); then C7, after the three in every outcome", out)
         # Ruling 6: the record's MISS holds synthia_alpha__mdrug, marked M, so 3 of 4 datasets and 6 of 7 pairs
         # are read; the largest cause of the four, 2, reaches 0.40 of 7 with the 1 pair added.
         self.assertIn("coverage: D0 reads 3 of the plan's 4 MISS datasets and 6 of its 7 miss pairs", out)
@@ -150,7 +150,7 @@ class Clean(Base):
         shutil.rmtree(self.out)
         code, out, err = self.run_reader(order_rest="default-after")
         self.assertEqual(code, 0, err)
-        self.assertIn("order of the input group: C3, then C4 and C5", out)
+        self.assertIn("order of the input group: C3, then C4 and C5; then C7", out)
 
 
 class SpeciesGates(Base):

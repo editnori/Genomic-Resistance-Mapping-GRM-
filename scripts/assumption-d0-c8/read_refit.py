@@ -564,7 +564,7 @@ def summary_text(spp, a, lines, every, line, meaning):
         f"C8 bands: {a.c8_bands}; order line: {a.order_rest}",
         "",
         f"D0 ordering ({D0_NOTE}): {line}",
-        f"order of the input group: {meaning}",
+        f"order of the input group: {meaning}; then C7, after the three in every outcome (the plan's Order, item 5)",
         f"coverage: D0 reads {a.d0_datasets} of the plan's {a.plan_datasets} MISS datasets and "
         f"{every['all']['miss_datasets']} of its {a.plan_pairs} miss pairs; the MISS datasets that are M wait for "
         "the maintainer's label rule, and the line is read again then",
