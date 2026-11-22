@@ -262,3 +262,40 @@ The small-cohort run fitted its 10 species and scored each a second time by 19:5
 **Tests.** `tests/c1_cutoff` goes from 84 tests to 97, and 14 of 14 planted faults fail a test: the 12 and 2 planted in input files.
 
 **Written.** The rulings were fixed at 20:03Z on 22 Nov 2026 and this entry was written at 20:44Z. No score of any cohort run had been read.
+
+## Refit reading
+
+The refit of the release's rule ended on its 23 species and 238 datasets at 20:36Z on 22 Nov 2026. A reading program, `scripts/assumption-d0-c8/read_refit.py`, turns the species' D0 and C8 tables into the tables of one page. Its writer left ten questions the plan does not answer. The lead ruled on them at 17:52Z on 22 Nov 2026, before the run ended. No D0 or C8 count had been read beyond the rehearsal on *Klebsiella aerogenes* that the entry "D0 causes" names.
+
+| Choice | Fixed |
+|---|---|
+| One fold | In C8, a unit where one fold alone chose a feature keeps its four pairs at overlap 0, so its median is 0. Only a unit where no fold chose is undefined. |
+| Five learners | C8's row over the five learners pools the dataset and learner values. It decides nothing. |
+| Bands | C8 gets no cut point beyond the plan's "within 0.05". The quartiles stand beside the median. |
+| Check tables | The dataset and learner check tables gate the reading. The breakpoint and feature-list tables are counted on the species table. |
+| Order's rest | The cause that sets the order moves its block to the front. The other two blocks keep the default's order. |
+| Coverage | The order is set now, on 177 of the plan's 204 miss pairs, in 65 of its 75 MISS datasets. |
+| Family count | C8's family count reads the fold-chosen features that have a card, and is given with both denominators. |
+| Per dataset | D0 per dataset and learner goes into a file beside the page, with species and antibiotic in full. |
+| Removed | Removed keeps the plan's words, "C4's floor arm". The page says it covers the support floor and the 4,000-row screen together. |
+| Pooled share | The gap share pooled over the five learners is not on the page. |
+
+**Stability.** The other 27 miss pairs lie in the 10 MISS datasets marked M. Take x as the leading cause's pairs and y as the next cause's, among the four. A named first block is stable when x over 204 is 0.40 or more and x is above y plus 27. The default order is stable when no cause of the four reaches 0.40 of 204 with 27 pairs added. Otherwise the page says the 27 pairs could change the first block.
+
+**Again.** The line is read again when the maintainer's label rule is made.
+
+**Units.** Beside C8's median the page gives the units where fewer than two folds chose. The first and third quartiles use the inclusive method of Python's `statistics.quantiles`.
+
+**Cards.** Under the entry "Refit cards", a dataset whose only difference from the release is the `kmer` or `locus` of a feature card reads equal. The species table counts such cards.
+
+**Arguments.** The reading program runs once, with `--equal-tables datasets.tsv,learners.tsv --c8-one-fold zero --c8-over-five pairs --c8-bands none --order-rest default-after`. Its gates are given 23 species, 238 datasets, and D0's 65 datasets in 16 species with 177 miss pairs: 23 for `scm`, 28 for `cart`, 52 for `rf`, 41 for `gbt` and 33 for `lasso`.
+
+**Review.** A review recounted D0's cause counts, the order line and C8's medians from the rulings' words, before the program ran on the 23 species. Its own program gave the same value in 1,408 of 1,413 cells of a small SYNTHETIC input and in 18,449 of 18,454 cells of each of 11 SYNTHETIC inputs with the run's counts. On *Klebsiella aerogenes* with ertapenem, imipenem and meropenem it gave the same value in 545 of 550 cells. The inputs are separate, and their cell counts do not add. The real output was compared for equality only.
+
+**Faults.** The 5 cells that differed in each input were the gap shares pooled over the five learners, written on a page table against the last ruling. The tables also lacked the stability words and the count of units where fewer than two folds chose. Three gates had no test.
+
+**Fix.** Seven commits fix these. After them the recount agrees in 1,426 of 1,426 cells, in 18,467 of 18,467 cells of each of the 11, and in 562 of 562 cells.
+
+**Tests.** `tests/assumption_d0_c8` goes from 41 tests to 87. Of 24 planted faults, 14 in the code and 10 in input files, each fails a test or stops at a gate.
+
+**Written.** The rulings were fixed at 17:52Z on 22 Nov 2026 and this entry was written at 21:25Z. The run's own check had compared each species' refit with the release. No D0 or C8 count had been read beyond that rehearsal.

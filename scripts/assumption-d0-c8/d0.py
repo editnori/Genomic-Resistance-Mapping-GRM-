@@ -41,7 +41,10 @@ import json
 import os
 import sys
 
-import numpy as np
+try:
+    import numpy as np
+except ImportError:  # `combine` reads tables with the standard library alone
+    np = None
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import foldread as fr  # noqa: E402
@@ -57,11 +60,12 @@ SCREEN = 4000
 CLUSTERS = 2
 CHUNK = 1 << 16
 READING = "sets chosen by their result; orders comparisons, tests nothing"
-POP = np.array([bin(i).count("1") for i in range(256)], dtype=np.int64)
-# Constants that mix each word into two independent 64-bit hashes of a
-# row's training pattern, to find the lowest row of each pattern.
-_rng = np.random.default_rng(20261121)
-MIX = _rng.integers(1, 2**63, size=(2, 4096), dtype=np.uint64) | np.uint64(1)
+if np is not None:
+    POP = np.array([bin(i).count("1") for i in range(256)], dtype=np.int64)
+    # Constants that mix each word into two independent 64-bit hashes of a
+    # row's training pattern, to find the lowest row of each pattern.
+    _rng = np.random.default_rng(20261121)
+    MIX = _rng.integers(1, 2**63, size=(2, 4096), dtype=np.uint64) | np.uint64(1)
 
 
 class Gate(SystemExit):
