@@ -64,6 +64,9 @@ DONE_RE = re.compile(
 SUMS_RE = re.compile(r"(?P<sha>[0-9a-f]{64})  (?P<path>[A-Za-z0-9_.\-/]+)\Z")
 CHECK_DATASETS = ["dataset", "fitted_fields", "fields_that_differ", "samples_with_other_descriptive_fields",
                   "fold_models", "samples_with_rule_groups", "unexpected_new_keys", "text_equal_less_allowed"]
+# The check's later column (the correction "Refit cards"): feature cards whose `kmer` or `locus` differs from the
+# release's. A table without it comes from the earlier check, which let no card differ, so its count is 0.
+CHECK_CARDS = "cards_with_other_locus"
 CHECK_LEARNERS = ["dataset", "split", "learner", "verdict", "fields_that_differ", "largest_abs_difference"]
 SPECS = ["dataset", "breakpoint", "root_r_above", "release_r_above", "root_n", "release_n"]
 FEATURE_LISTS = ["fetched", "equal_to_master"]
@@ -100,11 +103,13 @@ def read_lines(path):
     return text.splitlines()
 
 
-def tsv(path, header):
+def tsv(path, header, *more):
+    """The table's rows by column name. Its header must be `header` or one of `more`."""
     with open(path, encoding="utf-8", newline="") as f:
         rows = list(csv.reader(f, delimiter="\t", quoting=csv.QUOTE_NONE))
-    if not rows or rows[0] != header:
+    if not rows or rows[0] not in (header,) + more:
         raise Stop(f"{path}: its columns are not the run's")
+    header = rows[0]
     for i, r in enumerate(rows[1:], start=2):
         if len(r) != len(header):
             raise Stop(f"{path}: line {i} has {len(r)} cells, want {len(header)}")
@@ -163,12 +168,12 @@ def read_check(path, listed, expect, equal_tables):
     """Gate 3: the check tables named in equal_tables read equal on every
     row. All present tables are read and counted."""
     out = {}
-    rows = tsv(os.path.join(path, "check", "datasets.tsv"), CHECK_DATASETS)
+    rows = tsv(os.path.join(path, "check", "datasets.tsv"), CHECK_DATASETS, CHECK_DATASETS + [CHECK_CARDS])
     got = [r["dataset"] for r in rows]
     if sorted(got) != expect or len(set(got)) != len(got):
         raise Stop(f"{path}: check/datasets.tsv does not hold each listed dataset once")
     for r in rows:
-        if not r["samples_with_other_descriptive_fields"].isdigit():
+        if not r["samples_with_other_descriptive_fields"].isdigit() or not r.get(CHECK_CARDS, "0").isdigit():
             raise Stop(f"{path}: check/datasets.tsv: {r['dataset']}: a count is not a count")
         if "datasets.tsv" in equal_tables and (
                 r["fitted_fields"] != "equal" or r["fields_that_differ"] != "-" or r["fold_models"] != "complete"
@@ -176,6 +181,8 @@ def read_check(path, listed, expect, equal_tables):
             raise Stop(f"{path}: check/datasets.tsv: {r['dataset']} does not read equal")
     out["check_datasets"] = len(rows)
     out["descriptive"] = sum(int(r["samples_with_other_descriptive_fields"]) for r in rows)
+    cards = [int(r.get(CHECK_CARDS, "0")) for r in rows]
+    out["cards"], out["cards_datasets"] = sum(cards), sum(n > 0 for n in cards)
     rows = tsv(os.path.join(path, "check", "learners.tsv"), CHECK_LEARNERS)
     keys = [(r["dataset"], r["split"], r["learner"]) for r in rows]
     if len(set(keys)) != len(keys) or any(r["dataset"] not in expect for r in rows):
@@ -393,10 +400,12 @@ def page_tables(spp, a, names, every, line, c8_long, c8_summary):
         c = s["check"]
         species_rows.append([c8.species_name(s["species"]), len(s["expect"]), "; ".join(abx), len(s["d0"]),
                              "; ".join(d0abx) if d0abx else "none", c["check_datasets"], c["check_learners"],
-                             c["specs_differ"], c["features_fetched"], c["features_equal"], c["descriptive"]])
+                             c["specs_differ"], c["features_fetched"], c["features_equal"], c["descriptive"],
+                             c["cards_datasets"], c["cards"]])
     species_header = ["species", "datasets", "antibiotics", "d0_datasets", "d0_antibiotics", "check_dataset_rows",
                       "check_learner_rows", "breakpoints_set_to_the_release", "feature_lists_fetched",
-                      "feature_lists_equal_to_master", "samples_with_other_descriptive_fields"]
+                      "feature_lists_equal_to_master", "samples_with_other_descriptive_fields",
+                      "datasets_with_other_locus_cards", "cards_with_other_locus"]
     learners_header = ["learner", "miss_pairs"] + [f"datasets_{c}" for c in d0.CAUSES] + \
         [f"share_of_gap_to_the_amrfinderplus_program_{c}" for c in d0.CAUSES] + \
         ["ties", "pairs_with_no_missed_fold", "reading"]

@@ -181,6 +181,36 @@ class SpeciesGates(Base):
         S.seal(a)
         self.stops(r"check/learners.tsv: synthia_alpha__drugamycin lineage rf does not read equal")
 
+    def with_card_column(self, slug, counts, name="cards_with_other_locus"):
+        """Rewrite the species' check/datasets.tsv as the later check writes it, and seal."""
+        a = self.species(slug)
+        path = os.path.join(a, "check", "datasets.tsv")
+        with open(path, encoding="utf-8") as f:
+            lines = f.read().splitlines()
+        self.assertEqual(len(lines) - 1, len(counts))
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(lines[0] + "\t" + name + "\n")
+            f.write("".join(f"{line}\t{n}\n" for line, n in zip(lines[1:], counts)))
+        S.seal(a)
+
+    def test_check_datasets_table_with_and_without_the_card_column(self):
+        # One species from the later check (a card column), the others from the earlier one (none).
+        self.with_card_column("synthia_alpha", ["0", "2", "5"])
+        code, _, err = self.run_reader()
+        self.assertEqual(code, 0, err)
+        sp = {r["species"]: r for r in self.page("page-species.tsv")}
+        self.assertEqual((sp["Synthia alpha"]["datasets_with_other_locus_cards"],
+                          sp["Synthia alpha"]["cards_with_other_locus"]), ("2", "7"))
+        self.assertEqual((sp["Synthia beta"]["datasets_with_other_locus_cards"],
+                          sp["Synthia beta"]["cards_with_other_locus"]), ("0", "0"))
+
+    def test_a_card_count_that_is_no_count_or_another_new_column_stops(self):
+        self.with_card_column("synthia_alpha", ["0", "some", "5"])
+        self.stops(r"check/datasets.tsv: synthia_alpha__\w+: a count is not a count")
+        S.write_species(os.path.join(self.tmp.name, "back"), "synthia_alpha")
+        self.with_card_column("synthia_alpha", ["0", "0", "0"], name="cards_with_other_bits")
+        self.stops(r"check/datasets.tsv: its columns are not the run's")
+
     def test_a_check_row_missing_stops(self):
         a = self.species("synthia_alpha")
         edit(os.path.join(a, "check", "learners.tsv"), "synthia_alpha__drugamycin\trandom\tgbt\tequal\t0\t0\n", "")
