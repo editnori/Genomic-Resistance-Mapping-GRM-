@@ -79,14 +79,14 @@ missing() {  # expected results with no file
   awk -F'\t' 'NR > 1 { print $9 }' "$H/out-$1/expect.tsv" 2>/dev/null \
     | while read -r f; do [ -e "$H/out-$1/results/cohorts/$f" ] || echo "$f"; done | wc -l
 }
-ids_out() {  # genome ids of the species' list in what RUN.md copies back
+ids_out() {  # ids_out <case> [<folder>]: genome ids of the species' list in what RUN.md copies back, or in that folder of the OUT
   python3 -I -c '
 import json, os, re, sys
 out, sp = sys.argv[1], sys.argv[2]
 ids = {g["id"] for g in json.load(open(os.path.join(out, "work/release/rev14-274-20261112/species", sp + ".json")))["genomes"]}
 tok = re.compile(r"(?<![\w.])\d+\.\d+(?!\d)")
 files = ["binary.txt", "expect.tsv", "lists.txt", "SHA256SUMS", "DONE", "FAILED"]
-for d in ["score", "logs", "results", "results/cohorts"]:
+for d in sys.argv[3:] or ["score", "logs", "results", "results/cohorts"]:
     if os.path.isdir(os.path.join(out, d)):
         files += [os.path.join(d, f) for f in os.listdir(os.path.join(out, d))]
 n = 0
@@ -96,7 +96,7 @@ for f in files:
         with open(p, errors="replace") as fh:
             n += sum(m.group(0) in ids for m in tok.finditer(fh.read()))
 print(n)
-' "$H/out-$1" "$SP"
+' "$H/out-$1" "$SP" "${@:2}"
 }
 bad=0
 report() {  # report <case> <wanted> <seen> <ok 0/1>
@@ -138,9 +138,10 @@ rm "$H/kit-changed/curated.sha256"; { cat "$KIT/curated.sha256"; echo; } > "$H/k
 case_ kit-changed; go kit-changed "$H/kit-changed"; seen=$(failed_at kit-changed)
 report kit-changed "at kit (curated.sha256 one byte longer)" "$seen" "$(has "$seen" "at kit")"
 
-case_ id-failed; STUB_MODE=id go id-failed; n=$(ids_out id-failed)
-report id-failed "at fit-s42, 0 genome ids in the copy-back" "$(failed_at id-failed), $n" \
-  "$([ "$n" = 0 ] && [[ $(failed_at id-failed) == *"at fit-s42"* ]] && echo 1 || echo 0)"
+case_ id-failed; STUB_MODE=id go id-failed; n=$(ids_out id-failed); raw=$(ids_out id-failed work/raw-logs)
+# The positive control: the raw log the scrub read holds the stub's two id lines.
+report id-failed "at fit-s42, 0 genome ids in the copy-back, 2 in the raw logs" "$(failed_at id-failed), $n, raw $raw" \
+  "$([ "$n" = 0 ] && [ "$raw" = 2 ] && [[ $(failed_at id-failed) == *"at fit-s42"* ]] && echo 1 || echo 0)"
 
 case_ id-retried; STUB_MODE=idok go id-retried; n=$(ids_out id-retried)
 report id-retried "0 genome ids in the copy-back" "$(failed_at id-retried), $n" "$([ "$n" = 0 ] && echo 1 || echo 0)"
