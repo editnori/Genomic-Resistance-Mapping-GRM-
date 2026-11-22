@@ -449,6 +449,48 @@ class Measures(unittest.TestCase):
             self.assertTrue(scm and all(m["results"] == 3 for m in scm), over)
 
 
+    def test_the_truth_inside_the_estimates_wilson_interval_counts_only_results_it_lies_inside(self):
+        d = "synthia_alpha__drug_a"
+        scores = [score_row(d, 10, 0, recall_covers="1"), score_row(d, 10, 1, recall_covers="0"),
+                  score_row(d, 10, 2, recall_covers="")] + [score_row(d, 25, j) for j in range(3)]
+        ent = read.entry([lines_row(d, "10", range(3)), lines_row(d, "25", range(3))], ["10", "25"])
+        m = next(m for m in read.measures(scores, ent, "shared", ["10", "25"])
+                 if (m["line"], m["side"], m["who"], m["measure"]) == ("10", "line", "truth", "recall"))
+        self.assertEqual((m["truth_inside_estimate_wilson"], m["of_results"], m["results"]), (1, 2, 3))
+
+    def test_the_median_over_datasets_is_a_median_and_unavailable_results_stay_out(self):
+        # Recall 1 of 10, 2 of 10 and 9 of 10 in three datasets: median 0.2, mean 0.4. A fourth result,
+        # not available, with 10 of 10 on another 10 genomes, enters nothing.
+        ds = ["synthia_alpha__drug_a", "synthia_beta__drug_c", "synthia_gamma__drug_d"]
+        scores = [score_row(d, 10, 0, truth_recall_k=k) for d, k in zip(ds, (1, 2, 9))]
+        scores.append(score_row(ds[0], 10, 1, available=False))
+        for over in ("available", "shared"):
+            lrows = [lines_row(d, ln, range(1) if ln == "10" else ()) for d in ds for ln in ("10", "25")]
+            meas = read.measures(scores, read.entry(lrows, ["10", "25"]), over, ["10", "25"])
+            if over == "available":
+                m = next(m for m in meas if (m["line"], m["who"], m["measure"]) == ("10", "truth", "recall"))
+                self.assertEqual((m["pooled_count"], m["pooled_denominator"], m["results"], m["datasets"]),
+                                 (12, 30, 3, 3))
+                self.assertEqual((m["pooled_value"], m["median_over_datasets"]), ("0.400000", "0.200000"))
+            else:  # no dataset has 3 shared draws, so nothing enters the shared measures
+                m = next(m for m in meas if (m["line"], m["side"], m["who"], m["measure"]) == ("10", "line", "truth", "recall"))
+                self.assertEqual((m["results"], m["pooled_denominator"]), (0, 0))
+
+    def test_a_dataset_with_no_line_at_25_is_listed_as_such_and_checked_against_the_count(self):
+        d, e = "synthia_alpha__drug_a", "synthia_beta__drug_c"
+        lrows = [lines_row(d, "10", range(3)), lines_row(d, "25", range(3)), lines_row(e, "10", range(3))]
+        ent = read.entry(lrows, ["10", "25"])
+        self.assertEqual(ent[("lineage", "all", "scm", "10", e)]["why"], "no line at 25")
+        self.assertEqual(ent[("lineage", "all", "scm", "10", d)]["why"], "")
+        row = count_row(row="learner", learner="scm", line="10", datasets=2, entered=1, not_scored=1,
+                        no_base_line=1, median_difference="0.0")
+        read.check_entry(ent, [row], True)
+        with self.assertRaises(read.Stop):
+            read.check_entry(ent, [dict(row, no_base_line="0")], False)
+        with self.assertRaises(read.Stop):  # the median the scorer wrote must be the listed differences'
+            read.check_entry(ent, [dict(row, median_difference="0.01")], True)
+
+
 class Rulings(unittest.TestCase):
     """The rulings of 20:03Z against tables() and summary(), on SYNTHETIC count rows."""
 
@@ -518,6 +560,23 @@ class Rulings(unittest.TestCase):
         rows[0].update(interval_hi="0.01")
         with self.assertRaises(read.Stop):
             self.tables(rows + line_rows("25-s45", 3))
+
+    def test_the_coverage_fractions_are_the_shared_results_at_the_line_less_25s(self):
+        rows = line_rows("10", 0, covered=(9, 10), base=(7, 10))
+        rows[0].update(base_covered_own="5", base_coverage_n_own="10")
+        (dec, *_), _ = self.tables(rows + line_rows("25-s45", 3))
+        self.assertEqual((dec[0]["coverage_at_line"], dec[0]["coverage_at_25"], dec[0]["coverage_minus_25"]),
+                         ("0.900000", "0.700000", "0.200000"))
+
+    def test_the_twin_is_read_on_its_levelled_row_alone(self):
+        rows = line_rows("10", 1) + line_rows("25-s45", 1)
+        rows += [dict(r, coverage="fold_range") for r in line_rows("25-s45", 4)]
+        for rule in ("void", "beside"):
+            (dec, twin, other, *rest), text = self.tables(rows, twin_rule=rule)
+            self.assertFalse(rest[3], rule)  # void: the twin does not meet on its deciding row
+            self.assertEqual(next(r for r in dec if r["row"] == "line")["reading"],
+                             read.NOT_CANDIDATE + ": " + read.NOT_SHOWN, rule)
+            self.assertIn(read.TWIN_FAILS, next(r for r in twin if r["row"] == "line")["reading"])
 
     def test_ruling_2_line_50_beside_is_no_candidate_in_any_cell_or_summary_line(self):
         (dec, twin, other, *_), text = self.tables(line_rows("10", 1) + line_rows("25-s45", 3) + line_rows("50", 5))
