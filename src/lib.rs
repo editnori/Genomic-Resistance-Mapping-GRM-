@@ -17,6 +17,7 @@ pub mod drugs;
 pub mod export;
 pub mod fasta;
 mod fnv;
+pub mod input_arms;
 pub mod intervals;
 pub mod kset;
 pub mod layout;

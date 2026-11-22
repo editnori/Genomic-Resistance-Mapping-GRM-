@@ -273,6 +273,13 @@ src/lib.rs fasta::tests::reads_fastq
 src/lib.rs fasta::tests::reads_multiline_fasta_and_gzip
 src/lib.rs fasta::tests::stats_report_n50_and_gc
 src/lib.rs fnv::tests::fnv1a_matches_published_values
+src/lib.rs input_arms::tests::a_cohort_genome_without_a_table_stops_the_dataset
+src/lib.rs input_arms::tests::a_table_gives_the_named_column_of_the_admitted_rows
+src/lib.rs input_arms::tests::an_arm_matrix_does_not_change_with_the_labels
+src/lib.rs input_arms::tests::no_outer_test_genome_changes_a_fits_candidates
+src/lib.rs input_arms::tests::the_arm_dataset_keeps_labels_and_columns_and_counts_its_rows
+src/lib.rs input_arms::tests::the_joined_arm_holds_each_block_once_the_program_first
+src/lib.rs input_arms::tests::the_program_block_keeps_the_cohort_range_and_each_pattern_once
 src/lib.rs intervals::tests::clopper_pearson_boundaries_have_closed_forms
 src/lib.rs intervals::tests::clopper_pearson_matches_scipy_beta_ppf
 src/lib.rs intervals::tests::clopper_pearson_tails_hold_alpha_over_two
@@ -715,6 +722,7 @@ src/main.rs tests::learn_refuses_the_null_fold_refit_beside_a_fold_file
 src/main.rs tests::learn_refuses_the_null_fold_refit_beside_the_tie_rule_experiment
 src/main.rs tests::learn_takes_a_fold_file_only_with_its_output_directory_and_one_species
 src/main.rs tests::learn_takes_a_seed_and_a_learner_seed_and_the_pipeline_takes_neither
+src/main.rs tests::learn_takes_the_c3_input_arm_only_when_asked
 src/main.rs tests::learn_takes_the_c9_pick_only_when_asked
 src/main.rs tests::learn_takes_the_cohort_experiment_only_with_an_output_and_no_other_experiment
 src/main.rs tests::learn_takes_the_mic_experiment_only_with_an_output_and_no_other_experiment

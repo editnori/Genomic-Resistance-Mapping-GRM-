@@ -725,6 +725,11 @@ fn analyze_dataset_as(
         }),
         cfg,
     )?;
+    // The C3 experiment (`input_arms`) writes its counts and the C9 writer's
+    // per-fold calls; its rows carry no k-mer to annotate, so no report.
+    if crate::input_arms::active().is_some() {
+        return Ok(None);
+    }
 
     // Catalog baseline: the same calls in every split, since nothing trains.
     let truth = &resistant;
@@ -940,14 +945,18 @@ fn eval_inputs<'a>(input: &'a SpeciesInputs, spec: &DatasetSpec) -> Result<Optio
         return Ok(None);
     }
     let min_support = eval::support_floor(c.rows.len());
-    project_cohort(input, c, min_support).map(Some)
+    project_cohort(input, c, min_support, &spec.id, "drawn").map(Some)
 }
 
 /// `eval_inputs` for a cohort already drawn, projected at `min_support`.
+/// With the C3 experiment on (`input_arms`), the projection is the arm's
+/// matrix in place of K31's, and `dataset` and `tag` name its counts file.
 fn project_cohort<'a>(
     input: &'a SpeciesInputs,
     c: Cohort<'a>,
     min_support: u32,
+    dataset: &str,
+    tag: &str,
 ) -> Result<EvalInputs<'a>> {
     let resistant: Vec<bool> = c.rows.iter().map(|p| p.reported == Some(Call::R)).collect();
     // Per-fit candidates are a subset of the projection only when the species
@@ -958,6 +967,12 @@ fn project_cohort<'a>(
         input.matrix.summary.min_support
     );
     let ds = Dataset::project(&input.matrix, c.columns.clone(), &resistant, min_support);
+    let ds = if crate::input_arms::active().is_some() {
+        let ids: Vec<String> = c.rows.iter().map(|p| p.genome_id.clone()).collect();
+        crate::input_arms::apply(ds, dataset, tag, &ids, min_support)?
+    } else {
+        ds
+    };
     let groups = c
         .columns
         .iter()
@@ -1129,7 +1144,13 @@ pub fn evaluate_fold_file(
         .with_context(|| format!("fold file {}", fold_file.display()))?;
     // Projected at the floor of the genomes the file tests or trains, so
     // the genomes it leaves unused set no candidate (`evaluate_assigned`).
-    let e = project_cohort(&input, c, eval::supplied_support_floor(&roles))?;
+    let e = project_cohort(
+        &input,
+        c,
+        eval::supplied_support_floor(&roles),
+        &spec.id,
+        &file.scheme,
+    )?;
     // The evaluator refuses a fold that tests a genome and trains on its
     // copy, by sample number. Refuse it here first, by the ids the file uses.
     for group in &e.duplicates {
@@ -1453,7 +1474,13 @@ pub fn mic_plan_fold_file(
     let roles = file
         .roles(&spec.id, &sample_ids)
         .with_context(|| format!("fold file {}", fold_file.display()))?;
-    let e = project_cohort(&input, c, eval::supplied_support_floor(&roles))?;
+    let e = project_cohort(
+        &input,
+        c,
+        eval::supplied_support_floor(&roles),
+        &spec.id,
+        &file.scheme,
+    )?;
     for group in &e.duplicates {
         for f in 0..file.folds() {
             let tested = group.iter().find(|&&i| roles[i] == eval::Role::Test(f));
@@ -1931,6 +1958,11 @@ fn analyze_species_as(
                     done_line(&spec.id, report.seconds, &report.evaluation, &report.splits)?
                 );
                 written.push(spec.id.clone());
+            }
+            None if crate::input_arms::active().is_some() => {
+                // An input arm writes no report and removes none; its
+                // results are the files `input_arms` and the C9 writer made.
+                eprintln!("    {}: input arm, no report written or removed", spec.id);
             }
             None => {
                 eprintln!(
