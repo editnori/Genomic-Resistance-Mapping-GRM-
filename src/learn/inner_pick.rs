@@ -825,6 +825,95 @@ mod tests {
     }
 
     #[test]
+    fn each_inner_fit_learns_from_its_inner_training_part_alone() {
+        // Recomputed apart from inner_fold_pick: inner fit j of outer fold f
+        // trains on the outer training genomes less inner fold j, with
+        // candidates from those genomes alone, at inner_seed(seed, f, j) for
+        // its own folds and its draws, and is scored on inner fold j. An
+        // extra feature copies feature 0, turned round on inner fold 0: inner
+        // fit 0's genomes see the two as one, so its candidates keep feature
+        // 0 alone, and candidates screened on the whole outer training set
+        // would keep both.
+        let cfg = config();
+        let (_, y, groups) = fixture();
+        let folds = crate::learn::grouped_folds(&y, &groups, cfg.folds, cfg.seed);
+        let set = Settings {
+            dir: PathBuf::new(),
+            inner_folds: 3,
+            tie: PickTie::Later,
+        };
+        let tuning = Some(groups.as_slice());
+        for (f, (train, _)) in fold_masks(&folds, cfg.folds).into_iter().enumerate() {
+            let part = inner_partition(&y, &train, &groups, 3, cfg.seed, f);
+            let (mut x, _, _) = fixture();
+            let copy: Vec<usize> = (0..150)
+                .filter(|&i| x.get(0, i) != (train.contains(i) && part[i] == 0))
+                .collect();
+            x.push_row(Bits::from_indices(150, copy).words());
+            let got = inner_fold_pick(
+                "d", "lineage", &x, &y, &groups, tuning, &train, f, 3, &cfg, &set,
+            );
+            assert_eq!(got.status, "picked", "fold {f}: {:?}", got.reason);
+            assert_eq!(got.inner_folds.len(), 3);
+            for (li, &learner) in LEARNERS.iter().enumerate() {
+                let row = &got.learners[li];
+                assert!(row.error.is_none(), "fold {f}, {learner}: {:?}", row.error);
+                let (mut tp, mut fp, mut tn, mut fn_) = (0, 0, 0, 0);
+                for j in 0..3 {
+                    let fit = Bits::from_indices(150, train.iter_ones().filter(|&i| part[i] != j));
+                    let members: Vec<usize> = train.iter_ones().filter(|&i| part[i] == j).collect();
+                    let cx = training_candidates(&x, &fit, 3).0;
+                    let seed = inner_seed(cfg.seed, f, j);
+                    let context = LassoContext {
+                        dataset: "d",
+                        scheme: "lineage",
+                        outer_fold: Some(f),
+                    };
+                    let (scored, _) =
+                        fit_seeded(learner, &cx, &y, &fit, tuning, &cfg, seed, seed, context)
+                            .unwrap();
+                    let t: Vec<bool> = members.iter().map(|&i| y.contains(i)).collect();
+                    let s: Vec<f64> = match &scored.scores {
+                        Some(all) => members.iter().map(|&i| all[i]).collect(),
+                        None => vec![train_prevalence(&y, &fit); members.len()],
+                    };
+                    let c = calls(&t, &s);
+                    let had = &row.folds[j];
+                    assert_eq!(
+                        (had.n, had.tp, had.fp, had.tn, had.fn_),
+                        (c.n, c.tp, c.fp, c.tn, c.fn_),
+                        "fold {f}, {learner}, inner fold {j}"
+                    );
+                    tp += c.tp;
+                    fp += c.fp;
+                    tn += c.tn;
+                    fn_ += c.fn_;
+                }
+                assert_eq!(
+                    row.balanced_accuracy,
+                    balanced(tp, fp, tn, fn_),
+                    "fold {f}, {learner}"
+                );
+            }
+            // The tied set is every learner at the best figure at 12 decimals.
+            let figure = |l: &InnerLearner| l.balanced_accuracy.map(crate::report::round12);
+            let best = got
+                .learners
+                .iter()
+                .filter_map(figure)
+                .fold(f64::MIN, f64::max);
+            let tied: Vec<String> = got
+                .learners
+                .iter()
+                .filter(|&l| figure(l) == Some(best))
+                .map(|l| l.learner.clone())
+                .collect();
+            assert_eq!(got.tied, tied, "fold {f}");
+            assert_eq!(got.pick.as_ref(), tied.last(), "fold {f}");
+        }
+    }
+
+    #[test]
     fn inner_folds_keep_each_lineage_whole_and_are_the_release_tuning_partition() {
         let (_, y, groups) = fixture();
         let cfg = config();

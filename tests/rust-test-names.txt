@@ -380,6 +380,7 @@ src/lib.rs learn::gbt::tests::the_exact_rule_moves_a_split_only_to_the_same_two_
 src/lib.rs learn::gbt::tests::the_exact_rule_takes_the_same_groups_where_rounding_turns_them_away
 src/lib.rs learn::inner_pick::tests::a_supplied_split_writes_its_pick_with_no_default
 src/lib.rs learn::inner_pick::tests::a_tie_goes_where_the_rule_says_and_is_listed
+src/lib.rs learn::inner_pick::tests::each_inner_fit_learns_from_its_inner_training_part_alone
 src/lib.rs learn::inner_pick::tests::inner_folds_keep_each_lineage_whole_and_are_the_release_tuning_partition
 src/lib.rs learn::inner_pick::tests::no_outer_test_genome_reaches_an_inner_fit
 src/lib.rs learn::inner_pick::tests::outer_calls_are_each_learners_report_row_fold_by_fold
