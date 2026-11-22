@@ -179,6 +179,11 @@ class SpeciesGates(Base):
         S.seal(self.species("synthia_beta"))
         self.stops(r"binary.txt does not name DONE's binary and code")
 
+    def test_binary_txt_must_name_dones_binary(self):
+        edit(os.path.join(self.species("synthia_gamma"), "binary.txt"), "grm " + S.BINARY, "grm " + "b2" * 32)
+        S.seal(self.species("synthia_gamma"))
+        self.stops(r"synthia_gamma: binary.txt does not name DONE's binary and code")
+
     def test_a_file_changed_after_sha256sums_stops(self):
         edit(os.path.join(self.species("synthia_alpha"), "results", "c8", "c8-datasets.tsv"), "0.600000", "0.700000")
         self.stops(r"results/c8/c8-datasets.tsv is missing or differs from its sha256")
@@ -298,6 +303,33 @@ class D0Gates(Base):
         edit(os.path.join(a, "results", "d0", "d0-datasets.tsv"), "\tfold models\t", "\trelease report, no fold models\t")
         S.seal(a)
         self.stops(r"not read from fold models")
+
+    def rewrite_d0(self, slug, dataset, learner, **cells):
+        a = self.species(slug)
+        p = os.path.join(a, "results", "d0", "d0-datasets.tsv")
+        rows = table(p)
+        for r in rows:
+            if (r["dataset"], r["learner"]) == (dataset, learner):
+                r.update(cells)
+        with open(p, "w", encoding="utf-8", newline="") as f:
+            w = csv.writer(f, delimiter="\t", lineterminator="\n")
+            w.writerow(list(rows[0]))
+            w.writerows([list(r.values()) for r in rows])
+        S.seal(a)
+
+    def test_an_offered_or_inside_floor_fold_stops(self):
+        # SYNTHETIC: a fold count under the two causes read only from a released report, on a pair read from fold
+        # models, must stop the reading (Rules for D0 6), whichever of the two it is.
+        for col in ("folds_offered", "folds_inside_floor"):
+            with self.subTest(col=col):
+                self.rewrite_d0("synthia_beta", "synthia_beta__drugamycin", "scm", **{col: "1"})
+                self.stops(r"holds a cause read without fold models")
+                self.rewrite_d0("synthia_beta", "synthia_beta__drugamycin", "scm", **{col: "NA"})
+
+    def test_causes_out_of_d0s_order_stop(self):
+        # SYNTHETIC: synthia_alpha__drugamycin with rf ties removed and unused; written the other way round.
+        self.rewrite_d0("synthia_alpha", "synthia_alpha__drugamycin", "rf", cause="unused+removed")
+        self.stops(r"causes out of D0's order")
 
     def test_a_cause_that_is_not_its_folds_stops(self):
         # SYNTHETIC: synthia_alpha__drugamycin with scm has 1 absent fold; a cause column of unused does not hold.
