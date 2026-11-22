@@ -570,6 +570,8 @@ def summary_text(spp, a, lines, every, line, meaning):
         "the maintainer's label rule, and the line is read again then",
         "ruling 6: " + stability({c: int(every["all"][f"datasets_{c}"]) for c in d0.FOUR}, setter(line),
                                  a.plan_pairs, int(every["all"]["miss_datasets"]))[1],
+        "removed, as counted, covers both the support floor (A8) and the 4,000-row screen (A9), which the copy does "
+        "not split; the order keeps the plan's words, C4's floor arm (ruling 9)",
         "",
         "C8 on the release decides nothing alone (the plan's row C8, Release).",
     ]
