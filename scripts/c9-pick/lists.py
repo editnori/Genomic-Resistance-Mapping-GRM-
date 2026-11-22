@@ -18,9 +18,9 @@ sha256 list of the reviewed fold files) that names
 folds/<dataset>.study-whole.json.
 
 Writes <out dir>/l.tsv, one row per L dataset with its species and
-antibiotic in full, and <out dir>/counts.tsv, every count with its
-denominator, per species too. The first run takes L less M. No genome id is
-read or written.
+antibiotic in full and the label rules its measures depend on, and
+<out dir>/counts.tsv, every count with its denominator, per species too.
+The first run takes L less M. No genome id is read or written.
 """
 
 import csv
@@ -32,8 +32,14 @@ from pathlib import Path
 PLAN = re.compile(r"(?:^|[ /])folds/([a-z0-9_]+__[a-z0-9_]+)\.study-whole\.json$")
 COLUMNS = [
     "dataset", "species_slug", "species", "antibiotic", "samples", "resistant", "susceptible",
-    "lineages", "in_M", "in_S", "first_run", "pairs_S+R",
+    "lineages", "in_M", "in_S", "first_run", "pairs_S+R", "labels_depend_on",
 ]
+# Which of the four label rules (r-or-s-wins, the release's; intermediate-aside;
+# most-resistant; intermediate-class) a dataset's labels, and so every measure
+# on it, depend on. Not in M, three of the four agree; the most resistant call
+# labels an S and R pair R, so a dataset with one depends on that rule against
+# the other three. In M, the labels wait for the maintainer's rule.
+DEPENDS = {"none": "none of the four", "most": "most-resistant against the other three", "M": "the maintainer's rule"}
 
 
 def read_report(path):
@@ -88,7 +94,8 @@ def lists(reports, labels, study):
         if r["lineage_ran"]:
             m, sr = labels[r["dataset"]]
             row = {k: r[k] for k in COLUMNS if k in r}
-            row.update({"in_M": int(m), "in_S": int(r["dataset"] in study), "first_run": int(not m), "pairs_S+R": sr})
+            row.update({"in_M": int(m), "in_S": int(r["dataset"] in study), "first_run": int(not m), "pairs_S+R": sr,
+                        "labels_depend_on": DEPENDS["M" if m else "most" if sr > 0 else "none"]})
             rows.append(row)
     n = len(reports)
     m_all = sum(1 for d in ids if labels[d][0])
@@ -108,6 +115,8 @@ def lists(reports, labels, study):
         ("first-run datasets in S (the first study run)", sum(r["in_S"] for r in first), len(first)),
         ("L datasets in M and S", sum(r["in_S"] for r in in_m), len(in_m)),
         ("first-run datasets with an S and R pair", sum(r["pairs_S+R"] > 0 for r in first), len(first)),
+        ("first-run datasets whose labels depend on none of the four rules",
+         sum(r["labels_depend_on"] == DEPENDS["none"] for r in first), len(first)),
     ]
     for sp in sorted({r["species_slug"] for r in rows}):
         sr = [r for r in rows if r["species_slug"] == sp]

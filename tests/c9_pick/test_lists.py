@@ -41,6 +41,10 @@ class Lists(unittest.TestCase):
         self.assertEqual(got["a_x: L, not M, M, not M in S, M in S"], ("2, 1, 1, 0, 1", 2))
         self.assertEqual(rows[0]["species"], "Synthia x")
         self.assertEqual(rows[0]["antibiotic"], "d1")
+        self.assertEqual([r["labels_depend_on"] for r in rows],
+                         ["the maintainer's rule", "most-resistant against the other three", "none of the four",
+                          "the maintainer's rule"])
+        self.assertEqual(got["first-run datasets whose labels depend on none of the four rules"], (1, 2))
 
     def test_a_label_table_naming_other_datasets_or_a_plan_outside_the_release_is_refused(self):
         reports = [rep("a_x__d1", 50, 90)]
@@ -70,7 +74,8 @@ class Lists(unittest.TestCase):
             self.assertEqual(rc, 0)
             lines = (top / "out" / "l.tsv").read_text().splitlines()
             self.assertEqual(lines[0].split("\t"), lists.COLUMNS)
-            self.assertEqual(lines[1].split("\t"), ["a_x__d1", "a_x", "Synthia x", "d1", "30", "10", "20", "12", "0", "1", "1", "1"])
+            self.assertEqual(lines[1].split("\t"), ["a_x__d1", "a_x", "Synthia x", "d1", "30", "10", "20", "12", "0", "1", "1", "1",
+                                                 "most-resistant against the other three"])
             self.assertEqual(len(lines), 2)
 
 
