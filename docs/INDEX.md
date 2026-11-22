@@ -30,6 +30,7 @@ Every document under `docs/`, grouped by purpose. For the headline Revision 14 n
 | [assumption-plan.md](assumption-plan.md) | Fixed plan, written on 21 November 2026 before any fit, for testing each assumption a GRM result depends on: one diagnostic, nine comparisons (cutoff, cap, inputs, screen, settings, labels and MIC, outside learners, stability, pick), and a later-records test. |
 | [assumption-plan-later-records.md](assumption-plan-later-records.md) | Counts behind the plan's later-records test: 252,148 BV-BRC lab records set aside on 21 November 2026, counted with no fit. |
 | [assumption-plan-corrections.md](assumption-plan-corrections.md) | Dated corrections to the fixed plan: the study-split row, the release's missing fold models, the design of the MIC comparison, and four changes to its checks. |
+| [mic-comparison.md](mic-comparison.md) | MIC comparison of plan block C6 part B: the released MIC model, an ordered model and the training median on lineage and study folds, 100 and 28 datasets in 12 species, read by rules fixed before any score. |
 
 ## Methodology, pipeline, and contracts
 
