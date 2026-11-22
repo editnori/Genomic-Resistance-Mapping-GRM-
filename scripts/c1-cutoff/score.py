@@ -207,10 +207,16 @@ def levelled(c):
 
 
 def covers(lo, hi, v):
-    """Whether [lo, hi] covers v, an edge counting as covered; None when any is missing."""
+    """Whether [lo, hi] covers v, an edge counting as covered; None when any is missing.
+
+    Compared at the 12 decimals the files write, so a truth equal to a fold's
+    balanced accuracy is not read as outside it by float noise: calls of 60 of
+    100 and 70 of 100 give (0.6 + 0.7) / 2 = 0.6499999999999999, a fold of 13
+    of 20 in each class 0.65.
+    """
     if lo is None or hi is None or v is None:
         return None
-    return lo <= v <= hi
+    return round(lo, 12) <= round(v, 12) <= round(hi, 12)
 
 
 def fmt(x):

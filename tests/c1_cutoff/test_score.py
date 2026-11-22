@@ -178,6 +178,14 @@ class Scores(unittest.TestCase):
             row = score.score_rows(common.expect_row(), common.result(folds=folds))[0]
             self.assertEqual((row["truth"], row["fold_range_covers"]), (truth, True), folds)
 
+    def test_a_truth_equal_to_a_folds_balanced_accuracy_is_covered_whatever_the_float_noise(self):
+        truth = score.balanced({"tp": 60, "fn": 40, "tn": 70, "fp": 30})  # 13/20 as (0.6 + 0.7) / 2
+        fold = score.balanced({"tp": 13, "fn": 7, "tn": 13, "fp": 7})     # 13/20 as (0.65 + 0.65) / 2
+        self.assertNotEqual(truth, fold)  # the noise this test is about
+        self.assertTrue(score.covers(fold, 0.9, truth))
+        self.assertTrue(score.covers(0.5, fold, truth))
+        self.assertFalse(score.covers(fold, 0.9, 0.6499999))
+
     def test_a_fold_with_no_balanced_accuracy_leaves_the_draw_no_fold_range(self):
         row = score.score_rows(common.expect_row(), common.result(folds=(0.7, float("nan"), 0.75, 0.9, 0.85)))[0]
         self.assertTrue(row["available"])
