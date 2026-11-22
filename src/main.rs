@@ -221,6 +221,33 @@ enum Command {
         /// fits to a tie trace.
         #[arg(long, conflicts_with_all = ["exp_tie_rule", "exp_tie_trace", "exp_tie_out"])]
         exp_null_refit: Option<PathBuf>,
+        /// Experiment, off by default (docs/mic-plan.md): fit only these MIC
+        /// models, a comma list of `released` (the report's censored MIC
+        /// regression) and `ordered` (one fit per dilution threshold), on
+        /// the lineage split at --seed, or with --fold-file on the file's
+        /// folds. Writes one result per dataset, to --exp-mic-out or with
+        /// --fold-file to --fold-out, and fits no classifier and no final
+        /// model; no report is read or written. --force replaces a result.
+        /// Refused beside --learner-seed, the --exp-tie-* options and
+        /// --exp-null-refit.
+        #[arg(
+            long,
+            value_enum,
+            value_delimiter = ',',
+            conflicts_with_all = [
+                "learner_seed",
+                "exp_tie_rule",
+                "exp_tie_trace",
+                "exp_tie_out",
+                "exp_null_refit",
+            ]
+        )]
+        exp_mic: Vec<MicArmArg>,
+        /// Directory for the --exp-mic results on the lineage split:
+        /// <dir>/<dataset>.lineage-s<seed>.mic.json. With --fold-file the
+        /// result goes to --fold-out, so this is refused beside it.
+        #[arg(long, requires = "exp_mic", conflicts_with = "fold_file")]
+        exp_mic_out: Option<PathBuf>,
     },
     /// Run fetch, count, structure, matrix, and learn for each species, then
     /// build the report. Stages skip work that is already on disk.
@@ -487,6 +514,28 @@ fn run(cli: Cli) -> Result<()> {
                     .try_for_each(|s| matrix_with(&layout, s, min_support, column_blocks))
             }
         }
+        Command::Learn {
+            species,
+            only,
+            force,
+            screened_features,
+            seed,
+            fold_file,
+            fold_out,
+            exp_mic,
+            exp_mic_out,
+            ..
+        } if !exp_mic.is_empty() => learn_mic(
+            &layout,
+            &species,
+            &only,
+            force,
+            screened_features,
+            seed,
+            fold_file.as_deref().zip(fold_out.as_deref()),
+            exp_mic_out.as_deref(),
+            &exp_mic,
+        ),
         Command::Learn {
             species,
             force,
@@ -1158,6 +1207,59 @@ fn learn_fold_file(
     Ok(())
 }
 
+/// `grm learn --exp-mic`: the MIC models on the lineage split at `seed`
+/// (`analysis::mic_plan_species`), or on a fold file's folds at the
+/// release's seeds (`analysis::mic_plan_fold_file`; the parser refuses
+/// `--seed` beside `--fold-file`). Ends with lines of its own, which do not
+/// begin with the release line `learn_end_line` writes.
+#[allow(clippy::too_many_arguments)]
+fn learn_mic(
+    layout: &Layout,
+    species: &[String],
+    only: &[String],
+    force: bool,
+    screened_features: usize,
+    seed: u64,
+    fold_file: Option<(&std::path::Path, &std::path::Path)>,
+    exp_mic_out: Option<&std::path::Path>,
+    arms: &[MicArmArg],
+) -> Result<()> {
+    let arms: Vec<grm::learn::micplan::Arm> = arms.iter().map(|&a| a.into()).collect();
+    let cfg = learn_config(
+        screened_features,
+        seed,
+        None,
+        grm::learn::tie::TieRule::Float,
+    );
+    if let Some((file, out)) = fold_file {
+        let [slug] = species else {
+            anyhow::bail!(
+                "--fold-file names one dataset, so it takes one species, not {}",
+                species.len()
+            );
+        };
+        grm::species::ensure_selection_counted(layout, slug)?;
+        let written =
+            grm::analysis::mic_plan_fold_file(layout, slug, file, out, force, &cfg, &arms)?;
+        eprintln!("{slug}: MIC plan result written to {}", written.display());
+        return Ok(());
+    }
+    let out = exp_mic_out
+        .context("--exp-mic needs --exp-mic-out DIR, or --fold-file FILE with --fold-out DIR")?;
+    for slug in species {
+        grm::species::ensure_selection_counted(layout, slug)?;
+    }
+    for slug in species {
+        let written = grm::analysis::mic_plan_species(layout, slug, only, force, &cfg, &arms, out)?;
+        eprintln!(
+            "{slug}: {} MIC plan results written to {}",
+            written.len(),
+            out.display()
+        );
+    }
+    Ok(())
+}
+
 fn report(layout: &Layout, kover: &std::path::Path) -> Result<()> {
     let out = grm::report::build(layout, kover)?;
     eprintln!("dashboard data written to {}", out.display());
@@ -1326,6 +1428,21 @@ impl From<TieRuleArg> for grm::learn::tie::TieRule {
         match t {
             TieRuleArg::Float => Self::Float,
             TieRuleArg::Exact => Self::Exact,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, clap::ValueEnum)]
+enum MicArmArg {
+    Released,
+    Ordered,
+}
+
+impl From<MicArmArg> for grm::learn::micplan::Arm {
+    fn from(a: MicArmArg) -> Self {
+        match a {
+            MicArmArg::Released => Self::Released,
+            MicArmArg::Ordered => Self::Ordered,
         }
     }
 }
@@ -2845,6 +2962,138 @@ mod tests {
         assert_eq!(exp_tie_rule, TieRuleArg::Exact);
         // Without --fold-file the command is the one it was.
         assert_eq!((fold_file, fold_out), (None, None));
+    }
+
+    #[test]
+    fn learn_takes_the_mic_experiment_only_with_an_output_and_no_other_experiment() {
+        let parse = |rest: &[&str]| {
+            Cli::try_parse_from(["grm", "learn", "--species", "s"].iter().chain(rest))
+        };
+        // Off unless asked for.
+        let Command::Learn {
+            exp_mic,
+            exp_mic_out,
+            ..
+        } = parse(&[]).unwrap().command
+        else {
+            panic!("parsed another command");
+        };
+        assert_eq!((exp_mic, exp_mic_out), (vec![], None));
+        let Command::Learn {
+            exp_mic,
+            exp_mic_out,
+            seed,
+            ..
+        } = parse(&[
+            "--exp-mic",
+            "released,ordered",
+            "--exp-mic-out",
+            "o",
+            "--seed",
+            "43",
+        ])
+        .unwrap()
+        .command
+        else {
+            panic!("parsed another command");
+        };
+        assert_eq!(exp_mic, vec![MicArmArg::Released, MicArmArg::Ordered]);
+        assert_eq!((exp_mic_out, seed), (Some("o".into()), 43));
+        assert!(
+            parse(&[
+                "--exp-mic",
+                "ordered",
+                "--fold-file",
+                "f.json",
+                "--fold-out",
+                "o"
+            ])
+            .is_ok()
+        );
+        for bad in [
+            &["--exp-mic", "median", "--exp-mic-out", "o"][..],
+            &["--exp-mic-out", "o"],
+            &[
+                "--exp-mic",
+                "released",
+                "--exp-mic-out",
+                "o",
+                "--learner-seed",
+                "1",
+            ],
+            &[
+                "--exp-mic",
+                "released",
+                "--exp-mic-out",
+                "o",
+                "--exp-tie-rule",
+                "exact",
+            ],
+            &[
+                "--exp-mic",
+                "released",
+                "--exp-mic-out",
+                "o",
+                "--exp-tie-trace",
+                "t",
+            ],
+            &[
+                "--exp-mic",
+                "released",
+                "--exp-mic-out",
+                "o",
+                "--exp-tie-out",
+                "t",
+            ],
+            &[
+                "--exp-mic",
+                "released",
+                "--exp-mic-out",
+                "o",
+                "--exp-null-refit",
+                "t",
+            ],
+            &[
+                "--exp-mic",
+                "released",
+                "--fold-file",
+                "f",
+                "--fold-out",
+                "o",
+                "--exp-mic-out",
+                "p",
+            ],
+            &[
+                "--exp-mic",
+                "released",
+                "--fold-file",
+                "f",
+                "--fold-out",
+                "o",
+                "--seed",
+                "43",
+            ],
+        ] {
+            assert!(parse(bad).is_err(), "{bad:?}");
+        }
+        // Without an output it stops before reading the data root.
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path().join("data"));
+        let species = ["s".to_string()];
+        let error = learn_mic(
+            &layout,
+            &species,
+            &[],
+            false,
+            10,
+            42,
+            None,
+            None,
+            &[MicArmArg::Released],
+        )
+        .unwrap_err();
+        assert!(format!("{error:#}").contains("--exp-mic-out"));
+        assert!(!dir.path().join("data").exists());
     }
 
     #[test]
