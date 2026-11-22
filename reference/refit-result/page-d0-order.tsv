@@ -1,0 +1,6 @@
+cause	miss_pairs_in_cause	miss_pairs	share_of_miss_pairs	largest_of_the_four	sets_the_order
+absent	107	177	0.604520	yes	yes
+removed	15	177	0.084746	no	no
+lineage	1	177	0.005650	no	no
+chosen	28	177	0.158192	outside the four	never (entry D0 causes)
+unused	33	177	0.186441	no	no

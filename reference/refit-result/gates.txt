@@ -1,0 +1,5 @@
+species: 23 of 23, each with DONE and code sha256 20e08189285ece9ac29a03f989469899356d74e5876927e689f16a1a037c104c
+datasets: 238 of 238, none twice; check tables read equal: datasets.tsv, learners.tsv
+marks: the 238 datasets are exactly those of the label count's datasets.tsv that are not M
+D0: 65 datasets in 16 species, each species' list the MISS set among its listed datasets
+D0 pairs: 177 of 177, by d0.py combine

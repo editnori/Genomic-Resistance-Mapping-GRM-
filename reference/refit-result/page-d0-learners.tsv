@@ -1,0 +1,7 @@
+learner	miss_pairs	datasets_absent	datasets_removed	datasets_lineage	datasets_chosen	datasets_unused	share_of_gap_to_the_amrfinderplus_program_absent	share_of_gap_to_the_amrfinderplus_program_removed	share_of_gap_to_the_amrfinderplus_program_lineage	share_of_gap_to_the_amrfinderplus_program_chosen	share_of_gap_to_the_amrfinderplus_program_unused	ties	pairs_with_no_missed_fold	reading
+scm	23	13	0	0	2	8	0.568727	0.000000	0.000000	0.070648	0.360624	0	0	D0's sets are chosen by their result: it orders comparisons and tests nothing
+cart	28	19	0	0	2	10	0.637707	0.000000	0.000000	0.032701	0.329592	3	0	D0's sets are chosen by their result: it orders comparisons and tests nothing
+rf	52	29	3	1	17	3	0.585094	0.041255	0.038128	0.291874	0.043649	1	0	D0's sets are chosen by their result: it orders comparisons and tests nothing
+gbt	41	25	7	0	5	7	0.591261	0.129047	0.000000	0.094224	0.185468	2	0	D0's sets are chosen by their result: it orders comparisons and tests nothing
+lasso	33	21	5	0	2	5	0.612185	0.141242	0.000000	0.054757	0.168844	1	1	D0's sets are chosen by their result: it orders comparisons and tests nothing
+all five (dataset and learner pairs)	177	107	15	1	28	33	-	-	-	-	-	7	1	D0's sets are chosen by their result: it orders comparisons and tests nothing; the gap share pooled over the five is not on the page (ruling 10); it is in d0/d0-summary.tsv
