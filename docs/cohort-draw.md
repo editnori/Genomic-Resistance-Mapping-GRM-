@@ -1,0 +1,39 @@
+# Small cohorts against the 25-per-class line
+
+An experiment, off by default, for plan block C1 part B (`docs/assumption-plan.md`). `grm learn --exp-cohort DIR --exp-cohort-out OUT` draws nothing itself: it reads cohort files that `scripts/c1-cutoff/draw.py` wrote, runs the release's rule on each cohort, and scores the cohort's final models on the dataset's other genomes. Without the flag `grm learn` is unchanged, byte for byte. No report is read or written, `EVALUATION_REVISION` stays 14 and the report schema stays 2.
+
+The question: a dataset that passes the release's line of 25 genomes per class gets an estimate from its own lineage split. How far is an estimate from a cohort of r resistant and r susceptible genomes from the truth it stands for? Here the truth is known, because the cohort comes from a large dataset: the dataset's other genomes score the cohort's final models.
+
+Any split here is a retrospective split inside one public database. A split by lineage or by study is not external validation, and any threshold is an adapted research screen, never an applicable FDA validation criterion.
+
+## The draw
+
+`draw.py` reads each sample's genome id, reported call and lineage number from the release report, and nothing else. For draw j of dataset d, a lineage l gets the key `sha256("c1b-20261122|" + d + "|draw" + j + "|lineage|" + l)` and a genome g the key `sha256("c1b-20261122|" + d + "|draw" + j + "|genome|" + g)`. Each class walks its lineages in key order, round robin: the first genome of each lineage, then the second of each lineage that has one, and so on, each lineage's genomes in key order. The cohort at r is the first r genomes of each class. The keys do not hold r, so a draw's cohort at r = 10 lies inside its cohort at r = 50.
+
+A class with r or fewer genomes refuses the draw at r. No class is filled from another, and a draw is never redrawn. A cohort file lists genome ids, so it stays on the machine that fits it; `draws.tsv` lists each draw with its file's sha256 and lineage counts and no genome id.
+
+## The estimate and the truth
+
+For each cohort file (`<dataset>.r<r>.d<draw>.cohort.json`, format `grm-cohort-draw-v1`) whose dataset `grm learn` evaluates:
+
+- The cohort is the dataset's rows that the file lists. Each must carry the file's call and lineage, and the file must hold r of each class; otherwise the result says why it was refused.
+- The matrix is the species matrix projected onto the cohort at its own support floor, as `grm learn` projects a dataset. Lineages and k-mer copy groups are the species'.
+- `evaluate` runs unchanged on the cohort at the given seed: the random and the lineage split, 5 outer folds, 3 inner folds, the five learners. With a `study_fold` list, `evaluate_assigned` also scores the cohort on its `study-whole` folds.
+- The truth: `eval::final_scores` fits the final models as `final_models` does, with the same calls and seeds, and keeps all five. They score every row of the dataset that is not in the cohort and not a k-mer copy of a cohort genome (same kset digest). A feature's value on such a genome is the species matrix's bit of the feature's lowest species pattern, the k-mer its card names. Calls are at 0.5. A null final fit scores every genome at the cohort's resistant share, 0.5. The log loss clips at 0.0001.
+
+The result (`OUT/<dataset>.r<r>.d<draw>.s<seed>.cohort.json`, format `grm-cohort-draw-result-v1`) records the revision, the input fingerprint the dataset's report records, the settings, r, the draw, the seed and the cohort file's sha256; the dataset's, the cohort's and the scored set's counts by class (all, in lineages the cohort lacks, copies left out); per split the reason it is unavailable or, per learner, the calls by class, the log loss sum, the pooled balanced accuracy and the five fold balanced accuracies; and the truth's reason it is unavailable or, per learner, its null fit and its calls and log loss sum on all scored genomes and on those in new lineages. It holds no genome id, no row per genome and no feature. A result that exists is kept unless `--force`.
+
+`--exp-cohort` is refused beside `--fold-file`, `--learner-seed`, the `--exp-tie-*` options, `--exp-null-refit` and `--exp-mic`.
+
+Tests: `src/cutoff.rs` and `tests::learn_takes_the_cohort_experiment_only_with_an_output_and_no_other_experiment` in `src/main.rs`, all SYNTHETIC.
+
+## The scripts
+
+`scripts/c1-cutoff/` runs and scores one species on a box of its own:
+
+- `lists.py RELEASE LABELS STUDY OUT` writes the dataset lists. BIG: the release's reports whose lineage split ran and whose smaller class holds 200 or more genomes. M: a dataset whose label count row holds a genome pair of S and I calls or of I and R calls; it waits for the maintainer's label rule. S: a dataset with a reviewed `study-whole` plan.
+- `draw.py`, the draw above, and `expect.py`, the results a run must hold: every cohort at seed 42, and the r = 25 cohorts again at seed 45 (the twin).
+- `run_species.sh KIT SPECIES DATASETS OUT [JOBS] [LINES] [DRAWS] [TWIN]` builds `grm` from the checkout and records its commit, its sha256 and the sha256 of its code alone, builds the species' data root from public files (the catalog equal to a pinned list, each genome with the release's length, contig count and N50), draws, fits, checks that every result exists, scores, and writes `OUT/DONE` with the sha256 of its list of output files. Any failure writes `OUT/FAILED` and exits 1. Run again, it skips finished steps and fits only missing results, and refuses to go on if the checkout, the binary, the dataset list or a cohort file moved. A second start on an `OUT` ends at once. Each log is kept under `OUT/work`, and `OUT/logs` holds a copy with every genome id of the species' list written as `[genome id]`.
+- `score.py` checks each result first (format and revision, fingerprint, settings but the seed, cohort file sha256, r of each class, the scored set, the copies and the cohort summing to the dataset by class, each truth scoring exactly the scored genomes, each estimate scoring exactly the cohort), then writes per result, split, truth set and learner the estimate, its fold range, the truth, the error and whether the range covers the truth, with recall, specificity and both error rates (Wilson 95% intervals, Clopper-Pearson for the error rates) and the log loss, each with its denominator. `lines.tsv` gives each dataset's mean error and coverage per line, and `count.tsv` the count against 25: better, worse or same by more than 0.02, a dataset entering only with at least 3 draws available at both lines, and the median difference with its species interval (4,000 species resamples, the 101st and 3,900th values). `score.py --count OUT LINES...` counts over several species.
+
+The Python tests are in `tests/c1_cutoff/`, all SYNTHETIC; they are not in CI.
