@@ -66,7 +66,7 @@ Three options carry the design's open questions: `--tie later|earlier|default` (
 
 ## Datasets
 
-`scripts/c9-pick/lists.py` writes the lists from the release reports, the label count's table and the reviewed study plans.
+`scripts/c9-pick/lists.py` writes the lists from the release reports, the label count's table and the reviewed study plans. `scripts/c9-pick/l.tsv` is its list of L as it wrote it: one row per dataset with its species and antibiotic in full, its genomes by class, its lineages, whether it is in M, in S and in the first run, its genome pairs of S and R calls, and the label rules its measures depend on.
 
 | Set | Datasets | Species |
 |---|---:|---:|
