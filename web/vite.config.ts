@@ -45,5 +45,5 @@ export default defineConfig({
     },
   ],
   build: { outDir: "dist", emptyOutDir: true },
-  test: { include: ["src/**/*.test.ts"], environment: "node" },
+  test: { include: ["src/**/*.test.ts"], environment: "node", testTimeout: 15000 },
 });

@@ -67,12 +67,27 @@ import {
   type LearnerCounts,
 } from "../data/derive/inputs";
 import { ONE_STUDY_ALL, OUTSIDE_LEARNERS, OUTSIDE_STUDY, outsidePoints, populationById, populationSummary, type Learner as OutsideLearner, type PopulationSummary } from "../data/derive/outside";
+import { STUDY_LEARNERS, STUDY_SPLIT, studySplitSummary, type StudyContrast } from "../data/derive/studySplit";
+import { OTHER_DATABASE, OTHER_DB_LEARNERS, otherDatabaseSummary } from "../data/derive/otherDatabase";
+import { ADDITIONAL_STUDIES, COMPARISON_LEARNERS } from "../data/derive/additionalStudies";
 import { FOCUS_RING, ScrollFrame, type Fit } from "../ui/primitives";
 import { micBaselineSummary, type MicBaselineSummary, type MicConstant } from "../data/baselines";
 import { AUDIT_READING, AUDIT_SCOPE } from "../ui/EvaluationNotice";
 import { PanelEvidence } from "./PanelEvidence";
 
-export type FindingId = "corpus" | "lineage" | "learners" | "bars" | "catalog" | "panels" | "mic" | "outside" | "inputs";
+export type FindingId =
+  | "corpus"
+  | "lineage"
+  | "learners"
+  | "bars"
+  | "catalog"
+  | "panels"
+  | "mic"
+  | "outside"
+  | "study-split"
+  | "other-database"
+  | "comparisons"
+  | "inputs";
 
 /** What a deck gives a figure that may continue onto further slides: the
  *  measured box, the page to draw and the page count, and, while the deck
@@ -1574,4 +1589,426 @@ export const inputsFinding = (_m: Manifest, opts: FindingOptions): Finding => {
   };
 };
 
-export const FINDINGS = [corpusFinding, lineageFinding, learnersFinding, barsFinding, catalogFinding, panelsFinding, micFinding, outsideFinding, inputsFinding] as const;
+// ---- holding out whole studies (BioProjects) -------------------------------------------
+
+const signedDec = (v: number, digits = 3): string => `${v < 0 ? "−" : "+"}${Math.abs(v).toFixed(digits)}`;
+
+const contrastCell = (c: StudyContrast, asPoints = false): string => {
+  const val = asPoints ? signedPoints(c.median) : signedDec(c.median, 3);
+  return `${val} (${c.reading})`;
+};
+
+const StudySplitTable = ({ page }: { page: boolean }) => (
+  <NumberTable
+    label="Study folds minus random folds, first experiment"
+    head={page ? ["Learner", "Recall, points", "Specificity, points", "Log loss", "Plan reading"] : ["Learner", "Recall, points", "Specificity, points", "Log loss"]}
+    groups={[
+      {
+        rows: STUDY_LEARNERS.map((l) => {
+          const r = STUDY_SPLIT.first[l];
+          const base = [contrastCell(r.recall, true), contrastCell(r.specificity, true), contrastCell(r.log_loss, false)];
+          return { key: l, name: LEARNER_NAME[l], cells: page ? [...base, r.rule === "cost" ? `cost (${r.keep} of 9 species leave-outs)` : r.rule] : base };
+        }),
+      },
+    ]}
+    slide={!page}
+  />
+);
+
+const StudySplitRepeatedTable = () => (
+  <>
+    <NumberTable
+      label="Second experiment across repeated fold draws"
+      head={["Learner", "Contrast", "Recall, points", "Specificity, points", "Loss", "Draw pairs showing cost"]}
+      groups={[
+        {
+          rows: STUDY_LEARNERS.flatMap((l) =>
+            (
+              [
+                ["SR", "Study − random"],
+                ["SM", "Study − matched"],
+                ["MR", "Matched − random"],
+              ] as const
+            ).map(([fam, label]) => {
+              const e = STUDY_SPLIT.second[l][fam];
+              return {
+                key: `${l}-${fam}`,
+                name: `${LEARNER_NAME[l]}`,
+                cells: [label, contrastCell(e.recall, true), contrastCell(e.specificity, true), contrastCell(e.loss, false), `${e.cost} of ${e.pairs} (${e.answer})`],
+              };
+            }),
+          ),
+        },
+      ]}
+    />
+    <p className="type-note mt-2">
+      Loss is the error rate for the set covering machine and log loss for the other four learners. Matched random folds copy each study draw&apos;s fold sizes and resistant counts.
+    </p>
+  </>
+);
+
+const StudyVsLineageTable = () => (
+  <>
+    <NumberTable
+      label="Study folds minus lineage split"
+      head={["Learner", "Recall, points", "Specificity, points", "Log loss"]}
+      groups={[
+        {
+          rows: STUDY_LEARNERS.map((l) => {
+            const e = STUDY_SPLIT.vs_lineage[l];
+            return {
+              key: l,
+              name: LEARNER_NAME[l],
+              cells: [contrastCell(e.recall, true), contrastCell(e.specificity, true), contrastCell(e.log_loss, false)],
+            };
+          }),
+        },
+      ]}
+    />
+    <p className="type-note mt-2">
+      Over the {int(STUDY_SPLIT.lineage_datasets)} datasets that have a lineage split, study minus lineage is not shown on log loss for 4 of 5 learners; the first plan gave these contrasts no rule.
+    </p>
+  </>
+);
+
+export const studySplitFinding = (_m: Manifest, opts: FindingOptions): Finding => {
+  const s = studySplitSummary();
+  return {
+    id: "study-split",
+    title: "Holding out whole studies",
+    result: opts.page
+      ? `In a retrospective split by study inside one database, BV-BRC (${int(s.datasets)} datasets, ${int(s.species)} species, ${int(s.pairs)} genome-drug pairs), folds that keep each BioProject whole score worse than random folds on the same genomes. Log loss and specificity read worse for ${int(s.logLossWorse)} of 5 learners; recall reads worse for the random forest and boosted trees, and is lower but not shown for the set covering machine, decision tree and lasso.`
+      : `In BV-BRC (${int(s.datasets)} datasets, ${int(s.species)} species), folds holding whole BioProjects out score worse than random folds on log loss and specificity for ${int(s.logLossWorse)} of 5 learners.`,
+    figure: <StudySplitTable page={opts.page} />,
+    caption: opts.page
+      ? "Each cell is the median paired difference (study folds minus random folds) over 70 datasets, with its reading against an exact 95% species bootstrap interval over 9 species. A BioProject stands in for a study. This is a retrospective split by study inside one database and never external validation."
+      : "Median paired difference (study minus random) over 70 datasets in 9 species, read against exact 95% species intervals. Retrospective split inside BV-BRC, never external validation.",
+    note: opts.page ? (
+      <div className="prose-measure mt-3 space-y-1.5 text-note text-ink">
+        <p>
+          Across five repeated study assignments and five random draws (25 study-random draw pairs), every learner shows a cost in 25 of 25 study-random draw pairs and in 5 of 5 study-matched draw pairs (matched folds copy each study fold&apos;s size and resistant count).
+        </p>
+        <p>
+          The design does not separate study from lineage: study folds keep every study mate out of training and roughly half of lineage-cluster mates as well. Of the {int(s.pairs)} pairs, {int(STUDY_SPLIT.no_study_pairs)} have no BioProject.
+        </p>
+      </div>
+    ) : undefined,
+    span: "unit",
+    more: opts.page
+      ? [
+          { label: "Repeated draws and matched fold shapes", body: <StudySplitRepeatedTable /> },
+          { label: "Compared with the lineage split", body: <StudyVsLineageTable /> },
+        ]
+      : undefined,
+  };
+};
+
+// ---- another public database (NCBI Pathogen Detection) ---------------------------------
+
+const OtherDatabaseSummaryTable = ({ page }: { page: boolean }) => {
+  const s = otherDatabaseSummary();
+  return (
+    <NumberTable
+      label="Released Revision 14 models on NCBI Pathogen Detection genomes"
+      head={
+        page
+          ? ["Learner", "Species meeting plan (of 8)", "Datasets holding (8 species)", "Recall below", "Log loss worse", "E. coli pilot holding"]
+          : ["Learner", "Species met (of 8)", "Datasets holding", "E. coli pilot"]
+      }
+      groups={[
+        {
+          rows: OTHER_DB_LEARNERS.map((l) => {
+            const t = s.totals[l];
+            const p = s.pilot[l];
+            const sp = t.plan_not_assessable > 0 ? `${t.plan_meets} of ${t.assessable} assessable (${t.plan_not_assessable} n/a)` : `${t.plan_meets} of ${t.species}`;
+            return {
+              key: l,
+              name: LEARNER_NAME[l],
+              cells: page
+                ? [sp, `${t.holds} of ${t.estimable}`, int(t.recall_below), int(t.log_loss_worse), `${p.holds} of ${p.estimable}`]
+                : [sp, `${t.holds} of ${t.estimable}`, `${p.holds} of ${p.estimable}`],
+            };
+          }),
+        },
+      ]}
+      slide={!page}
+    />
+  );
+};
+
+const OtherDatabaseSpeciesTable = () => {
+  const bySp = new Map<string, Record<string, { holds: number; estimable: number; rule: string }>>();
+  for (const r of OTHER_DATABASE.by_species) {
+    const cur = bySp.get(r.species) ?? {};
+    cur[r.learner] = { holds: r.holds, estimable: r.estimable, rule: r.rule };
+    bySp.set(r.species, cur);
+  }
+  const fmt = (entry: { holds: number; estimable: number; rule: string } | undefined) =>
+    entry === undefined || entry.estimable === 0 ? "n/a" : `${entry.holds} of ${entry.estimable} (${entry.rule})`;
+  return (
+    <>
+      <NumberTable
+        label="NCBI Pathogen Detection results by species and BioProject overlap"
+        head={["Species", "Scored genomes", "Shared BioProject", "SCM", "Decision tree", "Lasso"]}
+        groups={[
+          {
+            title: "Eight species (plan fixed before labels)",
+            rows: OTHER_DATABASE.species
+              .filter((s) => s.part === "eight")
+              .map((s) => {
+                const m = bySp.get(s.slug) ?? {};
+                return {
+                  key: s.slug,
+                  name: s.name,
+                  cells: [int(s.scored), `${int(s.shared_bioproject)} (${pct(s.shared_bioproject / s.scored)})`, fmt(m.scm), fmt(m.cart), fmt(m.lasso)],
+                };
+              }),
+          },
+          {
+            title: "Pilot (exploratory)",
+            rows: OTHER_DATABASE.species
+              .filter((s) => s.part === "pilot")
+              .map((s) => {
+                const m = bySp.get(s.slug) ?? {};
+                return {
+                  key: s.slug,
+                  name: s.name,
+                  cells: [int(s.scored), `${int(s.shared_bioproject)} (${pct(s.shared_bioproject / s.scored)})`, fmt(m.scm), fmt(m.cart), fmt(m.lasso)],
+                };
+              }),
+          },
+        ]}
+      />
+      <p className="type-note mt-2">
+        Shared BioProject counts scored genomes in a BioProject that also contains training genomes (a lower bound). Random forest and boosted trees were not scored because published reports hold feature importances only.
+      </p>
+    </>
+  );
+};
+
+export const otherDatabaseFinding = (_m: Manifest, opts: FindingOptions): Finding => {
+  const s = otherDatabaseSummary();
+  const sEnterica = OTHER_DATABASE.species.find((sp) => sp.slug === "salmonella_enterica");
+  const cColi = OTHER_DATABASE.species.find((sp) => sp.slug === "campylobacter_coli");
+  return {
+    id: "other-database",
+    title: "Another public database",
+    result: opts.page
+      ? `The released revision ${int(OTHER_DATABASE.evaluation_revision)} models were scored on ${int(s.totalGenomes)} NCBI Pathogen Detection genomes outside BV-BRC's labelled set by BioSample and assembly accession. This is a test on data from another public database that shares isolates with the training database and never external validation. Under the plan's rule, the set covering machine meets in ${int(s.totals.scm.plan_meets)} of ${int(s.eightSpecies)} species (${int(s.totals.scm.holds)} of ${int(s.totals.scm.estimable)} datasets; recall below in ${int(s.totals.scm.recall_below)}, log loss worse in ${int(s.totals.scm.log_loss_worse)}), the decision tree in ${int(s.totals.cart.plan_meets)} of ${int(s.eightSpecies)} (${int(s.totals.cart.holds)} of ${int(s.totals.cart.estimable)}), and the lasso in ${int(s.totals.lasso.plan_meets)} of the ${int(s.totals.lasso.assessable)} species where it can be read (${int(s.totals.lasso.holds)} of its ${int(s.totals.lasso.estimable)} datasets across the eight). In the E. coli pilot, SCM holds on ${int(s.pilot.scm.holds)} of ${int(s.pilot.scm.estimable)} datasets and the decision tree on ${int(s.pilot.cart.holds)} of ${int(s.pilot.cart.estimable)}.`
+      : `On ${int(s.totalGenomes)} NCBI Pathogen Detection genomes (not external validation), SCM meets the plan's rule in ${int(s.totals.scm.plan_meets)} of ${int(s.eightSpecies)} species, CART in ${int(s.totals.cart.plan_meets)} of ${int(s.eightSpecies)}, and lasso in ${int(s.totals.lasso.plan_meets)} of ${int(s.totals.lasso.assessable)} species where it can be read.`,
+    figure: <OtherDatabaseSummaryTable page={opts.page} />,
+    caption: opts.page
+      ? "A dataset holds under the plan's rule when recall is not below and log loss is not worse than the release's lineage split (by 95% intervals). A learner meets in a species when it holds on more than half of at least 3 estimable datasets. The rule reads recall and log loss only, so a dataset can hold while a learner calls every susceptible genome resistant."
+      : "Test on data from another public database (NCBI Pathogen Detection), not external validation. The rule reads recall and log loss only and does not read specificity.",
+    note: opts.page ? (
+      <div className="prose-measure mt-3 space-y-1.5 text-note text-ink">
+        <p>
+          In <em>S. enterica</em> ({sEnterica ? `${int(sEnterica.shared_bioproject)} of ${int(sEnterica.scored)}` : "most"}) and <em>C. coli</em> (
+          {cColi ? `${int(cColi.shared_bioproject)} of ${int(cColi.scored)}` : "most"}), most scored genomes come from a BioProject that also contains training genomes. Intervals
+          over genomes treat related genomes as independent, and random forest and boosted trees were not scored.
+        </p>
+      </div>
+    ) : undefined,
+    span: "unit",
+    more: opts.page ? { label: "By species and BioProject overlap", body: <OtherDatabaseSpeciesTable /> } : undefined,
+  };
+};
+
+// ---- further stress tests and tool comparisons -----------------------------------------
+
+const ComparisonsSummaryTable = ({ page }: { page: boolean }) => {
+  const d = ADDITIONAL_STUDIES;
+  const rows = [
+    {
+      key: "time-split",
+      name: "First-public-day split",
+      cells: page
+        ? [
+            `${int(d.time_split.datasets)} datasets (${int(d.time_split.species)} species)`,
+            `Worse on log loss & BA for ${int(d.time_split.total_log_loss_worse)} of 5 learners; recall worse for ${int(d.time_split.total_recall_worse)} of 5`,
+            "Retrospective split inside BV-BRC",
+          ]
+        : [
+            `${int(d.time_split.datasets)} sets`,
+            `Log loss & BA worse (${int(d.time_split.total_log_loss_worse)}/5)`,
+            "BV-BRC dates only",
+          ],
+    },
+    {
+      key: "kover",
+      name: "Kover 2.0.7 vs GRM SCM",
+      cells: page
+        ? [
+            `${int(d.kover.datasets)} smallest datasets (${int(d.kover.genomes)} genomes)`,
+            `Kover minus SCM: ${signedPoints(d.kover.balanced_accuracy.value)} pts BA as run (lower on ${int(d.kover.balanced_accuracy.lower)} of ${int(d.kover.datasets)})`,
+            `Small datasets (<=150 genomes); gap turns on Kover's tie order (${signedDec(d.kover.balanced_accuracy.value, 3)} as run, ${signedDec(d.kover.ties_equal_ba.value, 3)} when each tied first rule counts equally)`,
+          ]
+        : [
+            `${int(d.kover.datasets)} sets`,
+            `Kover ${signedPoints(d.kover.balanced_accuracy.value)} pts BA`,
+            "As run; tie order",
+          ],
+    },
+    {
+      key: "dense-network",
+      name: "Dense neural network",
+      cells: page
+        ? [
+            `${int(d.dense_network.datasets)} datasets (${int(d.dense_network.species)} species)`,
+            `${signedPoints(d.dense_network.vs_best5.balanced_accuracy.diff)} pts vs hindsight best (${int(d.dense_network.vs_best5.balanced_accuracy.positive)} of ${int(d.dense_network.datasets)} higher); ${d.dense_network.outcome}`,
+            "One setting on 4,000 screened features",
+          ]
+        : [
+            `${int(d.dense_network.datasets)} sets`,
+            `${signedPoints(d.dense_network.vs_best5.balanced_accuracy.diff)} pts; ${d.dense_network.outcome}`,
+            "1 net, 4k screen",
+          ],
+    },
+    {
+      key: "amrfinderplus",
+      name: "AMRFinderPlus 4.2.7 program",
+      cells: page
+        ? [
+            `${int(d.amrfinderplus.datasets)} datasets (${int(d.amrfinderplus.species)} species)`,
+            `Ahead of GRM rule on ${int(d.amrfinderplus.program_vs_known_gene_rule.ahead)} of ${int(d.amrfinderplus.datasets)} (${int(d.amrfinderplus.program_vs_known_gene_rule.ahead_by_10pts)} by >=10 pts, ${int(d.amrfinderplus.program_vs_known_gene_rule.ahead_by_10pts_quinolone)} quinolones); lineage learners span 0`,
+            "Catalog may include these public isolates",
+          ]
+        : [
+            `${int(d.amrfinderplus.datasets)} sets`,
+            `Ahead of rule ${int(d.amrfinderplus.program_vs_known_gene_rule.ahead)}/${int(d.amrfinderplus.datasets)}; ties learners`,
+            "Catalog overlap possible",
+          ],
+    },
+    {
+      key: "tbprofiler",
+      name: "TBProfiler 6.6.3 (M. tuberculosis)",
+      cells: page
+        ? [
+            `${int(d.tbprofiler.by_name_endpoints)} named (${int(d.tbprofiler.graded_endpoints)} graded) TB reports`,
+            `Higher BA than SCM on ${int(d.tbprofiler.graded_vs_learners_lineage.scm.tool_higher)}/${int(d.tbprofiler.graded_endpoints)}, CART ${int(d.tbprofiler.graded_vs_learners_lineage.cart.tool_higher)}, RF ${int(d.tbprofiler.graded_vs_learners_lineage.rf.tool_higher)}, GBT & lasso ${int(d.tbprofiler.graded_vs_learners_lineage.gbt.tool_higher)}`,
+            `Assemblies not reads (${int(d.tbprofiler.by_name_rows_without_call)} no-calls)`,
+          ]
+        : [
+            `${int(d.tbprofiler.graded_endpoints)} TB drugs`,
+            `Ahead of SCM ${int(d.tbprofiler.graded_vs_learners_lineage.scm.tool_higher)}/${int(d.tbprofiler.graded_endpoints)}, RF ${int(d.tbprofiler.graded_vs_learners_lineage.rf.tool_higher)}/${int(d.tbprofiler.graded_endpoints)}`,
+            "Assemblies, not reads",
+          ],
+    },
+  ];
+  return (
+    <NumberTable
+      label="Further stress tests and external tool comparisons"
+      head={["Study", "Scale", "Headline result", "Scope limit"]}
+      groups={[{ rows }]}
+      slide={!page}
+    />
+  );
+};
+
+const TimeAndDenseTable = () => {
+  const d = ADDITIONAL_STUDIES;
+  return (
+    <>
+      <NumberTable
+        label="First-public-day split and dense neural network by learner"
+        head={["Learner", "Time split recall, pts", "Time split log loss", "Dense net minus learner BA, pts", "Dense net minus learner recall, pts", "Dense net minus learner log loss"]}
+        groups={[
+          {
+            rows: COMPARISON_LEARNERS.map((l) => {
+              const t = d.time_split.by_learner[l];
+              const n = d.dense_network.by_learner[l];
+              return {
+                key: l,
+                name: LEARNER_NAME[l],
+                cells: [
+                  `${signedPoints(t.recall.median)} (${t.recall.reading})`,
+                  `${signedDec(t.log_loss.median, 3)} (${t.log_loss.reading})`,
+                  signedPoints(n.balanced_accuracy.diff),
+                  signedPoints(n.recall.diff),
+                  signedDec(n.log_loss.diff, 3),
+                ],
+              };
+            }),
+          },
+        ]}
+      />
+      <p className="type-note mt-2">
+        Time split shows past-only training minus a size-matched random draw on {int(d.time_split.datasets)} datasets ({int(d.time_split.tested_pairs)} tested pairs). Dense net
+        shows the one-setting neural network minus each learner on lineage splits across {int(d.dense_network.datasets)} datasets ({int(d.dense_network.species)} species).
+      </p>
+    </>
+  );
+};
+
+const ToolsByLearnerTable = () => {
+  const d = ADDITIONAL_STUDIES;
+  return (
+    <>
+      <NumberTable
+        label="AMRFinderPlus 4.2.7 and TBProfiler 6.6.3 against each learner on lineage splits"
+        head={["Learner", "Learner minus AMRFinderPlus BA, pts", "Learner minus AMRFinderPlus sens, pts", "Learner minus AMRFinderPlus spec, pts", "TBProfiler higher BA (of 14)", "Learner minus TBProfiler BA, pts"]}
+        groups={[
+          {
+            rows: COMPARISON_LEARNERS.map((l) => {
+              const a = d.amrfinderplus.by_learner_lineage[l];
+              const t = d.tbprofiler.graded_vs_learners_lineage[l];
+              return {
+                key: l,
+                name: LEARNER_NAME[l],
+                cells: [
+                  signedPoints(a.ba_median),
+                  signedPoints(a.sens_median),
+                  signedPoints(a.spec_median),
+                  `${int(t.tool_higher)} of ${int(d.tbprofiler.graded_endpoints)}`,
+                  signedPoints(t.median_learner_minus_tool),
+                ],
+              };
+            }),
+          },
+        ]}
+      />
+      <p className="type-note mt-2">
+        AMRFinderPlus 4.2.7 covers {int(d.amrfinderplus.datasets)} datasets across {int(d.amrfinderplus.species)} species; every learner&apos;s 95% species interval on balanced
+        accuracy spans zero. TBProfiler 6.6.3 ran on 2,000 M. tuberculosis assemblies ({int(d.tbprofiler.graded_rows_with_call)} of {int(d.tbprofiler.graded_rows)} graded rows
+        called; {int(d.tbprofiler.graded_rows_without_call)} no-calls). Both catalogues are newer than many of these public genomes, which can favour the catalogue tools.
+      </p>
+    </>
+  );
+};
+
+export const comparisonsFinding = (_m: Manifest, opts: FindingOptions): Finding => {
+  const d = ADDITIONAL_STUDIES;
+  return {
+    id: "comparisons",
+    title: "Further stress tests and tool comparisons",
+    result: opts.page
+      ? `Five additional revision ${int(d.evaluation_revision)} records test temporal generalization and compare GRM against outside tools and a neural network. Training only on earlier public dates scores worse than a random draw on log loss and balanced accuracy for ${int(d.time_split.total_log_loss_worse)} of 5 learners (recall worse for ${int(d.time_split.total_recall_worse)} of 5, ${int(d.time_split.datasets)} datasets). On lineage splits, GRM's set covering machine leads Kover 2.0.7 by ${points(Math.abs(d.kover.balanced_accuracy.value))} as run on ${int(d.kover.datasets)} small datasets, a dense neural network establishes no gain over the classical learners (${int(d.dense_network.datasets)} datasets), the full AMRFinderPlus 4.2.7 program beats GRM's simplified known-gene rule on ${int(d.amrfinderplus.program_vs_known_gene_rule.ahead)} of ${int(d.amrfinderplus.datasets)} datasets while roughly tying the 5 learners, and TBProfiler 6.6.3 scores higher than SCM on ${int(d.tbprofiler.graded_vs_learners_lineage.scm.tool_higher)} of ${int(d.tbprofiler.graded_endpoints)} graded M. tuberculosis drugs on assemblies.`
+      : `Five revision ${int(d.evaluation_revision)} comparisons: earlier-date training hurts all 5 learners, SCM leads Kover on ${int(d.kover.datasets)} small sets, a dense net shows no gain, AMRFinderPlus ties lineage learners on ${int(d.amrfinderplus.datasets)} sets, and TBProfiler leads SCM on ${int(d.tbprofiler.graded_vs_learners_lineage.scm.tool_higher)} of ${int(d.tbprofiler.graded_endpoints)} TB drugs.`,
+    figure: <ComparisonsSummaryTable page={opts.page} />,
+    caption: opts.page
+      ? "Every row summarizes one committed revision 14 record. All five are retrospective comparisons on public genomes, not prospective or external validation. Catalogue tools (AMRFinderPlus and TBProfiler) use databases curated from public isolates and may overlap these cohorts; TBProfiler was run on assemblies rather than sequencing reads."
+      : "Five committed revision 14 records on public genomes (retrospective, not external validation). Catalogue tools may overlap these public isolates; TBProfiler ran on assemblies.",
+    span: "unit",
+    more: opts.page
+      ? [
+          { label: "Time split and dense network by learner", body: <TimeAndDenseTable /> },
+          { label: "AMRFinderPlus and TBProfiler by learner", body: <ToolsByLearnerTable /> },
+        ]
+      : undefined,
+  };
+};
+
+export const FINDINGS = [
+  corpusFinding,
+  lineageFinding,
+  learnersFinding,
+  barsFinding,
+  catalogFinding,
+  panelsFinding,
+  micFinding,
+  outsideFinding,
+  studySplitFinding,
+  otherDatabaseFinding,
+  comparisonsFinding,
+  inputsFinding,
+] as const;

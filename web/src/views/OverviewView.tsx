@@ -13,7 +13,8 @@ import type { Navigator } from "../app/router";
 import { ViewHeader } from "../ui/ViewHeader";
 import { FOCUS_RING, PanelState, VIEW_SHELL } from "../ui/primitives";
 import { AUDIT_READING, AUDIT_SCOPE } from "../ui/EvaluationNotice";
-import { PrimerSection } from "./primer";
+import { PRIMER_ANCHOR, PrimerSection } from "./primer";
+import { Takeaways } from "./Takeaways";
 import { useMicBaselines } from "../data/load";
 import { micConstants } from "../data/baselines";
 import { AuditReasons, FINDINGS, inApp, LINK, methodsHref, openMethodsAt, ReportLine, SectionHeading, selectionCap, showSection, STATUS_LINK, type Finding, type FindingMore } from "./findings";
@@ -89,8 +90,8 @@ const Limits = ({ n, manifest, nav }: { n: number; manifest: Manifest; nav: Navi
       </SectionHeading>
       <ul className="prose-measure mt-3 list-disc space-y-2 pl-5 text-body text-ink">
         <li>
-          Every number here, except those on newly deposited genomes, is internal cross-validation on public BV-BRC genomes: learners train on part of the genomes and are scored on the
-          rest, against the resistant and susceptible calls BV-BRC reports.
+          Every number here, except those on newly deposited genomes, earlier-vs-later public dates, and another public database, is internal cross-validation on public BV-BRC genomes: learners train on part of
+          the genomes and are scored on the rest, against the resistant and susceptible calls BV-BRC reports.
         </li>
         <li>
           {capped
@@ -99,7 +100,8 @@ const Limits = ({ n, manifest, nav }: { n: number; manifest: Manifest; nav: Navi
         </li>
         <li>
           No external, prospective, or clinical validation has been done: no test on another lab&apos;s genomes, on newly collected isolates or in a clinical study. The newly
-          deposited genomes come from the same database as the cohorts, so that test is not external validation either. {AUDIT_READING}
+          deposited genomes come from the same database as the cohorts, and the NCBI Pathogen Detection set shares BioProjects with BV-BRC training in <em>S. enterica</em> and{" "}
+          <em>C. coli</em>, so neither test is external validation. {AUDIT_READING}
         </li>
       </ul>
       <p className="mt-3 text-control">
@@ -155,7 +157,8 @@ export const OverviewView = ({ manifest, nav }: { manifest: Manifest; nav: Navig
         </div>
       ) : (
         <div className="mt-10 space-y-12">
-          <PrimerSection manifest={manifest} nav={nav} firstFinding={findings[0]!.id} />
+          <Takeaways manifest={manifest} micConstants={constants} />
+          <PrimerSection manifest={manifest} nav={nav} firstFinding={findings[0]!.id} initialOpen={hash === PRIMER_ANCHOR || hash.startsWith("primer-")} />
           {findings.map((f, i) => (
             <ReportSection key={f.id} n={i + 1} finding={f} open={f.id === PANELS_ANCHOR && hash === PANELS_ANCHOR} />
           ))}

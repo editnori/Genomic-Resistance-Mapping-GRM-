@@ -226,13 +226,14 @@ const framed = (section: Element, label: string) => section.querySelector(`[role
 const passing: Manifest = { ...base, evaluation_revision: 7, datasets: base.datasets.map((d) => ({ ...d, evaluation: { revision: 7, valid: true, reasons: [] } })) };
 
 describe("What GRM found", () => {
-  it("reads as a report: a plain title, what the site asks, a plain status line, the primer, and ten numbered sections", async () => {
+  it("reads as a report: a plain title, what the site asks, a plain status line, takeaways, the primer, and thirteen numbered sections", async () => {
     const host = await mount(passing, fakeNav().nav);
     expect(host.querySelector("h1")?.textContent).toBe("What GRM found");
     // The question comes in words before any chart.
     expect(host.querySelector("header")?.textContent).toContain("asks how well the bacterium's genome, its full DNA sequence, predicts that lab result.");
     expect(host.querySelector("header")?.textContent).toContain("Known-gene catalog: AMRFinderPlus database ");
     expect([...host.querySelectorAll("h2")].map((h) => h.textContent)).toEqual([
+      "At a glance",
       "How to read this report",
       "1 Genomes and lab calls",
       "2 Scores on unseen lineages",
@@ -242,8 +243,11 @@ describe("What GRM found", () => {
       "6 Simulated PCR panel",
       "7 Predicting the drug level that stops growth (MIC)",
       "8 Newly deposited genomes",
-      "9 Input settings against the default",
-      "10 Limits",
+      "9 Holding out whole studies",
+      "10 Another public database",
+      "11 Further stress tests and tool comparisons",
+      "12 Input settings against the default",
+      "13 Limits",
     ]);
     const scope = host.querySelector<HTMLAnchorElement>('header a[href="#limits"]');
     expect(scope?.textContent).toBe("Tested within one public database only");

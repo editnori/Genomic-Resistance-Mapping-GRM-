@@ -9,7 +9,7 @@ A Rust pipeline builds one dataset per species and antibiotic, cross-validates f
 
 ## What GRM found (Revision 14)
 
-On public BV-BRC genomes, the best of five k-mer learners reaches a median balanced accuracy of 92.9% on random splits (274 datasets) and 87.7% with whole lineages held out (268 datasets). With lineages held out, 0 of 268 datasets are shown to meet both limits of the adapted research screen. Folds that hold whole studies out score worse than random folds for 5 of 5 learners. Every figure is retrospective. No external or clinical validation has been done.
+On public BV-BRC genomes, the best of five k-mer learners reaches a median balanced accuracy of 92.9% on random splits (274 datasets) and 87.7% with whole lineages held out (268 datasets). With lineages held out, 0 of 268 datasets are shown to meet both limits of the adapted research screen. Folds that hold whole studies out score worse than random folds on log loss and specificity for 5 of 5 learners. Every figure is retrospective. No external or clinical validation has been done.
 
 | Question | Revision 14 finding | Details |
 | --- | --- | --- |
@@ -28,7 +28,7 @@ On public BV-BRC genomes, the best of five k-mer learners reaches a median balan
 | AMRFinderPlus 4.2.7 program | Across 235 datasets in 21 species, the full program leads GRM's known-gene rule on 94 of 235 (48 by >=10 points, 20 quinolones); SCM minus program median balanced accuracy is +0.0048 (95% species CI -0.0063 to +0.0466) | [amrfinderplus-comparison.md](docs/amrfinderplus-comparison.md) |
 | TBProfiler 6.6.3 (*M. tuberculosis*) | On 2,000 assemblies across 14 graded TB drugs (16 named endpoints, 819 no-calls), TBProfiler scores higher than SCM on 8 of 14 (SCM minus TBProfiler median -0.0058) | [tbprofiler-comparison.md](docs/tbprofiler-comparison.md) |
 
-They are an adapted research screen. They are not an applicable FDA criterion, and meeting them does not make a learner fit for clinical use. Every number in the table above is verified against committed `reference/` and `web/src/data/` files by `tests/readme_summary`. See [docs/INDEX.md](docs/INDEX.md) for the full documentation map.
+The VME ≤1.5% and ME ≤3% limits are an adapted research screen. They are not an applicable FDA criterion, and meeting them does not make a learner fit for clinical use. Every number in the table above is verified against committed `reference/` and `web/src/data/` files by `tests/readme_summary`. See [docs/INDEX.md](docs/INDEX.md) for the full documentation map.
 
 ## Flow
 
