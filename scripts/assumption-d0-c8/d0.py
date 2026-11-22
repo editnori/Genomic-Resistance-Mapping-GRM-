@@ -528,8 +528,13 @@ def place(report, inp, calls, learners, gap, reference):
             scored = [r for r in folds_rows if r[1]]
             if scored:
                 best = max(scored, key=lambda r: (r[4], -r[0]))
-                missed = [best[0]]
-                fallback = True
+                # Only a fold where the learner did worse than the program:
+                # a pooled miss that comes from single-class folds alone
+                # leaves the pair with no missed fold, and combine counts it
+                # apart (no_missed_fold).
+                if best[4] > 0:
+                    missed = [best[0]]
+                    fallback = True
         plan_folds[learner] = (lba, dgap, folds_rows, missed, fallback)
     need = sorted({f for v in plan_folds.values() if v[1] >= gap - EPS for f in v[3]})
     scans = {}
@@ -615,32 +620,35 @@ def write_dataset(out, fold_rows, data_rows):
 
 
 SUMMARY_HEADER = ["subset", "learner", "miss_datasets"] + [f"datasets_{c}" for c in CAUSES + OPEN_ONLY] + \
-    [f"gap_share_{c}" for c in CAUSES + OPEN_ONLY] + ["ties", "reading"]
+    [f"gap_share_{c}" for c in CAUSES + OPEN_ONLY] + ["ties", "no_missed_fold", "reading"]
 
 
 def combine(rows, subset="all"):
     """Per learner and over the five: datasets per cause (a tie counts in
     each tied cause) and each cause's share of the gap (a tie splits it).
-    Also returns the five learners' counts and their miss pairs. `subset`
-    names the rows in the table's first column."""
+    A miss pair with no missed fold has no cause: it counts in
+    `no_missed_fold`, in the miss pairs and in the gap total, and in no
+    cause. Also returns the five learners' counts and their miss pairs.
+    `subset` names the rows in the table's first column."""
     out = []
     every, pairs = dict.fromkeys(CAUSES + OPEN_ONLY, 0), 0
     for learner in list(fr.LEARNERS) + ["all"]:
         mine = [r for r in rows if r["in_miss"] and (learner == "all" or r["learner"] == learner)]
         counts = dict.fromkeys(CAUSES + OPEN_ONLY, 0)
         share = dict.fromkeys(CAUSES + OPEN_ONLY, 0.0)
-        ties = 0
+        ties = none = 0
         total = sum(r["gap"] for r in mine)
         for r in mine:
             causes = r["cause"].split("+") if r["cause"] else []
             ties += len(causes) > 1
+            none += not causes
             for c in causes:
                 counts[c] += 1
                 share[c] += r["gap"] / len(causes)
         if learner == "all":
             every, pairs = counts, len(mine)
         out.append([subset, learner, len(mine)] + [counts[c] for c in CAUSES + OPEN_ONLY] +
-                   [share[c] / total if total else None for c in CAUSES + OPEN_ONLY] + [ties, READING])
+                   [share[c] / total if total else None for c in CAUSES + OPEN_ONLY] + [ties, none, READING])
     return out, every, pairs
 
 

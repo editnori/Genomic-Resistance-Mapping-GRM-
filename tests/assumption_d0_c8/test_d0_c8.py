@@ -177,17 +177,42 @@ class D0Causes(unittest.TestCase):
     def test_no_missed_fold_falls_back_to_the_largest_gap(self):
         truth = [0 if S.cluster(i) in (2, 7) else SPREAD[i] for i in ALL]
         rows = S.noise(20, seed=7) + [truth]
-        # Wrong only on fold 2, whose test genomes are all susceptible.
+        # Wrong on fold 2, whose test genomes are all susceptible, and on
+        # one resistant genome of fold 0: fold 0's gap is 1/12, above 0 and
+        # under 0.10, the largest of the folds that test both classes.
         c = Case(self.tmp.name, "fallback", truth=truth, program=truth, rows=rows,
-                 scores={"scm": S.scores_for(truth, wrong_folds=(2,))})
+                 scores={"scm": S.scores_for(truth, wrong_folds=(2,), wrong_samples=(0,))})
         folds, data = c.read()
         self.assertTrue(data["scm"]["in_miss"])
         self.assertTrue(data["scm"]["fallback"])
         self.assertEqual(data["scm"]["missed_folds"], 1)
         self.assertFalse(fold_row(folds, "scm", 2)["both_classes"])
         self.assertFalse(fold_row(folds, "scm", 2)["missed"])
+        self.assertAlmostEqual(fold_row(folds, "scm", 0)["fold_gap"], 1 / 12)
         self.assertTrue(fold_row(folds, "scm", 0)["missed"])
         self.assertEqual(data["scm"]["cause"], "unused")
+
+    def test_no_fallback_to_a_fold_where_the_learner_did_as_well(self):
+        truth = [0 if S.cluster(i) in (2, 7) else SPREAD[i] for i in ALL]
+        rows = S.noise(20, seed=7) + [truth]
+        # Wrong only on fold 2, whose test genomes are all susceptible: the
+        # pooled gap is 0.10 or more, and every fold that tests both classes
+        # has a gap of 0. The pair has no missed fold and no cause.
+        c = Case(self.tmp.name, "nofallback", truth=truth, program=truth, rows=rows,
+                 scores={"scm": S.scores_for(truth, wrong_folds=(2,))})
+        folds, data = c.read()
+        self.assertTrue(data["scm"]["in_miss"])
+        self.assertFalse(data["scm"]["fallback"])
+        self.assertEqual(data["scm"]["missed_folds"], 0)
+        self.assertIsNone(data["scm"]["cause"])
+        self.assertFalse(any(r["missed"] for r in folds))
+        self.assertTrue(all(r["fold_gap"] <= 0 for r in folds if r["learner"] == "scm" and r["both_classes"]))
+        table, every, pairs = d0.combine(list(data.values()))
+        col = {h: i for i, h in enumerate(d0.SUMMARY_HEADER)}
+        scm = next(t for t in table if t[1] == "scm")
+        self.assertEqual((scm[col["miss_datasets"]], scm[col["no_missed_fold"]]), (1, 1))
+        self.assertEqual(sum(every[k] for k in d0.CAUSES), 0)
+        self.assertEqual(pairs, 1)
 
     def test_a_fold_without_a_miss_gets_no_cause(self):
         rows = S.noise(20, seed=8) + [SPREAD]
