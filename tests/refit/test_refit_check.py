@@ -172,6 +172,29 @@ class RefitCheck(unittest.TestCase):
         p, ds, _ = self.run_check(moved)
         self.assertEqual((p.returncode, ds[0]["fitted_fields"], ds[0]["text_equal_less_allowed"]), (1, "equal", "no"))
 
+    def test_a_dropped_null_field_or_a_new_sample_field_fails_by_the_text(self):
+        # The field checks read a missing key as null and compare a sample on
+        # its named fields only: the text check is what fails these two.
+        base = release_report()
+        base["unsupported_assays"] = None
+        self.write(self.release + "/datasets", base)
+        for change in ("null_dropped", "sample_field"):
+            r = refit_of(base)
+            if change == "null_dropped":
+                del r["unsupported_assays"]
+            else:
+                r["samples"][3]["SYNTHETIC_study"] = "SYNTHETIC"
+            p, ds, ln = self.run_check(r)
+            self.assertEqual((p.returncode, ds[0]["fitted_fields"], ds[0]["unexpected_new_keys"],
+                              ds[0]["text_equal_less_allowed"]), (1, "equal", "-", "no"), change)
+            self.assertTrue(all(x["verdict"] == "equal" for x in ln), change)
+
+    def test_fold_models_in_another_split_order_fail(self):
+        r = refit_of(self.base)
+        r["fold_models"]["splits"].reverse()
+        p, ds, _ = self.run_check(r)
+        self.assertEqual((p.returncode, ds[0]["fold_models"]), (1, "incomplete"))
+
     def test_the_tables_hold_no_sample_id_or_value(self):
         r = refit_of(self.base)
         r["samples"][1]["lineage"] = 7
