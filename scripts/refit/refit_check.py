@@ -18,16 +18,25 @@ it compares the refit report with the release's report:
                  difference over its numbers;
   added fields   `fold_models` (one entry per split, each learner with one
                  model per fold), `samples[].rule_groups`, and `selection`
-                 are allowed; any other key the release lacks is counted.
+                 are allowed; any other key the release lacks is counted;
+  feature cards  the top-level `features` list is compared card by card, in
+                 order, one to one: a card's `kmer` and `locus` may differ,
+                 since both are written after the fit from genome files and
+                 CDS lists fetched again; every other card field, the number
+                 and the order of the cards must be equal. The cards whose
+                 `kmer` or `locus` differs are counted per dataset. A `kmer`
+                 or `locus` key anywhere else is compared as any field.
 
-A last column compares the two files' text: with `seconds`, the three
-allowed fields and the four descriptive fields taken out, both are written
-again in their own key order and must be the same string, which also checks
-the key order.
+A column compares the two files' text: with `seconds`, the three allowed
+fields and the four descriptive fields taken out, and the values of each
+top-level feature card's `kmer` and `locus` set to one mark (the keys stay),
+both are written again in their own key order and must be the same string,
+which also checks the key order.
 
 Writes OUT_DIR/datasets.tsv (one row per dataset: field names that differ,
-no value) and OUT_DIR/learners.tsv (one row per dataset, split and learner),
-and prints the totals. Exit 1 when any fitted field or learner differs.
+no value; its last column, cards_with_other_locus, counts the feature cards
+whose `kmer` or `locus` differs) and OUT_DIR/learners.tsv (one row per
+dataset, split and learner), and prints the totals. Exit 1 when any fitted field or learner differs.
 No genome id, value or feature is written.
 """
 
@@ -42,6 +51,26 @@ DESCRIPTIVE = ("country", "year", "host", "mlst")
 ALLOWED_NEW = {"fold_models", "selection"}
 LEARNERS = ("scm", "cart", "rf", "gbt", "lasso")
 DROP = {"seconds", "fold_models", "rule_groups", "selection"} | set(DESCRIPTIVE)
+# Written after the fit from refetched genome files and CDS lists: allowed to
+# differ in a top-level feature card, and nowhere else.
+CARD_ALLOWED = ("kmer", "locus")
+MARK = "[allowed to differ]"
+
+
+def masked(card):
+    """A feature card with the allowed fields' values set to one mark."""
+    if not isinstance(card, dict):
+        return card
+    return OrderedDict((k, MARK if k in CARD_ALLOWED else v) for k, v in card.items())
+
+
+def cards(a, b):
+    """(equal but for the allowance, cards whose kmer or locus differs)."""
+    if not isinstance(a, list) or not isinstance(b, list):
+        return a == b, 0
+    other = sum(isinstance(x, dict) and isinstance(y, dict) and any(x.get(k) != y.get(k) for k in CARD_ALLOWED)
+                for x, y in zip(a, b))
+    return len(a) == len(b) and all(masked(x) == masked(y) for x, y in zip(a, b)), other
 
 
 def stripped(x):
@@ -86,9 +115,17 @@ def gap(a, b):
     return True, worst
 
 
+def text_form(text):
+    """The report as the text check compares it."""
+    doc = stripped(json.loads(text, object_pairs_hook=OrderedDict))
+    if isinstance(doc, dict) and isinstance(doc.get("features"), list):
+        doc["features"] = [masked(c) for c in doc["features"]]
+    return json.dumps(doc)
+
+
 def check(refit, release):
     row = {"report_fields_differ": [], "descriptive_samples_differ": 0, "unexpected_new_keys": [],
-           "fold_models": "no", "rule_groups_samples": 0}
+           "fold_models": "no", "rule_groups_samples": 0, "cards_with_other_locus": 0}
     for k in release:
         if k == "seconds":
             continue
@@ -106,6 +143,11 @@ def check(refit, release):
             strip = lambda s: {x: y for x, y in s.items() if x != "learners"}
             if len(a) != len(b) or any(strip(s) != strip(t) for s, t in zip(a, b)):
                 row["report_fields_differ"].append("splits")
+            continue
+        if k == "features":
+            same, row["cards_with_other_locus"] = cards(refit.get("features"), release["features"])
+            if not same:
+                row["report_fields_differ"].append("features")
             continue
         if refit.get(k) != release[k]:
             row["report_fields_differ"].append(k)
@@ -145,7 +187,7 @@ def main():
     for d in [x for x in listed.split(",") if x]:
         p = os.path.join(refit_dir, d + ".json")
         if not os.path.isfile(p):
-            ds_rows.append([d, "no report", "", "", "", "", "", ""])
+            ds_rows.append([d, "no report", "", "", "", "", "", "", ""])
             bad += 1
             continue
         with open(p, encoding="utf-8") as f:
@@ -154,21 +196,21 @@ def main():
             release_text = f.read()
         # Plain dicts for the field checks (key order aside), ordered ones for the text.
         refit, release = json.loads(refit_text), json.loads(release_text)
-        text_equal = json.dumps(stripped(json.loads(refit_text, object_pairs_hook=OrderedDict))) == \
-            json.dumps(stripped(json.loads(release_text, object_pairs_hook=OrderedDict)))
+        text_equal = text_form(refit_text) == text_form(release_text)
         row, learners = check(refit, release)
         differ = row["report_fields_differ"]
         ds_rows.append([d, "equal" if not differ else "differs", ",".join(differ) or "-",
                         str(row["descriptive_samples_differ"]), row["fold_models"],
                         str(row["rule_groups_samples"]), ",".join(row["unexpected_new_keys"]) or "-",
-                        "yes" if text_equal else "no"])
+                        "yes" if text_equal else "no", str(row["cards_with_other_locus"])])
         bad += bool(differ) or row["fold_models"] != "complete" or bool(row["unexpected_new_keys"]) or not text_equal
         for scheme, name, verdict, nd, worst in learners:
             ln_rows.append([d, scheme, name, verdict, str(nd), worst])
             bad += verdict != "equal"
     with open(os.path.join(out, "datasets.tsv"), "w", encoding="utf-8") as f:
         f.write("dataset\tfitted_fields\tfields_that_differ\tsamples_with_other_descriptive_fields"
-                "\tfold_models\tsamples_with_rule_groups\tunexpected_new_keys\ttext_equal_less_allowed\n")
+                "\tfold_models\tsamples_with_rule_groups\tunexpected_new_keys\ttext_equal_less_allowed"
+                "\tcards_with_other_locus\n")
         for r in ds_rows:
             f.write("\t".join(r) + "\n")
     with open(os.path.join(out, "learners.tsv"), "w", encoding="utf-8") as f:
@@ -177,9 +219,11 @@ def main():
             f.write("\t".join(r) + "\n")
     eq_d = sum(r[1] == "equal" for r in ds_rows)
     eq_l = sum(r[3] == "equal" for r in ln_rows)
+    other = [int(r[8]) for r in ds_rows if r[8]]
     print(f"datasets: {len(ds_rows)}; fitted fields equal {eq_d}, not equal {len(ds_rows) - eq_d}; "
           f"fold_models complete {sum(r[4] == 'complete' for r in ds_rows)}; "
-          f"text equal less the allowed fields {sum(r[7] == 'yes' for r in ds_rows)}")
+          f"text equal less the allowed fields {sum(r[7] == 'yes' for r in ds_rows)}; "
+          f"datasets with a card whose kmer or locus differs {sum(n > 0 for n in other)}, such cards {sum(other)}")
     print(f"learners (dataset x split x learner): {len(ln_rows)}; equal {eq_l}, not equal {len(ln_rows) - eq_l}")
     for r in ln_rows:
         if r[3] != "equal":
