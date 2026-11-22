@@ -81,13 +81,34 @@ master() {  # master <path in the data root> <file>
   local want; want=$(grep -m1 "  $1\$" "$M" | cut -c1-64)
   [ -n "$want" ] && [ "$(sha256sum "$2" | cut -c1-64)" = "$want" ]
 }
+# Genome ids stay on the box. grm names a genome in a download's retry line
+# (even when the retry succeeds), a fold file check, a copy refusal and a
+# count failure, and logs/ is copied back. So each step's and fit's log moves
+# to work/raw-logs, and logs/ gets it back with every genome id of the
+# species' list written as [genome id]; a failure's last 30 lines in
+# logs/run.log come from that copy.
+scrub() {  # scrub <log>
+  local raw; raw=$W/raw-logs/$(basename "$1")
+  mkdir -p "$W/raw-logs"; mv -f "$1" "$raw"
+  python3 -I -c '
+import json, os, re, sys
+ids = set()
+if os.path.isfile(sys.argv[1]):
+    with open(sys.argv[1]) as f:
+        ids = {g["id"].encode() for g in json.load(f)["genomes"]}
+token = re.compile(rb"(?<![\w.])\d+\.\d+(?!\d)")
+for line in sys.stdin.buffer:
+    sys.stdout.buffer.write(token.sub(lambda m: b"[genome id]" if m.group(0) in ids else m.group(0), line))
+' "$R/species/$SP.json" < "$raw" > "$1"
+}
 step() {  # step <name> <function>: once, timed, in a shell that stops at the first failure
   STEP=$1
   if [ -e "$OUT/flags/$1.done" ]; then say "$1: done before, skipped"; return 0; fi
   say "$1: start"
   /usr/bin/time -f "$1 %e s wall, %M KB peak, %U s user, %S s sys" -o "$OUT/logs/$1.time" \
     bash -euo pipefail -c "$(declare -f say pinned master "$2"); $2" < /dev/null > "$OUT/logs/$1.log" 2>&1 \
-    || { tail -n 30 "$OUT/logs/$1.log"; false; }
+    || { scrub "$OUT/logs/$1.log"; tail -n 30 "$OUT/logs/$1.log"; false; }
+  scrub "$OUT/logs/$1.log"
   touch "$OUT/flags/$1.done"
   disk "$1"
   say "$1: end, $(cat "$OUT/logs/$1.time")"
@@ -230,7 +251,8 @@ fit() {
   STEP=$name
   say "$name: start"
   /usr/bin/time -v -o "$OUT/logs/$name.time" "$GRM" --data "$ROOT" learn --species "$SP" "$@" \
-    < /dev/null > "$OUT/logs/$name.log" 2>&1 || { tail -n 30 "$OUT/logs/$name.log"; false; }
+    < /dev/null > "$OUT/logs/$name.log" 2>&1 || { scrub "$OUT/logs/$name.log"; tail -n 30 "$OUT/logs/$name.log"; false; }
+  scrub "$OUT/logs/$name.log"
   say "$name: end, $(grep -E 'Elapsed|Maximum resident' "$OUT/logs/$name.time" | sed 's/^\s*//' | tr '\n' ';')"
 }
 # The expected results of a split and seed: file<TAB>dataset<TAB>arms, one a line.
