@@ -304,13 +304,13 @@ The refit of the release's rule ended on its 23 species and 238 datasets at 20:3
 
 **Block.** Plan block C9 asks whether the release's served learner is the right one: the best random-split balanced accuracy among the five learners, a tie going to the later learner. The design was fixed at 19:19Z on 22 Nov 2026, before any code ran on real data, and `docs/served-pick.md` gives the method. No comparison result has been read.
 
-**Arms.** The default serves the release's pick on every outer lineage fold, read from the same run's random split at that run's seed. The inner pick serves, per outer fold, the learner with the best balanced accuracy on inner folds of that fold's training genomes. Both arms are scored with the release's own outer fits, so the default's pooled figure is its report's lineage row.
+**Arms.** The default serves the release's pick on every outer lineage fold, read from the same run's random split at that run's seed. The inner pick serves, per outer fold, the learner with the best balanced accuracy on inner folds of that fold's training genomes. Both arms are scored with the release's own outer fits, so the default's pooled figure is its report's lineage row. The default's pick reads the random split over every genome, the outer test folds' genomes included, so the default's served figure can carry the pick's optimism, and the inner pick's cannot. Wherever the two are compared, a same or a worse is never read as showing that the release's pick is right (ruling 9).
 
-**Partition.** The inner folds are 3 folds of the outer training genomes, each lineage whole, drawn at the fold's own seed. That is the partition the release's SCM and CART already tune on there. Each inner fit is fitted as an outer fold is, with draws seeded from the run's seed, the outer fold and the inner fold.
+**Partition.** The inner folds are 3 folds of the outer training genomes, each lineage whole, drawn at the fold's own seed. That is the partition the release's SCM and CART already tune on there. Each inner fit is fitted as an outer fold is, with its own inner folds, tuning holdouts and draws seeded from the run's seed, the outer fold and the inner fold.
 
 **Measure.** The primary measure is the pooled lineage balanced accuracy of the served learner on the outer test folds. Recall, specificity, both error rates with Wilson intervals, and log loss stand beside it. A dataset's value is the mean of seeds 42, 43 and 44. The twin is the default at seeds 45, 46 and 47.
 
-**Study.** The 55 first-run datasets in S get one study run each, on their reviewed `study-whole` plans, at the release's seeds. `grm learn` refuses a seed beside a fold file, so the study split has no twin. Its default is the seed-42 lineage run's pick.
+**Study.** The 55 first-run datasets in S get one study run each, on their reviewed `study-whole` plans, at the release's seeds. `grm learn` refuses a seed beside a fold file, so the study split has no twin. Its default is the seed-42 lineage run's pick. One study run per dataset and no study twin is a deviation from the plan's Rules, Draws, which give each arm seeds 42, 43 and 44 (question 6).
 
 **Count.** The count is the plan's Rules: better, worse or the same by 0.02 at 12 decimals, the median difference and its species interval, and the one-sided sign test. Holm runs over two pairs on the lineage primary measure, the inner pick and the twin.
 
@@ -324,21 +324,21 @@ The refit of the release's rule ended on its 23 species and 238 datasets at 20:3
 
 **Labels.** On the 233, three of the four label rules give the same labels. The 32 with an S and R pair depend on the most resistant call against the other three, and the other 201 on none of the four.
 
-**Questions.** The design leaves eight questions to the lead, each with the answer taken and the other one. The scorer runs either answer from the same results for questions 3 to 5.
+**Questions.** The design left eight questions to the lead, each with the answer taken and the other one. The lead ruled at 20:36Z on 22 Nov 2026, before any C9 score was read: all eight as taken, with the words of the column Ruled. For questions 3 to 5 the scorer runs every answer from the same results, and only the answer taken is read.
 
-| Question | Taken | Other |
-|---|---|---|
-| 1. Inner folds | 3, at the release's tuning seed | A partition at a seed of its own |
-| 2. Inner measure | Balanced accuracy of the summed inner calls | Mean of the inner folds' figures |
-| 3. Ties | The later learner, ties listed | The earlier, or the default's learner when tied |
-| 4. No pick | The default's learner on that fold, counted | The draw left unscored |
-| 5. Default | Each draw's own random-split pick | The seed-42 pick at every draw |
-| 6. Study draws | One run at the release's seeds, no twin | A seed under this flag only |
-| 7. Holm | Two pairs, condition 1 on the served figure | Per-learner rows |
-| 8. First run | L less M | All of L |
+| Question | Taken | Other | Ruled |
+|---|---|---|---|
+| 1. Inner folds | 3, at the release's tuning seed | A partition at a seed of its own | As taken |
+| 2. Inner measure | Balanced accuracy of the summed inner calls | Mean of the inner folds' figures | As taken |
+| 3. Ties | The later learner, ties listed | The earlier, or the default's learner when tied | The later is read; the earlier and the default's are scored beside it and decide nothing |
+| 4. No pick | The default's learner on that fold, counted | The draw left unscored | As taken |
+| 5. Default | Each draw's own random-split pick | The seed-42 pick at every draw | Each draw's own pick is read; the seed-42 pick is written beside it and decides nothing |
+| 6. Study draws | One run at the release's seeds, no twin | A seed under this flag only | As taken, named here as a deviation from Rules, Draws |
+| 7. Holm | Two pairs, condition 1 on the served figure | Per-learner rows | As taken |
+| 8. First run | L less M | All of L | As taken |
 
 **Pilot.** One draw of *Klebsiella aerogenes* with ertapenem, imipenem and meropenem, 93 genomes, ran in 108 s on a 16-CPU box at 8 threads. The fit with the inner pick took 30.85 s at a peak resident size of 925,212 KB, and the run used 5.09 GB of disk. Its seed-42 reports equal the release's in all 3 datasets.
 
 **Cost.** The inner pick took 0.19 to 0.44 of each dataset's release learning seconds. At 0.44, the first run costs 18.12 xlarge-hours central. Of those, 3.47 go to fetching genomes and building matrices again on each box, which the plan's 17 for all 268 leaves out. At the plan's 1.5 it costs 24.03.
 
-**Written.** This entry was written at 19:54Z on 22 Nov 2026, from the design fixed at 19:19Z, the lists and the pilot. No score of any C9 run had been read.
+**Written.** This entry was written at 19:54Z on 22 Nov 2026, from the design fixed at 19:19Z, the lists and the pilot, and the rulings of 20:36Z were added after a review of the block. No score of any C9 run had been read.
