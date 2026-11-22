@@ -1,6 +1,6 @@
 """Scores the results of `grm learn --exp-mic` (format grm-mic-plan-result-v1, docs/mic-plan.md).
 
-  python3 -I score.py <expect.tsv> <results dir> <release dir> <out dir>
+  python3 -I score.py <expect.tsv> <results dir> <release dir> <out dir> [<probe dir>]
 
 <expect.tsv> lists every result the run must hold, one per line, with the
 columns dataset, species_slug, split (lineage or study), plan (the result's
@@ -19,6 +19,13 @@ First every result is checked; the checks read no score:
     equal the report's but the seed, which must be the plan's, and its cohort
     (counts, and each tested genome's MIC, censor and call) must equal that
     of the dataset's seed-42 lineage result, which passed the first test;
+  - a dataset whose curated breakpoint differs from the release's (the
+    fingerprint hashes it; release_specs.py) passes the first test only
+    through <probe dir>/<dataset>.lineage-s42.mic.json, the seed-42 fit on
+    a copy of the data root with the release's breakpoints: the probe must
+    hold the release's settings and fingerprint and, but for its fingerprint
+    and wall time, equal the run's seed-42 result; then every result of the
+    dataset at the release's settings must hold the run's seed-42 key;
   - each fold's test counts equal the rows it tests;
   - each fold's training median is micbase's B2 recounted from the other
     folds' rows, and every row of the fold carries it, when the plan tests
@@ -136,6 +143,30 @@ def at_release_settings(result, report):
     )
 
 
+def strip(result):
+    """A result without its input fingerprint and its wall time."""
+    return {k: v for k, v in result.items() if k not in ("input_fingerprint", "seconds")}
+
+
+def probe_confirms(result, report, probe_dir, dataset):
+    """`result`, the run's seed-42 lineage result, read the release's inputs
+    but the dataset breakpoint: its probe holds the release's settings and
+    fingerprint and is the same result otherwise."""
+    if not probe_dir or report is None:
+        return False
+    path = os.path.join(probe_dir, f"{dataset}.lineage-s42.mic.json")
+    if not os.path.isfile(path):
+        return False
+    with open(path) as f:
+        probe = json.load(f)
+    return (
+        at_release_settings(probe, report)
+        and result.get("eval_config") == report["eval_config"]
+        and result.get("input_fingerprint") != report["input_fingerprint"]
+        and strip(probe) == strip(result)
+    )
+
+
 def cohort(result):
     """What a result reads of its dataset apart from the plan: its counts and
     each tested genome's MIC, censor and call, in no order."""
@@ -147,14 +178,20 @@ def but_seed(cfg):
     return {k: v for k, v in (cfg or {}).items() if k != "seed"}
 
 
-def fingerprint_check(result, exp, report, anchor):
-    """'equal', 'seed <S>, cohort as at 42', 'differs' or 'no report'.
-    `anchor` is the dataset's seed-42 lineage result when it is at the
-    release's settings, else None."""
+def fingerprint_check(result, exp, report, anchor, rebuilt=None):
+    """'equal', "equal with the release's breakpoint", 'seed <S>, cohort as
+    at 42', 'differs' or 'no report'. `anchor` is the dataset's seed-42
+    lineage result when it is at the release's settings or its probe
+    confirms it, else None; `rebuilt` that result's fingerprint when the
+    probe confirmed it."""
     if report is None:
         return "no report"
     if result.get("eval_config") == report["eval_config"]:
-        return "equal" if at_release_settings(result, report) else "differs"
+        if at_release_settings(result, report):
+            return "equal"
+        if rebuilt is not None and result.get("input_fingerprint") == rebuilt:
+            return "equal with the release's breakpoint"
+        return "differs"
     cfg = result.get("eval_config") or {}
     if (
         exp["split"] == "lineage"
@@ -162,7 +199,7 @@ def fingerprint_check(result, exp, report, anchor):
         and report["eval_config"] is not None
         and but_seed(cfg) == but_seed(report["eval_config"])
         and str(cfg.get("seed")) == exp["seed"]
-        and result.get("input_fingerprint") not in (None, report["input_fingerprint"])
+        and result.get("input_fingerprint") not in (None, report["input_fingerprint"], rebuilt)
         and cohort(result) == cohort(anchor)
     ):
         return f"seed {exp['seed']}, cohort as at 42"
@@ -293,9 +330,10 @@ def score_arm(result, exp, arm):
     return out
 
 
-def check_one(exp, results_dir, release_dir, anchors):
+def check_one(exp, results_dir, release_dir, anchors, rebuilt):
     """(the check row, the result or None). `anchors` maps a dataset to its
-    seed-42 lineage result at the release's settings."""
+    seed-42 lineage result at the release's settings or confirmed by its
+    probe, `rebuilt` a dataset to that result's key when the probe did."""
     row = {c: "" for c in CHECK_COLUMNS}
     row.update({c: exp[c] for c in ["dataset", "split", "plan", "seed", "file"]})
     path = os.path.join(results_dir, exp["file"])
@@ -312,14 +350,16 @@ def check_one(exp, results_dir, release_dir, anchors):
         and result.get("species_slug") == exp["species_slug"]
     ) else "differs"
     report = read_report(release_dir, exp["dataset"])
-    row["fingerprint"] = fingerprint_check(result, exp, report, anchors.get(exp["dataset"]))
+    row["fingerprint"] = fingerprint_check(result, exp, report, anchors.get(exp["dataset"]),
+                                           rebuilt.get(exp["dataset"]))
     row["plan_and_arms"] = "ok" if plan_matches(result, exp) else "differs"
     row["fold_counts"] = "equal" if fold_counts_equal(result) else "differs"
     row["median_check"] = median_check(result)
     row["predictions"] = "whole" if predictions_whole(result) else "partial"
     row["ok"] = "yes" if (
         row["format"] == "ok"
-        and (row["fingerprint"] == "equal" or row["fingerprint"].startswith("seed "))
+        and (row["fingerprint"] in ("equal", "equal with the release's breakpoint")
+             or row["fingerprint"].startswith("seed "))
         and row["plan_and_arms"] == "ok"
         and row["fold_counts"] == "equal"
         and row["median_check"] != "differs"
@@ -339,23 +379,28 @@ def write_tsv(path, columns, rows):
 
 
 def main(argv):
-    if len(argv) != 4:
+    if len(argv) not in (4, 5):
         print(__doc__.strip().splitlines()[2], file=sys.stderr)
         return 3
-    expect_path, results_dir, release_dir, out = argv
+    expect_path, results_dir, release_dir, out = argv[:4]
+    probe_dir = argv[4] if len(argv) == 5 else None
     os.makedirs(out, exist_ok=True)
     expect = read_expect(expect_path)
-    anchors = {}
+    anchors, rebuilt = {}, {}
     for exp in expect:
         path = os.path.join(results_dir, exp["file"])
         if exp["split"] == "lineage" and exp["seed"] == "42" and os.path.isfile(path):
             with open(path) as f:
                 result = json.load(f)
-            if at_release_settings(result, read_report(release_dir, exp["dataset"])):
+            report = read_report(release_dir, exp["dataset"])
+            if at_release_settings(result, report):
                 anchors[exp["dataset"]] = result
+            elif probe_confirms(result, report, probe_dir, exp["dataset"]):
+                anchors[exp["dataset"]] = result
+                rebuilt[exp["dataset"]] = result["input_fingerprint"]
     checks, scored = [], []
     for exp in expect:
-        row, result = check_one(exp, results_dir, release_dir, anchors)
+        row, result = check_one(exp, results_dir, release_dir, anchors, rebuilt)
         checks.append(row)
         if result is not None and row["ok"] == "yes":
             arms = [a for a in ARMS if a == "median" or a in exp["arms"].split(",")]

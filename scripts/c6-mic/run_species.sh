@@ -23,7 +23,14 @@
 # commit and sha256; the data root (the curated table, the catalog's three
 # files from NCBI and the genomes from BV-BRC, each checked against the master
 # list, then count, structure and matrix with no network); the study plan for
-# seed 47 (scripts/c6-mic/study_plans.py); the fits; the scorer.
+# seed 47 (scripts/c6-mic/study_plans.py); the fits; the probe; the scorer.
+#
+# The probe: the rebuilt table can give a dataset a breakpoint fitted on one
+# more MIC pair than the release's, which moves the input fingerprint and
+# nothing the fits read. For each such dataset (release_specs.py) seed 42 is
+# refitted on a copy of the data root whose breakpoints are the release's,
+# into results/probe; it must give the release's fingerprint, and the scorer
+# needs it to equal the run's seed-42 result in all else.
 #
 # Fits: grm learn --exp-mic on the lineage split at seeds 42 to 47 (released
 # and ordered at 42 to 44, released at 45 to 47), one run per seed over the
@@ -245,9 +252,43 @@ for seed in 42 43 44 45 46 47; do
 done
 disk fits
 
+probe() {
+  rm -rf "$W/probe" "$OUT/results/probe"; mkdir -p "$W/probe/root/curated" "$OUT/results/probe"
+  all=$(echo "$LINEAGE,$STUDY" | tr ',' '\n' | grep -vx -- '-' | sort -u | paste -sd, -)
+  python3 -I -B "$REPO/scripts/c6-mic/release_specs.py" "$ROOT/curated/datasets.json" "$R" "$all" "$W/probe"
+  cp "$W/probe/release-specs.tsv" "$OUT/results/release-specs.tsv"
+  todo=$(cat "$W/probe/differ.txt")
+  if [ -z "$todo" ]; then echo "probe: every breakpoint is the release's, none needed"; return 0; fi
+  for e in "$ROOT"/*; do [ "$(basename "$e")" = curated ] || ln -s "$e" "$W/probe/root/"; done
+  for f in "$ROOT"/curated/*; do [ "$(basename "$f")" = datasets.json ] || ln -s "$f" "$W/probe/root/curated/"; done
+  cp "$W/probe/datasets.json" "$W/probe/root/curated/datasets.json"
+  arms=$(awk -F'\t' 'NR > 1 && $3 == "lineage" && $5 == 42 { print $6; exit }' "$OUT/expect.tsv")
+  "$GRM" --data "$W/probe/root" learn --species "$SP" --only "$todo" --seed 42 --exp-mic "${arms:-released,ordered}" --exp-mic-out "$OUT/results/probe"
+  python3 -I -c '
+import json, os, sys
+probe, release, todo = sys.argv[1], sys.argv[2], sys.argv[3].split(",")
+bad = 0
+for d in todo:
+    path = os.path.join(probe, d + ".lineage-s42.mic.json")
+    with open(os.path.join(release, "datasets", d + ".json")) as f:
+        rep = json.load(f)
+    ok = os.path.isfile(path)
+    if ok:
+        with open(path) as f:
+            doc = json.load(f)
+        ok = doc["input_fingerprint"] == rep["input_fingerprint"] and doc["eval_config"] == rep["eval_config"]
+    if not ok:
+        print(d + ": the probe does not give the release fingerprint, so the inputs differ in more than the breakpoint")
+    bad += not ok
+print("probe:", len(todo) - bad, "of", len(todo), "give the release fingerprint")
+sys.exit(bad != 0)
+' "$OUT/results/probe" "$R" "$todo"
+}
+step probe probe
+
 STEP=score
 say "score: start"
-python3 -I -B "$REPO/scripts/c6-mic/score.py" "$OUT/expect.tsv" "$OUT/results" "$R" "$OUT/score" > "$OUT/logs/score.log" 2>&1 \
+python3 -I -B "$REPO/scripts/c6-mic/score.py" "$OUT/expect.tsv" "$OUT/results" "$R" "$OUT/score" "$OUT/results/probe" > "$OUT/logs/score.log" 2>&1 \
   || { cat "$OUT/logs/score.log"; false; }
 cat "$OUT/logs/score.log"
 

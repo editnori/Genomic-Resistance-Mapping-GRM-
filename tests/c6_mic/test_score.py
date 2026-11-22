@@ -20,6 +20,7 @@ A censored value sits at each end: at most -3 and above 6.
 
 import contextlib
 import io
+import json
 import os
 import tempfile
 import unittest
@@ -40,13 +41,21 @@ def cohort_a():
     ]
 
 
-def run(entries):
-    """score.main on a SYNTHETIC run: (exit code, checks, scores or None)."""
+def run(entries, probe=None):
+    """score.main on a SYNTHETIC run: (exit code, checks, scores or None).
+    `probe` maps a file name to a probe result document."""
     with tempfile.TemporaryDirectory() as tmp:
         expect, results, release = common.write_run(tmp, entries)
         out = os.path.join(tmp, "out")
+        args = [str(expect), str(results), str(release), out]
+        if probe is not None:
+            os.makedirs(os.path.join(tmp, "probe"))
+            for name, doc in probe.items():
+                with open(os.path.join(tmp, "probe", name), "w") as f:
+                    json.dump(doc, f)
+            args.append(os.path.join(tmp, "probe"))
         with contextlib.redirect_stdout(io.StringIO()):
-            code = score.main([str(expect), str(results), str(release), out])
+            code = score.main(args)
         _, checks = common.read_tsv(os.path.join(out, "checks.tsv"))
         path = os.path.join(out, "scores.tsv")
         scores = common.read_tsv(path) if os.path.exists(path) else None
@@ -266,6 +275,50 @@ class Checks(unittest.TestCase):
             code, checks, scores = run(entries)
             self.assertEqual((code, checks[1]["fingerprint"], checks[1]["ok"]), (1, "differs", "no"), i)
             self.assertIsNone(scores)
+
+    def test_a_rebuilt_breakpoint_passes_only_through_a_probe_equal_in_all_else(self):
+        # The rebuilt table fits the dataset breakpoint on one more MIC pair,
+        # and the fingerprint hashes the breakpoint: the run's key at the
+        # release's settings is "beef", the report's "f00d". The probe, the
+        # seed-42 fit with the release's breakpoint, keys "f00d" and is the
+        # same result but for its wall time.
+        exp42 = common.expect_row(seed=42, plan="lineage-s42")
+        exp43 = common.expect_row(seed=43, plan="lineage-s43")
+        exp47 = common.expect_row(split="study", plan="c6mic-s47", seed=47, arms="released")
+        s42 = common.result(cohort_a(), seed=42, fingerprint="beef")
+        s43 = common.result(cohort_a(), seed=43)
+        plan = {"kind": "fold-file", "scheme": "c6mic-s47", "fold_file_sha256": "ab"}
+
+        def study(key):
+            return common.result(cohort_a(), arms=("released",), plan=plan, fingerprint=key)
+
+        def probe(rows=None, key="f00d"):
+            doc = common.result(rows or cohort_a(), seed=42, fingerprint=key)
+            doc["seconds"] = 9.5
+            return {"synthia_coli__drug_a.lineage-s42.mic.json": doc}
+
+        entries = [(exp42, s42), (exp43, s43), (exp47, study("beef"))]
+        code, checks, scores = run(entries, probe())
+        self.assertEqual(code, 0)
+        self.assertEqual([c["fingerprint"] for c in checks], [
+            "equal with the release's breakpoint", "seed 43, cohort as at 42",
+            "equal with the release's breakpoint"])
+        self.assertEqual(len(scores[1]), 3 + 3 + 2)
+        # Each of these stops the run: no probe; a probe that does not give
+        # the report's key; a probe that differs in one MIC (fold 3's exact 0
+        # read as 1); a study result keyed apart from the seed-42 result.
+        other = cohort_a()
+        other[6] = R(3, 1, "Exact", False, -0.5, 0)
+        for i, (ents, prb) in enumerate([
+            (entries, None),
+            (entries, probe(key="cafe")),
+            (entries, probe(rows=other)),
+            ([(exp42, s42), (exp43, s43), (exp47, study("babe"))], probe()),
+        ]):
+            code, checks, scores = run(ents, prb)
+            self.assertEqual(code, 1, i)
+            self.assertIn("differs", [c["fingerprint"] for c in checks], i)
+            self.assertIsNone(scores, i)
 
     def test_a_study_result_is_matched_by_its_scheme(self):
         exp = common.expect_row(split="study", plan="c6mic-s47", seed=47, arms="released")
