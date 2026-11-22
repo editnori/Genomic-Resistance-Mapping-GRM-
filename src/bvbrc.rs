@@ -62,6 +62,99 @@ const AMR_FIELDS: &str = "genome_id,genome_name,taxon_id,antibiotic,resistant_ph
 measurement_value,measurement_unit,laboratory_typing_method,laboratory_typing_platform,vendor,testing_standard,\
 testing_standard_year,source,pmid,date_inserted";
 
+/// One row of a `genome_amr` page: BV-BRC's record id, which the download
+/// pages on, and the record. `genome_amr.jsonl` keeps the record alone, so
+/// its lines are what they were before the download paged on the id.
+#[derive(Clone, Debug, Deserialize)]
+struct AmrPageRow {
+    #[serde(deserialize_with = "text")]
+    id: String,
+    #[serde(flatten)]
+    record: AmrRecord,
+}
+
+/// The query for one page of laboratory-method `genome_amr` records: `page`
+/// records sorted by id, after the id `after` (none for the first page),
+/// with `AMR_FIELDS` and the id. BV-BRC answers HTTP 400 past offset 100,000
+/// ("Deep offset paging is not supported", 21 Nov 2026), so the pages do not
+/// use an offset. Its `gt` on the id also returns the record at the bound,
+/// which `write_amr_pages` drops.
+fn amr_page_url(after: Option<&str>, page: usize) -> String {
+    const LAB: &str = "eq(evidence,%22Laboratory%20Method%22)";
+    let filter = match after {
+        None => LAB.to_string(),
+        Some(id) => format!("and({LAB},gt(id,{}))", rql_value(id)),
+    };
+    format!("{API}/genome_amr/?{filter}&sort(+id)&limit({page})&select(id,{AMR_FIELDS})")
+}
+
+/// `text` percent-encoded for an RQL argument: every byte but an ASCII
+/// letter, a digit or one of `-._~`. BV-BRC's ids are UUIDs, which pass
+/// unchanged.
+fn rql_value(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    for b in text.bytes() {
+        if b.is_ascii_alphanumeric() || b"-._~".contains(&b) {
+            out.push(b as char);
+        } else {
+            out.push_str(&format!("%{b:02X}"));
+        }
+    }
+    out
+}
+
+/// Writes `genome_amr.jsonl` from pages of up to `page` rows sorted by id.
+/// `next_page` takes the last id written (none for the first page) and
+/// returns the rows from there on; a row whose id is that last id is the
+/// bound BV-BRC repeats and is skipped. A page shorter than `page` is the
+/// last. The file is written to `.part` and renamed only when every page
+/// came in, so a failed run leaves an earlier file as it was. A run always
+/// starts at the first page.
+fn write_amr_pages(
+    out: &Path,
+    page: usize,
+    mut next_page: impl FnMut(Option<&str>) -> Result<Vec<AmrPageRow>>,
+) -> Result<usize> {
+    let part = out.with_extension("part");
+    let mut w = BufWriter::new(File::create(&part)?);
+    let mut total = 0;
+    let mut last: Option<String> = None;
+    loop {
+        let rows = next_page(last.as_deref())?;
+        let n = rows.len();
+        let mut fresh = 0;
+        for row in rows {
+            if let Some(prev) = last.as_deref() {
+                if row.id == prev {
+                    continue;
+                }
+                if row.id.as_str() < prev {
+                    bail!(
+                        "genome_amr record {} came after {prev}: the pages are not in id order",
+                        row.id
+                    );
+                }
+            }
+            serde_json::to_writer(&mut w, &row.record)?;
+            w.write_all(b"\n")?;
+            last = Some(row.id);
+            fresh += 1;
+        }
+        total += fresh;
+        eprintln!("  amr records: {total}");
+        if n < page {
+            break;
+        }
+        if fresh == 0 {
+            bail!("a full genome_amr page after record {last:?} held no new record");
+        }
+    }
+    w.flush()?;
+    drop(w);
+    std::fs::rename(&part, out)?;
+    Ok(total)
+}
+
 /// Genome-level metadata used for curation, QC, lineage, and context views.
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct GenomeRecord {
@@ -515,29 +608,9 @@ impl Client {
 
     /// Downloads every laboratory-method AMR record to JSON lines. Records
     /// from BV-BRC's own computational predictions are excluded at the query.
+    /// The pages follow the record id (`amr_page_url`, `write_amr_pages`).
     pub fn fetch_amr(&self, out: &Path) -> Result<usize> {
-        let part = out.with_extension("part");
-        let mut w = BufWriter::new(File::create(&part)?);
-        let mut total = 0;
-        loop {
-            let url = format!(
-                "{API}/genome_amr/?eq(evidence,%22Laboratory%20Method%22)&sort(+id)&limit({PAGE},{total})&select({AMR_FIELDS})"
-            );
-            let page: Vec<AmrRecord> = self.get_json(&url)?;
-            for r in &page {
-                serde_json::to_writer(&mut w, r)?;
-                w.write_all(b"\n")?;
-            }
-            total += page.len();
-            eprintln!("  amr records: {total}");
-            if page.len() < PAGE {
-                break;
-            }
-        }
-        w.flush()?;
-        drop(w);
-        std::fs::rename(&part, out)?;
-        Ok(total)
+        write_amr_pages(out, PAGE, |after| self.get_json(&amr_page_url(after, PAGE)))
     }
 
     /// Fetches metadata for `ids` in POST batches and writes JSON lines.
@@ -1123,5 +1196,266 @@ mod tests {
         })
         .unwrap();
         assert!(!phenotype.contains("collection"), "{phenotype}");
+    }
+
+    /// A synthetic `genome_amr` table of `n` records in id order, each on its
+    /// own made-up genome.
+    fn synthetic_amr_table(n: usize) -> Vec<AmrPageRow> {
+        (0..n)
+            .map(|i| AmrPageRow {
+                id: format!("{i:08x}-0000-4000-8000-000000000000"),
+                record: AmrRecord {
+                    genome_id: format!("9990001.{i}"),
+                    antibiotic: "ampicillin".into(),
+                    resistant_phenotype: Some("Susceptible".into()),
+                    ..Default::default()
+                },
+            })
+            .collect()
+    }
+
+    /// A stand-in for BV-BRC's `genome_amr` pages, with no network: up to
+    /// `page` rows after the cursor, in id order. `inclusive` returns the row
+    /// at the cursor too, as BV-BRC's `gt` on the id did on 21 Nov 2026.
+    /// Request number `fail_at` (from 1) fails as an HTTP error would.
+    struct StubPages {
+        table: Vec<AmrPageRow>,
+        page: usize,
+        inclusive: bool,
+        fail_at: Option<usize>,
+        asked: Vec<Option<String>>,
+    }
+
+    impl StubPages {
+        fn new(table: Vec<AmrPageRow>, page: usize, inclusive: bool) -> Self {
+            StubPages {
+                table,
+                page,
+                inclusive,
+                fail_at: None,
+                asked: Vec::new(),
+            }
+        }
+
+        fn next(&mut self, after: Option<&str>) -> Result<Vec<AmrPageRow>> {
+            self.asked.push(after.map(String::from));
+            if self.fail_at == Some(self.asked.len()) {
+                bail!("synthetic HTTP 503 on request {}", self.asked.len());
+            }
+            Ok(self
+                .table
+                .iter()
+                .filter(|r| match after {
+                    None => true,
+                    Some(a) if self.inclusive => r.id.as_str() >= a,
+                    Some(a) => r.id.as_str() > a,
+                })
+                .take(self.page)
+                .cloned()
+                .collect())
+        }
+
+        fn id(&self, i: usize) -> Option<String> {
+            Some(self.table[i].id.clone())
+        }
+    }
+
+    fn amr_lines(path: &Path) -> Vec<String> {
+        std::fs::read_to_string(path)
+            .unwrap()
+            .lines()
+            .map(String::from)
+            .collect()
+    }
+
+    fn record_lines(rows: &[AmrPageRow]) -> Vec<String> {
+        rows.iter()
+            .map(|r| serde_json::to_string(&r.record).unwrap())
+            .collect()
+    }
+
+    fn run_pages(out: &Path, stub: &mut StubPages) -> Result<usize> {
+        let page = stub.page;
+        write_amr_pages(out, page, |after| stub.next(after))
+    }
+
+    #[test]
+    fn amr_pages_follow_the_record_id_to_a_short_last_page() {
+        // Synthetic: 7 records, 3 a page.
+        for inclusive in [false, true] {
+            let dir = tempfile::tempdir().unwrap();
+            let out = dir.path().join("genome_amr.jsonl");
+            let mut stub = StubPages::new(synthetic_amr_table(7), 3, inclusive);
+            assert_eq!(run_pages(&out, &mut stub).unwrap(), 7);
+            assert_eq!(amr_lines(&out), record_lines(&stub.table));
+            assert!(!out.with_extension("part").exists());
+            let want = if inclusive {
+                // Each later page starts with the record at the bound again.
+                vec![None, stub.id(2), stub.id(4), stub.id(6)]
+            } else {
+                vec![None, stub.id(2), stub.id(5)]
+            };
+            assert_eq!(stub.asked, want, "inclusive {inclusive}");
+        }
+    }
+
+    #[test]
+    fn a_table_that_ends_exactly_on_a_page_is_read_whole_and_once() {
+        // Synthetic: 6 records, 3 a page, so the second page is full and
+        // ends the table; the third request finds nothing after it.
+        let dir = tempfile::tempdir().unwrap();
+        let out = dir.path().join("genome_amr.jsonl");
+        let mut stub = StubPages::new(synthetic_amr_table(6), 3, false);
+        assert_eq!(run_pages(&out, &mut stub).unwrap(), 6);
+        assert_eq!(stub.asked, vec![None, stub.id(2), stub.id(5)]);
+        assert_eq!(amr_lines(&out), record_lines(&stub.table));
+        // With the bound returned again, 5 records end on a full second
+        // page, and the third page holds only the bound.
+        let mut stub = StubPages::new(synthetic_amr_table(5), 3, true);
+        assert_eq!(run_pages(&out, &mut stub).unwrap(), 5);
+        assert_eq!(stub.asked, vec![None, stub.id(2), stub.id(4)]);
+        assert_eq!(amr_lines(&out), record_lines(&stub.table));
+        // Every table size around the page, both ways.
+        for n in 0..=10 {
+            for inclusive in [false, true] {
+                let mut stub = StubPages::new(synthetic_amr_table(n), 3, inclusive);
+                assert_eq!(run_pages(&out, &mut stub).unwrap(), n);
+                assert_eq!(
+                    amr_lines(&out),
+                    record_lines(&stub.table),
+                    "{n} {inclusive}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn an_empty_amr_table_writes_an_empty_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let out = dir.path().join("genome_amr.jsonl");
+        let mut stub = StubPages::new(Vec::new(), 3, true);
+        assert_eq!(run_pages(&out, &mut stub).unwrap(), 0);
+        assert_eq!(std::fs::read(&out).unwrap(), b"");
+        assert_eq!(stub.asked, vec![None]);
+    }
+
+    #[test]
+    fn a_repeated_id_is_written_once_and_an_id_out_of_order_stops_the_download() {
+        // Synthetic pages: a record repeated inside the first page, and the
+        // bound repeated at the head of the second.
+        let t = synthetic_amr_table(4);
+        let dir = tempfile::tempdir().unwrap();
+        let out = dir.path().join("genome_amr.jsonl");
+        let mut asked = Vec::new();
+        let n = write_amr_pages(&out, 4, |after| {
+            asked.push(after.map(String::from));
+            Ok(match after {
+                None => vec![t[0].clone(), t[1].clone(), t[1].clone(), t[2].clone()],
+                Some(_) => vec![t[2].clone(), t[3].clone()],
+            })
+        })
+        .unwrap();
+        assert_eq!(n, 4);
+        assert_eq!(amr_lines(&out), record_lines(&t));
+        assert_eq!(asked, vec![None, Some(t[2].id.clone())]);
+        // A lower id after a higher one: the pages are not in id order, so
+        // records could be missed. The download stops and writes nothing.
+        let fresh = dir.path().join("other.jsonl");
+        let err = write_amr_pages(&fresh, 4, |_| {
+            Ok(vec![t[0].clone(), t[2].clone(), t[1].clone()])
+        })
+        .unwrap_err();
+        assert!(format!("{err:#}").contains("not in id order"), "{err:#}");
+        assert!(!fresh.exists());
+    }
+
+    #[test]
+    fn a_full_page_that_holds_only_the_bound_stops_the_download() {
+        // Synthetic: one record a page, and a `gt` that returns its bound, so
+        // the second page holds only the record already written and the
+        // cursor cannot move. The download stops there and does not ask
+        // for the same page again.
+        let dir = tempfile::tempdir().unwrap();
+        let out = dir.path().join("genome_amr.jsonl");
+        let mut stub = StubPages::new(synthetic_amr_table(3), 1, true);
+        let err = write_amr_pages(&out, 1, |after| {
+            if stub.asked.len() == 10 {
+                bail!("still asking after 10 pages");
+            }
+            stub.next(after)
+        })
+        .unwrap_err();
+        assert!(format!("{err:#}").contains("held no new record"), "{err:#}");
+        assert_eq!(stub.asked, vec![None, stub.id(0)]);
+        assert!(!out.exists());
+    }
+
+    #[test]
+    fn an_http_error_mid_way_stops_the_download_and_keeps_the_earlier_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let out = dir.path().join("genome_amr.jsonl");
+        std::fs::write(&out, "an earlier download\n").unwrap();
+        let mut stub = StubPages::new(synthetic_amr_table(7), 3, true);
+        stub.fail_at = Some(2);
+        let err = run_pages(&out, &mut stub).unwrap_err();
+        assert!(format!("{err:#}").contains("synthetic HTTP 503"), "{err:#}");
+        assert_eq!(stub.asked.len(), 2);
+        assert_eq!(
+            std::fs::read_to_string(&out).unwrap(),
+            "an earlier download\n"
+        );
+    }
+
+    #[test]
+    fn a_run_after_a_failed_one_starts_again_from_the_first_page() {
+        // The step keeps no cursor between runs: a second run asks for the
+        // first page again and writes each record once.
+        let dir = tempfile::tempdir().unwrap();
+        let out = dir.path().join("genome_amr.jsonl");
+        let mut stub = StubPages::new(synthetic_amr_table(8), 3, true);
+        stub.fail_at = Some(3);
+        assert!(run_pages(&out, &mut stub).is_err());
+        assert!(!out.exists());
+        assert!(out.with_extension("part").exists());
+        let mut stub = StubPages::new(synthetic_amr_table(8), 3, true);
+        assert_eq!(run_pages(&out, &mut stub).unwrap(), 8);
+        assert_eq!(stub.asked[0], None);
+        assert_eq!(amr_lines(&out), record_lines(&stub.table));
+        assert!(!out.with_extension("part").exists());
+    }
+
+    #[test]
+    fn the_amr_page_query_keeps_the_filter_and_fields_and_pages_on_the_id() {
+        let lab = "eq(evidence,%22Laboratory%20Method%22)";
+        let tail = format!("&sort(+id)&limit({PAGE})&select(id,{AMR_FIELDS})");
+        assert_eq!(
+            amr_page_url(None, PAGE),
+            format!("{API}/genome_amr/?{lab}{tail}")
+        );
+        // Synthetic id, in BV-BRC's UUID form.
+        let id = "0000a1b2-0000-4000-8000-0000000000ff";
+        assert_eq!(
+            amr_page_url(Some(id), PAGE),
+            format!("{API}/genome_amr/?and({lab},gt(id,{id})){tail}")
+        );
+        assert_eq!(rql_value("a b,c)é"), "a%20b%2Cc%29%C3%A9");
+    }
+
+    #[test]
+    fn page_rows_write_the_line_the_record_alone_writes() {
+        // Synthetic row in BV-BRC's shape, with a number, a list and an id.
+        let json = r#"{"id":"0000a1b2-0000-4000-8000-0000000000ff","genome_id":"9990001.1",
+            "taxon_id":9990001,"antibiotic":"methicillin","resistant_phenotype":"Resistant",
+            "measurement_value":4,"pmid":["1","2"],"date_inserted":"2026-11-05T19:10:05Z"}"#;
+        let row: AmrPageRow = serde_json::from_str(json).unwrap();
+        let alone: AmrRecord = serde_json::from_str(json).unwrap();
+        assert_eq!(row.id, "0000a1b2-0000-4000-8000-0000000000ff");
+        let line = serde_json::to_string(&row.record).unwrap();
+        assert_eq!(line, serde_json::to_string(&alone).unwrap());
+        assert!(!line.contains("0000a1b2"), "{line}");
+        let numbered: AmrPageRow =
+            serde_json::from_str(r#"{"id":17,"genome_id":"9990001.1","antibiotic":"methicillin"}"#)
+                .unwrap();
+        assert_eq!(numbered.id, "17");
     }
 }
