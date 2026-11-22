@@ -272,7 +272,7 @@ enum Command {
         )]
         exp_cohort: Option<PathBuf>,
         /// Directory for the --exp-cohort results:
-        /// <dir>/<dataset>.r<r>.d<draw>.s<seed>.json.
+        /// <dir>/<dataset>.r<r>.d<draw>.s<seed>.cohort.json.
         #[arg(long, requires = "exp_cohort")]
         exp_cohort_out: Option<PathBuf>,
     },

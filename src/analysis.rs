@@ -1493,10 +1493,6 @@ pub fn mic_plan_fold_file(
     Ok(path)
 }
 
-/// The samples whose genomes have the same kset digest, that is the same
-/// canonical k-mer set: one ascending list of sample indices per group of two
-/// or more, ordered by first member. `columns` holds each sample's matrix
-/// column and `digests` each column's digest.
 /// `grm learn --exp-cohort` (plan block C1 part B, docs/cohort-draw.md):
 /// for every cohort file in `cohorts` (`cutoff::cohort_name`) whose dataset
 /// is one of the species' (or of the named subset), the release's rule on
@@ -1694,6 +1690,10 @@ pub fn cohort_draw_species(
     Ok((written, kept))
 }
 
+/// The samples whose genomes have the same kset digest, that is the same
+/// canonical k-mer set: one ascending list of sample indices per group of two
+/// or more, ordered by first member. `columns` holds each sample's matrix
+/// column and `digests` each column's digest.
 fn kset_duplicates(columns: &[usize], digests: &[String]) -> Vec<Vec<usize>> {
     let mut by_digest: HashMap<&str, Vec<usize>> = HashMap::new();
     for (i, &col) in columns.iter().enumerate() {
