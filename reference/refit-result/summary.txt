@@ -1,0 +1,17 @@
+D0 and C8 of the refit over its species
+
+gate passed: species: 23 of 23, each with DONE and code sha256 20e08189285ece9ac29a03f989469899356d74e5876927e689f16a1a037c104c
+gate passed: datasets: 238 of 238, none twice; check tables read equal: datasets.tsv, learners.tsv
+gate passed: marks: the 238 datasets are exactly those of the label count's datasets.tsv that are not M
+gate passed: D0: 65 datasets in 16 species, each species' list the MISS set among its listed datasets
+gate passed: D0 pairs: 177 of 177, by d0.py combine
+
+rules: C8 one fold that chose: zero; C8 over the five: pairs; C8 bands: none; order line: default-after
+
+D0 ordering (D0's sets are chosen by their result: it orders comparisons and tests nothing): absent holds 107 of 177 miss pairs (0.605): C3 first (sets chosen by their result; orders comparisons, tests nothing)
+order of the input group: C3, then C4 and C5; then C7, after the three in every outcome (the plan's Order, item 5)
+coverage: D0 reads 65 of the plan's 75 MISS datasets and 177 of its 204 miss pairs; the MISS datasets that are M wait for the maintainer's label rule, and the line is read again then
+ruling 6: absent holds 107 of the plan's 204 miss pairs (0.525) and the next cause of the four 33; 107 is 0.40 or more of 204 and above 33 + 27: the first block is stable
+removed, as counted, covers both the support floor (A8) and the 4,000-row screen (A9), which the copy does not split; the order keeps the plan's words, C4's floor arm (ruling 9)
+
+C8 on the release decides nothing alone (the plan's row C8, Release).

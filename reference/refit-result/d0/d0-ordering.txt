@@ -1,0 +1,1 @@
+absent holds 107 of 177 miss pairs (0.605): C3 first (sets chosen by their result; orders comparisons, tests nothing)

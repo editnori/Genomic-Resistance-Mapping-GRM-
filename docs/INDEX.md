@@ -33,6 +33,7 @@ Every document under `docs/`, grouped by purpose. For the headline Revision 14 n
 | [mic-comparison.md](mic-comparison.md) | MIC comparison of plan block C6 part B: the released MIC model, an ordered model and the training median on lineage and study folds, 100 and 28 datasets in 12 species, read by rules fixed before any score. |
 | [cohort-result.md](cohort-result.md) | Small-cohort result of plan block C1 part B: the estimate's error at 10, 15 and 20 genomes a class against 25, on 89 datasets in 10 species, read once by rules fixed before any score. No lower line is a candidate. |
 | [assumption-refit.md](assumption-refit.md) | Refit of the release's rule with fold models saved, its check against the release, and the plan's D0 and C8 readers run on it, one species a box. |
+| [refit-result.md](refit-result.md) | Result of the plan's D0 and C8 on the refit of 238 datasets in 23 species, read once by rules fixed before any count: Absent holds 107 of 177 miss pairs, so C3 runs first; the median overlap of chosen features across lineage folds is 0.050 to 0.183 per learner. |
 
 ## Methodology, pipeline, and contracts
 

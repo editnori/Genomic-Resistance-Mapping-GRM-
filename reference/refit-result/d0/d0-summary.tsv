@@ -1,0 +1,7 @@
+subset	learner	miss_datasets	datasets_absent	datasets_removed	datasets_lineage	datasets_chosen	datasets_unused	datasets_offered	datasets_inside_floor	gap_share_absent	gap_share_removed	gap_share_lineage	gap_share_chosen	gap_share_unused	gap_share_offered	gap_share_inside_floor	ties	no_missed_fold	reading
+all	scm	23	13	0	0	2	8	0	0	0.568727	0.000000	0.000000	0.070648	0.360624	0.000000	0.000000	0	0	sets chosen by their result; orders comparisons, tests nothing
+all	cart	28	19	0	0	2	10	0	0	0.637707	0.000000	0.000000	0.032701	0.329592	0.000000	0.000000	3	0	sets chosen by their result; orders comparisons, tests nothing
+all	rf	52	29	3	1	17	3	0	0	0.585094	0.041255	0.038128	0.291874	0.043649	0.000000	0.000000	1	0	sets chosen by their result; orders comparisons, tests nothing
+all	gbt	41	25	7	0	5	7	0	0	0.591261	0.129047	0.000000	0.094224	0.185468	0.000000	0.000000	2	0	sets chosen by their result; orders comparisons, tests nothing
+all	lasso	33	21	5	0	2	5	0	0	0.612185	0.141242	0.000000	0.054757	0.168844	0.000000	0.000000	1	1	sets chosen by their result; orders comparisons, tests nothing
+all	all	177	107	15	1	28	33	0	0	0.597528	0.068117	0.011758	0.135634	0.182852	0.000000	0.000000	7	1	sets chosen by their result; orders comparisons, tests nothing

@@ -60,4 +60,6 @@ Its steps up to the matrix are `scripts/c6-mic/run_species.sh`'s in the same tex
 
 **Faults.** The same script runs a failed fit, a missing report, a report without fold models, a changed checkout or binary, a changed dataset list or kit file, and a second start. A restart after a commit under `scripts/refit/` must go on and record it, and one under `src/` or `scripts/assumption-d0-c8/` must be refused. With numpy hidden, a species with a D0 dataset must stop at the kit step and one with none must run. It lists *Acinetobacter baumannii* with amikacin, which is marked M. It puts a genome id in a retry line, which must leave none in the files that may leave the box.
 
-Tests: `tests/assumption_d0_c8` and `tests/refit`, on SYNTHETIC reports, exports and calls only.
+**Result.** The reading of 22 Nov 2026 over the 23 species is `docs/refit-result.md`, with its tables in `reference/refit-result/`. `page_tables.py` prints that page's tables from those files, with shares and overlaps rounded to 3 decimals.
+
+Tests: `tests/assumption_d0_c8` and `tests/refit`, on SYNTHETIC reports, exports and calls. One file differs: `tests/assumption_d0_c8/test_page.py` checks the result page against the committed tables of `reference/refit-result/`.
