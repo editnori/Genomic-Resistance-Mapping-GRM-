@@ -8,6 +8,7 @@
 pub mod eval;
 pub mod foldfile;
 pub mod gbt;
+pub mod inner_pick;
 pub mod lasso;
 pub mod micplan;
 pub mod null_refit;

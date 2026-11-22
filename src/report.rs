@@ -141,13 +141,84 @@ pub(crate) fn learner_rows(splits: &Value) -> Vec<LearnerRow> {
 /// older report a learner that left isolates uncalled is passed over. None
 /// when no learner qualifies. A tie goes to the later learner.
 pub(crate) fn best_learner(rows: &[LearnerRow]) -> Option<(&LearnerRow, f64)> {
+    best_learner_candidates(rows).max_by(|a, b| a.1.total_cmp(&b.1))
+}
+
+/// The learners `best_learner` chooses among, each with its random-split
+/// balanced accuracy, in pipeline order.
+fn best_learner_candidates(rows: &[LearnerRow]) -> impl Iterator<Item = (&LearnerRow, f64)> {
     rows.iter()
         .filter(|l| !l.lineage_ran || l.lineage.as_ref().is_some_and(scored_on_every_isolate))
         .filter_map(|l| {
             let random = l.random.filter(scored_on_every_isolate)?;
             Some((l, random.balanced_accuracy?))
         })
-        .max_by(|a, b| a.1.total_cmp(&b.1))
+}
+
+/// The served learner as the release picks it from one run's `splits`
+/// (`best_learner`), its random-split balanced accuracy, and every learner
+/// that ties it there, in pipeline order. Read by the C9 experiment
+/// (`learn::inner_pick`); None when no learner qualifies.
+pub(crate) fn release_pick(splits: &Value) -> Option<(String, f64, Vec<String>)> {
+    let rows = learner_rows(splits);
+    let (best, ba) = best_learner(&rows)?;
+    let tied = best_learner_candidates(&rows)
+        .filter(|(_, b)| b.total_cmp(&ba).is_eq())
+        .map(|(l, _)| l.learner.clone())
+        .collect();
+    Some((best.learner.clone(), ba, tied))
+}
+
+/// Where the C9 inner pick sends a tie (`learn::inner_pick`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PickTie {
+    /// The later learner in pipeline order, as `best_learner` does.
+    Later,
+    /// The earlier learner in pipeline order.
+    Earlier,
+}
+
+impl PickTie {
+    pub fn name(self) -> &'static str {
+        match self {
+            PickTie::Later => "later",
+            PickTie::Earlier => "earlier",
+        }
+    }
+}
+
+/// The C9 inner pick over one outer fold: the learner, by index into
+/// `scores` (pipeline order), with the highest inner balanced accuracy, and
+/// every learner tied with it. Each score is compared rounded to 12
+/// decimals, as the result files write it; a learner with no score (its
+/// inner fit failed) does not compete. A tie goes where `tie` says. None
+/// when no learner has a score.
+pub(crate) fn inner_pick(scores: &[Option<f64>], tie: PickTie) -> Option<(usize, Vec<usize>)> {
+    let rounded: Vec<Option<f64>> = scores
+        .iter()
+        .map(|s| s.filter(|v| v.is_finite()).map(round12))
+        .collect();
+    let best = rounded
+        .iter()
+        .flatten()
+        .copied()
+        .max_by(|a, b| a.total_cmp(b))?;
+    let tied: Vec<usize> = rounded
+        .iter()
+        .enumerate()
+        .filter(|(_, s)| s.is_some_and(|v| v.total_cmp(&best).is_eq()))
+        .map(|(i, _)| i)
+        .collect();
+    let pick = match tie {
+        PickTie::Later => *tied.last()?,
+        PickTie::Earlier => *tied.first()?,
+    };
+    Some((pick, tied))
+}
+
+/// `x` rounded to 12 decimals, the precision the C9 files compare at.
+pub(crate) fn round12(x: f64) -> f64 {
+    (x * 1e12).round() / 1e12
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy)]

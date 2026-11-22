@@ -378,6 +378,15 @@ src/lib.rs learn::gbt::tests::pure_xor_keeps_no_tree
 src/lib.rs learn::gbt::tests::rounding_puts_the_mirrored_feature_first_unless_the_rule_is_exact
 src/lib.rs learn::gbt::tests::the_exact_rule_moves_a_split_only_to_the_same_two_groups
 src/lib.rs learn::gbt::tests::the_exact_rule_takes_the_same_groups_where_rounding_turns_them_away
+src/lib.rs learn::inner_pick::tests::a_supplied_split_writes_its_pick_with_no_default
+src/lib.rs learn::inner_pick::tests::a_tie_goes_where_the_rule_says_and_is_listed
+src/lib.rs learn::inner_pick::tests::inner_folds_keep_each_lineage_whole_and_are_the_release_tuning_partition
+src/lib.rs learn::inner_pick::tests::no_outer_test_genome_reaches_an_inner_fit
+src/lib.rs learn::inner_pick::tests::outer_calls_are_each_learners_report_row_fold_by_fold
+src/lib.rs learn::inner_pick::tests::the_default_pick_reads_the_random_split_as_the_release_does
+src/lib.rs learn::inner_pick::tests::the_flag_writes_its_own_file_and_changes_no_split
+src/lib.rs learn::inner_pick::tests::the_seed_keys_every_inner_fit_and_partition
+src/lib.rs learn::inner_pick::tests::the_twin_runs_fit_no_inner_fold
 src/lib.rs learn::lasso::tests::a_coefficient_warm_started_with_the_wrong_sign_crosses_zero
 src/lib.rs learn::lasso::tests::a_coefficient_within_rounding_of_zero_does_not_stall_the_solve
 src/lib.rs learn::lasso::tests::a_column_dependent_on_the_active_set_is_exchanged_in
@@ -704,6 +713,7 @@ src/main.rs tests::learn_refuses_the_null_fold_refit_beside_a_fold_file
 src/main.rs tests::learn_refuses_the_null_fold_refit_beside_the_tie_rule_experiment
 src/main.rs tests::learn_takes_a_fold_file_only_with_its_output_directory_and_one_species
 src/main.rs tests::learn_takes_a_seed_and_a_learner_seed_and_the_pipeline_takes_neither
+src/main.rs tests::learn_takes_the_c9_pick_only_when_asked
 src/main.rs tests::learn_takes_the_cohort_experiment_only_with_an_output_and_no_other_experiment
 src/main.rs tests::learn_takes_the_mic_experiment_only_with_an_output_and_no_other_experiment
 src/main.rs tests::learn_with_a_fold_file_screens_as_many_features_as_it_is_told
