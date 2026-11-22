@@ -47,7 +47,10 @@
 # result per dataset and plan, with a row per tested genome and no genome id;
 # they stay on the box), score/checks.tsv and score/scores.tsv (aggregates),
 # binary.txt and expect.tsv. The end writes SHA256SUMS and OUT/DONE:
-#   DONE <species> <time> binary <sha256> SHA256SUMS <sha256>
+#   DONE <species> <time> binary <sha256> code <sha256> SHA256SUMS <sha256>
+# The binary's sha256 changes with the checkout's path, which its debug
+# information records; the code sha256 is that of its loaded sections less
+# the build-id note, which is the same from any path.
 # Any failure writes OUT/FAILED naming the step and exits 1. It stops
 # nothing but itself.
 set -Eeuo pipefail
@@ -123,6 +126,9 @@ build() {
   cd "$REPO" && CARGO_TARGET_DIR=$W/target cargo build --release --locked --bin grm
   echo "commit $(git -C "$REPO" rev-parse HEAD)" > "$OUT/binary.txt"
   echo "grm $(sha256sum "$GRM" | cut -c1-64)" >> "$OUT/binary.txt"
+  objcopy -O binary --remove-section=.note.gnu.build-id "$GRM" "$W/grm.image"
+  echo "code $(sha256sum "$W/grm.image" | cut -c1-64)" >> "$OUT/binary.txt"
+  rm -f "$W/grm.image"
   cat "$OUT/binary.txt"
 }
 step build build
@@ -299,6 +305,6 @@ cd "$OUT"
 { find results score -type f -name '*.json' -o -type f -name '*.tsv'; echo binary.txt; echo expect.tsv; } \
   | LC_ALL=C sort | xargs sha256sum > SHA256SUMS
 disk done
-line="DONE $SP $(date -u +%FT%TZ) binary $(sed -n 's/^grm //p' binary.txt) SHA256SUMS $(sha256sum SHA256SUMS | cut -c1-64)"
+line="DONE $SP $(date -u +%FT%TZ) binary $(sed -n 's/^grm //p' binary.txt) code $(sed -n 's/^code //p' binary.txt) SHA256SUMS $(sha256sum SHA256SUMS | cut -c1-64)"
 echo "$line" > DONE
 say "$line"
