@@ -66,3 +66,13 @@ Each of the 33 datasets is fitted again at seed 42 with the release's breakpoint
 | *Mycobacterium tuberculosis* | amikacin, delamanid, ethionamide, kanamycin, levofloxacin, linezolid, moxifloxacin, para-aminosalicylic acid, rifabutin, rifampin | 10 |
 
 No change touches what part B measures: the models, the folds, the measures and their denominators are as designed. One thing got worse. At seeds 43 to 47 no check compares the k-mer matrix with the release's; the run builds one matrix a species, and the seed-42 check covers it. This entry was written at 13:06Z on 22 Nov 2026, after the rehearsal and the review and before any other species ran. No score of any model had been read.
+
+## MIC list
+
+The MIC design says `scripts/c6-mic/study_plans.py` writes the seed-47 study plan `c6mic-s47` and checks it: both classes in each fold's test and training genomes. It does not say what follows when a plan fails its check. One of the 29 study datasets fails: *Klebsiella pneumoniae* with ampicillin/sulbactam (`klebsiella_pneumoniae__ampicillin_sulbactam`), 744 genomes in 14 units. Its plan ends with "fold 4's test genomes lack a class". The other 28 plans pass.
+
+**Change.** That dataset leaves the study list of *Klebsiella pneumoniae*, which goes from 14 datasets to 13. It stays on the lineage list with its 6 lineage results. The run holds 768 results where the design counted 774: 600 on the lineage split, as before, and 168 on the study split in place of 174.
+
+**Loss.** The dataset's 6 study results are not run. Its plans at seeds 42 to 46 pass their checks, so 5 of the 6 could have run. The scripts take one study list a species and run every seed on it, and they stay as reviewed. Part B's release rule reads the lineage split, so no reading of that rule loses a result.
+
+**Timing.** *Klebsiella pneumoniae* stopped at the plans step at 13:48Z on 22 Nov 2026, before any of its fits, and started again on the list of 13 at 13:59Z. This entry was written at 14:01Z on 22 Nov 2026. Nine species had finished and two more were running. No score of any model had been read.
