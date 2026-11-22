@@ -38,8 +38,8 @@ def build_lead_paragraph():
         f"{m['best:random']['value'] * 100:.1f}% on random splits ({m['best:random']['n']} datasets) and "
         f"{m['best:lineage']['value'] * 100:.1f}% with whole lineages held out ({m['best:lineage']['n']} datasets). "
         f"With lineages held out, {eb['shown_to_meet_both']} of {eb['n']} datasets are shown to meet both limits "
-        f"of the adapted research screen. Folds that hold whole studies out score worse than random folds for "
-        f"{study_ll_worse} of 5 learners. Every figure is retrospective. No external or clinical validation has been done."
+        f"of the adapted research screen. Folds that hold whole studies out score worse than random folds on log loss "
+        f"and specificity for {study_ll_worse} of 5 learners. Every figure is retrospective. No external or clinical validation has been done."
     )
 
 
@@ -220,7 +220,7 @@ class ReadmeAndDocsIndex(unittest.TestCase):
         expected = "\n".join(build_findings_table()) + "\n"
         self.assertIn(expected, text)
         self.assertIn(
-            "They are an adapted research screen. They are not an applicable FDA criterion, "
+            "The VME ≤1.5% and ME ≤3% limits are an adapted research screen. They are not an applicable FDA criterion, "
             "and meeting them does not make a learner fit for clinical use.",
             text,
         )

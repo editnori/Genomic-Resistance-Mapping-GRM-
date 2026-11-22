@@ -59,7 +59,7 @@ export const bottomLineLead = (m: Manifest): string => {
       : "";
   const screenPart =
     b.n > 0 ? ` With lineages held out, ${int(b.meets)} of ${plural(b.n, "dataset")} are shown to meet both limits of the adapted research screen.` : "";
-  return `On public BV-BRC genomes, the best of five k-mer learners reaches a median balanced accuracy of ${pct(randomAll)} on random splits (${plural(m.datasets.length, "dataset")})${lineagePart}.${screenPart} Folds that hold whole studies out score worse than random folds for ${int(st.costShown)} of 5 learners. Every figure is retrospective. No external or clinical validation has been done.`;
+  return `On public BV-BRC genomes, the best of five k-mer learners reaches a median balanced accuracy of ${pct(randomAll)} on random splits (${plural(m.datasets.length, "dataset")})${lineagePart}.${screenPart} Folds that hold whole studies out score worse than random folds on log loss and specificity for ${int(st.logLossWorse)} of 5 learners. Every figure is retrospective. No external or clinical validation has been done.`;
 };
 
 /** Builds the six concise takeaway cards (1–2 sentences each), leaving full detail in each linked section. */
@@ -101,7 +101,7 @@ export const takeawayCards = (m: Manifest, constants?: ReadonlyMap<string, MicCo
       stat: s.medianGap === null ? "–" : `${points(s.medianGap)} median loss`,
       body:
         s.nLineage === 0 || s.medianGap === null
-          ? `In a retrospective split by study inside BV-BRC (${int(st.datasets)} datasets, ${int(st.species)} species), folds keeping BioProjects whole score worse than random folds for ${int(st.costShown)} of 5 learners.`
+          ? `In a retrospective split by study inside BV-BRC (${int(st.datasets)} datasets, ${int(st.species)} species), folds keeping BioProjects whole score worse than random folds on log loss and specificity for ${int(st.logLossWorse)} of 5 learners.`
           : `Holding whole lineages out costs the best learner a median ${points(s.medianGap)} on ${int(s.nLineage)} datasets (${int(s.nLargeGap)} lose more than 5 points). Holding whole BioProjects out (${int(st.datasets)} datasets) or training only on earlier public dates (${int(extra.time_split.datasets)} datasets) worsens log loss for ${int(st.logLossWorse)} of 5 learners (recall worse for RF and GBT on study splits, and for ${int(extra.time_split.total_recall_worse)} of 5 on date splits); on ${int(outPrimary.frozen)} newly deposited unseen-study genomes SCM holds on ${int(outPrimary.holds.scm.holds)} of ${int(outPrimary.holds.scm.read)}.`,
       target: "study-split",
       linkLabel: "See study and date splits",
@@ -203,9 +203,10 @@ const StartToFinishGuide = ({ manifest }: { manifest: Manifest }) => {
             <p className="mt-1.5 text-note text-ink">
               The main release covers {plural(manifest.datasets.length, "dataset")} across {plural(speciesCount(manifest), "species", "species")} using {int(analyzed)} genomes
               selected from {int(manifest.funnel.genomes_passing_qc)} QC-passing public BV-BRC genomes
-              {capped ? ` (capped at ${int(cap)} per species in this run)` : ""}. Beyond random cross-validation, GRM tested the same models on unseen bacterial lineages (
-              {int(s.nLineage)} datasets), held-out BioProject studies ({int(st.datasets)} datasets), newly deposited BV-BRC genomes, earlier-vs-later public dates (
-              {int(extra.time_split.datasets)} datasets), and {int(od.totalGenomes)} NCBI Pathogen Detection genomes outside BV-BRC&apos;s labelled set (not external validation).
+              {capped ? ` (capped at ${int(cap)} per species in this run)` : ""}. Beyond random cross-validation, GRM refit the same five learners on unseen bacterial lineages (
+              {int(s.nLineage)} datasets), held-out BioProject studies ({int(st.datasets)} datasets), and earlier-vs-later public dates ({int(extra.time_split.datasets)} datasets),
+              and scored the released models unchanged on newly deposited BV-BRC genomes and {int(od.totalGenomes)} NCBI Pathogen Detection genomes outside BV-BRC&apos;s labelled
+              set (not external validation).
             </p>
           </div>
           <div>

@@ -8,6 +8,9 @@ tests name a few species and antibiotics, because each of those names must stop 
 
 docs/givens-terms.md is the same export as a page. The suite reads the page back and compares every term, assumption,
 row, note and list with the file, so the page can neither drop an entry nor state a number the file lacks.
+
+A measured line of an assumption names its side: whether it counts where the assumption is false, where it is true,
+where it is used, or where it is not proven. The suite holds the 19 lines to the side GRM ruled for each.
 """
 
 import contextlib
@@ -115,6 +118,10 @@ def joined(parts):
     return parts[0] if len(parts) == 1 else ", ".join(parts[:-1]) + " and " + parts[-1]
 
 
+HEAD = "| Count | Counted | Revision | Source |"
+SIDE_HEAD = "| Count | Side | Counted | Revision | Source |"
+
+
 def part(page, name):
     """One part of the page, from its heading to the next one."""
     body = page[page.index(f"\n## {name}\n"):]
@@ -136,16 +143,18 @@ def page_entries(page):
                 entries[-1]["uncounted"] = raw[len("**Not counted.** "):]
             elif raw.startswith("**"):
                 entries.append({"part": name, "lead": raw, "rows": [], "parts": {}, "notes": {}})
-            elif raw.startswith("| ") and raw not in ("| Count | Counted | Revision | Source |", "| Part | Text |"):
+            elif raw.startswith("| ") and raw not in (HEAD, SIDE_HEAD, "| Part | Text |"):
                 got = cells(raw)
-                assert len(got) in (2, 4), raw
+                assert len(got) in (2, len(cells(entries[-1].get("head", HEAD)))), raw
                 if len(got) == 2:
                     entries[-1]["parts"][got[0]] = got[1]
                 else:
                     entries[-1]["rows"].append(got)
+            elif raw in (HEAD, SIDE_HEAD):
+                assert "head" not in entries[-1], raw
+                entries[-1]["head"] = raw
             else:
-                assert raw in ("", "| Count | Counted | Revision | Source |", "|---|---|---|---|", "| Part | Text |",
-                               "|---|---|"), raw
+                assert raw in ("", "|---|---|---|---|", "|---|---|---|---|---|", "| Part | Text |", "|---|---|"), raw
     return entries
 
 
@@ -236,8 +245,9 @@ class Shape(unittest.TestCase):
         for entry, x in LINES:
             with self.subTest(entry=entry, what=x["what"]):
                 self.assertTrue(x["what"] and x["source"])
-                self.assertLessEqual(set(x), {"count", "of", "what", "source", "basis", "evaluation_revision", "read",
-                                              "quote", "rebuilt_by", "values", "note"})
+                self.assertLessEqual(set(x), {"count", "of", "what", "side", "source", "basis", "evaluation_revision",
+                                              "read", "quote", "rebuilt_by", "values", "note"})
+                self.assertEqual("side" in x, entry.startswith("grm:given/"))
                 for n in (x["count"], x["of"]):
                     self.assertTrue(n is None or (type(n) is int and n >= 0))
                 if x["count"] is not None and x["of"] is not None:
@@ -452,6 +462,60 @@ class Missing(unittest.TestCase):
             E.build_module(changed(strip))
         with self.assertRaisesRegex(E.Fault, "unmeasured says what GRM has not counted"):
             E.build_module(changed(lambda s: given(s, "folds-hold-different-genomes").update(unmeasured=" ")))
+
+
+class Sides(unittest.TestCase):
+    """A measured line of an assumption says which side of the assumption it counts. GRM rules it; Givens sets none."""
+
+    def refused(self, message, edit):
+        with self.assertRaisesRegex(E.Fault, message):
+            E.build_module(changed(edit))
+
+    def test_every_line_of_an_assumption_names_the_side_grm_ruled(self):
+        self.assertEqual(E.SIDES, ("false", "true", "used", "unproven"))
+        ruled = {
+            # A duplicate group may or may not cross a fold: not proven. A group that crossed: false.
+            "grm:given/folds-hold-different-genomes": ["unproven", "false"],
+            # Each line counts datasets on which the figure holds.
+            "grm:given/figure-holds-on-new-studies": ["true"] * 8,
+            # Rows short of genomes and what their repair changed: false. Rows scored on every genome: true.
+            # A median has no count: the line gives the figure that rests on the assumption.
+            "grm:given/learners-scored-on-same-genomes": ["false"] * 3 + ["true"] + ["false"] * 3 + ["used"] * 2,
+        }
+        for source in (MODULE, SPEC):
+            self.assertEqual({g["id"]: [x["side"] for x in g["measured"]] for g in source["assumptions"]}, ruled)
+            self.assertFalse([x for n in source["nodes"] for x in n.get("measured", []) if "side" in x])
+        self.assertEqual(sum(len(sides) for sides in ruled.values()), 19)
+        for g in MODULE["assumptions"]:
+            for x in g["measured"]:
+                with self.subTest(line=x["what"]):
+                    # A line with no count gives no count of false or of true.
+                    if x["count"] is None:
+                        self.assertIn(x["side"], ("used", "unproven"))
+                    self.assertEqual(list(x)[:4], ["count", "of", "what", "side"])
+
+    def test_a_line_without_its_side_stops_the_script(self):
+        def first(spec):
+            return given(spec, "figure-holds-on-new-studies")["measured"][0]
+
+        def median(spec):
+            return given(spec, "learners-scored-on-same-genomes")["measured"][7]
+
+        self.refused("names its side", lambda s: first(s).pop("side"))
+        for word in ("maybe", "True", "", True, False, None, ["true"]):
+            with self.subTest(side=word):
+                self.refused("names its side", lambda s, word=word: first(s).update(side=word))
+        self.refused("only a line of an assumption has a side",
+                     lambda s: node(s, "grm:dataset")["measured"][0].update(side="true"))
+        for word in ("false", "true"):
+            with self.subTest(median=word):
+                self.refused("a median has no count", lambda s, word=word: median(s).update(side=word))
+        E.build_module(changed(lambda s: median(s).update(side="unproven")))
+        # The page gives an assumption's rows a Side cell, so one row without a side stops it.
+        module = copy.deepcopy(MODULE)
+        module["assumptions"][0]["measured"][0].pop("side")
+        with self.assertRaisesRegex(E.Fault, "all name a side, or none does"):
+            E.page(module)
 
 
 class Limits(unittest.TestCase):
@@ -713,8 +777,12 @@ class Page(unittest.TestCase):
     def rows(self, entry, got):
         """The rows under one entry of the page are the entry's measured lines, in order."""
         self.assertEqual(len(got["rows"]), len(entry["measured"]))
-        for x, (count, what, revision, source) in zip(entry["measured"], got["rows"], strict=True):
+        sided = "statement" in entry
+        self.assertEqual(got.get("head"), (SIDE_HEAD if sided else HEAD) if entry["measured"] else None)
+        for x, row in zip(entry["measured"], got["rows"], strict=True):
             with self.subTest(line=x["what"]):
+                count, what, revision, source = row[:1] + row[2:] if sided else row
+                self.assertEqual(row[1] if sided else None, x.get("side"))
                 marker = re.search(r" \(([a-z])\)$", what)
                 self.assertEqual(what[: marker.start()] if marker else what, x["what"])
                 self.assertEqual(got["notes"].get(marker.group(1)) if marker else None,
@@ -898,7 +966,7 @@ class Wiring(unittest.TestCase):
     def test_the_suite_is_in_ci_and_its_document(self):
         self.assertIn("          - suite: tests/givens_export\n            top: .\n", text(".github/workflows/ci.yml"))
         tests = sum(len(unittest.defaultTestLoader.getTestCaseNames(case))
-                    for case in (Committed, Shape, Numbers, Missing, Limits, Page, Wiring))
+                    for case in (Committed, Shape, Numbers, Missing, Sides, Limits, Page, Wiring))
         self.assertIn(f"`tests/givens_export` {tests}", text("docs/ci.md"))
 
     def test_the_readme_and_the_page_name_the_file(self):
