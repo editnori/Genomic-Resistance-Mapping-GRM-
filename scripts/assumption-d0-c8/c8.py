@@ -24,7 +24,7 @@ pooled share of chosen features whose card names a family, for all
 datasets, for those `intcount` marks M and for the rest.
 
     python3 -I c8.py combine --out DIR --one-fold zero|undefined \
-        --over-five pairs|dataset-median [--bands none|LOW,HIGH] [--names TSV] C8_DIR...
+        --over-five pairs|dataset-median --bands none|LOW,HIGH [--names TSV] C8_DIR...
 
 `combine` reads the c8-datasets.tsv of each species (one C8_DIR each) and
 writes, per learner and over the five, the plan's measure: the median over
