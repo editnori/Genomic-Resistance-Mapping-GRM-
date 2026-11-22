@@ -473,7 +473,7 @@ def count(line_rows):
                     "datasets": len(pairs), "no_base_line": sum(1 for p in pairs if not p[4]), "entered": len(entered),
                     "not_scored": len(pairs) - len(entered), "better": better, "worse": worse,
                     "same": len(entered) - better - worse,
-                    "median_difference": float(np.median(diffs)) if diffs else None,
+                    "median_difference": round(float(np.median(diffs)), 12) if diffs else None,
                     "species": len({p[1] for p in entered}), "interval_lo": None, "interval_hi": None,
                     "shared_draws": sum(len(p[5]) for p in entered),
                     "line_available": sum(len(p[2]) for p in pairs),
@@ -487,7 +487,11 @@ def count(line_rows):
                 meds = []
                 for _ in range(RESAMPLES):
                     pick = rng.integers(0, len(sps), len(sps))
-                    meds.append(float(np.median(np.concatenate([by_sp[sps[i]] for i in pick]))))
+                    # Rounded like the differences: a median of two differences
+                    # whose mean is 0.02 can come out a hair below it in floating
+                    # point (-0.108 and 0.148 give 0.019999999999999997), and
+                    # "wholly below 0.02" must not read that noise.
+                    meds.append(round(float(np.median(np.concatenate([by_sp[sps[i]] for i in pick]))), 12))
                 meds.sort()
                 base["interval_lo"], base["interval_hi"] = meds[LO_INDEX], meds[HI_INDEX]
             for kind in COVERAGES:

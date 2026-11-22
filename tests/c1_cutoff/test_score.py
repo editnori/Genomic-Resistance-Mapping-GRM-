@@ -270,6 +270,18 @@ class Count(unittest.TestCase):
         self.assertEqual((c["datasets"], c["entered"], c["not_scored"], c["no_base_line"]), (2, 1, 1, 1))
         self.assertEqual((c["line_available"], c["base_available"]), (10, 5))
 
+    def test_an_interval_end_of_exactly_002_is_not_wholly_below_it(self):
+        # One species, two datasets: differences -0.108 and 0.148, whose median
+        # is exactly 0.02; in floating point -0.108 + 0.148 is 0.039999999999999994.
+        rows = [line("a", "25", 0.2), line("a", "10", 0.092), line("b", "25", 0.2), line("b", "10", 0.348)]
+        c = get(score.count(rows), line="10")
+        self.assertEqual(c["entered"], 2)
+        self.assertEqual((c["median_difference"], c["interval_lo"], c["interval_hi"]), (0.02, 0.02, 0.02))
+        self.assertEqual((c["covered"], c["coverage_n"], c["base_covered"], c["base_coverage_n"]), (10, 10, 10, 10))
+        self.assertFalse(c["meets"])
+        # The written row says the same: an upper end of 0.02 is not below 0.02.
+        self.assertEqual(score.fmt(c["interval_hi"]), "0.02")
+
     def test_coverage_within_005_of_25s_meets_at_the_edge(self):
         # 20 shared results: 19 covered at 10, 20 at 25, a difference of exactly 0.05.
         rows = []
