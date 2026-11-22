@@ -221,3 +221,44 @@ A second review recounted the small-cohort scorer from the rulings' words on 22 
 **Run.** The first run's 10 species started at `9945b97`, before these fixes, and their score step ran with the earlier scorer. Each species is scored again from its fitted results at the commit that holds these fixes. The counts are read from that second scoring alone.
 
 **Written.** This entry was written at 19:01Z on 22 Nov 2026. No score of any cohort run had been read.
+
+## C1 reading
+
+The small-cohort run fitted its 10 species and scored each a second time by 19:55Z on 22 Nov 2026. A reading program, `scripts/c1-cutoff/read.py`, turns the second scoring into the result page's tables. Its writer left nine questions on how the count is read. The lead ruled on them at 20:03Z on 22 Nov 2026, with no score read.
+
+| Question | Answer |
+|---|---|
+| Measures | Rules' measures run over the shared draws of the datasets that enter, with 25 beside on the same draws, as the count does. |
+| Line 50 | The release row names a lower line, and 50 lies above 25. Its row is written, decides nothing and is never a candidate. |
+| Twin | Rules' condition 3 is written for a gain. C1's row asks that a line be no worse than 25 by 0.02, so a twin that meets it voids nothing. |
+| Twin fails | When fewer than 3 learners meet on the twin, a line that is no candidate is written "not shown to be within the margin". |
+| First run | The reading is on the 89 datasets outside M, and a candidate is written "a candidate on the 89". |
+| Several lines | Each lower line is read on its own against 25. The page shows each reading and names no line as the one to take. |
+| Pooled | Each of Rules' measures is given pooled, as a count over its genomes, with the median over datasets beside it. |
+| Differences | Each dataset's mean difference is written by name, and the reading program checks that their median is the scorer's. The differences decide nothing. |
+| Conditions | Rules' six conditions are for a change to the release and are not applied to C1. Conditions 2, 4 and 5 are not computed. |
+| Breakpoints | The 36 datasets with a moved breakpoint are named in the page's limits, and no count is split by them. |
+
+**Later.** The count over the 108 datasets of BIG is taken when the maintainer's label rule lets the 19 run, with the same rules, scorer and arguments. When the twin fails the row, no line is called worse than 25 on that row.
+
+**Arguments.** The reading program runs once, with `--measures-over shared --line-50 beside --twin-rule beside --dataset-differences yes`.
+
+**Cells.** The entry "C1 scorer" says the twin is never a candidate. The scorer writes its `candidate` cell on the twin's line row as on any line: 1 when 3 or more learners meet. It also marks line 50's row as the row that decides.
+
+**Kept.** The scorer's count file keeps those cells, and the scorer stays as it scored the run. The reading program carries the twin's cell as `three_or_more_meet` and puts line 50's rows among those that decide nothing. No page calls the twin or line 50 a candidate.
+
+**Value.** In the measures table, a dataset's value is the mean over its results of each result's rate, as Rules' Draws take a dataset's value as a mean. The pooled figure is the count over genomes.
+
+**Part A.** Part A's counts were taken on 21 Nov 2026, before any cohort fit. At a cap of 2,000 genomes, lines 5, 10, 15, 20, 25 and 50 admit 457, 373, 332, 301, 277 and 212 datasets. The six counts are separate lines over one table and do not add. The result page carries that table beside each lower line's reading.
+
+**Review.** A review recounted each dataset's entry and Rules' measures from the rulings' words, before the reading program ran on the 10 species. Its own program gave the same value in 44,160 of 44,700 SYNTHETIC cells and in 29,175 of 29,175 cells of *Neisseria gonorrhoeae* with ciprofloxacin, penicillin and tetracycline. The two inputs are separate, and their cell counts do not add. The real output was compared for equality only.
+
+**Faults.** The 540 SYNTHETIC cells that differed are 60 rows the program did not write, for a learner with no available result at a line. The tables also lacked the twin's fixed words and the part of the release row a learner fails. Of the review's 12 planted faults, 8 passed every test.
+
+**Fix.** Five commits fix these. The 60 rows are written with 0 results, and 44,700 of 44,700 cells are equal.
+
+**Part.** A learner that does not meet reads as failing the interval's upper end, the coverage or both, or as having no dataset entered, from the scorer's cells. The program stops when those parts do not give the scorer's `meets` cell, and when a species' line file is not what its score file gives.
+
+**Tests.** `tests/c1_cutoff` goes from 84 tests to 97, and 14 of 14 planted faults fail a test: the 12 and 2 planted in input files.
+
+**Written.** The rulings were fixed at 20:03Z on 22 Nov 2026 and this entry was written at 20:44Z. No score of any cohort run had been read.
