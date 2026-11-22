@@ -326,6 +326,46 @@ class Count(unittest.TestCase):
         self.assertEqual(score.row_seed("lineage", "all", "rf", "15"),
                          int(__import__("hashlib").sha256(b"lineage|all|rf|15").hexdigest(), 16))
 
+    def test_a_difference_of_exactly_minus_002_is_the_same_not_better(self):
+        c = get(score.count([line("a", "25", 0.12), line("a", "10", 0.10)]), line="10")
+        self.assertEqual((c["better"], c["same"], c["worse"]), (0, 1, 0))
+        c = get(score.count([line("a", "25", 0.13), line("a", "10", 0.10)]), line="10")
+        self.assertEqual((c["better"], c["same"], c["worse"]), (1, 0, 0))
+
+    def test_a_dataset_enters_on_3_shared_draws_and_not_on_2(self):
+        rows = [line("a", "25", 0.10), line("a", "10", 0.10, draws=[0, 1]),
+                line("b", "25", 0.10), line("b", "10", 0.10, draws=[0, 1, 2])]
+        c = get(score.count(rows), line="10")
+        self.assertEqual((c["datasets"], c["entered"], c["not_scored"], c["shared_draws"]), (2, 1, 1, 3))
+
+    def test_a_datasets_difference_is_the_mean_over_its_shared_draws(self):
+        # Draw differences 0, 0, 0, 0.1 and 0.15: the mean 0.05, not the median 0.
+        c = get(score.count([line("a", "25", 0.10), line("a", "10", [0.10, 0.10, 0.10, 0.20, 0.25])]), line="10")
+        self.assertAlmostEqual(c["median_difference"], 0.05)
+        self.assertEqual((c["worse"], c["same"]), (1, 0))
+
+    def test_the_species_interval_is_the_101st_and_3900th_of_the_rows_own_species_resamples(self):
+        # Worked apart from count(): each resample draws as many species as
+        # there are, with replacement, from the row's own stream; the medians,
+        # rounded as the files write them, are sorted and read at 101 and 3,900.
+        import numpy as np
+        rows, diffs = [], {}
+        # 90 datasets in 30 species: the 3,900th and 3,901st medians differ.
+        for k in range(90):
+            sp, d = f"sp{k % 30}", f"sp{k % 30}__drug{k}"
+            e = round(0.10 + 0.03 * math.sin(1.7 * k + 0.3), 9)
+            rows += [line(d, "25", 0.10, sp=sp), line(d, "15", e, sp=sp)]
+            diffs.setdefault(sp, []).append(round(float(score.fmt(e)) - 0.10, 12))
+        sps = sorted(diffs)
+        rng = np.random.default_rng(score.row_seed("lineage", "all", "rf", "15"))
+        meds = sorted(round(float(np.median(np.concatenate([diffs[sps[i]] for i in rng.integers(0, 30, 30)]))), 12)
+                      for _ in range(4000))
+        c = get(score.count(rows), line="15")
+        self.assertEqual(c["species"], 30)
+        self.assertEqual((c["interval_lo"], c["interval_hi"]), (meds[100], meds[3899]))
+        # Read one value later, the pair moves.
+        self.assertNotEqual((meds[100], meds[3899]), (meds[101], meds[3900]))
+
     def learners(self, good, split="lineage", truth="all", line_="10"):
         """Rows of the five learners on 3 species: those in `good` gain nothing, the rest lose 0.05."""
         rows = []
