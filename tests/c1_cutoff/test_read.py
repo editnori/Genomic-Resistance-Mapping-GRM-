@@ -695,6 +695,36 @@ class Gates(Copy):
         seal_second(second)
         self.stops(args(self.root), "count.tsv is not what the scorer's --count writes from its lines.tsv")
 
+    def test_a_lines_tsv_that_is_not_its_scores_tsvs_stops_even_with_its_count_and_sums_made_again(self):
+        second = self.root / "back2" / "synthia_alpha"
+        p = second / "score" / "lines.tsv"
+        rows = p.read_text().splitlines(keepends=True)
+        head = rows[0].rstrip("\n").split("\t")
+        cells = rows[1].rstrip("\n").split("\t")
+        errors = cells[head.index("errors")].split(",")
+        errors[0] = "0.5"
+        cells[head.index("errors")] = ",".join(errors)
+        rows[1] = "\t".join(cells) + "\n"
+        p.write_text("".join(rows))
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            score.main(["--count", str(second / "score"), str(p)])
+        seal_second(second)
+        self.stops(args(self.root), "its available draws or errors are not scores.tsv's")
+
+    def test_a_scores_row_marked_unavailable_that_lines_tsv_holds_stops(self):
+        second = self.root / "back2" / "synthia_beta"
+        p = second / "score" / "scores.tsv"
+        rows = p.read_text().splitlines(keepends=True)
+        head = rows[0].rstrip("\n").split("\t")
+        cells = rows[1].rstrip("\n").split("\t")
+        self.assertEqual(cells[head.index("available")], "1")
+        cells[head.index("available")] = "0"
+        rows[1] = "\t".join(cells) + "\n"
+        p.write_text("".join(rows))
+        seal_second(second)
+        self.stops(args(self.root), "its available draws or errors are not scores.tsv's")
+
     def test_a_lines_row_missing_stops(self):
         second = self.root / "back2" / "synthia_beta"
         p = second / "score" / "lines.tsv"

@@ -276,7 +276,8 @@ def read_second(second, sp, expect, study, lines, draws, names):
     if len({tuple(sorted(v)) for v in by_file.values()}) != 1:
         raise Stop(f"{second}/score/checks.tsv: the results do not all hold the same checks")
 
-    key_cols = ["dataset", "species_slug", "antibiotic", "r", "draw", "seed", "split", "truth_set", "learner", "available"]
+    key_cols = ["dataset", "species_slug", "antibiotic", "r", "draw", "seed", "split", "truth_set", "learner", "available",
+                "error"]
     need = key_cols + [f"{w}_{n}_{s}" for w in ("estimate", "truth") for n in RATES for s in ("k", "n")] + \
         [f"{n}_covers" for n in RATES] + [f"{w}_log_loss{s}" for w in ("estimate", "truth") for s in ("", "_n")]
     _, scores = read_tsv(os.path.join(second, "score/scores.tsv"), need)
@@ -322,6 +323,18 @@ def read_second(second, sp, expect, study, lines, draws, names):
             raise Stop(f"{second}/score/lines.tsv: {k} is marked species {r['species_slug']} with {r['draws']} draws")
     if got != want:
         raise Stop(f"{second}/score/lines.tsv: {len(want - got)} rows missing, {len(got - want)} rows not expected")
+    # The entry and the count read lines.tsv, Rules' measures scores.tsv: each lines row's available draws and
+    # errors must be, as text, what the scorer writes from scores.tsv, so both speak of the same results.
+    avail = {}
+    for r in scores:
+        if r["available"] == "1":
+            avail.setdefault((r["dataset"], r["split"], r["truth_set"], r["learner"], line_name(r["r"], r["seed"])),
+                             []).append((int(r["draw"]), r["error"]))
+    for r in lrows:
+        k = (r["dataset"], r["split"], r["truth_set"], r["learner"], r["line"])
+        av = sorted(avail.get(k, []))
+        if r["available_draws"] != ",".join(str(d) for d, _ in av) or r["errors"] != ",".join(e for _, e in av):
+            raise Stop(f"{second}/score/lines.tsv: {k}: its available draws or errors are not scores.tsv's")
     return scores, lrows
 
 
