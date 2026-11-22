@@ -391,10 +391,11 @@ def measures(scores, ent, over, lines):
     """Rules' measures beside the error, per split, truth set, learner, line and side, with denominators."""
     by = {}
     for r in scores:
-        if r["available"] != "1":
-            continue
-        ln = line_name(r["r"], r["seed"])
-        by.setdefault((r["split"], r["truth_set"], r["learner"], ln), []).append(r)
+        # Every split, truth set, learner and line gets its rows, with 0 results
+        # where none is available (ruling 6: the file holds every row).
+        rows = by.setdefault((r["split"], r["truth_set"], r["learner"], line_name(r["r"], r["seed"])), [])
+        if r["available"] == "1":
+            rows.append(r)
     groups = []
     for (s, t, l, ln), rows in sorted(by.items(), key=lambda kv: (kv[0][:3], line_order(kv[0][3]))):
         if over == "available":

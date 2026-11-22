@@ -405,6 +405,50 @@ def line_rows(line, meeting, entered=4, interval_hi="0.01", covered=(9, 10), bas
     return rows
 
 
+def score_row(dataset, r, draw, learner="scm", seed=42, split="lineage", truth_set="all", available=True, **cells):
+    """One SYNTHETIC scores.tsv row as read.py reads it: 10 resistant and 10 susceptible genomes each side, all right."""
+    row = {"dataset": dataset, "species_slug": dataset.split("__")[0], "r": str(r), "draw": str(draw),
+           "seed": str(seed), "split": split, "truth_set": truth_set, "learner": learner,
+           "available": "1" if available else "0"}
+    for who in ("estimate", "truth"):
+        for name in read.RATES:
+            right = name in ("recall", "specificity")
+            row[f"{who}_{name}_k"], row[f"{who}_{name}_n"] = ("10" if right else "0"), "10"
+        row[f"{who}_log_loss"], row[f"{who}_log_loss_n"] = "0.1", "20"
+    for name in read.RATES:
+        row[f"{name}_covers"] = "1"
+    row.update({k: str(v) for k, v in cells.items()})
+    return row
+
+
+def lines_row(dataset, line, draws, learner="scm", split="lineage", truth_set="all", error="0.01"):
+    """One SYNTHETIC lines.tsv row: its available draws, each with the same error."""
+    return {"dataset": dataset, "species_slug": dataset.split("__")[0], "split": split, "truth_set": truth_set,
+            "learner": learner, "line": line, "available_draws": ",".join(map(str, draws)),
+            "errors": ",".join([error] * len(draws))}
+
+
+class Measures(unittest.TestCase):
+    """read.py's entry and Rules' measures on SYNTHETIC rows of the scorer's files."""
+
+    def test_a_learner_with_no_result_available_at_a_line_keeps_its_rows(self):
+        d = "synthia_alpha__drug_a"
+        scores = [score_row(d, r, j) for r in (10, 25) for j in range(3)]
+        scores += [score_row(d, 10, j, learner="gbt", available=False) for j in range(3)]
+        scores += [score_row(d, 25, j, learner="gbt") for j in range(3)]
+        lrows = [lines_row(d, "10", range(3)), lines_row(d, "25", range(3)), lines_row(d, "10", [], learner="gbt"),
+                 lines_row(d, "25", range(3), learner="gbt")]
+        ent = read.entry(lrows, ["10", "25"])
+        for over, sides in (("shared", ("line", "25")), ("available", ("line",))):
+            meas = read.measures(scores, ent, over, ["10", "25"])
+            gbt = [m for m in meas if m["learner"] == "gbt" and m["line"] == "10"]
+            self.assertEqual(sorted({m["side"] for m in gbt}), sorted(sides), over)
+            self.assertEqual(len(gbt), len(sides) * 10, over)
+            self.assertTrue(all(m["results"] == 0 and m["pooled_value"] == "" for m in gbt), over)
+            scm = [m for m in meas if m["learner"] == "scm" and m["line"] == "10" and m["side"] == "line"]
+            self.assertTrue(scm and all(m["results"] == 3 for m in scm), over)
+
+
 class Rulings(unittest.TestCase):
     """The rulings of 20:03Z against tables() and summary(), on SYNTHETIC count rows."""
 
