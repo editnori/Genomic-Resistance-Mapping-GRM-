@@ -194,6 +194,19 @@ pub fn feature_values(species: &BitMatrix, first_pattern: &[u32], columns: &[usi
     out
 }
 
+/// Each projected feature's lowest species pattern, the `first_pattern`
+/// `feature_values` reads.
+pub fn lowest_patterns(ds: &crate::matrix::Dataset) -> Vec<u32> {
+    (0..ds.n_features())
+        .map(|f| {
+            *ds.patterns_of(f)
+                .iter()
+                .min()
+                .expect("a feature covers a pattern")
+        })
+        .collect()
+}
+
 /// Calls at `CALL_CUTOFF` by reported class, and the log loss sum with each
 /// score clipped to [LOSS_CLIP, 1 − LOSS_CLIP].
 #[derive(Clone, Copy, Debug, Default, PartialEq, Serialize)]
@@ -415,6 +428,12 @@ pub fn fit_cohort(dataset: &str, c: &CohortInputs, cfg: &EvalConfig) -> CohortFi
     }
 }
 
+/// A null final fit's score on every scored genome: the cohort's resistant
+/// share, 0.5 for r of each class, never the scored set's.
+fn null_fit_score(c: &CohortInputs) -> f64 {
+    c.y.count() as f64 / c.x.cols as f64
+}
+
 fn scored_truth(dataset: &str, c: &CohortInputs, cfg: &EvalConfig) -> Truth {
     let unavailable = |why: String| Truth {
         unavailable: Some(why),
@@ -437,7 +456,7 @@ fn scored_truth(dataset: &str, c: &CohortInputs, cfg: &EvalConfig) -> Truth {
         Ok(f) => f,
         Err(e) => return unavailable(format!("{e:#}")),
     };
-    let share = c.y.count() as f64 / c.x.cols as f64;
+    let share = null_fit_score(c);
     let new: Vec<usize> = (0..c.scored_new.len())
         .filter(|&j| c.scored_new[j])
         .collect();
@@ -756,6 +775,72 @@ mod tests {
             own[1].as_ref().unwrap(),
             &out.finals.cart.predict(&s.0, out.finals.cart_depth)
         );
+        // The truth's lasso is the reported final lasso on the scored matrix.
+        let lasso = out
+            .finals
+            .lasso
+            .as_ref()
+            .filter(|m| !m.coef.is_empty())
+            .expect("the synthetic cohort's final lasso keeps a feature");
+        assert_eq!(direct[4].as_ref().unwrap(), &lasso.predict_proba(&s.3));
+    }
+
+    /// A feature the forest's screen drops cannot move its truth: flipping
+    /// every unscreened feature of every scored genome leaves the forest's
+    /// scores as they were, so its trees read the screened rows.
+    #[test]
+    fn the_truths_forest_reads_a_scored_genome_on_the_screened_features() {
+        let s = synthetic(11);
+        let cfg = EvalConfig {
+            screened_features: 4,
+            ..EvalConfig::default()
+        };
+        let feats = crate::learn::screen(&s.0, &s.1, &Bits::ones(24), 4);
+        assert_eq!(feats.len(), 4);
+        // A screened position whose row is not screened, so a forest that
+        // read the scored matrix unscreened would read a flipped row.
+        assert!((0..4u32).any(|i| !feats.contains(&i)));
+        let mut flipped = BitMatrix::with_cols(16);
+        for f in 0..s.3.rows {
+            let src = s.3.row(f);
+            let mut row = vec![0u64; bits::words_for(16)];
+            for j in 0..16 {
+                if bits::get(src, j) != !feats.contains(&(f as u32)) {
+                    bits::set(&mut row, j);
+                }
+            }
+            flipped.push_row(&row);
+        }
+        let (_, a) =
+            eval::final_scores("species__drug", &s.0, &s.1, &s.2, &[], 3, &cfg, &s.3).unwrap();
+        let (_, b) =
+            eval::final_scores("species__drug", &s.0, &s.1, &s.2, &[], 3, &cfg, &flipped).unwrap();
+        assert_eq!(a[2], b[2]);
+    }
+
+    #[test]
+    fn a_scored_genome_reads_a_features_lowest_species_pattern() {
+        let mut x = BitMatrix::with_cols(2);
+        for _ in 0..3 {
+            x.push_row(&[0b01]);
+        }
+        let ds = crate::matrix::Dataset {
+            x,
+            y: Bits::from_indices(2, [0]),
+            columns: vec![0, 1],
+            feature_offsets: vec![0, 2, 5, 6],
+            feature_patterns: vec![7, 3, 9, 4, 6, 2],
+        };
+        assert_eq!(lowest_patterns(&ds), vec![3, 4, 2]);
+    }
+
+    #[test]
+    fn a_null_final_fit_scores_at_the_cohorts_share_not_the_scored_sets() {
+        let s = synthetic(11);
+        let mut c = inputs(&s, None);
+        let sy: Vec<bool> = (0..16).map(|j| j < 5).collect();
+        c.scored_y = &sy;
+        assert_eq!(null_fit_score(&c), 0.5);
     }
 
     #[test]

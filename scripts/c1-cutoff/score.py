@@ -198,6 +198,8 @@ def check(exp, doc, report, cohort_sha):
     coh = doc.get("cohort") or {}
     add("not refused, r of each class", doc.get("refused") is None and coh.get("samples") == 2 * r and coh.get("resistant") == r,
         doc.get("refused") or "")
+    # src/learn/eval.rs support_floor of the cohort's 2r genomes, not of the dataset's.
+    add("the cohort's support floor is its own", coh.get("min_support") == max(2 * r // 200, 3))
     ds, rc = doc.get("dataset", {}), report["counts"]
     add("dataset counts are the report's", ds.get("samples") == rc["samples"] and ds.get("resistant") == rc["resistant"])
     sc, cp, nl = doc.get("scored", {}), doc.get("copies_left_out", {}), doc.get("new_lineage", {})

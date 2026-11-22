@@ -74,6 +74,12 @@ class Checks(unittest.TestCase):
             t["all"]["tp"] += 1
         self.assertEqual(failed(self.e, doc, self.rep), ["scored, copies and cohort sum to the dataset"])
 
+    def test_planted_a_cohort_projected_at_the_datasets_support_floor_fails(self):
+        doc = common.result()
+        self.assertEqual(doc["cohort"]["min_support"], 3)
+        doc["cohort"]["min_support"] = 10  # support_floor of a 2,000-genome dataset
+        self.assertEqual(failed(self.e, doc, self.rep), ["the cohort's support floor is its own"])
+
     def test_planted_a_class_short_of_r_fails_the_cohort_check(self):
         doc = common.result()
         doc["cohort"]["resistant"] = 24
@@ -103,6 +109,27 @@ class Scores(unittest.TestCase):
         self.assertAlmostEqual(row["truth_log_loss"], 12.5 / 88)
         self.assertEqual(rows[5]["truth_set"], "new_lineage")
         self.assertEqual(rows[5]["truth_recall_n"], 10)
+
+    def test_a_truth_on_the_fold_ranges_edge_is_covered(self):
+        doc = common.result()
+        truth = score.balanced(doc["truth"]["learners"][0]["all"])
+        for folds in ((truth, 0.9, 0.95, 0.92, 0.93), (0.6, 0.65, 0.62, 0.61, truth)):
+            row = score.score_rows(common.expect_row(), common.result(folds=folds))[0]
+            self.assertEqual((row["truth"], row["covers"]), (truth, True), folds)
+
+    def test_a_fold_with_no_balanced_accuracy_leaves_the_draw_no_interval(self):
+        row = score.score_rows(common.expect_row(), common.result(folds=(0.7, float("nan"), 0.75, 0.9, 0.85)))[0]
+        self.assertTrue(row["available"])
+        self.assertEqual((row["interval_lo"], row["interval_hi"], row["covers"]), (None, None, None))
+
+    def test_a_lines_mean_error_and_coverage_read_its_available_draws_only(self):
+        ex = [common.expect_row(draw=j) for j in range(3)]
+        rows = (score.score_rows(ex[0], common.result(draw=0)) + score.score_rows(ex[1], common.result(draw=1, ba=0.9))
+                + score.score_rows(ex[2], common.result(draw=2, lineage_unavailable="too few lineages")))
+        (x,) = [x for x in score.lines(rows, ex) if x["learner"] == "rf" and x["truth_set"] == "all"]
+        truth = score.balanced(common.result()["truth"]["learners"][0]["all"])
+        self.assertEqual((x["draws"], x["available"], x["available_draws"], x["coverage_n"]), (3, 2, "0,1", 2))
+        self.assertAlmostEqual(x["mean_error"], (abs(0.82 - truth) + abs(0.9 - truth)) / 2)
 
     def test_an_unavailable_lineage_split_leaves_the_draw_unavailable(self):
         rows = score.score_rows(common.expect_row(), common.result(lineage_unavailable="too few lineages"))

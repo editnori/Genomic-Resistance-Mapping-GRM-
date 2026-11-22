@@ -1620,8 +1620,7 @@ pub fn cohort_draw_species(
                     let groups: Vec<u32> = rows.iter().map(|&i| lineage[i]).collect();
                     let duplicates = kset_duplicates(&columns, &input.matrix.summary.kset_digests);
                     let scored = cutoff::scored_set(&rows, &lineage, &digests);
-                    let first: Vec<u32> =
-                        (0..ds.n_features()).map(|f| ds.patterns_of(f)[0]).collect();
+                    let first = cutoff::lowest_patterns(&ds);
                     let scored_columns: Vec<usize> =
                         scored.rows.iter().map(|&i| c.columns[i]).collect();
                     let scored_x =
