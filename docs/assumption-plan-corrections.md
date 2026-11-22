@@ -171,3 +171,21 @@ The 19 BIG datasets in M, which wait for the maintainer's label rule:
 **Cuts.** With the pilot's genome step scaled by that ratio, the first run costs 6.90 xlarge-hours central, $1.38, and 17.51 upper, $3.50. The other cut, one species' fetch overlapping the previous species' fits, is left out.
 
 **Written.** This entry was written at 17:56Z on 22 Nov 2026, after the review and the lead's rulings and before the first run. No score of any cohort run had been read.
+
+## Refit cards
+
+*Staphylococcus aureus* stopped at the refit's check at 17:42Z on 22 Nov 2026, `FAILED staphylococcus_aureus at check`. Of its 16 datasets, 15 were equal to the release in every fitted field and all 16 held complete fold models. All 171 learner rows were equal. The one field that differed was `features` of *Staphylococcus aureus* with clindamycin (`staphylococcus_aureus__clindamycin`).
+
+**Cards.** Of that dataset's 107 feature cards, 105 are equal. The other 2 differ only in `kmer` and in `locus`: `feature`, `bits`, `n_kmers`, `n_resistant`, `n_susceptible`, `catalog_families` and `catalog_products` are equal on 107 of 107. For both cards the locus genome is the same in the two reports and its contig differs.
+
+**Files.** For both cards the genome file fetched again differs in bytes from the release's list. Over the species, 834 of 2,000 fetched genome files differ in bytes from that list, while length, contig count and N50 equal the release's on 2,000 of 2,000. The 6 species that passed had such files too: *Klebsiella aerogenes* 27 of 93.
+
+**Ruling.** The lead ruled at 17:50Z on 22 Nov 2026 that a refit report stands for the release's when every field but `seconds` is equal, with one more allowance: in the top-level `features` list, a card's `kmer` and `locus` may differ. Cards are compared in order, one to one, and every other card field must be equal. The count of cards whose `kmer` or `locus` differs is written per dataset.
+
+**Reason.** Both fields are written after the fit, from genome files and CDS lists fetched again from BV-BRC. A file served today can differ from the one the release fetched. That moves where a pattern is shown and leaves the pattern, the fit and every field D0 and C8 read as they were. D0 and C8 read a card's `feature`, `bits` and `catalog_families`, and neither `kmer` nor `locus`.
+
+**Fails.** A difference in any other card field, in the number or the order of the cards, or in a `kmer` or `locus` key outside `features` still fails the check.
+
+**Restart.** A species stopped at the check goes on from its fitted reports on a later checkout when the built binary's sha256 is unchanged and the commits differ only under `scripts/refit/`, `docs/`, `tests/` and `.github/`. Any other changed path refuses, `src/` and `scripts/assumption-d0-c8/` among them. The check runs again and `binary.txt` gains a line `restart <commit> <time>`. A species with a D0 dataset now stops at the kit step without numpy 1.26.4.
+
+**Written.** This entry was written at 17:59Z on 22 Nov 2026, before any species was started again. No D0 or C8 count had been read.
