@@ -56,7 +56,6 @@
 set -Eeuo pipefail
 KIT=$(cd "${1:?kit folder}" && pwd); SP=${2:?species slug}; LINEAGE=${3:?lineage datasets or -}
 STUDY=${4:?study datasets or -}; OUT=${5:?out folder}; JOBS=${6:-$(nproc)}
-DATA=${DATA:-}
 mkdir -p "$OUT"/flags "$OUT"/logs "$OUT"/work "$OUT"/results "$OUT"/score; OUT=$(cd "$OUT" && pwd)
 exec >> "$OUT/logs/run.log" 2>&1
 REPO=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
@@ -116,7 +115,7 @@ step() {  # step <name> <function>: once, timed, in a shell that stops at the fi
   disk "$1"
   say "$1: end, $(cat "$OUT/logs/$1.time")"
 }
-export KIT SP LINEAGE STUDY OUT JOBS DATA REPO W ROOT R M GRM PLANS
+export KIT SP LINEAGE STUDY OUT JOBS REPO W ROOT R M GRM PLANS
 
 STEP=kit
 [ -z "$(git -C "$REPO" status --porcelain)" ] || { say "the checkout has changes; the binary must be its commit"; false; }
@@ -188,9 +187,6 @@ genomes() {
   python3 -I -c 'import json,sys; [print(g["id"]) for g in json.load(open(sys.argv[1]))["genomes"]]' \
     "$R/species/$SP.json" > "$ROOT/species/$SP/genomes.txt"
   master "species/$SP/genomes.txt" "$ROOT/species/$SP/genomes.txt"
-  if [ -n "$DATA" ] && [ -d "$DATA/fasta" ]; then
-    while read -r id; do cp -n "$DATA/fasta/$id.fna.gz" "$ROOT/fasta/" 2>/dev/null || true; done < "$ROOT/species/$SP/genomes.txt"
-  fi
   "$GRM" --data "$ROOT" fetch fasta --species "$SP" --workers 4
   n=0; bad=0
   while read -r id; do
