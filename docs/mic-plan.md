@@ -16,6 +16,6 @@ Each result also holds the training median of each fold (the lower median of the
 
 A result records the evaluation revision, the input fingerprint the dataset's report records for the same inputs, the settings, the plan and the arms, then per fold the counts, breakpoint, median and fit counts, and one row per test genome with an MIC: its fold, MIC, censor, reported call and each arm's prediction, with no genome id. An existing result is refused unless `--force`. `--exp-mic` is refused beside `--learner-seed`, the `--exp-tie-*` options and `--exp-null-refit`, and `--exp-mic-out` beside `--fold-file`.
 
-Any split here is a retrospective split inside one public database. A split by lineage or by study is not external validation, and an agreement line of 0.90 is an adapted research screen, not an FDA validation criterion.
+Any split here is a retrospective split inside one public database. A split by lineage or by study is not external validation, and an agreement line of 0.90 is an adapted research screen, never an applicable FDA validation criterion.
 
 Tests: `src/learn/micplan.rs`, `analysis::tests::the_mic_experiment_writes_one_result_per_plan_and_nothing_else` and `tests::learn_takes_the_mic_experiment_only_with_an_output_and_no_other_experiment` in `src/main.rs`.
