@@ -40,11 +40,11 @@ Its steps up to the matrix are `scripts/c6-mic/run_species.sh`'s in the same tex
 |---|---|
 | learn | `grm learn` over the listed datasets whose report is missing or has no `fold_models`; every listed report must then hold them |
 | check | `refit_check.py`; any difference stops the species before D0 or C8 reads a report |
-| program | for the species' MISS datasets among the listed: the program installed from the AMRFinderPlus kit and proved on the tool's own test file, then run on every genome of the species, each table equal to the sha256 recorded for the release |
+| C8 | `c8.py` over the species' refit reports, before the program, so a failure in the program or D0 still leaves C8's tables |
+| program | for the species' MISS datasets among the listed: the program installed from the AMRFinderPlus kit and proved on the tool's own test file, then run on every genome of the species that has a table recorded for the release, each table equal to the sha256 recorded for it. The release ran the program on the genomes of its rule datasets, so a genome in none has no table: *Staphylococcus aureus* lists 2,000 genomes and 1,994 have one |
 | D0 | per dataset, `grm export` on the same data root and `d0.py dataset` on the refit report, then `d0.py combine` with the species' own dataset and pair counts |
-| C8 | `c8.py` over the species' refit reports |
 
-**End.** A finished species writes `DONE <species> <time> binary <sha256> code <sha256> d0 <n> datasets SHA256SUMS <sha256>`. A species with no MISS dataset among the listed skips the program and D0, and its line says `d0 skipped: no MISS dataset among the listed` in place of `d0 <n> datasets`. Any failure writes `OUT/FAILED` naming the step and exits 1. Run again, the script skips finished steps and fits only the reports that are missing. It stops no process but its own.
+**End.** A finished species writes `DONE <species> <time> binary <sha256> code <sha256> d0 <n> datasets SHA256SUMS <sha256>`. A species with no MISS dataset among the listed skips the program and D0, and its line says `d0 skipped: no MISS dataset among the listed` in place of `d0 <n> datasets`. Any failure writes `OUT/FAILED` naming the step and exits 1. Run again, the script skips finished steps and fits only the reports that are missing or hold no `fold_models`. It stops no process but its own.
 
 **Copy.** The refit reports, the data root, the exports and the raw logs hold genome ids and stay on the box. After a count of genome ids over exactly these files, they may leave it: `binary.txt`, `expect.txt`, `d0.txt`, `SHA256SUMS`, `DONE`, `FAILED`, `logs/`, `check/` and `results/`. D0's tables and the program's adapter summary are under `results/d0`, and C8's are under `results/c8`.
 

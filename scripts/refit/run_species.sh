@@ -31,14 +31,15 @@
 #   check   refit_check.py: each report equals the release's in its input
 #           fingerprint and every fitted field, with fold_models complete;
 #           any difference stops the run before D0 or C8 reads a report;
+#   C8      c8.py over the species' refit reports;
 #   D0      for the species' datasets in the plan's MISS set that are listed
 #           (scripts/assumption-d0-c8/miss_sets.py): the program installed
 #           from the kit and proved on the tool's own test file, run on the
-#           species' genomes with every table equal to its recorded sha256,
-#           then per dataset grm export on the same data root and d0.py
-#           dataset on the refit report; a species with none skips D0 and
-#           says so in its DONE line;
-#   C8      c8.py over the species' refit reports.
+#           species' genomes that have a table recorded for the release,
+#           each table equal to its recorded sha256, then per dataset grm
+#           export on the same data root and d0.py dataset on the refit
+#           report; a species with none skips D0 and says so in its DONE
+#           line.
 #
 # OUT gets logs/ (each step's log with genome ids written as [genome id]; the
 # raw logs stay in work/raw-logs), flags/, work/ (release, root with the
@@ -291,6 +292,15 @@ python3 -I -B "$HERE/refit_check.py" "$RES" "$R" "$(paste -sd, "$OUT/expect.txt"
   || { cat "$OUT/logs/check.log"; false; }
 cat "$OUT/logs/check.log"
 
+# C8 reads the checked refit reports only, so it runs before the program
+# and D0: a failure there (the network, a tool table) still leaves C8's
+# tables in results/c8 for the copy back.
+c8() {
+  rm -rf "$OUT/results/c8"
+  python3 -I -B -W error "$DC/c8.py" --reports "$RES" --only "$OUT/expect.txt" --marks "$KIT/marks.tsv" --out "$OUT/results/c8"
+}
+step c8 c8
+
 if [ -s "$OUT/d0.txt" ]; then
   # The program, from the kit, proved on the tool's own test file.
   program_env() {
@@ -323,15 +333,25 @@ if [ -s "$OUT/d0.txt" ]; then
   }
   step program_env program_env
 
-  # The program on every genome of the species; each table must equal the
-  # sha256 recorded for the release, so the calls are the release's.
+  # The program on every genome of the species that has a recorded table; each
+  # table must equal the sha256 recorded for the release, so the calls are
+  # the release's. The release ran the program on the genomes of its rule
+  # datasets only (the kit's RERUN-SPEC.md, 23,751 genomes), so a genome of
+  # the species list that is in no rule dataset has no recorded table and is
+  # not run: Staphylococcus aureus lists 2,000 genomes and 1,994 have one.
+  # Each recorded genome must be in the species list, and the adapter stops
+  # on a D0 report genome with no table.
   program_run() {
     export PATH="$AMR/env/bin:$PATH"; cd "$AMR/kit"
-    { printf 'species_slug\tgenome_id\n'; sed "s/^/$SP\t/" "$ROOT/species/$SP/genomes.txt"; } > "$AMR/cohort.tsv"
+    grep "  $SP/" "$KIT/tool-tables.sha256" | sort -k2 > "$AMR/tables.recorded"
+    sed -E "s#^[0-9a-f]{64}  $SP/(.+)\.tsv\$#\1#" "$AMR/tables.recorded" | LC_ALL=C sort > "$AMR/cohort.ids"
+    outside=$(LC_ALL=C comm -23 "$AMR/cohort.ids" <(LC_ALL=C sort "$ROOT/species/$SP/genomes.txt") | wc -l)
+    [ "$outside" -eq 0 ] || { echo "recorded tables: $outside are not of a genome in the species list"; exit 1; }
+    echo "cohort: $(wc -l < "$AMR/cohort.ids") genomes with a recorded table, of $(wc -l < "$ROOT/species/$SP/genomes.txt") in the species list"
+    { printf 'species_slug\tgenome_id\n'; sed "s/^/$SP\t/" "$AMR/cohort.ids"; } > "$AMR/cohort.tsv"
     rm -rf "$AMR/tool"
     bash scripts/run_amrfinder.sh "$AMR/cohort.tsv" "$ROOT/fasta" "$AMR/tool" spec/run-manifest.rev14.json \
       "$AMR/db/2026-08-07.1" "$JOBS" 1 4000
-    grep "  $SP/" "$KIT/tool-tables.sha256" | sort -k2 > "$AMR/tables.recorded"
     ( cd "$AMR/tool" && find "$SP" -name '*.tsv' | sort | xargs sha256sum ) | sort -k2 > "$AMR/tables.now"
     echo "tool tables: $(wc -l < "$AMR/tables.now") made, $(wc -l < "$AMR/tables.recorded") recorded"
     diff "$AMR/tables.recorded" "$AMR/tables.now"
@@ -396,12 +416,6 @@ else
   say "D0 skipped: no dataset of the plan's MISS set is listed for $SP"
   d0line="d0 skipped: no MISS dataset among the listed"
 fi
-
-c8() {
-  rm -rf "$OUT/results/c8"
-  python3 -I -B -W error "$DC/c8.py" --reports "$RES" --only "$OUT/expect.txt" --marks "$KIT/marks.tsv" --out "$OUT/results/c8"
-}
-step c8 c8
 
 STEP=done
 cd "$OUT"
