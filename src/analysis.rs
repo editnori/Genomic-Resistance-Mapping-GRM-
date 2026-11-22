@@ -5340,4 +5340,41 @@ mod tests {
         );
         assert!(result["tested"].as_array().unwrap().is_empty());
     }
+
+    #[test]
+    fn the_mic_fold_file_route_refuses_a_copy_on_both_sides_of_a_fold() {
+        // Synthetic: genomes g0 and g1, one lineage, given the same k-mer
+        // set; the fold file tests g0 in fold 0 and g1 in fold 1.
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path().join("data"));
+        let mut input = mic_inputs();
+        for digests in [
+            &mut input.matrix.summary.kset_digests,
+            &mut input.structure.kset_digests,
+        ] {
+            digests[1] = digests[0].clone();
+        }
+        write_inputs(&layout, &input, "");
+        let folds: Vec<Vec<usize>> = (0..5)
+            .map(|f| (0..150).filter(|i| i % 5 == f).collect())
+            .collect();
+        let file = dir.path().join("folds.json");
+        std::fs::write(&file, fold_file_text(&folds, &[], &[])).unwrap();
+        let out = dir.path().join("mic");
+        let error = mic_plan_fold_file(
+            &layout,
+            "fixture",
+            &file,
+            &out,
+            false,
+            &fold_file_config(),
+            &[micplan::Arm::Released],
+        )
+        .unwrap_err();
+        assert!(
+            format!("{error:#}").contains("its k-mer-identical copy"),
+            "{error:#}"
+        );
+        assert!(!out.exists());
+    }
 }

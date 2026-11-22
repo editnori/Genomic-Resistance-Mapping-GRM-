@@ -136,6 +136,7 @@ src/lib.rs analysis::tests::the_disk_sparse_learn_writes_reports_only_through_re
 src/lib.rs analysis::tests::the_lasso_scan_fits_the_report_inputs_as_the_evaluator_does
 src/lib.rs analysis::tests::the_log_names_the_best_learner_scored_on_every_isolate
 src/lib.rs analysis::tests::the_mic_experiment_writes_one_result_per_plan_and_nothing_else
+src/lib.rs analysis::tests::the_mic_fold_file_route_refuses_a_copy_on_both_sides_of_a_fold
 src/lib.rs analysis::tests::the_mic_lineage_plan_refuses_a_copy_in_another_lineage
 src/lib.rs analysis::tests::unsourced_and_unsupported_probe_assays_give_a_reason_without_ksets
 src/lib.rs analysis::tests::unsupported_assays_are_listed_with_their_reason_instead_of_a_panel
