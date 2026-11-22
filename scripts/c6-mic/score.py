@@ -10,8 +10,15 @@ released) and file (the result's path under <results dir>).
 First every result is checked; the checks read no score:
   - the file exists (a dataset grm learn skips writes no file and exits 0);
   - its format, evaluation revision, dataset, plan and arms are the ones
-    expected, and its input fingerprint equals that of the dataset's report
-    in <release dir>/datasets/;
+    expected;
+  - at the release's settings (the lineage split at seed 42, and every study
+    plan, which grm learn fits at the release's seeds), its settings and input
+    fingerprint equal those of the dataset's report in <release dir>/datasets/;
+    at seeds 43 to 47 on the lineage split the fingerprint hashes the seed
+    too and the release holds no report at those seeds, so its settings must
+    equal the report's but the seed, which must be the plan's, and its cohort
+    (counts, and each tested genome's MIC, censor and call) must equal that
+    of the dataset's seed-42 lineage result, which passed the first test;
   - each fold's test counts equal the rows it tests;
   - each fold's training median is micbase's B2 recounted from the other
     folds' rows, and every row of the fold carries it, when the plan tests
@@ -61,6 +68,7 @@ SCORE_COLUMNS = [
     "major_rate", "major_count", "major_n",
     "ea_exact_reads", "category_reads",
 ]
+COHORT = ["samples", "resistant", "n_groups", "min_support", "n_mic", "n_exact", "unavailable"]
 EA_READS = "MIC values only"
 CATEGORY_READS = "R and S labels and the training breakpoint"
 
@@ -106,6 +114,59 @@ def read_expect(path):
     if rows and list(rows[0].keys()) != EXPECT_COLUMNS:
         raise ValueError(f"{path}: columns {list(rows[0].keys())}, want {EXPECT_COLUMNS}")
     return rows
+
+
+def read_report(release_dir, dataset):
+    """The settings and input fingerprint of the dataset's release report, or None."""
+    path = os.path.join(release_dir, "datasets", dataset + ".json")
+    if not os.path.isfile(path):
+        return None
+    with open(path) as f:
+        doc = json.load(f)
+    return {"eval_config": doc.get("eval_config"), "input_fingerprint": doc.get("input_fingerprint")}
+
+
+def at_release_settings(result, report):
+    return (
+        report is not None
+        and report["eval_config"] is not None
+        and bool(report["input_fingerprint"])
+        and result.get("eval_config") == report["eval_config"]
+        and result.get("input_fingerprint") == report["input_fingerprint"]
+    )
+
+
+def cohort(result):
+    """What a result reads of its dataset apart from the plan: its counts and
+    each tested genome's MIC, censor and call, in no order."""
+    rows = sorted((r["log2"], r["censor"], r["resistant"]) for r in result.get("tested") or [])
+    return [result.get(k) for k in COHORT], rows
+
+
+def but_seed(cfg):
+    return {k: v for k, v in (cfg or {}).items() if k != "seed"}
+
+
+def fingerprint_check(result, exp, report, anchor):
+    """'equal', 'seed <S>, cohort as at 42', 'differs' or 'no report'.
+    `anchor` is the dataset's seed-42 lineage result when it is at the
+    release's settings, else None."""
+    if report is None:
+        return "no report"
+    if result.get("eval_config") == report["eval_config"]:
+        return "equal" if at_release_settings(result, report) else "differs"
+    cfg = result.get("eval_config") or {}
+    if (
+        exp["split"] == "lineage"
+        and anchor is not None
+        and report["eval_config"] is not None
+        and but_seed(cfg) == but_seed(report["eval_config"])
+        and str(cfg.get("seed")) == exp["seed"]
+        and result.get("input_fingerprint") not in (None, report["input_fingerprint"])
+        and cohort(result) == cohort(anchor)
+    ):
+        return f"seed {exp['seed']}, cohort as at 42"
+    return "differs"
 
 
 def plan_matches(result, exp):
@@ -232,8 +293,9 @@ def score_arm(result, exp, arm):
     return out
 
 
-def check_one(exp, results_dir, release_dir):
-    """(the check row, the result or None)."""
+def check_one(exp, results_dir, release_dir, anchors):
+    """(the check row, the result or None). `anchors` maps a dataset to its
+    seed-42 lineage result at the release's settings."""
     row = {c: "" for c in CHECK_COLUMNS}
     row.update({c: exp[c] for c in ["dataset", "split", "plan", "seed", "file"]})
     path = os.path.join(results_dir, exp["file"])
@@ -249,20 +311,15 @@ def check_one(exp, results_dir, release_dir):
         and result.get("id") == exp["dataset"]
         and result.get("species_slug") == exp["species_slug"]
     ) else "differs"
-    report_path = os.path.join(release_dir, "datasets", exp["dataset"] + ".json")
-    if os.path.isfile(report_path):
-        with open(report_path) as f:
-            want = json.load(f).get("input_fingerprint")
-        row["fingerprint"] = "equal" if want and result.get("input_fingerprint") == want else "differs"
-    else:
-        row["fingerprint"] = "no report"
+    report = read_report(release_dir, exp["dataset"])
+    row["fingerprint"] = fingerprint_check(result, exp, report, anchors.get(exp["dataset"]))
     row["plan_and_arms"] = "ok" if plan_matches(result, exp) else "differs"
     row["fold_counts"] = "equal" if fold_counts_equal(result) else "differs"
     row["median_check"] = median_check(result)
     row["predictions"] = "whole" if predictions_whole(result) else "partial"
     row["ok"] = "yes" if (
         row["format"] == "ok"
-        and row["fingerprint"] == "equal"
+        and (row["fingerprint"] == "equal" or row["fingerprint"].startswith("seed "))
         and row["plan_and_arms"] == "ok"
         and row["fold_counts"] == "equal"
         and row["median_check"] != "differs"
@@ -288,9 +345,17 @@ def main(argv):
     expect_path, results_dir, release_dir, out = argv
     os.makedirs(out, exist_ok=True)
     expect = read_expect(expect_path)
+    anchors = {}
+    for exp in expect:
+        path = os.path.join(results_dir, exp["file"])
+        if exp["split"] == "lineage" and exp["seed"] == "42" and os.path.isfile(path):
+            with open(path) as f:
+                result = json.load(f)
+            if at_release_settings(result, read_report(release_dir, exp["dataset"])):
+                anchors[exp["dataset"]] = result
     checks, scored = [], []
     for exp in expect:
-        row, result = check_one(exp, results_dir, release_dir)
+        row, result = check_one(exp, results_dir, release_dir, anchors)
         checks.append(row)
         if result is not None and row["ok"] == "yes":
             arms = [a for a in ARMS if a == "median" or a in exp["arms"].split(",")]

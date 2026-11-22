@@ -37,12 +37,18 @@ def b2(values):
 
 def result(rows, *, dataset="synthia_coli__drug_a", seed=42, arms=("released", "ordered"),
            r_above=(2, 2, 2, 2, 2), folds=5, unavailable=None, released_unavailable=None,
-           ordered_unavailable=None, ordered_from_fold=None, fingerprint="f00d", plan=None):
+           ordered_unavailable=None, ordered_from_fold=None, fingerprint=None, plan=None):
     """A SYNTHETIC grm-mic-plan-result-v1 document, with the fold fields
     filled as grm learn fills them: a fold with no MIC test genome is not
     fitted, each fold's median is the lower median of the other folds'
-    exact MICs, and an arm marked unavailable predicts no row.
+    exact MICs, and an arm marked unavailable predicts no row. The settings
+    hold the lineage plan's seed, or the release's 42 on a fold file, and
+    the fingerprint, which hashes the settings, is the release report's
+    ("f00d") at 42 and another key at any other seed.
     `ordered_from_fold` marks the ordered arm unfitted from that fold on."""
+    cfg_seed = seed if plan is None else 42
+    if fingerprint is None:
+        fingerprint = "f00d" if cfg_seed == 42 else f"f00d{cfg_seed}"
     rows = [dict(r) for r in rows]
     fold_docs = []
     median_missing = False
@@ -82,7 +88,7 @@ def result(rows, *, dataset="synthia_coli__drug_a", seed=42, arms=("released", "
         "format": "grm-mic-plan-result-v1",
         "evaluation_revision": 14,
         "input_fingerprint": fingerprint,
-        "eval_config": {"folds": folds, "seed": 42},
+        "eval_config": settings(cfg_seed),
         "id": dataset,
         "species_slug": dataset.split("__")[0],
         "antibiotic": dataset.split("__")[1].replace("_", " "),
@@ -105,6 +111,11 @@ def result(rows, *, dataset="synthia_coli__drug_a", seed=42, arms=("released", "
     }
 
 
+def settings(seed=42):
+    """SYNTHETIC settings, as the release report and a result record them."""
+    return {"folds": 5, "forest": {"n_trees": 200, "subsample": 0.632}, "seed": seed}
+
+
 def expect_row(dataset="synthia_coli__drug_a", split="lineage", plan="lineage-s42", seed=42,
                arms="released,ordered"):
     sub = "lineage" if split == "lineage" else "study"
@@ -125,7 +136,7 @@ def write_run(tmp, entries, fingerprint="f00d"):
         lines.append("\t".join(exp[c] for c in cols))
         report = release / "datasets" / f"{exp['dataset']}.json"
         report.write_text(json.dumps({"id": exp["dataset"], "input_fingerprint": fingerprint,
-                                      "samples": [{"id": "SYNTHETIC"}]}))
+                                      "eval_config": settings(42), "samples": [{"id": "SYNTHETIC"}]}))
         if doc is not None:
             path = results / exp["file"]
             path.parent.mkdir(parents=True, exist_ok=True)

@@ -238,6 +238,35 @@ class Checks(unittest.TestCase):
             self.assertNotIn(checks[0][column], ("ok", "equal"), column)
             self.assertIsNone(scores)
 
+    def test_a_lineage_result_at_another_seed_is_checked_against_the_seed_42_result(self):
+        # The fingerprint hashes the settings, seed included, and the release
+        # holds reports at seed 42 only: at seed 43 the result's key is
+        # "f00d43", not the report's "f00d". It passes when its settings are
+        # the report's but the seed and its cohort is the seed-42 result's.
+        s42 = (common.expect_row(seed=42, plan="lineage-s42"), common.result(cohort_a(), seed=42))
+        exp43 = common.expect_row(seed=43, plan="lineage-s43")
+        code, checks, _ = run([s42, (exp43, common.result(cohort_a(), seed=43))])
+        self.assertEqual(code, 0)
+        self.assertEqual([c["fingerprint"] for c in checks], ["equal", "seed 43, cohort as at 42"])
+        # Each of these stops the run: one MIC changed (fold 3's exact 0 read
+        # as 1), a second setting changed (100 trees), the seed-42 key kept at
+        # seed 43, and a seed-42 result that is not at the release's settings.
+        other = cohort_a()
+        other[6] = R(3, 1, "Exact", False, -0.5, 0)
+        moved = common.result(cohort_a(), seed=43)
+        moved["eval_config"]["forest"]["n_trees"] = 100
+        cases = [
+            [s42, (exp43, common.result(other, seed=43))],
+            [s42, (exp43, moved)],
+            [s42, (exp43, common.result(cohort_a(), seed=43, fingerprint="f00d"))],
+            [(s42[0], common.result(cohort_a(), seed=42, fingerprint="beef")),
+             (exp43, common.result(cohort_a(), seed=43))],
+        ]
+        for i, entries in enumerate(cases):
+            code, checks, scores = run(entries)
+            self.assertEqual((code, checks[1]["fingerprint"], checks[1]["ok"]), (1, "differs", "no"), i)
+            self.assertIsNone(scores)
+
     def test_a_study_result_is_matched_by_its_scheme(self):
         exp = common.expect_row(split="study", plan="c6mic-s47", seed=47, arms="released")
         doc = common.result(cohort_a(), arms=("released",),
