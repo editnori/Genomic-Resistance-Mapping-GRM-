@@ -406,6 +406,7 @@ src/lib.rs learn::micplan::tests::the_lineage_plan_keeps_each_lineage_in_one_fol
 src/lib.rs learn::micplan::tests::the_read_off_is_the_median_step_of_the_monotone_sequence
 src/lib.rs learn::micplan::tests::the_released_arm_on_the_released_folds_is_evaluate_mic_bit_for_bit
 src/lib.rs learn::micplan::tests::the_training_median_is_the_lower_median
+src/lib.rs learn::micplan::tests::the_training_median_reads_exact_mics_only
 src/lib.rs learn::null_refit::tests::a_fold_of_the_tie_rule_experiment_is_refused
 src/lib.rs learn::null_refit::tests::a_null_lasso_fold_records_every_points_refit_and_both_arms
 src/lib.rs learn::null_refit::tests::a_record_counts_the_training_genomes_and_names_the_test_genomes

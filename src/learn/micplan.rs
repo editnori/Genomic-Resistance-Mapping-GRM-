@@ -685,6 +685,36 @@ mod tests {
     }
 
     #[test]
+    fn the_training_median_reads_exact_mics_only() {
+        // Synthetic: three in five genomes at most -4, the others exact 1 or
+        // 2. Counted as exact, the censored values would put every fold's
+        // median at -4.
+        let (x, y, _, groups) = fixture(200);
+        let mics: Vec<Option<Mic>> = (0..200)
+            .map(|i| {
+                Some(match i % 5 {
+                    3 => mic(1, Censor::Exact),
+                    4 => mic(2, Censor::Exact),
+                    _ => mic(-4, Censor::AtMost),
+                })
+            })
+            .collect();
+        let cfg = config(42);
+        let roles = lineage_roles(&y, &groups, &cfg);
+        let fit = fit_plan(&x, &y, &mics, &roles, 5, 3, &cfg, &[]);
+        for (f, fold) in fit.folds.iter().enumerate() {
+            let mut exact: Vec<i32> = (0..200)
+                .filter(|&i| roles[i] != Role::Test(f) && i % 5 >= 3)
+                .map(|i| mics[i].unwrap().log2)
+                .collect();
+            exact.sort_unstable();
+            let want = exact[exact.len().div_ceil(2) - 1];
+            assert_eq!(fold.median, Some(want), "fold {f}");
+            assert!(want >= 1);
+        }
+    }
+
+    #[test]
     fn the_released_arm_on_the_released_folds_is_evaluate_mic_bit_for_bit() {
         let (x, y, mics, _) = fixture(220);
         let cfg = config(42);
