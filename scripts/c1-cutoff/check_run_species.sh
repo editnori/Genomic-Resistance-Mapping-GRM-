@@ -138,6 +138,17 @@ rm "$H/kit-changed/curated.sha256"; { cat "$KIT/curated.sha256"; echo; } > "$H/k
 case_ kit-changed; go kit-changed "$H/kit-changed"; seen=$(failed_at kit-changed)
 report kit-changed "at kit (curated.sha256 one byte longer)" "$seen" "$(has "$seen" "at kit")"
 
+# A finished OUT (its DONE line SYNTHETIC) started again with another
+# dataset list, then with a changed kit: both refused at kit, DONE kept as
+# it was and no FAILED written.
+case_ done-kept; go done-kept; rm -f "$H/out-done-kept/FAILED"
+echo "DONE $SP SYNTHETIC" > "$H/out-done-kept/DONE"; cp "$H/out-done-kept/DONE" "$H/done-kept.before"
+go done-kept "$KIT" campylobacter_coli__azithromycin; go done-kept "$H/kit-changed"
+kept=$(cmp -s "$H/out-done-kept/DONE" "$H/done-kept.before" && echo "DONE kept" || echo "DONE changed or gone")
+refusals=$(grep -c "refused at kit; the finished run's DONE is kept" "$H/out-done-kept/logs/run.log")
+seen="$kept, $(failed_at done-kept), refusals $refusals"
+report done-kept "DONE kept, no FAILED file, refusals 2" "$seen" "$(has "$seen" "DONE kept, no FAILED file, refusals 2")"
+
 case_ id-failed; STUB_MODE=id go id-failed; n=$(ids_out id-failed); raw=$(ids_out id-failed work/raw-logs)
 # The positive control: the raw log the scrub read holds the stub's two id lines.
 report id-failed "at fit-s42, 0 genome ids in the copy-back, 2 in the raw logs" "$(failed_at id-failed), $n, raw $raw" \

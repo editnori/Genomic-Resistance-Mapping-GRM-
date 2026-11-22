@@ -48,7 +48,8 @@
 # information records; the code sha256 is that of its loaded sections less
 # the build-id note, which is the same from any path.
 # Any failure writes OUT/FAILED naming the step and exits 1. It stops
-# nothing but itself.
+# nothing but itself. A restart that the kit, list or pin checks refuse
+# leaves a finished OUT as it was: DONE stays and no FAILED is written.
 set -Eeuo pipefail
 KIT=$(cd "${1:?kit folder}" && pwd); SP=${2:?species slug}; DATASETS=${3:?datasets}
 OUT=${4:?out folder}; JOBS=${5:-$(nproc)}; LINES=${6:-10,15,20,25,50}; DRAWS=${7:-5}; TWIN=${8:-1}
@@ -65,9 +66,14 @@ flock -n 9 || { echo "$(date -u +%FT%TZ) another start runs on this OUT; this on
 STEP=start
 say() { echo "$(date -u +%FT%TZ) $*"; }
 disk() { echo -e "$(date -u +%FT%TZ)\t$1\t$(du -sb "$OUT" | cut -f1)\t$(df -B1 --output=avail "$OUT" | tail -1 | tr -d ' ')" >> "$OUT/logs/disk.tsv"; }
-trap 'say "FAILED at $STEP"; echo "FAILED $SP at $STEP $(date -u +%FT%TZ)" > "$OUT/FAILED"; exit 1' ERR
-trap 'say "stopped at $STEP"; echo "FAILED $SP stopped at $STEP $(date -u +%FT%TZ)" > "$OUT/FAILED"; exit 1' TERM INT
-rm -f "$OUT/FAILED" "$OUT/DONE"
+# Until the kit checks pass, a finished OUT keeps its DONE and gets no FAILED.
+fail() {  # fail <how>: at <step> or stopped at <step>
+  if [ -e "$OUT/DONE" ]; then say "refused $1 $STEP; the finished run's DONE is kept"
+  else say "FAILED $1 $STEP"; echo "FAILED $SP $1 $STEP $(date -u +%FT%TZ)" > "$OUT/FAILED"; fi
+  exit 1
+}
+trap 'fail at' ERR
+trap 'fail "stopped at"' TERM INT
 say "start $SP, $JOBS jobs, repo $(git -C "$REPO" rev-parse HEAD)"
 [ -s "$OUT/logs/disk.tsv" ] || echo -e "time\tafter\tout_bytes\tfree_bytes" > "$OUT/logs/disk.tsv"
 disk start
@@ -139,6 +145,8 @@ if [ -s "$OUT/lists.txt" ] && ! cmp -s "$OUT/lists.txt" "$OUT/lists.txt.part"; t
   say "the dataset list or the lines differ from the first start's; use a fresh OUT"; false
 fi
 mv "$OUT/lists.txt.part" "$OUT/lists.txt"
+# The kit, the checkout and the list passed: this start replaces any end line.
+rm -f "$OUT/FAILED" "$OUT/DONE"
 
 release() {
   rm -rf "$W/release"; mkdir -p "$W/release"
@@ -312,7 +320,8 @@ done
 STEP=score
 say "score: start"
 python3 -I -B "$REPO/scripts/c1-cutoff/score.py" "$OUT/expect.tsv" "$COH" "$RES" "$R" "$OUT/score" > "$OUT/logs/score.log" 2>&1 \
-  || { cat "$OUT/logs/score.log"; false; }
+  || { scrub "$OUT/logs/score.log"; cat "$OUT/logs/score.log"; false; }
+scrub "$OUT/logs/score.log"
 cat "$OUT/logs/score.log"
 
 STEP=done
