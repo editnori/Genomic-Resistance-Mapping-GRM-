@@ -76,3 +76,35 @@ The MIC design says `scripts/c6-mic/study_plans.py` writes the seed-47 study pla
 **Loss.** The dataset's 6 study results are not run. Its plans at seeds 42 to 46 pass their checks, so 5 of the 6 could have run. The scripts take one study list a species and run every seed on it, and they stay as reviewed. Part B's release rule reads the lineage split, so no reading of that rule loses a result.
 
 **Timing.** *Klebsiella pneumoniae* stopped at the plans step at 13:48Z on 22 Nov 2026, before any of its fits, and started again on the list of 13 at 13:59Z. This entry was written at 14:01Z on 22 Nov 2026. Nine species had finished and two more were running. No score of any model had been read.
+
+## D0 causes
+
+The plan's D0 puts each missed lineage fold in one of four causes, Absent, Removed, Lineage and Unused, and reads the release's fold models. The plan does not say when a fold counts as missed or how a cause is decided, and the release holds no fold models (entry "Fold models"). A review of D0's and C8's code on 22 Nov 2026 named eleven readings the plan leaves open. Each holds from 22 Nov 2026.
+
+| Reading | Rule |
+|---|---|
+| Missed fold | D0 counts a lineage fold as missed when it tests both classes and the program's fold balanced accuracy beats the learner's by 0.10 or more. A miss pair with no such fold takes, of its folds that test both classes, the one with the largest gap and flags it `fallback`, but only when that gap is above 0. Otherwise the pair has no missed fold and no cause: `combine` counts it as `no_missed_fold`, and it stays in the miss pairs, the 40% denominator and the gap total. |
+| Match | A feature matches the program, and a chosen feature agrees with a match, when its presence or its absence agrees at 0.95 or more on the fold's training genomes the program calls, its no-call genomes left out. |
+| Chosen | A missed fold where the learner chose a feature that agrees with an offered match but lies in more than two lineage clusters goes to a fifth cause, Chosen, which counts in the 40% denominator and never sets the order. |
+| Order | Each missed fold takes the first cause that holds in the order Absent, Removed, Lineage, Chosen, Unused, and the 40% is taken of miss pairs (dataset and learner), with a tie for most setting no order. |
+| Ties | A dataset whose missed folds tie between causes counts in each and splits its gap equally between them. |
+| Trees | For the random forest and the boosted trees a fold "chose" its 50 heaviest features, all `fold_models` keeps, so a feature used below that rank counts as not chosen in D0 and in C8. |
+| Clusters | A chosen feature's lineage clusters are counted over the fold's training genomes that carry its resistance-indicating state, and a genome with no lineage counts as a cluster of its own. |
+| Offered | A matching row counts as offered when the lowest row of its training pattern is a candidate, as `grm learn` sees one row per pattern. |
+| Empty pairs | C8's median Jaccard leaves out a fold pair in which both folds chose nothing. |
+| Pattern overlap | C8 also reports a second overlap in which two features are one when their patterns agree on every sample both folds train on. |
+| Catalogue family | C8's count of features whose notes carry a catalogue family reads the final models' features that have a card, since fold features have none. Its row over all learners is named `any_summed`: it counts a dataset once and sums the five learners' features. |
+
+**Chosen.** The lead ruled at 15:50Z on 22 Nov 2026 that the fifth cause stays. A missed fold where the learner chose a feature that agrees with an offered match and lies in more than two lineage clusters is neither Lineage nor Unused by the plan's words.
+
+**Default.** Chosen counts in the 40% denominator and never sets the order. The largest cause is taken among Absent, Removed, Lineage and Unused. It sets the order when it alone is the largest of the four and holds 40% or more of the miss pairs. Otherwise the plan's default order C4, C3, C5 holds.
+
+**Reading.** A pair whose missed folds tie counts in each tied cause, so Chosen can hold more miss pairs than a cause of the four that holds 40% or more. That cause still sets the order. The lead confirmed this reading at 17:05Z on 22 Nov 2026, with no D0 count read. `d0.py` already does this, and no code changed for it.
+
+**Refit.** D0 and C8 read a refit of the release's rule at seed 42 that saves fold models, on the 238 datasets that are not M. The build's code sha256 must be `20e08189285ece9ac29a03f989469899356d74e5876927e689f16a1a037c104c`. A species with any difference from the release stops before D0 or C8 reads a report.
+
+**Equality.** A refit report stands for the release's only when `scripts/refit/refit_check.py` finds every field of the release's report but `seconds` equal: the top-level fields, each sample's fitted fields, each split's folds, and each learner row but its `seconds`.
+
+**Allowed.** Three new fields pass: `fold_models`, complete for the five learners on every split that ran, each sample's `rule_groups`, and `selection`. Any other new field fails. A sample's country, year, host and MLST type are counted apart and do not fail it. With the allowed fields taken out, the two reports written again in their own key order must be the same text.
+
+**Written.** This entry was written at 16:08Z on 22 Nov 2026, while the refit, D0 and C8 were rehearsed on *Klebsiella aerogenes* with ertapenem, imipenem and meropenem, for time and equality only. No D0 or C8 count beyond the rehearsal on *Klebsiella aerogenes* had been read. A review made the first reading and the default's tie case exact at 16:40Z the same day, and by then still no D0 or C8 count beyond that rehearsal had been read.
