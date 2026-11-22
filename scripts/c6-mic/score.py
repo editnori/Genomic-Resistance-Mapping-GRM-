@@ -169,8 +169,9 @@ def probe_confirms(result, report, probe_dir, dataset):
 
 def cohort(result):
     """What a result reads of its dataset apart from the plan: its counts and
-    each tested genome's MIC, censor and call, in no order."""
-    rows = sorted((r["log2"], r["censor"], r["resistant"]) for r in result.get("tested") or [])
+    each tested genome's MIC, censor and call, in the order grm learn writes
+    the rows, which is the cohort's sample order at every seed and plan."""
+    rows = [(r["log2"], r["censor"], r["resistant"]) for r in result.get("tested") or []]
     return [result.get(k) for k in COHORT], rows
 
 

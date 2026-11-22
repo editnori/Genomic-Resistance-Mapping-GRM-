@@ -276,6 +276,19 @@ class Checks(unittest.TestCase):
             self.assertEqual((code, checks[1]["fingerprint"], checks[1]["ok"]), (1, "differs", "no"), i)
             self.assertIsNone(scores)
 
+    def test_a_seed_43_cohort_must_hold_the_seed_42_rows_in_order(self):
+        # grm learn writes the tested rows in the cohort's sample order at
+        # every seed. Swapping two genomes' MIC, censor and call (fold 0's
+        # exact 1, S and fold 4's above 6, R) keeps the counts and the rows
+        # as a set, and is a different cohort.
+        s42 = (common.expect_row(seed=42, plan="lineage-s42"), common.result(cohort_a(), seed=42))
+        rows = cohort_a()
+        rows[0], rows[9] = (R(0, 6, "Above", True, 1.4, 1), R(4, 1, "Exact", False, 5.0, 6))
+        code, checks, scores = run([s42, (common.expect_row(seed=43, plan="lineage-s43"),
+                                          common.result(rows, seed=43))])
+        self.assertEqual((code, checks[1]["fingerprint"]), (1, "differs"))
+        self.assertIsNone(scores)
+
     def test_a_rebuilt_breakpoint_passes_only_through_a_probe_equal_in_all_else(self):
         # The rebuilt table fits the dataset breakpoint on one more MIC pair,
         # and the fingerprint hashes the breakpoint: the run's key at the
