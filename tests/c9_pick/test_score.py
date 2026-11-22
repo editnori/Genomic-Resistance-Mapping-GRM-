@@ -341,6 +341,14 @@ class Count(unittest.TestCase):
         self.assertEqual((inner["holm_p"], twin["holm_p"]), (2 / 64, 7 / 64))
         self.assertIsNone(at(rows, "lineage", "inner-default", "recall")["holm_p"])
 
+    def test_the_interval_resamples_species_not_datasets(self):
+        # Species a holds 9 datasets at +0.05 and species b one at -0.05. A quarter of the species draws are b
+        # twice, with a median of -0.05, so the 101st of the 4,000 sorted medians is -0.05. Drawn by dataset, 5 or
+        # more of 10 at -0.05 come up in fewer than 1 draw in 500, and the 101st median would be 0.05.
+        rows = pairs([0.05] * 9 + [-0.05], species=["a"] * 9 + ["b"])
+        r = at(rows, "lineage", "inner-default", "balanced_accuracy")
+        self.assertEqual((r["median_difference"], r["interval_lo"], r["interval_hi"], r["species"]), (0.05, -0.05, 0.05, 2))
+
     def test_the_species_interval_is_seeded_by_its_row_and_read_at_the_101st_and_3900th_values(self):
         self.assertEqual((score.RESAMPLES, score.LO_INDEX, score.HI_INDEX), (4000, 100, 3899))
         self.assertNotEqual(score.row_seed("lineage", "inner-default", "recall"),
