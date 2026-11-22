@@ -13,6 +13,7 @@ A row gives a count, what it counts, the evaluation revision of the count and it
 - **File.** The script read the number from a committed summary file. The row names the file, and Sources gives the path for each revision.
 - **Document.** The script found the number in a sentence of that document, and the export holds the sentence. No committed file rebuilds the number unless the row names a suite.
 - **Median.** A median has no count. Its row gives the value under each revision, in the order of the Revision cell, and the number of splits the median covers.
+- **Side.** A row of an assumption says how to read its count. The count is where the assumption is false, where it is true, where it is used, or where it is not proven.
 - **Note.** A letter in brackets points to the note under the table.
 
 A term names its kind in brackets. A state may add a truth state, one of the values Givens keeps apart, such as missing or inferred. A term's links name other terms of this page, and an assumption sits under the terms it bears on.
@@ -137,10 +138,10 @@ A term names its kind in brackets. A state may add a truth state, one of the val
 | Under | Random split, Duplicate group and Report figure |
 | Stated in | `docs/duplicate-isolation.md` |
 
-| Count | Counted | Revision | Source |
-|---|---|---|---|
-| 58 of 277 | datasets with at least one duplicate group, on the cohorts of revision 9 | 9 | `docs/duplicate-isolation.md` |
-| 55 of 277 | datasets with a group that crossed the saved random folds, on the cohorts of revision 9, before groups were kept whole | 9 | `docs/duplicate-isolation.md` |
+| Count | Side | Counted | Revision | Source |
+|---|---|---|---|---|
+| 58 of 277 | unproven | datasets with at least one duplicate group, on the cohorts of revision 9 | 9 | `docs/duplicate-isolation.md` |
+| 55 of 277 | false | datasets with a group that crossed the saved random folds, on the cohorts of revision 9, before groups were kept whole | 9 | `docs/duplicate-isolation.md` |
 
 **Not counted.** No committed file counts duplicate groups on the cohorts of revision 10 or later. The two counts are of the revision 9 cohorts, and the document says to count again after the revision 10 curation. How far a figure moved is given for named species only, so it is left out.
 
@@ -153,16 +154,16 @@ A term names its kind in brackets. A state may add a truth state, one of the val
 | Under | Report figure, Lineage split, Studies the cohort does not hold and Reading |
 | Stated in | `docs/outside-study-results.md` |
 
-| Count | Counted | Revision | Source |
-|---|---|---|---|
-| 32 of 81 | datasets on which the set covering machine holds, on genomes from studies the cohort does not hold | 12 | `outside-study.json` |
-| 23 of 81 | datasets on which the decision tree holds, same population | 12 | `outside-study.json` |
-| 7 of 25 | datasets on which the lasso holds, of the datasets it can be scored and read on, same population | 12 | `outside-study.json` |
-| 8 of 25 | datasets on which the lasso holds against the revision 14 figure, same population and same new estimates | 14 | `docs/outside-study-results.md`, rebuilt by `tests/outside_study_results` |
-| 36 of 49 | datasets on which the set covering machine holds, on new genomes from studies the cohort already holds (a) | 12 | `outside-study.json` |
-| 31 of 49 | datasets on which the decision tree holds, on new genomes from studies the cohort already holds (a) | 12 | `outside-study.json` |
-| 9 of 15 | datasets on which the lasso holds, of the datasets it can be scored and read on, on new genomes from studies the cohort already holds (a) | 12 | `outside-study.json` |
-| 7 of 15 | datasets on which the lasso holds against the revision 14 figure, on new genomes from studies the cohort already holds (b) | 14 | `docs/outside-study-results.md`, rebuilt by `tests/outside_study_results` |
+| Count | Side | Counted | Revision | Source |
+|---|---|---|---|---|
+| 32 of 81 | true | datasets on which the set covering machine holds, on genomes from studies the cohort does not hold | 12 | `outside-study.json` |
+| 23 of 81 | true | datasets on which the decision tree holds, same population | 12 | `outside-study.json` |
+| 7 of 25 | true | datasets on which the lasso holds, of the datasets it can be scored and read on, same population | 12 | `outside-study.json` |
+| 8 of 25 | true | datasets on which the lasso holds against the revision 14 figure, same population and same new estimates | 14 | `docs/outside-study-results.md`, rebuilt by `tests/outside_study_results` |
+| 36 of 49 | true | datasets on which the set covering machine holds, on new genomes from studies the cohort already holds (a) | 12 | `outside-study.json` |
+| 31 of 49 | true | datasets on which the decision tree holds, on new genomes from studies the cohort already holds (a) | 12 | `outside-study.json` |
+| 9 of 15 | true | datasets on which the lasso holds, of the datasets it can be scored and read on, on new genomes from studies the cohort already holds (a) | 12 | `outside-study.json` |
+| 7 of 15 | true | datasets on which the lasso holds against the revision 14 figure, on new genomes from studies the cohort already holds (b) | 14 | `docs/outside-study-results.md`, rebuilt by `tests/outside_study_results` |
 
 **Note a.** A separate population. The plan scores the two apart, and the document set them side by side after both results were read.
 
@@ -177,19 +178,21 @@ A term names its kind in brackets. A state may add a truth state, one of the val
 | Under | Learner row, Best learner, Report figure, Fold scored at prevalence and Called metrics |
 | Stated in | `docs/equal-scoring.md` |
 
-| Count | Counted | Revision | Source |
-|---|---|---|---|
-| 122 of 2,710 | learner rows that left genomes without a call, in the revision 12 release | 12 | `index-counts.json` |
-| 65 of 122 | of those rows, the boosted trees' rows on either split | 12 | `guidance.json` and `index-counts.json` |
-| 57 of 122 | of those rows, the lasso's rows on either split | 12 | `guidance.json` and `index-counts.json` |
-| 122 of 2,710 | learner rows with a fold whose fit learned nothing beyond the class balance, each scored on every genome, in the revision 14 release | 14 | `index-counts.json` |
-| 0 of 2,710 | learner rows that still count fewer genomes than their class, in the revision 14 release | 14 | `index-counts.json` |
-| 73 of 274 | datasets whose revision 14 report differs from revision 12 in the rows of a learner with a fold whose fit learned nothing beyond the class balance: 48 there only, and 25 there and in the rows of the simulated molecular panels | 14 | `README.md` |
-| 21 of 274 | datasets whose best learner changed from revision 12 to revision 14 | 14 | `README.md` |
-| 0.8459 and 0.8409, over 268 | lineage splits over which the boosted trees' median balanced accuracy is taken, under each revision (a) | 12 and 14 | `summary.json` |
-| 0.8567 and 0.8565, over 268 | lineage splits over which the lasso's median balanced accuracy is taken, under each revision (a) | 12 and 14 | `summary.json` |
+| Count | Side | Counted | Revision | Source |
+|---|---|---|---|---|
+| 122 of 2,710 | false | learner rows that left genomes without a call, in the revision 12 release | 12 | `index-counts.json` |
+| 65 of 122 | false | of those rows, the boosted trees' rows on either split | 12 | `guidance.json` and `index-counts.json` |
+| 57 of 122 | false | of those rows, the lasso's rows on either split | 12 | `guidance.json` and `index-counts.json` |
+| 122 of 2,710 | true | learner rows with a fold whose fit learned nothing beyond the class balance, each scored on every genome, in the revision 14 release | 14 | `index-counts.json` |
+| 0 of 2,710 | false | learner rows that still count fewer genomes than their class, in the revision 14 release | 14 | `index-counts.json` |
+| 73 of 274 | false | datasets whose revision 14 report differs from revision 12 in the rows of a learner with a fold whose fit learned nothing beyond the class balance: 48 there only, and 25 there and in the rows of the simulated molecular panels (a) | 14 | `README.md` |
+| 21 of 274 | false | datasets whose best learner changed from revision 12 to revision 14 (a) | 14 | `README.md` |
+| 0.8459 and 0.8409, over 268 | used | lineage splits over which the boosted trees' median balanced accuracy is taken, under each revision (b) | 12 and 14 | `summary.json` |
+| 0.8567 and 0.8565, over 268 | used | lineage splits over which the lasso's median balanced accuracy is taken, under each revision (b) | 12 and 14 | `summary.json` |
 
-**Note a.** A median, so the line has no count.
+**Note a.** The assumption failed under revision 12 and holds under revision 14. The line counts what the repair changed.
+
+**Note b.** A median, so the line has no count.
 
 ## Rules
 

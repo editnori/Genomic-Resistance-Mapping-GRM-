@@ -31,6 +31,26 @@ The file has the shape of a Givens module, so Givens can store it unchanged.
 
 A measured line has `count`, `of`, `what`, `source` and `basis`. It also names its `evaluation_revision`, so a figure of revision 12 is never shown as revision 14's. A median has no count. Its line carries `values`, one for each revision, and a `note`.
 
+## Side
+
+A measured line of an assumption also has `side`. It says how to read the count. GRM sets it in `spec.json` from what the count counts, and Givens sets none. A line of a definition has no side.
+
+| Side | Reading |
+|---|---|
+| `false` | the line counts where the assumption is false |
+| `true` | the line counts where the assumption is true |
+| `used` | the line gives a figure that rests on the assumption, and what the figure covers |
+| `unproven` | the line counts where the assumption is not proven either way |
+
+Four readings need a word:
+
+- **Duplicates.** A dataset with a duplicate group is `unproven`: the group may or may not cross a fold. A dataset whose group crossed the saved folds is `false`.
+- **New genomes.** Each outside-study line counts datasets on which the figure holds, so each is `true`. On the lines for studies the cohort already holds, `true` says the figure holds there. The assumption speaks of studies the cohort never saw, and the note on those lines says the population is a separate one.
+- **Repair.** The counts of changed reports and of changed best learners are `false`. The assumption failed under revision 12, and the lines count what its repair changed. Their note says so.
+- **Medians.** A median has no count, so its line is `used`. It gives the figure under each revision.
+
+A line with no count is never `false` or `true`.
+
 ## Sources
 
 Each number has one of two bases.
@@ -114,9 +134,10 @@ The page leaves out the quoted sentences and each sha256, which stay in the file
 - the file breaks a rule that Givens' own check applies to a module;
 - a count of the export differs from the sentence of `docs/outside-study-results.md` or `docs/release-summary.md` that states it;
 - a line's revision differs from the revision its files name;
-- an entry with no count lacks `unmeasured`.
+- an entry with no count lacks `unmeasured`;
+- a line of an assumption has a side other than the one ruled for it.
 
-It also plants faults in a copy of the spec, and each must stop the script: a species, an antibiotic, a dataset or a sequence in a string, a quote its document does not hold, a file or a field outside the lists, an unknown field, a count above its denominator, and a number written by hand. A copy of `index-counts.json` whose count of labels inferred from a MIC is missing or null must stop it too, so such a count is never written as zero.
+It also plants faults in a copy of the spec, and each must stop the script: a species, an antibiotic, a dataset or a sequence in a string, a quote its document does not hold, a file or a field outside the lists, an unknown field, a count above its denominator, a number written by hand, a line of an assumption with no side or with a word outside the list, a side on a line of a definition, and a median read as `false` or `true`. A copy of `index-counts.json` whose count of labels inferred from a MIC is missing or null must stop it too, so such a count is never written as zero.
 
 The suite tries every name the screen has from the vocabulary alone, and each one stops the script. It also renames each table of a copy of the vocabulary. The script must then stop, because a table it cannot read would shrink the screen.
 
