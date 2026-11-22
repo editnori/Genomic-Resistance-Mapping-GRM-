@@ -414,6 +414,7 @@
       "measured": [
         {
           "what": "datasets with at least one duplicate group, on the cohorts of revision 9",
+          "side": "unproven",
           "revision": 9,
           "document": "docs/duplicate-isolation.md",
           "quote": "Over the 277 datasets of the 23-species candidate, 58 have at least one group and 55 have a group that crossed the saved random folds.",
@@ -422,6 +423,7 @@
         },
         {
           "what": "datasets with a group that crossed the saved random folds, on the cohorts of revision 9, before groups were kept whole",
+          "side": "false",
           "revision": 9,
           "document": "docs/duplicate-isolation.md",
           "quote": "Over the 277 datasets of the 23-species candidate, 58 have at least one group and 55 have a group that crossed the saved random folds.",
@@ -444,24 +446,28 @@
       "measured": [
         {
           "what": "datasets on which the set covering machine holds, on genomes from studies the cohort does not hold",
+          "side": "true",
           "revision": 12,
           "count": {"outside": "primary", "learner": "scm", "rows": "holds"},
           "of": {"outside": "primary", "learner": "scm", "rows": "read"}
         },
         {
           "what": "datasets on which the decision tree holds, same population",
+          "side": "true",
           "revision": 12,
           "count": {"outside": "primary", "learner": "cart", "rows": "holds"},
           "of": {"outside": "primary", "learner": "cart", "rows": "read"}
         },
         {
           "what": "datasets on which the lasso holds, of the datasets it can be scored and read on, same population",
+          "side": "true",
           "revision": 12,
           "count": {"outside": "primary", "learner": "lasso", "rows": "holds"},
           "of": {"outside": "primary", "learner": "lasso", "rows": "read"}
         },
         {
           "what": "datasets on which the lasso holds against the revision 14 figure, same population and same new estimates",
+          "side": "true",
           "revision": 14,
           "document": "docs/outside-study-results.md",
           "quote": "Against revision 14 the lasso holds on 8 of the 25 primary datasets read for it, where the runs read 7.",
@@ -471,6 +477,7 @@
         },
         {
           "what": "datasets on which the set covering machine holds, on new genomes from studies the cohort already holds",
+          "side": "true",
           "revision": 12,
           "count": {"outside": "same-study", "learner": "scm", "rows": "holds"},
           "of": {"outside": "same-study", "learner": "scm", "rows": "read"},
@@ -478,6 +485,7 @@
         },
         {
           "what": "datasets on which the decision tree holds, on new genomes from studies the cohort already holds",
+          "side": "true",
           "revision": 12,
           "count": {"outside": "same-study", "learner": "cart", "rows": "holds"},
           "of": {"outside": "same-study", "learner": "cart", "rows": "read"},
@@ -485,6 +493,7 @@
         },
         {
           "what": "datasets on which the lasso holds, of the datasets it can be scored and read on, on new genomes from studies the cohort already holds",
+          "side": "true",
           "revision": 12,
           "count": {"outside": "same-study", "learner": "lasso", "rows": "holds"},
           "of": {"outside": "same-study", "learner": "lasso", "rows": "read"},
@@ -492,6 +501,7 @@
         },
         {
           "what": "datasets on which the lasso holds against the revision 14 figure, on new genomes from studies the cohort already holds",
+          "side": "true",
           "revision": 14,
           "document": "docs/outside-study-results.md",
           "quote": "It holds on 7 of the 15 same-study datasets, where the runs read 9.",
@@ -514,36 +524,43 @@
       "measured": [
         {
           "what": "learner rows that left genomes without a call, in the revision 12 release",
+          "side": "false",
           "revision": 12,
           "count": {"file": "index12", "at": ["unflagged_with_no_call"]},
           "of": {"file": "index12", "at": ["learner_rows"]}
         },
         {
           "what": "of those rows, the boosted trees' rows on either split",
+          "side": "false",
           "revision": 12,
           "count": {"sum": [{"file": "guidance12", "at": ["rows", "gbt:random", "fewer_than_every_genome"]}, {"file": "guidance12", "at": ["rows", "gbt:lineage", "fewer_than_every_genome"]}]},
           "of": {"file": "index12", "at": ["unflagged_with_no_call"]}
         },
         {
           "what": "of those rows, the lasso's rows on either split",
+          "side": "false",
           "revision": 12,
           "count": {"sum": [{"file": "guidance12", "at": ["rows", "lasso:random", "fewer_than_every_genome"]}, {"file": "guidance12", "at": ["rows", "lasso:lineage", "fewer_than_every_genome"]}]},
           "of": {"file": "index12", "at": ["unflagged_with_no_call"]}
         },
         {
           "what": "learner rows with a fold whose fit learned nothing beyond the class balance, each scored on every genome, in the revision 14 release",
+          "side": "true",
           "revision": 14,
           "count": {"file": "index14", "at": ["flagged_rows"]},
           "of": {"file": "index14", "at": ["learner_rows"]}
         },
         {
           "what": "learner rows that still count fewer genomes than their class, in the revision 14 release",
+          "side": "false",
           "revision": 14,
           "count": {"file": "index14", "at": ["unflagged_with_no_call"]},
           "of": {"file": "index14", "at": ["learner_rows"]}
         },
         {
           "what": "datasets whose revision 14 report differs from revision 12 in the rows of a learner with a fold whose fit learned nothing beyond the class balance: 48 there only, and 25 there and in the rows of the simulated molecular panels",
+          "side": "false",
+          "note": "The assumption failed under revision 12 and holds under revision 14. The line counts what the repair changed.",
           "revision": 14,
           "document": "README.md",
           "quote": "Of the 274 reports, 162 differ from revision 12 only in the revision number and the run time, 39 in panel rows only, 48 only in the rows of a learner with a null fit, and 25 in both.",
@@ -552,6 +569,8 @@
         },
         {
           "what": "datasets whose best learner changed from revision 12 to revision 14",
+          "side": "false",
+          "note": "The assumption failed under revision 12 and holds under revision 14. The line counts what the repair changed.",
           "revision": 14,
           "document": "README.md",
           "quote": "Of the 274 reports, 162 differ from revision 12 only in the revision number and the run time, 39 in panel rows only, 48 only in the rows of a learner with a null fit, and 25 in both. The best learner changed in 21 datasets.",
@@ -560,6 +579,7 @@
         },
         {
           "what": "lineage splits over which the boosted trees' median balanced accuracy is taken, under each revision",
+          "side": "used",
           "of": {"file": "summary14", "at": ["per_learner", "gbt", "n_both"]},
           "values": [
             {"revision": 12, "value": {"file": "summary12", "at": ["per_learner", "gbt", "median_lineage"]}},
@@ -569,6 +589,7 @@
         },
         {
           "what": "lineage splits over which the lasso's median balanced accuracy is taken, under each revision",
+          "side": "used",
           "of": {"file": "summary14", "at": ["per_learner", "lasso", "n_both"]},
           "values": [
             {"revision": 12, "value": {"file": "summary12", "at": ["per_learner", "lasso", "median_lineage"]}},

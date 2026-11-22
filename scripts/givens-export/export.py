@@ -21,6 +21,10 @@ The words come from spec.json beside this script. Every number comes from one of
 
 An entry GRM has no count for carries "unmeasured" with the reason. The script fills in nothing.
 
+A measured line of an assumption names its side: false, true, used or unproven. It says whether the line counts
+where the assumption is false, where it is true, where it is used, or where it is not proven. The spec states it for
+each line, and the script stops when a line lacks it.
+
 It is an allow-list. It stops with a message when the spec holds a key it does not know, reads a file or a field
 outside the lists below, quotes a sentence its document does not hold, or writes a string that names a dataset, a
 species, an antibiotic or a drug class. The screen takes those names from the files read and from GRM's antibiotic
@@ -46,6 +50,9 @@ SPLITS = ("random", "lineage")
 KINDS = {"concept", "state", "role", "rule", "measure", "artifact"}
 TRUTH_STATES = {"asserted", "negated", "false", "unknown", "absent", "missing", "unchecked", "unsupported", "inferred",
                 "unresolved"}
+# How to read a measured line of an assumption: it counts where the assumption is false, where it is true, where it is
+# used, or where it is not proven. A line with no count cannot count where the assumption is false or true.
+SIDES = ("false", "true", "used", "unproven")
 EDGE_TYPES = {"is_a", "part_of", "value_of", "input_of", "output_of", "guards", "depends_on", "measured_by",
               "contrasts_with", "compared_with"}
 
@@ -74,7 +81,7 @@ MODULE_KEYS = ["id", "namespace", "name", "job", "repo", "release", "binding", "
 NODE_KEYS = {"id", "kind", "label", "definition", "truth_state", "quotes", "measured", "unmeasured"}
 EDGE_KEYS = {"from", "type", "to"}
 GIVEN_KEYS = {"id", "statement", "under", "hidden_in", "when_false", "quotes", "measured", "unmeasured"}
-LINE_KEYS = {"what", "revision", "count", "of", "note", "document", "quote", "rebuilt_by", "values"}
+LINE_KEYS = {"what", "side", "revision", "count", "of", "note", "document", "quote", "rebuilt_by", "values"}
 OUTSIDE_ROWS = {
     "read": "that are read",
     "holds": "that hold",
@@ -234,10 +241,20 @@ def _count_of(at, count, of, note):
         raise Fault(f"{at}: a line with no denominator says why in note")
 
 
-def _line(at, spec, src):
-    """One measured line of a node or of an assumption."""
+def _line(at, spec, src, given=False):
+    """One measured line of a node or of an assumption. A line of an assumption names its side."""
     _keys(at, spec, LINE_KEYS, {"what"})
+    side = spec.get("side")
+    if not given and "side" in spec:
+        raise Fault(f"{at}: only a line of an assumption has a side")
+    if given and not (isinstance(side, str) and side in SIDES):
+        raise Fault(f"{at}: a line of an assumption names its side, one of {', '.join(SIDES)}")
+    if "values" in spec and side in ("false", "true"):
+        raise Fault(f"{at}: a median has no count, so its side is used or unproven")
+    spec = {k: v for k, v in spec.items() if k != "side"}
     out = {"count": None, "of": None, "what": spec["what"]}
+    if given:
+        out["side"] = side
     if "document" in spec:
         _keys(at, spec, {"what", "revision", "count", "of", "note", "document", "quote", "rebuilt_by"},
               {"document", "quote", "count"})
@@ -286,7 +303,7 @@ def _line(at, spec, src):
     return out
 
 
-def _entry(at, spec, src, out):
+def _entry(at, spec, src, out, given=False):
     """The parts a node and an assumption share: quotes, measured lines and what is unmeasured."""
     quotes = spec.get("quotes") or []
     if not quotes:
@@ -296,7 +313,7 @@ def _entry(at, spec, src, out):
         src.quote(at, q["path"], q["quote"])
     out["source"] = "; ".join(dict.fromkeys(q["path"] for q in quotes))
     out["quotes"] = [{"path": q["path"], "quote": q["quote"]} for q in quotes]
-    out["measured"] = [_line(f"{at} line {i + 1}", x, src) for i, x in enumerate(spec.get("measured") or [])]
+    out["measured"] = [_line(f"{at} line {i + 1}", x, src, given) for i, x in enumerate(spec.get("measured") or [])]
     if "unmeasured" in spec:
         if not isinstance(spec["unmeasured"], str) or not spec["unmeasured"].strip():
             raise Fault(f"{at}: unmeasured says what GRM has not counted")
@@ -443,7 +460,7 @@ def _built(spec, root):
         given_ids.add(g["id"])
         out = {"id": g["id"], "statement": g["statement"], "under": list(g["under"]), "hidden_in": g["hidden_in"],
                "when_false": g["when_false"]}
-        givens.append(_entry(at, g, src, out))
+        givens.append(_entry(at, g, src, out, given=True))
     for key in ("import_rule", "left_out"):
         if not spec[key] or not all(isinstance(x, str) and x.strip() for x in spec[key]):
             raise Fault(f"{key} is a list of sentences")
@@ -482,6 +499,7 @@ LINKS = {"is_a": "is a kind of", "part_of": "is part of", "value_of": "is a valu
          "output_of": "is an output of", "guards": "guards", "depends_on": "depends on",
          "measured_by": "is measured by", "contrasts_with": "contrasts with", "compared_with": "is compared with"}
 ROW = "| Count | Counted | Revision | Source |\n|---|---|---|---|"
+SIDE_ROW = "| Count | Side | Counted | Revision | Source |\n|---|---|---|---|---|"
 LETTERS = "abcdefghijklmnopqrstuvwxyz"
 MARK = re.compile(r"[*_`|<>\[\]#\\~]")
 
@@ -525,9 +543,12 @@ def _counted(entry):
         else:
             count = f"{x['count']:,}" + ("" if x["of"] is None else f" of {x['of']:,}")
             revision = str(x["evaluation_revision"])
-        out.append(f"| {count} | {what} | {revision} | {where} |")
+        side = f" {x['side']} |" if "side" in x else ""
+        out.append(f"| {count} |{side} {what} | {revision} | {where} |")
     if out:
-        out = ["", ROW, *out]
+        if len({"side" in x for x in entry["measured"]}) != 1:
+            raise Fault("the lines of one entry all name a side, or none does")
+        out = ["", SIDE_ROW if "side" in entry["measured"][0] else ROW, *out]
     for letter, note in zip(LETTERS, notes, strict=False):
         out += ["", f"**Note {letter}.** {_stop(note)}"]
     if "unmeasured" in entry:
@@ -582,6 +603,8 @@ def page(module, barred=frozenset()):
         "sentence. No committed file rebuilds the number unless the row names a suite.",
         "- **Median.** A median has no count. Its row gives the value under each revision, in the order of the "
         "Revision cell, and the number of splits the median covers.",
+        "- **Side.** A row of an assumption says how to read its count. The count is where the assumption is false, "
+        "where it is true, where it is used, or where it is not proven.",
         "- **Note.** A letter in brackets points to the note under the table.",
         "",
         "A term names its kind in brackets. A state may add a truth state, one of the values Givens keeps apart, such "
