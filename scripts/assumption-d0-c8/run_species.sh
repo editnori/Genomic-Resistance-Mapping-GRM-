@@ -247,7 +247,7 @@ for name in ("d0-datasets.tsv", "d0-folds.tsv"):
 ' "$dest" "${dirs[@]}"
   cp "$AMR/adapter-summary.json" "$dest/program-adapter-summary.json"
   cat "$OUT"/logs/*.time > "$dest/cost.txt"
-  for d in root amr target; do echo "disk $d $(du -sb "$W/$d" | cut -f1) bytes"; done >> "$dest/cost.txt"
+  for d in release root amr target; do echo "disk $d $(du -sb "$W/$d" | cut -f1) bytes"; done >> "$dest/cost.txt"
   ( cd "$dest" && sha256sum d0-*.tsv d0-ordering.txt program-adapter-summary.json cost.txt > SHA256SUMS )
 }
 step results results
