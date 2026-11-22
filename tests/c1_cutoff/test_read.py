@@ -249,7 +249,7 @@ class Reading(unittest.TestCase):
                 self.assertEqual((d["covered"], d["coverage_n"], d["base_covered"], d["base_coverage_n"]),
                                  ("12", "12", "12", "12"))
                 self.assertEqual((d["coverage_at_line"], d["coverage_minus_25"]), ("1.000000", "0.000000"))
-                self.assertEqual(d["reading"], "does not meet" if line == "10" else "meets")
+                self.assertEqual(d["reading"], "does not meet: the interval's upper end" if line == "10" else "meets")
             row = next(x for x in dec if (x["line"], x["row"]) == (line, "line"))
             self.assertEqual(row["learners_meeting"], "0" if line == "10" else "5")
             # The twin meets on 5 of 5 here, so a line that is no candidate is "not a candidate" alone (ruling 3).
@@ -413,7 +413,7 @@ class Rulings(unittest.TestCase):
                  names=str(Path(TMP.name) / "template" / "names.tsv"))
         a.update(over)
         ns = argparse.Namespace(**a)
-        out = read.tables(ns, [], rows, {}, ["10", "15", "25", "25-s45", "50"])
+        out = read.tables(ns, [], rows, {}, ["10", "15", "20", "25", "25-s45", "50"])
         text = read.summary(argparse.Namespace(measures_over="shared", **a), [], [], out[0], out[7], out[6])
         return out, text
 
@@ -442,6 +442,38 @@ class Rulings(unittest.TestCase):
         twin_lines = [x for x in text.splitlines() if x.startswith("twin ")]
         self.assertEqual(twin_lines, ["twin 25-s45: 3 of 5 learners meet; the count with no change, never a "
                                       "candidate; " + read.TWIN_HOLDS])
+
+    def test_ruling_10_a_learner_that_does_not_meet_names_the_part_that_failed(self):
+        rows = line_rows("10", 1)
+        rows[1].update(interval_hi="0.02")  # cart: the upper end at 0.02 is not wholly below it
+        rows[2].update(interval_hi="0.019999999999", covered="7", coverage_n="10")  # rf: 0.7 against 0.9
+        rows[3].update(interval_hi="0.019999999999", covered="2", coverage_n="5", base_covered="11",
+                       base_coverage_n="20")  # gbt: 0.4 against 0.55 is 0.15 apart
+        rows[4].update(entered="0", not_scored="4", interval_hi="")  # lasso: no dataset entered
+        (dec, *_), _ = self.tables(rows + line_rows("25-s45", 3))
+        got = {r["learner"]: r["reading"] for r in dec if r["row"] == "learner"}
+        self.assertEqual(got, {"scm": "meets", "cart": "does not meet: the interval's upper end",
+                               "rf": "does not meet: the coverage", "gbt": "does not meet: the coverage",
+                               "lasso": "does not meet: no dataset entered"})
+        both = line_rows("15", 0)
+        both[0].update(covered="1", coverage_n="10")
+        (dec, *_), _ = self.tables(both + line_rows("25-s45", 3))
+        self.assertEqual(dec[0]["reading"], "does not meet: the interval's upper end and the coverage")
+        # A coverage exactly 0.05 from 25's is within it, as the scorer compares it.
+        edge = line_rows("20", 1)
+        edge[0].update(covered="17", coverage_n="20", base_covered="18", base_coverage_n="20")
+        (dec, *_), _ = self.tables(edge + line_rows("25-s45", 3))
+        self.assertEqual(dec[0]["reading"], "meets")
+
+    def test_ruling_10_a_meets_cell_that_its_cells_do_not_give_stops(self):
+        rows = line_rows("10", 1)
+        rows[0].update(interval_hi="0.03")
+        with self.assertRaises(read.Stop):
+            self.tables(rows + line_rows("25-s45", 3))
+        rows = line_rows("10", 0)
+        rows[0].update(interval_hi="0.01")
+        with self.assertRaises(read.Stop):
+            self.tables(rows + line_rows("25-s45", 3))
 
     def test_ruling_2_line_50_beside_is_no_candidate_in_any_cell_or_summary_line(self):
         (dec, twin, other, *_), text = self.tables(line_rows("10", 1) + line_rows("25-s45", 3) + line_rows("50", 5))

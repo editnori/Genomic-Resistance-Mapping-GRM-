@@ -486,6 +486,29 @@ MEET3 = "three_or_more_meet"
 TWIN_COLUMNS = [MEET3 if k == "candidate" else k for k in DECIDING_COLUMNS]
 
 
+def learner_reading(c):
+    """Ruling 10: "meets", or which part of the release row a learner row fails, from the scorer's own cells.
+
+    The parts are the interval's upper end (not wholly below 0.02, read at
+    the 12 decimals the file writes), the coverage (not within 0.05 of 25's,
+    in exact fractions) and no dataset entered. The scorer's meets cell must
+    agree with them; nothing is counted again.
+    """
+    if c["entered"] in ("", "0"):
+        parts = ["no dataset entered"]
+    else:
+        parts = []
+        if c["interval_hi"] == "" or Fraction(c["interval_hi"]) >= Fraction(1, 50):
+            parts.append("the interval's upper end")
+        n, bn = c["coverage_n"], c["base_coverage_n"]
+        if n in ("", "0") or bn in ("", "0") or abs(Fraction(int(c["covered"]), int(n))
+                                                   - Fraction(int(c["base_covered"]), int(bn))) > Fraction(1, 20):
+            parts.append("the coverage")
+    if (c["meets"] == "1") != (not parts):
+        raise Stop(f"count.tsv: {c['line']} {c['learner']}: the meets cell {c['meets']!r} differs from its cells")
+    return "meets" if not parts else "does not meet: " + " and ".join(parts)
+
+
 def deciding_row(c, reading):
     out = {k: c.get(k, "") for k in DECIDING_COLUMNS}
     out["learner"] = c["learner"]
@@ -611,15 +634,14 @@ def tables(a, species, count_rows, ent, lines):
                            else CANDIDATE + beside_twin if c["candidate"] == "1"
                            else NOT_CANDIDATE + (": " + NOT_SHOWN if twin_fails else ""))
             else:
-                reading = "meets" if c["meets"] == "1" else "does not meet"
+                reading = learner_reading(c)
             deciding.append(deciding_row(c, reading))
         elif view(c) and c["line"] in twin_lines:
             reading = ("the count with no change; never a candidate"
                        + ("; it meets the release row on 3 or more learners, so the block decides nothing"
                           if void else "; " + (TWIN_HOLDS if int(c["learners_meeting"]) >= 3 else TWIN_FAILS)
                           if c["row"] == "line" else ""))
-            t = deciding_row(c, reading if c["row"] == "line" else
-                             ("meets" if c["meets"] == "1" else "does not meet"))
+            t = deciding_row(c, reading if c["row"] == "line" else learner_reading(c))
             t[MEET3] = t.pop("candidate")
             twin.append(t)
         else:
