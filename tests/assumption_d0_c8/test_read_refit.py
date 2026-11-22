@@ -75,6 +75,11 @@ class Clean(Base):
         self.assertEqual(code, 0, err)
         self.assertIn("no single cause holds 0.40 of 6 miss pairs: C4, C3, C5", out)
         self.assertIn("C4, C3, C5 (the plan's default)", out)
+        # Ruling 6: the record's MISS holds synthia_alpha__mdrug, marked M, so 3 of 4 datasets and 6 of 7 pairs
+        # are read; the largest cause of the four, 2, reaches 0.40 of 7 with the 1 pair added.
+        self.assertIn("coverage: D0 reads 3 of the plan's 4 MISS datasets and 6 of its 7 miss pairs", out)
+        self.assertIn("ruling 6: the largest cause of the four holds 2, 3 with the 1 pairs added, of 7; the 1 pairs "
+                      "of the MISS datasets that are M could change the order", out)
         sp = {r["species"]: r for r in self.page("page-species.tsv")}
         self.assertEqual(sorted(sp), ["Synthia alpha", "Synthia beta", "Synthia gamma"])
         self.assertEqual(sp["Synthia alpha"]["antibiotics"], "drugamycin; fakecillin; mockazole/trimethoprim")
@@ -140,6 +145,8 @@ class Clean(Base):
         self.assertEqual(code, 0, err)
         self.assertIn("absent holds 3 of 6 miss pairs (0.500): C3 first", out)
         self.assertIn("order of the input group: C3 first", out)
+        self.assertIn("ruling 6: absent holds 3 of the plan's 7 miss pairs (0.429) and the next cause of the four 1; "
+                      "3 is 0.40 or more of 7 and above 1 + 1: the first block is stable", out)
         shutil.rmtree(self.out)
         code, out, err = self.run_reader(order_rest="default-after")
         self.assertEqual(code, 0, err)
@@ -436,6 +443,38 @@ class Outputs(Base):
                            capture_output=True, text=True, check=False)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("no single cause holds 0.40", r.stdout)
+
+
+class Ruling6(unittest.TestCase):
+    """The order's stability on the plan's pairs: 204, of which 177 are read and 27 are M (SYNTHETIC counts)."""
+
+    @staticmethod
+    def four(a=0, r=0, l=0, u=0):
+        return {"absent": a, "removed": r, "lineage": l, "unused": u}
+
+    def test_a_named_first_block_on_both_sides_of_both_tests(self):
+        f = rr.stability
+        self.assertTrue(f(self.four(a=82, r=54), "absent", 204, 177)[0])
+        self.assertFalse(f(self.four(a=82, r=55), "absent", 204, 177)[0])  # x = y + 27
+        self.assertFalse(f(self.four(a=81), "absent", 204, 177)[0])  # 81 / 204 under 0.40
+        self.assertTrue(f(self.four(u=90, a=30), "unused", 204, 177)[0])
+        self.assertIn("could change the first block", f(self.four(a=82, r=55), "absent", 204, 177)[1])
+        # exactly 0.40 of the plan's pairs counts, and x must be above y + m, not equal to it
+        self.assertTrue(f(self.four(l=4, a=2), "lineage", 10, 9)[0])
+        self.assertFalse(f(self.four(l=4, a=3), "lineage", 10, 9)[0])
+
+    def test_the_default_on_both_sides(self):
+        f = rr.stability
+        self.assertTrue(f(self.four(a=54, r=54), None, 204, 177)[0])
+        self.assertFalse(f(self.four(a=55), None, 204, 177)[0])
+        self.assertFalse(f(self.four(a=72, u=72), None, 204, 177)[0])  # a tie for most at 0.40 of 177
+        self.assertFalse(f(self.four(a=3), None, 10, 9)[0])  # 3 + 1 is exactly 0.40 of 10
+        self.assertTrue(f(self.four(a=2), None, 10, 9)[0])
+        self.assertIn("the default order is stable", f(self.four(a=54), None, 204, 177)[1])
+
+    def test_more_pairs_read_than_the_plan_holds_stops(self):
+        with self.assertRaises(rr.Stop):
+            rr.stability(self.four(), None, 10, 11)
 
 
 class C8Combine(unittest.TestCase):

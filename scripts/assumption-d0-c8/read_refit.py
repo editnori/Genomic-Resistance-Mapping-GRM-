@@ -348,6 +348,7 @@ def gates(spp, a, names):
             if (r["in_miss"] == "yes") != (r["dataset"] in miss[r["learner"]]):
                 raise Stop(f"{s['species']}: {r['dataset']} {r['learner']}: in the miss set by D0's table and "
                            "not by the record, or the reverse")
+    a.plan_datasets, a.plan_pairs = len(union), sum(len(v) for v in miss.values())
     d0_species = [s for s in spp if s["d0"]]
     n_d0 = sum(len(s["d0"]) for s in d0_species)
     if n_d0 != a.d0_datasets or len(d0_species) != a.d0_species:
@@ -388,6 +389,36 @@ def setter(line):
     """The cause `d0.ordering` says sets the order, or None."""
     m = re.match(r"(absent|removed|lineage|unused) holds ", line)
     return m.group(1) if m else None
+
+
+def stability(counts, best, plan_pairs, pairs):
+    """Ruling 6: the order is set on the miss pairs read, `pairs` of the
+    plan's `plan_pairs`; m = plan_pairs - pairs are the MISS datasets' pairs
+    that are M and not read. With x the leading cause's pairs and y the next
+    cause's among the four, a named first block is stable when x / plan_pairs
+    is 0.40 or more and x is above y + m; the default order is stable when no
+    cause of the four reaches 0.40 of plan_pairs with m pairs added.
+    `counts` holds the four causes' pairs. Returns (stable, words)."""
+    m = plan_pairs - pairs
+    if m < 0:
+        raise Stop(f"D0: {pairs} miss pairs read, more than the plan's {plan_pairs}")
+    ranked = sorted(((counts[c], c) for c in d0.FOUR), reverse=True)
+    if best is not None:
+        x = counts[best]
+        y = max(counts[c] for c in d0.FOUR if c != best)
+        stable = 5 * x >= 2 * plan_pairs and x > y + m
+        words = (f"{best} holds {x} of the plan's {plan_pairs} miss pairs ({x / plan_pairs:.3f}) and the next cause "
+                 f"of the four {y}; ")
+        if stable:
+            return True, words + f"{x} is 0.40 or more of {plan_pairs} and above {y} + {m}: the first block is stable"
+        return False, words + f"the {m} pairs of the MISS datasets that are M could change the first block"
+    most = ranked[0][0]
+    stable = all(5 * (n + m) < 2 * plan_pairs for n, _ in ranked)
+    words = f"the largest cause of the four holds {most}, {most + m} with the {m} pairs added, of {plan_pairs}; "
+    if stable:
+        return True, words + f"no cause of the four reaches 0.40 of {plan_pairs} with {m} pairs added: " \
+                             "the default order is stable"
+    return False, words + f"the {m} pairs of the MISS datasets that are M could change the order"
 
 
 def page_tables(spp, a, names, every, line, c8_long, c8_summary):
@@ -525,6 +556,11 @@ def summary_text(spp, a, lines, every, line, meaning):
         "",
         f"D0 ordering ({D0_NOTE}): {line}",
         f"order of the input group: {meaning}",
+        f"coverage: D0 reads {a.d0_datasets} of the plan's {a.plan_datasets} MISS datasets and "
+        f"{every['all']['miss_datasets']} of its {a.plan_pairs} miss pairs; the MISS datasets that are M wait for "
+        "the maintainer's label rule, and the line is read again then",
+        "ruling 6: " + stability({c: int(every["all"][f"datasets_{c}"]) for c in d0.FOUR}, setter(line),
+                                 a.plan_pairs, int(every["all"]["miss_datasets"]))[1],
         "",
         "C8 on the release decides nothing alone (the plan's row C8, Release).",
     ]
