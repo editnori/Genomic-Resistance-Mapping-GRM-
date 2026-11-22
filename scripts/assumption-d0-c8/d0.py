@@ -614,14 +614,15 @@ def write_dataset(out, fold_rows, data_rows):
 # ---------------------------------------------------------------- combine
 
 
-SUMMARY_HEADER = ["learner", "miss_datasets"] + [f"datasets_{c}" for c in CAUSES + OPEN_ONLY] + \
+SUMMARY_HEADER = ["subset", "learner", "miss_datasets"] + [f"datasets_{c}" for c in CAUSES + OPEN_ONLY] + \
     [f"gap_share_{c}" for c in CAUSES + OPEN_ONLY] + ["ties", "reading"]
 
 
-def combine(rows):
+def combine(rows, subset="all"):
     """Per learner and over the five: datasets per cause (a tie counts in
     each tied cause) and each cause's share of the gap (a tie splits it).
-    Also returns the five learners' counts and their miss pairs."""
+    Also returns the five learners' counts and their miss pairs. `subset`
+    names the rows in the table's first column."""
     out = []
     every, pairs = dict.fromkeys(CAUSES + OPEN_ONLY, 0), 0
     for learner in list(fr.LEARNERS) + ["all"]:
@@ -638,7 +639,7 @@ def combine(rows):
                 share[c] += r["gap"] / len(causes)
         if learner == "all":
             every, pairs = counts, len(mine)
-        out.append([learner, len(mine)] + [counts[c] for c in CAUSES + OPEN_ONLY] +
+        out.append([subset, learner, len(mine)] + [counts[c] for c in CAUSES + OPEN_ONLY] +
                    [share[c] / total if total else None for c in CAUSES + OPEN_ONLY] + [ties, READING])
     return out, every, pairs
 
@@ -697,6 +698,7 @@ def main(argv=None):
     r.add_argument("--out", required=True)
     c = sub.add_parser("combine")
     c.add_argument("--out", required=True)
+    c.add_argument("--marks", help="intcount's cut table (datasets.tsv): adds the rows for M and not M")
     c.add_argument("dirs", nargs="+", help="directories holding a d0-datasets.tsv")
     a = ap.parse_args(argv)
     if a.mode in ("dataset", "release"):
@@ -716,6 +718,12 @@ def main(argv=None):
         for p in a.dirs:
             rows += read_rows(os.path.join(p, "d0-datasets.tsv"))
         table, every, pairs = combine(rows)
+        if a.marks:
+            marks = fr.read_marks(a.marks)
+            gone = sorted({r["dataset"] for r in rows} - set(marks))
+            gate(not gone, f"{len(gone)} datasets are not in the marks table, the first {gone[0] if gone else ''}")
+            for name, flag in (("not_M", False), ("M", True)):
+                table += combine([r for r in rows if marks[r["dataset"]] is flag], name)[0]
         os.makedirs(a.out, exist_ok=True)
         fr.write_tsv(os.path.join(a.out, "d0-summary.tsv"), SUMMARY_HEADER, table)
         line = ordering(every, pairs)

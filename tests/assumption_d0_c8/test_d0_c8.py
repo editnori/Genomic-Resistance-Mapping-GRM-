@@ -5,6 +5,7 @@ Run as CI runs the python suites:
 """
 
 import contextlib
+import csv
 import io
 import json
 import os
@@ -150,7 +151,7 @@ class D0Causes(unittest.TestCase):
         self.assertEqual(fold_row(folds, "scm", 1)["cause"], "unused")
         self.assertEqual(data["scm"]["cause"], "absent+unused")
         table, every, _ = d0.combine(list(data.values()))
-        scm = next(t for t in table if t[0] == "scm")
+        scm = next(t for t in table if t[1] == "scm")
         col = {h: i for i, h in enumerate(d0.SUMMARY_HEADER)}
         self.assertEqual((scm[col["datasets_absent"]], scm[col["datasets_unused"]]), (1, 1))
         self.assertAlmostEqual(scm[col["gap_share_absent"]], 0.5)
@@ -431,10 +432,10 @@ class D0Combine(unittest.TestCase):
         table, every, pairs = d0.combine(rows)
         self.assertEqual(pairs, 4)
         col = {h: i for i, h in enumerate(d0.SUMMARY_HEADER)}
-        scm = next(t for t in table if t[0] == "scm")
+        scm = next(t for t in table if t[1] == "scm")
         self.assertAlmostEqual(scm[col["gap_share_absent"]], 0.75)
         self.assertEqual(scm[col["miss_datasets"]], 2)
-        rf = next(t for t in table if t[0] == "rf")
+        rf = next(t for t in table if t[1] == "rf")
         self.assertAlmostEqual(rf[col["gap_share_removed"]], 0.25)
         self.assertEqual(every, {"absent": 2, "removed": 1, "lineage": 0, "chosen": 0, "unused": 2,
                                  "offered": 0, "inside_floor": 0})
@@ -457,6 +458,19 @@ class D0Combine(unittest.TestCase):
                 d0.main(["combine", "--out", out, tmp])
             with open(os.path.join(out, "d0-summary.tsv"), encoding="utf-8") as f:
                 self.assertIn("tests nothing", f.read())
+            # With intcount's marks the table adds the M and not-M rows.
+            marks = os.path.join(tmp, "marks.tsv")
+            with open(marks, "w", encoding="utf-8") as f:
+                f.write("dataset\tpairs_S+I\tpairs_I+R\na__b\t0\t2\n")
+            with contextlib.redirect_stdout(io.StringIO()):
+                d0.main(["combine", "--marks", marks, "--out", out, tmp])
+            with open(os.path.join(out, "d0-summary.tsv"), encoding="utf-8", newline="") as f:
+                got = {(r["subset"], r["learner"]): r["miss_datasets"] for r in csv.DictReader(f, delimiter="\t")}
+            self.assertEqual((got[("all", "scm")], got[("M", "scm")], got[("not_M", "scm")]), ("1", "1", "0"))
+            with open(marks, "w", encoding="utf-8") as f:
+                f.write("dataset\tpairs_S+I\tpairs_I+R\nc__d\t0\t0\n")
+            with self.assertRaises(d0.Gate):
+                d0.main(["combine", "--marks", marks, "--out", out, tmp])
 
 
 class C8(unittest.TestCase):
