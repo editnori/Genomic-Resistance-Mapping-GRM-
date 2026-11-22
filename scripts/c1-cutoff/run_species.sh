@@ -209,7 +209,8 @@ genomes() {
   python3 -I -c 'import json,sys; [print(g["id"]) for g in json.load(open(sys.argv[1]))["genomes"]]' \
     "$R/species/$SP.json" > "$ROOT/species/$SP/genomes.txt"
   master "species/$SP/genomes.txt" "$ROOT/species/$SP/genomes.txt"
-  "$GRM" --data "$ROOT" fetch fasta --species "$SP" --workers 4
+  # The fetch waits on the network, not the CPU: 8 workers, grm's own default.
+  "$GRM" --data "$ROOT" fetch fasta --species "$SP" --workers 8
   n=0; bad=0
   while read -r id; do
     n=$((n + 1)); master "fasta/$id.fna.gz" "$ROOT/fasta/$id.fna.gz" || bad=$((bad + 1))
