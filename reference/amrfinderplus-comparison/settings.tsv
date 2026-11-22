@@ -1,0 +1,21 @@
+key	value
+program	AMRFinderPlus
+program_version	4.2.7
+database_version	2026-08-07.1
+newest_database_not_run	2026-10-29.1
+release	rev14-274-20261112
+datasets_scored	253
+genomes_read	23751
+score_cutoff	0.5
+resamples	4000
+fewest_species	6
+interval_level	0.95
+interval_low_rank	101
+interval_high_rank	3900
+generator	random.Random(seed string)
+draw	randrange over the species of the set sorted by name
+median	statistics.median
+mean	statistics.fmean
+within	0.02
+large	0.10
+rule_m_needs	14

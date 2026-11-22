@@ -365,7 +365,7 @@ Before the window (no live change):
 - [x] The boot hook: until the host was destroyed, `/root/onstart.sh` ran `boot-active.sh` (`restore.sh --apply`, one retry, the pinned revision-8 fallback) and no longer ran `serve-live.sh` (see [After a container restart](#after-a-container-restart)).
 - [ ] List the live root's approvals and re-stage any `browser=pass` pair without `browser_check` (see [Approvals and state](#approvals-and-state)). The live pair gets `approve-legacy.sh` (`browser=legacy`).
 - [ ] Verify the backup of the live releases, publications, `onstart.sh` and `boot-active.sh`. Copy the scripts to `/root/grm-ops` with `git archive <reviewed commit>`, and record the commit.
-- [ ] Layth approves a dated maintenance window explicitly. The site is down for a second or two during the switch, and longer if a rollback fails (exit 4).
+- [ ] The site's owner approves a dated maintenance window explicitly. The site is down for a second or two during the switch, and longer if a rollback fails (exit 4).
 - [ ] Accept the limits in [Limitations](#limitations) in writing.
 
 In the window (supervised, one operator, inside tmux):

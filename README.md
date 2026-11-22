@@ -15,15 +15,20 @@ On public BV-BRC genomes, the best of five k-mer learners reaches a median balan
 | --- | --- | --- |
 | Coverage | 274 datasets across 23 species have a report (268 with a lineage split) | [release-summary.md](docs/release-summary.md) |
 | Random vs. lineage split (best learner) | Median balanced accuracy 0.9293 random (274) vs. 0.8768 lineage (268); paired median drop 0.0377, 116 of 268 lose >5 points | [release-summary.md](docs/release-summary.md) |
-| Five learners on unseen lineages | SCM 0.8708, CART 0.8684, lasso 0.8565, GBT 0.8409, RF 0.8124 (268 datasets each) | [release-summary.md](docs/release-summary.md) |
+| Five learners on unseen lineages | SCM 0.8708, CART 0.8684, lasso 0.8565, GBT 0.8409, RF 0.8124 (268 datasets each); SCM's paired gap to CART (0.0026) and to lasso (0.0046) does not clear zero | [release-summary.md](docs/release-summary.md) |
 | Adapted research error screen (lineage, best learner) | 0 of 268 shown to meet VME ≤1.5% and ME ≤3% by 95% intervals (239 shown to miss, 29 not decided); 14 of 268 meet FDA 2009 guidance wording | [release-summary.md](docs/release-summary.md) |
 | Known-gene rule vs. best learner (lineage) | Rule ahead or within 2 points on 108 of 249 (74 of 80 where rule ≥0.85); learner ahead by >2 points on 141 of 249 | [release-summary.md](docs/release-summary.md) |
 | Study split inside BV-BRC | Holding BioProjects whole scores worse than random folds for 5 of 5 learners on log loss and specificity across 70 datasets in 9 species (recall worse for RF and GBT) | [study-split.md](docs/study-split.md) |
 | Newly deposited BV-BRC studies | On 7,258 unseen-study genomes (rev 12 reports), lineage figures hold on 32 of 81 datasets for SCM, 23 of 81 for CART, and 7 of 25 for lasso | [outside-study-results.md](docs/outside-study-results.md) |
-| Another public database (NCBI) | On 13,377 genomes (9 species), SCM meets the plan's rule in 6 of 8 species (52 of 84 datasets; plus 14 of 25 in *E. coli* pilot), CART in 5 of 8 (50 of 84), lasso in 3 of 4 assessable (17 of 24) | [other-database-test.md](docs/other-database-test.md) |
+| Another public database (NCBI) | On 13,377 genomes (9 species), SCM meets the plan's rule in 6 of 8 species (52 of 84 datasets; plus 14 of 25 in *E. coli* pilot), CART in 5 of 8 (50 of 84; plus 12 of 25 in *E. coli* pilot), lasso in 3 of the 4 species where it can be read (17 of its 24 datasets across the eight) | [other-database-test.md](docs/other-database-test.md) |
 | Input settings (4 species, H-1) | No single change shown better than default across 49 answered datasets (cap-4000 better 31 of 49; cap-1000 worse 25 of 33; budget-1000 worse 37 of 49) | [input-comparison-runner.md](docs/input-comparison-runner.md) |
+| First-public-day split | Training on earlier public dates scores worse than a size-matched random draw on log loss and balanced accuracy for 5 of 5 learners across 24 datasets in 4 species (recall worse for 2 of 5) | [time-split.md](docs/time-split.md) |
+| Kover 2.0.7 vs. GRM SCM | On the 12 smallest lineage-split datasets (1,118 genome-dataset entries), Kover minus GRM SCM balanced accuracy is -0.0516 (lower on 8 of 12, higher on 2, equal on 2) | [kover-comparison.md](docs/kover-comparison.md) |
+| Dense neural network | Across 24 datasets in 12 species (one setting on 4,000 screened features), no gain established: median -0.0593 balanced accuracy vs. hindsight best of 5 learners (higher on 1 of 24) | [dense-network.md](docs/dense-network.md) |
+| AMRFinderPlus 4.2.7 program | Across 235 datasets in 21 species, the full program leads GRM's known-gene rule on 94 of 235 (48 by >=10 points, 20 quinolones); SCM minus program median balanced accuracy is +0.0048 (95% species CI -0.0063 to +0.0466) | [amrfinderplus-comparison.md](docs/amrfinderplus-comparison.md) |
+| TBProfiler 6.6.3 (*M. tuberculosis*) | On 2,000 assemblies across 14 graded TB drugs (16 named endpoints, 819 no-calls), TBProfiler scores higher than SCM on 8 of 14 (SCM minus TBProfiler median -0.0058) | [tbprofiler-comparison.md](docs/tbprofiler-comparison.md) |
 
-Every number in the table above is verified against committed `reference/` and `web/src/data/` files by `tests/readme_summary`. See [docs/INDEX.md](docs/INDEX.md) for the full documentation map.
+They are an adapted research screen. They are not an applicable FDA criterion, and meeting them does not make a learner fit for clinical use. Every number in the table above is verified against committed `reference/` and `web/src/data/` files by `tests/readme_summary`. See [docs/INDEX.md](docs/INDEX.md) for the full documentation map.
 
 ## Flow
 
@@ -39,22 +44,22 @@ Every number in the table above is verified against committed `reference/` and `
 
 ## Use
 
-- **Read the results.** Open [genomicresistance.com](https://genomicresistance.com), download the [`data-rev14-274-20261112` release](https://github.com/editnori/Genomic-Resistance-Mapping-GRM-/releases/tag/data-rev14-274-20261112), or browse [docs/INDEX.md](docs/INDEX.md).
+- **Read the results.** Open [genomicresistance.com](https://genomicresistance.com), download the reports from the [`data-rev14-274-20261112` release](https://github.com/editnori/Genomic-Resistance-Mapping-GRM-/releases/tag/data-rev14-274-20261112), or browse [docs/INDEX.md](docs/INDEX.md).
 - **Run it.** [Setup](#setup) builds the pipeline and the dashboard. [Run](#run) scores one species and serves the result on your machine.
 - **Check a number.** [Checks](#checks) recomputes each learner's counts and balanced accuracy from the saved scores, apart from the code that wrote them.
 - **Reuse the name.** `assets/` holds the name beside the mark, for light and dark pages. The mark alone is `web/public/favicon.svg`.
 
 ## Status
 
-The site serves evaluation revision 14. Of its 277 curated datasets, 274 have a report and 3 have none, because one class is under the minimum of 25 genomes. The 274 reports cover 23 species: the three without a report are *Escherichia coli* amoxicillin, *Klebsiella pneumoniae* cefotaxime, and *Staphylococcus aureus* methicillin. The published report lists them in `SKIPS.json`.
+The site serves evaluation revision 14. Of its 277 curated datasets, 274 have a report and 3 have none, because one class is under the minimum of 25 genomes. The 274 reports cover 23 species. The three without a report are *Escherichia coli* amoxicillin, *Klebsiella pneumoniae* cefotaxime, and *Staphylococcus aureus* methicillin. The published report lists them in `SKIPS.json`.
 
-Every figure is internal validation: cross-validation on public BV-BRC genomes, scored against their reported calls. No external, prospective, or clinical validation has been done. [docs/outside-study-results.md](docs/outside-study-results.md), [docs/study-split.md](docs/study-split.md), and [docs/other-database-test.md](docs/other-database-test.md) add retrospective tests across studies and another public database.
+Every figure is internal validation: cross-validation on public BV-BRC genomes, scored against their reported calls. No external, prospective, or clinical validation has been done. [docs/outside-study-results.md](docs/outside-study-results.md) and [docs/study-split.md](docs/study-split.md) add retrospective tests across studies inside BV-BRC, and [docs/other-database-test.md](docs/other-database-test.md) adds a test on data from another public database. None of these is external validation.
 
 Read each learner's figures with their split and their evaluation revision. The lineage split holds out whole lineages, and a report records why when that split could not be formed. From revision 14 every learner's figures cover every isolate of the split ([docs/equal-scoring.md](docs/equal-scoring.md)).
 
 In each of the six clindamycin datasets one deposited study holds most or a large share of the disagreements between GRM's known-gene rule and the reported phenotype, and the datasets are of four kinds: measured dependence for `staphylococcus_aureus__clindamycin` and `campylobacter_coli__clindamycin`, one study for `enterococcus_faecium__clindamycin`, class balance with dependence not measured for `campylobacter_jejuni__clindamycin` and `streptococcus_agalactiae__clindamycin`, and no dependence under the plan's rule for `streptococcus_pneumoniae__clindamycin`. [docs/clindamycin-labels.md](docs/clindamycin-labels.md) says what each released clindamycin figure rests on.
 
-For the full revision 5–14 change history, retired Vast host notes, and revision-5 `research.json` packaging details, see [docs/revision-history.md](docs/revision-history.md). Revision 14 was run on 12 November 2026 from revision 12's inputs: Of the 274 reports, 162 differ from revision 12 only in the revision number and the run time, 39 in panel rows only, 48 only in the rows of a learner with a null fit, and 25 in both. The best learner changed in 21 datasets.
+For the full revision 5 to 14 change history, retired Vast host notes, and revision-5 `research.json` packaging details, see [docs/revision-history.md](docs/revision-history.md). Revision 14 was run for the same 274 datasets on 12 November 2026, from revision 12's inputs. Of the 274 reports, 162 differ from revision 12 only in the revision number and the run time, 39 in panel rows only, 48 only in the rows of a learner with a null fit, and 25 in both. The best learner changed in 21 datasets.
 
 ## Givens
 
@@ -116,7 +121,7 @@ The launcher writes its PID to `data/logs/pipeline.pid` and, on exit, its exit c
 
 ## Deploy
 
-A Cloudflare Worker serves `genomicresistance.com` from one R2 bucket (`grm-site`), with no origin process. [docs/static-hosting.md](docs/static-hosting.md) covers the bucket layout, atomic activation/rollback, release scripts, and checks. On 13 November 2026 the site answered HTTP 200 with the revision-14 report, 274 datasets over 23 species.
+A Cloudflare Worker serves genomicresistance.com from one R2 bucket, with no origin process. [docs/static-hosting.md](docs/static-hosting.md) covers the bucket, the release scripts and their checks. On 13 November 2026 the site answered HTTP 200 with the revision-14 report, 274 datasets over 23 species.
 
 The earlier host-based `grm serve` + Cloudflare Tunnel toolkit stays in `scripts/deployment/` ([docs/deployment.md](docs/deployment.md), [docs/revision-history.md](docs/revision-history.md)).
 
@@ -135,7 +140,7 @@ Every command takes `--data <directory>` (default `data`), and the output paths 
 | Evaluate on supplied folds | `grm learn --species <slug> --fold-file <file> --fold-out <dir>` | `<dir>/<dataset>.<scheme>.json` ([docs/fold-file.md](docs/fold-file.md)) |
 | Report | `grm report` | `report/` |
 | Research | `grm research --revision5-reports <dir> --out <file>` | the `--out` file ([docs/revision-history.md](docs/revision-history.md)) |
-| Intervals | `grm intervals` | `report/intervals/<id>.json` |
+| Intervals | `grm intervals` | `report/intervals/<id>.json` ([docs/operations-reference.md](docs/operations-reference.md)) |
 | Baselines | `grm baselines` | `report/baselines/<id>.json`, `report/baselines.json` ([docs/baselines.md](docs/baselines.md)) |
 | Provenance | `grm fetch genome-dates`, then `grm provenance` | `bvbrc/genome_dates.jsonl` and its manifest, `report/provenance/<id>.json` ([docs/provenance-fields.md](docs/provenance-fields.md)) |
 | Predict | `grm predict --report <file> --fasta <files>` | JSON lines on standard output, or `--out` ([docs/prediction-contract.md](docs/prediction-contract.md)) |
@@ -167,18 +172,19 @@ The five learners are a Set Covering Machine (a few presence or absence rules jo
 
 Each learner is cross-validated on two splits. The random split is stratified 5-fold cross-validation, the scheme most published numbers use, with each fold keeping the dataset's R/S mix. The lineage split holds out whole lineage clusters, so a test genome has no near-identical relative in training, and the gap between the two splits shows how much a score depends on such relatives. The lineage split is unavailable when whole lineages cannot fill outer and inner folds that each hold both classes, and the report records why.
 
-Tuning and feature screening use only each outer fold's training genomes. A boosted model with no trees or a lasso with no weights is a null fit: it has learned nothing beyond the class balance. From evaluation revision 14 it scores each isolate of its test fold at the share of resistant genomes in that fold's training set, called resistant at 0.5 or more, so every learner's metrics cover every isolate ([docs/equal-scoring.md](docs/equal-scoring.md)). The headline learner has the best random-split balanced accuracy (the mean of sensitivity and specificity) among learners scored on every isolate on every split that ran, so a learner missing from a lineage split that ran cannot be the headline. Saved predictions keep the 64-bit precision the metrics used.
+Tuning and feature screening use only each outer fold's training genomes. From evaluation revision 7, the random forest is screened too, each fold's random draws are seeded from the fold so any held-out fit can be rebuilt, and the forest's subsamples and node features come from separate random streams. A boosted model with no trees or a lasso with no weights is a null fit: it has learned nothing beyond the class balance. From evaluation revision 14 it scores each isolate of its test fold at the share of resistant genomes in that fold's training set, called resistant at 0.5 or more, so every learner's metrics cover every isolate; revisions 7 to 13 made no call for those isolates and scored only the rest ([docs/equal-scoring.md](docs/equal-scoring.md)). The headline learner has the best random-split balanced accuracy (the mean of sensitivity and specificity) among learners scored on every isolate on every split that ran, so a learner missing from a lineage split that ran cannot be the headline. Saved predictions keep the 64-bit precision the metrics used.
 
-A report also keeps what each outer fold's model reads (`fold_models`), and for each genome the catalog groups whose own hit counts for the drug's rule (`rule_groups`); both are optional additions that change no score ([docs/report-rule-fields.md](docs/report-rule-fields.md)). MIC regression predicts each isolate's MIC and is scored separately, by agreement within one doubling dilution.
+A report also keeps what each outer fold's model reads (`fold_models`), so agreement between folds and with the final models can be counted, and for each genome the catalog groups whose own hit counts for the drug's rule (`rule_groups`). Both are optional additions that change no score, the reports of the revision 14 release do not have them, and a report gains them when it is next computed ([docs/report-rule-fields.md](docs/report-rule-fields.md)).
+
+MIC regression predicts each isolate's MIC and is scored separately, by agreement within one doubling dilution. The catalog baseline and the simulated molecular panels describe which target genes or wild-type regions each assembled genome carries and how often that agrees with the lab call in this cohort.
 
 ## Reuse and derived outputs
 
-Before reusing count, structure, and matrix, the pipeline checks genome selection and order, `k = 31`, matrix minimum support of 2, the catalog version behind the gene calls, and each genome's kset digest. A learned report is reused only when its evaluation revision and input fingerprint match, its evaluation audit is valid, and no feature records an `annotation_error`. Rerunning `grm curate` is a separate choice; see [docs/revision-history.md](docs/revision-history.md) for revision-by-revision compatibility notes.
+Pipeline reuse checks, input fingerprints, `--drop-ksets`, `grm learn --force`, `grm curate` reruns, and full details of `grm intervals`, `grm baselines`, and `grm provenance` live in [docs/operations-reference.md](docs/operations-reference.md).
 
-- **Intervals (`grm intervals`):** Writes `report/intervals/<id>.json` for every dataset `report/index.json` lists: for each learner row of each split, a two-sided 95% Clopper-Pearson (exact binomial) interval for VME, over the resistant isolates the row called (`fn` of `tp + fn`), and for ME, over the susceptible ones (`fp` of `tn + fp`). Pinned to the report's SHA-256 and evaluation revision; changes no report file.
-- **Baselines (`grm baselines`):** Writes `report/baselines/<id>.json` and `report/baselines.json` with the constant training-fold MIC and lineage-identity baselines ([docs/baselines.md](docs/baselines.md)).
+- **Intervals (`grm intervals`):** Writes `report/intervals/<id>.json` for every dataset `report/index.json` lists: for each learner row of each split, a two-sided 95% Clopper-Pearson (exact binomial) interval for VME, over the resistant isolates the row called (`fn` of `tp + fn`), and for ME, over the susceptible ones (`fp` of `tn + fp`). See [docs/operations-reference.md](docs/operations-reference.md#intervals) for zero-denominator handling, count pins, and SciPy `beta.ppf` reference checks.
+- **Baselines (`grm baselines`):** Writes `report/baselines/<id>.json` and `report/baselines.json` with the constant training-fold MIC and lineage-identity baselines ([docs/baselines.md](docs/baselines.md), [docs/operations-reference.md](docs/operations-reference.md#baselines)).
 - **Provenance (`grm fetch genome-dates`, `grm provenance`):** Writes `report/provenance/<id>.json` with source-proxy dates and record metadata, pinned to report and input SHA-256s ([docs/provenance-fields.md](docs/provenance-fields.md)); not part of public site releases yet.
-- **Additional reports and tooling:** [docs/release-summary.md](docs/release-summary.md) (revisions 12 and 14 side by side), [docs/outside-study-results.md](docs/outside-study-results.md) (newly deposited BV-BRC studies), [docs/study-split.md](docs/study-split.md) (BioProject-held-out splits), [docs/other-database-test.md](docs/other-database-test.md) (NCBI Pathogen Detection genomes), [docs/lasso-stopping.md](docs/lasso-stopping.md) (Revision 14 lasso scan), [docs/rule-words.md](docs/rule-words.md) (SCM rule wording), and [docs/data-collection.md](docs/data-collection.md) (verified archiving).
 
 ## Checks
 
@@ -195,8 +201,6 @@ bash scripts/deployment/tests/dry-run.sh
 bash scripts/deployment/tests/apply.sh
 ```
 
-`bash -n` parses only its first file, so `xargs -n1` runs it once per script. The deployment tests run in temporary directories; `apply.sh` needs `cc`, starts stub servers on free loopback ports, and takes about 15 to 20 minutes on a loaded host.
-
 `scripts/check-results.py` and `scripts/metric-audit/` check saved reports apart from the Rust code that wrote them. Build `foldgen` and run their tests:
 
 ```bash
@@ -206,4 +210,4 @@ python3 -I scripts/metric-audit/tests/test_audit.py
 python3 -I scripts/metric-audit/tests/test_scripts.py
 ```
 
-`python3 -I scripts/check-results.py data` checks saved dataset reports and writes `data/logs/result-validation-receipt.json` (`--out <file>` writes elsewhere); run without `-O`. Use `--log <pipeline log>` after a full recompute or `--skip-log <pipeline log>` after a run that reused reports. `python3 -I scripts/metric-audit/audit.py --help` lists the metric audit's inputs.
+`python3 -I scripts/check-results.py data` checks the saved dataset reports and writes `data/logs/result-validation-receipt.json`; `--out <file>` writes the receipt elsewhere. See [docs/operations-reference.md](docs/operations-reference.md#deployment-tests-and-result-checking) for deployment test skip rules, `--log` vs. `--skip-log`, and `audit.py --help` inputs.

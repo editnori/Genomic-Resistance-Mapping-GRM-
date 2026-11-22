@@ -240,7 +240,7 @@ The suite also checks K's mirrored constants against J's `scripts/ablation/stats
 
 ## Pairing rules
 
-Main decided these for the full-pipeline input comparison on 5 Nov 2026, under Layth's delegation (DECISIONS V-1; [input-comparison-runner.md](input-comparison-runner.md)). J's `stats.PAIRINGS` and K's `schema.PAIRINGS` hold the same three, and the suite checks they agree.
+Main decided these for the full-pipeline input comparison on 5 Nov 2026 (DECISIONS V-1; [input-comparison-runner.md](input-comparison-runner.md)). J's `stats.PAIRINGS` and K's `schema.PAIRINGS` hold the same three, and the suite checks they agree.
 
 | Rule | Samples | Fold plan | Used for |
 |---|---|---|---|

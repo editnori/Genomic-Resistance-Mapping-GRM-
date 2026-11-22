@@ -1,0 +1,9 @@
+set	role	datasets	species	definition
+primary-new-235	primary	235	21	organism option, lineage split, not read before the plan
+primary-237	secondary	237	21	organism option and lineage split
+rule-M-quinolone-28	secondary	28	14	quinolone datasets of primary-237
+rule-M-quinolone-new-26	secondary	26	13	quinolone datasets of primary-new-235
+quinolone-organism-option-30	secondary	30	14	quinolone datasets with an organism option
+carbapenem-20	secondary	20	9	carbapenem datasets
+no-organism-option-12	secondary	12	2	datasets in a species without an organism option
+organism-option-no-lineage-split-4	secondary	4	2	organism option and no lineage split

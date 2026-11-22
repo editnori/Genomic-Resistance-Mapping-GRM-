@@ -1,0 +1,6 @@
+learner	recall	log_loss	rule
+scm	not shown	worse	cost
+cart	not shown	worse	cost
+rf	worse	worse	cost
+gbt	not shown	worse	cost
+lasso	worse	worse	cost

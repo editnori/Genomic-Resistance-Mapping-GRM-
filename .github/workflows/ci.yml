@@ -242,6 +242,24 @@ jobs:
           # SYNTHETIC inputs built in the test, the committed record under reference/study-split and docs/study-split.md.
           - suite: tests/study_split
             top: .
+          # SYNTHETIC inputs built in the test, the committed record under reference/time-split and docs/time-split.md.
+          - suite: tests/time_split
+            top: .
+          # SYNTHETIC inputs built in the test, the committed record under reference/kover-comparison and docs/kover-comparison.md.
+          - suite: tests/kover_comparison
+            top: .
+          # SYNTHETIC inputs built in the test, the committed record under reference/dense-network and docs/dense-network.md.
+          - suite: tests/dense_network
+            top: .
+          # SYNTHETIC inputs built in the test, the committed record under reference/tbprofiler-comparison and docs/tbprofiler-comparison.md.
+          - suite: tests/tbprofiler_comparison
+            top: .
+          # SYNTHETIC inputs built in the test, the committed record under reference/amrfinderplus-comparison and docs/amrfinderplus-comparison.md.
+          - suite: tests/amrfinderplus_comparison
+            top: .
+          # Reads every tracked file of the tree and docs/ci.md; it builds nothing.
+          - suite: tests/public_words
+            top: .
           # Reads README.md, docs/INDEX.md and committed reference/ and web/src/data/ files; it fits nothing.
           - suite: tests/readme_summary
             top: .
@@ -250,6 +268,8 @@ jobs:
       TOP: ${{ matrix.top }}
       # unittest's last line; a skip outside a suite's stated ones fails the job.
       OK_LINE: ${{ matrix.ok || 'OK' }}
+      # More barred names for tests/public_words, one word a line. Empty on a fork: the suite then checks its own names.
+      PUBLIC_WORDS_EXTRA: ${{ matrix.suite == 'tests/public_words' && secrets.PUBLIC_WORDS_EXTRA || '' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -265,6 +285,7 @@ jobs:
           for seed in 0 1 4242; do
             echo "::group::PYTHONHASHSEED=$seed"
             env -i PATH=/usr/bin:/bin HOME="$HOME" PYTHONHASHSEED="$seed" GRM_TASK_J_STATS="$PWD/scripts/ablation/stats.py" \
+              ${PUBLIC_WORDS_EXTRA:+PUBLIC_WORDS_EXTRA="$PUBLIC_WORDS_EXTRA"} \
               python3 -s -P -B -W error -m unittest discover -s "$SUITE" ${TOP:+-t "$TOP"} -v 2>&1 | tee "$RUNNER_TEMP/unittest.log"
             echo "::endgroup::"
             test "$(tail -n 1 "$RUNNER_TEMP/unittest.log")" = "$OK_LINE" || { echo "::error::tests skipped at PYTHONHASHSEED=$seed"; exit 1; }

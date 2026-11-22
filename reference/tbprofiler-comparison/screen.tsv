@@ -1,0 +1,9 @@
+way	set	endpoints	within_best	needed
+who_assoc	by_name	16	12	8
+who_assoc	graded	14	12	7
+who_assoc_only	by_name	16	10	8
+who_assoc_only	graded	14	10	7
+tool_default	by_name	16	13	8
+tool_default	graded	14	12	7
+who_assoc_small	by_name	16	12	8
+who_assoc_small	graded	14	12	7

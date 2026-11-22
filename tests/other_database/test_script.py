@@ -193,12 +193,19 @@ class SyntheticRecord(unittest.TestCase):
         self.assertEqual(files(again), files(self.out))
 
     def test_same_bytes_at_other_hash_seeds(self):
+        # Without -I, which would drop PYTHONHASHSEED; -s and -P keep site-packages and the cwd out.
         lanes, release, data = self.tree
+        seen = set()
         for seed in ("0", "4242"):
+            env = {"PYTHONHASHSEED": seed, "PATH": "/usr/bin:/bin"}
             out = os.path.join(self.root, "seed" + seed)
-            subprocess.run([sys.executable, "-I", "-B", str(SCRIPT), "--lanes", lanes, "--release", release, "--data-root", data, "--out", out],
-                           env={"PYTHONHASHSEED": seed}, check=True, capture_output=True)
+            subprocess.run([sys.executable, "-s", "-P", "-B", str(SCRIPT), "--lanes", lanes, "--release", release, "--data-root", data, "--out", out],
+                           env=env, check=True, capture_output=True)
             self.assertEqual(files(out), files(self.out), seed)
+            seen.add(subprocess.run([sys.executable, "-s", "-P", "-c", "import sys; print(sys.flags.ignore_environment, hash('other database'))"],
+                                    env=env, check=True, capture_output=True, text=True).stdout)
+        self.assertEqual(len(seen), 2, "the two seeds gave one hash")
+        self.assertTrue(all(x.startswith("0 ") for x in seen), seen)
 
     def test_check(self):
         self.assertEqual(run(self.tree, "--check", self.out), (0, ""))

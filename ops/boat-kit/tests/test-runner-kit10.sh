@@ -21,8 +21,8 @@ cat > "$W/bin/wslpath" << 'EOF'
 EOF
 chmod +x "$W/bin/wslpath"; export PATH=$W/bin:$PATH WSLPATH_ROOT=$W/winc
 export GRM_BOAT=$T/stub-boat-kit10.sh GRM_BOAT_ADOPT=1 GRM_BOAT_STATE=$W/state GRM_BT_TIMEOUT=30
-export GRM_STAGE_WIN='C:\Users\layth888\.t3\scratch\2026-10-28-test-3a358d9a\boat-grm\kit10-local'
-STAGEBASE=$W/winc/Users/layth888/.t3/scratch/2026-10-28-test-3a358d9a/boat-grm/kit10-local
+export GRM_STAGE_WIN='C:\grm-stage\boat-grm\kit10-local'
+STAGEBASE=$W/winc/grm-stage/boat-grm/kit10-local
 export GRM_LANES_MD=$W/lanes.md GRM_MEM_RETRY_SECS=0
 echo "GRM_CAP=64" > "$W/lanes.md"
 # the floor at test scale: 10 kB/s over 3 s windows (30 kB per window)

@@ -1,0 +1,13 @@
+order	dataset	species	genomes	resistant	susceptible	lineages	lineage_folds	genomes_listed_in_data_root	fold_sizes
+1	klebsiella_pneumoniae__cefpodoxime_ceftriaxone	Klebsiella pneumoniae	56	28	28	35	5	56	12,12,12,10,10
+2	mycobacterium_tuberculosis__amoxicillin	Mycobacterium tuberculosis	57	25	32	48	5	57	12,12,11,11,11
+3	klebsiella_aerogenes__imipenem	Klebsiella aerogenes	68	26	42	34	5	68	15,18,12,12,11
+4	klebsiella_oxytoca__cefpodoxime	Klebsiella oxytoca	74	47	27	24	5	74	28,19,10,9,8
+5	vibrio_cholerae__sulfamethoxazole	Vibrio cholerae	74	37	37	42	5	74	17,16,14,14,13
+6	enterobacter_cloacae__sulfamethoxazole_trimethoprim	Enterobacter cloacae	80	41	39	23	5	80	30,19,11,10,10
+7	acinetobacter_baumannii__moxifloxacin	Acinetobacter baumannii	91	60	31	34	5	91	28,18,15,15,15
+8	klebsiella_quasipneumoniae__cefotaxime	Klebsiella quasipneumoniae	101	62	39	58	5	101	35,17,17,17,15
+9	staphylococcus_haemolyticus__tetracycline	Staphylococcus haemolyticus	104	37	67	57	5	104	22,22,20,20,20
+10	clostridioides_difficile__ceftriaxone	Clostridioides difficile	136	90	46	90	5	136	46,23,23,22,22
+11	escherichia_coli__cefpodoxime_clavulanate	Escherichia coli	136	101	35	33	5	136	27,28,29,26,26
+12	streptococcus_agalactiae__clindamycin	Streptococcus agalactiae	141	115	26	93	5	141	40,26,25,25,25

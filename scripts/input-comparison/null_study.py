@@ -130,7 +130,7 @@ def one_seed(seed, out, grm, jobs, spec=HERE / "spec.json", visible=1.0):
         rc = subprocess.run([sys.executable, "-B", str(HERE / "run.py"), str(path), "--raw", str(raw),
                              "--work", str(run), "--grm", grm, "--source-commit", "0" * 40, "--jobs", str(jobs),
                              *vocabulary], stdout=log, stderr=subprocess.STDOUT).returncode
-    # A run with a dataset that made no lineage decision exits 0 and its summary names that dataset (Layth's ruling
+    # A run with a dataset that made no lineage decision exits 0 and its summary names that dataset (the ruling
     # on H-1's pilot, 2026-11-09, which replaced M3's exit 3); report() lists the seed.
     if rc != 0:
         raise subprocess.CalledProcessError(rc, "run.py")

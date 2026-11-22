@@ -1,0 +1,8 @@
+event	time	source
+plan_hashed	2026-11-14T15:16:56Z	the plan's hash list
+first_result	2026-11-14T15:43:54Z	the run log of 14 Nov
+layout_hashed	2026-11-14T15:47:19Z	the layout script's hash list
+last_result	2026-11-14T16:11:39Z	the run log of 14 Nov
+rerun_plan_hashed	2026-11-15T14:23:05Z	the rerun plan's hash list
+rerun_first_fit	2026-11-15T14:23:53Z	the rerun's run log
+rerun_last_result	2026-11-15T14:37:00Z	the rerun's run log

@@ -1,0 +1,6 @@
+learner	fits	fits_changed	scores	scores_changed	readings	readings_changed	changed_readings
+scm	72	10	10170	136	12	0	
+cart	72	21	10170	1412	12	2	study recall;time log_loss
+rf	72	0	10170	0	12	0	
+gbt	72	8	10170	838	12	2	study recall;study specificity
+lasso	72	8	10170	838	12	2	time log_loss;time balanced_accuracy

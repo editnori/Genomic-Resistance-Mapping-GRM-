@@ -672,7 +672,7 @@ UNANSWERED_KPNEU = ("- `kpneu__amp`: can't be tested this way: 2 planned family 
 
 
 class UnansweredDatasetCases(unittest.TestCase):
-    """Layth's ruling on H-1's pilot (2026-11-09): a confirmatory dataset whose planned family C contrasts outside
+    """The ruling on H-1's pilot (2026-11-09): a confirmatory dataset whose planned family C contrasts outside
     the sentinel arms all lack a p is listed as one the per-dataset test can't answer. The list is derived from the
     report's records, so the JSON keys and validate_report don't change."""
 

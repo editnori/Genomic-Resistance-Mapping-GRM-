@@ -67,7 +67,7 @@ All take their configuration from the environment; see the header of `ops/cloudf
 
 ## Runbook: revision 9 live
 
-Roles as in the recovery runbook: Layth holds the Cloudflare account and the token; main runs the commands; nothing is printed that holds the token.
+Roles as in the recovery runbook: the site's owner holds the Cloudflare account and the token; main runs the commands; nothing is printed that holds the token.
 
 ### 1. The token
 
@@ -82,7 +82,7 @@ Create one API token in the dashboard (My Profile › API Tokens › Create Cust
 
 If `wrangler deploy` refuses the custom domain for want of a zone read, add Zone › Zone › Read on the same zone; nothing else should be needed, since `CLOUDFLARE_ACCOUNT_ID` is always set. For later releases only, a second token with Workers R2 Storage › Edit alone is enough; revoke the first once the site is live.
 
-**Passing it.** Main asks Layth for it through a private secret card with file delivery. The file must be mode 0600 and owned by the operator; `site-lib.sh` checks both and refuses anything else. If the delivered file is not 0600, copy it once with `umask 077; cat "$DELIVERED" >"$HOME/.grm-site-token"` and point `GRM_SITE_TOKEN_FILE` there. The scripts read the file into Wrangler's environment only, never onto a command line, into a log or to the terminal. `site-lib.sh` turns shell tracing off, so even `bash -x` doesn't print it. When done: `shred -u "$GRM_SITE_TOKEN_FILE"` and revoke the token in the dashboard.
+**Passing it.** Main asks the owner for it through a private secret card with file delivery. The file must be mode 0600 and owned by the operator; `site-lib.sh` checks both and refuses anything else. If the delivered file is not 0600, copy it once with `umask 077; cat "$DELIVERED" >"$HOME/.grm-site-token"` and point `GRM_SITE_TOKEN_FILE` there. The scripts read the file into Wrangler's environment only, never onto a command line, into a log or to the terminal. `site-lib.sh` turns shell tracing off, so even `bash -x` doesn't print it. When done: `shred -u "$GRM_SITE_TOKEN_FILE"` and revoke the token in the dashboard.
 
 ### 2. Setup
 
@@ -132,7 +132,7 @@ bash $W/activate.sh ui-main-fd558ce2 rev9-275-20261030 --apply
 bash $W/status.sh                              # active rev9, previous rev8
 ```
 
-The custom domain cannot be created while `genomicresistance.com` has a CNAME, and the tunnel's route is one. In the dashboard (DNS › Records), Layth or main deletes the CNAME for `genomicresistance.com` that points at `<tunnel-uuid>.cfargotunnel.com` (and `www`, if one exists and should serve too). The site has answered 530 since 31 October, so this removes nothing that works. Then:
+The custom domain cannot be created while `genomicresistance.com` has a CNAME, and the tunnel's route is one. In the dashboard (DNS › Records), the owner or main deletes the CNAME for `genomicresistance.com` that points at `<tunnel-uuid>.cfargotunnel.com` (and `www`, if one exists and should serve too). The site has answered 530 since 31 October, so this removes nothing that works. Then:
 
 ```bash
 bash $W/wrangler.sh deploy                     # Worker grm-site, custom domain genomicresistance.com

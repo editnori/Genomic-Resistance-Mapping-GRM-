@@ -736,7 +736,7 @@ UNANSWERED_SENTENCE = ("No family C contrast of these confirmatory datasets outs
 def unanswered_datasets(report):
     """The confirmatory datasets with planned family C contrasts outside the sentinel arms, none of which has a p:
     the per-dataset test answers nothing for them, and the summary lists each rather than leave it to read as a
-    contrast that found nothing (Layth's ruling on H-1's pilot, 2026-11-09). A dataset with no family C planned
+    contrast that found nothing (the ruling on H-1's pilot, 2026-11-09). A dataset with no family C planned
     asked that test nothing and isn't listed, and K refuses family C on a development dataset, so each one listed
     is confirmatory. Derived from the report's own records, so its JSON keys and validate_report are unchanged.
     Each entry gives the dataset, its planned family C contrasts outside the sentinels, how many of them were not

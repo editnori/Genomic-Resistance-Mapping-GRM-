@@ -44,8 +44,8 @@ anc=" "; p=\$PPID; while [ -n "\$p" ] && [ "\$p" -gt 1 ]; do anc="\$anc\$p "; p=
 EOF
 chmod +x "$PG/pgrep"
 # INSTALL.md's rollback block, with the two roots pointed at the fake tree
-awk '/^    D=\/home\/layth\//{f=1} f && /^    /{print substr($0, 5); next} f{exit}' "$HB/INSTALL.md" |
-  sed "s#/home/layth/review/grm-port-r11-20261105#$F/port#g; s#/home/layth/review/grm-boat-runner-20261031#$F/runner#g" > "$WK/rollback.sh"
+awk '/^    D=\/home\/user\//{f=1} f && /^    /{print substr($0, 5); next} f{exit}' "$HB/INSTALL.md" |
+  sed "s#/home/user/review/grm-port-r11-20261105#$F/port#g; s#/home/user/review/grm-boat-runner-20261031#$F/runner#g" > "$WK/rollback.sh"
 newall() { # every target hashes to its next/ file
   local ok=yes
   cmp -s "$F/port/drive/drive.sh" "$HB/next/drive.sh.next" || ok=no; cmp -s "$F/runner/grm-boat.sh" "$HB/next/grm-boat.sh.next" || ok=no

@@ -69,7 +69,7 @@
 # boat binary, and the staging folders go under GRM_STAGE_DIR (default ~/.cache/grm-boat), with no wslpath. memcheck
 # reads this host's MemAvailable and its cgroup room: the tightest memory.high or memory.max, less memory.current,
 # over this process's cgroup and every parent. Each must be GRM_MIN_AVAIL_MB (512) or more, or memcheck fails with
-# 76. GRM_HOST=wsl, the default, is the laptop, unchanged. KIT12 (Layth, 9 Nov 2026): each cgroup's room counts its
+# 76. GRM_HOST=wsl, the default, is the laptop, unchanged. KIT12 (ruling of 9 Nov 2026): each cgroup's room counts its
 # reclaimable page cache as free (memory.stat's inactive_file less file_dirty and file_writeback, never below 0), since
 # the kernel drops those pages before it reaches the limit. memory.current alone read 150 MiB of room on the
 # controller with 737 MiB of inactive cache and 1.7 GB MemAvailable. GRM_MEMINFO, GRM_PROC_CGROUP and GRM_CGROUP_FS
@@ -81,9 +81,9 @@
 # 75 the cap stayed full for 30 min; 76 the laptop memory check failed; 77 the plan is under its floor; 2 usage or
 # refused id.
 set -u -o pipefail
-BOAT=${GRM_BOAT:-/mnt/c/Users/layth888/.ascii/bin/boat.exe}
-LANES_MD=${GRM_LANES_MD:-/home/layth/review/GRM-BOAT-LANES-20261031.md}   # holds the live GRM_CAP= line
-STAGE_WIN=${GRM_STAGE_WIN:-'C:\Users\layth888\.t3\scratch\2026-10-28-test-3a358d9a\boat-grm'}
+BOAT=${GRM_BOAT:-boat.exe}
+LANES_MD=${GRM_LANES_MD:-/home/user/review/GRM-BOAT-LANES-20261031.md}   # holds the live GRM_CAP= line
+STAGE_WIN=${GRM_STAGE_WIN:-'C:\grm-stage\boat-grm'}
 HOST_KIND=${GRM_HOST:-wsl}   # KIT11: wsl (the laptop) or linux (a plain Linux host, such as the T3 controller)
 case "$HOST_KIND" in
   wsl) ;;
@@ -101,7 +101,7 @@ ROUTE_RC=86 GUARD_RC=97 CAP_RC=75 MEM_RC=76 PLAN_RC=77
 PWSH=${GRM_POWERSHELL:-/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe}
 MIN_FREE_GB=${GRM_MIN_FREE_GB:-4} MAX_COMMIT_GB=${GRM_MAX_COMMIT_GB:-95}   # decision 433's laptop check
 MIN_PLAN_VMH=${GRM_MIN_PLAN_VMH:-150}   # user rule, 23:4xZ Nov 1: under this many plan VM-hours, start no new box;
-# since Layth's prepaid pack (6 Nov) the floor applies to plan plus pack (boat limits: creditBalanceHours)
+# since the prepaid pack (6 Nov) the floor applies to plan plus pack (boat limits: creditBalanceHours)
 NOTES=${GRM_NOTES:-}
 # every remote step starts with this: the image's cargo home, the pinned toolchain's PATH and the open-file limit
 RENV='export CARGO_HOME=/usr/local/cargo PATH=/usr/local/cargo/bin:$PATH
@@ -605,7 +605,7 @@ def is_receipt(p):
 RECEIPT_MAX = 64 * 1024 * 1024
 # the account rules' names, wherever they appear in a segment (I4), plus env and key files
 deny = re.compile(r"sealed|held-?out|ks30|ks50|vumc|aua2027|gold-review|clinical|private|secret|credential|ksd|sigdrug"
-                  r"|^review$|^layth_review$|^\.env|\.(pem|key|p12|pfx|jks|ppk|asc|gpg)$|^id_(rsa|dsa|ecdsa|ed25519)", re.I)
+                  r"|^review$|^[a-z0-9]+_review$|^\.env|\.(pem|key|p12|pfx|jks|ppk|asc|gpg)$|^id_(rsa|dsa|ecdsa|ed25519)", re.I)
 # KIT11: TAR "-" is stage-local's check only. DIR is then a folder on the box, so its path is taken as written
 # (normalised, never resolved here), and no file is read
 check_only = out == "-"
