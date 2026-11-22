@@ -44,7 +44,8 @@ datasets.tsv, and prints the row count only. count.tsv holds, per
 split, pair (inner against default, twin against default on the lineage
 split) and measure, the datasets better, worse and the same by more than
 MARGIN (lower is better for log loss and the two error rates), the median
-difference and its species interval (RESAMPLES species resamples, read at
+difference, which for every measure is the arm's value less the default's,
+and its species interval (RESAMPLES species resamples, read at
 the 101st and 3,900th sorted values, each row seeded from the sha256 of
 split|pair|measure), the one-sided sign test of better against worse, and
 Holm over the lineage split's primary measure, the inner pick and the twin.
@@ -351,11 +352,13 @@ def count(rows):
                     if b is None or not int(a["scored"]) or not int(b["scored"]) or a[m] in (None, "") or b[m] in (None, ""):
                         unscored += 1
                         continue
-                    x = r12(float(a[m]) - float(b[m]))
-                    diffs.append(-x if m in LOWER_IS_BETTER else x)
+                    diffs.append(r12(float(a[m]) - float(b[m])))
                     sps.append(a["species_slug"])
-                better = sum(1 for x in diffs if x > MARGIN)
-                worse = sum(1 for x in diffs if x < -MARGIN)
+                # Every difference, median and interval is the arm's value less the default's;
+                # only better and worse turn round where lower is better.
+                up = -1 if m in LOWER_IS_BETTER else 1
+                better = sum(1 for x in diffs if up * x > MARGIN)
+                worse = sum(1 for x in diffs if up * x < -MARGIN)
                 row = {"split": split, "pair": f"{arm}-{base}", "measure": m, "datasets": len(ds), "entered": len(diffs),
                        "not_scored": unscored, "better": better, "worse": worse, "same": len(diffs) - better - worse,
                        "median_difference": r12(float(np.median(diffs))) if diffs else None,

@@ -291,6 +291,13 @@ class Count(unittest.TestCase):
         r = at(pairs([-0.05, -0.05, 0.05], measure="recall"), "lineage", "inner-default", "recall")
         self.assertEqual((r["better"], r["worse"]), (1, 2))
 
+    def test_the_median_and_its_interval_are_the_arm_less_the_default_for_every_measure(self):
+        # A lower log loss or error rate is better, but its difference stays the arm's value less the default's.
+        for m in score.MEASURES:
+            r = at(pairs([-0.05] * 6, measure=m), "lineage", "inner-default", m)
+            self.assertEqual((r["median_difference"], r["interval_lo"], r["interval_hi"]), (-0.05, -0.05, -0.05), m)
+            self.assertEqual((r["better"], r["worse"]), (6, 0) if m in score.LOWER_IS_BETTER else (0, 6), m)
+
     def test_the_sign_test_is_one_sided_and_holm_runs_over_the_inner_pick_and_the_twin(self):
         self.assertEqual(score.sign_p(5, 0), 1 / 32)
         self.assertEqual(score.sign_p(3, 2), 0.5)
