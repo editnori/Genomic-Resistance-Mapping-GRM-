@@ -6,7 +6,10 @@ Copies this checkout's last commit to <out dir>/tree (git archive) and, one
 fault at a time, changes one piece of text there, runs the one test named
 for it, and puts the text back. A fault is caught when its test fails and
 the tree still builds; each test must also pass with no fault planted.
-Rust tests build with CARGO_TARGET_DIR (default <out dir>/target). Writes
+Rust tests always build in <out dir>/target, whatever CARGO_TARGET_DIR
+says: the copy has the same crate and relative paths as the checkout, so in
+a shared target folder a planted build left there looks fresh to cargo in
+the checkout, whose files are older. Writes
 <out dir>/faults.tsv (fault, what it plants, file, test, result) and
 <out dir>/logs/, prints one line per fault, and exits 1 when a fault is not
 caught. Every test it runs is SYNTHETIC; it reads no data.
@@ -89,7 +92,7 @@ def main(argv):
     archive = subprocess.run(["git", "-C", str(REPO), "archive", "HEAD"], check=True, capture_output=True).stdout
     subprocess.run(["tar", "-x", "-C", str(tree)], input=archive, check=True)
     env = dict(os.environ)
-    env.setdefault("CARGO_TARGET_DIR", str(out / "target"))
+    env["CARGO_TARGET_DIR"] = str(out / "target")
     rows, bad = [], 0
     for n, what, path, old, new, kind, test in FAULTS:
         target = tree / path
