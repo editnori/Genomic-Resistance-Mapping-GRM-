@@ -20,9 +20,11 @@
 #                               the sha256 of each, taken before any fit
 #
 # Steps, each once: the release; grm built from this checkout, with its
-# commit and sha256; the data root (the curated table, the catalog's three
-# files from NCBI and the genomes from BV-BRC, each checked against the master
-# list, then count, structure and matrix with no network); the study plan for
+# commit and sha256; the data root (the curated table; the catalog's three
+# files from NCBI, each equal to the master list; the genomes from BV-BRC,
+# whose list equals the master list and each of which has the release's
+# length, contig count and N50, since a refetched file can differ in its gzip
+# bytes; then count, structure and matrix with no network); the study plan for
 # seed 47 (scripts/c6-mic/study_plans.py); the fits; the probe; the scorer.
 #
 # The probe: the rebuilt table can give a dataset a breakpoint fitted on one
