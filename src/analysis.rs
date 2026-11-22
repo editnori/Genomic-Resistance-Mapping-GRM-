@@ -1497,6 +1497,204 @@ pub fn mic_plan_fold_file(
 /// canonical k-mer set: one ascending list of sample indices per group of two
 /// or more, ordered by first member. `columns` holds each sample's matrix
 /// column and `digests` each column's digest.
+/// `grm learn --exp-cohort` (plan block C1 part B, docs/cohort-draw.md):
+/// for every cohort file in `cohorts` (`cutoff::cohort_name`) whose dataset
+/// is one of the species' (or of the named subset), the release's rule on
+/// the cohort and the cohort's final models on the dataset's other genomes
+/// (`cutoff::fit_cohort`), at `cfg.seed`. The cohort is the dataset's
+/// cohort rows (`cohort`) the file lists, checked against the file
+/// (`cutoff::cohort_rows`), projected at its own support floor; its
+/// lineages and copy groups are the species'. Writes
+/// `cutoff::result_path(out, dataset, r, draw, seed)` and nothing else. A
+/// result that exists is kept unless `force`, so a restart fits only the
+/// missing ones. A refused file still gets a result, which says why.
+pub fn cohort_draw_species(
+    layout: &Layout,
+    slug: &str,
+    only: &[String],
+    force: bool,
+    cfg: &EvalConfig,
+    cohorts: &std::path::Path,
+    out: &std::path::Path,
+) -> Result<(Vec<std::path::PathBuf>, usize)> {
+    use crate::cutoff;
+    let mut files: Vec<(String, usize, usize, std::path::PathBuf)> = Vec::new();
+    for entry in
+        std::fs::read_dir(cohorts).with_context(|| format!("read {}", cohorts.display()))?
+    {
+        let path = entry?.path();
+        let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
+            continue;
+        };
+        if let Some((d, r, j)) = cutoff::parse_cohort_name(name) {
+            files.push((d, r, j, path));
+        }
+    }
+    files.sort();
+    let (input, catalog) = load_inputs(layout, slug)?;
+    let digest = matrix_digest(&input.matrix);
+    let release_cfg = EvalConfig {
+        seed: EvalConfig::default().seed,
+        ..cfg.clone()
+    };
+    std::fs::create_dir_all(out).with_context(|| format!("create {}", out.display()))?;
+    let (mut written, mut kept) = (Vec::new(), 0);
+    for spec in input
+        .datasets
+        .iter()
+        .filter(|d| only.is_empty() || only.iter().any(|o| *o == d.antibiotic || *o == d.id))
+    {
+        let mine: Vec<_> = files.iter().filter(|f| f.0 == spec.id).collect();
+        if mine.is_empty() {
+            continue;
+        }
+        let fingerprint = input_fingerprint(&input, spec, catalog.as_ref(), &release_cfg, digest);
+        let c = cohort(spec, &input.phenotypes, &input.matrix.summary.genomes);
+        let ids: Vec<&str> = c.rows.iter().map(|p| p.genome_id.as_str()).collect();
+        let resistant: Vec<bool> = c.rows.iter().map(|p| p.reported == Some(Call::R)).collect();
+        let lineage: Vec<u32> = c
+            .columns
+            .iter()
+            .map(|&col| input.structure.lineages.labels[col])
+            .collect();
+        let digests: Vec<&str> = c
+            .columns
+            .iter()
+            .map(|&col| input.matrix.summary.kset_digests[col].as_str())
+            .collect();
+        for (_, r, draw, path) in mine {
+            let target = cutoff::result_path(out, &spec.id, *r, *draw, cfg.seed);
+            if target.exists() && !force {
+                kept += 1;
+                continue;
+            }
+            let started = Instant::now();
+            let bytes = std::fs::read(path).with_context(|| format!("read {}", path.display()))?;
+            let parsed: Result<cutoff::CohortFile> =
+                serde_json::from_slice(&bytes).context("the cohort file is not a cohort");
+            let rows = parsed.and_then(|f| {
+                anyhow::ensure!(
+                    (f.r, f.draw) == (*r, *draw),
+                    "the cohort file's r and draw differ from its name's"
+                );
+                anyhow::ensure!(
+                    c.meets_min_class,
+                    "the dataset has a class short of its class minimum"
+                );
+                cutoff::cohort_rows(&f, &spec.id, &ids, &resistant, &lineage).map(|rows| (f, rows))
+            });
+            let mut result = cutoff::CohortResult {
+                format: cutoff::FORMAT.into(),
+                evaluation_revision: EVALUATION_REVISION,
+                release_fingerprint: fingerprint.clone(),
+                eval_config: cfg.clone(),
+                id: spec.id.clone(),
+                species_slug: slug.to_string(),
+                antibiotic: spec.antibiotic.clone(),
+                r: *r,
+                draw: *draw,
+                seed: cfg.seed,
+                cohort_file_sha256: crate::research::sha256(&bytes),
+                dataset: cutoff::Counts::of(resistant.iter().copied()),
+                refused: None,
+                cohort: None,
+                scored: cutoff::Counts::default(),
+                new_lineage: cutoff::Counts::default(),
+                copies_left_out: cutoff::Counts::default(),
+                estimates: vec![],
+                truth: None,
+                seconds: 0.0,
+            };
+            match rows {
+                Err(e) => result.refused = Some(format!("{e:#}")),
+                Ok((file, rows)) => {
+                    let columns: Vec<usize> = rows.iter().map(|&i| c.columns[i]).collect();
+                    let y: Vec<bool> = rows.iter().map(|&i| resistant[i]).collect();
+                    let min_support = eval::support_floor(rows.len());
+                    anyhow::ensure!(
+                        input.matrix.summary.min_support <= min_support,
+                        "the species matrix was built with min_support {} above the cohort's {min_support}",
+                        input.matrix.summary.min_support
+                    );
+                    let ds = Dataset::project(&input.matrix, columns.clone(), &y, min_support);
+                    let groups: Vec<u32> = rows.iter().map(|&i| lineage[i]).collect();
+                    let duplicates = kset_duplicates(&columns, &input.matrix.summary.kset_digests);
+                    let scored = cutoff::scored_set(&rows, &lineage, &digests);
+                    let first: Vec<u32> =
+                        (0..ds.n_features()).map(|f| ds.patterns_of(f)[0]).collect();
+                    let scored_columns: Vec<usize> =
+                        scored.rows.iter().map(|&i| c.columns[i]).collect();
+                    let scored_x =
+                        cutoff::feature_values(&input.matrix.patterns, &first, &scored_columns);
+                    let scored_y: Vec<bool> = scored.rows.iter().map(|&i| resistant[i]).collect();
+                    // The study plan's folds, in cohort row order.
+                    let roles: Option<Vec<eval::Role>> = file.study_fold.as_ref().map(|folds| {
+                        let fold_of: HashMap<&str, usize> = file
+                            .genomes
+                            .iter()
+                            .map(String::as_str)
+                            .zip(folds.iter().copied())
+                            .collect();
+                        rows.iter()
+                            .map(|&i| eval::Role::Test(fold_of[ids[i]]))
+                            .collect()
+                    });
+                    let fit = cutoff::fit_cohort(
+                        &spec.id,
+                        &cutoff::CohortInputs {
+                            x: &ds.x,
+                            y: &ds.y,
+                            groups: &groups,
+                            duplicates: &duplicates,
+                            min_support,
+                            study_roles: roles.as_deref(),
+                            scored_x: &scored_x,
+                            scored_y: &scored_y,
+                            scored_new: &scored.new_lineage,
+                        },
+                        cfg,
+                    );
+                    result.cohort = Some(cutoff::CohortCounts {
+                        samples: rows.len(),
+                        resistant: y.iter().filter(|&&v| v).count(),
+                        lineages: groups.iter().collect::<BTreeSet<_>>().len(),
+                        copy_groups: duplicates.len(),
+                        min_support,
+                        features: ds.n_features(),
+                    });
+                    result.scored = cutoff::Counts::of(scored_y.iter().copied());
+                    result.new_lineage = cutoff::Counts::of(
+                        scored_y
+                            .iter()
+                            .zip(&scored.new_lineage)
+                            .filter(|(_, n)| **n)
+                            .map(|(&v, _)| v),
+                    );
+                    result.copies_left_out =
+                        cutoff::Counts::of(scored.copies.iter().map(|&i| resistant[i]));
+                    result.estimates = fit.estimates;
+                    result.truth = Some(fit.truth);
+                }
+            }
+            result.seconds = started.elapsed().as_secs_f64();
+            write_atomic(&target, &serde_json::to_vec(&result)?)?;
+            eprintln!(
+                "    {} r{r} d{draw} s{}: cohort result in {:.1}s{}",
+                spec.id,
+                cfg.seed,
+                result.seconds,
+                if result.refused.is_some() {
+                    ", refused"
+                } else {
+                    ""
+                }
+            );
+            written.push(target);
+        }
+    }
+    Ok((written, kept))
+}
+
 fn kset_duplicates(columns: &[usize], digests: &[String]) -> Vec<Vec<usize>> {
     let mut by_digest: HashMap<&str, Vec<usize>> = HashMap::new();
     for (i, &col) in columns.iter().enumerate() {

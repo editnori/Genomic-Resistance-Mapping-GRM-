@@ -1924,6 +1924,144 @@ fn final_models(
     })
 }
 
+/// The final models `final_models` fits on every sample of `x`, kept whole
+/// and applied to the columns of `scored`, a matrix whose rows are `x`'s
+/// features. It gives the final models and, per learner in `LEARNERS`
+/// order, a score for every column of `scored`, or None for a null fit
+/// (boosting kept no tree, the lasso kept no weight). Each fit is
+/// `final_models`' own call with its own inputs and seeds, on the tuning
+/// groups `evaluate` gives them (`final_tuning`), so the models equal
+/// `final_models`' output: a report keeps only the forest's and boosting's importances, and
+/// here the forest and the boosted model themselves score `scored`.
+/// `grm learn --exp-cohort` scores a drawn cohort's final models on the
+/// dataset's other genomes with it (`crate::cutoff`).
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn final_scores(
+    dataset: &str,
+    x: &BitMatrix,
+    y: &Bits,
+    groups: &[u32],
+    duplicates: &[Vec<usize>],
+    min_support: u32,
+    cfg: &EvalConfig,
+    scored: &BitMatrix,
+) -> Result<(FinalModels, LearnerScores)> {
+    ensure!(
+        scored.rows == x.rows,
+        "the scored matrix has {} features where the cohort has {}",
+        scored.rows,
+        x.rows
+    );
+    check_inputs(x, y, groups, duplicates, min_support, cfg)?;
+    let tuning = final_tuning(groups, duplicates);
+    let tuning = tuning.as_deref();
+    let all = Bits::ones(x.cols);
+    let inner = final_plan(x, y, tuning, min_support, cfg)?;
+    let choice = scm::select(x, y, &all, cfg.scm_max_rules, &inner, cfg.inner_folds);
+    let model = scm::fit(x, y, &all, choice.kind, choice.p, choice.n_rules, true);
+    let importance = scm::rule_importance(&model, x, y, &all);
+    let scm_scores: Vec<f64> = {
+        let called = model.predict(scored);
+        (0..scored.cols)
+            .map(|i| called.contains(i) as u8 as f64)
+            .collect()
+    };
+    let (depth, _) = tree::select_depth(
+        x,
+        y,
+        &all,
+        &inner,
+        cfg.inner_folds,
+        cfg.cart_max_depth,
+        cfg.tie_rule,
+    );
+    let cart = tree::fit_tree(
+        x,
+        y,
+        &all,
+        &TreeParams {
+            max_depth: depth,
+            min_leaf: 1,
+            max_features: None,
+            seed: 0,
+            tie: cfg.tie_rule,
+        },
+    );
+    let cart_scores = cart.predict(scored, depth);
+    let (lasso_scored, lasso_model) = final_lasso(
+        dataset,
+        x,
+        y,
+        tuning,
+        cfg,
+        &mut LassoTrace::default(),
+        &mut |_, _| {},
+    )?;
+    let lasso = lasso_scores(lasso_model.as_ref(), scored);
+    // `fit_rf` on every sample, with the forest kept: its trees read the
+    // screened rows, so `scored` is screened on the same features.
+    let draws = draw_seed(cfg);
+    let feats = screen(x, y, &all, cfg.screened_features);
+    let (mut screened, mut scored_screened) = (
+        BitMatrix::with_cols(x.cols),
+        BitMatrix::with_cols(scored.cols),
+    );
+    for &f in &feats {
+        screened.push_row(x.row(f as usize));
+        scored_screened.push_row(scored.row(f as usize));
+    }
+    let forest = tree::fit_forest(
+        &screened,
+        y,
+        &all,
+        &ForestParams {
+            seed: draws.wrapping_add(17),
+            tie: cfg.tie_rule,
+            ..cfg.forest
+        },
+    );
+    let rf_importance = forest
+        .importance()
+        .into_iter()
+        .map(|(f, w)| (feats[f as usize], w))
+        .collect();
+    let rf = forest.predict(&scored_screened);
+    let (_, gbt_model) = fit_gbt(
+        x,
+        y,
+        &all,
+        tuning,
+        "group",
+        cfg,
+        cfg.seed.wrapping_add(13),
+        draws.wrapping_add(13),
+    )?;
+    let gbt = gbt_scores(&gbt_model, scored);
+    Ok((
+        FinalModels {
+            scm: FinalScm {
+                kind: model.kind,
+                p: model.p,
+                cv_error: choice.cv_error,
+                rules: model.rules,
+                steps: model.steps,
+                importance,
+            },
+            cart,
+            cart_depth: depth,
+            lasso: lasso_model,
+            lasso_fit: lasso_scored.lasso_fit,
+            rf_importance: top_weighted(rf_importance, TOP_WEIGHTED),
+            gbt_importance: top_weighted(gbt_model.importance(), TOP_WEIGHTED),
+        },
+        vec![Some(scm_scores), Some(cart_scores), Some(rf), gbt, lasso],
+    ))
+}
+
+/// Per learner in `LEARNERS` order, a score for every scored column, or
+/// None for a null fit (`final_scores`).
+pub(crate) type LearnerScores = Vec<Option<Vec<f64>>>;
+
 /// The final models' preconditions, and their inner folds, drawn on
 /// `tuning` (`final_tuning`). They train on every sample, so their
 /// candidates are the dataset matrix itself; that keeps their feature ids
