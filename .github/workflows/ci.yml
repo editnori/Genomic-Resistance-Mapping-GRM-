@@ -267,6 +267,7 @@ jobs:
           - suite: tests/c6_mic
             top: .
           # SYNTHETIC samples, reports, results and line rows built in the test; it runs the scripts under scripts/c1-cutoff and fits nothing.
+          # test_page.py alone reads committed tables: it checks docs/cohort-result.md against reference/cohort-result.
           - suite: tests/c1_cutoff
             top: .
           # SYNTHETIC reports, exports and calls built in the test; it runs the D0 and C8 readers under scripts/assumption-d0-c8 and fits nothing.

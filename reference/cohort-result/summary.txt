@@ -1,0 +1,20 @@
+Small cohorts against the 25-per-class line, plan block C1 part B: the reading's tables
+species: 10: Enterococcus faecium, Escherichia coli, Klebsiella pneumoniae, Mycobacterium tuberculosis, Neisseria gonorrhoeae, Pseudomonas aeruginosa, Salmonella enterica, Shigella sonnei, Staphylococcus aureus, Streptococcus pneumoniae
+gates passed:
+  1 scorer: score.py has sha256 1a6bf6fee63f1cce2be2d40277f51caae5e259cd1e85d67dd29b682d93b31e5e
+  2 first copies: DONE with code sha256 f304142d825e15b91e8c774bc4b4cfc89bcce1ac22c312f928c3b5fe36637f0f, binary.txt and SHA256SUMS agree, in 10 of 10
+  3 expect.tsv: every dataset holds its 30 results of lists.txt's lines, draws and twin
+  4 second scorings: the 5 files of SHA256SUMS hold their sha256 in 10 of 10
+  5 checks: every result passes every check in every species
+  6 scores.tsv and lines.tsv hold exactly expect.tsv's rows; antibiotics equal the names file
+  7 counts: 10 species, 89 datasets, 2670 results, none twice
+  8 count.tsv: the scorer's --count of each species' lines.tsv, in 10 of 10
+  the entry listed here equals the scorer's datasets, entered, not scored and no line at 25 on every learner row, and its median difference
+rules chosen: --measures-over shared, --line-50 beside, --twin-rule beside, --dataset-differences yes
+the row that decides: the lineage split, the truth on all scored genomes, the levelled interval
+line 10: 0 of 5 learners meet (none): not a candidate
+line 15: 0 of 5 learners meet (none): not a candidate
+line 20: 1 of 5 learners meet (rf): not a candidate
+twin 25-s45: 3 of 5 learners meet; the count with no change, never a candidate; the row holds against a change of fold seed alone
+labels: not M: the same labels under label rules (a), (b) and (d); under rule (c), the most resistant call, a dataset holding a pair with an R and an S record is checked again
+A candidate is a line the maintainer may then decide to fetch and fit. Nothing changes in the release.
