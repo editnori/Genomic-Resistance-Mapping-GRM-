@@ -46,6 +46,7 @@ Every document under `docs/`, grouped by purpose. For the headline Revision 14 n
 | [fold-file.md](fold-file.md) | Supplied fold-plan file format for `grm learn --fold-file`. |
 | [mic-plan.md](mic-plan.md) | Experimental MIC models on a fold plan (`grm learn --exp-mic`, off by default), and the scripts that run and score one species. |
 | [cohort-draw.md](cohort-draw.md) | Experimental small cohorts drawn from large datasets (`grm learn --exp-cohort`, off by default), and the scripts that draw, run and score one species. |
+| [served-pick.md](served-pick.md) | Experimental pick of the served learner inside each outer training fold (`grm learn --exp-pick`, off by default) for plan block C9, and the scripts that list, run and score one species. |
 | [null-fold-refit.md](null-fold-refit.md) | Experimental null-fold refit flag (off by default). |
 | [matrix-scaling.md](matrix-scaling.md) | Out-of-core partial matrix building (`--disk-sparse`) and the `REVIEWED_COLUMNS` (4,096) review gate. |
 | [lasso-layout.md](lasso-layout.md) | Machine-code layout check for `grm::learn::lasso::column_sum`. |
