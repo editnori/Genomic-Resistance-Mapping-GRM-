@@ -244,6 +244,18 @@ src/lib.rs curate::tests::the_recorded_generator_matches_cargo_lock
 src/lib.rs curate::tests::the_species_check_exclusion_comes_before_the_no_species_qc
 src/lib.rs curate::tests::timestamps_order_by_time
 src/lib.rs curate::tests::zone_diameters_do_not_become_mic_labels
+src/lib.rs cutoff::tests::a_cohort_file_must_hold_r_of_each_class_and_rows_of_the_dataset
+src/lib.rs cutoff::tests::a_feature_on_a_genome_outside_the_cohort_reads_its_lowest_pattern
+src/lib.rs cutoff::tests::a_null_final_fit_scores_at_the_cohorts_share_not_the_scored_sets
+src/lib.rs cutoff::tests::a_scored_genome_reads_a_features_lowest_species_pattern
+src/lib.rs cutoff::tests::a_scored_set_short_of_a_class_has_no_truth
+src/lib.rs cutoff::tests::calls_count_by_class_at_the_cutoff_and_clip_the_log_loss
+src/lib.rs cutoff::tests::cohort_names_parse_back
+src/lib.rs cutoff::tests::the_cohort_lineage_split_keeps_each_lineage_in_one_fold
+src/lib.rs cutoff::tests::the_scored_set_leaves_out_the_cohort_and_its_copies_and_flags_new_lineages
+src/lib.rs cutoff::tests::the_study_estimate_scores_the_plans_folds_or_says_why_not
+src/lib.rs cutoff::tests::the_truth_is_the_final_models_on_the_scored_set
+src/lib.rs cutoff::tests::the_truths_forest_reads_a_scored_genome_on_the_screened_features
 src/lib.rs dna::tests::canonical_matches_a_naive_reference_on_both_strands
 src/lib.rs dna::tests::canonical_matches_both_strands
 src/lib.rs dna::tests::mixed_values_balance_across_top_bits
@@ -692,6 +704,7 @@ src/main.rs tests::learn_refuses_the_null_fold_refit_beside_a_fold_file
 src/main.rs tests::learn_refuses_the_null_fold_refit_beside_the_tie_rule_experiment
 src/main.rs tests::learn_takes_a_fold_file_only_with_its_output_directory_and_one_species
 src/main.rs tests::learn_takes_a_seed_and_a_learner_seed_and_the_pipeline_takes_neither
+src/main.rs tests::learn_takes_the_cohort_experiment_only_with_an_output_and_no_other_experiment
 src/main.rs tests::learn_takes_the_mic_experiment_only_with_an_output_and_no_other_experiment
 src/main.rs tests::learn_with_a_fold_file_screens_as_many_features_as_it_is_told
 src/main.rs tests::matrix_and_pipeline_keep_the_stock_path_unless_disk_sparse_is_given

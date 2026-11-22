@@ -108,3 +108,66 @@ The plan's D0 puts each missed lineage fold in one of four causes, Absent, Remov
 **Allowed.** Three new fields pass: `fold_models`, complete for the five learners on every split that ran, each sample's `rule_groups`, and `selection`. Any other new field fails. A sample's country, year, host and MLST type are counted apart and do not fail it. With the allowed fields taken out, the two reports written again in their own key order must be the same text.
 
 **Written.** This entry was written at 16:08Z on 22 Nov 2026, while the refit, D0 and C8 were rehearsed on *Klebsiella aerogenes* with ertapenem, imipenem and meropenem, for time and equality only. No D0 or C8 count beyond the rehearsal on *Klebsiella aerogenes* had been read. A review made the first reading and the default's tie case exact at 16:40Z the same day, and by then still no D0 or C8 count beyond that rehearsal had been read.
+
+## C1 design
+
+The plan's C1 part B draws cohorts of r resistant and r susceptible genomes from the BIG datasets and counts how far each cohort's estimate lies from the truth. It leaves open how a cohort is drawn, which interval's coverage counts and which row decides. A design fixed those on 22 Nov 2026, before its code ran on real data. A review of the code named twelve deviations from the plan, each holding from that day.
+
+| Item | Deviation |
+|---|---|
+| Draw | Draws take r genomes per class by a keyed round robin over lineages, nested across r; the plan says only "r per class within lineage groups". |
+| Interval | C1's release row reads coverage on a levelled interval from pooled recall and specificity; the five lineage folds' range is written beside it and decides nothing. |
+| Scored set | The truth is scored on the release dataset's other cohort rows inside the release's 2,000-genome cap, not on every labelled genome of the species and antibiotic. |
+| Copies | Genomes k-mer-identical to a cohort genome (same kset digest) are left out of the truth's scored set and counted by class; the plan does not name copies. |
+| Feature value | A cohort feature's value on a scored genome is the species-matrix bit of its lowest species pattern, one choice among the patterns the cohort's projection merged. |
+| Twin | The twin is r 25 at fold seed 45 on the same five cohorts, not Rules' default at seeds 45, 46 and 47. |
+| Seeds | Each line uses fold seed 42 with five cohort draws in place of Rules' fold seeds 42, 43 and 44. |
+| Code | The subsample arm sits on `grm learn --exp-cohort`, not on `grm arm` as the plan's Code column says. |
+| First run | The first run is the 89 BIG datasets outside M in 10 species, and the 19 in M wait for the maintainer's label rule. |
+| Breakpoints | The run gives the listed datasets the release's breakpoints, which the rebuilt table moves on 36 of the first run's 89 and no fit reads. |
+| Pairing | A dataset's difference from 25 is its mean error difference over shared available draws; it enters on 3 or more, and coverage counts those shared results at both lines. |
+| Cost | The first run is costed at 7.80 xlarge-hours central and 18.86 upper, against the plan's about 4.5. |
+
+**Draw.** Both classes walk one lineage order, and the draw refuses a class with r or fewer genomes.
+
+**Rulings.** The lead ruled three design items at 17:14Z on 22 Nov 2026, with no score of any cohort run read by anyone. All three sit in the scorer, `scripts/c1-cutoff/score.py`, and no fit changes. They are the rows Interval and Pairing above, and the row that decides.
+
+**Interval.** Every row counts coverage on two intervals, each with its median width: the fold range, which is what a report shows, and the levelled interval. With recall p_R in its Wilson 95% interval (l_R, u_R) and specificity p_S in (l_S, u_S), the levelled interval runs from b − ½·√((p_R − l_R)² + (p_S − l_S)²) to b + ½·√((u_R − p_R)² + (u_S − p_S)²), where b = (p_R + p_S) / 2. An edge counts as covered.
+
+**Level.** The release row compares coverage between lines. That comparison means something only when the interval has the same level at each line. The fold range has no nominal level and widens as r falls, so its coverage rises with its width. Each split builds its levelled interval from its own pooled counts.
+
+**Decides.** The row that decides is the lineage split with the truth on all scored genomes. A learner meets the release row when the median over datasets of its error minus 25's has a species interval wholly below 0.02 and its levelled coverage is within 0.05 of 25's. A line is a candidate when at least 3 of the 5 learners meet it, the form Rules' condition 1 takes for a change that touches all learners.
+
+**Others.** `count.tsv` marks that one row per line as the row that decides. Every other row is written and decides nothing: the truth on new lineages, the random and the study split, each learner alone, the fold range's coverage and the twin.
+
+**Pairs.** Draw d at a line lies inside draw d at 25, so the count pairs the two lines on their shared draws: the error at the line less the error at 25, draw by draw. Each line's own available draws and its coverage over all its own results are written beside. A dataset with no line at 25 is counted as not scored.
+
+**Resamples.** Each row's species resamples take their seed from the sha256 of its split, truth set, learner and line, so adding a row moves no other row's interval.
+
+The 36 first-run datasets whose breakpoint the rebuilt table moves:
+
+| Species | Antibiotics | Datasets |
+|---|---|---|
+| *Escherichia coli* | aztreonam, cefepime, cefotaxime, cefoxitin, ceftazidime, ceftriaxone, cefuroxime, ertapenem, piperacillin/tazobactam, tetracycline, tobramycin, trimethoprim | 12 |
+| *Klebsiella pneumoniae* | ampicillin/sulbactam, aztreonam, cefazolin, cefepime, cefoxitin, ceftazidime, ceftriaxone, ciprofloxacin, ertapenem, imipenem, levofloxacin, sulfamethoxazole/trimethoprim, tetracycline, tobramycin | 14 |
+| *Mycobacterium tuberculosis* | amikacin, delamanid, ethionamide, kanamycin, levofloxacin, linezolid, moxifloxacin, para-aminosalicylic acid, rifabutin, rifampin | 10 |
+
+The 19 BIG datasets in M, which wait for the maintainer's label rule:
+
+| Species | Antibiotics | Datasets |
+|---|---|---|
+| *Acinetobacter baumannii* | amikacin, ampicillin/sulbactam, imipenem, meropenem, tetracycline, tobramycin | 6 |
+| *Escherichia coli* | amoxicillin/clavulanate, ampicillin, ciprofloxacin, gentamicin, sulfamethoxazole/trimethoprim | 5 |
+| *Klebsiella pneumoniae* | amikacin, gentamicin, meropenem, piperacillin/tazobactam | 4 |
+| *Mycobacterium tuberculosis* | isoniazid | 1 |
+| *Neisseria gonorrhoeae* | azithromycin | 1 |
+| *Pseudomonas aeruginosa* | ciprofloxacin | 1 |
+| *Staphylococcus aureus* | oxacillin | 1 |
+
+**Cost.** The plan put part B at about 4.5 xlarge-hours, $0.90. A pilot on *Streptococcus pneumoniae* with erythromycin and the release's dataset sizes put the first run at 7.80 xlarge-hours central, $1.56, and 18.86 upper, $3.77. Fits make 4.83 of the 7.80, against the plan's 0.91, and the genome fetch 2.46, which the plan does not cost.
+
+**Fetch.** The run fetches genomes 8 at a time (`--workers 8`, `grm fetch fasta`'s own default) in place of 4. On the review's 16-CPU machine, the genome step of *Escherichia coli* with aztreonam, which fetches the 2,000 release genomes and checks each, took 389.3 s at 8 against 615.5 s at 4, with no retry logged.
+
+**Cuts.** With the pilot's genome step scaled by that ratio, the first run costs 6.90 xlarge-hours central, $1.38, and 17.51 upper, $3.50. The other cut, one species' fetch overlapping the previous species' fits, is left out.
+
+**Written.** This entry was written at 17:56Z on 22 Nov 2026, after the review and the lead's rulings and before the first run. No score of any cohort run had been read.

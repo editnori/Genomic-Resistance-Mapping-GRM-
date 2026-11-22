@@ -11,6 +11,7 @@ pub mod catalog;
 pub mod cluster;
 pub mod confine;
 pub mod curate;
+pub mod cutoff;
 pub mod dna;
 pub mod drugs;
 pub mod export;
