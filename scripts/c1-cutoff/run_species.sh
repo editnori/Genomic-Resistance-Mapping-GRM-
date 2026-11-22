@@ -120,6 +120,9 @@ ulimit -n "$(ulimit -Hn)" 2>/dev/null || true
 [ "$(ulimit -n)" = unlimited ] || [ "$(ulimit -n)" -ge 4096 ] \
   || { say "the open-file limit is $(ulimit -n), below the 4,096 grm matrix needs here"; false; }
 [ -z "$(git -C "$REPO" status --porcelain)" ] || { say "the checkout has changes; the binary must be its commit"; false; }
+# The scorer runs last and imports numpy; a box without it would fail only
+# after every fit.
+python3 -I -c 'import numpy' 2> /dev/null || { say "python3 has no numpy, which score.py needs"; false; }
 pinned "$KIT/rev14-274-20261112.tar.zst" c67155f598dbb1ebe1a4ab908e793124ebc058430a33c1c67d7e2058910256de
 pinned "$M" 7dd00779bc4b538b325d947137c525afb4e723ca494bd14b607a8730b7902887
 pinned "$KIT/curated.tar" d77e2c6f75f8d986268d0c075cb2ea364fba9972fa22a55139495ac0eb376d97
@@ -168,6 +171,14 @@ curated() {
   mkdir -p "$ROOT/curated" "$ROOT/bvbrc"
   tar -xf "$KIT/curated.tar" -C "$ROOT/curated"
   (cd "$ROOT/curated" && sha256sum --quiet -c "$KIT/curated.sha256")
+  # The input fingerprint hashes each dataset's breakpoint, which the rebuilt
+  # table's curation moves (its n and agreement) wherever QC passed one more
+  # genome with an MIC, while the genomes and calls stay the release's and no
+  # fit reads it (docs/mic-plan.md, the probe). The scorer needs the release
+  # report's fingerprint, so the listed datasets take the release's
+  # breakpoints; release_specs.py stops on any other difference.
+  python3 -I -B "$REPO/scripts/c6-mic/release_specs.py" "$ROOT/curated/datasets.json" "$R" "$DATASETS" "$W/specs"
+  cp "$W/specs/datasets.json" "$ROOT/curated/datasets.json"
   # Genome metadata feeds only a report's descriptive fields and is not in
   # the input fingerprint; the cohort experiment writes no report.
   : > "$ROOT/bvbrc/genomes.jsonl"
