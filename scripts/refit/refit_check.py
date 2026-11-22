@@ -36,8 +36,8 @@ which also checks the key order.
 Writes OUT_DIR/datasets.tsv (one row per dataset: field names that differ,
 no value; its last column, cards_with_other_locus, counts the feature cards
 whose `kmer` or `locus` differs) and OUT_DIR/learners.tsv (one row per
-dataset, split and learner), and prints the totals. Exit 1 when any fitted field or learner differs.
-No genome id, value or feature is written.
+dataset, split and learner), and prints the totals. Exit 1 when any fitted
+field or learner differs. No genome id, value or feature is written.
 """
 
 import json
