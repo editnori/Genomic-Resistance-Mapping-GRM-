@@ -58,7 +58,10 @@ import numpy as np
 FORMAT = "grm-cohort-draw-result-v1"
 REVISION = 14
 LEARNERS = ["scm", "cart", "rf", "gbt", "lasso"]
-SPLITS = ["lineage", "study"]
+# The study estimate's scheme as grm learn --exp-cohort writes it (src/cutoff.rs
+# STUDY_SCHEME); its rows here are named split "study".
+STUDY_SCHEME = "study-whole"
+SPLITS = {"lineage": "lineage", "study": STUDY_SCHEME}
 TRUTHS = ["all", "new_lineage"]
 Z = 1.959963984540054
 MARGIN = 0.02
@@ -216,7 +219,7 @@ def check(exp, doc, report, cohort_sha):
     add("each truth scores the scored genomes and new lineages", ok)
     ok = True
     schemes = [e["scheme"] for e in doc.get("estimates", [])]
-    ok = schemes[:2] == ["random", "lineage"] and (schemes[2:] == (["study"] if exp["study"] == "1" else []))
+    ok = schemes[:2] == ["random", "lineage"] and (schemes[2:] == ([STUDY_SCHEME] if exp["study"] == "1" else []))
     for e in doc.get("estimates", []):
         if e.get("unavailable") is None:
             ok = ok and [x["learner"] for x in e["learners"]] == LEARNERS
@@ -236,10 +239,10 @@ def score_rows(exp, doc):
     truth = doc.get("truth") or {}
     t_ok = truth.get("unavailable") is None
     t_rows = {t["learner"]: t for t in truth.get("learners", [])}
-    for split in SPLITS:
-        if split not in est:
+    for split, scheme in SPLITS.items():
+        if scheme not in est:
             continue
-        e = est[split]
+        e = est[scheme]
         e_ok = e.get("unavailable") is None
         e_rows = {x["learner"]: x for x in e.get("learners", [])}
         for ts in TRUTHS:

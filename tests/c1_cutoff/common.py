@@ -69,7 +69,7 @@ def result(r=25, draw=0, seed=42, dataset=DATASET, samples_=140, resistant=60, c
 
     estimates = [split("random"), split("lineage", lineage_unavailable)]
     if study:
-        estimates.append(split("study"))
+        estimates.append(split("study-whole"))
     if truth_from_folds:
         all_ = calls(r, r, est_tp, est_tn)
     else:

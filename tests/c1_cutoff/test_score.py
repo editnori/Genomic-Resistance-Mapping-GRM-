@@ -53,6 +53,18 @@ class Checks(unittest.TestCase):
         self.assertEqual(failed(self.e, common.result(), self.rep, sha="d" * 64), ["cohort file sha256"])
         self.assertIn("each estimate scores the cohort", failed(self.e, common.result(study=True), self.rep))
 
+    def test_the_study_estimate_carries_the_scheme_grm_writes(self):
+        # grm learn --exp-cohort names the study estimate src/cutoff.rs's STUDY_SCHEME.
+        src = (Path(__file__).resolve().parents[2] / "src" / "cutoff.rs").read_text()
+        self.assertIn(f'pub const STUDY_SCHEME: &str = "{score.STUDY_SCHEME}";', src)
+        doc = common.result(study=True)
+        self.assertEqual([e["scheme"] for e in doc["estimates"]][2:], [score.STUDY_SCHEME])
+        self.assertEqual(failed(common.expect_row(study="1"), doc, self.rep), [])
+        doc["estimates"][2]["scheme"] = "study"
+        self.assertIn("each estimate scores the cohort", failed(common.expect_row(study="1"), doc, self.rep))
+        rows = score.score_rows(common.expect_row(study="1"), common.result(study=True))
+        self.assertEqual(sorted({r["split"] for r in rows}), ["lineage", "study"])
+
     def test_planted_a_cohort_genome_scored_as_left_out_fails_the_sum_check(self):
         doc = common.result()
         doc["scored"]["samples"] += 1
