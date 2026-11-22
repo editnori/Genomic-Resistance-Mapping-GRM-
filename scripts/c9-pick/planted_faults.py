@@ -65,7 +65,9 @@ def run_test(tree, kind, name, log, env):
     if kind == "rust":
         cmd = ["cargo", "test", "--release", "--locked", "--lib", "--", "--exact", name]
     else:
-        cmd = ["python3", "-s", "-P", "-B", "-W", "error", "-m", "unittest", name]
+        # As CI runs the suite: discover from the top, so `tests` imports under -P.
+        suite = "/".join(name.split(".")[:2])
+        cmd = ["python3", "-s", "-P", "-B", "-W", "error", "-m", "unittest", "discover", "-s", suite, "-t", ".", "-k", name]
         env = {"PATH": "/usr/bin:/bin", "HOME": env.get("HOME", "/tmp"), "PYTHONHASHSEED": "0"}
     with open(log, "w") as f:
         p = subprocess.run(cmd, cwd=tree, env=env, stdout=f, stderr=subprocess.STDOUT)
