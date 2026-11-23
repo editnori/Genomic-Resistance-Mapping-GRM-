@@ -1,0 +1,562 @@
+species	class	periods	family	earlier_genomes	later_genomes	earlier_mix	later_mix
+Acinetobacter baumannii	AMINOGLYCOSIDE	primary	aac(3)-IId	7	0	0.031250000000	0.000000000000
+Acinetobacter baumannii	AMINOGLYCOSIDE	primary	aac(3)-Ia	47	25	0.064568383417	0.031638888889
+Acinetobacter baumannii	AMINOGLYCOSIDE	primary	aac(6')-Ib'	41	8	0.039689800405	0.004907916158
+Acinetobacter baumannii	AMINOGLYCOSIDE	primary	aadA1	63	14	0.072951736759	0.013598087098
+Acinetobacter baumannii	AMINOGLYCOSIDE	primary	aadA2	23	26	0.021100545481	0.040312500000
+Acinetobacter baumannii	AMINOGLYCOSIDE	primary	ant(2'')-Ia	43	29	0.062272593248	0.046895833333
+Acinetobacter baumannii	AMINOGLYCOSIDE	primary	ant(3'')-IIa	151	169	0.296256321751	0.259708664021
+Acinetobacter baumannii	AMINOGLYCOSIDE	primary	aph(3'')-Ib	69	124	0.100016585582	0.164863044363
+Acinetobacter baumannii	AMINOGLYCOSIDE	primary	aph(3')-Ia	60	76	0.058604968303	0.059096484534
+Acinetobacter baumannii	AMINOGLYCOSIDE	primary	aph(3')-VIa	67	96	0.065065921105	0.097514066952
+Acinetobacter baumannii	AMINOGLYCOSIDE	primary	aph(3')-VIb	7	17	0.031250000000	0.009934472934
+Acinetobacter baumannii	AMINOGLYCOSIDE	primary	aph(6)-Id	62	127	0.068766585582	0.170529711030
+Acinetobacter baumannii	AMINOGLYCOSIDE	primary	armA	39	80	0.045551601648	0.070645095645
+Acinetobacter baumannii	AMINOGLYCOSIDE	primary	other families	41	12	0.042654956720	0.030355235043
+Acinetobacter baumannii	AMINOGLYCOSIDE	secondary	aac(3)-IId	0	7	0.000000000000	0.019886363636
+Acinetobacter baumannii	AMINOGLYCOSIDE	secondary	aac(3)-IIe	23	23	0.009850003498	0.009313513284
+Acinetobacter baumannii	AMINOGLYCOSIDE	secondary	aac(3)-Ia	232	78	0.101572068587	0.058644602769
+Acinetobacter baumannii	AMINOGLYCOSIDE	secondary	aac(6')	57	17	0.004372883798	0.016712405242
+Acinetobacter baumannii	AMINOGLYCOSIDE	secondary	aac(6')-Ib	6	10	0.006362655293	0.008104477222
+Acinetobacter baumannii	AMINOGLYCOSIDE	secondary	aac(6')-Ib'	63	49	0.030150103520	0.026221559153
+Acinetobacter baumannii	AMINOGLYCOSIDE	secondary	aadA1	296	81	0.132099427692	0.054363025530
+Acinetobacter baumannii	AMINOGLYCOSIDE	secondary	aadA2	19	49	0.001813551837	0.015971479501
+Acinetobacter baumannii	AMINOGLYCOSIDE	secondary	ant(2'')-Ia	370	74	0.063817448311	0.046292971734
+Acinetobacter baumannii	AMINOGLYCOSIDE	secondary	ant(3'')-IIa	757	328	0.251439282295	0.277420858220
+Acinetobacter baumannii	AMINOGLYCOSIDE	secondary	ant(3'')-Ia	15	0	0.000981557525	0.000000000000
+Acinetobacter baumannii	AMINOGLYCOSIDE	secondary	aph(3'')-Ib	373	197	0.072430534022	0.132840916281
+Acinetobacter baumannii	AMINOGLYCOSIDE	secondary	aph(3')-Ia	383	140	0.150584997061	0.065605888237
+Acinetobacter baumannii	AMINOGLYCOSIDE	secondary	aph(3')-VIa	298	165	0.074349965128	0.068106486379
+Acinetobacter baumannii	AMINOGLYCOSIDE	secondary	aph(3')-VIb	13	25	0.001294335182	0.024755568506
+Acinetobacter baumannii	AMINOGLYCOSIDE	secondary	aph(6)-Id	378	193	0.072901201361	0.115101017291
+Acinetobacter baumannii	AMINOGLYCOSIDE	secondary	armA	54	119	0.025168219462	0.057323313679
+Acinetobacter baumannii	AMINOGLYCOSIDE	secondary	other families	3	4	0.000811765431	0.003335553336
+Acinetobacter baumannii	BETA-LACTAM	primary	blaADC	152	167	0.421368600072	0.416976495726
+Acinetobacter baumannii	BETA-LACTAM	primary	blaGES	0	5	0.000000000000	0.011709401709
+Acinetobacter baumannii	BETA-LACTAM	primary	blaOXA	152	169	0.421368600072	0.422104700855
+Acinetobacter baumannii	BETA-LACTAM	primary	blaPSE	7	0	0.041666666667	0.000000000000
+Acinetobacter baumannii	BETA-LACTAM	primary	blaTEM	42	83	0.101310418904	0.126602564103
+Acinetobacter baumannii	BETA-LACTAM	primary	other families	3	16	0.014285714286	0.022606837607
+Acinetobacter baumannii	BETA-LACTAM	secondary	blaADC	765	327	0.446600584533	0.414078421578
+Acinetobacter baumannii	BETA-LACTAM	secondary	blaCMY	7	0	0.001171352075	0.000000000000
+Acinetobacter baumannii	BETA-LACTAM	secondary	blaMCA	10	0	0.001673360107	0.000000000000
+Acinetobacter baumannii	BETA-LACTAM	secondary	blaOXA	764	329	0.446098576501	0.416409423909
+Acinetobacter baumannii	BETA-LACTAM	secondary	blaPER	28	20	0.004255115701	0.017371517372
+Acinetobacter baumannii	BETA-LACTAM	secondary	blaPSE	0	7	0.000000000000	0.026515151515
+Acinetobacter baumannii	BETA-LACTAM	secondary	blaRTG	19	0	0.002581755594	0.000000000000
+Acinetobacter baumannii	BETA-LACTAM	secondary	blaTEM	217	126	0.096232757115	0.119895104895
+Acinetobacter baumannii	BETA-LACTAM	secondary	other families	9	6	0.001386498374	0.005730380730
+Acinetobacter baumannii	MACROLIDE	primary	mph(E)	80	95	0.500000000000	0.500000000000
+Acinetobacter baumannii	MACROLIDE	primary	msr(E)	80	95	0.500000000000	0.500000000000
+Acinetobacter baumannii	MACROLIDE	secondary	mph(E)	85	176	0.485294117647	0.500000000000
+Acinetobacter baumannii	MACROLIDE	secondary	msr(E)	85	176	0.485294117647	0.500000000000
+Acinetobacter baumannii	MACROLIDE	secondary	other families	1	0	0.029411764706	0.000000000000
+Acinetobacter baumannii	PHENICOL	primary	catB8	42	8	0.600000000000	0.666666666667
+Acinetobacter baumannii	PHENICOL	primary	other families	6	6	0.400000000000	0.333333333333
+Acinetobacter baumannii	PHENICOL	secondary	catA1	50	7	0.575268817204	0.112103174603
+Acinetobacter baumannii	PHENICOL	secondary	catB8	63	50	0.333333333333	0.622023809524
+Acinetobacter baumannii	PHENICOL	secondary	floR	12	5	0.064516129032	0.081349206349
+Acinetobacter baumannii	PHENICOL	secondary	other families	5	5	0.026881720430	0.184523809524
+Acinetobacter baumannii	RIFAMYCIN	primary	other families	3	1	1.000000000000	1.000000000000
+Acinetobacter baumannii	STREPTOGRAMIN	primary	msr(E)	80	95	1.000000000000	1.000000000000
+Acinetobacter baumannii	STREPTOGRAMIN	secondary	msr(E)	85	176	0.970588235294	1.000000000000
+Acinetobacter baumannii	STREPTOGRAMIN	secondary	other families	1	0	0.029411764706	0.000000000000
+Acinetobacter baumannii	STREPTOTHRICIN	secondary	other families	11	2	1.000000000000	1.000000000000
+Acinetobacter baumannii	SULFONAMIDE	primary	sul1	99	53	0.699852914139	0.365493646139
+Acinetobacter baumannii	SULFONAMIDE	primary	sul2	44	65	0.300147085861	0.634506353861
+Acinetobacter baumannii	SULFONAMIDE	secondary	sul1	459	156	0.844076060458	0.528384494294
+Acinetobacter baumannii	SULFONAMIDE	secondary	sul2	297	113	0.155923939542	0.471615505706
+Acinetobacter baumannii	TETRACYCLINE	primary	tet(B)	58	106	0.673611111111	0.933883116883
+Acinetobacter baumannii	TETRACYCLINE	primary	other families	11	5	0.326388888889	0.066116883117
+Acinetobacter baumannii	TETRACYCLINE	secondary	tet(39)	59	12	0.041095890411	0.149833333333
+Acinetobacter baumannii	TETRACYCLINE	secondary	tet(A)	179	7	0.461567732116	0.085119047619
+Acinetobacter baumannii	TETRACYCLINE	secondary	tet(B)	303	165	0.497336377473	0.765047619048
+Acinetobacter baumannii	TRIMETHOPRIM	primary	dfrA16	7	0	0.333333333333	0.000000000000
+Acinetobacter baumannii	TRIMETHOPRIM	primary	dfrA44	7	0	0.291666666667	0.000000000000
+Acinetobacter baumannii	TRIMETHOPRIM	primary	dfrA7	0	5	0.000000000000	0.750000000000
+Acinetobacter baumannii	TRIMETHOPRIM	primary	other families	4	3	0.375000000000	0.250000000000
+Acinetobacter baumannii	TRIMETHOPRIM	secondary	dfrA16	0	7	0.000000000000	0.200000000000
+Acinetobacter baumannii	TRIMETHOPRIM	secondary	other families	20	19	1.000000000000	0.800000000000
+Enterococcus faecium	AMINOGLYCOSIDE	primary	aac(6')-I	236	545	0.506895994832	0.559539709853
+Enterococcus faecium	AMINOGLYCOSIDE	primary	aac(6')-Ie/aph(2'')-Ia	17	144	0.129735949612	0.132177622072
+Enterococcus faecium	AMINOGLYCOSIDE	primary	ant(6)-Ia	102	211	0.176166828165	0.126571034934
+Enterococcus faecium	AMINOGLYCOSIDE	primary	aph(3')-IIIa	95	226	0.165205103359	0.142205174295
+Enterococcus faecium	AMINOGLYCOSIDE	primary	spw	11	17	0.004844961240	0.005958061903
+Enterococcus faecium	AMINOGLYCOSIDE	primary	other families	6	54	0.017151162791	0.033548396942
+Enterococcus faecium	GLYCOPEPTIDE	primary	vanA	132	303	0.125263709087	0.133820769459
+Enterococcus faecium	GLYCOPEPTIDE	primary	vanB	25	41	0.025531834355	0.023323259321
+Enterococcus faecium	GLYCOPEPTIDE	primary	vanH-A	132	302	0.125263709087	0.129191139829
+Enterococcus faecium	GLYCOPEPTIDE	primary	vanH-B	25	41	0.025531834355	0.023323259321
+Enterococcus faecium	GLYCOPEPTIDE	primary	vanR-A	130	296	0.124137582961	0.099240684988
+Enterococcus faecium	GLYCOPEPTIDE	primary	vanR-B	25	40	0.025531834355	0.023163387219
+Enterococcus faecium	GLYCOPEPTIDE	primary	vanS-A	132	298	0.125263709087	0.105799326964
+Enterococcus faecium	GLYCOPEPTIDE	primary	vanS-B	25	40	0.025531834355	0.023163387219
+Enterococcus faecium	GLYCOPEPTIDE	primary	vanW-B	25	41	0.025531834355	0.023323259321
+Enterococcus faecium	GLYCOPEPTIDE	primary	vanX-A	132	303	0.125263709087	0.133820769459
+Enterococcus faecium	GLYCOPEPTIDE	primary	vanX-B	25	41	0.025531834355	0.023323259321
+Enterococcus faecium	GLYCOPEPTIDE	primary	vanY-A	76	293	0.098793120852	0.120829378946
+Enterococcus faecium	GLYCOPEPTIDE	primary	vanY-B	25	41	0.025531834355	0.023323259321
+Enterococcus faecium	GLYCOPEPTIDE	primary	vanZ-A	72	268	0.097291619350	0.114354859313
+Enterococcus faecium	LINCOSAMIDE	primary	cfr(D)	0	43	0.000000000000	0.051502870652
+Enterococcus faecium	LINCOSAMIDE	primary	erm(B)	182	339	0.769459560393	0.675058213084
+Enterococcus faecium	LINCOSAMIDE	primary	erm(T)	9	107	0.051567612747	0.178033308908
+Enterococcus faecium	LINCOSAMIDE	primary	lnu(B)	30	27	0.079825544174	0.026209213555
+Enterococcus faecium	LINCOSAMIDE	primary	lsa(E)	22	25	0.052430110969	0.022624984164
+Enterococcus faecium	LINCOSAMIDE	primary	other families	3	45	0.046717171717	0.046571409637
+Enterococcus faecium	MACROLIDE	primary	erm(B)	182	339	0.323018015346	0.290340690806
+Enterococcus faecium	MACROLIDE	primary	erm(T)	9	107	0.030669099035	0.106171343215
+Enterococcus faecium	MACROLIDE	primary	mef(H)	90	20	0.055358626009	0.011753993461
+Enterococcus faecium	MACROLIDE	primary	msr(C)	234	545	0.580537592944	0.565681029439
+Enterococcus faecium	MACROLIDE	primary	other families	1	39	0.010416666667	0.026052943079
+Enterococcus faecium	OXAZOLIDINONE	primary	cfr(D)	0	43	0.000000000000	0.453488372093
+Enterococcus faecium	OXAZOLIDINONE	primary	other families	3	55	1.000000000000	0.546511627907
+Enterococcus faecium	PHENICOL	primary	cfr(D)	0	43	0.000000000000	0.078349944629
+Enterococcus faecium	PHENICOL	primary	fexA	0	35	0.000000000000	0.037606127722
+Enterococcus faecium	PHENICOL	primary	other families	5	93	1.000000000000	0.884043927649
+Enterococcus faecium	PLEUROMUTILIN	primary	cfr(D)	0	43	0.000000000000	0.666666666667
+Enterococcus faecium	PLEUROMUTILIN	primary	other families	1	1	1.000000000000	0.333333333333
+Enterococcus faecium	STREPTOGRAMIN	primary	cfr(D)	0	43	0.000000000000	0.034466584112
+Enterococcus faecium	STREPTOGRAMIN	primary	erm(B)	182	339	0.340139762300	0.294620225954
+Enterococcus faecium	STREPTOGRAMIN	primary	erm(T)	9	107	0.026910546195	0.094307362766
+Enterococcus faecium	STREPTOGRAMIN	primary	lsa(E)	22	25	0.038375306518	0.017250434441
+Enterococcus faecium	STREPTOGRAMIN	primary	msr(C)	234	545	0.592023364578	0.558326870423
+Enterococcus faecium	STREPTOGRAMIN	primary	other families	1	2	0.002551020408	0.001028522305
+Enterococcus faecium	STREPTOTHRICIN	primary	sat4	57	159	1.000000000000	1.000000000000
+Enterococcus faecium	TETRACYCLINE	primary	tet(L)	76	212	0.338080085900	0.271321582380
+Enterococcus faecium	TETRACYCLINE	primary	tet(M)	122	383	0.581506652001	0.681826601841
+Enterococcus faecium	TETRACYCLINE	primary	tet(S)	6	14	0.080413262099	0.046851815778
+Enterococcus faecium	TRIMETHOPRIM	primary	dfrF	114	86	0.448225516622	0.390723808691
+Enterococcus faecium	TRIMETHOPRIM	primary	dfrG	130	266	0.551774483378	0.609276191309
+Escherichia coli	AMINOGLYCOSIDE	primary	aac(3)-IId	32	37	0.054079988511	0.038075624886
+Escherichia coli	AMINOGLYCOSIDE	primary	aac(3)-IIe	30	57	0.038482719370	0.069719410721
+Escherichia coli	AMINOGLYCOSIDE	primary	aac(3)-VIa	0	5	0.000000000000	0.003122040073
+Escherichia coli	AMINOGLYCOSIDE	primary	aac(6')-Ib-cr	56	87	0.094618412639	0.068679058207
+Escherichia coli	AMINOGLYCOSIDE	primary	aadA1	44	60	0.071791568642	0.111278471680
+Escherichia coli	AMINOGLYCOSIDE	primary	aadA2	20	60	0.034830108465	0.112309641952
+Escherichia coli	AMINOGLYCOSIDE	primary	aadA5	83	130	0.107324636897	0.129528829847
+Escherichia coli	AMINOGLYCOSIDE	primary	ant(2'')-Ia	5	0	0.004675022116	0.000000000000
+Escherichia coli	AMINOGLYCOSIDE	primary	aph(3'')-Ib	142	183	0.278303332792	0.217504550743
+Escherichia coli	AMINOGLYCOSIDE	primary	aph(3')-Ia	19	42	0.019670577036	0.021773093937
+Escherichia coli	AMINOGLYCOSIDE	primary	aph(6)-Id	129	184	0.261948986689	0.220154823967
+Escherichia coli	AMINOGLYCOSIDE	primary	other families	22	10	0.034274646842	0.007854453986
+Escherichia coli	AMINOGLYCOSIDE	secondary	aac(3)-IId	9	69	0.015802794511	0.053335569373
+Escherichia coli	AMINOGLYCOSIDE	secondary	aac(3)-VIa	35	5	0.041313559322	0.001528951487
+Escherichia coli	AMINOGLYCOSIDE	secondary	aac(6')-Ib	0	10	0.000000000000	0.007639967174
+Escherichia coli	AMINOGLYCOSIDE	secondary	aac(6')-Ib-cr	12	144	0.020833333333	0.070309341576
+Escherichia coli	AMINOGLYCOSIDE	secondary	aadA1	40	104	0.101749664112	0.101522801628
+Escherichia coli	AMINOGLYCOSIDE	secondary	aadA2	7	80	0.017435915980	0.077691603859
+Escherichia coli	AMINOGLYCOSIDE	secondary	aadA5	41	214	0.111930993411	0.119365197884
+Escherichia coli	AMINOGLYCOSIDE	secondary	aph(3'')-Ib	160	325	0.325489744828	0.239109679183
+Escherichia coli	AMINOGLYCOSIDE	secondary	aph(3')-Ia	6	61	0.008391203704	0.023678663251
+Escherichia coli	AMINOGLYCOSIDE	secondary	aph(6)-Id	159	313	0.319235561428	0.239424504786
+Escherichia coli	AMINOGLYCOSIDE	secondary	rmtB	0	12	0.000000000000	0.014348718574
+Escherichia coli	AMINOGLYCOSIDE	secondary	other families	34	102	0.037817229369	0.052045001225
+Escherichia coli	BETA-LACTAM	primary	blaCMY	28	25	0.100559440559	0.102420078106
+Escherichia coli	BETA-LACTAM	primary	blaCTX-M	109	217	0.311638361638	0.317796702865
+Escherichia coli	BETA-LACTAM	primary	blaKPC	13	0	0.017857142857	0.000000000000
+Escherichia coli	BETA-LACTAM	primary	blaOXA	68	90	0.191187244128	0.066626059407
+Escherichia coli	BETA-LACTAM	primary	blaTEM	145	168	0.365662572721	0.504830556530
+Escherichia coli	BETA-LACTAM	primary	other families	11	11	0.013095238095	0.008326603092
+Escherichia coli	BETA-LACTAM	secondary	blaCMY	54	53	0.173633279557	0.097562500422
+Escherichia coli	BETA-LACTAM	secondary	blaCTX-M	19	327	0.051852097033	0.304996997900
+Escherichia coli	BETA-LACTAM	secondary	blaKPC	0	13	0.000000000000	0.010416666667
+Escherichia coli	BETA-LACTAM	secondary	blaOXA	24	159	0.084962560866	0.114997257841
+Escherichia coli	BETA-LACTAM	secondary	blaPSE	0	5	0.000000000000	0.003378995434
+Escherichia coli	BETA-LACTAM	secondary	blaSHV	7	9	0.019171415005	0.006456718346
+Escherichia coli	BETA-LACTAM	secondary	blaTEM	171	313	0.670380647539	0.460497671114
+Escherichia coli	BETA-LACTAM	secondary	other families	0	8	0.000000000000	0.001693192276
+Escherichia coli	COLISTIN	primary	mcr-1	9	13	1.000000000000	1.000000000000
+Escherichia coli	LINCOSAMIDE	primary	other families	3	10	1.000000000000	1.000000000000
+Escherichia coli	LINCOSAMIDE	secondary	other families	2	13	1.000000000000	1.000000000000
+Escherichia coli	MACROLIDE	primary	mph(A)	98	145	0.494545186496	0.399385964912
+Escherichia coli	MACROLIDE	primary	mrx(A)	98	145	0.494545186496	0.359912280702
+Escherichia coli	MACROLIDE	primary	other families	5	40	0.010909627009	0.240701754386
+Escherichia coli	MACROLIDE	secondary	mph(A)	49	244	0.476041666667	0.447420862335
+Escherichia coli	MACROLIDE	secondary	mrx(A)	49	244	0.476041666667	0.427474053825
+Escherichia coli	MACROLIDE	secondary	other families	7	45	0.047916666667	0.125105083840
+Escherichia coli	PHENICOL	primary	catA1	23	35	0.212994572829	0.187695105820
+Escherichia coli	PHENICOL	primary	catB3	59	88	0.379538690476	0.328085317460
+Escherichia coli	PHENICOL	primary	cmlA1	9	25	0.075520833333	0.169431216931
+Escherichia coli	PHENICOL	primary	floR	26	48	0.319669117647	0.307982804233
+Escherichia coli	PHENICOL	primary	other families	2	4	0.012276785714	0.006805555556
+Escherichia coli	PHENICOL	secondary	catA1	28	58	0.594375000000	0.217967994947
+Escherichia coli	PHENICOL	secondary	catB3	13	148	0.128125000000	0.343900114871
+Escherichia coli	PHENICOL	secondary	floR	48	74	0.240000000000	0.306036895752
+Escherichia coli	PHENICOL	secondary	other families	3	40	0.037500000000	0.132094994431
+Escherichia coli	QUINOLONE	primary	aac(6')-Ib-cr	56	87	0.556122448980	0.452307692308
+Escherichia coli	QUINOLONE	primary	qnrB	7	5	0.147959183673	0.209230769231
+Escherichia coli	QUINOLONE	primary	other families	4	28	0.295918367347	0.338461538462
+Escherichia coli	QUINOLONE	secondary	aac(6')-Ib-cr	12	144	0.461538461538	0.474331550802
+Escherichia coli	QUINOLONE	secondary	other families	5	44	0.538461538462	0.525668449198
+Escherichia coli	RIFAMYCIN	primary	other families	4	3	1.000000000000	1.000000000000
+Escherichia coli	RIFAMYCIN	secondary	other families	3	7	1.000000000000	1.000000000000
+Escherichia coli	STREPTOGRAMIN	primary	other families	2	7	1.000000000000	1.000000000000
+Escherichia coli	STREPTOGRAMIN	secondary	other families	2	9	1.000000000000	1.000000000000
+Escherichia coli	STREPTOTHRICIN	primary	sat2	15	14	0.750000000000	1.000000000000
+Escherichia coli	STREPTOTHRICIN	primary	other families	1	0	0.250000000000	0.000000000000
+Escherichia coli	STREPTOTHRICIN	secondary	sat2	11	29	1.000000000000	0.857142857143
+Escherichia coli	STREPTOTHRICIN	secondary	other families	0	1	0.000000000000	0.142857142857
+Escherichia coli	SULFONAMIDE	primary	sul1	117	177	0.352124549406	0.395225947053
+Escherichia coli	SULFONAMIDE	primary	sul2	135	179	0.604810984939	0.442505687977
+Escherichia coli	SULFONAMIDE	primary	sul3	9	35	0.043064465655	0.162268364970
+Escherichia coli	SULFONAMIDE	secondary	sul1	124	295	0.396460429318	0.383912229747
+Escherichia coli	SULFONAMIDE	secondary	sul2	171	314	0.595963813106	0.513685062301
+Escherichia coli	SULFONAMIDE	secondary	other families	2	44	0.007575757576	0.102402707952
+Escherichia coli	TETRACYCLINE	primary	tet(A)	109	212	0.606086354866	0.743938371570
+Escherichia coli	TETRACYCLINE	primary	tet(B)	57	53	0.385063394507	0.227052406658
+Escherichia coli	TETRACYCLINE	primary	other families	3	8	0.008850250627	0.029009221772
+Escherichia coli	TETRACYCLINE	secondary	tet(A)	129	321	0.556101190476	0.686190441053
+Escherichia coli	TETRACYCLINE	secondary	tet(B)	88	111	0.433482142857	0.293819010996
+Escherichia coli	TETRACYCLINE	secondary	other families	2	11	0.010416666667	0.019990547951
+Escherichia coli	TRIMETHOPRIM	primary	dfrA1	23	25	0.222149668325	0.102175252087
+Escherichia coli	TRIMETHOPRIM	primary	dfrA12	17	45	0.092970752299	0.344866546707
+Escherichia coli	TRIMETHOPRIM	primary	dfrA14	15	47	0.084798545153	0.106504915324
+Escherichia coli	TRIMETHOPRIM	primary	dfrA17	88	137	0.378304500226	0.392167514563
+Escherichia coli	TRIMETHOPRIM	primary	dfrA7	7	0	0.046092454395	0.000000000000
+Escherichia coli	TRIMETHOPRIM	primary	other families	22	15	0.175684079602	0.054285771319
+Escherichia coli	TRIMETHOPRIM	secondary	dfrA1	28	48	0.160127965044	0.193760426655
+Escherichia coli	TRIMETHOPRIM	secondary	dfrA12	6	62	0.045895755306	0.191261359615
+Escherichia coli	TRIMETHOPRIM	secondary	dfrA14	36	62	0.209144818976	0.106257653181
+Escherichia coli	TRIMETHOPRIM	secondary	dfrA17	41	226	0.248673533084	0.376626492666
+Escherichia coli	TRIMETHOPRIM	secondary	dfrA5	6	15	0.097284644195	0.020462063142
+Escherichia coli	TRIMETHOPRIM	secondary	dfrA7	23	7	0.141596441948	0.030484638212
+Escherichia coli	TRIMETHOPRIM	secondary	dfrA8	24	6	0.066690074906	0.019308090151
+Escherichia coli	TRIMETHOPRIM	secondary	other families	2	17	0.030586766542	0.061839276377
+Klebsiella pneumoniae	AMINOGLYCOSIDE	primary	aac(3)-IId	51	30	0.062885119136	0.076643589744
+Klebsiella pneumoniae	AMINOGLYCOSIDE	primary	aac(3)-IIe	150	28	0.056462493708	0.053286768267
+Klebsiella pneumoniae	AMINOGLYCOSIDE	primary	aac(3)-IVa	32	0	0.010545284972	0.000000000000
+Klebsiella pneumoniae	AMINOGLYCOSIDE	primary	aac(6')-Ib	150	31	0.122872325070	0.088906208282
+Klebsiella pneumoniae	AMINOGLYCOSIDE	primary	aac(6')-Ib-cr	166	65	0.097294506540	0.142961526647
+Klebsiella pneumoniae	AMINOGLYCOSIDE	primary	aadA1	93	15	0.049544898262	0.058231490342
+Klebsiella pneumoniae	AMINOGLYCOSIDE	primary	aadA16	8	29	0.014549640611	0.072013053613
+Klebsiella pneumoniae	AMINOGLYCOSIDE	primary	aadA2	198	41	0.107166922666	0.091442266570
+Klebsiella pneumoniae	AMINOGLYCOSIDE	primary	aph(3'')-Ib	231	66	0.155384313352	0.143376583196
+Klebsiella pneumoniae	AMINOGLYCOSIDE	primary	aph(3')-Ia	124	21	0.062401026065	0.043019899853
+Klebsiella pneumoniae	AMINOGLYCOSIDE	primary	aph(3')-VI	8	0	0.002519832762	0.000000000000
+Klebsiella pneumoniae	AMINOGLYCOSIDE	primary	aph(4)-Ia	32	0	0.010545284972	0.000000000000
+Klebsiella pneumoniae	AMINOGLYCOSIDE	primary	aph(6)-Id	230	66	0.150384313352	0.145653506273
+Klebsiella pneumoniae	AMINOGLYCOSIDE	primary	rmtB	9	10	0.010553398896	0.015151515152
+Klebsiella pneumoniae	AMINOGLYCOSIDE	primary	rmtF	7	18	0.019775586049	0.032323232323
+Klebsiella pneumoniae	AMINOGLYCOSIDE	primary	other families	84	12	0.067115053586	0.036990359738
+Klebsiella pneumoniae	BETA-LACTAM	primary	blaCMY	10	0	0.008102063511	0.000000000000
+Klebsiella pneumoniae	BETA-LACTAM	primary	blaCTX-M	352	121	0.186344588078	0.245374699014
+Klebsiella pneumoniae	BETA-LACTAM	primary	blaDHA	5	9	0.005076148430	0.010416666667
+Klebsiella pneumoniae	BETA-LACTAM	primary	blaKPC	194	6	0.087686011080	0.011369315342
+Klebsiella pneumoniae	BETA-LACTAM	primary	blaLAP	20	9	0.002279547553	0.025646551724
+Klebsiella pneumoniae	BETA-LACTAM	primary	blaLEN	12	0	0.002931301939	0.000000000000
+Klebsiella pneumoniae	BETA-LACTAM	primary	blaNDM	25	12	0.035253929414	0.014848484848
+Klebsiella pneumoniae	BETA-LACTAM	primary	blaOXA	298	67	0.154618504216	0.111803240696
+Klebsiella pneumoniae	BETA-LACTAM	primary	blaSHV	600	154	0.330960743941	0.379548237245
+Klebsiella pneumoniae	BETA-LACTAM	primary	blaTEM	295	107	0.161625964009	0.200099947321
+Klebsiella pneumoniae	BETA-LACTAM	primary	other families	20	1	0.025121197827	0.000892857143
+Klebsiella pneumoniae	BLEOMYCIN	primary	ble	25	12	1.000000000000	0.333333333333
+Klebsiella pneumoniae	BLEOMYCIN	primary	other families	0	3	0.000000000000	0.666666666667
+Klebsiella pneumoniae	FOSFOMYCIN	primary	fosA	615	156	0.994364517106	0.977324487107
+Klebsiella pneumoniae	FOSFOMYCIN	primary	fosA7	24	7	0.005635482894	0.022675512893
+Klebsiella pneumoniae	LINCOSAMIDE	primary	erm(B)	16	16	0.958333333333	0.566666666667
+Klebsiella pneumoniae	LINCOSAMIDE	primary	other families	1	9	0.041666666667	0.433333333333
+Klebsiella pneumoniae	MACROLIDE	primary	ere(A)	10	0	0.046879827000	0.000000000000
+Klebsiella pneumoniae	MACROLIDE	primary	erm(B)	16	16	0.121262180862	0.084796817278
+Klebsiella pneumoniae	MACROLIDE	primary	estX	34	0	0.035787528371	0.000000000000
+Klebsiella pneumoniae	MACROLIDE	primary	mph(A)	189	52	0.282803664397	0.412077294686
+Klebsiella pneumoniae	MACROLIDE	primary	mrx(A)	189	52	0.282803664397	0.412077294686
+Klebsiella pneumoniae	MACROLIDE	primary	other families	32	4	0.230463134973	0.091048593350
+Klebsiella pneumoniae	NITROFURAN	primary	oqxA	554	134	0.652409269519	0.740716267535
+Klebsiella pneumoniae	NITROFURAN	primary	oqxB	315	71	0.347590730481	0.259283732465
+Klebsiella pneumoniae	PHENICOL	primary	catA1	141	16	0.085791494942	0.029816017316
+Klebsiella pneumoniae	PHENICOL	primary	catA2	65	18	0.031475784122	0.025054112554
+Klebsiella pneumoniae	PHENICOL	primary	catB	9	18	0.019756863452	0.031818181818
+Klebsiella pneumoniae	PHENICOL	primary	catB3	162	37	0.098852562411	0.069145021645
+Klebsiella pneumoniae	PHENICOL	primary	cmlA1	32	0	0.016370047193	0.000000000000
+Klebsiella pneumoniae	PHENICOL	primary	cmlA5	19	6	0.022133422708	0.019069264069
+Klebsiella pneumoniae	PHENICOL	primary	floR	12	28	0.009290309260	0.077348484848
+Klebsiella pneumoniae	PHENICOL	primary	floR2	9	0	0.015489130435	0.000000000000
+Klebsiella pneumoniae	PHENICOL	primary	oqxA	586	151	0.349780312123	0.370144300144
+Klebsiella pneumoniae	PHENICOL	primary	oqxB	587	151	0.350128501538	0.370144300144
+Klebsiella pneumoniae	PHENICOL	primary	other families	3	3	0.000931571816	0.007460317460
+Klebsiella pneumoniae	QUINOLONE	primary	aac(6')-Ib-cr	166	65	0.110234954586	0.114478323609
+Klebsiella pneumoniae	QUINOLONE	primary	oqxA	586	151	0.378947541947	0.332719273480
+Klebsiella pneumoniae	QUINOLONE	primary	oqxB	587	151	0.379298665543	0.332719273480
+Klebsiella pneumoniae	QUINOLONE	primary	qnrB	158	70	0.099517371578	0.146384026601
+Klebsiella pneumoniae	QUINOLONE	primary	qnrS	56	37	0.030263404548	0.072508626639
+Klebsiella pneumoniae	QUINOLONE	primary	other families	3	1	0.001738061798	0.001190476190
+Klebsiella pneumoniae	RIFAMYCIN	primary	arr	28	22	0.579158936302	0.347916666667
+Klebsiella pneumoniae	RIFAMYCIN	primary	arr-3	16	31	0.420841063698	0.652083333333
+Klebsiella pneumoniae	STREPTOGRAMIN	primary	erm(B)	16	16	0.489377289377	0.607142857143
+Klebsiella pneumoniae	STREPTOGRAMIN	primary	other families	30	3	0.510622710623	0.392857142857
+Klebsiella pneumoniae	STREPTOTHRICIN	primary	other families	13	1	1.000000000000	1.000000000000
+Klebsiella pneumoniae	SULFONAMIDE	primary	sul1	284	75	0.478945554194	0.489438510687
+Klebsiella pneumoniae	SULFONAMIDE	primary	sul2	226	72	0.488981961640	0.510561489313
+Klebsiella pneumoniae	SULFONAMIDE	primary	sul3	29	0	0.032072484166	0.000000000000
+Klebsiella pneumoniae	TETRACYCLINE	primary	oqxA	554	134	0.428380230734	0.476917229216
+Klebsiella pneumoniae	TETRACYCLINE	primary	oqxB	315	71	0.270081860440	0.201551088333
+Klebsiella pneumoniae	TETRACYCLINE	primary	tet(A)	164	67	0.184643763191	0.253013163933
+Klebsiella pneumoniae	TETRACYCLINE	primary	tet(D)	107	21	0.096468025198	0.057407407407
+Klebsiella pneumoniae	TETRACYCLINE	primary	tet(G)	9	0	0.019202898551	0.000000000000
+Klebsiella pneumoniae	TETRACYCLINE	primary	other families	5	1	0.001223221886	0.011111111111
+Klebsiella pneumoniae	TRIMETHOPRIM	primary	dfrA1	42	8	0.059681039535	0.066275017253
+Klebsiella pneumoniae	TRIMETHOPRIM	primary	dfrA12	185	32	0.349271046632	0.182657004831
+Klebsiella pneumoniae	TRIMETHOPRIM	primary	dfrA14	227	53	0.409039146868	0.398671497585
+Klebsiella pneumoniae	TRIMETHOPRIM	primary	dfrA22	6	0	0.002798507463	0.000000000000
+Klebsiella pneumoniae	TRIMETHOPRIM	primary	dfrA23	6	0	0.012228260870	0.000000000000
+Klebsiella pneumoniae	TRIMETHOPRIM	primary	dfrA27	10	29	0.031001243781	0.244642857143
+Klebsiella pneumoniae	TRIMETHOPRIM	primary	dfrA50	37	14	0.063354356790	0.049347826087
+Klebsiella pneumoniae	TRIMETHOPRIM	primary	other families	33	10	0.072626398061	0.058405797101
+Pseudomonas aeruginosa	AMINOGLYCOSIDE	secondary	aac(6')-Ib	20	42	0.060139750580	0.040657741074
+Pseudomonas aeruginosa	AMINOGLYCOSIDE	secondary	aac(6')-Ib'	13	5	0.007021996616	0.001769626770
+Pseudomonas aeruginosa	AMINOGLYCOSIDE	secondary	aac(6')-Il	14	16	0.011023375321	0.005346954097
+Pseudomonas aeruginosa	AMINOGLYCOSIDE	secondary	aadA1	8	19	0.038766506415	0.008269519520
+Pseudomonas aeruginosa	AMINOGLYCOSIDE	secondary	aadA2	10	11	0.022466629066	0.004324324324
+Pseudomonas aeruginosa	AMINOGLYCOSIDE	secondary	aadA6	13	34	0.030938146268	0.030609657276
+Pseudomonas aeruginosa	AMINOGLYCOSIDE	secondary	ant(2'')-Ia	19	30	0.039581195893	0.033095416845
+Pseudomonas aeruginosa	AMINOGLYCOSIDE	secondary	aph(3'')-Ib	18	24	0.020315795128	0.012317138567
+Pseudomonas aeruginosa	AMINOGLYCOSIDE	secondary	aph(3')-IIb	230	318	0.685948432842	0.801678583345
+Pseudomonas aeruginosa	AMINOGLYCOSIDE	secondary	aph(3')-VIb	0	5	0.000000000000	0.001569426569
+Pseudomonas aeruginosa	AMINOGLYCOSIDE	secondary	aph(6)-Id	18	24	0.020315795128	0.012317138567
+Pseudomonas aeruginosa	AMINOGLYCOSIDE	secondary	rmtD	5	0	0.002115059222	0.000000000000
+Pseudomonas aeruginosa	AMINOGLYCOSIDE	secondary	other families	33	60	0.061367317523	0.048044473044
+Pseudomonas aeruginosa	BETA-LACTAM	secondary	blaOXA	233	322	0.487545753459	0.473928040796
+Pseudomonas aeruginosa	BETA-LACTAM	secondary	blaPDC	233	321	0.487545753459	0.472583954775
+Pseudomonas aeruginosa	BETA-LACTAM	secondary	blaPER	0	5	0.000000000000	0.003175587853
+Pseudomonas aeruginosa	BETA-LACTAM	secondary	blaPSE	6	7	0.015137415472	0.002912186380
+Pseudomonas aeruginosa	BETA-LACTAM	secondary	blaVIM	7	22	0.003489670575	0.010568060971
+Pseudomonas aeruginosa	BETA-LACTAM	secondary	other families	12	28	0.006281407035	0.036832169225
+Pseudomonas aeruginosa	BLEOMYCIN	secondary	other families	1	2	1.000000000000	1.000000000000
+Pseudomonas aeruginosa	FOSFOMYCIN	secondary	fosA	229	318	1.000000000000	1.000000000000
+Pseudomonas aeruginosa	MACROLIDE	secondary	other families	2	1	1.000000000000	1.000000000000
+Pseudomonas aeruginosa	PHENICOL	secondary	catB7	226	317	0.895077720207	0.939801090616
+Pseudomonas aeruginosa	PHENICOL	secondary	cmlA1	0	5	0.000000000000	0.002717391304
+Pseudomonas aeruginosa	PHENICOL	secondary	cmlA5	5	5	0.063939263097	0.003952569170
+Pseudomonas aeruginosa	PHENICOL	secondary	cmx	7	5	0.005181347150	0.003684947299
+Pseudomonas aeruginosa	PHENICOL	secondary	floR2	10	18	0.027741796200	0.039983164983
+Pseudomonas aeruginosa	PHENICOL	secondary	other families	11	15	0.008059873345	0.009860836627
+Pseudomonas aeruginosa	RIFAMYCIN	secondary	other families	2	4	1.000000000000	1.000000000000
+Pseudomonas aeruginosa	STREPTOGRAMIN	secondary	other families	2	1	1.000000000000	1.000000000000
+Pseudomonas aeruginosa	SULFONAMIDE	secondary	sul1	64	101	0.993589743590	1.000000000000
+Pseudomonas aeruginosa	SULFONAMIDE	secondary	other families	2	0	0.006410256410	0.000000000000
+Pseudomonas aeruginosa	TETRACYCLINE	secondary	tet(C)	0	5	0.000000000000	0.069444444444
+Pseudomonas aeruginosa	TETRACYCLINE	secondary	tet(G)	13	21	0.528846153846	0.670138888889
+Pseudomonas aeruginosa	TETRACYCLINE	secondary	tmexC	0	6	0.000000000000	0.026620370370
+Pseudomonas aeruginosa	TETRACYCLINE	secondary	tmexD	0	6	0.000000000000	0.026620370370
+Pseudomonas aeruginosa	TETRACYCLINE	secondary	toprJ	0	6	0.000000000000	0.026620370370
+Pseudomonas aeruginosa	TETRACYCLINE	secondary	other families	6	4	0.471153846154	0.180555555556
+Pseudomonas aeruginosa	TRIMETHOPRIM	secondary	other families	7	17	1.000000000000	1.000000000000
+Salmonella enterica	AMINOGLYCOSIDE	primary	aac(3)-IId	22	24	0.021409590546	0.011024386317
+Salmonella enterica	AMINOGLYCOSIDE	primary	aac(3)-IIe	7	8	0.009513888889	0.036910095579
+Salmonella enterica	AMINOGLYCOSIDE	primary	aac(3)-IVa	51	58	0.016447052539	0.035738940405
+Salmonella enterica	AMINOGLYCOSIDE	primary	aac(3)-VIa	70	0	0.034040216728	0.000000000000
+Salmonella enterica	AMINOGLYCOSIDE	primary	aac(6')-Ib-cr	48	50	0.016128034547	0.070119913364
+Salmonella enterica	AMINOGLYCOSIDE	primary	aac(6')-Il	5	0	0.002009803922	0.000000000000
+Salmonella enterica	AMINOGLYCOSIDE	primary	aadA1	115	101	0.147344667247	0.223183498685
+Salmonella enterica	AMINOGLYCOSIDE	primary	aadA2	49	69	0.045739670334	0.028346097334
+Salmonella enterica	AMINOGLYCOSIDE	primary	aadA22	6	9	0.008125000000	0.003047336401
+Salmonella enterica	AMINOGLYCOSIDE	primary	aadA5	34	34	0.008493933898	0.032254111544
+Salmonella enterica	AMINOGLYCOSIDE	primary	aadA7	5	7	0.007096306471	0.003172043011
+Salmonella enterica	AMINOGLYCOSIDE	primary	aph(3'')-Ib	240	226	0.249847987806	0.223246195716
+Salmonella enterica	AMINOGLYCOSIDE	primary	aph(3')-IIa	56	18	0.026034957145	0.018766079957
+Salmonella enterica	AMINOGLYCOSIDE	primary	aph(3')-Ia	118	71	0.085584995216	0.033715973425
+Salmonella enterica	AMINOGLYCOSIDE	primary	aph(4)-Ia	51	58	0.016447052539	0.035738940405
+Salmonella enterica	AMINOGLYCOSIDE	primary	aph(6)-Id	236	228	0.253912320804	0.223963041594
+Salmonella enterica	AMINOGLYCOSIDE	primary	armA	23	11	0.005919117647	0.011168062904
+Salmonella enterica	AMINOGLYCOSIDE	primary	grdA	5	0	0.002619301994	0.000000000000
+Salmonella enterica	AMINOGLYCOSIDE	primary	other families	53	24	0.043286101727	0.009605283359
+Salmonella enterica	AMINOGLYCOSIDE	secondary	aac(3)-IId	18	46	0.034217443250	0.013687146344
+Salmonella enterica	AMINOGLYCOSIDE	secondary	aac(3)-IIe	0	15	0.000000000000	0.020702702791
+Salmonella enterica	AMINOGLYCOSIDE	secondary	aac(3)-IIg	22	6	0.045613415259	0.007932750120
+Salmonella enterica	AMINOGLYCOSIDE	secondary	aac(3)-IVa	7	109	0.032712585034	0.018647022047
+Salmonella enterica	AMINOGLYCOSIDE	secondary	aac(3)-Id	0	8	0.000000000000	0.001767351209
+Salmonella enterica	AMINOGLYCOSIDE	secondary	aac(3)-VIa	6	70	0.018222222222	0.027654812211
+Salmonella enterica	AMINOGLYCOSIDE	secondary	aac(6')-IIc	22	6	0.045613415259	0.007932750120
+Salmonella enterica	AMINOGLYCOSIDE	secondary	aac(6')-Il	0	5	0.000000000000	0.001194638695
+Salmonella enterica	AMINOGLYCOSIDE	secondary	aadA1	25	216	0.052022998805	0.156646075939
+Salmonella enterica	AMINOGLYCOSIDE	secondary	aadA2	19	120	0.084566521591	0.043172983553
+Salmonella enterica	AMINOGLYCOSIDE	secondary	aadA22	0	15	0.000000000000	0.002213031685
+Salmonella enterica	AMINOGLYCOSIDE	secondary	aadA5	6	68	0.039319727891	0.015939747938
+Salmonella enterica	AMINOGLYCOSIDE	secondary	aph(3'')-Ib	82	468	0.202005211762	0.239529792507
+Salmonella enterica	AMINOGLYCOSIDE	secondary	aph(3')-Ia	34	191	0.078294973545	0.087997883860
+Salmonella enterica	AMINOGLYCOSIDE	secondary	aph(4)-Ia	6	109	0.030490362812	0.018647022047
+Salmonella enterica	AMINOGLYCOSIDE	secondary	aph(6)-Ic	0	14	0.000000000000	0.002365890369
+Salmonella enterica	AMINOGLYCOSIDE	secondary	aph(6)-Id	82	466	0.202005211762	0.238067499111
+Salmonella enterica	AMINOGLYCOSIDE	secondary	grdA	0	5	0.000000000000	0.002381183631
+Salmonella enterica	AMINOGLYCOSIDE	secondary	other families	18	181	0.134915910809	0.093519715821
+Salmonella enterica	BETA-LACTAM	primary	blaCMY	295	56	0.368746295577	0.028901734104
+Salmonella enterica	BETA-LACTAM	primary	blaCTX-M	65	95	0.178537081472	0.335125928984
+Salmonella enterica	BETA-LACTAM	primary	blaOXA	49	49	0.047828282828	0.143120928526
+Salmonella enterica	BETA-LACTAM	primary	blaSHV	5	0	0.020143779343	0.000000000000
+Salmonella enterica	BETA-LACTAM	primary	blaTEM	173	288	0.359208998323	0.489894715111
+Salmonella enterica	BETA-LACTAM	primary	other families	18	4	0.025535562456	0.002956693275
+Salmonella enterica	BETA-LACTAM	secondary	blaCMY	43	351	0.312516087516	0.323667754465
+Salmonella enterica	BETA-LACTAM	secondary	blaCTX-M	38	160	0.219490596587	0.190975360296
+Salmonella enterica	BETA-LACTAM	secondary	blaOXA	20	98	0.077863993025	0.075928324717
+Salmonella enterica	BETA-LACTAM	secondary	blaSCO	17	0	0.030645161290	0.000000000000
+Salmonella enterica	BETA-LACTAM	secondary	blaSHV	19	7	0.089285714286	0.023994344857
+Salmonella enterica	BETA-LACTAM	secondary	blaTEM	49	463	0.251279528376	0.364139288383
+Salmonella enterica	BETA-LACTAM	secondary	other families	4	22	0.018918918919	0.021294927283
+Salmonella enterica	BLEOMYCIN	primary	ble	56	18	0.522962962963	0.290598290598
+Salmonella enterica	BLEOMYCIN	primary	bleO	17	35	0.477037037037	0.709401709402
+Salmonella enterica	BLEOMYCIN	secondary	other families	5	124	1.000000000000	1.000000000000
+Salmonella enterica	COLISTIN	primary	mcr-3	0	10	0.000000000000	0.500000000000
+Salmonella enterica	COLISTIN	primary	other families	3	5	1.000000000000	0.500000000000
+Salmonella enterica	COLISTIN	secondary	mcr-1	0	7	0.000000000000	0.500000000000
+Salmonella enterica	COLISTIN	secondary	other families	1	11	1.000000000000	0.500000000000
+Salmonella enterica	FOSFOMYCIN	primary	fosA	37	36	0.322916666667	0.717803030303
+Salmonella enterica	FOSFOMYCIN	primary	fosA7	57	13	0.677083333333	0.282196969697
+Salmonella enterica	FOSFOMYCIN	secondary	fosA	5	73	0.500000000000	0.350000000000
+Salmonella enterica	FOSFOMYCIN	secondary	other families	3	70	0.500000000000	0.650000000000
+Salmonella enterica	LINCOSAMIDE	primary	other families	4	16	1.000000000000	1.000000000000
+Salmonella enterica	MACROLIDE	primary	estX	15	39	0.519841269841	0.441686879187
+Salmonella enterica	MACROLIDE	primary	mph(A)	60	40	0.114880952381	0.231772638023
+Salmonella enterica	MACROLIDE	primary	mrx(A)	60	40	0.114880952381	0.231772638023
+Salmonella enterica	MACROLIDE	primary	other families	10	12	0.250396825397	0.094767844768
+Salmonella enterica	MACROLIDE	secondary	ere(A)	22	6	0.347301587302	0.171428571429
+Salmonella enterica	MACROLIDE	secondary	erm(42)	0	5	0.000000000000	0.010164530929
+Salmonella enterica	MACROLIDE	secondary	mph(A)	17	100	0.186587301587	0.129219129512
+Salmonella enterica	MACROLIDE	secondary	mrx(A)	17	100	0.186587301587	0.129219129512
+Salmonella enterica	MACROLIDE	secondary	other families	5	66	0.279523809524	0.559968638618
+Salmonella enterica	NITROFURAN	primary	oqxA	25	29	0.494047619048	0.504629629630
+Salmonella enterica	NITROFURAN	primary	oqxB	26	30	0.505952380952	0.495370370370
+Salmonella enterica	NITROFURAN	secondary	oqxA	5	54	0.500000000000	0.504318181818
+Salmonella enterica	NITROFURAN	secondary	oqxB	5	56	0.500000000000	0.495681818182
+Salmonella enterica	PHENICOL	primary	catA1	18	13	0.121786833856	0.256617647059
+Salmonella enterica	PHENICOL	primary	catA2	11	14	0.052272727273	0.018171296296
+Salmonella enterica	PHENICOL	primary	catB3	48	47	0.050402298851	0.170231141068
+Salmonella enterica	PHENICOL	primary	cmlA1	11	55	0.050325421705	0.088608387800
+Salmonella enterica	PHENICOL	primary	floR	156	127	0.613830671244	0.382820783406
+Salmonella enterica	PHENICOL	primary	oqxA	25	34	0.035284619595	0.039988198983
+Salmonella enterica	PHENICOL	primary	oqxB	26	32	0.035859332239	0.037428286129
+Salmonella enterica	PHENICOL	primary	other families	15	3	0.040238095238	0.006134259259
+Salmonella enterica	PHENICOL	secondary	catA1	0	31	0.000000000000	0.150859919066
+Salmonella enterica	PHENICOL	secondary	catA2	41	27	0.308211143695	0.052922077922
+Salmonella enterica	PHENICOL	secondary	cmlA5	18	15	0.058064516129	0.029410173160
+Salmonella enterica	PHENICOL	secondary	floR	49	283	0.414190755481	0.556153930610
+Salmonella enterica	PHENICOL	secondary	oqxA	5	59	0.047956989247	0.022508861911
+Salmonella enterica	PHENICOL	secondary	oqxB	5	58	0.047956989247	0.022103017755
+Salmonella enterica	PHENICOL	secondary	other families	9	147	0.123619606200	0.166042019575
+Salmonella enterica	QUINOLONE	primary	aac(6')-Ib-cr	48	50	0.133442265795	0.339133522727
+Salmonella enterica	QUINOLONE	primary	oqxA	25	34	0.139161220044	0.092211174242
+Salmonella enterica	QUINOLONE	primary	oqxB	26	32	0.140795206972	0.084635416667
+Salmonella enterica	QUINOLONE	primary	qnrB	6	5	0.343253968254	0.136600378788
+Salmonella enterica	QUINOLONE	primary	qnrS	8	78	0.240079365079	0.341737689394
+Salmonella enterica	QUINOLONE	primary	other families	1	2	0.003267973856	0.005681818182
+Salmonella enterica	QUINOLONE	secondary	oqxA	5	59	0.100000000000	0.107818469854
+Salmonella enterica	QUINOLONE	secondary	oqxB	5	58	0.100000000000	0.105861522691
+Salmonella enterica	QUINOLONE	secondary	other families	12	189	0.800000000000	0.786320007455
+Salmonella enterica	RIFAMYCIN	primary	arr-3	49	50	0.541666666667	0.773148148148
+Salmonella enterica	RIFAMYCIN	primary	other families	4	7	0.458333333333	0.226851851852
+Salmonella enterica	RIFAMYCIN	secondary	arr	38	13	0.540000000000	0.514640522876
+Salmonella enterica	RIFAMYCIN	secondary	arr-3	7	99	0.460000000000	0.485359477124
+Salmonella enterica	STREPTOGRAMIN	primary	other families	3	8	1.000000000000	1.000000000000
+Salmonella enterica	STREPTOGRAMIN	secondary	other families	2	11	1.000000000000	1.000000000000
+Salmonella enterica	SULFONAMIDE	primary	sul1	195	117	0.395615007785	0.403988364764
+Salmonella enterica	SULFONAMIDE	primary	sul2	310	252	0.581913404440	0.544256812791
+Salmonella enterica	SULFONAMIDE	primary	sul3	14	69	0.022471587774	0.051754822444
+Salmonella enterica	SULFONAMIDE	secondary	sul1	65	314	0.481851851852	0.348648308692
+Salmonella enterica	SULFONAMIDE	secondary	sul2	81	564	0.505185185185	0.621807822164
+Salmonella enterica	SULFONAMIDE	secondary	other families	3	83	0.012962962963	0.029543869145
+Salmonella enterica	TETRACYCLINE	primary	oqxA	25	29	0.018181902408	0.048622442756
+Salmonella enterica	TETRACYCLINE	primary	oqxB	26	30	0.019967616693	0.046924131201
+Salmonella enterica	TETRACYCLINE	primary	tet(A)	334	195	0.626516945006	0.687251810073
+Salmonella enterica	TETRACYCLINE	primary	tet(B)	68	111	0.237344469298	0.158116268056
+Salmonella enterica	TETRACYCLINE	primary	tet(M)	11	41	0.026911621843	0.055924088146
+Salmonella enterica	TETRACYCLINE	primary	other families	21	4	0.071077444753	0.003161259768
+Salmonella enterica	TETRACYCLINE	secondary	oqxA	5	54	0.068518518519	0.018739416322
+Salmonella enterica	TETRACYCLINE	secondary	oqxB	5	56	0.068518518519	0.019769704216
+Salmonella enterica	TETRACYCLINE	secondary	tet(A)	52	529	0.499007936508	0.650029268648
+Salmonella enterica	TETRACYCLINE	secondary	other families	32	248	0.363955026455	0.311461610813
+Salmonella enterica	TRIMETHOPRIM	primary	dfrA1	5	8	0.047385620915	0.029252704031
+Salmonella enterica	TRIMETHOPRIM	primary	dfrA12	20	58	0.321604938272	0.165940008860
+Salmonella enterica	TRIMETHOPRIM	primary	dfrA14	5	31	0.173148148148	0.379898862200
+Salmonella enterica	TRIMETHOPRIM	primary	dfrA17	35	34	0.117283950617	0.162441786336
+Salmonella enterica	TRIMETHOPRIM	primary	dfrA7	13	7	0.084967320261	0.166666666667
+Salmonella enterica	TRIMETHOPRIM	primary	other families	13	57	0.255610021786	0.095799971906
+Salmonella enterica	TRIMETHOPRIM	secondary	dfrA12	8	78	0.234983579639	0.195991285793
+Salmonella enterica	TRIMETHOPRIM	secondary	dfrA17	6	69	0.157142857143	0.122356829507
+Salmonella enterica	TRIMETHOPRIM	secondary	dfrA19	18	7	0.213965517241	0.089772727273
+Salmonella enterica	TRIMETHOPRIM	secondary	other families	29	134	0.393908045977	0.591879157428
+Staphylococcus aureus	AMINOGLYCOSIDE	primary	aac(6')-Ie/aph(2'')-Ia	92	108	0.356489729510	0.315021753791
+Staphylococcus aureus	AMINOGLYCOSIDE	primary	aadD1	88	47	0.081762761847	0.152682459919
+Staphylococcus aureus	AMINOGLYCOSIDE	primary	ant(6)-Ia	181	129	0.178895668090	0.129396658618
+Staphylococcus aureus	AMINOGLYCOSIDE	primary	ant(9)-Ia	82	24	0.203956172463	0.254720028715
+Staphylococcus aureus	AMINOGLYCOSIDE	primary	aph(3')-IIIa	119	105	0.151910209477	0.091759120277
+Staphylococcus aureus	AMINOGLYCOSIDE	primary	spw	62	18	0.026985458613	0.052448606670
+Staphylococcus aureus	AMINOGLYCOSIDE	primary	other families	0	2	0.000000000000	0.003971372012
+Staphylococcus aureus	AMINOGLYCOSIDE	secondary	aac(6')-Ie/aph(2'')-Ia	100	200	0.095375982043	0.306292496742
+Staphylococcus aureus	AMINOGLYCOSIDE	secondary	aadD1	16	135	0.171863075196	0.159806719210
+Staphylococcus aureus	AMINOGLYCOSIDE	secondary	ant(6)-Ia	100	310	0.127586980920	0.169143404488
+Staphylococcus aureus	AMINOGLYCOSIDE	secondary	ant(9)-Ia	104	106	0.477586980920	0.178647097760
+Staphylococcus aureus	AMINOGLYCOSIDE	secondary	aph(3')-IIIa	100	224	0.127586980920	0.132167840142
+Staphylococcus aureus	AMINOGLYCOSIDE	secondary	spw	0	80	0.000000000000	0.050752496227
+Staphylococcus aureus	AMINOGLYCOSIDE	secondary	other families	0	2	0.000000000000	0.003189945431
+Staphylococcus aureus	BETA-LACTAM	primary	blaI	328	702	0.220237305988	0.312849271180
+Staphylococcus aureus	BETA-LACTAM	primary	blaR1	285	542	0.178425345548	0.226156149487
+Staphylococcus aureus	BETA-LACTAM	primary	blaZ	327	701	0.219777747164	0.312607725286
+Staphylococcus aureus	BETA-LACTAM	primary	mecA	312	196	0.181872814016	0.100135675597
+Staphylococcus aureus	BETA-LACTAM	primary	mecI	57	19	0.053815259027	0.002064412238
+Staphylococcus aureus	BETA-LACTAM	primary	mecR1	212	127	0.144033292962	0.042550402576
+Staphylococcus aureus	BETA-LACTAM	primary	other families	1	1	0.001838235294	0.003636363636
+Staphylococcus aureus	BETA-LACTAM	secondary	blaI	114	1030	0.189316837846	0.272554658640
+Staphylococcus aureus	BETA-LACTAM	secondary	blaR1	106	827	0.123373793962	0.198818646403
+Staphylococcus aureus	BETA-LACTAM	secondary	blaZ	113	1028	0.173443821973	0.272137294039
+Staphylococcus aureus	BETA-LACTAM	secondary	mecA	112	508	0.187138188609	0.135000491198
+Staphylococcus aureus	BETA-LACTAM	secondary	mecI	102	76	0.109430438842	0.036142750791
+Staphylococcus aureus	BETA-LACTAM	secondary	mecR1	112	339	0.187138188609	0.081204744789
+Staphylococcus aureus	BETA-LACTAM	secondary	other families	3	2	0.030158730159	0.004141414141
+Staphylococcus aureus	BLEOMYCIN	primary	bleO	22	10	1.000000000000	1.000000000000
+Staphylococcus aureus	BLEOMYCIN	secondary	bleO	6	32	1.000000000000	1.000000000000
+Staphylococcus aureus	FOSFOMYCIN	primary	fosB	205	417	1.000000000000	0.967575904764
+Staphylococcus aureus	FOSFOMYCIN	primary	fosY	0	42	0.000000000000	0.032424095236
+Staphylococcus aureus	FOSFOMYCIN	secondary	fosB	106	622	1.000000000000	0.978554907346
+Staphylococcus aureus	FOSFOMYCIN	secondary	fosY	0	42	0.000000000000	0.021445092654
+Staphylococcus aureus	FUSIDIC ACID	primary	fusB	6	7	0.500000000000	0.500000000000
+Staphylococcus aureus	FUSIDIC ACID	primary	other families	3	1	0.500000000000	0.500000000000
+Staphylococcus aureus	FUSIDIC ACID	secondary	other families	1	17	1.000000000000	1.000000000000
+Staphylococcus aureus	LINCOSAMIDE	primary	erm(A)	82	23	0.471481130149	0.113686995266
+Staphylococcus aureus	LINCOSAMIDE	primary	erm(B)	78	154	0.154690618762	0.137041467305
+Staphylococcus aureus	LINCOSAMIDE	primary	erm(C)	123	120	0.276256068721	0.468778005620
+Staphylococcus aureus	LINCOSAMIDE	primary	lnu(A)	6	28	0.006806518975	0.088109161793
+Staphylococcus aureus	LINCOSAMIDE	primary	lnu(B)	62	18	0.041749833666	0.087200956938
+Staphylococcus aureus	LINCOSAMIDE	primary	lnu(G)	0	23	0.000000000000	0.017105263158
+Staphylococcus aureus	LINCOSAMIDE	primary	lsa(E)	62	18	0.041749833666	0.087200956938
+Staphylococcus aureus	LINCOSAMIDE	primary	other families	3	1	0.007265996061	0.000877192982
+Staphylococcus aureus	LINCOSAMIDE	secondary	erm(A)	105	105	0.668300653595	0.333374303507
+Staphylococcus aureus	LINCOSAMIDE	secondary	erm(B)	0	232	0.000000000000	0.105098551891
+Staphylococcus aureus	LINCOSAMIDE	secondary	erm(C)	17	243	0.328431372549	0.323332141474
+Staphylococcus aureus	LINCOSAMIDE	secondary	lnu(B)	0	80	0.000000000000	0.078432555645
+Staphylococcus aureus	LINCOSAMIDE	secondary	lnu(G)	0	23	0.000000000000	0.008628318584
+Staphylococcus aureus	LINCOSAMIDE	secondary	lsa(E)	0	80	0.000000000000	0.078432555645
+Staphylococcus aureus	LINCOSAMIDE	secondary	other families	2	37	0.003267973856	0.072701573255
+Staphylococcus aureus	MACROLIDE	primary	erm(A)	82	23	0.472401562251	0.113794100636
+Staphylococcus aureus	MACROLIDE	primary	erm(B)	78	154	0.158536585366	0.126153846154
+Staphylococcus aureus	MACROLIDE	primary	erm(C)	123	120	0.359257930815	0.556975130133
+Staphylococcus aureus	MACROLIDE	primary	other families	3	5	0.009803921569	0.203076923077
+Staphylococcus aureus	MACROLIDE	secondary	erm(A)	105	105	0.604901960784	0.296493448764
+Staphylococcus aureus	MACROLIDE	secondary	erm(B)	0	232	0.000000000000	0.098349056604
+Staphylococcus aureus	MACROLIDE	secondary	erm(C)	17	243	0.295098039216	0.432331344958
+Staphylococcus aureus	MACROLIDE	secondary	other families	2	8	0.100000000000	0.172826149674
+Staphylococcus aureus	MUPIROCIN	primary	other families	5	2	1.000000000000	1.000000000000
+Staphylococcus aureus	MUPIROCIN	secondary	mupA	14	7	1.000000000000	1.000000000000
+Staphylococcus aureus	PHENICOL	primary	catA	40	84	0.771317829457	0.706871345029
+Staphylococcus aureus	PHENICOL	primary	fexA	59	22	0.228682170543	0.293128654971
+Staphylococcus aureus	PHENICOL	secondary	fexA	0	81	0.000000000000	0.289588189588
+Staphylococcus aureus	PHENICOL	secondary	other families	2	124	1.000000000000	0.710411810412
+Staphylococcus aureus	STREPTOGRAMIN	primary	erm(B)	78	154	0.158536585366	0.129189857761
+Staphylococcus aureus	STREPTOGRAMIN	primary	erm(C)	123	120	0.757904245709	0.558763141620
+Staphylococcus aureus	STREPTOGRAMIN	primary	lsa(E)	62	18	0.065040650407	0.108781694496
+Staphylococcus aureus	STREPTOGRAMIN	primary	other families	2	5	0.018518518519	0.203265306122
+Staphylococcus aureus	STREPTOGRAMIN	secondary	erm(B)	0	232	0.000000000000	0.098299622138
+Staphylococcus aureus	STREPTOGRAMIN	secondary	erm(C)	17	243	0.833333333333	0.622685111683
+Staphylococcus aureus	STREPTOGRAMIN	secondary	lsa(E)	0	80	0.000000000000	0.102782099726
+Staphylococcus aureus	STREPTOGRAMIN	secondary	other families	2	7	0.166666666667	0.176233166453
+Staphylococcus aureus	STREPTOTHRICIN	primary	sat4	44	31	1.000000000000	1.000000000000
+Staphylococcus aureus	STREPTOTHRICIN	secondary	sat4	100	75	1.000000000000	1.000000000000
+Staphylococcus aureus	TETRACYCLINE	primary	tet(K)	85	284	0.489244860743	0.641838888765
+Staphylococcus aureus	TETRACYCLINE	primary	tet(L)	63	26	0.134698275862	0.265058427168
+Staphylococcus aureus	TETRACYCLINE	primary	tet(M)	38	31	0.376056863395	0.093102684068
+Staphylococcus aureus	TETRACYCLINE	secondary	tet(K)	87	369	0.440594059406	0.541673233741
+Staphylococcus aureus	TETRACYCLINE	secondary	tet(L)	0	89	0.000000000000	0.211110847274
+Staphylococcus aureus	TETRACYCLINE	secondary	tet(M)	99	69	0.559405940594	0.247215918985
+Staphylococcus aureus	TRIMETHOPRIM	primary	dfrG	85	111	0.902518656716	0.832070707071
+Staphylococcus aureus	TRIMETHOPRIM	primary	other families	4	67	0.097481343284	0.167929292929
+Staphylococcus aureus	TRIMETHOPRIM	secondary	dfrE	0	64	0.000000000000	0.063755020080
+Staphylococcus aureus	TRIMETHOPRIM	secondary	dfrG	98	196	0.494949494949	0.869728915663
+Staphylococcus aureus	TRIMETHOPRIM	secondary	other families	2	7	0.505050505051	0.066516064257

@@ -1,0 +1,22 @@
+species	species_slug	datasets	in_m	entered	hard_check_pass	learner_rows_equal	learner_rows	m1_primary_both_ten	m1_m_both_ten	m2_genomes	m2_no_table	m2_genomes_2010_2014	m2_genomes_2015_2019	m2_classes	m2_pass_primary	m2_pass_secondary	m2_moves_point	m2_moves_tvd
+Acinetobacter baumannii	acinetobacter_baumannii	18	11	18	18	216	216	0	0	1702	0	360	187	15	15	15	0	0
+Campylobacter coli	campylobacter_coli	7	0	7	7	84	84	0	0	391	0	50	309	8	0	0	0	0
+Campylobacter jejuni	campylobacter_jejuni	4	0	4	4	48	48	0	0	508	0	12	477	9	0	0	0	0
+Clostridioides difficile	clostridioides_difficile	4	0	4	4	48	48	0	0	204	0	1	0	15	0	0	0	0
+Corynebacterium diphtheriae	corynebacterium_diphtheriae	3	0	3	3	36	36	0	0	243	0	49	96	11	0	0	0	0
+Enterobacter cloacae	enterobacter_cloacae	9	0	9	9	108	108	0	0	270	0	148	20	15	0	0	0	0
+Enterococcus faecium	enterococcus_faecium	13	2	13	13	156	156	0	0	2000	0	247	552	17	17	0	0	0
+Escherichia coli	escherichia_coli	36	7	36	36	432	432	3	3	2000	0	579	521	21	21	21	0	0
+Klebsiella aerogenes	klebsiella_aerogenes	3	0	3	3	36	36	0	0	93	0	55	28	13	0	0	0	0
+Klebsiella oxytoca	klebsiella_oxytoca	4	0	4	4	48	48	0	0	112	0	0	15	11	0	0	0	0
+Klebsiella pneumoniae	klebsiella_pneumoniae	37	6	37	37	444	444	11	2	2000	0	659	174	19	19	0	0	0
+Klebsiella quasipneumoniae	klebsiella_quasipneumoniae	3	0	3	3	36	36	0	0	109	0	59	13	14	0	0	0	0
+Neisseria gonorrhoeae	neisseria_gonorrhoeae	7	1	7	7	84	84	0	0	2000	0	282	1097	9	0	0	0	0
+Pseudomonas aeruginosa	pseudomonas_aeruginosa	13	1	13	13	156	156	2	0	1421	0	326	65	15	0	15	0	0
+Salmonella enterica	salmonella_enterica	23	0	23	23	276	276	1	0	2000	0	924	569	17	17	17	0	0
+Shigella flexneri	shigella_flexneri	4	0	4	4	48	48	0	0	362	0	0	362	13	0	0	0	0
+Shigella sonnei	shigella_sonnei	18	0	18	18	216	216	2	0	1984	0	34	1010	19	0	0	0	0
+Staphylococcus aureus	staphylococcus_aureus	13	1	13	13	156	156	0	0	1994	6	438	1055	21	21	21	0	0
+Streptococcus agalactiae	streptococcus_agalactiae	3	0	3	3	36	36	0	0	141	0	119	1	5	0	0	0	0
+Streptococcus pneumoniae	streptococcus_pneumoniae	12	4	12	12	144	144	0	0	2000	0	136	12	9	0	0	0	0
+Vibrio cholerae	vibrio_cholerae	3	0	3	3	36	36	0	0	91	0	50	0	9	0	0	0	0

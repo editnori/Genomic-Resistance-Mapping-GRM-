@@ -1,0 +1,29 @@
+split	set	row	datasets	median_recall	label
+lineage	primary	scm	92	0.192592592593	
+lineage	primary	cart	92	0.230147058824	
+lineage	primary	rf	92	0.166501976284	
+lineage	primary	gbt	92	0.253378378378	
+lineage	primary	lasso	92	0.217647058823	
+lineage	primary	catalog	92	0.000000000000	
+lineage	primary	program	92	0.000000000000	
+lineage	M	scm	19	0.068965517241	
+lineage	M	cart	19	0.189320388350	
+lineage	M	rf	19	0.150000000000	
+lineage	M	gbt	19	0.125000000000	
+lineage	M	lasso	19	0.097087378641	
+lineage	M	catalog	19	0.000000000000	
+lineage	M	program	19	0.000000000000	
+random	primary	scm	92	0.404545454546	training and test share lineages
+random	primary	cart	92	0.449494949494	training and test share lineages
+random	primary	rf	92	0.516666666667	training and test share lineages
+random	primary	gbt	92	0.460606060606	training and test share lineages
+random	primary	lasso	92	0.471428571429	training and test share lineages
+random	primary	catalog	92	0.000000000000	training and test share lineages
+random	primary	program	92	0.000000000000	training and test share lineages
+random	M	scm	19	0.142857142857	training and test share lineages
+random	M	cart	19	0.487179487179	training and test share lineages
+random	M	rf	19	0.441860465116	training and test share lineages
+random	M	gbt	19	0.328125000000	training and test share lineages
+random	M	lasso	19	0.406250000000	training and test share lineages
+random	M	catalog	19	0.000000000000	training and test share lineages
+random	M	program	19	0.000000000000	training and test share lineages

@@ -1,0 +1,11 @@
+learner	reading	measure	datasets	spearman	label
+cart	point_as_one	d_recall	24	0.184180088253	exploratory; a retrospective split inside one database
+cart	point_as_one	d_log_loss	24	0.370902687005	exploratory; a retrospective split inside one database
+gbt	point_as_one	d_recall	24	0.150768533004	exploratory; a retrospective split inside one database
+gbt	point_as_one	d_log_loss	24	-0.186120842937	exploratory; a retrospective split inside one database
+lasso	point_as_one	d_recall	24	-0.059846218796	exploratory; a retrospective split inside one database
+lasso	point_as_one	d_log_loss	24	-0.092390922034	exploratory; a retrospective split inside one database
+rf	point_as_one	d_recall	24	0.267626911019	exploratory; a retrospective split inside one database
+rf	point_as_one	d_log_loss	24	-0.046864960452	exploratory; a retrospective split inside one database
+scm	point_as_one	d_recall	24	-0.257042540749	exploratory; a retrospective split inside one database
+scm	point_as_one	d_log_loss	24	0.234994301694	exploratory; a retrospective split inside one database

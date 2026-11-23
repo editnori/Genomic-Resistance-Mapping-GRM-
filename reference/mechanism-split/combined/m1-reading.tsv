@@ -1,0 +1,29 @@
+split	set	row	datasets	species	median	lo	hi	gene_ahead	point_ahead	same	sign_p	holm_p	reading	decides	label
+lineage	primary	scm	19	5	0.491905813098			14	5	0	0.063568115234	0.317840576170	no difference shown	1	
+lineage	primary	cart	19	5	0.341329479769			13	6	0	0.167068481445	0.317840576170	no difference shown	1	
+lineage	primary	rf	19	5	0.206349206349			13	5	1	0.096252441406	0.317840576170	no difference shown	1	
+lineage	primary	gbt	19	5	0.338451268358			14	5	0	0.063568115234	0.317840576170	no difference shown	1	
+lineage	primary	lasso	19	5	0.395861148197			14	5	0	0.063568115234	0.317840576170	no difference shown	1	
+lineage	primary	catalog	19	5	0.984126984127			17	0	2	0.000015258789			0	
+lineage	primary	program	19	5	0.000000000000			0	0	19	1.000000000000			0	
+lineage	M	scm	5	2	0.620370370370			5	0	0	0.062500000000			0	
+lineage	M	cart	5	2	0.630334190231			5	0	0	0.062500000000			0	
+lineage	M	rf	5	2	0.268985507246			5	0	0	0.062500000000			0	
+lineage	M	gbt	5	2	0.582647814910			5	0	0	0.062500000000			0	
+lineage	M	lasso	5	2	0.569794344473			5	0	0	0.062500000000			0	
+lineage	M	catalog	5	2	0.640000000000			4	0	1	0.125000000000			0	
+lineage	M	program	5	2	0.000000000000			0	0	5	1.000000000000			0	
+random	primary	scm	19	5	0.452380952381			14	4	1	0.030883789062			0	training and test share lineages
+random	primary	cart	19	5	0.313852813853			14	4	1	0.030883789062			0	training and test share lineages
+random	primary	rf	19	5	0.287861271676			14	5	0	0.063568115234			0	training and test share lineages
+random	primary	gbt	19	5	0.280408542247			13	5	1	0.096252441406			0	training and test share lineages
+random	primary	lasso	19	5	0.276218001652			13	6	0	0.167068481445			0	training and test share lineages
+random	primary	catalog	19	5	0.984126984127			17	0	2	0.000015258789			0	training and test share lineages
+random	primary	program	19	5	0.000000000000			0	0	19	1.000000000000			0	training and test share lineages
+random	M	scm	5	2	0.726376811594			5	0	0	0.062500000000			0	training and test share lineages
+random	M	cart	5	2	0.318894601542			4	1	0	0.375000000000			0	training and test share lineages
+random	M	rf	5	2	0.407407407407			5	0	0	0.062500000000			0	training and test share lineages
+random	M	gbt	5	2	0.500000000000			5	0	0	0.062500000000			0	training and test share lineages
+random	M	lasso	5	2	0.744601542416			5	0	0	0.062500000000			0	training and test share lineages
+random	M	catalog	5	2	0.640000000000			4	0	1	0.125000000000			0	training and test share lineages
+random	M	program	5	2	0.000000000000			0	0	5	1.000000000000			0	training and test share lineages

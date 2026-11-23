@@ -1,0 +1,31 @@
+species copies: 21; species of A in lists.tsv: 21; equal: 1
+check 1 SHA256SUMS: holds in 21 of 21 species, 210 of 210 lines, every file listed and none more
+check 2 DONE: 21 of 21 name their species, commit 11c299674c68, 10 results and the sha256 of their SHA256SUMS; FAILED files: 0
+check 3 first run: 19 first-run copies with DONE (commit 253d60e12759); 19 of 19 SHA256SUMS equal the second run's byte for byte; not in the first run: streptococcus_agalactiae, streptococcus_pneumoniae
+check 4 scan, against the species' own ids: 0 files with a hit in 609 files (189 tables) over 21 species; scans failing: 0
+check 4 scan, against every species' ids: 0 files with a hit in 609 files (189 tables) over 21 species; scans failing: 0
+check 4 ids: 23757 genome ids in the release's 23 species files
+check 5 hard check: 237 of 237 datasets pass, 2844 of 2844 rows equal, 237 entered
+check 5   acinetobacter_baumannii 18/18 datasets, 216/216 rows, 18 entered (A lists 18)
+check 5   campylobacter_coli 7/7 datasets, 84/84 rows, 7 entered (A lists 7)
+check 5   campylobacter_jejuni 4/4 datasets, 48/48 rows, 4 entered (A lists 4)
+check 5   clostridioides_difficile 4/4 datasets, 48/48 rows, 4 entered (A lists 4)
+check 5   corynebacterium_diphtheriae 3/3 datasets, 36/36 rows, 3 entered (A lists 3)
+check 5   enterobacter_cloacae 9/9 datasets, 108/108 rows, 9 entered (A lists 9)
+check 5   enterococcus_faecium 13/13 datasets, 156/156 rows, 13 entered (A lists 13)
+check 5   escherichia_coli 36/36 datasets, 432/432 rows, 36 entered (A lists 36)
+check 5   klebsiella_aerogenes 3/3 datasets, 36/36 rows, 3 entered (A lists 3)
+check 5   klebsiella_oxytoca 4/4 datasets, 48/48 rows, 4 entered (A lists 4)
+check 5   klebsiella_pneumoniae 37/37 datasets, 444/444 rows, 37 entered (A lists 37)
+check 5   klebsiella_quasipneumoniae 3/3 datasets, 36/36 rows, 3 entered (A lists 3)
+check 5   neisseria_gonorrhoeae 7/7 datasets, 84/84 rows, 7 entered (A lists 7)
+check 5   pseudomonas_aeruginosa 13/13 datasets, 156/156 rows, 13 entered (A lists 13)
+check 5   salmonella_enterica 23/23 datasets, 276/276 rows, 23 entered (A lists 23)
+check 5   shigella_flexneri 4/4 datasets, 48/48 rows, 4 entered (A lists 4)
+check 5   shigella_sonnei 18/18 datasets, 216/216 rows, 18 entered (A lists 18)
+check 5   staphylococcus_aureus 13/13 datasets, 156/156 rows, 13 entered (A lists 13)
+check 5   streptococcus_agalactiae 3/3 datasets, 36/36 rows, 3 entered (A lists 3)
+check 5   streptococcus_pneumoniae 12/12 datasets, 144/144 rows, 12 entered (A lists 12)
+check 5   vibrio_cholerae 3/3 datasets, 36/36 rows, 3 entered (A lists 3)
+check 6 program: 21 species read the program's tables made before and 0 ran the program again; 21 logged that nothing was installed (TABLES and DB given), 0 installed the program; 21 of 21 tables logs hold every table equal to its recorded sha256, 21625 tables in all; 21 of 21 database logs give 43 files equal to the kit's list
+checks: all pass

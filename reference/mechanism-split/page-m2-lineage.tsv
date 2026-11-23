@@ -1,0 +1,22 @@
+species	reports	report_pairs	differing_genome_pairs	given
+Acinetobacter baumannii	18	149	0	1
+Campylobacter coli	8	28	0	1
+Campylobacter jejuni	4	6	0	1
+Clostridioides difficile	4	6	0	1
+Corynebacterium diphtheriae	3	3	0	1
+Enterobacter cloacae	9	28	0	1
+Enterococcus faecium	14	84	0	1
+Escherichia coli	36	565	0	1
+Klebsiella aerogenes	3	3	0	1
+Klebsiella oxytoca	4	6	0	1
+Klebsiella pneumoniae	38	517	0	1
+Klebsiella quasipneumoniae	3	3	0	1
+Neisseria gonorrhoeae	7	21	0	1
+Pseudomonas aeruginosa	13	78	0	1
+Salmonella enterica	25	253	0	1
+Shigella flexneri	4	6	0	1
+Shigella sonnei	20	169	0	1
+Staphylococcus aureus	18	152	0	1
+Streptococcus agalactiae	3	3	0	1
+Streptococcus pneumoniae	12	66	0	1
+Vibrio cholerae	3	3	0	1

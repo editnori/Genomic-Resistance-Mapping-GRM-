@@ -1,0 +1,238 @@
+dataset	species	antibiotic	drug_class	set	labels_depend_on	genomes	with_table	rule_check	hard_check	learner_rows_equal	learner_rows	program_check	record_check	entered	why
+acinetobacter_baumannii__amikacin	Acinetobacter baumannii	amikacin	aminoglycoside	M	the maintainer's rule	1277	1277	1	1	12	12	1	1	1	
+acinetobacter_baumannii__ampicillin_sulbactam	Acinetobacter baumannii	ampicillin/sulbactam	penicillin + inhibitor	M	the maintainer's rule	989	989	1	1	12	12	1	1	1	
+acinetobacter_baumannii__cefepime	Acinetobacter baumannii	cefepime	cephalosporin (4th gen)	primary		437	437	1	1	12	12	1	1	1	
+acinetobacter_baumannii__cefotaxime	Acinetobacter baumannii	cefotaxime	cephalosporin (3rd gen)	primary		808	808	1	1	12	12	1	1	1	
+acinetobacter_baumannii__ceftazidime	Acinetobacter baumannii	ceftazidime	cephalosporin (3rd gen)	M	the maintainer's rule	1247	1247	1	1	12	12	1	1	1	
+acinetobacter_baumannii__ceftriaxone	Acinetobacter baumannii	ceftriaxone	cephalosporin (3rd gen)	M	the maintainer's rule	1070	1070	1	1	12	12	1	1	1	
+acinetobacter_baumannii__ciprofloxacin	Acinetobacter baumannii	ciprofloxacin	quinolone	M	the maintainer's rule	1440	1440	1	1	12	12	1	1	1	
+acinetobacter_baumannii__doripenem	Acinetobacter baumannii	doripenem	carbapenem	primary		213	213	1	1	12	12	1	1	1	
+acinetobacter_baumannii__doxycycline	Acinetobacter baumannii	doxycycline	tetracycline	primary		167	167	1	1	12	12	1	1	1	
+acinetobacter_baumannii__gentamicin	Acinetobacter baumannii	gentamicin	aminoglycoside	M	the maintainer's rule	1342	1342	1	1	12	12	1	1	1	
+acinetobacter_baumannii__imipenem	Acinetobacter baumannii	imipenem	carbapenem	M	the maintainer's rule	1544	1544	1	1	12	12	1	1	1	
+acinetobacter_baumannii__levofloxacin	Acinetobacter baumannii	levofloxacin	quinolone	M	the maintainer's rule	919	919	1	1	12	12	1	1	1	
+acinetobacter_baumannii__meropenem	Acinetobacter baumannii	meropenem	carbapenem	M	the maintainer's rule	666	666	1	1	12	12	1	1	1	
+acinetobacter_baumannii__minocycline	Acinetobacter baumannii	minocycline	tetracycline	primary		139	139	1	1	12	12	1	1	1	
+acinetobacter_baumannii__moxifloxacin	Acinetobacter baumannii	moxifloxacin	quinolone	primary		91	91	1	1	12	12	1	1	1	
+acinetobacter_baumannii__sulfamethoxazole_trimethoprim	Acinetobacter baumannii	sulfamethoxazole/trimethoprim	folate pathway combination	primary		1114	1114	1	1	12	12	1	1	1	
+acinetobacter_baumannii__tetracycline	Acinetobacter baumannii	tetracycline	tetracycline	M	the maintainer's rule	962	962	1	1	12	12	1	1	1	
+acinetobacter_baumannii__tobramycin	Acinetobacter baumannii	tobramycin	aminoglycoside	M	the maintainer's rule	981	981	1	1	12	12	1	1	1	
+campylobacter_coli__azithromycin	Campylobacter coli	azithromycin	macrolide	primary		389	389	1	1	12	12	1	1	1	
+campylobacter_coli__ciprofloxacin	Campylobacter coli	ciprofloxacin	quinolone	primary		391	391	1	1	12	12	1	1	1	
+campylobacter_coli__clindamycin	Campylobacter coli	clindamycin	lincosamide	primary		389	389	1	1	12	12	1	1	1	
+campylobacter_coli__erythromycin	Campylobacter coli	erythromycin	macrolide	primary		391	391	1	1	12	12	1	1	1	
+campylobacter_coli__gentamicin	Campylobacter coli	gentamicin	aminoglycoside	primary		391	391	1	1	12	12	1	1	1	
+campylobacter_coli__nalidixic_acid	Campylobacter coli	nalidixic acid	quinolone	primary		375	375	1	1	12	12	1	1	1	
+campylobacter_coli__tetracycline	Campylobacter coli	tetracycline	tetracycline	primary		391	391	1	1	12	12	1	1	1	
+campylobacter_jejuni__ciprofloxacin	Campylobacter jejuni	ciprofloxacin	quinolone	primary		508	508	1	1	12	12	1	1	1	
+campylobacter_jejuni__clindamycin	Campylobacter jejuni	clindamycin	lincosamide	primary		508	508	1	1	12	12	1	1	1	
+campylobacter_jejuni__nalidixic_acid	Campylobacter jejuni	nalidixic acid	quinolone	primary		506	506	1	1	12	12	1	1	1	
+campylobacter_jejuni__tetracycline	Campylobacter jejuni	tetracycline	tetracycline	primary		508	508	1	1	12	12	1	1	1	
+clostridioides_difficile__azithromycin	Clostridioides difficile	azithromycin	macrolide	primary		203	203	1	1	12	12	1	1	1	
+clostridioides_difficile__ceftriaxone	Clostridioides difficile	ceftriaxone	cephalosporin (3rd gen)	primary		136	136	1	1	12	12	1	1	1	
+clostridioides_difficile__clarithromycin	Clostridioides difficile	clarithromycin	macrolide	primary		203	203	1	1	12	12	1	1	1	
+clostridioides_difficile__moxifloxacin	Clostridioides difficile	moxifloxacin	quinolone	primary		204	204	1	1	12	12	1	1	1	
+corynebacterium_diphtheriae__sulfamethoxazole_trimethoprim	Corynebacterium diphtheriae	sulfamethoxazole/trimethoprim	folate pathway combination	primary		236	236	1	1	12	12	1	1	1	
+corynebacterium_diphtheriae__tetracycline	Corynebacterium diphtheriae	tetracycline	tetracycline	primary		243	243	1	1	12	12	1	1	1	
+corynebacterium_diphtheriae__trimethoprim	Corynebacterium diphtheriae	trimethoprim	trimethoprim	primary		229	229	1	1	12	12	1	1	1	
+enterobacter_cloacae__cefepime	Enterobacter cloacae	cefepime	cephalosporin (4th gen)	primary		103	103	1	1	12	12	1	1	1	
+enterobacter_cloacae__ciprofloxacin	Enterobacter cloacae	ciprofloxacin	quinolone	primary		110	110	1	1	12	12	1	1	1	
+enterobacter_cloacae__gentamicin	Enterobacter cloacae	gentamicin	aminoglycoside	primary		104	104	1	1	12	12	1	1	1	
+enterobacter_cloacae__imipenem	Enterobacter cloacae	imipenem	carbapenem	primary		86	86	1	1	12	12	1	1	1	
+enterobacter_cloacae__levofloxacin	Enterobacter cloacae	levofloxacin	quinolone	primary		104	104	1	1	12	12	1	1	1	
+enterobacter_cloacae__meropenem	Enterobacter cloacae	meropenem	carbapenem	primary		99	99	1	1	12	12	1	1	1	
+enterobacter_cloacae__sulfamethoxazole_trimethoprim	Enterobacter cloacae	sulfamethoxazole/trimethoprim	folate pathway combination	primary		80	80	1	1	12	12	1	1	1	
+enterobacter_cloacae__tobramycin	Enterobacter cloacae	tobramycin	aminoglycoside	primary		99	99	1	1	12	12	1	1	1	
+enterobacter_cloacae__trimethoprim	Enterobacter cloacae	trimethoprim	trimethoprim	primary		124	124	1	1	12	12	1	1	1	
+enterococcus_faecium__ampicillin	Enterococcus faecium	ampicillin	penicillin	primary		1680	1680	1	1	12	12	1	1	1	
+enterococcus_faecium__clindamycin	Enterococcus faecium	clindamycin	lincosamide	primary		901	901	1	1	12	12	1	1	1	
+enterococcus_faecium__dalfopristin_quinupristin	Enterococcus faecium	dalfopristin/quinupristin	streptogramin	primary		1118	1118	1	1	12	12	1	1	1	
+enterococcus_faecium__daptomycin	Enterococcus faecium	daptomycin	lipopeptide	M	the maintainer's rule	333	333	1	1	12	12	1	1	1	
+enterococcus_faecium__doxycycline	Enterococcus faecium	doxycycline	tetracycline	primary		345	345	1	1	12	12	1	1	1	
+enterococcus_faecium__erythromycin	Enterococcus faecium	erythromycin	macrolide	primary		1151	1151	1	1	12	12	1	1	1	
+enterococcus_faecium__gentamicin	Enterococcus faecium	gentamicin	aminoglycoside	primary		1345	1345	1	1	12	12	1	1	1	
+enterococcus_faecium__kanamycin	Enterococcus faecium	kanamycin	aminoglycoside	primary		944	944	1	1	12	12	1	1	1	
+enterococcus_faecium__linezolid	Enterococcus faecium	linezolid	oxazolidinone	M	the maintainer's rule	1367	1367	1	1	12	12	1	1	1	
+enterococcus_faecium__streptomycin	Enterococcus faecium	streptomycin	aminoglycoside	primary		1239	1239	1	1	12	12	1	1	1	
+enterococcus_faecium__teicoplanin	Enterococcus faecium	teicoplanin	glycopeptide	primary		1192	1192	1	1	12	12	1	1	1	
+enterococcus_faecium__tetracycline	Enterococcus faecium	tetracycline	tetracycline	primary		958	958	1	1	12	12	1	1	1	
+enterococcus_faecium__vancomycin	Enterococcus faecium	vancomycin	glycopeptide	primary		1741	1741	1	1	12	12	1	1	1	
+escherichia_coli__amikacin	Escherichia coli	amikacin	aminoglycoside	primary		1125	1125	1	1	12	12	1	1	1	
+escherichia_coli__amoxicillin_clavulanate	Escherichia coli	amoxicillin/clavulanate	penicillin + inhibitor	M	the maintainer's rule	1115	1115	1	1	12	12	1	1	1	
+escherichia_coli__ampicillin	Escherichia coli	ampicillin	penicillin	M	the maintainer's rule	1965	1965	1	1	12	12	1	1	1	
+escherichia_coli__ampicillin_sulbactam	Escherichia coli	ampicillin/sulbactam	penicillin + inhibitor	primary		283	283	1	1	12	12	1	1	1	
+escherichia_coli__aztreonam	Escherichia coli	aztreonam	monobactam	primary		699	699	1	1	12	12	1	1	1	
+escherichia_coli__cefazolin	Escherichia coli	cefazolin	cephalosporin (1st-2nd gen)	primary		414	414	1	1	12	12	1	1	1	
+escherichia_coli__cefepime	Escherichia coli	cefepime	cephalosporin (4th gen)	primary		1124	1124	1	1	12	12	1	1	1	
+escherichia_coli__cefotaxime	Escherichia coli	cefotaxime	cephalosporin (3rd gen)	primary		1149	1149	1	1	12	12	1	1	1	
+escherichia_coli__cefoxitin	Escherichia coli	cefoxitin	cephalosporin (1st-2nd gen)	primary		1066	1066	1	1	12	12	1	1	1	
+escherichia_coli__cefpodoxime	Escherichia coli	cefpodoxime	cephalosporin (3rd gen)	primary		175	175	1	1	12	12	1	1	1	
+escherichia_coli__cefpodoxime_clavulanate	Escherichia coli	cefpodoxime/clavulanate	cephalosporin + inhibitor	primary		136	136	1	1	12	12	1	1	1	
+escherichia_coli__ceftazidime	Escherichia coli	ceftazidime	cephalosporin (3rd gen)	primary		1466	1466	1	1	12	12	1	1	1	
+escherichia_coli__ceftiofur	Escherichia coli	ceftiofur	cephalosporin (3rd gen)	primary		203	203	1	1	12	12	1	1	1	
+escherichia_coli__ceftriaxone	Escherichia coli	ceftriaxone	cephalosporin (3rd gen)	primary		923	923	1	1	12	12	1	1	1	
+escherichia_coli__cefuroxime	Escherichia coli	cefuroxime	cephalosporin (1st-2nd gen)	primary		548	548	1	1	12	12	1	1	1	
+escherichia_coli__cephalothin	Escherichia coli	cephalothin	cephalosporin (1st-2nd gen)	primary		472	472	1	1	12	12	1	1	1	
+escherichia_coli__chloramphenicol	Escherichia coli	chloramphenicol	phenicol	primary		709	709	1	1	12	12	1	1	1	
+escherichia_coli__ciprofloxacin	Escherichia coli	ciprofloxacin	quinolone	M	the maintainer's rule	1615	1615	1	1	12	12	1	1	1	
+escherichia_coli__colistin	Escherichia coli	colistin	polymyxin	primary		239	239	1	1	12	12	1	1	1	
+escherichia_coli__doxycycline	Escherichia coli	doxycycline	tetracycline	primary		227	227	1	1	12	12	1	1	1	
+escherichia_coli__ertapenem	Escherichia coli	ertapenem	carbapenem	primary		820	820	1	1	12	12	1	1	1	
+escherichia_coli__erythromycin	Escherichia coli	erythromycin	macrolide	primary		205	205	1	1	12	12	1	1	1	
+escherichia_coli__gentamicin	Escherichia coli	gentamicin	aminoglycoside	M	the maintainer's rule	1695	1695	1	1	12	12	1	1	1	
+escherichia_coli__imipenem	Escherichia coli	imipenem	carbapenem	primary		614	614	1	1	12	12	1	1	1	
+escherichia_coli__levofloxacin	Escherichia coli	levofloxacin	quinolone	primary		403	403	1	1	12	12	1	1	1	
+escherichia_coli__meropenem	Escherichia coli	meropenem	carbapenem	M	the maintainer's rule	1539	1539	1	1	12	12	1	1	1	
+escherichia_coli__nalidixic_acid	Escherichia coli	nalidixic acid	quinolone	primary		406	406	1	1	12	12	1	1	1	
+escherichia_coli__nitrofurantoin	Escherichia coli	nitrofurantoin	nitrofuran	primary		482	482	1	1	12	12	1	1	1	
+escherichia_coli__norfloxacin	Escherichia coli	norfloxacin	quinolone	M	the maintainer's rule	197	197	1	1	12	12	1	1	1	
+escherichia_coli__piperacillin_tazobactam	Escherichia coli	piperacillin/tazobactam	penicillin + inhibitor	primary		979	979	1	1	12	12	1	1	1	
+escherichia_coli__streptomycin	Escherichia coli	streptomycin	aminoglycoside	primary		386	386	1	1	12	12	1	1	1	
+escherichia_coli__sulfamethoxazole	Escherichia coli	sulfamethoxazole	sulfonamide	primary		341	341	1	1	12	12	1	1	1	
+escherichia_coli__sulfamethoxazole_trimethoprim	Escherichia coli	sulfamethoxazole/trimethoprim	folate pathway combination	M	the maintainer's rule	925	925	1	1	12	12	1	1	1	
+escherichia_coli__tetracycline	Escherichia coli	tetracycline	tetracycline	primary		782	782	1	1	12	12	1	1	1	
+escherichia_coli__tobramycin	Escherichia coli	tobramycin	aminoglycoside	primary		1070	1070	1	1	12	12	1	1	1	
+escherichia_coli__trimethoprim	Escherichia coli	trimethoprim	trimethoprim	primary		861	861	1	1	12	12	1	1	1	
+klebsiella_aerogenes__ertapenem	Klebsiella aerogenes	ertapenem	carbapenem	primary		83	83	1	1	12	12	1	1	1	
+klebsiella_aerogenes__imipenem	Klebsiella aerogenes	imipenem	carbapenem	primary		68	68	1	1	12	12	1	1	1	
+klebsiella_aerogenes__meropenem	Klebsiella aerogenes	meropenem	carbapenem	primary		78	78	1	1	12	12	1	1	1	
+klebsiella_oxytoca__cefotaxime	Klebsiella oxytoca	cefotaxime	cephalosporin (3rd gen)	primary		98	98	1	1	12	12	1	1	1	
+klebsiella_oxytoca__cefoxitin	Klebsiella oxytoca	cefoxitin	cephalosporin (1st-2nd gen)	primary		99	99	1	1	12	12	1	1	1	
+klebsiella_oxytoca__cefpodoxime	Klebsiella oxytoca	cefpodoxime	cephalosporin (3rd gen)	primary		74	74	1	1	12	12	1	1	1	
+klebsiella_oxytoca__ertapenem	Klebsiella oxytoca	ertapenem	carbapenem	primary		112	112	1	1	12	12	1	1	1	
+klebsiella_pneumoniae__amikacin	Klebsiella pneumoniae	amikacin	aminoglycoside	M	the maintainer's rule	1588	1588	1	1	12	12	1	1	1	
+klebsiella_pneumoniae__amoxicillin_clavulanate	Klebsiella pneumoniae	amoxicillin/clavulanate	penicillin + inhibitor	M	the maintainer's rule	778	778	1	1	12	12	1	1	1	
+klebsiella_pneumoniae__ampicillin_sulbactam	Klebsiella pneumoniae	ampicillin/sulbactam	penicillin + inhibitor	primary		744	744	1	1	12	12	1	1	1	
+klebsiella_pneumoniae__aztreonam	Klebsiella pneumoniae	aztreonam	monobactam	primary		1050	1050	1	1	12	12	1	1	1	
+klebsiella_pneumoniae__cefazolin	Klebsiella pneumoniae	cefazolin	cephalosporin (1st-2nd gen)	primary		1141	1141	1	1	12	12	1	1	1	
+klebsiella_pneumoniae__cefepime	Klebsiella pneumoniae	cefepime	cephalosporin (4th gen)	primary		1233	1233	1	1	12	12	1	1	1	
+klebsiella_pneumoniae__cefotetan	Klebsiella pneumoniae	cefotetan	cephalosporin (1st-2nd gen)	primary		61	61	1	1	12	12	1	1	1	
+klebsiella_pneumoniae__cefoxitin	Klebsiella pneumoniae	cefoxitin	cephalosporin (1st-2nd gen)	primary		1181	1181	1	1	12	12	1	1	1	
+klebsiella_pneumoniae__cefpodoxime	Klebsiella pneumoniae	cefpodoxime	cephalosporin (3rd gen)	primary		221	221	1	1	12	12	1	1	1	
+klebsiella_pneumoniae__cefpodoxime_clavulanate	Klebsiella pneumoniae	cefpodoxime/clavulanate	cephalosporin + inhibitor	primary		207	207	1	1	12	12	1	1	1	
+klebsiella_pneumoniae__ceftazidime	Klebsiella pneumoniae	ceftazidime	cephalosporin (3rd gen)	primary		1310	1310	1	1	12	12	1	1	1	
+klebsiella_pneumoniae__ceftazidime_avibactam	Klebsiella pneumoniae	ceftazidime/avibactam	cephalosporin + inhibitor	primary		259	259	1	1	12	12	1	1	1	
+klebsiella_pneumoniae__ceftriaxone	Klebsiella pneumoniae	ceftriaxone	cephalosporin (3rd gen)	primary		1208	1208	1	1	12	12	1	1	1	
+klebsiella_pneumoniae__cefuroxime	Klebsiella pneumoniae	cefuroxime	cephalosporin (1st-2nd gen)	primary		565	565	1	1	12	12	1	1	1	
+klebsiella_pneumoniae__chloramphenicol	Klebsiella pneumoniae	chloramphenicol	phenicol	primary		409	409	1	1	12	12	1	1	1	
+klebsiella_pneumoniae__ciprofloxacin	Klebsiella pneumoniae	ciprofloxacin	quinolone	primary		1706	1706	1	1	12	12	1	1	1	
+klebsiella_pneumoniae__colistin	Klebsiella pneumoniae	colistin	polymyxin	primary		336	336	1	1	12	12	1	1	1	
+klebsiella_pneumoniae__doripenem	Klebsiella pneumoniae	doripenem	carbapenem	primary		243	243	1	1	12	12	1	1	1	
+klebsiella_pneumoniae__doxycycline	Klebsiella pneumoniae	doxycycline	tetracycline	primary		141	141	1	1	12	12	1	1	1	
+klebsiella_pneumoniae__ertapenem	Klebsiella pneumoniae	ertapenem	carbapenem	primary		952	952	1	1	12	12	1	1	1	
+klebsiella_pneumoniae__fosfomycin	Klebsiella pneumoniae	fosfomycin	fosfomycin	primary		294	294	1	1	12	12	1	1	1	
+klebsiella_pneumoniae__gentamicin	Klebsiella pneumoniae	gentamicin	aminoglycoside	M	the maintainer's rule	1842	1842	1	1	12	12	1	1	1	
+klebsiella_pneumoniae__imipenem	Klebsiella pneumoniae	imipenem	carbapenem	primary		1158	1158	1	1	12	12	1	1	1	
+klebsiella_pneumoniae__levofloxacin	Klebsiella pneumoniae	levofloxacin	quinolone	primary		871	871	1	1	12	12	1	1	1	
+klebsiella_pneumoniae__meropenem	Klebsiella pneumoniae	meropenem	carbapenem	M	the maintainer's rule	1765	1765	1	1	12	12	1	1	1	
+klebsiella_pneumoniae__nitrofurantoin	Klebsiella pneumoniae	nitrofurantoin	nitrofuran	primary		562	562	1	1	12	12	1	1	1	
+klebsiella_pneumoniae__norfloxacin	Klebsiella pneumoniae	norfloxacin	quinolone	M	the maintainer's rule	194	194	1	1	12	12	1	1	1	
+klebsiella_pneumoniae__ofloxacin	Klebsiella pneumoniae	ofloxacin	quinolone	primary		71	71	1	1	12	12	1	1	1	
+klebsiella_pneumoniae__piperacillin_tazobactam	Klebsiella pneumoniae	piperacillin/tazobactam	penicillin + inhibitor	M	the maintainer's rule	1452	1452	1	1	12	12	1	1	1	
+klebsiella_pneumoniae__polymyxin_b	Klebsiella pneumoniae	polymyxin b	polymyxin	primary		100	100	1	1	12	12	1	1	1	
+klebsiella_pneumoniae__streptomycin	Klebsiella pneumoniae	streptomycin	aminoglycoside	primary		80	80	1	1	12	12	1	1	1	
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	Klebsiella pneumoniae	sulfamethoxazole/trimethoprim	folate pathway combination	primary		1546	1546	1	1	12	12	1	1	1	
+klebsiella_pneumoniae__tetracycline	Klebsiella pneumoniae	tetracycline	tetracycline	primary		741	741	1	1	12	12	1	1	1	
+klebsiella_pneumoniae__ticarcillin_clavulanate	Klebsiella pneumoniae	ticarcillin/clavulanate	penicillin + inhibitor	primary		250	250	1	1	12	12	1	1	1	
+klebsiella_pneumoniae__tigecycline	Klebsiella pneumoniae	tigecycline	glycylcycline	primary		924	924	1	1	12	12	1	1	1	
+klebsiella_pneumoniae__tobramycin	Klebsiella pneumoniae	tobramycin	aminoglycoside	primary		1230	1230	1	1	12	12	1	1	1	
+klebsiella_pneumoniae__trimethoprim	Klebsiella pneumoniae	trimethoprim	trimethoprim	primary		258	258	1	1	12	12	1	1	1	
+klebsiella_quasipneumoniae__cefotaxime	Klebsiella quasipneumoniae	cefotaxime	cephalosporin (3rd gen)	primary		101	101	1	1	12	12	1	1	1	
+klebsiella_quasipneumoniae__ceftazidime	Klebsiella quasipneumoniae	ceftazidime	cephalosporin (3rd gen)	primary		102	102	1	1	12	12	1	1	1	
+klebsiella_quasipneumoniae__sulfamethoxazole_trimethoprim	Klebsiella quasipneumoniae	sulfamethoxazole/trimethoprim	folate pathway combination	primary		101	101	1	1	12	12	1	1	1	
+neisseria_gonorrhoeae__azithromycin	Neisseria gonorrhoeae	azithromycin	macrolide	M	the maintainer's rule	1899	1899	1	1	12	12	1	1	1	
+neisseria_gonorrhoeae__cefixime	Neisseria gonorrhoeae	cefixime	cephalosporin (3rd gen)	primary		600	600	1	1	12	12	1	1	1	
+neisseria_gonorrhoeae__ceftriaxone	Neisseria gonorrhoeae	ceftriaxone	cephalosporin (3rd gen)	primary		1926	1926	1	1	12	12	1	1	1	
+neisseria_gonorrhoeae__ciprofloxacin	Neisseria gonorrhoeae	ciprofloxacin	quinolone	primary		1746	1746	1	1	12	12	1	1	1	
+neisseria_gonorrhoeae__erythromycin	Neisseria gonorrhoeae	erythromycin	macrolide	primary		179	179	1	1	12	12	1	1	1	
+neisseria_gonorrhoeae__penicillin	Neisseria gonorrhoeae	penicillin	penicillin	primary		1354	1354	1	1	12	12	1	1	1	
+neisseria_gonorrhoeae__tetracycline	Neisseria gonorrhoeae	tetracycline	tetracycline	primary		1371	1371	1	1	12	12	1	1	1	
+pseudomonas_aeruginosa__amikacin	Pseudomonas aeruginosa	amikacin	aminoglycoside	primary		708	708	1	1	12	12	1	1	1	
+pseudomonas_aeruginosa__aztreonam	Pseudomonas aeruginosa	aztreonam	monobactam	primary		235	235	1	1	12	12	1	1	1	
+pseudomonas_aeruginosa__cefepime	Pseudomonas aeruginosa	cefepime	cephalosporin (4th gen)	primary		245	245	1	1	12	12	1	1	1	
+pseudomonas_aeruginosa__ceftazidime	Pseudomonas aeruginosa	ceftazidime	cephalosporin (3rd gen)	primary		833	833	1	1	12	12	1	1	1	
+pseudomonas_aeruginosa__ceftazidime_avibactam	Pseudomonas aeruginosa	ceftazidime/avibactam	cephalosporin + inhibitor	primary		309	309	1	1	12	12	1	1	1	
+pseudomonas_aeruginosa__ceftolozane_tazobactam	Pseudomonas aeruginosa	ceftolozane/tazobactam	cephalosporin + inhibitor	primary		259	259	1	1	12	12	1	1	1	
+pseudomonas_aeruginosa__ciprofloxacin	Pseudomonas aeruginosa	ciprofloxacin	quinolone	M	the maintainer's rule	703	703	1	1	12	12	1	1	1	
+pseudomonas_aeruginosa__gentamicin	Pseudomonas aeruginosa	gentamicin	aminoglycoside	primary		346	346	1	1	12	12	1	1	1	
+pseudomonas_aeruginosa__imipenem	Pseudomonas aeruginosa	imipenem	carbapenem	primary		447	447	1	1	12	12	1	1	1	
+pseudomonas_aeruginosa__levofloxacin	Pseudomonas aeruginosa	levofloxacin	quinolone	primary		702	702	1	1	12	12	1	1	1	
+pseudomonas_aeruginosa__meropenem	Pseudomonas aeruginosa	meropenem	carbapenem	primary		883	883	1	1	12	12	1	1	1	
+pseudomonas_aeruginosa__piperacillin_tazobactam	Pseudomonas aeruginosa	piperacillin/tazobactam	penicillin + inhibitor	primary		210	210	1	1	12	12	1	1	1	
+pseudomonas_aeruginosa__tobramycin	Pseudomonas aeruginosa	tobramycin	aminoglycoside	primary		645	645	1	1	12	12	1	1	1	
+salmonella_enterica__amoxicillin_clavulanate	Salmonella enterica	amoxicillin/clavulanate	penicillin + inhibitor	primary		799	799	1	1	12	12	1	1	1	
+salmonella_enterica__ampicillin	Salmonella enterica	ampicillin	penicillin	primary		1997	1997	1	1	12	12	1	1	1	
+salmonella_enterica__ampicillin_sulbactam	Salmonella enterica	ampicillin/sulbactam	penicillin + inhibitor	primary		183	183	1	1	12	12	1	1	1	
+salmonella_enterica__azithromycin	Salmonella enterica	azithromycin	macrolide	primary		1355	1355	1	1	12	12	1	1	1	
+salmonella_enterica__cefazolin	Salmonella enterica	cefazolin	cephalosporin (1st-2nd gen)	primary		185	185	1	1	12	12	1	1	1	
+salmonella_enterica__cefotaxime	Salmonella enterica	cefotaxime	cephalosporin (3rd gen)	primary		941	941	1	1	12	12	1	1	1	
+salmonella_enterica__cefoxitin	Salmonella enterica	cefoxitin	cephalosporin (1st-2nd gen)	primary		1080	1080	1	1	12	12	1	1	1	
+salmonella_enterica__ceftazidime	Salmonella enterica	ceftazidime	cephalosporin (3rd gen)	primary		783	783	1	1	12	12	1	1	1	
+salmonella_enterica__ceftiofur	Salmonella enterica	ceftiofur	cephalosporin (3rd gen)	primary		689	689	1	1	12	12	1	1	1	
+salmonella_enterica__ceftriaxone	Salmonella enterica	ceftriaxone	cephalosporin (3rd gen)	primary		1155	1155	1	1	12	12	1	1	1	
+salmonella_enterica__chloramphenicol	Salmonella enterica	chloramphenicol	phenicol	primary		1989	1989	1	1	12	12	1	1	1	
+salmonella_enterica__ciprofloxacin	Salmonella enterica	ciprofloxacin	quinolone	primary		1503	1503	1	1	12	12	1	1	1	
+salmonella_enterica__gentamicin	Salmonella enterica	gentamicin	aminoglycoside	primary		1675	1675	1	1	12	12	1	1	1	
+salmonella_enterica__kanamycin	Salmonella enterica	kanamycin	aminoglycoside	primary		584	584	1	1	12	12	1	1	1	
+salmonella_enterica__nalidixic_acid	Salmonella enterica	nalidixic acid	quinolone	primary		1599	1599	1	1	12	12	1	1	1	
+salmonella_enterica__spectinomycin	Salmonella enterica	spectinomycin	aminoglycoside	primary		396	396	1	1	12	12	1	1	1	
+salmonella_enterica__streptomycin	Salmonella enterica	streptomycin	aminoglycoside	primary		1269	1269	1	1	12	12	1	1	1	
+salmonella_enterica__sulfamethoxazole	Salmonella enterica	sulfamethoxazole	sulfonamide	primary		275	275	1	1	12	12	1	1	1	
+salmonella_enterica__sulfamethoxazole_trimethoprim	Salmonella enterica	sulfamethoxazole/trimethoprim	folate pathway combination	primary		1145	1145	1	1	12	12	1	1	1	
+salmonella_enterica__sulfathiazole	Salmonella enterica	sulfathiazole	sulfonamide	primary		225	225	1	1	12	12	1	1	1	
+salmonella_enterica__sulfisoxazole	Salmonella enterica	sulfisoxazole	sulfonamide	primary		544	544	1	1	12	12	1	1	1	
+salmonella_enterica__tetracycline	Salmonella enterica	tetracycline	tetracycline	primary		1869	1869	1	1	12	12	1	1	1	
+salmonella_enterica__trimethoprim	Salmonella enterica	trimethoprim	trimethoprim	primary		634	634	1	1	12	12	1	1	1	
+shigella_flexneri__ampicillin	Shigella flexneri	ampicillin	penicillin	primary		358	358	1	1	12	12	1	1	1	
+shigella_flexneri__azithromycin	Shigella flexneri	azithromycin	macrolide	primary		361	361	1	1	12	12	1	1	1	
+shigella_flexneri__ciprofloxacin	Shigella flexneri	ciprofloxacin	quinolone	primary		361	361	1	1	12	12	1	1	1	
+shigella_flexneri__trimethoprim	Shigella flexneri	trimethoprim	trimethoprim	primary		362	362	1	1	12	12	1	1	1	
+shigella_sonnei__amikacin	Shigella sonnei	amikacin	aminoglycoside	primary		580	580	1	1	12	12	1	1	1	
+shigella_sonnei__ampicillin	Shigella sonnei	ampicillin	penicillin	primary		1674	1674	1	1	12	12	1	1	1	
+shigella_sonnei__azithromycin	Shigella sonnei	azithromycin	macrolide	primary		1307	1307	1	1	12	12	1	1	1	
+shigella_sonnei__cefoperazone	Shigella sonnei	cefoperazone	cephalosporin (3rd gen)	primary		257	257	1	1	12	12	1	1	1	
+shigella_sonnei__cefotaxime	Shigella sonnei	cefotaxime	cephalosporin (3rd gen)	primary		593	593	1	1	12	12	1	1	1	
+shigella_sonnei__cefoxitin	Shigella sonnei	cefoxitin	cephalosporin (1st-2nd gen)	primary		593	593	1	1	12	12	1	1	1	
+shigella_sonnei__ceftazidime	Shigella sonnei	ceftazidime	cephalosporin (3rd gen)	primary		582	582	1	1	12	12	1	1	1	
+shigella_sonnei__ceftriaxone	Shigella sonnei	ceftriaxone	cephalosporin (3rd gen)	primary		1163	1163	1	1	12	12	1	1	1	
+shigella_sonnei__ciprofloxacin	Shigella sonnei	ciprofloxacin	quinolone	primary		1397	1397	1	1	12	12	1	1	1	
+shigella_sonnei__colistin	Shigella sonnei	colistin	polymyxin	primary		268	268	1	1	12	12	1	1	1	
+shigella_sonnei__ertapenem	Shigella sonnei	ertapenem	carbapenem	primary		338	338	1	1	12	12	1	1	1	
+shigella_sonnei__gentamicin	Shigella sonnei	gentamicin	aminoglycoside	primary		1288	1288	1	1	12	12	1	1	1	
+shigella_sonnei__nalidixic_acid	Shigella sonnei	nalidixic acid	quinolone	primary		854	854	1	1	12	12	1	1	1	
+shigella_sonnei__streptomycin	Shigella sonnei	streptomycin	aminoglycoside	primary		595	595	1	1	12	12	1	1	1	
+shigella_sonnei__sulfamethoxazole_trimethoprim	Shigella sonnei	sulfamethoxazole/trimethoprim	folate pathway combination	primary		617	617	1	1	12	12	1	1	1	
+shigella_sonnei__tetracycline	Shigella sonnei	tetracycline	tetracycline	primary		878	878	1	1	12	12	1	1	1	
+shigella_sonnei__tobramycin	Shigella sonnei	tobramycin	aminoglycoside	primary		541	541	1	1	12	12	1	1	1	
+shigella_sonnei__trimethoprim	Shigella sonnei	trimethoprim	trimethoprim	primary		1104	1104	1	1	12	12	1	1	1	
+staphylococcus_aureus__cefoxitin	Staphylococcus aureus	cefoxitin	cephalosporin (1st-2nd gen)	primary		1407	1407	1	1	12	12	1	1	1	
+staphylococcus_aureus__chloramphenicol	Staphylococcus aureus	chloramphenicol	phenicol	primary		1038	1038	1	1	12	12	1	1	1	
+staphylococcus_aureus__ciprofloxacin	Staphylococcus aureus	ciprofloxacin	quinolone	primary		1624	1624	1	1	12	12	1	1	1	
+staphylococcus_aureus__clindamycin	Staphylococcus aureus	clindamycin	lincosamide	primary		1543	1543	1	1	12	12	1	1	1	
+staphylococcus_aureus__daptomycin	Staphylococcus aureus	daptomycin	lipopeptide	primary		904	904	1	1	12	12	1	1	1	
+staphylococcus_aureus__erythromycin	Staphylococcus aureus	erythromycin	macrolide	primary		1957	1957	1	1	12	12	1	1	1	
+staphylococcus_aureus__fusidic_acid	Staphylococcus aureus	fusidic acid	fusidane	primary		1101	1101	1	1	12	12	1	1	1	
+staphylococcus_aureus__gentamicin	Staphylococcus aureus	gentamicin	aminoglycoside	primary		1913	1913	1	1	12	12	1	1	1	
+staphylococcus_aureus__mupirocin	Staphylococcus aureus	mupirocin	mupirocin	primary		736	736	1	1	12	12	1	1	1	
+staphylococcus_aureus__oxacillin	Staphylococcus aureus	oxacillin	penicillin	M	the maintainer's rule	1318	1318	1	1	12	12	1	1	1	
+staphylococcus_aureus__penicillin	Staphylococcus aureus	penicillin	penicillin	primary		1508	1508	1	1	12	12	1	1	1	
+staphylococcus_aureus__sulfamethoxazole_trimethoprim	Staphylococcus aureus	sulfamethoxazole/trimethoprim	folate pathway combination	primary		1389	1389	1	1	12	12	1	1	1	
+staphylococcus_aureus__tetracycline	Staphylococcus aureus	tetracycline	tetracycline	primary		1647	1647	1	1	12	12	1	1	1	
+streptococcus_agalactiae__clindamycin	Streptococcus agalactiae	clindamycin	lincosamide	primary		141	141	1	1	12	12	1	1	1	
+streptococcus_agalactiae__erythromycin	Streptococcus agalactiae	erythromycin	macrolide	primary		141	141	1	1	12	12	1	1	1	
+streptococcus_agalactiae__tetracycline	Streptococcus agalactiae	tetracycline	tetracycline	primary		141	141	1	1	12	12	1	1	1	
+streptococcus_pneumoniae__azithromycin	Streptococcus pneumoniae	azithromycin	macrolide	primary		1297	1297	1	1	12	12	1	1	1	
+streptococcus_pneumoniae__cefepime	Streptococcus pneumoniae	cefepime	cephalosporin (4th gen)	M	the maintainer's rule	1602	1602	1	1	12	12	1	1	1	
+streptococcus_pneumoniae__cefotaxime	Streptococcus pneumoniae	cefotaxime	cephalosporin (3rd gen)	M	the maintainer's rule	1884	1884	1	1	12	12	1	1	1	
+streptococcus_pneumoniae__ceftriaxone	Streptococcus pneumoniae	ceftriaxone	cephalosporin (3rd gen)	M	the maintainer's rule	1839	1839	1	1	12	12	1	1	1	
+streptococcus_pneumoniae__cefuroxime	Streptococcus pneumoniae	cefuroxime	cephalosporin (1st-2nd gen)	primary		1732	1732	1	1	12	12	1	1	1	
+streptococcus_pneumoniae__chloramphenicol	Streptococcus pneumoniae	chloramphenicol	phenicol	primary		1859	1859	1	1	12	12	1	1	1	
+streptococcus_pneumoniae__clindamycin	Streptococcus pneumoniae	clindamycin	lincosamide	primary		1894	1894	1	1	12	12	1	1	1	
+streptococcus_pneumoniae__erythromycin	Streptococcus pneumoniae	erythromycin	macrolide	primary		1991	1991	1	1	12	12	1	1	1	
+streptococcus_pneumoniae__meropenem	Streptococcus pneumoniae	meropenem	carbapenem	primary		1808	1808	1	1	12	12	1	1	1	
+streptococcus_pneumoniae__penicillin	Streptococcus pneumoniae	penicillin	penicillin	M	the maintainer's rule	1690	1690	1	1	12	12	1	1	1	
+streptococcus_pneumoniae__sulfamethoxazole_trimethoprim	Streptococcus pneumoniae	sulfamethoxazole/trimethoprim	folate pathway combination	primary		1777	1777	1	1	12	12	1	1	1	
+streptococcus_pneumoniae__tetracycline	Streptococcus pneumoniae	tetracycline	tetracycline	primary		1971	1971	1	1	12	12	1	1	1	
+vibrio_cholerae__nalidixic_acid	Vibrio cholerae	nalidixic acid	quinolone	primary		91	91	1	1	12	12	1	1	1	
+vibrio_cholerae__sulfamethoxazole	Vibrio cholerae	sulfamethoxazole	sulfonamide	primary		74	74	1	1	12	12	1	1	1	
+vibrio_cholerae__trimethoprim	Vibrio cholerae	trimethoprim	trimethoprim	primary		74	74	1	1	12	12	1	1	1	

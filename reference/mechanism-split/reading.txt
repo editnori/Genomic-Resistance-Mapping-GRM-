@@ -1,0 +1,12 @@
+# The mechanism split's one reading, 2026-11-23
+# runs: the 21 species of A at commit 11c299674c681581bbdaea0717058ed47034cd68, each copy's DONE and results/ as its run wrote them
+# scripts: 6372979c1c7c82f5692335ff1cb2caf1a3bfe3a1
+python3 -I scripts/mechanism/combine.py --run runs/<species slug> (21, in sorted order) --contrasts reference/time-split/contrasts.tsv --out combined
+# printed: combine: 21 species runs; m1 rows 28, m2 rows 10752, time-split link rows 10
+c88668b2967fd0e94bcb196d5f87fbdb2a36c43a1768070db6fc0e69f916e31a  combined/m1-reading.tsv
+7927f566f5dd0afb29ee99d20a53e474b892e342545966f782e50caa868e92a7  combined/m1-neither.tsv
+c81663b8b0efa48345305489a3c7d9182b16ab9ba17166a08a4069833b0ebede  combined/m2-reading.tsv
+a650c9c6d55602d534160b9149cfbf852b6ffa994b455c827377b32bd28ca718  combined/m2-summary.tsv
+8436433cc8d6ce7275824bfe8951e2f48d135d6ab2b8a8357cf06e1533b9d0a9  combined/timesplit-link.tsv
+python3 -I scripts/mechanism/page_tables.py write <this reading> scripts/c3-inputs/lists.tsv reference/time-split/contrasts.tsv 11c299674c681581bbdaea0717058ed47034cd68 reference/mechanism-split
+# its files and their sha256: SHA256SUMS
