@@ -416,6 +416,45 @@ class Gates(Built):
                    lambda: page.check_count(data))
 
 
+class GatesHeld(Built):
+    """Gates 4, 7, 10 and 11 on what each must refuse, where no test held them (SYNTHETIC)."""
+
+    def test_a_study_run_at_a_draw_seed_is_refused(self):
+        reading = self.copy()
+
+        def change(rows):
+            for r in rows:
+                if r["role"] == "study" and r["dataset"] == "synthia_coli__drug_a" and r["arm"] == "unitigs":
+                    r["seed"] = "43"
+            return rows
+        R.rewrite_species(reading, "synthia_coli", change)
+        self.stops(reading, "gate 4 study: score/synthia_coli/draws.tsv: a study run of synthia_coli__drug_a at seed 43")
+
+    def test_a_dataset_figure_a_thousandth_off_its_draws_mean_is_refused(self):
+        reading = self.copy()
+        path = reading / "score" / "fakeria_maxima" / "datasets.tsv"
+        rows = rows_of(path.parent, path.name)
+        row = next(r for r in rows if r["recall"] != "")
+        row["recall"] = repr(float(row["recall"]) + 0.001)
+        score.write_tsv(path, rows, score.DATASET_COLUMNS)
+        self.stops(reading, "gate 7 draws: score/fakeria_maxima: .* recall is not the mean of its draws")
+
+    def test_a_build_record_of_another_species_is_refused(self):
+        reading = self.copy()
+        path = reading / "run" / "synthia_coli" / "builds" / "unitigs.build.json"
+        rec = json.loads(path.read_text())
+        rec["species"] = "fakeria_maxima"
+        path.write_text(json.dumps(rec))
+        self.stops(reading, "gate 10 builds: run/synthia_coli/builds/unitigs.build.json is not the unitigs build of "
+                            "synthia_coli")
+
+    def test_a_done_line_naming_another_species_is_refused(self):
+        reading = self.copy()
+        path = reading / "run" / "synthia_coli" / "DONE"
+        path.write_text(path.read_text().replace("DONE synthia_coli ", "DONE fakeria_maxima "))
+        self.stops(reading, "gate 11 binary: run/synthia_coli/DONE does not name synthia_coli")
+
+
 class Withdrawn(unittest.TestCase):
     def test_a_withdrawn_arm_has_no_rows_no_build_and_its_five_pairs(self):
         with tempfile.TemporaryDirectory() as tmp:
