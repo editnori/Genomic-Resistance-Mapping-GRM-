@@ -347,7 +347,7 @@ The refit of the release's rule ended on its 23 species and 238 datasets at 20:3
 
 **Block.** Plan block C3 asks whether other inputs separate the classes better than the presence of 31-mers (K31). The design was fixed at 23:22Z on 22 Nov 2026, before any code ran on real data, and `docs/input-arms.md` gives the method. No comparison result has been read.
 
-**Arms.** Five arms stand against K31, the release's rule refitted in the same run. Two are built behind `grm learn --exp-inputs`: the AMRFinderPlus program's calls alone, and those calls joined before the K31 rows. K31 plus k-mer counts, unitigs and K31 plus amino-acid k-mers of called genes are designed and wait for the lead's ruling on their tools. A program column is one element symbol of the program's Type AMR rows, kept by the cohort range K31 uses.
+**Arms.** Five arms stand against K31, the release's rule refitted in the same run. Two are built behind `grm learn --exp-inputs`: the AMRFinderPlus program's calls alone, and those calls joined before the K31 rows, less a K31 row a program column repeats. K31 plus k-mer counts, unitigs and K31 plus amino-acid k-mers are designed and wait for the lead's ruling on their tools. A program column is one element symbol of the program's Type AMR rows, kept by the cohort range K31 uses.
 
 **Folds.** Each arm hands the release's code a new matrix. The support floor, the collapse of identical patterns and the chi-square screen to 4,000 then run on each fit's own training genomes, over both blocks of a joined arm at once. What an arm builds per dataset reads no label, and its cohort range is implied by every training subset, so no outer test genome can change a fit's candidates.
 

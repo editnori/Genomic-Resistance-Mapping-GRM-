@@ -168,11 +168,26 @@ class Checks(unittest.TestCase):
                 self.assertEqual(failed(checks), ["inputs: format, revision, dataset, arm and tag"])
 
     def test_a_joined_arm_that_drops_or_doubles_a_block_fails(self):
-        for rows_held in (4, 100, 2 * 4 + 100):
+        for rows_held in (4, 98, 2 * 4 + 98):
             with self.subTest(arm_rows=rows_held):
                 def change(r, d, i, n=rows_held):
                     if i is not None and r[2] == "k31-program":
                         i["arm_rows"] = n
+
+                rows, docs, files, releases = common.full_run(change=change)
+                rc, _, checks, _, _ = run(rows, docs, files, releases)
+                self.assertEqual(rc, 1)
+                self.assertEqual(failed(checks), ["inputs: the arm's rows are its blocks', each once"])
+
+    def test_k31_rows_left_out_beyond_the_program_rows_fail(self):
+        # The arm's rows still add up; only the count of K31 rows left out as a
+        # program column's pattern is impossible.
+        for arm, dropped in (("k31-program", 5), ("k31-program", -1), ("program", 1)):
+            with self.subTest(arm=arm, dropped=dropped):
+                def change(r, d, i, arm=arm, n=dropped):
+                    if i is not None and r[2] == arm:
+                        i["k31_rows_as_program"] = n
+                        i["arm_rows"] = i["program_rows"] + (i["k31_rows"] - n if arm == "k31-program" else 0)
 
                 rows, docs, files, releases = common.full_run(change=change)
                 rc, _, checks, _, _ = run(rows, docs, files, releases)

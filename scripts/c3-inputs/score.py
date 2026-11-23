@@ -127,8 +127,11 @@ def check(exp, doc, base, inputs, stray_inputs, release=None, served_learner=Non
             ok("inputs: the program names seen are those out of range, collapsed and kept",
                inputs["program_names_seen"] == inputs["program_names_out_of_range"]
                + inputs["program_names_collapsed"] + inputs["program_rows"])
+            joined = arm in JOINED
+            dropped = inputs["k31_rows_as_program"]
             ok("inputs: the arm's rows are its blocks', each once",
-               inputs["arm_rows"] == inputs["program_rows"] + (inputs["k31_rows"] if arm in JOINED else 0))
+               inputs["arm_rows"] == inputs["program_rows"] + (inputs["k31_rows"] - dropped if joined else 0)
+               and 0 <= dropped <= (min(inputs["program_rows"], inputs["k31_rows"]) if joined else 0))
         else:
             ok("inputs: the arm's file exists", False)
     return out

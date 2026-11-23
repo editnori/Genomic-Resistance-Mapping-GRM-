@@ -33,12 +33,14 @@ def pick(dataset=DATASET, scheme="lineage", seed=42, outer=None):
 
 
 def inputs(dataset=DATASET, arm="program", tag="drawn", program=4, k31=100, out_of_range=3, collapsed=1):
-    """One SYNTHETIC inputs file as grm learn --exp-inputs writes it: counts only."""
+    """One SYNTHETIC inputs file as grm learn --exp-inputs writes it: counts only. In the
+    joined arm two K31 rows equal a program column over the cohort and are left out."""
+    dropped = 2 if arm == "k31-program" else 0
     return {"format": "grm-c3-inputs-1", "evaluation_revision": 14, "dataset": dataset, "tag": tag, "arm": arm,
             "column": "symbol", "rows": "amr", "samples": 150, "min_support": 3, "tables_read": 150,
             "program_names_seen": program + out_of_range + collapsed, "program_names_out_of_range": out_of_range,
             "program_names_collapsed": collapsed, "program_rows": program, "k31_rows": k31,
-            "arm_rows": program + (k31 if arm == "k31-program" else 0)}
+            "k31_rows_as_program": dropped, "arm_rows": program + (k31 - dropped if arm == "k31-program" else 0)}
 
 
 def write_run(top, rows, docs, files, releases):

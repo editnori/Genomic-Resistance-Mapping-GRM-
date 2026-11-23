@@ -12,7 +12,7 @@ Any split here is a retrospective split inside one public database. A split by l
 |---|---|---|
 | K31, the default | the release's, `grm learn` with no `--exp-inputs` | runs today |
 | `program` | one per element symbol of the program's Type AMR rows | built |
-| `k31-program` | the program's columns, then the dataset's K31 rows | built |
+| `k31-program` | the program's columns, then the dataset's K31 rows less those whose cohort pattern a program column has | built |
 | `k31-counts` | K31 rows, then [count ≥ 2] of each 31-mer in a genome | designed, waits |
 | `unitigs` | one per distinct unitig pattern, in place of K31 | designed, waits |
 | `k31-aa` | K31 rows, then amino-acid 10-mers of called genes | designed, waits |
@@ -29,7 +29,7 @@ The folds come from the labels, the lineages and the seed, never from a column, 
 
 ## The files
 
-`grm learn --exp-inputs ARM --exp-program-tables DIR --exp-pick OUT --exp-pick-inner 0 --force` reads `DIR/<genome id>.tsv` and writes, per dataset, split and seed, C9's result file at no inner fold (`docs/served-pick.md`, The result file): each outer fold's genomes by class and each learner's calls, with no genome id. Beside it, per dataset, it writes `OUT/<dataset>.<tag>.inputs.json`, format `grm-c3-inputs-1`, where the tag is `drawn` for the drawn splits and the fold file's scheme for a study run. That file holds counts only: the tables read, the program names seen, out of range, collapsed and kept, the K31 rows and the arm's rows. It holds no column name, genome id, k-mer, sequence or position.
+`grm learn --exp-inputs ARM --exp-program-tables DIR --exp-pick OUT --exp-pick-inner 0 --force` reads `DIR/<genome id>.tsv` and writes, per dataset, split and seed, C9's result file at no inner fold (`docs/served-pick.md`, The result file): each outer fold's genomes by class and each learner's calls, with no genome id. Beside it, per dataset, it writes `OUT/<dataset>.<tag>.inputs.json`, format `grm-c3-inputs-1`, where the tag is `drawn` for the drawn splits and the fold file's scheme for a study run. That file holds counts only: the tables read, the program names seen, out of range, collapsed and kept, the K31 rows, those left out as a program column's pattern, and the arm's rows. It holds no column name, genome id, k-mer, sequence or position.
 
 `--exp-program-column` takes `symbol` (the default), `subclass` or `class`, and `--exp-program-rows` takes `amr` (the default) or `all`, so the lead's other answers to questions 7 and 8 need no new code. The flag needs `--force`, so a kept report can never skip an arm, and it refuses beside `--learner-seed`, the `--exp-tie-*` options, `--exp-null-refit`, `--exp-mic` and `--exp-cohort`.
 
@@ -66,12 +66,12 @@ It fits the default at each seed and checks its seed-42 reports against the rele
 
 ## Tests and planted faults
 
-`input_arms` holds 7 SYNTHETIC tests and `src/main.rs` one more on the flags. `tests/c3_inputs` holds 32 SYNTHETIC tests of the scorer, the lists and the expected results. `scripts/c3-inputs/planted_faults.py` plants each fault below in a copy of the tree and runs the test meant to catch it, which must fail.
+`input_arms` holds 8 SYNTHETIC tests and `src/main.rs` one more on the flags. `tests/c3_inputs` holds 33 SYNTHETIC tests of the scorer, the lists and the expected results. `scripts/c3-inputs/planted_faults.py` plants each fault below in a copy of the tree and runs the test meant to catch it, which must fail.
 
 | Fault | Caught by |
 |---|---|
 | 1. A cohort filter that reads the outer test genomes' calls | `no_outer_test_genome_changes_a_fits_candidates`: emptying or filling the outer test genomes' calls changes no fit's candidates |
-| 2. A joined arm that drops K31 (2a) or holds the program block twice (2b), or a scorer that passes one (2c) | `the_joined_arm_holds_each_block_once_the_program_first`; `Checks.test_a_joined_arm_that_drops_or_doubles_a_block_fails` |
+| 2. A joined arm that drops K31 (2a), holds the program block twice (2b) or keeps a K31 copy of a program column (2d), or a scorer that passes one (2c) | `the_joined_arm_holds_each_block_once_the_program_first`; `a_k31_row_equal_to_a_program_column_enters_once_as_the_programs`; `Checks.test_a_joined_arm_that_drops_or_doubles_a_block_fails` |
 | 3. A program column built from the label | `an_arm_matrix_does_not_change_with_the_labels` |
 | 4. An arm scored on other folds (4a) or paired with the default at another seed (4b) | `Checks.test_an_arm_on_other_folds_fails`; `Checks.test_an_arm_is_held_to_the_default_at_its_own_seed` |
 | 5. A twin at a draw's seed, in the scorer (5a) or the list (5b), or fitted with an arm (5c) | `Checks.test_a_twin_at_a_draw_seed_fails`; `Expect.test_a_twin_at_a_draw_seed_is_refused`; `Checks.test_a_twin_with_an_inputs_file_fails` |

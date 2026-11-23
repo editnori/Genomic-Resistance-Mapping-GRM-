@@ -274,6 +274,7 @@ src/lib.rs fasta::tests::reads_multiline_fasta_and_gzip
 src/lib.rs fasta::tests::stats_report_n50_and_gc
 src/lib.rs fnv::tests::fnv1a_matches_published_values
 src/lib.rs input_arms::tests::a_cohort_genome_without_a_table_stops_the_dataset
+src/lib.rs input_arms::tests::a_k31_row_equal_to_a_program_column_enters_once_as_the_programs
 src/lib.rs input_arms::tests::a_table_gives_the_named_column_of_the_admitted_rows
 src/lib.rs input_arms::tests::an_arm_matrix_does_not_change_with_the_labels
 src/lib.rs input_arms::tests::no_outer_test_genome_changes_a_fits_candidates

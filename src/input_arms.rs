@@ -18,9 +18,11 @@
 //! - `program`: one binary column per element symbol (or subclass, or
 //!   class) the program's tables name, over the cohort, and nothing else;
 //! - `k31-program`: those columns first, then the dataset's K31 rows, in one
-//!   matrix, so one candidate pass and one screen run over both blocks, and a
-//!   program column identical on a fit's training genomes to a K31 pattern
-//!   is kept as the program's.
+//!   matrix, so one candidate pass and one screen run over both blocks. A
+//!   K31 row whose cohort pattern equals a program column's is left out, so
+//!   the matrix holds each cohort pattern once, as the final models need,
+//!   and a program column identical on a fit's training genomes to a K31
+//!   pattern is kept as the program's.
 //!
 //! What this module builds reads no label: `program_block` sees each
 //! genome's calls and the support floor only, and `arm_matrix` takes the
@@ -227,20 +229,29 @@ pub fn program_block(calls: &[BTreeSet<String>], min_support: u32) -> ProgramBlo
     }
 }
 
-/// The arm's matrix over the dataset's samples: the program's rows, then,
-/// for `k31-program`, every K31 row of `ds` once. It reads `ds.x` only.
-pub fn arm_matrix(arm: Arm, ds: &Dataset, program: &ProgramBlock) -> BitMatrix {
+/// The arm's matrix over the dataset's samples, and how many K31 rows it
+/// left out as a program row's pattern: the program's rows, then, for
+/// `k31-program`, each K31 row of `ds` whose cohort pattern no program row
+/// has. It reads `ds.x` only.
+pub fn arm_matrix(arm: Arm, ds: &Dataset, program: &ProgramBlock) -> (BitMatrix, usize) {
     assert_eq!(program.x.cols, ds.x.cols);
     let mut x = BitMatrix::with_cols(ds.x.cols);
+    let mut held: HashSet<&[u64]> = HashSet::new();
     for r in 0..program.x.rows {
         x.push_row(program.x.row(r));
+        held.insert(program.x.row(r));
     }
+    let mut as_program = 0;
     if arm == Arm::K31Program {
         for r in 0..ds.x.rows {
+            if held.contains(ds.x.row(r)) {
+                as_program += 1;
+                continue;
+            }
             x.push_row(ds.x.row(r));
         }
     }
-    x
+    (x, as_program)
 }
 
 /// What one arm's matrix of one dataset held: counts only.
@@ -261,6 +272,8 @@ pub struct InputsResult {
     pub program_names_collapsed: usize,
     pub program_rows: usize,
     pub k31_rows: usize,
+    /// K31 rows left out of a joined arm as a program row's cohort pattern.
+    pub k31_rows_as_program: usize,
     pub arm_rows: usize,
 }
 
@@ -314,7 +327,7 @@ pub fn arm_dataset(
     );
     let calls = cohort_calls(&settings.tables, genome_ids, settings.column, settings.rows)?;
     let block = program_block(&calls, min_support);
-    let x = arm_matrix(settings.arm, &ds, &block);
+    let (x, as_program) = arm_matrix(settings.arm, &ds, &block);
     let result = InputsResult {
         format: FORMAT,
         evaluation_revision: crate::analysis::EVALUATION_REVISION,
@@ -331,6 +344,7 @@ pub fn arm_dataset(
         program_names_collapsed: block.collapsed,
         program_rows: block.x.rows,
         k31_rows: ds.x.rows,
+        k31_rows_as_program: as_program,
         arm_rows: x.rows,
     };
     let rows = x.rows;
@@ -366,7 +380,7 @@ pub fn apply(
     std::fs::write(&part, &bytes).with_context(|| format!("write {}", part.display()))?;
     std::fs::rename(&part, &path).with_context(|| format!("rename to {}", path.display()))?;
     eprintln!(
-        "    {dataset}: input arm {}: {} program rows and {} K31 rows of {}, {} rows",
+        "    {dataset}: input arm {}: {} program rows and {} K31 rows of {}, {} as a program row, {} rows",
         settings.arm.name(),
         result.program_rows,
         result.k31_rows,
@@ -375,6 +389,7 @@ pub fn apply(
         } else {
             "which none enter"
         },
+        result.k31_rows_as_program,
         result.arm_rows
     );
     Ok(ds)
@@ -523,13 +538,44 @@ mod tests {
         let (calls, ds) = cohort(60, 12, 40, 7);
         let block = program_block(&calls, 3);
         assert!(block.x.rows >= 3, "the fixture gives program rows");
-        let joined = arm_matrix(Arm::K31Program, &ds, &block);
+        let (joined, none) = arm_matrix(Arm::K31Program, &ds, &block);
+        assert_eq!(none, 0, "the fixture's K31 rows hold no program pattern");
         assert_eq!(joined.rows, block.x.rows + ds.x.rows);
         let rows = rows_of(&joined);
         assert_eq!(&rows[..block.x.rows], &rows_of(&block.x)[..]);
         assert_eq!(&rows[block.x.rows..], &rows_of(&ds.x)[..]);
-        let alone = arm_matrix(Arm::Program, &ds, &block);
-        assert_eq!(rows_of(&alone), rows_of(&block.x));
+        let (alone, zero) = arm_matrix(Arm::Program, &ds, &block);
+        assert_eq!((rows_of(&alone), zero), (rows_of(&block.x), 0));
+    }
+
+    #[test]
+    fn a_k31_row_equal_to_a_program_column_enters_once_as_the_programs() {
+        // SYNTHETIC: two of the K31 rows are copies of program columns over
+        // the cohort. The joined matrix holds each cohort pattern once, the
+        // program's copy first, and so passes the final models' check that
+        // every row is a candidate on all samples.
+        let (calls, mut ds) = cohort(60, 12, 40, 7);
+        let block = program_block(&calls, 3);
+        assert!(block.x.rows >= 2, "the fixture gives program rows");
+        let k = ds.x.rows;
+        let mut x = BitMatrix::with_cols(ds.x.cols);
+        for r in 0..k {
+            x.push_row(ds.x.row(r));
+            if r == 5 {
+                x.push_row(block.x.row(0));
+            }
+        }
+        x.push_row(block.x.row(1));
+        ds.x = x;
+        let (joined, as_program) = arm_matrix(Arm::K31Program, &ds, &block);
+        assert_eq!(as_program, 2);
+        assert_eq!(joined.rows, block.x.rows + k);
+        let rows = rows_of(&joined);
+        assert_eq!(&rows[..block.x.rows], &rows_of(&block.x)[..]);
+        let distinct: HashSet<&Vec<u64>> = rows.iter().collect();
+        assert_eq!(distinct.len(), rows.len());
+        let all = Bits::ones(ds.x.cols);
+        assert_eq!(training_candidates(&joined, &all, 3).1.len(), joined.rows);
     }
 
     #[test]
@@ -545,8 +591,8 @@ mod tests {
         };
         for arm in [Arm::Program, Arm::K31Program] {
             assert_eq!(
-                rows_of(&arm_matrix(arm, &ds, &block)),
-                rows_of(&arm_matrix(arm, &flipped, &block))
+                rows_of(&arm_matrix(arm, &ds, &block).0),
+                rows_of(&arm_matrix(arm, &flipped, &block).0)
             );
         }
     }
@@ -576,7 +622,7 @@ mod tests {
             for f in 0..5 {
                 let test: Vec<usize> = (f * 12..f * 12 + 12).collect();
                 let train = Bits::from_indices(60, (0..60).filter(|i| !test.contains(i)));
-                let base = arm_matrix(Arm::K31Program, &ds, &program_block(&calls, floor));
+                let (base, _) = arm_matrix(Arm::K31Program, &ds, &program_block(&calls, floor));
                 let want = candidates(&base, &train, floor);
                 let every: BTreeSet<String> = calls.iter().flatten().cloned().collect();
                 for fill in [BTreeSet::new(), every] {
@@ -584,7 +630,7 @@ mod tests {
                     for &i in &test {
                         moved[i] = fill.clone();
                     }
-                    let x = arm_matrix(Arm::K31Program, &ds, &program_block(&moved, floor));
+                    let (x, _) = arm_matrix(Arm::K31Program, &ds, &program_block(&moved, floor));
                     assert_eq!(candidates(&x, &train, floor), want, "seed {seed}, fold {f}");
                 }
             }
@@ -650,6 +696,7 @@ mod tests {
             let p = program_block(&calls, 3).x.rows;
             assert_eq!(result.program_rows, p);
             assert_eq!(result.k31_rows, k);
+            assert_eq!(result.k31_rows_as_program, 0);
             let want = if arm == Arm::K31Program { p + k } else { p };
             assert_eq!((result.arm_rows, got.x.rows), (want, want));
             assert_eq!(result.tables_read, 40);
