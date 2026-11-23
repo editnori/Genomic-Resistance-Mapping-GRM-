@@ -4,11 +4,14 @@
 
 <runs dir> holds one folder per species, named by its slug, as each run
 came back: run_species.sh's OUT layout less work/ (results/, logs/,
-score/ once unpacked, expect.tsv, binary.txt, lists.txt, DONE or FAILED,
-SHA256SUMS). <release dir> is the release data-rev14-274-20261112, whose
-species/<slug>.json lists each species' 2,000 genomes. It reads no score:
-score/ is read only as bytes, for SHA256SUMS and the genome id count, and
-score/score.log is never read, listed or counted.
+expect.tsv, binary.txt, lists.txt, DONE or FAILED, SHA256SUMS), with
+score/ as c2-drive.sh brings it back, score.tar beside the rest and not
+unpacked (or, where no score.tar is there, a score/ folder). <release dir>
+is the release data-rev14-274-20261112, whose species/<slug>.json lists
+each species' 2,000 genomes. It reads no score: score.tar's tables are read
+in place, only as bytes, for SHA256SUMS and the genome id count; score.tar
+is never read whole, and its score/score.log is never extracted, read,
+listed or counted.
 
 Checks, each printed with its counts and none with a genome id:
 
@@ -44,12 +47,15 @@ Writes the printout to <out txt> and exits 1 when a check fails.
 import hashlib
 import importlib.util
 import json
+import posixpath
 import re
 import sys
+import tarfile
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 SCORE_LOG = "score/score.log"
+SCORE_TAR = "score.tar"
 # docs/cap-arms.md, The arms: ranked by the rule, added at 4,000, added at 4,096.
 SELECTION = {
     "escherichia_coli": (8704, 2000, 2096),
@@ -91,18 +97,45 @@ def first_run(lrows):
 
 
 def published(folder):
-    """Every file of a species' copy that will be read or published: all but score/score.log."""
+    """Every file of a species' copy that will be read or published, but score/score.log and score.tar, whose
+    tables score_files reads in place."""
     return sorted(p for p in Path(folder).rglob("*") if p.is_file() and p.relative_to(folder).as_posix() != SCORE_LOG
-                  and "work" not in p.relative_to(folder).parts)
+                  and p.relative_to(folder).as_posix() != SCORE_TAR and "work" not in p.relative_to(folder).parts)
 
 
-def check_sums(folder):
-    """(lines, bad lines, names score.log)."""
+def score_files(folder):
+    """{name: bytes} of a copy's score/ tables: read in place from score.tar when the copy holds it, else from a
+    score/ folder. score/score.log is never extracted, opened or read."""
+    folder, out = Path(folder), {}
+    tar = folder / SCORE_TAR
+    if tar.is_file():
+        with tarfile.open(tar) as archive:
+            for member in archive:
+                name = posixpath.normpath(member.name)
+                if name == SCORE_LOG or not member.isfile() or not name.startswith("score/"):
+                    continue
+                out[name] = archive.extractfile(member).read()
+        return out
+    top = folder / "score"
+    for p in sorted(top.rglob("*")) if top.is_dir() else []:
+        name = p.relative_to(folder).as_posix()
+        if p.is_file() and name != SCORE_LOG:
+            out[name] = p.read_bytes()
+    return out
+
+
+def check_sums(folder, scores=None):
+    """(lines, bad lines, names score.log). A score/ line is held to score_files' bytes."""
+    scores = score_files(folder) if scores is None else scores
     lines = [l for l in (folder / "SHA256SUMS").read_text(encoding="utf-8").splitlines() if l.strip()]
     bad, log = 0, 0
     for line in lines:
         want, name = line.split("  ", 1)
         log += name == SCORE_LOG
+        if name.startswith("score/"):
+            data = scores.get(name)
+            bad += data is None or hashlib.sha256(data).hexdigest() != want
+            continue
         p = folder / name
         bad += not p.is_file() or sha256(p) != want
     return len(lines), bad, log
@@ -202,11 +235,10 @@ def release_ids(release, slugs, lists=()):
     return {i.encode() for i in ids}
 
 
-def scan(files, ids):
-    """(genome ids found, BioProject accessions found)."""
+def scan(files, ids, texts=()):
+    """(genome ids found, BioProject accessions found) in the files and in score.tar's tables' bytes."""
     found_ids = found_bp = 0
-    for p in files:
-        text = p.read_bytes()
+    for text in [p.read_bytes() for p in files] + list(texts):
         found_ids += sum(1 for t in scrub.TOKEN.findall(text) if t in ids)
         found_bp += len(BIOPROJECT.findall(text))
     return found_ids, found_bp
@@ -230,9 +262,10 @@ def run(runs, release, lrows, selection=None, lists=()):
         + ("" if found == species else f"; missing {sorted(set(species) - set(found))}, more {sorted(set(found) - set(species))}"))
     slugs = [s for s in species if s in found]
 
+    scores = {slug: score_files(runs / slug) for slug in slugs}
     total = bad = logs = 0
     for slug in slugs:
-        n, b, l = check_sums(runs / slug)
+        n, b, l = check_sums(runs / slug, scores[slug])
         total, bad, logs = total + n, bad + b, logs + l
     say("SHA256SUMS", bad == 0 and logs == 0, f"{total - bad} of {total} lines hold in {len(slugs)} species; "
         f"score/score.log listed {logs} times")
@@ -287,10 +320,13 @@ def run(runs, release, lrows, selection=None, lists=()):
 
     ids = release_ids(release, slugs, lists)
     files = [p for slug in slugs for p in published(runs / slug)]
-    n_ids, n_bp = scan(files, ids)
+    tables = [data for slug in slugs for name, data in sorted(scores[slug].items())
+              if not (runs / slug / name).is_file()]
+    n_ids, n_bp = scan(files, ids, tables)
     say("genome ids and BioProjects", n_ids == 0 and n_bp == 0,
-        f"{n_ids} genome ids and {n_bp} BioProject accessions in {len(files)} files, against the {len(ids):,} "
-        f"genome ids of the release's {len(slugs)} species lists and {len(lists)} id lists; score/score.log not read")
+        f"{n_ids} genome ids and {n_bp} BioProject accessions in {len(files) + len(tables)} files, against the "
+        f"{len(ids):,} genome ids of the release's {len(slugs)} species lists and {len(lists)} id lists; "
+        "score/score.log not read")
 
     refused = []
     for slug in slugs:
