@@ -1089,12 +1089,19 @@ mod tests {
     }
 
     /// SYNTHETIC: a species matrix of `rows` patterns over `n` genomes, as
-    /// `grm exp-input-build` saves one.
+    /// `grm exp-input-build` saves one, each genome in a pattern at 30%.
     fn species_matrix(n: usize, rows: usize, seed: u64) -> FeatureMatrix {
+        species_matrix_at(n, &vec![30; rows], seed)
+    }
+
+    /// SYNTHETIC: as `species_matrix`, with pattern r holding each genome at
+    /// `percent[r]`%, so a low one gives patterns held by a few genomes.
+    fn species_matrix_at(n: usize, percent: &[u64], seed: u64) -> FeatureMatrix {
+        let rows = percent.len();
         let mut g = Lcg(seed);
         let mut patterns = BitMatrix::with_cols(n);
-        for _ in 0..rows {
-            patterns.push_row(Bits::from_indices(n, (0..n).filter(|_| g.below(30))).words());
+        for &p in percent {
+            patterns.push_row(Bits::from_indices(n, (0..n).filter(|_| g.below(p))).words());
         }
         FeatureMatrix {
             summary: crate::matrix::MatrixSummary {
@@ -1180,11 +1187,15 @@ mod tests {
     fn no_outer_test_genome_changes_a_matrix_arms_candidates() {
         // SYNTHETIC: 60 cohort genomes of 72 in 5 outer folds of 12. For each
         // fold, the outer test genomes' presence in the species' added
-        // matrix is cleared, then filled; no fit's candidates may move.
+        // matrix is cleared, then filled; no fit's candidates may move. Half
+        // the added patterns hold a genome at 8%, so some sit near the floor
+        // on the training genomes, where a count over the whole cohort would
+        // keep or drop them.
         let floor = 3;
+        let percent: Vec<u64> = (0..80).map(|r| if r % 2 == 0 { 30 } else { 8 }).collect();
         for seed in [3, 5, 9] {
             let (_, ds) = cohort(60, 4, 30, seed);
-            let m = species_matrix(72, 80, seed + 100);
+            let m = species_matrix_at(72, &percent, seed + 100);
             for arm in MATRIX_ARMS {
                 for f in 0..5 {
                     let test: Vec<usize> = (f * 12..f * 12 + 12).collect();
@@ -1193,7 +1204,7 @@ mod tests {
                         matrix_arm(arm.joined(), &ds, &added_block(&m, &ds.columns, floor)).0;
                     let want = candidates(&base, &train, floor);
                     for fill in [false, true] {
-                        let mut moved = species_matrix(72, 80, seed + 100);
+                        let mut moved = species_matrix_at(72, &percent, seed + 100);
                         for r in 0..moved.patterns.rows {
                             let mut row = Bits::from_indices(
                                 72,
