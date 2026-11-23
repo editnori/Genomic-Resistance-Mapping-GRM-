@@ -1,0 +1,40 @@
+dataset	species	antibiotic	role	added_labelled	may_train	trained	unused_bioproject	unused_unknown	unused_duplicate	tested	reading
+escherichia_coli__amikacin	Escherichia coli	amikacin	study	284	2	2	96	186	0	1125	the study split: decides nothing
+escherichia_coli__ampicillin_sulbactam	Escherichia coli	ampicillin/sulbactam	none-added	1	0		1	0	0		the study split: decides nothing
+escherichia_coli__aztreonam	Escherichia coli	aztreonam	study	349	2	2	114	233	0	699	the study split: decides nothing
+escherichia_coli__cefazolin	Escherichia coli	cefazolin	none-added	2	0		2	0	0		the study split: decides nothing
+escherichia_coli__cefepime	Escherichia coli	cefepime	study	100	2	2	96	2	0	1124	the study split: decides nothing
+escherichia_coli__cefoxitin	Escherichia coli	cefoxitin	study	94	3	3	91	0	0	1066	the study split: decides nothing
+escherichia_coli__ceftriaxone	Escherichia coli	ceftriaxone	none-added	3	0		2	1	0		the study split: decides nothing
+escherichia_coli__ertapenem	Escherichia coli	ertapenem	study	108	3	3	98	7	0	820	the study split: decides nothing
+escherichia_coli__levofloxacin	Escherichia coli	levofloxacin	none-added	2	0		2	0	0		the study split: decides nothing
+escherichia_coli__nitrofurantoin	Escherichia coli	nitrofurantoin	none-added	0	0		0	0	0		the study split: decides nothing
+escherichia_coli__piperacillin_tazobactam	Escherichia coli	piperacillin/tazobactam	study	1739	2	2	882	855	0	979	the study split: decides nothing
+escherichia_coli__streptomycin	Escherichia coli	streptomycin	none-added	0	0		0	0	0		the study split: decides nothing
+escherichia_coli__sulfamethoxazole	Escherichia coli	sulfamethoxazole	none-added	0	0		0	0	0		the study split: decides nothing
+escherichia_coli__tetracycline	Escherichia coli	tetracycline	study	65	15	15	28	22	0	782	the study split: decides nothing
+escherichia_coli__tobramycin	Escherichia coli	tobramycin	study	490	1	1	95	394	0	1070	the study split: decides nothing
+klebsiella_pneumoniae__ampicillin_sulbactam	Klebsiella pneumoniae	ampicillin/sulbactam	study	1244	73	73	1171	0	0	744	the study split: decides nothing
+klebsiella_pneumoniae__aztreonam	Klebsiella pneumoniae	aztreonam	study	1529	27	27	1470	32	0	1050	the study split: decides nothing
+klebsiella_pneumoniae__cefazolin	Klebsiella pneumoniae	cefazolin	study	1348	72	72	1276	0	0	1141	the study split: decides nothing
+klebsiella_pneumoniae__cefepime	Klebsiella pneumoniae	cefepime	none-added	1163	0		1163	0	0		the study split: decides nothing
+klebsiella_pneumoniae__cefoxitin	Klebsiella pneumoniae	cefoxitin	study	1371	84	84	1287	0	0	1181	the study split: decides nothing
+klebsiella_pneumoniae__ceftazidime	Klebsiella pneumoniae	ceftazidime	study	1988	430	430	1526	32	0	1310	the study split: decides nothing
+klebsiella_pneumoniae__ceftriaxone	Klebsiella pneumoniae	ceftriaxone	none-added	1315	0		1283	32	0		the study split: decides nothing
+klebsiella_pneumoniae__ciprofloxacin	Klebsiella pneumoniae	ciprofloxacin	study	1834	418	418	1379	37	0	1706	the study split: decides nothing
+klebsiella_pneumoniae__colistin	Klebsiella pneumoniae	colistin	study	50	16	16	2	32	0	336	the study split: decides nothing
+klebsiella_pneumoniae__doripenem	Klebsiella pneumoniae	doripenem	none-added	2	0		2	0	0		the study split: decides nothing
+klebsiella_pneumoniae__ertapenem	Klebsiella pneumoniae	ertapenem	study	533	102	102	400	31	0	952	the study split: decides nothing
+klebsiella_pneumoniae__imipenem	Klebsiella pneumoniae	imipenem	study	1221	88	88	1131	2	0	1158	the study split: decides nothing
+klebsiella_pneumoniae__levofloxacin	Klebsiella pneumoniae	levofloxacin	study	1239	89	89	1150	0	0	871	the study split: decides nothing
+klebsiella_pneumoniae__nitrofurantoin	Klebsiella pneumoniae	nitrofurantoin	study	576	36	36	540	0	0	562	the study split: decides nothing
+klebsiella_pneumoniae__polymyxin_b	Klebsiella pneumoniae	polymyxin b	none-added	55	0		2	53	0		the study split: decides nothing
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	Klebsiella pneumoniae	sulfamethoxazole/trimethoprim	study	1735	402	402	1294	39	0	1546	the study split: decides nothing
+klebsiella_pneumoniae__tigecycline	Klebsiella pneumoniae	tigecycline	study	212	64	64	148	0	0	924	the study split: decides nothing
+klebsiella_pneumoniae__tobramycin	Klebsiella pneumoniae	tobramycin	study	1036	20	20	1016	0	0	1230	the study split: decides nothing
+mycobacterium_tuberculosis__nicotinamide	Mycobacterium tuberculosis	nicotinamide	none-added	0	0		0	0	0		the study split: decides nothing
+salmonella_enterica__sulfisoxazole	Salmonella enterica	sulfisoxazole	study	1439	4	4	1240	195	0	544	the study split: decides nothing
+staphylococcus_aureus__clindamycin	Staphylococcus aureus	clindamycin	study	386	7	7	335	44	0	1543	the study split: decides nothing
+staphylococcus_aureus__erythromycin	Staphylococcus aureus	erythromycin	study	1382	6	6	857	519	0	1957	the study split: decides nothing
+staphylococcus_aureus__penicillin	Staphylococcus aureus	penicillin	study	811	3	3	764	44	0	1508	the study split: decides nothing
+staphylococcus_aureus__sulfamethoxazole_trimethoprim	Staphylococcus aureus	sulfamethoxazole/trimethoprim	study	147	7	7	96	44	0	1389	the study split: decides nothing

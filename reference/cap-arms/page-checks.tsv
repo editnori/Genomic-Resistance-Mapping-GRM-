@@ -1,0 +1,17 @@
+check	passed	made	species
+cart has rows	738	738	8
+cart: one row per scored genome in each of 5 folds	738	738	8
+gbt has rows	738	738	8
+gbt: one row per scored genome in each of 5 folds	738	738	8
+lasso has rows	738	738	8
+lasso: one row per scored genome in each of 5 folds	738	738	8
+rf has rows	738	738	8
+rf: one row per scored genome in each of 5 folds	738	738	8
+scm has rows	738	738	8
+scm: one row per scored genome in each of 5 folds	738	738	8
+the lineage split is unavailable (a default plan refused past grm arm's replacements); not produced	468	468	8
+the pick file is the dataset's study-whole fit at seed 42 with no inner fold	66	66	5
+the plan and the prediction rows exist	738	738	8
+the scored genomes of each outer fold are the default's	228	228	8
+the test folds are the default's, with at least its training genomes	27	27	4
+the twin is the default's fit at a slot no draw has	255	255	8

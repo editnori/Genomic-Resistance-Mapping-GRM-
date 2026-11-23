@@ -1,0 +1,20 @@
+dataset	species	antibiotic	added_labelled	added_resistant	added_susceptible	reading
+enterococcus_faecium__tetracycline	Enterococcus faecium	tetracycline	6	6	0	in the deciding count; the count without them decides nothing
+escherichia_coli__ampicillin_sulbactam	Escherichia coli	ampicillin/sulbactam	1	1	0	in the deciding count; the count without them decides nothing
+escherichia_coli__cefazolin	Escherichia coli	cefazolin	2	2	0	in the deciding count; the count without them decides nothing
+escherichia_coli__ceftriaxone	Escherichia coli	ceftriaxone	3	2	1	in the deciding count; the count without them decides nothing
+escherichia_coli__chloramphenicol	Escherichia coli	chloramphenicol	7	5	2	in the deciding count; the count without them decides nothing
+escherichia_coli__doxycycline	Escherichia coli	doxycycline	2	2	0	in the deciding count; the count without them decides nothing
+escherichia_coli__levofloxacin	Escherichia coli	levofloxacin	2	1	1	in the deciding count; the count without them decides nothing
+klebsiella_pneumoniae__cefpodoxime	Klebsiella pneumoniae	cefpodoxime	6	1	5	in the deciding count; the count without them decides nothing
+klebsiella_pneumoniae__cefpodoxime_ceftriaxone	Klebsiella pneumoniae	cefpodoxime/ceftriaxone	3	2	1	in the deciding count; the count without them decides nothing
+klebsiella_pneumoniae__cefpodoxime_clavulanate	Klebsiella pneumoniae	cefpodoxime/clavulanate	5	0	5	in the deciding count; the count without them decides nothing
+klebsiella_pneumoniae__chloramphenicol	Klebsiella pneumoniae	chloramphenicol	11	8	3	in the deciding count; the count without them decides nothing
+klebsiella_pneumoniae__doripenem	Klebsiella pneumoniae	doripenem	2	1	1	in the deciding count; the count without them decides nothing
+klebsiella_pneumoniae__doxycycline	Klebsiella pneumoniae	doxycycline	5	0	5	in the deciding count; the count without them decides nothing
+klebsiella_pneumoniae__fosfomycin	Klebsiella pneumoniae	fosfomycin	2	0	2	in the deciding count; the count without them decides nothing
+klebsiella_pneumoniae__ticarcillin_clavulanate	Klebsiella pneumoniae	ticarcillin/clavulanate	5	0	5	in the deciding count; the count without them decides nothing
+klebsiella_pneumoniae__trimethoprim	Klebsiella pneumoniae	trimethoprim	15	10	5	in the deciding count; the count without them decides nothing
+salmonella_enterica__sulfamethoxazole	Salmonella enterica	sulfamethoxazole	1	0	1	in the deciding count; the count without them decides nothing
+staphylococcus_aureus__daptomycin	Staphylococcus aureus	daptomycin	14	0	14	in the deciding count; the count without them decides nothing
+streptococcus_pneumoniae__meropenem	Streptococcus pneumoniae	meropenem	13	0	13	in the deciding count; the count without them decides nothing

@@ -1,0 +1,94 @@
+dataset	species	antibiotic	arm	split	reason	refused_slots
+enterococcus_faecium__clindamycin	Enterococcus faecium	clindamycin	cap-all	lineage	none-added: no added genome labelled	
+enterococcus_faecium__dalfopristin_quinupristin	Enterococcus faecium	dalfopristin/quinupristin	cap-all	lineage	none-added: no added genome labelled	
+enterococcus_faecium__doxycycline	Enterococcus faecium	doxycycline	cap-all	lineage	none-added: no added genome labelled	
+enterococcus_faecium__erythromycin	Enterococcus faecium	erythromycin	cap-all	lineage	none-added: no added genome labelled	
+enterococcus_faecium__gentamicin	Enterococcus faecium	gentamicin	cap-all	lineage	none-added: no added genome labelled	
+enterococcus_faecium__kanamycin	Enterococcus faecium	kanamycin	cap-all	lineage	none-added: no added genome labelled	
+enterococcus_faecium__streptomycin	Enterococcus faecium	streptomycin	cap-all	lineage	none-added: no added genome labelled	
+enterococcus_faecium__teicoplanin	Enterococcus faecium	teicoplanin	cap-all	lineage	none-added: no added genome labelled	
+enterococcus_faecium__doxycycline	Enterococcus faecium	doxycycline	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	1
+enterococcus_faecium__teicoplanin	Enterococcus faecium	teicoplanin	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	5
+enterococcus_faecium__vancomycin	Enterococcus faecium	vancomycin	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	3
+escherichia_coli__cefpodoxime	Escherichia coli	cefpodoxime	cap-all	lineage	none-added: no added genome labelled	
+escherichia_coli__cefpodoxime_clavulanate	Escherichia coli	cefpodoxime/clavulanate	cap-all	lineage	none-added: no added genome labelled	
+escherichia_coli__ceftiofur	Escherichia coli	ceftiofur	cap-all	lineage	none-added: no added genome labelled	
+escherichia_coli__colistin	Escherichia coli	colistin	cap-all	lineage	none-added: no added genome labelled	
+escherichia_coli__erythromycin	Escherichia coli	erythromycin	cap-all	lineage	none-added: no added genome labelled	
+escherichia_coli__nitrofurantoin	Escherichia coli	nitrofurantoin	cap-all	lineage and study	none-added: no added genome labelled	
+escherichia_coli__streptomycin	Escherichia coli	streptomycin	cap-all	lineage and study	none-added: no added genome labelled	
+escherichia_coli__sulfamethoxazole	Escherichia coli	sulfamethoxazole	cap-all	lineage and study	none-added: no added genome labelled	
+escherichia_coli__ampicillin_sulbactam	Escherichia coli	ampicillin/sulbactam	cap-all	study	none-added: no added genome trains on the study split	
+escherichia_coli__cefazolin	Escherichia coli	cefazolin	cap-all	study	none-added: no added genome trains on the study split	
+escherichia_coli__ceftriaxone	Escherichia coli	ceftriaxone	cap-all	study	none-added: no added genome trains on the study split	
+escherichia_coli__levofloxacin	Escherichia coli	levofloxacin	cap-all	study	none-added: no added genome trains on the study split	
+escherichia_coli__amikacin	Escherichia coli	amikacin	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	6
+escherichia_coli__ampicillin_sulbactam	Escherichia coli	ampicillin/sulbactam	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	5
+escherichia_coli__aztreonam	Escherichia coli	aztreonam	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	2
+escherichia_coli__cefazolin	Escherichia coli	cefazolin	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	2
+escherichia_coli__cefepime	Escherichia coli	cefepime	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	2
+escherichia_coli__cefpodoxime	Escherichia coli	cefpodoxime	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	5
+escherichia_coli__cefpodoxime_clavulanate	Escherichia coli	cefpodoxime/clavulanate	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	5
+escherichia_coli__ceftiofur	Escherichia coli	ceftiofur	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	6
+escherichia_coli__cefuroxime	Escherichia coli	cefuroxime	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	1
+escherichia_coli__chloramphenicol	Escherichia coli	chloramphenicol	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	1
+escherichia_coli__colistin	Escherichia coli	colistin	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	6
+escherichia_coli__doxycycline	Escherichia coli	doxycycline	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	5
+escherichia_coli__erythromycin	Escherichia coli	erythromycin	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	6
+escherichia_coli__imipenem	Escherichia coli	imipenem	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	4
+escherichia_coli__nalidixic_acid	Escherichia coli	nalidixic acid	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	1
+escherichia_coli__nitrofurantoin	Escherichia coli	nitrofurantoin	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	6
+escherichia_coli__streptomycin	Escherichia coli	streptomycin	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	2
+escherichia_coli__tobramycin	Escherichia coli	tobramycin	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	1
+klebsiella_pneumoniae__cefotetan	Klebsiella pneumoniae	cefotetan	cap-all	lineage	none-added: no added genome labelled	
+klebsiella_pneumoniae__ceftazidime_avibactam	Klebsiella pneumoniae	ceftazidime/avibactam	cap-all	lineage	none-added: no added genome labelled	
+klebsiella_pneumoniae__ofloxacin	Klebsiella pneumoniae	ofloxacin	cap-all	lineage	none-added: no added genome labelled	
+klebsiella_pneumoniae__streptomycin	Klebsiella pneumoniae	streptomycin	cap-all	lineage	none-added: no added genome labelled	
+klebsiella_pneumoniae__cefepime	Klebsiella pneumoniae	cefepime	cap-all	study	none-added: no added genome trains on the study split	
+klebsiella_pneumoniae__ceftriaxone	Klebsiella pneumoniae	ceftriaxone	cap-all	study	none-added: no added genome trains on the study split	
+klebsiella_pneumoniae__doripenem	Klebsiella pneumoniae	doripenem	cap-all	study	none-added: no added genome trains on the study split	
+klebsiella_pneumoniae__polymyxin_b	Klebsiella pneumoniae	polymyxin b	cap-all	study	none-added: no added genome trains on the study split	
+klebsiella_pneumoniae__cefotetan	Klebsiella pneumoniae	cefotetan	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	6
+klebsiella_pneumoniae__cefpodoxime_ceftriaxone	Klebsiella pneumoniae	cefpodoxime/ceftriaxone	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	3
+klebsiella_pneumoniae__cefpodoxime_clavulanate	Klebsiella pneumoniae	cefpodoxime/clavulanate	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	2
+klebsiella_pneumoniae__ceftazidime_avibactam	Klebsiella pneumoniae	ceftazidime/avibactam	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	6
+klebsiella_pneumoniae__chloramphenicol	Klebsiella pneumoniae	chloramphenicol	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	1
+klebsiella_pneumoniae__colistin	Klebsiella pneumoniae	colistin	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	6
+klebsiella_pneumoniae__doripenem	Klebsiella pneumoniae	doripenem	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	6
+klebsiella_pneumoniae__doxycycline	Klebsiella pneumoniae	doxycycline	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	5
+klebsiella_pneumoniae__fosfomycin	Klebsiella pneumoniae	fosfomycin	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	4
+klebsiella_pneumoniae__ofloxacin	Klebsiella pneumoniae	ofloxacin	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	6
+klebsiella_pneumoniae__polymyxin_b	Klebsiella pneumoniae	polymyxin b	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	6
+klebsiella_pneumoniae__streptomycin	Klebsiella pneumoniae	streptomycin	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	6
+klebsiella_pneumoniae__ticarcillin_clavulanate	Klebsiella pneumoniae	ticarcillin/clavulanate	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	6
+mycobacterium_tuberculosis__nicotinamide	Mycobacterium tuberculosis	nicotinamide	cap-all	lineage and study	none-added: no added genome labelled	
+mycobacterium_tuberculosis__ciprofloxacin	Mycobacterium tuberculosis	ciprofloxacin	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	5
+mycobacterium_tuberculosis__nicotinamide	Mycobacterium tuberculosis	nicotinamide	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	4
+neisseria_gonorrhoeae__erythromycin	Neisseria gonorrhoeae	erythromycin	cap-all	lineage	none-added: no added genome labelled	
+neisseria_gonorrhoeae__cefixime	Neisseria gonorrhoeae	cefixime	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	6
+neisseria_gonorrhoeae__ceftriaxone	Neisseria gonorrhoeae	ceftriaxone	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	6
+neisseria_gonorrhoeae__erythromycin	Neisseria gonorrhoeae	erythromycin	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	3
+salmonella_enterica__ampicillin_sulbactam	Salmonella enterica	ampicillin/sulbactam	cap-all	lineage	none-added: no added genome labelled	
+salmonella_enterica__cefazolin	Salmonella enterica	cefazolin	cap-all	lineage	none-added: no added genome labelled	
+salmonella_enterica__pefloxacin	Salmonella enterica	pefloxacin	cap-all	lineage	none-added: no added genome labelled	
+salmonella_enterica__ampicillin_sulbactam	Salmonella enterica	ampicillin/sulbactam	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	6
+salmonella_enterica__cefazolin	Salmonella enterica	cefazolin	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	6
+salmonella_enterica__ceftazidime	Salmonella enterica	ceftazidime	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	6
+salmonella_enterica__pefloxacin	Salmonella enterica	pefloxacin	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	6
+salmonella_enterica__sulfamethoxazole	Salmonella enterica	sulfamethoxazole	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	6
+salmonella_enterica__sulfathiazole	Salmonella enterica	sulfathiazole	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	6
+staphylococcus_aureus__cefoxitin	Staphylococcus aureus	cefoxitin	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	3
+staphylococcus_aureus__chloramphenicol	Staphylococcus aureus	chloramphenicol	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	2
+staphylococcus_aureus__ciprofloxacin	Staphylococcus aureus	ciprofloxacin	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	1
+staphylococcus_aureus__daptomycin	Staphylococcus aureus	daptomycin	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	4
+staphylococcus_aureus__fusidic_acid	Staphylococcus aureus	fusidic acid	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	3
+staphylococcus_aureus__gentamicin	Staphylococcus aureus	gentamicin	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	5
+staphylococcus_aureus__mupirocin	Staphylococcus aureus	mupirocin	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	6
+staphylococcus_aureus__rifampin	Staphylococcus aureus	rifampin	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	4
+staphylococcus_aureus__sulfamethoxazole_trimethoprim	Staphylococcus aureus	sulfamethoxazole/trimethoprim	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	6
+staphylococcus_aureus__tetracycline	Staphylococcus aureus	tetracycline	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	1
+streptococcus_pneumoniae__azithromycin	Streptococcus pneumoniae	azithromycin	cap-all	lineage	none-added: no added genome labelled	
+streptococcus_pneumoniae__cefuroxime	Streptococcus pneumoniae	cefuroxime	cap-all	lineage	none-added: no added genome labelled	
+streptococcus_pneumoniae__chloramphenicol	Streptococcus pneumoniae	chloramphenicol	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	3
+streptococcus_pneumoniae__clindamycin	Streptococcus pneumoniae	clindamycin	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	1
+streptococcus_pneumoniae__meropenem	Streptococcus pneumoniae	meropenem	every arm and the twin	lineage	lineage split unavailable: the default's lineage draws refused past grm arm's two replacements	6

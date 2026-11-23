@@ -1,0 +1,151 @@
+split	pair	learner	measure	orientation	withdrawn	datasets	entered	not_scored	constant	better	worse	same	median_difference	species	interval_lo	interval_hi	sign_p	holm_p
+lineage	cap-4000-cap-2000	scm	balanced_accuracy	higher	1	0	0	0	0	0	0	0		0			1.0	1.0
+lineage	cap-4000-cap-2000	scm	recall	higher	1	0	0	0	0	0	0	0		0			1.0	
+lineage	cap-4000-cap-2000	scm	specificity	higher	1	0	0	0	0	0	0	0		0			1.0	
+lineage	cap-4000-cap-2000	scm	vme	lower	1	0	0	0	0	0	0	0		0			1.0	
+lineage	cap-4000-cap-2000	scm	me	lower	1	0	0	0	0	0	0	0		0			1.0	
+lineage	cap-4000-cap-2000	scm	log_loss	lower	1	0	0	0	0	0	0	0		0			1.0	
+lineage	cap-4000-cap-2000	cart	balanced_accuracy	higher	1	0	0	0	0	0	0	0		0			1.0	1.0
+lineage	cap-4000-cap-2000	cart	recall	higher	1	0	0	0	0	0	0	0		0			1.0	
+lineage	cap-4000-cap-2000	cart	specificity	higher	1	0	0	0	0	0	0	0		0			1.0	
+lineage	cap-4000-cap-2000	cart	vme	lower	1	0	0	0	0	0	0	0		0			1.0	
+lineage	cap-4000-cap-2000	cart	me	lower	1	0	0	0	0	0	0	0		0			1.0	
+lineage	cap-4000-cap-2000	cart	log_loss	lower	1	0	0	0	0	0	0	0		0			1.0	
+lineage	cap-4000-cap-2000	rf	balanced_accuracy	higher	1	0	0	0	0	0	0	0		0			1.0	1.0
+lineage	cap-4000-cap-2000	rf	recall	higher	1	0	0	0	0	0	0	0		0			1.0	
+lineage	cap-4000-cap-2000	rf	specificity	higher	1	0	0	0	0	0	0	0		0			1.0	
+lineage	cap-4000-cap-2000	rf	vme	lower	1	0	0	0	0	0	0	0		0			1.0	
+lineage	cap-4000-cap-2000	rf	me	lower	1	0	0	0	0	0	0	0		0			1.0	
+lineage	cap-4000-cap-2000	rf	log_loss	lower	1	0	0	0	0	0	0	0		0			1.0	
+lineage	cap-4000-cap-2000	gbt	balanced_accuracy	higher	1	0	0	0	0	0	0	0		0			1.0	1.0
+lineage	cap-4000-cap-2000	gbt	recall	higher	1	0	0	0	0	0	0	0		0			1.0	
+lineage	cap-4000-cap-2000	gbt	specificity	higher	1	0	0	0	0	0	0	0		0			1.0	
+lineage	cap-4000-cap-2000	gbt	vme	lower	1	0	0	0	0	0	0	0		0			1.0	
+lineage	cap-4000-cap-2000	gbt	me	lower	1	0	0	0	0	0	0	0		0			1.0	
+lineage	cap-4000-cap-2000	gbt	log_loss	lower	1	0	0	0	0	0	0	0		0			1.0	
+lineage	cap-4000-cap-2000	lasso	balanced_accuracy	higher	1	0	0	0	0	0	0	0		0			1.0	1.0
+lineage	cap-4000-cap-2000	lasso	recall	higher	1	0	0	0	0	0	0	0		0			1.0	
+lineage	cap-4000-cap-2000	lasso	specificity	higher	1	0	0	0	0	0	0	0		0			1.0	
+lineage	cap-4000-cap-2000	lasso	vme	lower	1	0	0	0	0	0	0	0		0			1.0	
+lineage	cap-4000-cap-2000	lasso	me	lower	1	0	0	0	0	0	0	0		0			1.0	
+lineage	cap-4000-cap-2000	lasso	log_loss	lower	1	0	0	0	0	0	0	0		0			1.0	
+lineage	cap-all-cap-2000	scm	balanced_accuracy	higher	0	116	76	40	0	17	7	52	0.001918747061	8	-0.002675391109	0.005319321924	0.03195732832	0.479359924793
+lineage	cap-all-cap-2000	scm	recall	higher	0	116	76	40	0	26	18	32	0.004662236053	8	-0.000971817298	0.008658008658	0.145607618273	
+lineage	cap-all-cap-2000	scm	specificity	higher	0	116	76	40	0	25	15	36	0.0	8	-0.003144654088	0.007163927518	0.076929972081	
+lineage	cap-all-cap-2000	scm	vme	lower	0	116	76	40	0	26	18	32	-0.004662236053	8	-0.008658008658	0.000971817298	0.145607618273	
+lineage	cap-all-cap-2000	scm	me	lower	0	116	76	40	0	25	15	36	0.0	8	-0.007163927518	0.003144654088	0.076929972081	
+lineage	cap-all-cap-2000	scm	log_loss	lower	0	116	76	40	0	43	25	8	-0.026398425354	8	-0.054051263689	0.026609578525	0.019230026674	
+lineage	cap-all-cap-2000	cart	balanced_accuracy	higher	0	116	76	40	0	17	13	46	0.000935472282	8	0.0	0.006985074972	0.292332355864	1.0
+lineage	cap-all-cap-2000	cart	recall	higher	0	116	76	40	0	30	21	25	0.001872140498	8	-0.002849002849	0.016736401673	0.131218767856	
+lineage	cap-all-cap-2000	cart	specificity	higher	0	116	76	40	0	15	14	47	0.0	8	-0.000505050505	0.002032520325	0.5	
+lineage	cap-all-cap-2000	cart	vme	lower	0	116	76	40	0	30	21	25	-0.001872140498	8	-0.016736401673	0.002849002849	0.131218767856	
+lineage	cap-all-cap-2000	cart	me	lower	0	116	76	40	0	15	14	47	0.0	8	-0.002032520325	0.000505050505	0.5	
+lineage	cap-all-cap-2000	cart	log_loss	lower	0	116	76	40	0	31	21	24	-0.010334000093	8	-0.01763702282	0.00108260546	0.105804284381	
+lineage	cap-all-cap-2000	rf	balanced_accuracy	higher	0	116	76	40	0	20	10	46	0.002305235499	8	-0.001851851852	0.017389076623	0.049368573353	0.691160026938
+lineage	cap-all-cap-2000	rf	recall	higher	0	116	76	40	0	16	23	37	-0.002142799757	8	-0.013698630137	0.003370599603	0.90020456654	
+lineage	cap-all-cap-2000	rf	specificity	higher	0	116	76	40	0	31	10	35	0.008956187196	8	-0.000603500301	0.034255599473	0.000725245507	
+lineage	cap-all-cap-2000	rf	vme	lower	0	116	76	40	0	16	23	37	0.002142799757	8	-0.003370599603	0.013698630137	0.90020456654	
+lineage	cap-all-cap-2000	rf	me	lower	0	116	76	40	0	31	10	35	-0.008956187196	8	-0.03346224049	0.0	0.000725245507	
+lineage	cap-all-cap-2000	rf	log_loss	lower	0	116	76	40	0	18	22	36	0.001151524042	8	-0.008734299603	0.014117493143	0.785204746078	
+lineage	cap-all-cap-2000	gbt	balanced_accuracy	higher	0	116	76	40	0	13	14	49	-0.001578991212	8	-0.004623284591	0.008033007319	0.649445980787	1.0
+lineage	cap-all-cap-2000	gbt	recall	higher	0	116	76	40	0	14	30	32	-0.001723450886	8	-0.015206812652	0.001446131598	0.995220060572	
+lineage	cap-all-cap-2000	gbt	specificity	higher	0	116	76	40	0	22	7	47	0.005213739702	8	0.000524109014	0.011192214112	0.004065029323	
+lineage	cap-all-cap-2000	gbt	vme	lower	0	116	76	40	0	14	30	32	0.001723450886	8	-0.001446131598	0.015206812652	0.995220060572	
+lineage	cap-all-cap-2000	gbt	me	lower	0	116	76	40	0	22	7	47	-0.005213739702	8	-0.011192214112	-0.000524109014	0.004065029323	
+lineage	cap-all-cap-2000	gbt	log_loss	lower	0	116	76	40	0	19	16	41	0.001227744585	8	-0.013040331375	0.011606109026	0.367939400428	
+lineage	cap-all-cap-2000	lasso	balanced_accuracy	higher	0	116	76	40	0	16	14	46	-0.001727778739	8	-0.004590241668	0.00364761941	0.427767775953	1.0
+lineage	cap-all-cap-2000	lasso	recall	higher	0	116	76	40	0	17	20	39	-0.000843881857	8	-0.011382113821	0.00532553788	0.744312109207	
+lineage	cap-all-cap-2000	lasso	specificity	higher	0	116	76	40	0	26	14	36	0.003258526689	8	0.0	0.008012820513	0.040345233876	
+lineage	cap-all-cap-2000	lasso	vme	lower	0	116	76	40	0	17	20	39	0.000843881857	8	-0.00532553788	0.011382113821	0.744312109207	
+lineage	cap-all-cap-2000	lasso	me	lower	0	116	76	40	0	26	14	36	-0.003258526689	8	-0.008012820513	0.0	0.040345233876	
+lineage	cap-all-cap-2000	lasso	log_loss	lower	0	116	76	40	0	22	18	36	0.001632219477	8	-0.015418262994	0.010797723139	0.317914001314	
+lineage	twin-cap-2000	scm	balanced_accuracy	higher	0	143	85	58	0	12	13	60	0.000401976779	8	-0.000722696295	0.000873602236	0.654981017113	1.0
+lineage	twin-cap-2000	scm	recall	higher	0	143	85	58	0	21	26	38	-0.004796163069	8	-0.012949055336	0.0	0.809153301168	
+lineage	twin-cap-2000	scm	specificity	higher	0	143	85	58	0	18	17	50	0.0	8	-0.003058103976	0.003703703703	0.5	
+lineage	twin-cap-2000	scm	vme	lower	0	143	85	58	0	21	26	38	0.004796163069	8	0.0	0.013927576602	0.809153301168	
+lineage	twin-cap-2000	scm	me	lower	0	143	85	58	0	18	17	50	0.0	8	-0.003703703703	0.003058103976	0.5	
+lineage	twin-cap-2000	scm	log_loss	lower	0	143	85	58	0	30	39	16	0.004565174904	8	-0.00725787263	0.033678708039	0.885799887323	
+lineage	twin-cap-2000	cart	balanced_accuracy	higher	0	143	85	58	0	13	15	57	0.0	8	-0.001987154408	0.001488095238	0.714205905795	1.0
+lineage	twin-cap-2000	cart	recall	higher	0	143	85	58	0	17	19	49	0.0	8	-0.002267573696	0.00054200542	0.691140341485	
+lineage	twin-cap-2000	cart	specificity	higher	0	143	85	58	0	13	16	56	0.0	8	-0.000604372777	0.000579710145	0.770870840177	
+lineage	twin-cap-2000	cart	vme	lower	0	143	85	58	0	17	19	49	0.0	8	-0.000353857042	0.002267573696	0.691140341485	
+lineage	twin-cap-2000	cart	me	lower	0	143	85	58	0	13	16	56	0.0	8	-0.000579710145	0.000567859171	0.770870840177	
+lineage	twin-cap-2000	cart	log_loss	lower	0	143	85	58	0	24	34	27	0.003797977466	8	0.000474293192	0.005644695726	0.92599709962	
+lineage	twin-cap-2000	rf	balanced_accuracy	higher	0	143	85	58	0	8	11	66	-0.000834583684	8	-0.003240546865	0.001207501208	0.820358276367	1.0
+lineage	twin-cap-2000	rf	recall	higher	0	143	85	58	0	16	12	57	0.001061571125	8	-0.002569904386	0.001865671642	0.285794094205	
+lineage	twin-cap-2000	rf	specificity	higher	0	143	85	58	0	9	14	62	0.0	8	-0.004934879062	0.004248012472	0.894980192184	
+lineage	twin-cap-2000	rf	vme	lower	0	143	85	58	0	16	12	57	-0.001061571125	8	-0.002371155482	0.003134796239	0.285794094205	
+lineage	twin-cap-2000	rf	me	lower	0	143	85	58	0	9	14	62	0.0	8	-0.004248012472	0.00469822304	0.894980192184	
+lineage	twin-cap-2000	rf	log_loss	lower	0	143	85	58	0	5	11	69	0.002685245252	8	-0.000227970069	0.0071593124	0.96159362793	
+lineage	twin-cap-2000	gbt	balanced_accuracy	higher	0	143	85	58	0	13	13	59	-0.000814762855	8	-0.003248180348	0.001407165826	0.577490508556	1.0
+lineage	twin-cap-2000	gbt	recall	higher	0	143	85	58	0	25	20	40	0.000501253133	8	-0.000707714084	0.002940075851	0.275742164901	
+lineage	twin-cap-2000	gbt	specificity	higher	0	143	85	58	0	13	24	48	-0.002319416833	8	-0.009530450953	-0.001111111111	0.97648448628	
+lineage	twin-cap-2000	gbt	vme	lower	0	143	85	58	0	25	20	40	-0.000501253133	8	-0.003049240709	0.000707714084	0.275742164901	
+lineage	twin-cap-2000	gbt	me	lower	0	143	85	58	0	13	24	48	0.002319416833	8	0.001111111111	0.009530450953	0.97648448628	
+lineage	twin-cap-2000	gbt	log_loss	lower	0	143	85	58	0	14	21	50	-0.000377510576	8	-0.003204193323	0.007947882306	0.912267375505	
+lineage	twin-cap-2000	lasso	balanced_accuracy	higher	0	143	85	58	0	13	15	57	-8.6405739e-05	8	-0.001018501019	0.001240827934	0.714205905795	1.0
+lineage	twin-cap-2000	lasso	recall	higher	0	143	85	58	0	26	16	43	0.000938967137	8	-0.00382407806	0.011924119241	0.082074700892	
+lineage	twin-cap-2000	lasso	specificity	higher	0	143	85	58	0	11	25	49	-0.00140816737	8	-0.007337526205	0.002096436059	0.994334507908	
+lineage	twin-cap-2000	lasso	vme	lower	0	143	85	58	0	26	16	43	-0.000938967137	8	-0.011924119241	0.00382407806	0.082074700892	
+lineage	twin-cap-2000	lasso	me	lower	0	143	85	58	0	11	25	49	0.00140816737	8	-0.002096436059	0.007337526205	0.994334507908	
+lineage	twin-cap-2000	lasso	log_loss	lower	0	143	85	58	0	23	26	36	-0.000266431586	8	-0.007474458475	0.011972515886	0.715913793575	
+study	cap-4000-cap-2000	scm	balanced_accuracy	higher	1	0	0	0	0	0	0	0		0			1.0	
+study	cap-4000-cap-2000	scm	recall	higher	1	0	0	0	0	0	0	0		0			1.0	
+study	cap-4000-cap-2000	scm	specificity	higher	1	0	0	0	0	0	0	0		0			1.0	
+study	cap-4000-cap-2000	scm	vme	lower	1	0	0	0	0	0	0	0		0			1.0	
+study	cap-4000-cap-2000	scm	me	lower	1	0	0	0	0	0	0	0		0			1.0	
+study	cap-4000-cap-2000	scm	log_loss	lower	1	0	0	0	0	0	0	0		0			1.0	
+study	cap-4000-cap-2000	cart	balanced_accuracy	higher	1	0	0	0	0	0	0	0		0			1.0	
+study	cap-4000-cap-2000	cart	recall	higher	1	0	0	0	0	0	0	0		0			1.0	
+study	cap-4000-cap-2000	cart	specificity	higher	1	0	0	0	0	0	0	0		0			1.0	
+study	cap-4000-cap-2000	cart	vme	lower	1	0	0	0	0	0	0	0		0			1.0	
+study	cap-4000-cap-2000	cart	me	lower	1	0	0	0	0	0	0	0		0			1.0	
+study	cap-4000-cap-2000	cart	log_loss	lower	1	0	0	0	0	0	0	0		0			1.0	
+study	cap-4000-cap-2000	rf	balanced_accuracy	higher	1	0	0	0	0	0	0	0		0			1.0	
+study	cap-4000-cap-2000	rf	recall	higher	1	0	0	0	0	0	0	0		0			1.0	
+study	cap-4000-cap-2000	rf	specificity	higher	1	0	0	0	0	0	0	0		0			1.0	
+study	cap-4000-cap-2000	rf	vme	lower	1	0	0	0	0	0	0	0		0			1.0	
+study	cap-4000-cap-2000	rf	me	lower	1	0	0	0	0	0	0	0		0			1.0	
+study	cap-4000-cap-2000	rf	log_loss	lower	1	0	0	0	0	0	0	0		0			1.0	
+study	cap-4000-cap-2000	gbt	balanced_accuracy	higher	1	0	0	0	0	0	0	0		0			1.0	
+study	cap-4000-cap-2000	gbt	recall	higher	1	0	0	0	0	0	0	0		0			1.0	
+study	cap-4000-cap-2000	gbt	specificity	higher	1	0	0	0	0	0	0	0		0			1.0	
+study	cap-4000-cap-2000	gbt	vme	lower	1	0	0	0	0	0	0	0		0			1.0	
+study	cap-4000-cap-2000	gbt	me	lower	1	0	0	0	0	0	0	0		0			1.0	
+study	cap-4000-cap-2000	gbt	log_loss	lower	1	0	0	0	0	0	0	0		0			1.0	
+study	cap-4000-cap-2000	lasso	balanced_accuracy	higher	1	0	0	0	0	0	0	0		0			1.0	
+study	cap-4000-cap-2000	lasso	recall	higher	1	0	0	0	0	0	0	0		0			1.0	
+study	cap-4000-cap-2000	lasso	specificity	higher	1	0	0	0	0	0	0	0		0			1.0	
+study	cap-4000-cap-2000	lasso	vme	lower	1	0	0	0	0	0	0	0		0			1.0	
+study	cap-4000-cap-2000	lasso	me	lower	1	0	0	0	0	0	0	0		0			1.0	
+study	cap-4000-cap-2000	lasso	log_loss	lower	1	0	0	0	0	0	0	0		0			1.0	
+study	cap-all-cap-2000	scm	balanced_accuracy	higher	0	27	27	0	0	8	3	16	0.000435822364	4	-0.004222837061	0.007862594205	0.11328125	
+study	cap-all-cap-2000	scm	recall	higher	0	27	27	0	0	5	6	16	-0.003636363637	4	-0.009029345372	0.0	0.7255859375	
+study	cap-all-cap-2000	scm	specificity	higher	0	27	27	0	0	8	3	16	0.002739726027	4	-0.002751031637	0.009900990099	0.11328125	
+study	cap-all-cap-2000	scm	vme	lower	0	27	27	0	0	5	6	16	0.003636363637	4	0.0	0.009029345372	0.7255859375	
+study	cap-all-cap-2000	scm	me	lower	0	27	27	0	0	8	3	16	-0.002739726027	4	-0.009900990099	0.002751031637	0.11328125	
+study	cap-all-cap-2000	scm	log_loss	lower	0	27	27	0	0	10	11	6	0.0	4	-0.031722986339	0.070666805884	0.668188095093	
+study	cap-all-cap-2000	cart	balanced_accuracy	higher	0	27	27	0	0	3	8	16	-0.009240641711	4	-0.013414029099	0.0	0.96728515625	
+study	cap-all-cap-2000	cart	recall	higher	0	27	27	0	0	5	9	13	0.0	4	-0.00677200903	0.0	0.910217285156	
+study	cap-all-cap-2000	cart	specificity	higher	0	27	27	0	0	3	10	14	0.0	4	-0.007936507937	0.000588235294	0.98876953125	
+study	cap-all-cap-2000	cart	vme	lower	0	27	27	0	0	5	9	13	0.0	4	0.0	0.00677200903	0.910217285156	
+study	cap-all-cap-2000	cart	me	lower	0	27	27	0	0	3	10	14	0.0	4	-0.000588235294	0.007936507937	0.98876953125	
+study	cap-all-cap-2000	cart	log_loss	lower	0	27	27	0	0	10	10	7	0.00108771222	4	-0.018334679251	0.004969397363	0.588098526001	
+study	cap-all-cap-2000	rf	balanced_accuracy	higher	0	27	27	0	0	2	4	21	0.0	4	-0.004755141226	0.007586143862	0.890625	
+study	cap-all-cap-2000	rf	recall	higher	0	27	27	0	0	2	2	23	-0.001818181818	4	-0.005012531328	0.0	0.6875	
+study	cap-all-cap-2000	rf	specificity	higher	0	27	27	0	0	5	4	18	0.000905797101	4	0.0	0.014423076923	0.5	
+study	cap-all-cap-2000	rf	vme	lower	0	27	27	0	0	2	2	23	0.001818181818	4	0.0	0.005012531328	0.6875	
+study	cap-all-cap-2000	rf	me	lower	0	27	27	0	0	5	4	18	-0.000905797101	4	-0.014423076923	0.0	0.5	
+study	cap-all-cap-2000	rf	log_loss	lower	0	27	27	0	0	3	6	18	-0.007862635846	4	-0.00974081437	0.005142805853	0.91015625	
+study	cap-all-cap-2000	gbt	balanced_accuracy	higher	0	27	27	0	0	2	4	21	-0.000642048219	4	-0.007386630311	0.000841791256	0.890625	
+study	cap-all-cap-2000	gbt	recall	higher	0	27	27	0	0	9	6	12	-0.002915451895	4	-0.003827394194	0.013713080169	0.303619384766	
+study	cap-all-cap-2000	gbt	specificity	higher	0	27	27	0	0	7	5	15	0.0	4	-0.01171875	0.008333333333	0.38720703125	
+study	cap-all-cap-2000	gbt	vme	lower	0	27	27	0	0	9	6	12	0.002915451895	4	-0.013713080169	0.003827394194	0.303619384766	
+study	cap-all-cap-2000	gbt	me	lower	0	27	27	0	0	7	5	15	0.0	4	-0.008333333333	0.012578616352	0.38720703125	
+study	cap-all-cap-2000	gbt	log_loss	lower	0	27	27	0	0	5	12	10	0.006477403817	4	-0.012833627838	0.031149140189	0.975479125977	
+study	cap-all-cap-2000	lasso	balanced_accuracy	higher	0	27	27	0	0	4	3	20	0.002132942444	4	-0.005955797934	0.003478695244	0.5	
+study	cap-all-cap-2000	lasso	recall	higher	0	27	27	0	0	4	7	16	-0.004444444444	4	-0.009029345372	-0.002665132777	0.88671875	
+study	cap-all-cap-2000	lasso	specificity	higher	0	27	27	0	0	8	6	13	0.0	4	-0.006937561942	0.006251688461	0.395263671875	
+study	cap-all-cap-2000	lasso	vme	lower	0	27	27	0	0	4	7	16	0.004444444444	4	0.002665132777	0.009029345372	0.88671875	
+study	cap-all-cap-2000	lasso	me	lower	0	27	27	0	0	8	6	13	0.0	4	-0.006251688461	0.006937561942	0.395263671875	
+study	cap-all-cap-2000	lasso	log_loss	lower	0	27	27	0	0	11	7	9	-0.005245711283	4	-0.025227452665	0.008184384014	0.240341186523	
