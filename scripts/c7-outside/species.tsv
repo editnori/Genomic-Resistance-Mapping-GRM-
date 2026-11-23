@@ -1,0 +1,24 @@
+species_slug	species	L	L_not_M	L_not_M_in_S
+acinetobacter_baumannii	Acinetobacter baumannii	18	7	2
+campylobacter_coli	Campylobacter coli	8	8	0
+campylobacter_jejuni	Campylobacter jejuni	4	4	0
+clostridioides_difficile	Clostridioides difficile	4	4	0
+corynebacterium_diphtheriae	Corynebacterium diphtheriae	3	3	0
+enterobacter_cloacae	Enterobacter cloacae	9	9	8
+enterococcus_faecium	Enterococcus faecium	13	11	0
+escherichia_coli	Escherichia coli	36	29	15
+klebsiella_aerogenes	Klebsiella aerogenes	3	3	0
+klebsiella_oxytoca	Klebsiella oxytoca	4	4	0
+klebsiella_pneumoniae	Klebsiella pneumoniae	38	32	18
+klebsiella_quasipneumoniae	Klebsiella quasipneumoniae	3	3	0
+mycobacterium_tuberculosis	Mycobacterium tuberculosis	22	20	1
+neisseria_gonorrhoeae	Neisseria gonorrhoeae	7	6	0
+pseudomonas_aeruginosa	Pseudomonas aeruginosa	13	12	6
+salmonella_enterica	Salmonella enterica	24	24	1
+shigella_flexneri	Shigella flexneri	4	4	0
+shigella_sonnei	Shigella sonnei	20	20	0
+staphylococcus_aureus	Staphylococcus aureus	14	13	4
+staphylococcus_haemolyticus	Staphylococcus haemolyticus	3	3	0
+streptococcus_agalactiae	Streptococcus agalactiae	3	3	0
+streptococcus_pneumoniae	Streptococcus pneumoniae	12	8	0
+vibrio_cholerae	Vibrio cholerae	3	3	0

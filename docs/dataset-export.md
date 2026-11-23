@@ -3,10 +3,10 @@
 `grm export` writes what a learner outside GRM needs to be scored on the same genomes and outer folds as GRM's five learners, without refitting them: a dataset's projected matrix, its random and lineage fold plans, and the random forest's screened rows for each outer fold. Only the forest reads that screen. Boosting and the lasso screen again on the fitting side of their tuning holdouts, and the set covering machine and the tree read every candidate row. The export fits nothing and changes no report.
 
 ```
-grm --data <root> export --species <slug> --out <dir> [--only <antibiotic or id>,...] [--screened-features <n>] [--force]
+grm --data <root> export --species <slug> --out <dir> [--only <antibiotic or id>,...] [--screened-features <n>] [--seed <s>] [--force]
 ```
 
-The species must be counted and built first (`grm count`, `grm structure`, `grm matrix`), as for `grm learn`. Without a matrix the export stops and names those three commands. Like `grm learn`, it also stops when `genomes.txt` adds, removes or reorders genomes after counting (`species::ensure_selection_counted`). It reads the same inputs `grm learn` reads (`analysis::arm_inputs`) at the same settings (`EvalConfig::default()`, with `--screened-features`, 4,000 by default).
+The species must be counted and built first (`grm count`, `grm structure`, `grm matrix`), as for `grm learn`. Without a matrix the export stops and names those three commands. Like `grm learn`, it also stops when `genomes.txt` adds, removes or reorders genomes after counting (`species::ensure_selection_counted`). It reads the same inputs `grm learn` reads (`analysis::arm_inputs`) at the same settings (`EvalConfig::default()`, with `--screened-features`, 4,000 by default, and `--seed`, 42 by default).
 
 `--only` takes antibiotics or dataset ids. A name that matches no dataset of the species stops the export before it writes anything, and the message lists the names that matched nothing beside the species' datasets.
 
@@ -49,7 +49,7 @@ Among rows with an equal score, the lower matrix row comes first. The cut can fa
 - **Unavailable plans.** A plan whose `unavailable_reason` is set keeps its outer folds but has no inner folds, holdouts or screens, and its report has no `test_fold` for that split. Do not score its outer folds: GRM scored no learner on them, so a number made on them has nothing to compare with.
 - **Size and memory.** `matrix.bin` takes `rows` x `words` x 8 bytes. The largest release dataset, `escherichia_coli__ampicillin` (3,078,562 rows x 1,965 genomes), writes 763.5 MB, and its export peaked at 4,962,952 kB of resident memory at 4 threads. All 274 release datasets would write 24.87 GB. The export holds the species matrix, the projected matrix and a byte copy of it in memory at once.
 - **A fold plan is not a fold file.** A fold file is what `grm learn --fold-file` reads: lists of genome ids, one test list per outer fold ([fold-file.md](fold-file.md)). `splits[].plan.outer` gives one fold number per sample, by position in `samples`, and the plan also carries each outer fold's inner folds and tuning holdouts. A lineage plan turned into a list of genome ids keeps its outer partition but loses its lineage-grouped tuning: inner folds and holdouts drawn again from such a list are not the plan's.
-- **One fold draw.** `grm export` takes no seed flag, so its plans are the release's draw, the one `grm learn` scores without `--seed`. A report that `grm learn --seed` wrote under `draws/` was scored on other folds and has another `input_fingerprint`, so it does not pair with an export ([fold-draws.md](fold-draws.md)).
+- **One fold draw an export.** Without `--seed` the plans are the release's draw, the one `grm learn` scores without `--seed`, and every byte written is what the export wrote before the flag existed (a test pins the files of a SYNTHETIC species to the bytes main wrote at `0d987ba`). `--seed <s>` writes the plans and holdouts `grm learn --seed <s>` scores, fold by fold, and its `input_fingerprint`; the matrix, the cohort and the screening rule do not change, `seed` holds the value and no key is added. An export pairs only with the report of its own seed: a report that `grm learn --seed` wrote under `draws/` pairs with an export at that seed and with no other ([fold-draws.md](fold-draws.md)).
 
 ## What it does not do
 
