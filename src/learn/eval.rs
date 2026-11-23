@@ -6566,6 +6566,94 @@ mod tests {
         }
     }
 
+    /// A supplied partition (a fold file, as the study split runs) under the
+    /// adjusted arm: each outer fit of rf, gbt and lasso takes the arm's
+    /// screen on its own fitting samples, and no tested or unused sample's
+    /// lineage reaches a stratum. SYNTHETIC: `c4_cohort`'s 12 lineages of 8;
+    /// lineage 11 is unused and lineage g tests in fold g % 2, so fold 0
+    /// trains on 5 lineages (40 samples) and fold 1 on 6 (48).
+    #[test]
+    fn a_supplied_partition_under_the_adjusted_arm_screens_each_fit_on_its_training_lineages() {
+        use screen_arm::{Rule, Settings};
+        let (x, y, groups) = c4_cohort();
+        let mut cfg = small_config();
+        cfg.screened_features = 6;
+        let roles: Vec<Role> = groups
+            .iter()
+            .map(|&g| {
+                if g == 11 {
+                    Role::Unused
+                } else {
+                    Role::Test(g as usize % cfg.folds)
+                }
+            })
+            .collect();
+        let dir = tempfile::tempdir().unwrap();
+        let settings = Settings {
+            rule: Rule::Cmh,
+            floor: None,
+            out: dir.path().to_path_buf(),
+        };
+        screen_arm::with_settings(settings, || {
+            evaluate_assigned(
+                "fixture__fixturemycin",
+                "study-whole",
+                &x,
+                &y,
+                &groups,
+                &[],
+                &roles,
+                cfg.folds,
+                &cfg,
+            )
+            .unwrap()
+        });
+        let file = c4_inputs(dir.path(), "study-whole");
+        assert_eq!(
+            (&file["rule"], &file["samples"], &file["min_support"]),
+            (
+                &serde_json::json!("cmh"),
+                &serde_json::json!(88),
+                &serde_json::json!(3)
+            )
+        );
+        let folds = file["folds"].as_array().unwrap();
+        let train: Vec<u64> = folds.iter().map(|f| f["train"].as_u64().unwrap()).collect();
+        assert_eq!(train, [40, 48]);
+        let screens = file["screens"].as_array().unwrap();
+        assert_eq!(screens.len(), cfg.folds * 3);
+        for note in screens {
+            assert_eq!(
+                (&note["split"], &note["rule"]),
+                (&serde_json::json!("study-whole"), &serde_json::json!("cmh")),
+                "{note}"
+            );
+            let fold = note["fold"].as_u64().unwrap() as usize;
+            let fitting = note["fitting"].as_u64().unwrap();
+            let strata = note["strata"].as_u64().unwrap();
+            if note["learner"] == "rf" {
+                assert_eq!(fitting, train[fold], "{note}");
+            } else {
+                assert!(fitting < train[fold], "{note}");
+            }
+            // Fold 0 trains on 5 lineages, fold 1 on 6: a test or unused
+            // sample's lineage in a stratum would push the count past them.
+            assert!(
+                strata >= fitting.div_ceil(8) && strata <= [5, 6][fold],
+                "{note}"
+            );
+        }
+        for learner in ["rf", "gbt", "lasso"] {
+            for fold in 0..cfg.folds {
+                let n = screens
+                    .iter()
+                    .filter(|s| s["learner"] == learner && s["fold"] == fold)
+                    .count();
+                assert_eq!(n, 1, "{learner} fold {fold}");
+            }
+        }
+    }
+
     /// The floor arm moves the floor of a supplied partition, and the
     /// projection's, to its own; without it the floor is max(3, n/200).
     #[test]
