@@ -478,15 +478,48 @@ class Count(unittest.TestCase):
         self.assertEqual((float(gbt["interval_lo"]), int(gbt["better"]), int(gbt["worse"])), (0.0, 15, 0))
         self.assertLess(float(gbt["holm_p"]), 0.05)
 
-    def test_condition_three_reads_the_twin_as_an_arm_is_read(self):
-        # The twin moves +0.01 in every learner: it meets 1 in all five and 2 in none, so it carries in none.
+    def test_condition_three_fails_when_the_twin_meets_one_alone(self):
+        # The twin moves +0.01 in every learner: it meets 1 in all five and 2 in none. It carries in no
+        # learner, and the plan's condition 3 (the twin meets neither 1 nor 2) still fails.
         def shift(arm, learner, m):
             return 0.01 if arm == "twin" and m == "balanced_accuracy" else 0.0
 
         _, _, conditions = count(count_rows(shift))
         at = {(r["arm"], r["reading"], r["condition"]): r for r in conditions}
-        self.assertEqual((at[("program", "ruling 15", "3")]["met"], at[("program", "ruling 15", "3")]["learners"]), ("1", "0"))
+        self.assertEqual((at[("program", "ruling 15", "3")]["met"], at[("program", "ruling 15", "3")]["learners"]), ("0", "5"))
         self.assertEqual(at[("program", "stricter", "3")]["met"], "0")
+
+    def twin_rows(self, one_alone, two_alone):
+        # A twin that meets 1 alone in `one_alone` (+0.01, inside the margin) and 2 alone in `two_alone`
+        # (+0.05 in three species, 0 in synthia_0, whose resamples hold the interval's low end at 0).
+        rows = count_rows(lambda arm, learner, m: 0.0, n=20, species=4)
+        for r in rows:
+            if r["arm"] == "twin":
+                if r["learner"] in one_alone:
+                    r["balanced_accuracy"] += 0.01
+                elif r["learner"] in two_alone and r["species_slug"] != "synthia_0":
+                    r["balanced_accuracy"] += 0.05
+        return rows
+
+    def test_condition_three_fails_when_the_twin_meets_two_alone_in_three_learners(self):
+        rc, counted, conditions = count(self.twin_rows((), ("cart", "rf", "gbt")))
+        self.assertEqual(rc, 0)
+        at = {(r["arm"], r["reading"], r["condition"]): r for r in conditions}
+        for arm in ("program", "unitigs"):
+            self.assertEqual((at[(arm, "ruling 15", "3")]["met"], at[(arm, "ruling 15", "3")]["learners"]), ("0", "3"))
+        by = {(r["split"], r["pair"], r["learner"], r["measure"]): r for r in counted}
+        for learner in ("cart", "rf", "gbt"):
+            twin = by[("lineage", "twin-k31", learner, "balanced_accuracy")]
+            self.assertEqual((float(twin["interval_lo"]), int(twin["better"]), int(twin["worse"])), (0.0, 15, 0))
+            self.assertLess(float(twin["holm_p"]), 0.05)
+
+    def test_condition_three_holds_when_the_twin_meets_each_in_two_learners(self):
+        # 1 alone in scm and lasso, 2 alone in cart and rf: four learners move, and neither count reaches 3.
+        rc, _, conditions = count(self.twin_rows(("scm", "lasso"), ("cart", "rf")))
+        self.assertEqual(rc, 0)
+        at = {(r["arm"], r["reading"], r["condition"]): r for r in conditions}
+        self.assertEqual((at[("program", "ruling 15", "3")]["met"], at[("program", "ruling 15", "3")]["learners"]), ("1", "2"))
+        self.assertEqual(at[("program", "stricter", "3")]["met"], "1")
 
     def test_condition_five_reads_the_learners_that_carry(self):
         # program carries in cart, rf and gbt, each with a study median of its lineage sign; scm moves +0.01
