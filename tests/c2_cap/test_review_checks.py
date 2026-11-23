@@ -222,5 +222,19 @@ class Binaries(Copies):
         self.assertIn(f"{'a' * 64}: Synthetic species s1, Synthetic species s3", rows[0]["binary_names"])
 
 
+class ShortOf4096(unittest.TestCase):
+    def test_a_cohort_short_by_the_rule_and_by_failed_fetches_names_both(self):
+        page = base.common.load("page_tables")
+        arm = {"genomes": 2907, "added": 907, "holds_default": 2000, "lines": 2907}
+        self.assertEqual(page.short_because(arm, 2904, 3),
+                         "the rule ranks fewer genomes and 3 added genomes failed the fetch")
+        self.assertEqual(page.short_because(arm, 2907, 0), "the rule ranks fewer genomes")
+        wide = {"genomes": 4096, "added": 2096, "holds_default": 2000, "lines": 4096}
+        self.assertEqual(page.short_because(wide, 4089, 7), "7 added genomes failed the fetch")
+        self.assertEqual(page.short_because(dict(wide, genomes=4089, fetch_failed=7), 4089, 7),
+                         "7 added genomes failed the fetch")
+        self.assertEqual(page.short_because(wide, 4096, 0), "")
+
+
 if __name__ == "__main__":
     unittest.main()

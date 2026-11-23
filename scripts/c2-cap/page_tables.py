@@ -578,6 +578,19 @@ def cohort_sizes(run):
     return out
 
 
+def short_because(arm, size, failed):
+    """Why cap-all's cohort as fitted is short of 4,096: the rule's own count (cohorts.json's genomes, with any
+    fetch_failed it already took out put back) short of it, failed added genomes, or both, each named."""
+    if size >= CAP_GATE:
+        return ""
+    why = []
+    if int(arm["genomes"]) + int(arm.get("fetch_failed", 0)) < CAP_GATE:
+        why.append("the rule ranks fewer genomes")
+    if failed:
+        why.append(f"{failed} added genomes failed the fetch")
+    return " and ".join(why)
+
+
 def page_species(runs, lrows):
     run_rows = first_run(lrows)
     out = []
@@ -593,9 +606,7 @@ def page_species(runs, lrows):
                "genomes_cap_all": size[ALL], "added_cap_all": int(arms[ALL]["added"]) - (int(arms[ALL]["genomes"]) - size[ALL]),
                "fetch_failed_added": failed,
                "short_of_4096": CAP_GATE - size[ALL] if size[ALL] < CAP_GATE else 0,
-               "short_because": ("" if size[ALL] >= CAP_GATE else
-                                 "the rule ranks fewer genomes" if failed == 0 else
-                                 f"{failed} added genomes failed the fetch"),
+               "short_because": short_because(arms[ALL], size[ALL], failed),
                "none_added": sum(1 for arm, d in none_added(run) if arm == ALL and d in {m["dataset"] for m in mine})}
         rows = run["datasets.tsv"]
         for arm in (ALL, TWIN):
