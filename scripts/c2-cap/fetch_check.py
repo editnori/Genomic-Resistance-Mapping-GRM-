@@ -6,9 +6,12 @@
 After `grm fetch fasta` over <cohorts dir>/cap-all.txt. A genome failed when
 grm fetch fasta wrote it in fasta_failures.tsv or wrote no file for it.
 
-- A release genome (the default's) must be fetched, with the master list's
-  sha256 and the release's length, contig count and N50; any failure or
-  difference exits 1.
+- A release genome (the default's) must be fetched with the release's
+  length, contig count and N50; any failure or difference exits 1. Its
+  bytes are held to the master list's sha256 and the count that differs is
+  written, as scripts/c3-inputs/run_species.sh counts it without stopping:
+  a FASTA whose header text BV-BRC changed differs in bytes, not in its
+  sequence.
 - An added genome in the master genome rows is held to the master list's
   sha256, the count that differs written; any other added genome has its
   sha256 written to <fetched sha256>, which stays on the box.
@@ -158,8 +161,8 @@ def main(argv):
         doc["left_wider_cohorts"] = drop_failed(cohorts, failed - set(rel))
     Path(out_json).write_text(json.dumps(doc, indent=1, sort_keys=True) + "\n", encoding="utf-8")
     print(json.dumps(doc, sort_keys=True))
-    if doc["failed_release"] or rel_bytes or rel_stats:
-        print("a release genome failed or differs from the master list or the release")
+    if doc["failed_release"] or rel_stats:
+        print("a release genome failed or its length, contig count or N50 differs from the release's")
         return 1
     return 0
 
