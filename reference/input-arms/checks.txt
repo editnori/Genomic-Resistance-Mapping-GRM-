@@ -1,0 +1,13 @@
+PASS species: 23 copies, 23 species in lists.tsv's first run
+PASS SHA256SUMS: 23 of 23 species; 10953 of 10953 lines hold; results/ and check/ are the listed files in 23 of 23
+PASS DONE and binary.txt: 23 of 23 DONE lines name their species, SHA256SUMS, result count, binary and code as binary.txt does; FAILED in 0 species not set aside
+  species per commit: 8bfd4ca 23
+  species per code sha256: d3de72fcc10f 23
+  restart lines in binary.txt: 0
+  vibrio_cholerae: FAILED at build at 2026-11-23T07:29:21Z, before DONE at 2026-11-23T07:49:38Z: named and set aside
+PASS expect.py: 23 of 23 species: lists.txt names the first run, the design's seeds, twin seeds and arms, expect.tsv is expect.py's, and the result files are exactly its rows; 5047 of 5047 results found, 0 more
+  datasets 233, study datasets 55, species 23
+PASS refusals: 0 of 0 refusal records are an arm's study run refused for no candidate; 0 constant-model rows in draws.tsv, 5 per record
+  records per arm: none
+PASS genome ids: 0 genome ids in 13362 files, against 23757 release ids of 23 species lists
+CHECKS 6 of 6

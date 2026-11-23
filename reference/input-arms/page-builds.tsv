@@ -1,0 +1,70 @@
+species	species_slug	kind	arm	graph	genomes	space_k	matrix_support	values_summed	matrix_patterns	matrix_values_kept	matrix_values_rare	matrix_values_core	proteins	graph_kmers	unitigs	pairs_held	pairs_in_part	kmers_without_unitig	equality_kmers_grm	equality_kmers_outside	equality_kmers_both	equality_kmers_grm_only	equality_kmers_outside_only	equality_unitigs_grm	equality_unitigs_outside	equality_unitigs_both	equality_unitigs_grm_only	equality_unitigs_outside_only
+Acinetobacter baumannii	acinetobacter_baumannii	aa	k31-aa		1702	25	2	1901796518	440154	5652095	2814920	219529	6552874															
+Acinetobacter baumannii	acinetobacter_baumannii	counts	k31-counts		1702	31	2	42982498	78652	2752875	3370266	0																
+Acinetobacter baumannii	acinetobacter_baumannii	unitigs	unitigs	grm	1702	16	2	1084530272	1569889	2434317	461909	3622		59799377	2899863	1084530272	64818	0										
+Campylobacter coli	campylobacter_coli	aa	k31-aa		391	25	2	204299294	86977	1055154	364261	249591	714742															
+Campylobacter coli	campylobacter_coli	counts	k31-counts		391	31	2	2092278	11742	144803	170718	0																
+Campylobacter coli	campylobacter_coli	unitigs	unitigs	grm	391	16	2	46390988	222241	299666	53311	15411		8174633	368389	46390988	13310	0										
+Campylobacter jejuni	campylobacter_jejuni	aa	k31-aa		508	25	2	261575942	90611	1109400	329510	220594	912294															
+Campylobacter jejuni	campylobacter_jejuni	counts	k31-counts		508	31	2	2664633	10441	149920	147320	15																
+Campylobacter jejuni	campylobacter_jejuni	unitigs	unitigs	grm	508	16	2	78715651	264997	388100	53868	14506		8701577	456474	78715651	10160	0										
+Clostridioides difficile	clostridioides_difficile	aa	k31-aa		204	25	2	225585493	53770	1641366	609700	641719	784319															
+Clostridioides difficile	clostridioides_difficile	counts	k31-counts		204	31	2	5341957	18475	391780	809724	552																
+Clostridioides difficile	clostridioides_difficile	unitigs	unitigs	grm	204	16	2	55508819	200221	560633	100620	42143		16608973	703397	55508819	16367	0										
+Corynebacterium diphtheriae	corynebacterium_diphtheriae	aa	k31-aa		243	25	2	169730671	156198	1628865	509520	239928	559282															
+Corynebacterium diphtheriae	corynebacterium_diphtheriae	counts	k31-counts		243	31	2	989780	7242	63847	93611	137																
+Corynebacterium diphtheriae	corynebacterium_diphtheriae	unitigs	unitigs	grm	243	16	2	66071381	556020	738462	103132	15033		13913149	856628	66071381	11248	0										
+Enterobacter cloacae	enterobacter_cloacae	aa	k31-aa		270	25	2	383185052	338250	6702314	3448243	423800	1269052															
+Enterobacter cloacae	enterobacter_cloacae	counts	k31-counts		270	31	2	3604887	16244	294875	785734	85																
+Enterobacter cloacae	enterobacter_cloacae	unitigs	unitigs	grm	270	16	2	163239569	1222404	3235080	688432	4054		85706073	3927570	163239569	15840	0										
+Enterococcus faecium	enterococcus_faecium	aa	k31-aa		2000	25	2	1581423541	315529	3826122	2142646	206316	5827108															
+Enterococcus faecium	enterococcus_faecium	counts	k31-counts		2000	31	2	34168097	61636	594067	446696	219																
+Enterococcus faecium	enterococcus_faecium	unitigs	unitigs	grm	2000	16	2	712173077	814056	1233455	249430	10280		34030901	1493776	712173077	100988	0										
+Escherichia coli	escherichia_coli	aa	k31-aa		2000	25	2	2866173068	1008020	10869658	5282778	217504	9795417															
+Escherichia coli	escherichia_coli	counts	k31-counts		2000	31	2	53447222	189522	1956725	2273401	16																
+Escherichia coli	escherichia_coli	unitigs	unitigs	grm	2000	16	2	2089259406	3351087	4679579	809587	4102		104518454	5493343	2089259406	150437	0										
+Klebsiella aerogenes	klebsiella_aerogenes	aa	k31-aa		93	25	2	138711652	90641	2183596	1675408	922343	455919															
+Klebsiella aerogenes	klebsiella_aerogenes	counts	k31-counts		93	31	2	1643521	7596	99184	218965	847																
+Klebsiella aerogenes	klebsiella_aerogenes	unitigs	unitigs	grm	93	16	2	43935938	577629	1074306	253971	42111		31083227	1370388	43935938	803	0										
+Klebsiella oxytoca	klebsiella_oxytoca	aa	k31-aa		112	25	2	192731465	84452	3796709	1830840	821132	639505															
+Klebsiella oxytoca	klebsiella_oxytoca	counts	k31-counts		112	31	2	1648648	7550	132176	213431	705																
+Klebsiella oxytoca	klebsiella_oxytoca	unitigs	unitigs	grm	112	16	2	45279878	311720	1489076	243720	16451		43170848	1749258	45279878	10252	0										
+Klebsiella pneumoniae	klebsiella_pneumoniae	aa	k31-aa		2000	25	2	3129460178	765004	9638650	4333601	347887	10520926															
+Klebsiella pneumoniae	klebsiella_pneumoniae	counts	k31-counts		2000	31	2	35994549	88228	1244558	1838291	3																
+Klebsiella pneumoniae	klebsiella_pneumoniae	unitigs	unitigs	grm	2000	16	2	2128201382	2584874	3764629	653440	8143		92206621	4426252	2128201382	96938	0										
+Klebsiella quasipneumoniae	klebsiella_quasipneumoniae	aa	k31-aa		109	25	2	169510077	75921	1985404	1539737	957579	566993															
+Klebsiella quasipneumoniae	klebsiella_quasipneumoniae	counts	k31-counts		109	31	2	1319703	6694	86221	116280	662																
+Klebsiella quasipneumoniae	klebsiella_quasipneumoniae	unitigs	unitigs	grm	109	16	2	43939445	400476	904447	198414	55431		27319565	1158295	43939445	10351	0										
+Mycobacterium tuberculosis	mycobacterium_tuberculosis	aa	k31-aa		2000	25	2	2505160281	159567	1229295	1447965	452744	8167681															
+Mycobacterium tuberculosis	mycobacterium_tuberculosis	counts	k31-counts		2000	31	2	33066659	21081	273490	847693	40																
+Mycobacterium tuberculosis	mycobacterium_tuberculosis	unitigs	unitigs	grm	2000	16	2	560601791	275719	352799	159759	45883		12947858	558497	560601791	170812	0										
+Neisseria gonorrhoeae	neisseria_gonorrhoeae	aa	k31-aa		2000	25	2	1134678586	103055	697701	490823	245938	4255825															
+Neisseria gonorrhoeae	neisseria_gonorrhoeae	counts	k31-counts		2000	31	2	30387471	26882	241647	169506	702																
+Neisseria gonorrhoeae	neisseria_gonorrhoeae	unitigs	unitigs	grm	2000	16	2	303566186	202190	250638	75938	27291		6601471	353872	303566186	193847	0										
+Pseudomonas aeruginosa	pseudomonas_aeruginosa	aa	k31-aa		1421	25	2	2735703912	752488	9829794	4555295	314948	8885356															
+Pseudomonas aeruginosa	pseudomonas_aeruginosa	counts	k31-counts		1421	31	2	33226726	82507	1315261	1967149	94																
+Pseudomonas aeruginosa	pseudomonas_aeruginosa	unitigs	unitigs	grm	1421	16	2	1772395920	2401921	3539887	612964	11433		88777399	4164312	1772395920	167894	0										
+Salmonella enterica	salmonella_enterica	aa	k31-aa		2000	25	2	2749730989	277069	4732553	2046916	406290	9347836															
+Salmonella enterica	salmonella_enterica	counts	k31-counts		2000	31	2	49798931	51224	1781576	2013078	1																
+Salmonella enterica	salmonella_enterica	unitigs	unitigs	grm	2000	16	2	1258426533	1098067	1702184	221956	17280		43058161	1941439	1258426533	114177	0										
+Shigella flexneri	shigella_flexneri	aa	k31-aa		362	25	2	442703705	17922	1402816	8448	647847	1631095															
+Shigella flexneri	shigella_flexneri	counts	k31-counts		362	31	2	3172906	3280	93616	55952	176																
+Shigella flexneri	shigella_flexneri	unitigs	unitigs	grm	362	16	2	39193976	29177	188104	1116	23735		8859488	212961	39193976	196765	0										
+Shigella sonnei	shigella_sonnei	aa	k31-aa		1984	25	2	2507684273	153843	2956347	1887742	567950	9078208															
+Shigella sonnei	shigella_sonnei	counts	k31-counts		1984	31	2	23754653	27241	452050	360178	52																
+Shigella sonnei	shigella_sonnei	unitigs	unitigs	grm	1984	16	2	661887852	473032	864877	170809	34897		28755352	1070586	661887852	733188	0										
+Staphylococcus aureus	staphylococcus_aureus	aa	k31-aa		2000	25	2	1503719561	260754	2212577	990436	192924	5218222															
+Staphylococcus aureus	staphylococcus_aureus	counts	k31-counts		2000	31	2	19680858	32087	365770	395293	30																
+Staphylococcus aureus	staphylococcus_aureus	unitigs	unitigs	grm	2000	16	2	885620251	765269	1093332	182379	16044		20898969	1291757	885620251	41649	0										
+Staphylococcus haemolyticus	staphylococcus_haemolyticus	aa	k31-aa		126	25	2	87185931	21642	711906	216175	508025	316877															
+Staphylococcus haemolyticus	staphylococcus_haemolyticus	counts	k31-counts		126	31	2	1061879	4204	59219	69862	781																
+Staphylococcus haemolyticus	staphylococcus_haemolyticus	unitigs	unitigs	grm	126	16	2	7685210	44428	122134	25887	22400		6754621	170422	7685210	2779	0										
+Streptococcus agalactiae	streptococcus_agalactiae	aa	k31-aa		141	25	2	87778323	5106	440153	212333	462070	304148															
+Streptococcus agalactiae	streptococcus_agalactiae	counts	k31-counts		141	31	2	474623	1115	18120	32119	206																
+Streptococcus agalactiae	streptococcus_agalactiae	unitigs	unitigs	grm	141	16	2	6131463	8648	54180	12232	18627		4613886	85039	6131463	1019	0										
+Streptococcus pneumoniae	streptococcus_pneumoniae	aa	k31-aa		2000	25	2	1126211172	202021	1768129	735551	119087	4126155															
+Streptococcus pneumoniae	streptococcus_pneumoniae	counts	k31-counts		2000	31	2	31402846	35617	313669	446917	600																
+Streptococcus pneumoniae	streptococcus_pneumoniae	unitigs	unitigs	grm	2000	16	2	566708472	524146	683173	119846	11188		14510197	814228	566708472	97135	0										
+Vibrio cholerae	vibrio_cholerae	aa	k31-aa		91	25	2	102692050	36212	1196870	969003	719320	327075															
+Vibrio cholerae	vibrio_cholerae	counts	k31-counts		91	31	2	1227630	6190	76576	176173	1358																
+Vibrio cholerae	vibrio_cholerae	unitigs	unitigs	grm	91	16	2	26676162	235254	574546	140037	42268		17239066	756851	26676162	3963	0										
