@@ -78,7 +78,11 @@ LIGHTGBM = {"objective": "binary", "boost_from_average": False, "learning_rate":
             "max_depth": GRM_GBT["max_depth"], "num_leaves": 2 ** GRM_GBT["max_depth"], "lambda_l2": GRM_GBT["lambda"],
             "min_sum_hessian_in_leaf": GRM_GBT["min_child_weight"], "feature_fraction": GRM_GBT["colsample"],
             "metric": "binary_logloss", "deterministic": True, "force_col_wise": True, "num_threads": 1,
-            "verbosity": -1}
+            "verbosity": -1,
+            # Ruled 23 Nov: LightGBM's floor of 20 genomes a leaf allows no split on a fitting side of about 34
+            # genomes; GRM's gbt has no count floor. min_data_in_bin stays at the library's 3: a 0/1 row of 1 or 2
+            # fitting genomes is still split on (test_runner.Floors).
+            "min_data_in_leaf": 1}
 # The elastic net (question 7 and section 4 of the design).
 MIXES = (0.25, 0.5, 0.75, 1.0)
 PENALTIES = 10

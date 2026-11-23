@@ -282,6 +282,38 @@ class Arms(Temp):
                 O.run("xgboost", d, "lineage", 42)
 
 
+class Floors(unittest.TestCase):
+    """LightGBM's count floors as the arm sets them, on SYNTHETIC tables: a leaf of 1 genome (ruled 23 Nov), and the
+    library's bin floor of 3, under which a 0/1 row of 1 or 2 fitting genomes is still split on."""
+
+    def splits(self, X, y):
+        """Splits on each column in 5 rounds of the arm's settings, the rows all fitting genomes, GRM's weights."""
+        import lightgbm
+        w = O.class_weights(y, np.ones(y.shape[0], dtype=bool))
+        d = lightgbm.Dataset(X, label=y.astype(np.float64), weight=w, params={"verbosity": -1})
+        model = lightgbm.train(dict(O.LIGHTGBM, seed=1), d, num_boost_round=5)
+        return model.feature_importance("split").tolist()
+
+    def test_a_row_under_the_bin_floor_is_split_on(self):
+        self.assertNotIn("min_data_in_bin", O.LIGHTGBM)
+        for support in (1, 2):
+            y = np.zeros(34, dtype=bool)
+            y[:support] = True
+            X = np.zeros((34, 2))
+            X[:support, 0] = 1
+            X[::2, 1] = 1
+            self.assertGreater(self.splits(X, y)[0], 0, f"support {support}")
+
+    def test_a_fitting_side_of_34_genomes_is_split(self):
+        # 10 of 34 carry the row and are the resistant ones; a floor of 20 genomes a leaf leaves no split.
+        y = np.zeros(34, dtype=bool)
+        y[:10] = True
+        X = np.zeros((34, 2))
+        X[:10, 0] = 1
+        X[::2, 1] = 1
+        self.assertGreater(self.splits(X, y)[0], 0)
+
+
 class Plain(Temp):
     """The arms against the plain paths of plain.py, on SYNTHETIC tables."""
 
@@ -311,7 +343,7 @@ class Plain(Temp):
             def keep(X, y, fo, w):
                 s, info = O.fit_lightgbm(X, y, fo, w)
                 fit, hold, test = O.sides(fo)
-                want, run, kept = plain.boost(X, y, w, fit, hold, test, 400, 0.1, 2, 1.0, 1.0, 25, min_count=20,
+                want, run, kept = plain.boost(X, y, w, fit, hold, test, 400, 0.1, 2, 1.0, 1.0, 25, min_count=1,
                                               split_eps=0.0, eps=1e-15, hessian_count=True)
                 got[fo["fold"]] = (s, want, info, run, kept)
                 return s, info
