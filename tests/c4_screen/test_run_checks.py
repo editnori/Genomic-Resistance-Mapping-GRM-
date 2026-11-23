@@ -215,6 +215,27 @@ class Timeless(Copies):
             self.assertEqual(aside, [], text)
 
 
+class Prefixed(Copies):
+    def test_a_genome_id_after_a_letter_or_underscore_is_refused(self):
+        for text in (f"genome_{fx.GENOME_IDS[0]}", f"id{fx.GENOME_IDS[1]}"):
+            root = self.fresh()
+            out = root / "copies" / "synthia_alpha"
+            with open(out / "check" / "refit.tsv", "a", encoding="utf-8") as f:
+                f.write(f"{text}\t1\n")
+            reseal(out, "synthia_alpha")
+            got, _ = self.run_checks(root)
+            self.assertEqual([n for n, (p, _) in got.items() if not p], [NAMES[10]], text)
+            self.assertTrue(got[NAMES[10]][1].startswith("1 genome ids in "), text)
+
+    def test_a_longer_number_holding_a_genome_id_is_not_one(self):
+        root = self.fresh()
+        out = root / "copies" / "synthia_alpha"
+        with open(out / "check" / "refit.tsv", "a", encoding="utf-8") as f:
+            f.write(f"1{fx.GENOME_IDS[0]}\t0.{fx.GENOME_IDS[0].replace('.', '')}\n")
+        reseal(out, "synthia_alpha")
+        self.assertEqual(self.failed(root), [])
+
+
 class TwoBinaries(Copies):
     build = {"codes": {"synthia_beta": "d" * 64}}
 
