@@ -1,0 +1,8 @@
+1 answers: the reading holds reading.txt and the four answers, each with count/count.tsv, count/conditions.tsv and score/
+2 species: each answer's score/ holds exactly the species of l.tsv's first run, each with its four files
+3 options: each species' options.txt holds its answer's options
+4 datasets: each datasets.tsv holds exactly its species' first-run datasets, none in M: the default, the inner pick and the twin on the lineage split, and the default and the inner pick on the study split for those in S; species and antibiotic equal l.tsv's
+5 draws: each draws.tsv holds each dataset's draws at seeds 42, 43 and 44, its twin at 45, 46 and 47 and its study run at seed 42, and nothing else; datasets.tsv is their mean; picks.tsv is their inner rows
+6 beside: the tie answers' default and twin rows equal the read answer's
+7 count: each answer's count.tsv and conditions.tsv are what score.py --count writes from its datasets.tsv files
+8 conditions: the inner pick's conditions 1 and 2 as read here off count.tsv, and condition 3 off the twin's row, equal conditions.tsv's

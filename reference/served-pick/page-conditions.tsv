@@ -1,0 +1,7 @@
+condition	reads	read	tie-earlier	tie-default	default-seed42
+1	the lineage median difference's interval lies wholly above 0	0	0	0	0
+2	better beats worse by the one-sided sign test at p < 0.05 after Holm	0	0	0	0
+3	the twin meets neither 1 nor 2	1	1	1	1
+4	the recall interval does not lie wholly below -0.02	1	1	1	1
+5	the study median has the lineage median's sign	0	0	0	0
+6	the maintainer rules the change				

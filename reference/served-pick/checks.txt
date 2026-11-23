@@ -1,0 +1,17 @@
+The checks of the C9 run's 23 copies, made on the run box before any score was read. Counts only.
+
+PASS species: 23 copies, 23 species in l.tsv's first run
+PASS SHA256SUMS: 23 of 23 species; 1683 of 1683 lines hold
+PASS DONE and binary.txt: 23 of 23 DONE lines name their species, SHA256SUMS, result count, binary and code; no FAILED
+  species per commit: 0fd05e9 22 (the rest); dd17f98 1 (klebsiella_pneumoniae)
+  species per code sha256: f9319da84056 22; 909fce01cc35 1
+  restart lines in binary.txt: 0
+PASS expect.py: 23 of 23 species: expect.tsv is expect.py's from l.tsv and the result files are exactly its rows; 1453 of 1453 results found, 0 more
+  datasets 233, study datasets 55, species 23
+PASS genome ids: 0 genome ids in 2671 files, against 23757 release ids of 23 species
+PASS Klebsiella pneumoniae seed 42: 32 of 32 first-run seed-42 results equal the second run's with seconds_inner left out
+  polymyxin B seed 43: unavailable_reason 'invalid lineage outer evaluation: fold 4 validation lacks one or both classes'; fold reasons none
+CHECKS 6 of 6
+
+The count of the release's genome ids over the reading and the tables here, after the reading:
+IDCOUNT ids=0 files=488 known=23757

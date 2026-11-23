@@ -685,7 +685,8 @@ def print_pooled(rows):
 def print_picks(rows):
     out = []
     for r in rows:
-        tail = ([r["no_pick"], r["tied"], r["same_as_default"], of(r["differs"], r["folds"])] if r["arm"] == "inner"
+        tail = ([count_words(r["no_pick"]), count_words(r["tied"]), count_words(r["same_as_default"]),
+                 of(r["differs"], r["folds"])] if r["arm"] == "inner"
                 else ["", "", "", ""])
         out.append([ANSWER_WORDS[r["answer"]], r["split"], r["arm"], r["draws"], count_words(r["folds"])]
                    + [count_words(r[l]) for l in LEARNERS] + tail)

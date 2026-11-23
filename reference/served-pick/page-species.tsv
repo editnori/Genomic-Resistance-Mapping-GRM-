@@ -1,0 +1,24 @@
+species	species_slug	datasets	study_datasets	lineage_inner_entered	lineage_inner_not_scored	lineage_inner_better	lineage_inner_worse	lineage_inner_same	lineage_inner_median	lineage_twin_entered	lineage_twin_not_scored	lineage_twin_better	lineage_twin_worse	lineage_twin_same	lineage_twin_median	study_inner_entered	study_inner_not_scored	study_inner_better	study_inner_worse	study_inner_same	study_inner_median
+Acinetobacter baumannii	acinetobacter_baumannii	7	2	7	0	0	3	4	-0.018980582524	7	0	1	3	3	-2.596054e-05	2	0	1	0	1	0.025016087516
+Campylobacter coli	campylobacter_coli	8	0	8	0	0	1	7	0.0	8	0	0	1	7	-0.0002596054	0	0	0	0	0	
+Campylobacter jejuni	campylobacter_jejuni	4	0	4	0	0	1	3	-0.000896852128	4	0	1	0	3	0.005131143366	0	0	0	0	0	
+Clostridioides difficile	clostridioides_difficile	4	0	4	0	0	0	4	-0.009442963927	4	0	0	0	4	-0.00377519192	0	0	0	0	0	
+Corynebacterium diphtheriae	corynebacterium_diphtheriae	3	0	3	0	0	1	2	-0.003384094754	3	0	0	0	3	0.0	0	0	0	0	0	
+Enterobacter cloacae	enterobacter_cloacae	9	8	9	0	4	2	3	0.009995002499	9	0	2	4	3	-0.010818003008	8	0	4	3	1	0.017568542569
+Enterococcus faecium	enterococcus_faecium	11	0	11	0	3	1	7	0.002450980393	11	0	2	0	9	0.0	0	0	0	0	0	
+Escherichia coli	escherichia_coli	29	15	29	0	5	5	19	-0.001377410469	29	0	2	4	23	0.000810653212	15	0	3	3	9	0.0
+Klebsiella aerogenes	klebsiella_aerogenes	3	0	3	0	2	1	0	0.02242063492	3	0	1	1	1	0.0	0	0	0	0	0	
+Klebsiella oxytoca	klebsiella_oxytoca	4	0	4	0	1	1	2	0.010432693913	4	0	2	1	1	0.002429298617	0	0	0	0	0	
+Klebsiella pneumoniae	klebsiella_pneumoniae	32	18	31	1	6	3	22	0.0	31	1	5	7	19	-0.000982042649	18	0	8	1	9	0.012885583529
+Klebsiella quasipneumoniae	klebsiella_quasipneumoniae	3	0	3	0	0	0	3	-0.002824858757	3	0	0	0	3	0.011299435028	0	0	0	0	0	
+Mycobacterium tuberculosis	mycobacterium_tuberculosis	20	1	20	0	0	4	16	-0.005064675895	20	0	3	3	14	0.000222050274	1	0	0	0	1	-0.012048192771
+Neisseria gonorrhoeae	neisseria_gonorrhoeae	6	0	6	0	2	1	3	-0.000378787879	6	0	1	0	5	-0.002083350032	0	0	0	0	0	
+Pseudomonas aeruginosa	pseudomonas_aeruginosa	12	6	12	0	2	2	8	-0.001708216664	12	0	3	1	8	4.9575398e-05	6	0	2	1	3	-0.003285833912
+Salmonella enterica	salmonella_enterica	24	1	24	0	6	4	14	-0.000270701451	24	0	7	5	12	-0.000739539641	1	0	0	0	1	-0.006079163221
+Shigella flexneri	shigella_flexneri	4	0	4	0	1	1	2	0.002842337381	4	0	1	0	3	0.002750002415	0	0	0	0	0	
+Shigella sonnei	shigella_sonnei	20	0	20	0	0	4	16	-0.00594187657	20	0	1	1	18	0.001718213058	0	0	0	0	0	
+Staphylococcus aureus	staphylococcus_aureus	13	4	13	0	4	0	9	0.0	13	0	1	1	11	-0.002708166933	4	0	0	0	4	-0.001702741703
+Staphylococcus haemolyticus	staphylococcus_haemolyticus	3	0	3	0	0	2	1	-0.035901573215	3	0	0	0	3	-0.000605082695	0	0	0	0	0	
+Streptococcus agalactiae	streptococcus_agalactiae	3	0	3	0	0	0	3	-0.002356321839	3	0	0	1	2	-0.003205128205	0	0	0	0	0	
+Streptococcus pneumoniae	streptococcus_pneumoniae	8	0	8	0	1	2	5	-0.00873070137	8	0	0	2	6	0.000742345441	0	0	0	0	0	
+Vibrio cholerae	vibrio_cholerae	3	0	3	0	0	0	3	0.006802721088	3	0	1	1	1	0.010204081633	0	0	0	0	0	

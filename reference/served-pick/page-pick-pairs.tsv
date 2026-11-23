@@ -1,0 +1,11 @@
+split	default_learner	draws	folds	no_pick	scm	cart	rf	gbt	lasso
+lineage	scm	164	820	39	375	178	60	71	136
+lineage	cart	106	530	16	111	191	42	68	118
+lineage	rf	91	455	27	77	89	151	62	76
+lineage	gbt	158	790	24	166	139	123	206	156
+lineage	lasso	179	895	64	174	158	87	156	320
+study	scm	13	65	0	33	10	5	6	11
+study	cart	7	35	0	7	10	2	6	10
+study	rf	8	40	0	7	5	8	12	8
+study	gbt	13	65	0	8	12	14	16	15
+study	lasso	14	70	0	22	9	3	18	18

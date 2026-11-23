@@ -1,0 +1,73 @@
+answer	split	pair	measure	orientation	datasets	entered	not_scored	better	worse	same	median_difference	species	interval_lo	interval_hi	sign_p	holm_p	meets_1	meets_2
+read	lineage	inner-default	balanced_accuracy	higher	233	232	1	37	39	156	-0.000721845961	23	-0.002762015909	0.0	0.634495558889	1.0	0	0
+read	lineage	inner-default	recall	higher	233	232	1	58	50	124	0.0	23	-0.00170940171	0.00027100271	0.250383196708			
+read	lineage	inner-default	specificity	higher	233	232	1	30	59	143	-0.001345608103	23	-0.003668104645	0.0	0.999332368817			
+read	lineage	inner-default	vme	lower	233	232	1	58	50	124	0.0	23	-0.00027100271	0.00170940171	0.250383196708			
+read	lineage	inner-default	me	lower	233	232	1	30	59	143	0.001345608103	23	0.0	0.003683241253	0.999332368817			
+read	lineage	inner-default	log_loss	lower	233	232	1	81	110	41	0.013769161177	23	0.0	0.057639571117	0.985157441811			
+read	lineage	twin-default	balanced_accuracy	higher	233	232	1	34	36	162	0.0	23	-0.000107665806	0.000810653212	0.639898613824	1.0	0	0
+read	lineage	twin-default	recall	higher	233	232	1	51	45	136	0.0	23	0.0	0.002544529262	0.305034133053			
+read	lineage	twin-default	specificity	higher	233	232	1	38	55	139	0.0	23	-0.001346801347	0.0	0.969307050648			
+read	lineage	twin-default	vme	lower	233	232	1	51	45	136	0.0	23	-0.002544529262	0.0	0.305034133053			
+read	lineage	twin-default	me	lower	233	232	1	38	55	139	0.0	23	0.0	0.001346801347	0.969307050648			
+read	lineage	twin-default	log_loss	lower	233	232	1	78	71	83	-0.000406435963	23	-0.004638446656	0.002835100512	0.311597249221			
+read	study	inner-default	balanced_accuracy	higher	55	55	0	18	8	29	0.000772170306	8	-0.003006035297	0.01167245811	0.03775934875			
+read	study	inner-default	recall	higher	55	55	0	21	13	21	0.0	8	-0.014388489209	0.015037593985	0.114740506513			
+read	study	inner-default	specificity	higher	55	55	0	17	17	21	0.0	8	-0.013493253373	0.00299850075	0.56791687978			
+read	study	inner-default	vme	lower	55	55	0	21	13	21	0.0	8	-0.015037593985	0.014388489209	0.114740506513			
+read	study	inner-default	me	lower	55	55	0	17	17	21	0.0	8	-0.00299850075	0.013493253373	0.56791687978			
+read	study	inner-default	log_loss	lower	55	55	0	17	27	11	0.015770829686	8	0.003764524587	0.08006940043	0.95192912279			
+tie-earlier	lineage	inner-default	balanced_accuracy	higher	233	232	1	38	37	157	-0.000319520273	23	-0.002136752137	0.0	0.5	1.0	0	0
+tie-earlier	lineage	inner-default	recall	higher	233	232	1	59	49	124	0.0	23	-0.000596302922	0.0	0.193286304494			
+tie-earlier	lineage	inner-default	specificity	higher	233	232	1	31	57	144	-0.000565647023	23	-0.003381234151	0.0	0.998126745327			
+tie-earlier	lineage	inner-default	vme	lower	233	232	1	59	49	124	0.0	23	0.0	0.000612745098	0.193286304494			
+tie-earlier	lineage	inner-default	me	lower	233	232	1	31	57	144	0.000565647023	23	0.0	0.003381234151	0.998126745327			
+tie-earlier	lineage	inner-default	log_loss	lower	233	232	1	70	126	36	0.037846498074	23	0.014683878881	0.082672300712	0.999979275661			
+tie-earlier	lineage	twin-default	balanced_accuracy	higher	233	232	1	34	36	162	0.0	23	-0.000107665806	0.000810653212	0.639898613824	1.0	0	0
+tie-earlier	lineage	twin-default	recall	higher	233	232	1	51	45	136	0.0	23	0.0	0.002544529262	0.305034133053			
+tie-earlier	lineage	twin-default	specificity	higher	233	232	1	38	55	139	0.0	23	-0.001346801347	0.0	0.969307050648			
+tie-earlier	lineage	twin-default	vme	lower	233	232	1	51	45	136	0.0	23	-0.002544529262	0.0	0.305034133053			
+tie-earlier	lineage	twin-default	me	lower	233	232	1	38	55	139	0.0	23	0.0	0.001346801347	0.969307050648			
+tie-earlier	lineage	twin-default	log_loss	lower	233	232	1	78	71	83	-0.000406435963	23	-0.004638446656	0.002835100512	0.311597249221			
+tie-earlier	study	inner-default	balanced_accuracy	higher	55	55	0	18	8	29	0.000772170306	8	-0.003006035297	0.01167245811	0.03775934875			
+tie-earlier	study	inner-default	recall	higher	55	55	0	20	13	22	0.0	8	-0.014388489209	0.012987012987	0.1481031843			
+tie-earlier	study	inner-default	specificity	higher	55	55	0	17	16	22	0.0	8	-0.009900990099	0.012244897959	0.5			
+tie-earlier	study	inner-default	vme	lower	55	55	0	20	13	22	0.0	8	-0.012987012987	0.014388489209	0.1481031843			
+tie-earlier	study	inner-default	me	lower	55	55	0	17	16	22	0.0	8	-0.012244897959	0.009900990099	0.5			
+tie-earlier	study	inner-default	log_loss	lower	55	55	0	16	29	10	0.031097265162	8	0.011606824274	0.198751041927	0.982151098222			
+tie-default	lineage	inner-default	balanced_accuracy	higher	233	232	1	37	37	158	-0.000398323254	23	-0.00216802168	0.0	0.546219691194	1.0	0	0
+tie-default	lineage	inner-default	recall	higher	233	232	1	58	49	125	0.0	23	-0.000636132315	0.0	0.21972005089			
+tie-default	lineage	inner-default	specificity	higher	233	232	1	30	58	144	-0.000840798079	23	-0.003033060357	0.0	0.999087985677			
+tie-default	lineage	inner-default	vme	lower	233	232	1	58	49	125	0.0	23	0.0	0.001172767013	0.21972005089			
+tie-default	lineage	inner-default	me	lower	233	232	1	30	58	144	0.000840798079	23	0.0	0.003033060357	0.999087985677			
+tie-default	lineage	inner-default	log_loss	lower	233	232	1	78	111	43	0.013769161177	23	0.002470534964	0.051393251274	0.993408315809			
+tie-default	lineage	twin-default	balanced_accuracy	higher	233	232	1	34	36	162	0.0	23	-0.000107665806	0.000810653212	0.639898613824	1.0	0	0
+tie-default	lineage	twin-default	recall	higher	233	232	1	51	45	136	0.0	23	0.0	0.002544529262	0.305034133053			
+tie-default	lineage	twin-default	specificity	higher	233	232	1	38	55	139	0.0	23	-0.001346801347	0.0	0.969307050648			
+tie-default	lineage	twin-default	vme	lower	233	232	1	51	45	136	0.0	23	-0.002544529262	0.0	0.305034133053			
+tie-default	lineage	twin-default	me	lower	233	232	1	38	55	139	0.0	23	0.0	0.001346801347	0.969307050648			
+tie-default	lineage	twin-default	log_loss	lower	233	232	1	78	71	83	-0.000406435963	23	-0.004638446656	0.002835100512	0.311597249221			
+tie-default	study	inner-default	balanced_accuracy	higher	55	55	0	18	8	29	0.000772170306	8	-0.003006035297	0.01167245811	0.03775934875			
+tie-default	study	inner-default	recall	higher	55	55	0	20	13	22	0.0	8	-0.014388489209	0.012987012987	0.1481031843			
+tie-default	study	inner-default	specificity	higher	55	55	0	17	16	22	0.0	8	-0.009900990099	0.012244897959	0.5			
+tie-default	study	inner-default	vme	lower	55	55	0	20	13	22	0.0	8	-0.012987012987	0.014388489209	0.1481031843			
+tie-default	study	inner-default	me	lower	55	55	0	17	16	22	0.0	8	-0.012244897959	0.009900990099	0.5			
+tie-default	study	inner-default	log_loss	lower	55	55	0	16	28	11	0.02113082396	8	0.008214828819	0.08006940043	0.975616617048			
+default-seed42	lineage	inner-default	balanced_accuracy	higher	233	232	1	35	50	147	-0.00225039775	23	-0.003403621626	0.0	0.958972850206	0.958972850206	0	0
+default-seed42	lineage	inner-default	recall	higher	233	232	1	59	58	115	0.0	23	-0.002283105023	0.0	0.5			
+default-seed42	lineage	inner-default	specificity	higher	233	232	1	25	68	139	-0.002147080179	23	-0.006646216769	-0.000553709856	0.999998348553			
+default-seed42	lineage	inner-default	vme	lower	233	232	1	59	58	115	0.0	23	0.0	0.002283105023	0.5			
+default-seed42	lineage	inner-default	me	lower	233	232	1	25	68	139	0.002147080179	23	0.000553709856	0.006646216769	0.999998348553			
+default-seed42	lineage	inner-default	log_loss	lower	233	232	1	63	130	39	0.047538473647	23	0.014778872774	0.11534100651	0.99999962044			
+default-seed42	lineage	twin-default	balanced_accuracy	higher	233	232	1	31	26	175	0.0	23	-0.000444084616	7.3027315e-05	0.298320880187	0.596641760373	0	0
+default-seed42	lineage	twin-default	recall	higher	233	232	1	42	42	148	0.0	23	-0.000246664148	0.0	0.543398818888			
+default-seed42	lineage	twin-default	specificity	higher	233	232	1	26	35	171	0.0	23	-0.000563539025	0.0	0.899984315743			
+default-seed42	lineage	twin-default	vme	lower	233	232	1	42	42	148	0.0	23	0.0	0.000246664148	0.543398818888			
+default-seed42	lineage	twin-default	me	lower	233	232	1	26	35	171	0.0	23	0.0	0.000554993556	0.899984315743			
+default-seed42	lineage	twin-default	log_loss	lower	233	232	1	61	47	124	-9.1347083e-05	23	-0.003594941595	0.000248816253	0.105382896989			
+default-seed42	study	inner-default	balanced_accuracy	higher	55	55	0	18	8	29	0.000772170306	8	-0.003006035297	0.01167245811	0.03775934875			
+default-seed42	study	inner-default	recall	higher	55	55	0	21	13	21	0.0	8	-0.014388489209	0.015037593985	0.114740506513			
+default-seed42	study	inner-default	specificity	higher	55	55	0	17	17	21	0.0	8	-0.013493253373	0.00299850075	0.56791687978			
+default-seed42	study	inner-default	vme	lower	55	55	0	21	13	21	0.0	8	-0.015037593985	0.014388489209	0.114740506513			
+default-seed42	study	inner-default	me	lower	55	55	0	17	17	21	0.0	8	-0.00299850075	0.013493253373	0.56791687978			
+default-seed42	study	inner-default	log_loss	lower	55	55	0	17	27	11	0.015770829686	8	0.003764524587	0.08006940043	0.95192912279			
