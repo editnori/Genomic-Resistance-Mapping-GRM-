@@ -26,7 +26,7 @@ The rule is `curate::select_genomes` (`src/curate.rs`): a genome with an unconfl
 | *Staphylococcus aureus* | 5,045 | 2,000 | 2,096 |
 | *Streptococcus pneumoniae* | 15,530 | 2,000 | 2,096 |
 
-The release's 2,000 lie in the top 4,000 in all 8 species, so each wider cohort is the 2,000 plus the next genomes of the ranking. The default is the release's list, not the rebuilt table's top 2,000, which differs from it by 4, 68, 2 and 1 genomes in 4 species. *Enterococcus faecium* ranks 2,907 of its 3,138 labelled genomes; the other 231 hold no call the rule counts and can enter no dataset's cohort, so its `cap-4000` and `cap-all` are one cohort, fitted and counted under `cap-all` only; its `cap-4000` rows in `expect.tsv` are `same-cohort` and are never scored.
+The release's 2,000 lie in the top 4,000 in all 8 species, so each wider cohort is the 2,000 plus the next genomes of the ranking. The default is the release's list, not the rebuilt table's top 2,000, which differs from it by 4, 68, 2 and 1 genomes in 4 species. *Enterococcus faecium* ranks 2,907 of its 3,138 labelled genomes; the other 231 hold no call the rule counts and can enter no dataset's cohort, so its `cap-4000` and `cap-all` are one cohort, fitted and counted under `cap-all` only. When `ARMS` names `cap-4000`, its `cap-4000` rows in `expect.tsv` are `same-cohort` and never scored; the run's `ARMS`, `cap-all`, lists no `cap-4000` row.
 
 ## Added genomes with a label
 
@@ -86,6 +86,8 @@ Before the k-mer digest check, which needs the run's ksets, `cap-all`'s added ge
 
 A `grm arm` fit takes evaluation seed 42; its lineage draws are its keyed slots. `cap-2000` runs 6 slots: 0 to 2 are the draws, 3 to 5 the twin. Each wider arm runs slots 0 to 2 against the reference's. The plan names `grm learn` seeds 42 to 44 for the draws and 45 to 47 for the twin; `grm arm` takes no seed of its own, and its keyed slots are its draws, so the same roles here are slots 0 to 2 and 3 to 5 at seed 42 (`docs/assumption-plan-corrections.md`). `expect.py` lists every row a species must score, with its role: `draw`, `twin` or `study`; `none-added` (no added genome labelled, or on the study split none that trains); or `same-cohort` (*Enterococcus faecium*'s `cap-4000`). Rows of the last two are not scored.
 
+**Refused draws.** When the default's lineage draw at a slot is refused, `grm arm` draws the next keyed repeat past the slots (6, then 7), at most twice a dataset (`src/ablate/arm.rs`, `arm_plans`). The slot's plan and each wider arm's cohort plan then hold the keyed repeat, while the trace lines and prediction rows hold the slot, so `check_folds.py` and `score.py` read both by slot. When the replacements are refused too, every lineage run of the dataset is unavailable and none is produced, as H-1's ruling has it (`docs/input-comparison-runner.md`, A refused repeat). `check_folds.py` then prints the dataset's lineage split as unavailable and breaches only on a trace line of the default or a wider arm's cohort plan at a refused slot; the run goes on. `score.py` scores each of the dataset's lineage rows 0, with why `lineage split unavailable`, on every arm and the twin, so the dataset leaves each arm's lineage count. Its study rows are scored as usual.
+
 `score.py` runs on the run box and writes under `score/`, never `logs/`. Before any score it checks, per row: the dataset is first run; the plan and the prediction rows exist, five learners, one row per scored genome per fold (a missing draw stops the scorer and is never read as zero); a twin row is the default's own fit at a slot no draw has; a wider arm's scored genomes in each fold are the default's; a study row's `--exp-pick` file is the dataset's `study-whole` fit at seed 42 with no inner fold, and a wider arm's test folds hold the default's tested and resistant counts, fold by fold, with at least the default's training genomes. Per dataset, arm, split, slot and learner it sums the outer calls into the measures of `scripts/c9-pick/score.py`. The count and conditions come from its own instance of `scripts/c3-inputs/score.py` with the family `cap-4000`, `cap-all` and `twin` against `cap-2000`: Holm over the 15 lineage rows of the primary measure, 3 arms by 5 learners. The count is taken once, over every species' `score/datasets.tsv`, with `cap-4000` withdrawn:
 
 ```
@@ -106,7 +108,7 @@ bash scripts/c2-cap/run_species.sh KIT SPECIES DATASETS OUT [JOBS] [DRAWS] [TWIN
 
 The full run is `16 3 3 cap-all lineage,study yes N`, one species to one 16-CPU, 32 GB machine, with N, at most 4, from the species' scaled peak fit memory with 4 GB kept free. Each step writes a time record (wall, CPU, peak memory), a log scrubbed of genome ids and a flag, so a restart skips finished steps. The end scan (`scrub.py --scan`) counts genome ids of the release and every cohort list in `results/`, `score/` and `logs/` and fails on any. `SCORE no` moves each fit's prediction and score files to `work/unread/`, which nothing reads. The cohort lists, fold files, fits and scores stay on the run machine.
 
-On *Enterococcus faecium* (vancomycin, ampicillin and gentamicin, one lineage slot, `cap-2000` and `cap-all`, scores unread), the fetch took 439.58 s for 2,907 genomes at 8 workers with no failure, the `cap-all` count 129.53 s, its matrix 105.81 s at 3.1 GB peak, and each fit 38 to 55 s at 2.4 to 3.6 GB peak. Every fold check passed, with no balance drop and no added copy of a scored genome. Over the 5 outer folds, `cap-all`'s added genomes trained in 3,644 of 4,505 fold places on vancomycin (901 labelled added genomes) and were kept out by lineage in 861; on ampicillin, 753 of 940 (188) and 187. None of the 907 added genomes carries a gentamicin call, so on gentamicin `cap-all`'s fit repeats the default's; such a dataset is now none-added and not fitted.
+On *Enterococcus faecium* (vancomycin, ampicillin and gentamicin, one lineage slot, `cap-2000` and `cap-all`, scores unread), the fetch took 439.58 s for 2,907 genomes at 8 workers with no failure, the `cap-all` count 129.53 s, its matrix 105.81 s at 3.1 GiB peak, and each fit 38 to 55 s at 2.4 to 3.5 GiB peak. Every fold check passed, with no balance drop and no added copy of a scored genome. Over the 5 outer folds, `cap-all`'s added genomes trained in 3,644 of 4,505 fold places on vancomycin (901 labelled added genomes) and were kept out by lineage in 861; on ampicillin, 753 of 940 (188) and 187. None of the 907 added genomes carries a gentamicin call, so on gentamicin `cap-all`'s fit repeats the default's; such a dataset is now none-added and not fitted.
 
 **Fits at once.** Each dataset's lineage chain (the default's fit, each wider arm's, the fold check) is one job. The chains run largest first, by the `cap-all` cohort's labelled genomes on the dataset; the first runs alone, and after it N chains run at once: the smaller of `AT_ONCE` and (the box's memory less 4 GiB) / (the largest fit peak so far), at least 1, read again before each chain starts and written to `results/at-once.txt`. A fit killed for memory fails the run once the running chains end, and the next start runs at half the N in force then. Study fits run one at a time.
 
@@ -132,6 +134,61 @@ No limit in the fit path depends on wall time. Every clock read in `grm arm`'s p
 | 12. A wider arm with no added genome labelled fitted and counted on the lineage split | `Expect.test_an_arm_with_no_added_genome_labelled_is_none_added_on_both_splits` |
 | 13. A withdrawn arm's conditions read as a fitted arm's | `Count.test_a_withdrawn_arm_keeps_its_five_pairs_at_p_one_and_the_tables_name_it_withdrawn` |
 | 14. *Enterococcus faecium*'s one wider cohort scored under both wider arms | `Checks.test_a_none_added_or_same_cohort_lineage_row_is_not_scored` |
+
+## Limits
+
+**The study split decides nothing.** Its fits, one per dataset and arm, are kept beside the lineage count, and no condition reads them (the lead's ruling of 23 Nov 2026).
+
+**Few added genomes may train on the study split.** Before the k-mer digest check, which can only lower these counts, 1,978 added genomes may train on 27 of the 39 datasets in S: 1,921 in *Klebsiella pneumoniae*, 30 in *Escherichia coli*, 23 in *Staphylococcus aureus* and 4 in *Salmonella enterica*. On the other 12, no added genome trains, and the arm is none-added there. Of the 25,853 added genomes labelled on the 39, 21,039 share a tested genome's BioProject and 2,836 have none known. Per dataset, with the default's tested genomes and those of them with no BioProject known:
+
+| Species | Antibiotic | Added labelled | Share a tested genome's BioProject | BioProject unknown | May train | Tested | Tested, no BioProject |
+|---|---|---:|---:|---:|---:|---:|---:|
+| *Escherichia coli* | amikacin | 284 | 96 | 186 | 2 | 1,125 | 36 |
+| *Escherichia coli* | ampicillin/sulbactam | 1 | 1 | 0 | 0 | 283 | 24 |
+| *Escherichia coli* | aztreonam | 349 | 114 | 233 | 2 | 699 | 38 |
+| *Escherichia coli* | cefazolin | 2 | 2 | 0 | 0 | 414 | 23 |
+| *Escherichia coli* | cefepime | 100 | 96 | 2 | 2 | 1,124 | 77 |
+| *Escherichia coli* | cefoxitin | 94 | 91 | 0 | 3 | 1,066 | 186 |
+| *Escherichia coli* | ceftriaxone | 3 | 2 | 1 | 0 | 923 | 53 |
+| *Escherichia coli* | ertapenem | 108 | 98 | 7 | 3 | 820 | 55 |
+| *Escherichia coli* | levofloxacin | 2 | 2 | 0 | 0 | 403 | 34 |
+| *Escherichia coli* | nitrofurantoin | 0 | 0 | 0 | 0 | 482 | 24 |
+| *Escherichia coli* | piperacillin/tazobactam | 1,739 | 882 | 855 | 2 | 979 | 145 |
+| *Escherichia coli* | streptomycin | 0 | 0 | 0 | 0 | 386 | 21 |
+| *Escherichia coli* | sulfamethoxazole | 0 | 0 | 0 | 0 | 341 | 37 |
+| *Escherichia coli* | tetracycline | 65 | 28 | 22 | 15 | 782 | 94 |
+| *Escherichia coli* | tobramycin | 490 | 95 | 394 | 1 | 1,070 | 199 |
+| *Klebsiella pneumoniae* | ampicillin/sulbactam | 1,244 | 1,171 | 0 | 73 | 744 | 0 |
+| *Klebsiella pneumoniae* | aztreonam | 1,529 | 1,470 | 32 | 27 | 1,050 | 0 |
+| *Klebsiella pneumoniae* | cefazolin | 1,348 | 1,276 | 0 | 72 | 1,141 | 24 |
+| *Klebsiella pneumoniae* | cefepime | 1,163 | 1,163 | 0 | 0 | 1,233 | 21 |
+| *Klebsiella pneumoniae* | cefoxitin | 1,371 | 1,287 | 0 | 84 | 1,181 | 0 |
+| *Klebsiella pneumoniae* | ceftazidime | 1,988 | 1,526 | 32 | 430 | 1,310 | 23 |
+| *Klebsiella pneumoniae* | ceftriaxone | 1,315 | 1,283 | 32 | 0 | 1,208 | 24 |
+| *Klebsiella pneumoniae* | ciprofloxacin | 1,834 | 1,379 | 37 | 418 | 1,706 | 117 |
+| *Klebsiella pneumoniae* | colistin | 50 | 2 | 32 | 16 | 336 | 0 |
+| *Klebsiella pneumoniae* | doripenem | 2 | 2 | 0 | 0 | 243 | 0 |
+| *Klebsiella pneumoniae* | ertapenem | 533 | 400 | 31 | 102 | 952 | 0 |
+| *Klebsiella pneumoniae* | imipenem | 1,221 | 1,131 | 2 | 88 | 1,158 | 40 |
+| *Klebsiella pneumoniae* | levofloxacin | 1,239 | 1,150 | 0 | 89 | 871 | 0 |
+| *Klebsiella pneumoniae* | nitrofurantoin | 576 | 540 | 0 | 36 | 562 | 0 |
+| *Klebsiella pneumoniae* | polymyxin b | 55 | 2 | 53 | 0 | 100 | 11 |
+| *Klebsiella pneumoniae* | sulfamethoxazole/trimethoprim | 1,735 | 1,294 | 39 | 402 | 1,546 | 118 |
+| *Klebsiella pneumoniae* | tigecycline | 212 | 148 | 0 | 64 | 924 | 0 |
+| *Klebsiella pneumoniae* | tobramycin | 1,036 | 1,016 | 0 | 20 | 1,230 | 0 |
+| *Mycobacterium tuberculosis* | nicotinamide | 0 | 0 | 0 | 0 | 166 | 0 |
+| *Salmonella enterica* | sulfisoxazole | 1,439 | 1,240 | 195 | 4 | 544 | 78 |
+| *Staphylococcus aureus* | clindamycin | 386 | 335 | 44 | 7 | 1,543 | 124 |
+| *Staphylococcus aureus* | erythromycin | 1,382 | 857 | 519 | 6 | 1,957 | 384 |
+| *Staphylococcus aureus* | penicillin | 811 | 764 | 44 | 3 | 1,508 | 99 |
+| *Staphylococcus aureus* | sulfamethoxazole/trimethoprim | 147 | 96 | 44 | 7 | 1,389 | 29 |
+| All 39 | | **25,853** | **21,039** | **2,836** | **1,978** | **35,499** | **2,138** |
+
+**Tested genomes with no BioProject.** 2,138 of the 35,499 tested genomes, summed over the 39 datasets, have no BioProject known. An added genome of the same project, recorded only on the added genome, is not held out by the BioProject rule; only the k-mer digest check reaches it, and only when it is an exact copy.
+
+**A copy is an equal digest on the study split.** The study split holds out an added genome whose k-mer digest equals a tested genome's. A near copy from another BioProject may train. On the lineage split, a near copy shares the scored genome's lineage and is held out with it.
+
+**A refused lineage split is not produced.** A dataset whose lineage draws `grm arm` refuses past its two replacements leaves every arm's lineage count (Draws, the twin and the count, above).
 
 ## What it does not do
 
