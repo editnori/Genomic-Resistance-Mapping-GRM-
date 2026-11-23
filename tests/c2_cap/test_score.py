@@ -252,6 +252,26 @@ class Checks(unittest.TestCase):
         self.assertEqual(rc, 0, text)
         self.assertEqual({x["arm"] for x in draws}, {"cap-2000", "twin"})
 
+    def test_each_draw_sums_its_prediction_rows_calls_by_cell(self):
+        # Counted here from the SYNTHETIC prediction rows themselves, per learner and slot of the default.
+        with tempfile.TemporaryDirectory() as tmp:
+            run = Run(tmp)
+            rc, text, checks, draws, _ = run.run()
+            rows = [json.loads(line) for line in
+                    (run.t / "fits" / "cap-2000" / D / "predictions.jsonl").read_text(encoding="utf-8").splitlines()
+                    if line.strip()]
+        self.assertEqual(rc, 0, failed(checks))
+        for learner in ("scm", "lasso"):
+            for slot in (0, 3):
+                want = {"tp": 0, "fp": 0, "tn": 0, "fn": 0}
+                for p in rows:
+                    if p["learner"] == learner and p["repeat"] == slot:
+                        want[("t" if bool(p["called"]) == bool(p["y"]) else "f") + ("p" if p["called"] else "n")] += 1
+                got = next(r for r in draws if r["fit"] == "cap-2000" and r["split"] == "lineage"
+                           and r["slot"] == str(slot) and r["learner"] == learner)
+                self.assertEqual({k: int(got[k]) for k in want}, want)
+                self.assertGreater(min(want.values()), 0)
+
     def test_the_log_loss_is_clipped(self):
         self.assertAlmostEqual(score.loss(1, 0.0), -__import__("math").log(1e-4))
         self.assertAlmostEqual(score.loss(0, 1.0), -__import__("math").log(1e-4))
