@@ -272,11 +272,8 @@ def main(argv):
         counted = C3.count(rows)
         out.mkdir(parents=True, exist_ok=True)
         write_tsv(out / "count.tsv", counted, C3.COUNT_COLUMNS)
-        held = len(FAMILY) * len(LEARNERS)
-        conds = C3.conditions(counted)
-        for c in conds:
-            c["reads"] = c["reads"].replace("Holm over 30", f"Holm over {held}")
-        write_tsv(out / "conditions.tsv", conds, C3.CONDITION_COLUMNS)
+        # C3's conditions write its family's size, 15 here: 3 arms by 5 learners.
+        write_tsv(out / "conditions.tsv", C3.conditions(counted), C3.CONDITION_COLUMNS)
         print(f"count: {len(rows)} dataset rows from {len(argv) - 2} files")
         return 0
     if len(argv) != 4:

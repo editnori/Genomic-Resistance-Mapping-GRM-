@@ -66,7 +66,7 @@ On *Enterococcus faecium* (vancomycin, ampicillin and gentamicin, one lineage sl
 
 ## Tests and planted faults
 
-`tests/c2_cap` holds SYNTHETIC tests of the cohorts, roots, lists, expected rows, both fold checks, the study files, the scorer and count, the fetch check, the scrub, the time records and the runner's text; the study split is proved on SYNTHETIC fold plans only. `scripts/c2-cap/planted_faults.py` plants each fault below in a copy of the last commit, runs the one test named for it, and puts the text back, on `scripts/c9-pick/planted_faults.py`'s runner. Each test passes with no fault planted and fails with its fault.
+`tests/c2_cap` holds SYNTHETIC tests of the cohorts, roots, lists, expected rows, both fold checks, the study files, the scorer and count, the fetch check, the scrub, the time records and the runner's text; the study split is proved on SYNTHETIC fold plans only. `scripts/c2-cap/planted_faults.py` plants each fault below in a copy of the last commit, runs the one test named for it, and puts the text back, on `scripts/c9-pick/planted_faults.py`'s runner. Each test passes with no fault planted and fails with its fault, and `test_faults.py` holds each fault's text to one occurrence in its file, since the runner stops at a text it does not find once.
 
 | Fault | Caught by |
 |---|---|

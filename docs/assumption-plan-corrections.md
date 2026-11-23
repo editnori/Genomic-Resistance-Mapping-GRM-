@@ -623,7 +623,7 @@ An eleventh came while the text was written. The project's wording rules put rec
 
 **Fault.** The first pilot fit stopped on a group file named `1000`: the runner's variable was `GROUPS`, which bash sets to the user's group ids. It is now `GROUPING`, and a runner test fails on any bash special variable.
 
-**Checks.** `tests/c2_cap` holds 61 SYNTHETIC tests. The ten faults of `docs/cap-arms.md`, three of them planted in two places, 13 in all, are each caught by the one test named for it.
+**Checks.** `tests/c2_cap` holds 62 SYNTHETIC tests. The ten faults of `docs/cap-arms.md`, three of them planted in two places, 13 in all, are each caught by the one test named for it, and one test holds each fault's text to one occurrence in its file at this tree.
 
 **Cost.** Scaled from the pilot: a fit costs 1.7873 s of `grm arm` wall a second of the release's learning, times its genomes over 2,000. On the species' refit boxes, which hold the release's 2,000 FASTA files, the run comes to 53.83 xlarge-hours central and 157.76 upper, $10.77 and $31.55; on new boxes, 54.50 and 158.77, $10.90 and $31.75. Per arm, central and upper hours: `cap-2000` 8.83 and 26.50, the twin 7.49 and 22.46, `cap-4000` 17.52 and 51.99, `cap-all` 18.35 and 54.42; the data steps every arm shares 0.99 and 1.41; the fetch 0.65 and 0.98 on a refit box, 1.33 and 1.99 on a new one. Nothing beyond the pilot has run.
 
