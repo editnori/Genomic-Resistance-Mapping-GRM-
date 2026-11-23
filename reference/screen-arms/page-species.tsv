@@ -1,0 +1,737 @@
+species	species_slug	split	pair	set	learner	decides	datasets	entered	not_scored	constant	better	worse	same	median
+Acinetobacter baumannii	acinetobacter_baumannii	lineage	cmh-4000-k31	all	rf	0	7	7	0	0	3	2	2	0.018224299065
+Acinetobacter baumannii	acinetobacter_baumannii	lineage	cmh-4000-k31	all	gbt	0	7	7	0	0	5	1	1	0.043359040275
+Acinetobacter baumannii	acinetobacter_baumannii	lineage	cmh-4000-k31	all	lasso	0	7	7	0	0	3	1	3	0.0
+Acinetobacter baumannii	acinetobacter_baumannii	lineage	cmh-16000-k31	all	rf	0	7	7	0	0	3	1	3	0.017185877466
+Acinetobacter baumannii	acinetobacter_baumannii	lineage	cmh-16000-k31	all	gbt	0	7	7	0	0	3	0	4	0.007172131148
+Acinetobacter baumannii	acinetobacter_baumannii	lineage	cmh-16000-k31	all	lasso	0	7	7	0	0	1	1	5	0.0
+Acinetobacter baumannii	acinetobacter_baumannii	lineage	floor-3-k31	800-or-more	scm	0	2	2	0	0	1	0	1	0.010147100828
+Acinetobacter baumannii	acinetobacter_baumannii	lineage	floor-3-k31	800-or-more	cart	0	2	2	0	0	0	0	2	0.002085870202
+Acinetobacter baumannii	acinetobacter_baumannii	lineage	floor-3-k31	800-or-more	rf	0	2	2	0	0	0	0	2	0.0
+Acinetobacter baumannii	acinetobacter_baumannii	lineage	floor-3-k31	800-or-more	gbt	0	2	2	0	0	0	0	2	0.0
+Acinetobacter baumannii	acinetobacter_baumannii	lineage	floor-3-k31	800-or-more	lasso	0	2	2	0	0	0	0	2	0.0
+Acinetobacter baumannii	acinetobacter_baumannii	lineage	twin-k31	all	scm	0	7	7	0	0	4	0	3	0.026673687858
+Acinetobacter baumannii	acinetobacter_baumannii	lineage	twin-k31	all	cart	0	7	7	0	0	3	0	4	0.009107032134
+Acinetobacter baumannii	acinetobacter_baumannii	lineage	twin-k31	all	rf	0	7	7	0	0	1	0	6	5.3625053e-05
+Acinetobacter baumannii	acinetobacter_baumannii	lineage	twin-k31	all	gbt	0	7	7	0	0	3	2	2	0.000268125269
+Acinetobacter baumannii	acinetobacter_baumannii	lineage	twin-k31	all	lasso	0	7	7	0	0	1	4	2	-0.023894846264
+Acinetobacter baumannii	acinetobacter_baumannii	lineage	twin-k31	800-or-more	scm	0	2	2	0	0	1	0	1	0.019056638274
+Acinetobacter baumannii	acinetobacter_baumannii	lineage	twin-k31	800-or-more	cart	0	2	2	0	0	1	0	1	0.017514098757
+Acinetobacter baumannii	acinetobacter_baumannii	lineage	twin-k31	800-or-more	rf	0	2	2	0	0	0	0	2	0.000427309211
+Acinetobacter baumannii	acinetobacter_baumannii	lineage	twin-k31	800-or-more	gbt	0	2	2	0	0	1	0	1	0.00666980897
+Acinetobacter baumannii	acinetobacter_baumannii	lineage	twin-k31	800-or-more	lasso	0	2	2	0	0	0	1	1	-0.016331884714
+Acinetobacter baumannii	acinetobacter_baumannii	study	cmh-4000-k31	all	rf	0	2	2	0	0	1	1	0	-0.00139545926
+Acinetobacter baumannii	acinetobacter_baumannii	study	cmh-4000-k31	all	gbt	0	2	2	0	0	1	1	0	-0.017700078719
+Acinetobacter baumannii	acinetobacter_baumannii	study	cmh-4000-k31	all	lasso	0	2	2	0	0	0	0	2	-0.002941047844
+Acinetobacter baumannii	acinetobacter_baumannii	study	cmh-16000-k31	all	rf	0	2	2	0	0	0	2	0	-0.03808596044
+Acinetobacter baumannii	acinetobacter_baumannii	study	cmh-16000-k31	all	gbt	0	2	2	0	0	0	2	0	-0.049677531207
+Acinetobacter baumannii	acinetobacter_baumannii	study	cmh-16000-k31	all	lasso	0	2	2	0	0	1	0	1	0.003418175457
+Acinetobacter baumannii	acinetobacter_baumannii	study	floor-3-k31	800-or-more	scm	0	0	0	0	0	0	0	0	
+Acinetobacter baumannii	acinetobacter_baumannii	study	floor-3-k31	800-or-more	cart	0	0	0	0	0	0	0	0	
+Acinetobacter baumannii	acinetobacter_baumannii	study	floor-3-k31	800-or-more	rf	0	0	0	0	0	0	0	0	
+Acinetobacter baumannii	acinetobacter_baumannii	study	floor-3-k31	800-or-more	gbt	0	0	0	0	0	0	0	0	
+Acinetobacter baumannii	acinetobacter_baumannii	study	floor-3-k31	800-or-more	lasso	0	0	0	0	0	0	0	0	
+Campylobacter coli	campylobacter_coli	lineage	cmh-4000-k31	all	rf	0	8	8	0	0	2	4	2	-0.014617702118
+Campylobacter coli	campylobacter_coli	lineage	cmh-4000-k31	all	gbt	0	8	8	0	0	1	0	7	0.002647338394
+Campylobacter coli	campylobacter_coli	lineage	cmh-4000-k31	all	lasso	0	8	8	0	0	0	0	8	0.000550438716
+Campylobacter coli	campylobacter_coli	lineage	cmh-16000-k31	all	rf	0	8	8	0	0	0	7	1	-0.07885961196
+Campylobacter coli	campylobacter_coli	lineage	cmh-16000-k31	all	gbt	0	8	8	0	0	1	0	7	0.000539340974
+Campylobacter coli	campylobacter_coli	lineage	cmh-16000-k31	all	lasso	0	8	8	0	0	1	0	7	0.0
+Campylobacter coli	campylobacter_coli	lineage	floor-3-k31	800-or-more	scm	0	0	0	0	0	0	0	0	
+Campylobacter coli	campylobacter_coli	lineage	floor-3-k31	800-or-more	cart	0	0	0	0	0	0	0	0	
+Campylobacter coli	campylobacter_coli	lineage	floor-3-k31	800-or-more	rf	0	0	0	0	0	0	0	0	
+Campylobacter coli	campylobacter_coli	lineage	floor-3-k31	800-or-more	gbt	0	0	0	0	0	0	0	0	
+Campylobacter coli	campylobacter_coli	lineage	floor-3-k31	800-or-more	lasso	0	0	0	0	0	0	0	0	
+Campylobacter coli	campylobacter_coli	lineage	twin-k31	all	scm	0	8	8	0	0	0	0	8	0.0
+Campylobacter coli	campylobacter_coli	lineage	twin-k31	all	cart	0	8	8	0	0	0	1	7	0.0
+Campylobacter coli	campylobacter_coli	lineage	twin-k31	all	rf	0	8	8	0	0	1	2	5	-0.001793298725
+Campylobacter coli	campylobacter_coli	lineage	twin-k31	all	gbt	0	8	8	0	0	1	1	6	0.0
+Campylobacter coli	campylobacter_coli	lineage	twin-k31	all	lasso	0	8	8	0	0	0	0	8	0.0
+Campylobacter coli	campylobacter_coli	lineage	twin-k31	800-or-more	scm	0	0	0	0	0	0	0	0	
+Campylobacter coli	campylobacter_coli	lineage	twin-k31	800-or-more	cart	0	0	0	0	0	0	0	0	
+Campylobacter coli	campylobacter_coli	lineage	twin-k31	800-or-more	rf	0	0	0	0	0	0	0	0	
+Campylobacter coli	campylobacter_coli	lineage	twin-k31	800-or-more	gbt	0	0	0	0	0	0	0	0	
+Campylobacter coli	campylobacter_coli	lineage	twin-k31	800-or-more	lasso	0	0	0	0	0	0	0	0	
+Campylobacter coli	campylobacter_coli	study	cmh-4000-k31	all	rf	0	0	0	0	0	0	0	0	
+Campylobacter coli	campylobacter_coli	study	cmh-4000-k31	all	gbt	0	0	0	0	0	0	0	0	
+Campylobacter coli	campylobacter_coli	study	cmh-4000-k31	all	lasso	0	0	0	0	0	0	0	0	
+Campylobacter coli	campylobacter_coli	study	cmh-16000-k31	all	rf	0	0	0	0	0	0	0	0	
+Campylobacter coli	campylobacter_coli	study	cmh-16000-k31	all	gbt	0	0	0	0	0	0	0	0	
+Campylobacter coli	campylobacter_coli	study	cmh-16000-k31	all	lasso	0	0	0	0	0	0	0	0	
+Campylobacter coli	campylobacter_coli	study	floor-3-k31	800-or-more	scm	0	0	0	0	0	0	0	0	
+Campylobacter coli	campylobacter_coli	study	floor-3-k31	800-or-more	cart	0	0	0	0	0	0	0	0	
+Campylobacter coli	campylobacter_coli	study	floor-3-k31	800-or-more	rf	0	0	0	0	0	0	0	0	
+Campylobacter coli	campylobacter_coli	study	floor-3-k31	800-or-more	gbt	0	0	0	0	0	0	0	0	
+Campylobacter coli	campylobacter_coli	study	floor-3-k31	800-or-more	lasso	0	0	0	0	0	0	0	0	
+Campylobacter jejuni	campylobacter_jejuni	lineage	cmh-4000-k31	all	rf	0	4	4	0	0	0	2	2	-0.014529397753
+Campylobacter jejuni	campylobacter_jejuni	lineage	cmh-4000-k31	all	gbt	0	4	4	0	0	0	1	3	0.0
+Campylobacter jejuni	campylobacter_jejuni	lineage	cmh-4000-k31	all	lasso	0	4	4	0	0	0	1	3	0.000645771172
+Campylobacter jejuni	campylobacter_jejuni	lineage	cmh-16000-k31	all	rf	0	4	4	0	0	0	2	2	-0.08345959596
+Campylobacter jejuni	campylobacter_jejuni	lineage	cmh-16000-k31	all	gbt	0	4	4	0	0	0	0	4	-0.000737463127
+Campylobacter jejuni	campylobacter_jejuni	lineage	cmh-16000-k31	all	lasso	0	4	4	0	0	1	0	3	0.005131143366
+Campylobacter jejuni	campylobacter_jejuni	lineage	floor-3-k31	800-or-more	scm	0	0	0	0	0	0	0	0	
+Campylobacter jejuni	campylobacter_jejuni	lineage	floor-3-k31	800-or-more	cart	0	0	0	0	0	0	0	0	
+Campylobacter jejuni	campylobacter_jejuni	lineage	floor-3-k31	800-or-more	rf	0	0	0	0	0	0	0	0	
+Campylobacter jejuni	campylobacter_jejuni	lineage	floor-3-k31	800-or-more	gbt	0	0	0	0	0	0	0	0	
+Campylobacter jejuni	campylobacter_jejuni	lineage	floor-3-k31	800-or-more	lasso	0	0	0	0	0	0	0	0	
+Campylobacter jejuni	campylobacter_jejuni	lineage	twin-k31	all	scm	0	4	4	0	0	0	0	4	0.0
+Campylobacter jejuni	campylobacter_jejuni	lineage	twin-k31	all	cart	0	4	4	0	0	1	0	3	0.0
+Campylobacter jejuni	campylobacter_jejuni	lineage	twin-k31	all	rf	0	4	4	0	0	0	1	3	0.000172532782
+Campylobacter jejuni	campylobacter_jejuni	lineage	twin-k31	all	gbt	0	4	4	0	0	1	0	3	0.0
+Campylobacter jejuni	campylobacter_jejuni	lineage	twin-k31	all	lasso	0	4	4	0	0	1	0	3	0.004485116653
+Campylobacter jejuni	campylobacter_jejuni	lineage	twin-k31	800-or-more	scm	0	0	0	0	0	0	0	0	
+Campylobacter jejuni	campylobacter_jejuni	lineage	twin-k31	800-or-more	cart	0	0	0	0	0	0	0	0	
+Campylobacter jejuni	campylobacter_jejuni	lineage	twin-k31	800-or-more	rf	0	0	0	0	0	0	0	0	
+Campylobacter jejuni	campylobacter_jejuni	lineage	twin-k31	800-or-more	gbt	0	0	0	0	0	0	0	0	
+Campylobacter jejuni	campylobacter_jejuni	lineage	twin-k31	800-or-more	lasso	0	0	0	0	0	0	0	0	
+Campylobacter jejuni	campylobacter_jejuni	study	cmh-4000-k31	all	rf	0	0	0	0	0	0	0	0	
+Campylobacter jejuni	campylobacter_jejuni	study	cmh-4000-k31	all	gbt	0	0	0	0	0	0	0	0	
+Campylobacter jejuni	campylobacter_jejuni	study	cmh-4000-k31	all	lasso	0	0	0	0	0	0	0	0	
+Campylobacter jejuni	campylobacter_jejuni	study	cmh-16000-k31	all	rf	0	0	0	0	0	0	0	0	
+Campylobacter jejuni	campylobacter_jejuni	study	cmh-16000-k31	all	gbt	0	0	0	0	0	0	0	0	
+Campylobacter jejuni	campylobacter_jejuni	study	cmh-16000-k31	all	lasso	0	0	0	0	0	0	0	0	
+Campylobacter jejuni	campylobacter_jejuni	study	floor-3-k31	800-or-more	scm	0	0	0	0	0	0	0	0	
+Campylobacter jejuni	campylobacter_jejuni	study	floor-3-k31	800-or-more	cart	0	0	0	0	0	0	0	0	
+Campylobacter jejuni	campylobacter_jejuni	study	floor-3-k31	800-or-more	rf	0	0	0	0	0	0	0	0	
+Campylobacter jejuni	campylobacter_jejuni	study	floor-3-k31	800-or-more	gbt	0	0	0	0	0	0	0	0	
+Campylobacter jejuni	campylobacter_jejuni	study	floor-3-k31	800-or-more	lasso	0	0	0	0	0	0	0	0	
+Clostridioides difficile	clostridioides_difficile	lineage	cmh-4000-k31	all	rf	0	4	4	0	0	0	4	0	-0.045067867079
+Clostridioides difficile	clostridioides_difficile	lineage	cmh-4000-k31	all	gbt	0	4	4	0	0	0	3	1	-0.074327675143
+Clostridioides difficile	clostridioides_difficile	lineage	cmh-4000-k31	all	lasso	0	4	4	0	0	0	3	1	-0.055936109605
+Clostridioides difficile	clostridioides_difficile	lineage	cmh-16000-k31	all	rf	0	4	4	0	0	0	4	0	-0.026661336444
+Clostridioides difficile	clostridioides_difficile	lineage	cmh-16000-k31	all	gbt	0	4	4	0	0	0	2	2	-0.021783463856
+Clostridioides difficile	clostridioides_difficile	lineage	cmh-16000-k31	all	lasso	0	4	4	0	0	0	0	4	-0.011317415258
+Clostridioides difficile	clostridioides_difficile	lineage	floor-3-k31	800-or-more	scm	0	0	0	0	0	0	0	0	
+Clostridioides difficile	clostridioides_difficile	lineage	floor-3-k31	800-or-more	cart	0	0	0	0	0	0	0	0	
+Clostridioides difficile	clostridioides_difficile	lineage	floor-3-k31	800-or-more	rf	0	0	0	0	0	0	0	0	
+Clostridioides difficile	clostridioides_difficile	lineage	floor-3-k31	800-or-more	gbt	0	0	0	0	0	0	0	0	
+Clostridioides difficile	clostridioides_difficile	lineage	floor-3-k31	800-or-more	lasso	0	0	0	0	0	0	0	0	
+Clostridioides difficile	clostridioides_difficile	lineage	twin-k31	all	scm	0	4	4	0	0	0	0	4	-0.00193236715
+Clostridioides difficile	clostridioides_difficile	lineage	twin-k31	all	cart	0	4	4	0	0	0	1	3	-0.005151098902
+Clostridioides difficile	clostridioides_difficile	lineage	twin-k31	all	rf	0	4	4	0	0	0	0	4	0.00388867128
+Clostridioides difficile	clostridioides_difficile	lineage	twin-k31	all	gbt	0	4	4	0	0	0	1	3	-0.003703703704
+Clostridioides difficile	clostridioides_difficile	lineage	twin-k31	all	lasso	0	4	4	0	0	0	0	4	0.000113498789
+Clostridioides difficile	clostridioides_difficile	lineage	twin-k31	800-or-more	scm	0	0	0	0	0	0	0	0	
+Clostridioides difficile	clostridioides_difficile	lineage	twin-k31	800-or-more	cart	0	0	0	0	0	0	0	0	
+Clostridioides difficile	clostridioides_difficile	lineage	twin-k31	800-or-more	rf	0	0	0	0	0	0	0	0	
+Clostridioides difficile	clostridioides_difficile	lineage	twin-k31	800-or-more	gbt	0	0	0	0	0	0	0	0	
+Clostridioides difficile	clostridioides_difficile	lineage	twin-k31	800-or-more	lasso	0	0	0	0	0	0	0	0	
+Clostridioides difficile	clostridioides_difficile	study	cmh-4000-k31	all	rf	0	0	0	0	0	0	0	0	
+Clostridioides difficile	clostridioides_difficile	study	cmh-4000-k31	all	gbt	0	0	0	0	0	0	0	0	
+Clostridioides difficile	clostridioides_difficile	study	cmh-4000-k31	all	lasso	0	0	0	0	0	0	0	0	
+Clostridioides difficile	clostridioides_difficile	study	cmh-16000-k31	all	rf	0	0	0	0	0	0	0	0	
+Clostridioides difficile	clostridioides_difficile	study	cmh-16000-k31	all	gbt	0	0	0	0	0	0	0	0	
+Clostridioides difficile	clostridioides_difficile	study	cmh-16000-k31	all	lasso	0	0	0	0	0	0	0	0	
+Clostridioides difficile	clostridioides_difficile	study	floor-3-k31	800-or-more	scm	0	0	0	0	0	0	0	0	
+Clostridioides difficile	clostridioides_difficile	study	floor-3-k31	800-or-more	cart	0	0	0	0	0	0	0	0	
+Clostridioides difficile	clostridioides_difficile	study	floor-3-k31	800-or-more	rf	0	0	0	0	0	0	0	0	
+Clostridioides difficile	clostridioides_difficile	study	floor-3-k31	800-or-more	gbt	0	0	0	0	0	0	0	0	
+Clostridioides difficile	clostridioides_difficile	study	floor-3-k31	800-or-more	lasso	0	0	0	0	0	0	0	0	
+Corynebacterium diphtheriae	corynebacterium_diphtheriae	lineage	cmh-4000-k31	all	rf	0	3	3	0	0	1	0	2	0.0
+Corynebacterium diphtheriae	corynebacterium_diphtheriae	lineage	cmh-4000-k31	all	gbt	0	3	3	0	0	2	0	1	0.032719151312
+Corynebacterium diphtheriae	corynebacterium_diphtheriae	lineage	cmh-4000-k31	all	lasso	0	3	3	0	0	0	2	1	-0.054715662473
+Corynebacterium diphtheriae	corynebacterium_diphtheriae	lineage	cmh-16000-k31	all	rf	0	3	3	0	0	0	1	2	0.0
+Corynebacterium diphtheriae	corynebacterium_diphtheriae	lineage	cmh-16000-k31	all	gbt	0	3	3	0	0	1	1	1	-8.3752094e-05
+Corynebacterium diphtheriae	corynebacterium_diphtheriae	lineage	cmh-16000-k31	all	lasso	0	3	3	0	0	0	1	2	0.0
+Corynebacterium diphtheriae	corynebacterium_diphtheriae	lineage	floor-3-k31	800-or-more	scm	0	0	0	0	0	0	0	0	
+Corynebacterium diphtheriae	corynebacterium_diphtheriae	lineage	floor-3-k31	800-or-more	cart	0	0	0	0	0	0	0	0	
+Corynebacterium diphtheriae	corynebacterium_diphtheriae	lineage	floor-3-k31	800-or-more	rf	0	0	0	0	0	0	0	0	
+Corynebacterium diphtheriae	corynebacterium_diphtheriae	lineage	floor-3-k31	800-or-more	gbt	0	0	0	0	0	0	0	0	
+Corynebacterium diphtheriae	corynebacterium_diphtheriae	lineage	floor-3-k31	800-or-more	lasso	0	0	0	0	0	0	0	0	
+Corynebacterium diphtheriae	corynebacterium_diphtheriae	lineage	twin-k31	all	scm	0	3	3	0	0	0	1	2	-0.005778894473
+Corynebacterium diphtheriae	corynebacterium_diphtheriae	lineage	twin-k31	all	cart	0	3	3	0	0	0	1	2	0.0
+Corynebacterium diphtheriae	corynebacterium_diphtheriae	lineage	twin-k31	all	rf	0	3	3	0	0	0	0	3	0.0
+Corynebacterium diphtheriae	corynebacterium_diphtheriae	lineage	twin-k31	all	gbt	0	3	3	0	0	2	0	1	0.028754885539
+Corynebacterium diphtheriae	corynebacterium_diphtheriae	lineage	twin-k31	all	lasso	0	3	3	0	0	1	1	1	-0.017030824689
+Corynebacterium diphtheriae	corynebacterium_diphtheriae	lineage	twin-k31	800-or-more	scm	0	0	0	0	0	0	0	0	
+Corynebacterium diphtheriae	corynebacterium_diphtheriae	lineage	twin-k31	800-or-more	cart	0	0	0	0	0	0	0	0	
+Corynebacterium diphtheriae	corynebacterium_diphtheriae	lineage	twin-k31	800-or-more	rf	0	0	0	0	0	0	0	0	
+Corynebacterium diphtheriae	corynebacterium_diphtheriae	lineage	twin-k31	800-or-more	gbt	0	0	0	0	0	0	0	0	
+Corynebacterium diphtheriae	corynebacterium_diphtheriae	lineage	twin-k31	800-or-more	lasso	0	0	0	0	0	0	0	0	
+Corynebacterium diphtheriae	corynebacterium_diphtheriae	study	cmh-4000-k31	all	rf	0	0	0	0	0	0	0	0	
+Corynebacterium diphtheriae	corynebacterium_diphtheriae	study	cmh-4000-k31	all	gbt	0	0	0	0	0	0	0	0	
+Corynebacterium diphtheriae	corynebacterium_diphtheriae	study	cmh-4000-k31	all	lasso	0	0	0	0	0	0	0	0	
+Corynebacterium diphtheriae	corynebacterium_diphtheriae	study	cmh-16000-k31	all	rf	0	0	0	0	0	0	0	0	
+Corynebacterium diphtheriae	corynebacterium_diphtheriae	study	cmh-16000-k31	all	gbt	0	0	0	0	0	0	0	0	
+Corynebacterium diphtheriae	corynebacterium_diphtheriae	study	cmh-16000-k31	all	lasso	0	0	0	0	0	0	0	0	
+Corynebacterium diphtheriae	corynebacterium_diphtheriae	study	floor-3-k31	800-or-more	scm	0	0	0	0	0	0	0	0	
+Corynebacterium diphtheriae	corynebacterium_diphtheriae	study	floor-3-k31	800-or-more	cart	0	0	0	0	0	0	0	0	
+Corynebacterium diphtheriae	corynebacterium_diphtheriae	study	floor-3-k31	800-or-more	rf	0	0	0	0	0	0	0	0	
+Corynebacterium diphtheriae	corynebacterium_diphtheriae	study	floor-3-k31	800-or-more	gbt	0	0	0	0	0	0	0	0	
+Corynebacterium diphtheriae	corynebacterium_diphtheriae	study	floor-3-k31	800-or-more	lasso	0	0	0	0	0	0	0	0	
+Enterobacter cloacae	enterobacter_cloacae	lineage	cmh-4000-k31	all	rf	0	9	9	0	0	2	3	4	-0.012345679012
+Enterobacter cloacae	enterobacter_cloacae	lineage	cmh-4000-k31	all	gbt	0	9	9	0	0	3	1	5	0.00512243878
+Enterobacter cloacae	enterobacter_cloacae	lineage	cmh-4000-k31	all	lasso	0	9	9	0	0	5	1	3	0.023867809058
+Enterobacter cloacae	enterobacter_cloacae	lineage	cmh-16000-k31	all	rf	0	9	9	0	0	1	5	3	-0.029020362354
+Enterobacter cloacae	enterobacter_cloacae	lineage	cmh-16000-k31	all	gbt	0	9	9	0	0	2	1	6	0.00062539087
+Enterobacter cloacae	enterobacter_cloacae	lineage	cmh-16000-k31	all	lasso	0	9	9	0	0	3	4	2	0.008333333333
+Enterobacter cloacae	enterobacter_cloacae	lineage	floor-3-k31	800-or-more	scm	0	0	0	0	0	0	0	0	
+Enterobacter cloacae	enterobacter_cloacae	lineage	floor-3-k31	800-or-more	cart	0	0	0	0	0	0	0	0	
+Enterobacter cloacae	enterobacter_cloacae	lineage	floor-3-k31	800-or-more	rf	0	0	0	0	0	0	0	0	
+Enterobacter cloacae	enterobacter_cloacae	lineage	floor-3-k31	800-or-more	gbt	0	0	0	0	0	0	0	0	
+Enterobacter cloacae	enterobacter_cloacae	lineage	floor-3-k31	800-or-more	lasso	0	0	0	0	0	0	0	0	
+Enterobacter cloacae	enterobacter_cloacae	lineage	twin-k31	all	scm	0	9	9	0	0	0	1	8	0.0
+Enterobacter cloacae	enterobacter_cloacae	lineage	twin-k31	all	cart	0	9	9	0	0	1	2	6	-0.005050505051
+Enterobacter cloacae	enterobacter_cloacae	lineage	twin-k31	all	rf	0	9	9	0	0	4	1	4	-0.001341807909
+Enterobacter cloacae	enterobacter_cloacae	lineage	twin-k31	all	gbt	0	9	9	0	0	4	0	5	0.014367816092
+Enterobacter cloacae	enterobacter_cloacae	lineage	twin-k31	all	lasso	0	9	9	0	0	2	1	6	-0.00115700567
+Enterobacter cloacae	enterobacter_cloacae	lineage	twin-k31	800-or-more	scm	0	0	0	0	0	0	0	0	
+Enterobacter cloacae	enterobacter_cloacae	lineage	twin-k31	800-or-more	cart	0	0	0	0	0	0	0	0	
+Enterobacter cloacae	enterobacter_cloacae	lineage	twin-k31	800-or-more	rf	0	0	0	0	0	0	0	0	
+Enterobacter cloacae	enterobacter_cloacae	lineage	twin-k31	800-or-more	gbt	0	0	0	0	0	0	0	0	
+Enterobacter cloacae	enterobacter_cloacae	lineage	twin-k31	800-or-more	lasso	0	0	0	0	0	0	0	0	
+Enterobacter cloacae	enterobacter_cloacae	study	cmh-4000-k31	all	rf	0	8	8	0	0	1	2	5	-0.014871070667
+Enterobacter cloacae	enterobacter_cloacae	study	cmh-4000-k31	all	gbt	0	8	8	0	0	1	1	6	-0.006461864406
+Enterobacter cloacae	enterobacter_cloacae	study	cmh-4000-k31	all	lasso	0	8	8	0	0	3	4	1	-0.001402058711
+Enterobacter cloacae	enterobacter_cloacae	study	cmh-16000-k31	all	rf	0	8	8	0	0	0	3	5	-0.016083376222
+Enterobacter cloacae	enterobacter_cloacae	study	cmh-16000-k31	all	gbt	0	8	8	0	0	1	3	4	-0.015740740741
+Enterobacter cloacae	enterobacter_cloacae	study	cmh-16000-k31	all	lasso	0	8	8	0	0	2	2	4	0.00641025641
+Enterobacter cloacae	enterobacter_cloacae	study	floor-3-k31	800-or-more	scm	0	0	0	0	0	0	0	0	
+Enterobacter cloacae	enterobacter_cloacae	study	floor-3-k31	800-or-more	cart	0	0	0	0	0	0	0	0	
+Enterobacter cloacae	enterobacter_cloacae	study	floor-3-k31	800-or-more	rf	0	0	0	0	0	0	0	0	
+Enterobacter cloacae	enterobacter_cloacae	study	floor-3-k31	800-or-more	gbt	0	0	0	0	0	0	0	0	
+Enterobacter cloacae	enterobacter_cloacae	study	floor-3-k31	800-or-more	lasso	0	0	0	0	0	0	0	0	
+Enterococcus faecium	enterococcus_faecium	lineage	cmh-4000-k31	all	rf	0	11	11	0	0	3	2	6	0.004045876724
+Enterococcus faecium	enterococcus_faecium	lineage	cmh-4000-k31	all	gbt	0	11	11	0	0	1	2	8	-0.009862557463
+Enterococcus faecium	enterococcus_faecium	lineage	cmh-4000-k31	all	lasso	0	11	11	0	0	2	1	8	0.006859394829
+Enterococcus faecium	enterococcus_faecium	lineage	cmh-16000-k31	all	rf	0	11	11	0	0	1	1	9	0.004267770592
+Enterococcus faecium	enterococcus_faecium	lineage	cmh-16000-k31	all	gbt	0	11	11	0	0	2	1	8	0.002716434207
+Enterococcus faecium	enterococcus_faecium	lineage	cmh-16000-k31	all	lasso	0	11	11	0	0	3	0	8	0.004921410333
+Enterococcus faecium	enterococcus_faecium	lineage	floor-3-k31	800-or-more	scm	0	10	10	0	0	0	0	10	0.0
+Enterococcus faecium	enterococcus_faecium	lineage	floor-3-k31	800-or-more	cart	0	10	10	0	0	0	1	9	0.0
+Enterococcus faecium	enterococcus_faecium	lineage	floor-3-k31	800-or-more	rf	0	10	10	0	0	0	0	10	0.0
+Enterococcus faecium	enterococcus_faecium	lineage	floor-3-k31	800-or-more	gbt	0	10	10	0	0	0	0	10	0.0
+Enterococcus faecium	enterococcus_faecium	lineage	floor-3-k31	800-or-more	lasso	0	10	10	0	0	0	0	10	0.0
+Enterococcus faecium	enterococcus_faecium	lineage	twin-k31	all	scm	0	11	11	0	0	6	0	5	0.021010839723
+Enterococcus faecium	enterococcus_faecium	lineage	twin-k31	all	cart	0	11	11	0	0	2	0	9	0.0
+Enterococcus faecium	enterococcus_faecium	lineage	twin-k31	all	rf	0	11	11	0	0	0	0	11	-0.006068815085
+Enterococcus faecium	enterococcus_faecium	lineage	twin-k31	all	gbt	0	11	11	0	0	2	1	8	-0.00030579637
+Enterococcus faecium	enterococcus_faecium	lineage	twin-k31	all	lasso	0	11	11	0	0	1	1	9	-1.47922e-05
+Enterococcus faecium	enterococcus_faecium	lineage	twin-k31	800-or-more	scm	0	10	10	0	0	5	0	5	0.011653804249
+Enterococcus faecium	enterococcus_faecium	lineage	twin-k31	800-or-more	cart	0	10	10	0	0	2	0	8	0.0
+Enterococcus faecium	enterococcus_faecium	lineage	twin-k31	800-or-more	rf	0	10	10	0	0	0	0	10	-0.005371582997
+Enterococcus faecium	enterococcus_faecium	lineage	twin-k31	800-or-more	gbt	0	10	10	0	0	2	1	7	-4.7196395e-05
+Enterococcus faecium	enterococcus_faecium	lineage	twin-k31	800-or-more	lasso	0	10	10	0	0	1	1	8	0.000184229182
+Enterococcus faecium	enterococcus_faecium	study	cmh-4000-k31	all	rf	0	0	0	0	0	0	0	0	
+Enterococcus faecium	enterococcus_faecium	study	cmh-4000-k31	all	gbt	0	0	0	0	0	0	0	0	
+Enterococcus faecium	enterococcus_faecium	study	cmh-4000-k31	all	lasso	0	0	0	0	0	0	0	0	
+Enterococcus faecium	enterococcus_faecium	study	cmh-16000-k31	all	rf	0	0	0	0	0	0	0	0	
+Enterococcus faecium	enterococcus_faecium	study	cmh-16000-k31	all	gbt	0	0	0	0	0	0	0	0	
+Enterococcus faecium	enterococcus_faecium	study	cmh-16000-k31	all	lasso	0	0	0	0	0	0	0	0	
+Enterococcus faecium	enterococcus_faecium	study	floor-3-k31	800-or-more	scm	0	0	0	0	0	0	0	0	
+Enterococcus faecium	enterococcus_faecium	study	floor-3-k31	800-or-more	cart	0	0	0	0	0	0	0	0	
+Enterococcus faecium	enterococcus_faecium	study	floor-3-k31	800-or-more	rf	0	0	0	0	0	0	0	0	
+Enterococcus faecium	enterococcus_faecium	study	floor-3-k31	800-or-more	gbt	0	0	0	0	0	0	0	0	
+Enterococcus faecium	enterococcus_faecium	study	floor-3-k31	800-or-more	lasso	0	0	0	0	0	0	0	0	
+Escherichia coli	escherichia_coli	lineage	cmh-4000-k31	all	rf	0	29	29	0	0	8	2	19	0.006926361381
+Escherichia coli	escherichia_coli	lineage	cmh-4000-k31	all	gbt	0	29	29	0	0	7	1	21	0.004785766158
+Escherichia coli	escherichia_coli	lineage	cmh-4000-k31	all	lasso	0	29	29	0	0	7	7	15	0.00273134192
+Escherichia coli	escherichia_coli	lineage	cmh-16000-k31	all	rf	0	29	29	0	0	4	9	16	-0.002983802216
+Escherichia coli	escherichia_coli	lineage	cmh-16000-k31	all	gbt	0	29	29	0	0	6	5	18	0.007160493827
+Escherichia coli	escherichia_coli	lineage	cmh-16000-k31	all	lasso	0	29	29	0	0	7	7	15	0.005707762557
+Escherichia coli	escherichia_coli	lineage	floor-3-k31	800-or-more	scm	0	10	10	0	0	0	1	9	0.0
+Escherichia coli	escherichia_coli	lineage	floor-3-k31	800-or-more	cart	0	10	10	0	0	0	0	10	0.0
+Escherichia coli	escherichia_coli	lineage	floor-3-k31	800-or-more	rf	0	10	10	0	0	0	0	10	0.0
+Escherichia coli	escherichia_coli	lineage	floor-3-k31	800-or-more	gbt	0	10	10	0	0	0	0	10	0.0
+Escherichia coli	escherichia_coli	lineage	floor-3-k31	800-or-more	lasso	0	10	10	0	0	0	1	9	0.0
+Escherichia coli	escherichia_coli	lineage	twin-k31	all	scm	0	29	29	0	0	2	4	23	0.001776072748
+Escherichia coli	escherichia_coli	lineage	twin-k31	all	cart	0	29	29	0	0	2	2	25	4.4401819e-05
+Escherichia coli	escherichia_coli	lineage	twin-k31	all	rf	0	29	29	0	0	1	1	27	0.0
+Escherichia coli	escherichia_coli	lineage	twin-k31	all	gbt	0	29	29	0	0	1	3	25	0.0
+Escherichia coli	escherichia_coli	lineage	twin-k31	all	lasso	0	29	29	0	0	3	0	26	-0.000977436741
+Escherichia coli	escherichia_coli	lineage	twin-k31	800-or-more	scm	0	10	10	0	0	1	0	9	0.004693934988
+Escherichia coli	escherichia_coli	lineage	twin-k31	800-or-more	cart	0	10	10	0	0	0	1	9	0.000211183144
+Escherichia coli	escherichia_coli	lineage	twin-k31	800-or-more	rf	0	10	10	0	0	0	0	10	0.000561844916
+Escherichia coli	escherichia_coli	lineage	twin-k31	800-or-more	gbt	0	10	10	0	0	0	0	10	-0.001055215071
+Escherichia coli	escherichia_coli	lineage	twin-k31	800-or-more	lasso	0	10	10	0	0	1	0	9	-0.00041261487
+Escherichia coli	escherichia_coli	study	cmh-4000-k31	all	rf	0	15	15	0	0	3	1	11	0.000494740837
+Escherichia coli	escherichia_coli	study	cmh-4000-k31	all	gbt	0	15	15	0	0	2	0	13	0.009174311926
+Escherichia coli	escherichia_coli	study	cmh-4000-k31	all	lasso	0	15	15	0	0	4	1	10	0.001915925246
+Escherichia coli	escherichia_coli	study	cmh-16000-k31	all	rf	0	15	15	0	0	0	4	11	-0.004814305365
+Escherichia coli	escherichia_coli	study	cmh-16000-k31	all	gbt	0	15	15	0	0	4	0	11	0.007167116173
+Escherichia coli	escherichia_coli	study	cmh-16000-k31	all	lasso	0	15	15	0	0	4	1	10	0.00798848696
+Escherichia coli	escherichia_coli	study	floor-3-k31	800-or-more	scm	0	7	7	0	0	0	1	6	0.0
+Escherichia coli	escherichia_coli	study	floor-3-k31	800-or-more	cart	0	7	7	0	0	0	0	7	0.0
+Escherichia coli	escherichia_coli	study	floor-3-k31	800-or-more	rf	0	7	7	0	0	0	0	7	0.0
+Escherichia coli	escherichia_coli	study	floor-3-k31	800-or-more	gbt	0	7	7	0	0	0	0	7	0.0
+Escherichia coli	escherichia_coli	study	floor-3-k31	800-or-more	lasso	0	7	7	0	0	0	1	6	0.0
+Klebsiella aerogenes	klebsiella_aerogenes	lineage	cmh-4000-k31	all	rf	0	3	3	0	0	1	0	2	0.003968253968
+Klebsiella aerogenes	klebsiella_aerogenes	lineage	cmh-4000-k31	all	gbt	0	3	3	0	0	0	1	2	0.001526251527
+Klebsiella aerogenes	klebsiella_aerogenes	lineage	cmh-4000-k31	all	lasso	0	3	3	0	0	1	1	1	-0.01282051282
+Klebsiella aerogenes	klebsiella_aerogenes	lineage	cmh-16000-k31	all	rf	0	3	3	0	0	1	0	2	0.007936507936
+Klebsiella aerogenes	klebsiella_aerogenes	lineage	cmh-16000-k31	all	gbt	0	3	3	0	0	0	1	2	-0.004578754578
+Klebsiella aerogenes	klebsiella_aerogenes	lineage	cmh-16000-k31	all	lasso	0	3	3	0	0	0	1	2	-0.00641025641
+Klebsiella aerogenes	klebsiella_aerogenes	lineage	floor-3-k31	800-or-more	scm	0	0	0	0	0	0	0	0	
+Klebsiella aerogenes	klebsiella_aerogenes	lineage	floor-3-k31	800-or-more	cart	0	0	0	0	0	0	0	0	
+Klebsiella aerogenes	klebsiella_aerogenes	lineage	floor-3-k31	800-or-more	rf	0	0	0	0	0	0	0	0	
+Klebsiella aerogenes	klebsiella_aerogenes	lineage	floor-3-k31	800-or-more	gbt	0	0	0	0	0	0	0	0	
+Klebsiella aerogenes	klebsiella_aerogenes	lineage	floor-3-k31	800-or-more	lasso	0	0	0	0	0	0	0	0	
+Klebsiella aerogenes	klebsiella_aerogenes	lineage	twin-k31	all	scm	0	3	3	0	0	0	3	0	-0.047916666666
+Klebsiella aerogenes	klebsiella_aerogenes	lineage	twin-k31	all	cart	0	3	3	0	0	1	1	1	-0.01923076923
+Klebsiella aerogenes	klebsiella_aerogenes	lineage	twin-k31	all	rf	0	3	3	0	0	1	0	2	0.00641025641
+Klebsiella aerogenes	klebsiella_aerogenes	lineage	twin-k31	all	gbt	0	3	3	0	0	0	0	3	-0.009615384615
+Klebsiella aerogenes	klebsiella_aerogenes	lineage	twin-k31	all	lasso	0	3	3	0	0	2	1	0	0.081051587302
+Klebsiella aerogenes	klebsiella_aerogenes	lineage	twin-k31	800-or-more	scm	0	0	0	0	0	0	0	0	
+Klebsiella aerogenes	klebsiella_aerogenes	lineage	twin-k31	800-or-more	cart	0	0	0	0	0	0	0	0	
+Klebsiella aerogenes	klebsiella_aerogenes	lineage	twin-k31	800-or-more	rf	0	0	0	0	0	0	0	0	
+Klebsiella aerogenes	klebsiella_aerogenes	lineage	twin-k31	800-or-more	gbt	0	0	0	0	0	0	0	0	
+Klebsiella aerogenes	klebsiella_aerogenes	lineage	twin-k31	800-or-more	lasso	0	0	0	0	0	0	0	0	
+Klebsiella aerogenes	klebsiella_aerogenes	study	cmh-4000-k31	all	rf	0	0	0	0	0	0	0	0	
+Klebsiella aerogenes	klebsiella_aerogenes	study	cmh-4000-k31	all	gbt	0	0	0	0	0	0	0	0	
+Klebsiella aerogenes	klebsiella_aerogenes	study	cmh-4000-k31	all	lasso	0	0	0	0	0	0	0	0	
+Klebsiella aerogenes	klebsiella_aerogenes	study	cmh-16000-k31	all	rf	0	0	0	0	0	0	0	0	
+Klebsiella aerogenes	klebsiella_aerogenes	study	cmh-16000-k31	all	gbt	0	0	0	0	0	0	0	0	
+Klebsiella aerogenes	klebsiella_aerogenes	study	cmh-16000-k31	all	lasso	0	0	0	0	0	0	0	0	
+Klebsiella aerogenes	klebsiella_aerogenes	study	floor-3-k31	800-or-more	scm	0	0	0	0	0	0	0	0	
+Klebsiella aerogenes	klebsiella_aerogenes	study	floor-3-k31	800-or-more	cart	0	0	0	0	0	0	0	0	
+Klebsiella aerogenes	klebsiella_aerogenes	study	floor-3-k31	800-or-more	rf	0	0	0	0	0	0	0	0	
+Klebsiella aerogenes	klebsiella_aerogenes	study	floor-3-k31	800-or-more	gbt	0	0	0	0	0	0	0	0	
+Klebsiella aerogenes	klebsiella_aerogenes	study	floor-3-k31	800-or-more	lasso	0	0	0	0	0	0	0	0	
+Klebsiella oxytoca	klebsiella_oxytoca	lineage	cmh-4000-k31	all	rf	0	4	4	0	0	2	1	1	0.035018399067
+Klebsiella oxytoca	klebsiella_oxytoca	lineage	cmh-4000-k31	all	gbt	0	4	4	0	0	2	2	0	0.030389883723
+Klebsiella oxytoca	klebsiella_oxytoca	lineage	cmh-4000-k31	all	lasso	0	4	4	0	0	1	1	2	0.002652888761
+Klebsiella oxytoca	klebsiella_oxytoca	lineage	cmh-16000-k31	all	rf	0	4	4	0	0	2	1	1	0.009451493806
+Klebsiella oxytoca	klebsiella_oxytoca	lineage	cmh-16000-k31	all	gbt	0	4	4	0	0	1	2	1	-0.013266926698
+Klebsiella oxytoca	klebsiella_oxytoca	lineage	cmh-16000-k31	all	lasso	0	4	4	0	0	1	1	2	0.007634038037
+Klebsiella oxytoca	klebsiella_oxytoca	lineage	floor-3-k31	800-or-more	scm	0	0	0	0	0	0	0	0	
+Klebsiella oxytoca	klebsiella_oxytoca	lineage	floor-3-k31	800-or-more	cart	0	0	0	0	0	0	0	0	
+Klebsiella oxytoca	klebsiella_oxytoca	lineage	floor-3-k31	800-or-more	rf	0	0	0	0	0	0	0	0	
+Klebsiella oxytoca	klebsiella_oxytoca	lineage	floor-3-k31	800-or-more	gbt	0	0	0	0	0	0	0	0	
+Klebsiella oxytoca	klebsiella_oxytoca	lineage	floor-3-k31	800-or-more	lasso	0	0	0	0	0	0	0	0	
+Klebsiella oxytoca	klebsiella_oxytoca	lineage	twin-k31	all	scm	0	4	4	0	0	3	0	1	0.056379657364
+Klebsiella oxytoca	klebsiella_oxytoca	lineage	twin-k31	all	cart	0	4	4	0	0	1	3	0	-0.031576448243
+Klebsiella oxytoca	klebsiella_oxytoca	lineage	twin-k31	all	rf	0	4	4	0	0	1	2	1	-0.026018099547
+Klebsiella oxytoca	klebsiella_oxytoca	lineage	twin-k31	all	gbt	0	4	4	0	0	2	1	1	0.016769493936
+Klebsiella oxytoca	klebsiella_oxytoca	lineage	twin-k31	all	lasso	0	4	4	0	0	1	1	2	0.008925857299
+Klebsiella oxytoca	klebsiella_oxytoca	lineage	twin-k31	800-or-more	scm	0	0	0	0	0	0	0	0	
+Klebsiella oxytoca	klebsiella_oxytoca	lineage	twin-k31	800-or-more	cart	0	0	0	0	0	0	0	0	
+Klebsiella oxytoca	klebsiella_oxytoca	lineage	twin-k31	800-or-more	rf	0	0	0	0	0	0	0	0	
+Klebsiella oxytoca	klebsiella_oxytoca	lineage	twin-k31	800-or-more	gbt	0	0	0	0	0	0	0	0	
+Klebsiella oxytoca	klebsiella_oxytoca	lineage	twin-k31	800-or-more	lasso	0	0	0	0	0	0	0	0	
+Klebsiella oxytoca	klebsiella_oxytoca	study	cmh-4000-k31	all	rf	0	0	0	0	0	0	0	0	
+Klebsiella oxytoca	klebsiella_oxytoca	study	cmh-4000-k31	all	gbt	0	0	0	0	0	0	0	0	
+Klebsiella oxytoca	klebsiella_oxytoca	study	cmh-4000-k31	all	lasso	0	0	0	0	0	0	0	0	
+Klebsiella oxytoca	klebsiella_oxytoca	study	cmh-16000-k31	all	rf	0	0	0	0	0	0	0	0	
+Klebsiella oxytoca	klebsiella_oxytoca	study	cmh-16000-k31	all	gbt	0	0	0	0	0	0	0	0	
+Klebsiella oxytoca	klebsiella_oxytoca	study	cmh-16000-k31	all	lasso	0	0	0	0	0	0	0	0	
+Klebsiella oxytoca	klebsiella_oxytoca	study	floor-3-k31	800-or-more	scm	0	0	0	0	0	0	0	0	
+Klebsiella oxytoca	klebsiella_oxytoca	study	floor-3-k31	800-or-more	cart	0	0	0	0	0	0	0	0	
+Klebsiella oxytoca	klebsiella_oxytoca	study	floor-3-k31	800-or-more	rf	0	0	0	0	0	0	0	0	
+Klebsiella oxytoca	klebsiella_oxytoca	study	floor-3-k31	800-or-more	gbt	0	0	0	0	0	0	0	0	
+Klebsiella oxytoca	klebsiella_oxytoca	study	floor-3-k31	800-or-more	lasso	0	0	0	0	0	0	0	0	
+Klebsiella pneumoniae	klebsiella_pneumoniae	lineage	cmh-4000-k31	all	rf	0	32	31	1	0	11	6	14	0.006367004838
+Klebsiella pneumoniae	klebsiella_pneumoniae	lineage	cmh-4000-k31	all	gbt	0	32	31	1	0	11	10	10	-0.001760401263
+Klebsiella pneumoniae	klebsiella_pneumoniae	lineage	cmh-4000-k31	all	lasso	0	32	31	1	0	16	4	11	0.020300414456
+Klebsiella pneumoniae	klebsiella_pneumoniae	lineage	cmh-16000-k31	all	rf	0	32	31	1	0	10	7	14	0.003599789514
+Klebsiella pneumoniae	klebsiella_pneumoniae	lineage	cmh-16000-k31	all	gbt	0	32	31	1	0	13	5	13	0.011207171633
+Klebsiella pneumoniae	klebsiella_pneumoniae	lineage	cmh-16000-k31	all	lasso	0	32	31	1	0	13	0	18	0.016772151898
+Klebsiella pneumoniae	klebsiella_pneumoniae	lineage	floor-3-k31	800-or-more	scm	0	13	13	0	0	0	0	13	0.0
+Klebsiella pneumoniae	klebsiella_pneumoniae	lineage	floor-3-k31	800-or-more	cart	0	13	13	0	0	0	0	13	0.0
+Klebsiella pneumoniae	klebsiella_pneumoniae	lineage	floor-3-k31	800-or-more	rf	0	13	13	0	0	0	0	13	0.0
+Klebsiella pneumoniae	klebsiella_pneumoniae	lineage	floor-3-k31	800-or-more	gbt	0	13	13	0	0	0	0	13	0.0
+Klebsiella pneumoniae	klebsiella_pneumoniae	lineage	floor-3-k31	800-or-more	lasso	0	13	13	0	0	0	0	13	0.0
+Klebsiella pneumoniae	klebsiella_pneumoniae	lineage	twin-k31	all	scm	0	32	31	1	0	4	5	22	0.00153609831
+Klebsiella pneumoniae	klebsiella_pneumoniae	lineage	twin-k31	all	cart	0	32	31	1	0	4	8	19	-0.00129974624
+Klebsiella pneumoniae	klebsiella_pneumoniae	lineage	twin-k31	all	rf	0	32	31	1	0	0	3	28	-0.000621890547
+Klebsiella pneumoniae	klebsiella_pneumoniae	lineage	twin-k31	all	gbt	0	32	31	1	0	4	6	21	-0.002717213557
+Klebsiella pneumoniae	klebsiella_pneumoniae	lineage	twin-k31	all	lasso	0	32	31	1	0	6	4	21	-0.001854650438
+Klebsiella pneumoniae	klebsiella_pneumoniae	lineage	twin-k31	800-or-more	scm	0	13	13	0	0	1	2	10	0.000525535642
+Klebsiella pneumoniae	klebsiella_pneumoniae	lineage	twin-k31	800-or-more	cart	0	13	13	0	0	1	3	9	-0.001007638307
+Klebsiella pneumoniae	klebsiella_pneumoniae	lineage	twin-k31	800-or-more	rf	0	13	13	0	0	0	0	13	-0.000282380061
+Klebsiella pneumoniae	klebsiella_pneumoniae	lineage	twin-k31	800-or-more	gbt	0	13	13	0	0	0	1	12	-0.001364007962
+Klebsiella pneumoniae	klebsiella_pneumoniae	lineage	twin-k31	800-or-more	lasso	0	13	13	0	0	1	1	11	-0.002215404693
+Klebsiella pneumoniae	klebsiella_pneumoniae	study	cmh-4000-k31	all	rf	0	18	18	0	0	3	1	14	0.007043921511
+Klebsiella pneumoniae	klebsiella_pneumoniae	study	cmh-4000-k31	all	gbt	0	18	18	0	0	8	4	6	0.002347268176
+Klebsiella pneumoniae	klebsiella_pneumoniae	study	cmh-4000-k31	all	lasso	0	18	18	0	0	8	4	6	0.013969727141
+Klebsiella pneumoniae	klebsiella_pneumoniae	study	cmh-16000-k31	all	rf	0	18	18	0	0	4	2	12	0.006893599864
+Klebsiella pneumoniae	klebsiella_pneumoniae	study	cmh-16000-k31	all	gbt	0	18	18	0	0	6	3	9	0.009403075513
+Klebsiella pneumoniae	klebsiella_pneumoniae	study	cmh-16000-k31	all	lasso	0	18	18	0	0	7	2	9	0.014561150022
+Klebsiella pneumoniae	klebsiella_pneumoniae	study	floor-3-k31	800-or-more	scm	0	13	13	0	0	0	0	13	0.0
+Klebsiella pneumoniae	klebsiella_pneumoniae	study	floor-3-k31	800-or-more	cart	0	13	13	0	0	0	0	13	0.0
+Klebsiella pneumoniae	klebsiella_pneumoniae	study	floor-3-k31	800-or-more	rf	0	13	13	0	0	0	0	13	0.0
+Klebsiella pneumoniae	klebsiella_pneumoniae	study	floor-3-k31	800-or-more	gbt	0	13	13	0	0	0	0	13	0.0
+Klebsiella pneumoniae	klebsiella_pneumoniae	study	floor-3-k31	800-or-more	lasso	0	13	13	0	0	0	0	13	0.0
+Klebsiella quasipneumoniae	klebsiella_quasipneumoniae	lineage	cmh-4000-k31	all	rf	0	3	3	0	0	0	0	3	0.0
+Klebsiella quasipneumoniae	klebsiella_quasipneumoniae	lineage	cmh-4000-k31	all	gbt	0	3	3	0	0	1	0	2	0.011299435028
+Klebsiella quasipneumoniae	klebsiella_quasipneumoniae	lineage	cmh-4000-k31	all	lasso	0	3	3	0	0	0	1	2	0.001773748522
+Klebsiella quasipneumoniae	klebsiella_quasipneumoniae	lineage	cmh-16000-k31	all	rf	0	3	3	0	0	0	0	3	0.0
+Klebsiella quasipneumoniae	klebsiella_quasipneumoniae	lineage	cmh-16000-k31	all	gbt	0	3	3	0	0	1	0	2	0.015503875969
+Klebsiella quasipneumoniae	klebsiella_quasipneumoniae	lineage	cmh-16000-k31	all	lasso	0	3	3	0	0	0	1	2	0.003170664461
+Klebsiella quasipneumoniae	klebsiella_quasipneumoniae	lineage	floor-3-k31	800-or-more	scm	0	0	0	0	0	0	0	0	
+Klebsiella quasipneumoniae	klebsiella_quasipneumoniae	lineage	floor-3-k31	800-or-more	cart	0	0	0	0	0	0	0	0	
+Klebsiella quasipneumoniae	klebsiella_quasipneumoniae	lineage	floor-3-k31	800-or-more	rf	0	0	0	0	0	0	0	0	
+Klebsiella quasipneumoniae	klebsiella_quasipneumoniae	lineage	floor-3-k31	800-or-more	gbt	0	0	0	0	0	0	0	0	
+Klebsiella quasipneumoniae	klebsiella_quasipneumoniae	lineage	floor-3-k31	800-or-more	lasso	0	0	0	0	0	0	0	0	
+Klebsiella quasipneumoniae	klebsiella_quasipneumoniae	lineage	twin-k31	all	scm	0	3	3	0	0	2	0	1	0.020102483248
+Klebsiella quasipneumoniae	klebsiella_quasipneumoniae	lineage	twin-k31	all	cart	0	3	3	0	0	2	0	1	0.02397845224
+Klebsiella quasipneumoniae	klebsiella_quasipneumoniae	lineage	twin-k31	all	rf	0	3	3	0	0	1	0	2	0.013440860215
+Klebsiella quasipneumoniae	klebsiella_quasipneumoniae	lineage	twin-k31	all	gbt	0	3	3	0	0	1	0	2	0.010752688172
+Klebsiella quasipneumoniae	klebsiella_quasipneumoniae	lineage	twin-k31	all	lasso	0	3	3	0	0	0	0	3	-0.002067824648
+Klebsiella quasipneumoniae	klebsiella_quasipneumoniae	lineage	twin-k31	800-or-more	scm	0	0	0	0	0	0	0	0	
+Klebsiella quasipneumoniae	klebsiella_quasipneumoniae	lineage	twin-k31	800-or-more	cart	0	0	0	0	0	0	0	0	
+Klebsiella quasipneumoniae	klebsiella_quasipneumoniae	lineage	twin-k31	800-or-more	rf	0	0	0	0	0	0	0	0	
+Klebsiella quasipneumoniae	klebsiella_quasipneumoniae	lineage	twin-k31	800-or-more	gbt	0	0	0	0	0	0	0	0	
+Klebsiella quasipneumoniae	klebsiella_quasipneumoniae	lineage	twin-k31	800-or-more	lasso	0	0	0	0	0	0	0	0	
+Klebsiella quasipneumoniae	klebsiella_quasipneumoniae	study	cmh-4000-k31	all	rf	0	0	0	0	0	0	0	0	
+Klebsiella quasipneumoniae	klebsiella_quasipneumoniae	study	cmh-4000-k31	all	gbt	0	0	0	0	0	0	0	0	
+Klebsiella quasipneumoniae	klebsiella_quasipneumoniae	study	cmh-4000-k31	all	lasso	0	0	0	0	0	0	0	0	
+Klebsiella quasipneumoniae	klebsiella_quasipneumoniae	study	cmh-16000-k31	all	rf	0	0	0	0	0	0	0	0	
+Klebsiella quasipneumoniae	klebsiella_quasipneumoniae	study	cmh-16000-k31	all	gbt	0	0	0	0	0	0	0	0	
+Klebsiella quasipneumoniae	klebsiella_quasipneumoniae	study	cmh-16000-k31	all	lasso	0	0	0	0	0	0	0	0	
+Klebsiella quasipneumoniae	klebsiella_quasipneumoniae	study	floor-3-k31	800-or-more	scm	0	0	0	0	0	0	0	0	
+Klebsiella quasipneumoniae	klebsiella_quasipneumoniae	study	floor-3-k31	800-or-more	cart	0	0	0	0	0	0	0	0	
+Klebsiella quasipneumoniae	klebsiella_quasipneumoniae	study	floor-3-k31	800-or-more	rf	0	0	0	0	0	0	0	0	
+Klebsiella quasipneumoniae	klebsiella_quasipneumoniae	study	floor-3-k31	800-or-more	gbt	0	0	0	0	0	0	0	0	
+Klebsiella quasipneumoniae	klebsiella_quasipneumoniae	study	floor-3-k31	800-or-more	lasso	0	0	0	0	0	0	0	0	
+Mycobacterium tuberculosis	mycobacterium_tuberculosis	lineage	cmh-4000-k31	all	rf	0	20	20	0	0	1	2	17	-0.004992886573
+Mycobacterium tuberculosis	mycobacterium_tuberculosis	lineage	cmh-4000-k31	all	gbt	0	20	20	0	0	2	4	14	-0.000231293329
+Mycobacterium tuberculosis	mycobacterium_tuberculosis	lineage	cmh-4000-k31	all	lasso	0	20	20	0	0	2	3	15	-0.001962178803
+Mycobacterium tuberculosis	mycobacterium_tuberculosis	lineage	cmh-16000-k31	all	rf	0	20	20	0	0	0	4	16	-0.011375942732
+Mycobacterium tuberculosis	mycobacterium_tuberculosis	lineage	cmh-16000-k31	all	gbt	0	20	20	0	0	1	2	17	0.001124004214
+Mycobacterium tuberculosis	mycobacterium_tuberculosis	lineage	cmh-16000-k31	all	lasso	0	20	20	0	0	1	1	18	0.000314171336
+Mycobacterium tuberculosis	mycobacterium_tuberculosis	lineage	floor-3-k31	800-or-more	scm	0	11	11	0	0	0	0	11	-2.1000021e-05
+Mycobacterium tuberculosis	mycobacterium_tuberculosis	lineage	floor-3-k31	800-or-more	cart	0	11	11	0	0	0	0	11	0.0
+Mycobacterium tuberculosis	mycobacterium_tuberculosis	lineage	floor-3-k31	800-or-more	rf	0	11	11	0	0	0	0	11	0.0
+Mycobacterium tuberculosis	mycobacterium_tuberculosis	lineage	floor-3-k31	800-or-more	gbt	0	11	11	0	0	1	0	10	0.0
+Mycobacterium tuberculosis	mycobacterium_tuberculosis	lineage	floor-3-k31	800-or-more	lasso	0	11	11	0	0	0	0	11	0.0
+Mycobacterium tuberculosis	mycobacterium_tuberculosis	lineage	twin-k31	all	scm	0	20	20	0	0	2	2	16	2.1367354e-05
+Mycobacterium tuberculosis	mycobacterium_tuberculosis	lineage	twin-k31	all	cart	0	20	20	0	0	1	3	16	-0.001861970898
+Mycobacterium tuberculosis	mycobacterium_tuberculosis	lineage	twin-k31	all	rf	0	20	20	0	0	0	3	17	-0.006274750616
+Mycobacterium tuberculosis	mycobacterium_tuberculosis	lineage	twin-k31	all	gbt	0	20	20	0	0	5	2	13	0.000982436898
+Mycobacterium tuberculosis	mycobacterium_tuberculosis	lineage	twin-k31	all	lasso	0	20	20	0	0	2	1	17	-0.000362887189
+Mycobacterium tuberculosis	mycobacterium_tuberculosis	lineage	twin-k31	800-or-more	scm	0	11	11	0	0	0	0	11	9.390049e-06
+Mycobacterium tuberculosis	mycobacterium_tuberculosis	lineage	twin-k31	800-or-more	cart	0	11	11	0	0	0	1	10	-0.000704423782
+Mycobacterium tuberculosis	mycobacterium_tuberculosis	lineage	twin-k31	800-or-more	rf	0	11	11	0	0	0	0	11	-0.002808519934
+Mycobacterium tuberculosis	mycobacterium_tuberculosis	lineage	twin-k31	800-or-more	gbt	0	11	11	0	0	1	0	10	0.001267962807
+Mycobacterium tuberculosis	mycobacterium_tuberculosis	lineage	twin-k31	800-or-more	lasso	0	11	11	0	0	0	0	11	-0.000476267356
+Mycobacterium tuberculosis	mycobacterium_tuberculosis	study	cmh-4000-k31	all	rf	0	1	1	0	0	0	0	1	-0.006024096385
+Mycobacterium tuberculosis	mycobacterium_tuberculosis	study	cmh-4000-k31	all	gbt	0	1	1	0	0	0	1	0	-0.036144578313
+Mycobacterium tuberculosis	mycobacterium_tuberculosis	study	cmh-4000-k31	all	lasso	0	1	1	0	0	0	0	1	0.0
+Mycobacterium tuberculosis	mycobacterium_tuberculosis	study	cmh-16000-k31	all	rf	0	1	1	0	0	0	0	1	-0.006024096385
+Mycobacterium tuberculosis	mycobacterium_tuberculosis	study	cmh-16000-k31	all	gbt	0	1	1	0	0	0	1	0	-0.036144578313
+Mycobacterium tuberculosis	mycobacterium_tuberculosis	study	cmh-16000-k31	all	lasso	0	1	1	0	0	0	0	1	0.0
+Mycobacterium tuberculosis	mycobacterium_tuberculosis	study	floor-3-k31	800-or-more	scm	0	0	0	0	0	0	0	0	
+Mycobacterium tuberculosis	mycobacterium_tuberculosis	study	floor-3-k31	800-or-more	cart	0	0	0	0	0	0	0	0	
+Mycobacterium tuberculosis	mycobacterium_tuberculosis	study	floor-3-k31	800-or-more	rf	0	0	0	0	0	0	0	0	
+Mycobacterium tuberculosis	mycobacterium_tuberculosis	study	floor-3-k31	800-or-more	gbt	0	0	0	0	0	0	0	0	
+Mycobacterium tuberculosis	mycobacterium_tuberculosis	study	floor-3-k31	800-or-more	lasso	0	0	0	0	0	0	0	0	
+Neisseria gonorrhoeae	neisseria_gonorrhoeae	lineage	cmh-4000-k31	all	rf	0	6	6	0	0	1	3	2	-0.01366288345
+Neisseria gonorrhoeae	neisseria_gonorrhoeae	lineage	cmh-4000-k31	all	gbt	0	6	6	0	0	2	1	3	0.005094722264
+Neisseria gonorrhoeae	neisseria_gonorrhoeae	lineage	cmh-4000-k31	all	lasso	0	6	6	0	0	2	3	1	-0.013319192271
+Neisseria gonorrhoeae	neisseria_gonorrhoeae	lineage	cmh-16000-k31	all	rf	0	6	6	0	0	1	3	2	-0.018451877948
+Neisseria gonorrhoeae	neisseria_gonorrhoeae	lineage	cmh-16000-k31	all	gbt	0	6	6	0	0	1	2	3	0.001808947875
+Neisseria gonorrhoeae	neisseria_gonorrhoeae	lineage	cmh-16000-k31	all	lasso	0	6	6	0	0	1	1	4	-0.000943691176
+Neisseria gonorrhoeae	neisseria_gonorrhoeae	lineage	floor-3-k31	800-or-more	scm	0	4	4	0	0	0	1	3	-0.007310445387
+Neisseria gonorrhoeae	neisseria_gonorrhoeae	lineage	floor-3-k31	800-or-more	cart	0	4	4	0	0	0	0	4	0.000176740898
+Neisseria gonorrhoeae	neisseria_gonorrhoeae	lineage	floor-3-k31	800-or-more	rf	0	4	4	0	0	0	0	4	0.0
+Neisseria gonorrhoeae	neisseria_gonorrhoeae	lineage	floor-3-k31	800-or-more	gbt	0	4	4	0	0	1	0	3	0.0
+Neisseria gonorrhoeae	neisseria_gonorrhoeae	lineage	floor-3-k31	800-or-more	lasso	0	4	4	0	0	0	0	4	0.0
+Neisseria gonorrhoeae	neisseria_gonorrhoeae	lineage	twin-k31	all	scm	0	6	6	0	0	0	1	5	-0.00285173904
+Neisseria gonorrhoeae	neisseria_gonorrhoeae	lineage	twin-k31	all	cart	0	6	6	0	0	1	1	4	-0.001619530687
+Neisseria gonorrhoeae	neisseria_gonorrhoeae	lineage	twin-k31	all	rf	0	6	6	0	0	1	1	4	-0.002826017594
+Neisseria gonorrhoeae	neisseria_gonorrhoeae	lineage	twin-k31	all	gbt	0	6	6	0	0	2	0	4	8.7778337e-05
+Neisseria gonorrhoeae	neisseria_gonorrhoeae	lineage	twin-k31	all	lasso	0	6	6	0	0	0	1	5	-0.007660688313
+Neisseria gonorrhoeae	neisseria_gonorrhoeae	lineage	twin-k31	800-or-more	scm	0	4	4	0	0	0	1	3	-0.00285173904
+Neisseria gonorrhoeae	neisseria_gonorrhoeae	lineage	twin-k31	800-or-more	cart	0	4	4	0	0	1	1	2	-0.00866025832
+Neisseria gonorrhoeae	neisseria_gonorrhoeae	lineage	twin-k31	800-or-more	rf	0	4	4	0	0	0	1	3	-0.009127471274
+Neisseria gonorrhoeae	neisseria_gonorrhoeae	lineage	twin-k31	800-or-more	gbt	0	4	4	0	0	1	0	3	-9.0931091e-05
+Neisseria gonorrhoeae	neisseria_gonorrhoeae	lineage	twin-k31	800-or-more	lasso	0	4	4	0	0	0	0	4	-0.006543486004
+Neisseria gonorrhoeae	neisseria_gonorrhoeae	study	cmh-4000-k31	all	rf	0	0	0	0	0	0	0	0	
+Neisseria gonorrhoeae	neisseria_gonorrhoeae	study	cmh-4000-k31	all	gbt	0	0	0	0	0	0	0	0	
+Neisseria gonorrhoeae	neisseria_gonorrhoeae	study	cmh-4000-k31	all	lasso	0	0	0	0	0	0	0	0	
+Neisseria gonorrhoeae	neisseria_gonorrhoeae	study	cmh-16000-k31	all	rf	0	0	0	0	0	0	0	0	
+Neisseria gonorrhoeae	neisseria_gonorrhoeae	study	cmh-16000-k31	all	gbt	0	0	0	0	0	0	0	0	
+Neisseria gonorrhoeae	neisseria_gonorrhoeae	study	cmh-16000-k31	all	lasso	0	0	0	0	0	0	0	0	
+Neisseria gonorrhoeae	neisseria_gonorrhoeae	study	floor-3-k31	800-or-more	scm	0	0	0	0	0	0	0	0	
+Neisseria gonorrhoeae	neisseria_gonorrhoeae	study	floor-3-k31	800-or-more	cart	0	0	0	0	0	0	0	0	
+Neisseria gonorrhoeae	neisseria_gonorrhoeae	study	floor-3-k31	800-or-more	rf	0	0	0	0	0	0	0	0	
+Neisseria gonorrhoeae	neisseria_gonorrhoeae	study	floor-3-k31	800-or-more	gbt	0	0	0	0	0	0	0	0	
+Neisseria gonorrhoeae	neisseria_gonorrhoeae	study	floor-3-k31	800-or-more	lasso	0	0	0	0	0	0	0	0	
+Pseudomonas aeruginosa	pseudomonas_aeruginosa	lineage	cmh-4000-k31	all	rf	0	12	12	0	0	3	3	6	0.00504181481
+Pseudomonas aeruginosa	pseudomonas_aeruginosa	lineage	cmh-4000-k31	all	gbt	0	12	12	0	0	1	4	7	-0.003731329347
+Pseudomonas aeruginosa	pseudomonas_aeruginosa	lineage	cmh-4000-k31	all	lasso	0	12	12	0	0	3	2	7	0.011399246009
+Pseudomonas aeruginosa	pseudomonas_aeruginosa	lineage	cmh-16000-k31	all	rf	0	12	12	0	0	1	4	7	-0.008248114996
+Pseudomonas aeruginosa	pseudomonas_aeruginosa	lineage	cmh-16000-k31	all	gbt	0	12	12	0	0	1	3	8	-0.011048715495
+Pseudomonas aeruginosa	pseudomonas_aeruginosa	lineage	cmh-16000-k31	all	lasso	0	12	12	0	0	2	3	7	0.003232266689
+Pseudomonas aeruginosa	pseudomonas_aeruginosa	lineage	floor-3-k31	800-or-more	scm	0	2	2	0	0	0	0	2	0.0
+Pseudomonas aeruginosa	pseudomonas_aeruginosa	lineage	floor-3-k31	800-or-more	cart	0	2	2	0	0	0	0	2	0.0
+Pseudomonas aeruginosa	pseudomonas_aeruginosa	lineage	floor-3-k31	800-or-more	rf	0	2	2	0	0	0	0	2	0.0
+Pseudomonas aeruginosa	pseudomonas_aeruginosa	lineage	floor-3-k31	800-or-more	gbt	0	2	2	0	0	0	0	2	0.0
+Pseudomonas aeruginosa	pseudomonas_aeruginosa	lineage	floor-3-k31	800-or-more	lasso	0	2	2	0	0	0	0	2	0.0
+Pseudomonas aeruginosa	pseudomonas_aeruginosa	lineage	twin-k31	all	scm	0	12	12	0	0	3	1	8	0.002352441465
+Pseudomonas aeruginosa	pseudomonas_aeruginosa	lineage	twin-k31	all	cart	0	12	12	0	0	2	2	8	-0.000580181455
+Pseudomonas aeruginosa	pseudomonas_aeruginosa	lineage	twin-k31	all	rf	0	12	12	0	0	2	1	9	-0.004488663261
+Pseudomonas aeruginosa	pseudomonas_aeruginosa	lineage	twin-k31	all	gbt	0	12	12	0	0	1	4	7	-0.00026840755
+Pseudomonas aeruginosa	pseudomonas_aeruginosa	lineage	twin-k31	all	lasso	0	12	12	0	0	0	0	12	-0.001625248546
+Pseudomonas aeruginosa	pseudomonas_aeruginosa	lineage	twin-k31	800-or-more	scm	0	2	2	0	0	0	0	2	-0.004487652394
+Pseudomonas aeruginosa	pseudomonas_aeruginosa	lineage	twin-k31	800-or-more	cart	0	2	2	0	0	0	0	2	0.000744133306
+Pseudomonas aeruginosa	pseudomonas_aeruginosa	lineage	twin-k31	800-or-more	rf	0	2	2	0	0	0	0	2	-0.007341293337
+Pseudomonas aeruginosa	pseudomonas_aeruginosa	lineage	twin-k31	800-or-more	gbt	0	2	2	0	0	0	1	1	-0.003356679715
+Pseudomonas aeruginosa	pseudomonas_aeruginosa	lineage	twin-k31	800-or-more	lasso	0	2	2	0	0	0	0	2	-0.010492364178
+Pseudomonas aeruginosa	pseudomonas_aeruginosa	study	cmh-4000-k31	all	rf	0	6	6	0	0	2	2	2	-0.001965880314
+Pseudomonas aeruginosa	pseudomonas_aeruginosa	study	cmh-4000-k31	all	gbt	0	6	6	0	0	1	2	3	0.005085448814
+Pseudomonas aeruginosa	pseudomonas_aeruginosa	study	cmh-4000-k31	all	lasso	0	6	6	0	0	2	2	2	-0.004220254545
+Pseudomonas aeruginosa	pseudomonas_aeruginosa	study	cmh-16000-k31	all	rf	0	6	6	0	0	2	1	3	0.002839709856
+Pseudomonas aeruginosa	pseudomonas_aeruginosa	study	cmh-16000-k31	all	gbt	0	6	6	0	0	1	1	4	-0.001472569938
+Pseudomonas aeruginosa	pseudomonas_aeruginosa	study	cmh-16000-k31	all	lasso	0	6	6	0	0	3	2	1	0.016997527733
+Pseudomonas aeruginosa	pseudomonas_aeruginosa	study	floor-3-k31	800-or-more	scm	0	0	0	0	0	0	0	0	
+Pseudomonas aeruginosa	pseudomonas_aeruginosa	study	floor-3-k31	800-or-more	cart	0	0	0	0	0	0	0	0	
+Pseudomonas aeruginosa	pseudomonas_aeruginosa	study	floor-3-k31	800-or-more	rf	0	0	0	0	0	0	0	0	
+Pseudomonas aeruginosa	pseudomonas_aeruginosa	study	floor-3-k31	800-or-more	gbt	0	0	0	0	0	0	0	0	
+Pseudomonas aeruginosa	pseudomonas_aeruginosa	study	floor-3-k31	800-or-more	lasso	0	0	0	0	0	0	0	0	
+Salmonella enterica	salmonella_enterica	lineage	cmh-4000-k31	all	rf	0	24	24	0	0	10	4	10	0.001003651146
+Salmonella enterica	salmonella_enterica	lineage	cmh-4000-k31	all	gbt	0	24	24	0	0	11	3	10	0.015716370699
+Salmonella enterica	salmonella_enterica	lineage	cmh-4000-k31	all	lasso	0	24	24	0	0	9	1	14	0.010661766169
+Salmonella enterica	salmonella_enterica	lineage	cmh-16000-k31	all	rf	0	24	24	0	0	6	5	13	0.004312335957
+Salmonella enterica	salmonella_enterica	lineage	cmh-16000-k31	all	gbt	0	24	24	0	0	13	1	10	0.026349853167
+Salmonella enterica	salmonella_enterica	lineage	cmh-16000-k31	all	lasso	0	24	24	0	0	14	1	9	0.026746923241
+Salmonella enterica	salmonella_enterica	lineage	floor-3-k31	800-or-more	scm	0	12	12	0	0	0	0	12	0.0
+Salmonella enterica	salmonella_enterica	lineage	floor-3-k31	800-or-more	cart	0	12	12	0	0	0	0	12	0.0
+Salmonella enterica	salmonella_enterica	lineage	floor-3-k31	800-or-more	rf	0	12	12	0	0	0	0	12	0.0
+Salmonella enterica	salmonella_enterica	lineage	floor-3-k31	800-or-more	gbt	0	12	12	0	0	0	0	12	0.0
+Salmonella enterica	salmonella_enterica	lineage	floor-3-k31	800-or-more	lasso	0	12	12	0	0	0	0	12	0.0
+Salmonella enterica	salmonella_enterica	lineage	twin-k31	all	scm	0	24	24	0	0	1	4	19	-0.003555627727
+Salmonella enterica	salmonella_enterica	lineage	twin-k31	all	cart	0	24	24	0	0	5	4	15	0.0
+Salmonella enterica	salmonella_enterica	lineage	twin-k31	all	rf	0	24	24	0	0	1	4	19	-0.000224372392
+Salmonella enterica	salmonella_enterica	lineage	twin-k31	all	gbt	0	24	24	0	0	4	4	16	0.000176928521
+Salmonella enterica	salmonella_enterica	lineage	twin-k31	all	lasso	0	24	24	0	0	3	2	19	0.000243035635
+Salmonella enterica	salmonella_enterica	lineage	twin-k31	800-or-more	scm	0	12	12	0	0	1	2	9	-0.00982040082
+Salmonella enterica	salmonella_enterica	lineage	twin-k31	800-or-more	cart	0	12	12	0	0	3	2	7	0.0
+Salmonella enterica	salmonella_enterica	lineage	twin-k31	800-or-more	rf	0	12	12	0	0	0	3	9	-0.001522020684
+Salmonella enterica	salmonella_enterica	lineage	twin-k31	800-or-more	gbt	0	12	12	0	0	2	1	9	0.002199784586
+Salmonella enterica	salmonella_enterica	lineage	twin-k31	800-or-more	lasso	0	12	12	0	0	2	1	9	-0.001030486801
+Salmonella enterica	salmonella_enterica	study	cmh-4000-k31	all	rf	0	1	1	0	0	1	0	0	0.07251413629
+Salmonella enterica	salmonella_enterica	study	cmh-4000-k31	all	gbt	0	1	1	0	0	1	0	0	0.076414187694
+Salmonella enterica	salmonella_enterica	study	cmh-4000-k31	all	lasso	0	1	1	0	0	1	0	0	0.073721028988
+Salmonella enterica	salmonella_enterica	study	cmh-16000-k31	all	rf	0	1	1	0	0	1	0	0	0.065563328342
+Salmonella enterica	salmonella_enterica	study	cmh-16000-k31	all	gbt	0	1	1	0	0	1	0	0	0.077542855866
+Salmonella enterica	salmonella_enterica	study	cmh-16000-k31	all	lasso	0	1	1	0	0	1	0	0	0.072592360816
+Salmonella enterica	salmonella_enterica	study	floor-3-k31	800-or-more	scm	0	0	0	0	0	0	0	0	
+Salmonella enterica	salmonella_enterica	study	floor-3-k31	800-or-more	cart	0	0	0	0	0	0	0	0	
+Salmonella enterica	salmonella_enterica	study	floor-3-k31	800-or-more	rf	0	0	0	0	0	0	0	0	
+Salmonella enterica	salmonella_enterica	study	floor-3-k31	800-or-more	gbt	0	0	0	0	0	0	0	0	
+Salmonella enterica	salmonella_enterica	study	floor-3-k31	800-or-more	lasso	0	0	0	0	0	0	0	0	
+Shigella flexneri	shigella_flexneri	lineage	cmh-4000-k31	all	rf	0	4	4	0	0	0	2	2	-0.047994755921
+Shigella flexneri	shigella_flexneri	lineage	cmh-4000-k31	all	gbt	0	4	4	0	0	1	0	3	0.013013928151
+Shigella flexneri	shigella_flexneri	lineage	cmh-4000-k31	all	lasso	0	4	4	0	0	1	1	2	-0.012743286523
+Shigella flexneri	shigella_flexneri	lineage	cmh-16000-k31	all	rf	0	4	4	0	0	0	1	3	-0.01236757822
+Shigella flexneri	shigella_flexneri	lineage	cmh-16000-k31	all	gbt	0	4	4	0	0	2	0	2	0.010588837686
+Shigella flexneri	shigella_flexneri	lineage	cmh-16000-k31	all	lasso	0	4	4	0	0	1	0	3	0.011841725676
+Shigella flexneri	shigella_flexneri	lineage	floor-3-k31	800-or-more	scm	0	0	0	0	0	0	0	0	
+Shigella flexneri	shigella_flexneri	lineage	floor-3-k31	800-or-more	cart	0	0	0	0	0	0	0	0	
+Shigella flexneri	shigella_flexneri	lineage	floor-3-k31	800-or-more	rf	0	0	0	0	0	0	0	0	
+Shigella flexneri	shigella_flexneri	lineage	floor-3-k31	800-or-more	gbt	0	0	0	0	0	0	0	0	
+Shigella flexneri	shigella_flexneri	lineage	floor-3-k31	800-or-more	lasso	0	0	0	0	0	0	0	0	
+Shigella flexneri	shigella_flexneri	lineage	twin-k31	all	scm	0	4	4	0	0	0	0	4	0.000628332896
+Shigella flexneri	shigella_flexneri	lineage	twin-k31	all	cart	0	4	4	0	0	0	0	4	0.004552601486
+Shigella flexneri	shigella_flexneri	lineage	twin-k31	all	rf	0	4	4	0	0	0	0	4	-0.003979347913
+Shigella flexneri	shigella_flexneri	lineage	twin-k31	all	gbt	0	4	4	0	0	1	0	3	0.005856543875
+Shigella flexneri	shigella_flexneri	lineage	twin-k31	all	lasso	0	4	4	0	0	1	0	3	0.003145209595
+Shigella flexneri	shigella_flexneri	lineage	twin-k31	800-or-more	scm	0	0	0	0	0	0	0	0	
+Shigella flexneri	shigella_flexneri	lineage	twin-k31	800-or-more	cart	0	0	0	0	0	0	0	0	
+Shigella flexneri	shigella_flexneri	lineage	twin-k31	800-or-more	rf	0	0	0	0	0	0	0	0	
+Shigella flexneri	shigella_flexneri	lineage	twin-k31	800-or-more	gbt	0	0	0	0	0	0	0	0	
+Shigella flexneri	shigella_flexneri	lineage	twin-k31	800-or-more	lasso	0	0	0	0	0	0	0	0	
+Shigella flexneri	shigella_flexneri	study	cmh-4000-k31	all	rf	0	0	0	0	0	0	0	0	
+Shigella flexneri	shigella_flexneri	study	cmh-4000-k31	all	gbt	0	0	0	0	0	0	0	0	
+Shigella flexneri	shigella_flexneri	study	cmh-4000-k31	all	lasso	0	0	0	0	0	0	0	0	
+Shigella flexneri	shigella_flexneri	study	cmh-16000-k31	all	rf	0	0	0	0	0	0	0	0	
+Shigella flexneri	shigella_flexneri	study	cmh-16000-k31	all	gbt	0	0	0	0	0	0	0	0	
+Shigella flexneri	shigella_flexneri	study	cmh-16000-k31	all	lasso	0	0	0	0	0	0	0	0	
+Shigella flexneri	shigella_flexneri	study	floor-3-k31	800-or-more	scm	0	0	0	0	0	0	0	0	
+Shigella flexneri	shigella_flexneri	study	floor-3-k31	800-or-more	cart	0	0	0	0	0	0	0	0	
+Shigella flexneri	shigella_flexneri	study	floor-3-k31	800-or-more	rf	0	0	0	0	0	0	0	0	
+Shigella flexneri	shigella_flexneri	study	floor-3-k31	800-or-more	gbt	0	0	0	0	0	0	0	0	
+Shigella flexneri	shigella_flexneri	study	floor-3-k31	800-or-more	lasso	0	0	0	0	0	0	0	0	
+Shigella sonnei	shigella_sonnei	lineage	cmh-4000-k31	all	rf	0	20	20	0	0	3	5	12	-0.001493271195
+Shigella sonnei	shigella_sonnei	lineage	cmh-4000-k31	all	gbt	0	20	20	0	0	1	6	13	-0.004683108898
+Shigella sonnei	shigella_sonnei	lineage	cmh-4000-k31	all	lasso	0	20	20	0	0	1	4	15	-0.00246500076
+Shigella sonnei	shigella_sonnei	lineage	cmh-16000-k31	all	rf	0	20	20	0	0	4	8	8	-0.00431856971
+Shigella sonnei	shigella_sonnei	lineage	cmh-16000-k31	all	gbt	0	20	20	0	0	2	1	17	0.001891588759
+Shigella sonnei	shigella_sonnei	lineage	cmh-16000-k31	all	lasso	0	20	20	0	0	2	3	15	0.004184692075
+Shigella sonnei	shigella_sonnei	lineage	floor-3-k31	800-or-more	scm	0	8	8	0	0	0	0	8	0.0
+Shigella sonnei	shigella_sonnei	lineage	floor-3-k31	800-or-more	cart	0	8	8	0	0	0	0	8	0.000118371212
+Shigella sonnei	shigella_sonnei	lineage	floor-3-k31	800-or-more	rf	0	8	8	0	0	0	0	8	0.0
+Shigella sonnei	shigella_sonnei	lineage	floor-3-k31	800-or-more	gbt	0	8	8	0	0	0	0	8	0.0
+Shigella sonnei	shigella_sonnei	lineage	floor-3-k31	800-or-more	lasso	0	8	8	0	0	0	0	8	0.0
+Shigella sonnei	shigella_sonnei	lineage	twin-k31	all	scm	0	20	20	0	0	1	1	18	0.0
+Shigella sonnei	shigella_sonnei	lineage	twin-k31	all	cart	0	20	20	0	0	0	0	20	0.0
+Shigella sonnei	shigella_sonnei	lineage	twin-k31	all	rf	0	20	20	0	0	1	1	18	-0.0046960178
+Shigella sonnei	shigella_sonnei	lineage	twin-k31	all	gbt	0	20	20	0	0	0	2	18	-0.003685387876
+Shigella sonnei	shigella_sonnei	lineage	twin-k31	all	lasso	0	20	20	0	0	1	0	19	-0.001590779141
+Shigella sonnei	shigella_sonnei	lineage	twin-k31	800-or-more	scm	0	8	8	0	0	0	0	8	0.002263489855
+Shigella sonnei	shigella_sonnei	lineage	twin-k31	800-or-more	cart	0	8	8	0	0	0	0	8	0.000459558824
+Shigella sonnei	shigella_sonnei	lineage	twin-k31	800-or-more	rf	0	8	8	0	0	1	0	7	0.00107835443
+Shigella sonnei	shigella_sonnei	lineage	twin-k31	800-or-more	gbt	0	8	8	0	0	0	0	8	0.002120371497
+Shigella sonnei	shigella_sonnei	lineage	twin-k31	800-or-more	lasso	0	8	8	0	0	0	0	8	0.000959637887
+Shigella sonnei	shigella_sonnei	study	cmh-4000-k31	all	rf	0	0	0	0	0	0	0	0	
+Shigella sonnei	shigella_sonnei	study	cmh-4000-k31	all	gbt	0	0	0	0	0	0	0	0	
+Shigella sonnei	shigella_sonnei	study	cmh-4000-k31	all	lasso	0	0	0	0	0	0	0	0	
+Shigella sonnei	shigella_sonnei	study	cmh-16000-k31	all	rf	0	0	0	0	0	0	0	0	
+Shigella sonnei	shigella_sonnei	study	cmh-16000-k31	all	gbt	0	0	0	0	0	0	0	0	
+Shigella sonnei	shigella_sonnei	study	cmh-16000-k31	all	lasso	0	0	0	0	0	0	0	0	
+Shigella sonnei	shigella_sonnei	study	floor-3-k31	800-or-more	scm	0	0	0	0	0	0	0	0	
+Shigella sonnei	shigella_sonnei	study	floor-3-k31	800-or-more	cart	0	0	0	0	0	0	0	0	
+Shigella sonnei	shigella_sonnei	study	floor-3-k31	800-or-more	rf	0	0	0	0	0	0	0	0	
+Shigella sonnei	shigella_sonnei	study	floor-3-k31	800-or-more	gbt	0	0	0	0	0	0	0	0	
+Shigella sonnei	shigella_sonnei	study	floor-3-k31	800-or-more	lasso	0	0	0	0	0	0	0	0	
+Staphylococcus aureus	staphylococcus_aureus	lineage	cmh-4000-k31	all	rf	0	13	13	0	0	5	2	6	0.000698758288
+Staphylococcus aureus	staphylococcus_aureus	lineage	cmh-4000-k31	all	gbt	0	13	13	0	0	6	2	5	0.00573933934
+Staphylococcus aureus	staphylococcus_aureus	lineage	cmh-4000-k31	all	lasso	0	13	13	0	0	3	1	9	0.0
+Staphylococcus aureus	staphylococcus_aureus	lineage	cmh-16000-k31	all	rf	0	13	13	0	0	2	4	7	-0.002440448705
+Staphylococcus aureus	staphylococcus_aureus	lineage	cmh-16000-k31	all	gbt	0	13	13	0	0	3	2	8	-0.002249878326
+Staphylococcus aureus	staphylococcus_aureus	lineage	cmh-16000-k31	all	lasso	0	13	13	0	0	4	0	9	0.004244533435
+Staphylococcus aureus	staphylococcus_aureus	lineage	floor-3-k31	800-or-more	scm	0	12	12	0	0	1	1	10	-0.000330360092
+Staphylococcus aureus	staphylococcus_aureus	lineage	floor-3-k31	800-or-more	cart	0	12	12	0	0	0	0	12	0.001084417751
+Staphylococcus aureus	staphylococcus_aureus	lineage	floor-3-k31	800-or-more	rf	0	12	12	0	0	1	0	11	0.0
+Staphylococcus aureus	staphylococcus_aureus	lineage	floor-3-k31	800-or-more	gbt	0	12	12	0	0	0	0	12	0.0
+Staphylococcus aureus	staphylococcus_aureus	lineage	floor-3-k31	800-or-more	lasso	0	12	12	0	0	0	0	12	0.0
+Staphylococcus aureus	staphylococcus_aureus	lineage	twin-k31	all	scm	0	13	13	0	0	0	1	12	0.0
+Staphylococcus aureus	staphylococcus_aureus	lineage	twin-k31	all	cart	0	13	13	0	0	0	1	12	1.4560037e-05
+Staphylococcus aureus	staphylococcus_aureus	lineage	twin-k31	all	rf	0	13	13	0	0	2	0	11	0.0
+Staphylococcus aureus	staphylococcus_aureus	lineage	twin-k31	all	gbt	0	13	13	0	0	1	4	8	0.0
+Staphylococcus aureus	staphylococcus_aureus	lineage	twin-k31	all	lasso	0	13	13	0	0	0	0	13	0.000188964475
+Staphylococcus aureus	staphylococcus_aureus	lineage	twin-k31	800-or-more	scm	0	12	12	0	0	0	1	11	-6.656017e-05
+Staphylococcus aureus	staphylococcus_aureus	lineage	twin-k31	800-or-more	cart	0	12	12	0	0	0	1	11	0.000174113519
+Staphylococcus aureus	staphylococcus_aureus	lineage	twin-k31	800-or-more	rf	0	12	12	0	0	1	0	11	-8.341675e-05
+Staphylococcus aureus	staphylococcus_aureus	lineage	twin-k31	800-or-more	gbt	0	12	12	0	0	1	4	7	0.000251680644
+Staphylococcus aureus	staphylococcus_aureus	lineage	twin-k31	800-or-more	lasso	0	12	12	0	0	0	0	12	0.000452828283
+Staphylococcus aureus	staphylococcus_aureus	study	cmh-4000-k31	all	rf	0	4	4	0	0	0	1	3	-0.005297315675
+Staphylococcus aureus	staphylococcus_aureus	study	cmh-4000-k31	all	gbt	0	4	4	0	0	1	0	3	0.003563406101
+Staphylococcus aureus	staphylococcus_aureus	study	cmh-4000-k31	all	lasso	0	4	4	0	0	1	0	3	0.003627782029
+Staphylococcus aureus	staphylococcus_aureus	study	cmh-16000-k31	all	rf	0	4	4	0	0	1	1	2	-0.007808030606
+Staphylococcus aureus	staphylococcus_aureus	study	cmh-16000-k31	all	gbt	0	4	4	0	0	2	0	2	0.013908740485
+Staphylococcus aureus	staphylococcus_aureus	study	cmh-16000-k31	all	lasso	0	4	4	0	0	0	0	4	0.008540555423
+Staphylococcus aureus	staphylococcus_aureus	study	floor-3-k31	800-or-more	scm	0	4	4	0	0	1	0	3	0.0
+Staphylococcus aureus	staphylococcus_aureus	study	floor-3-k31	800-or-more	cart	0	4	4	0	0	1	0	3	0.005574142965
+Staphylococcus aureus	staphylococcus_aureus	study	floor-3-k31	800-or-more	rf	0	4	4	0	0	0	0	4	0.0
+Staphylococcus aureus	staphylococcus_aureus	study	floor-3-k31	800-or-more	gbt	0	4	4	0	0	0	0	4	0.0
+Staphylococcus aureus	staphylococcus_aureus	study	floor-3-k31	800-or-more	lasso	0	4	4	0	0	0	0	4	0.0
+Staphylococcus haemolyticus	staphylococcus_haemolyticus	lineage	cmh-4000-k31	all	rf	0	3	3	0	0	0	1	2	-0.012101653893
+Staphylococcus haemolyticus	staphylococcus_haemolyticus	lineage	cmh-4000-k31	all	gbt	0	3	3	0	0	1	2	0	-0.057777777777
+Staphylococcus haemolyticus	staphylococcus_haemolyticus	lineage	cmh-4000-k31	all	lasso	0	3	3	0	0	0	1	2	-0.010427350428
+Staphylococcus haemolyticus	staphylococcus_haemolyticus	lineage	cmh-16000-k31	all	rf	0	3	3	0	0	0	2	1	-0.036036036036
+Staphylococcus haemolyticus	staphylococcus_haemolyticus	lineage	cmh-16000-k31	all	gbt	0	3	3	0	0	1	0	2	0.00389942181
+Staphylococcus haemolyticus	staphylococcus_haemolyticus	lineage	cmh-16000-k31	all	lasso	0	3	3	0	0	1	0	2	0.008740083367
+Staphylococcus haemolyticus	staphylococcus_haemolyticus	lineage	floor-3-k31	800-or-more	scm	0	0	0	0	0	0	0	0	
+Staphylococcus haemolyticus	staphylococcus_haemolyticus	lineage	floor-3-k31	800-or-more	cart	0	0	0	0	0	0	0	0	
+Staphylococcus haemolyticus	staphylococcus_haemolyticus	lineage	floor-3-k31	800-or-more	rf	0	0	0	0	0	0	0	0	
+Staphylococcus haemolyticus	staphylococcus_haemolyticus	lineage	floor-3-k31	800-or-more	gbt	0	0	0	0	0	0	0	0	
+Staphylococcus haemolyticus	staphylococcus_haemolyticus	lineage	floor-3-k31	800-or-more	lasso	0	0	0	0	0	0	0	0	
+Staphylococcus haemolyticus	staphylococcus_haemolyticus	lineage	twin-k31	all	scm	0	3	3	0	0	1	0	2	-0.002136752137
+Staphylococcus haemolyticus	staphylococcus_haemolyticus	lineage	twin-k31	all	cart	0	3	3	0	0	0	0	3	-0.002136752137
+Staphylococcus haemolyticus	staphylococcus_haemolyticus	lineage	twin-k31	all	rf	0	3	3	0	0	0	1	2	-0.017744332961
+Staphylococcus haemolyticus	staphylococcus_haemolyticus	lineage	twin-k31	all	gbt	0	3	3	0	0	2	1	0	0.040271614898
+Staphylococcus haemolyticus	staphylococcus_haemolyticus	lineage	twin-k31	all	lasso	0	3	3	0	0	1	1	1	0.003589743589
+Staphylococcus haemolyticus	staphylococcus_haemolyticus	lineage	twin-k31	800-or-more	scm	0	0	0	0	0	0	0	0	
+Staphylococcus haemolyticus	staphylococcus_haemolyticus	lineage	twin-k31	800-or-more	cart	0	0	0	0	0	0	0	0	
+Staphylococcus haemolyticus	staphylococcus_haemolyticus	lineage	twin-k31	800-or-more	rf	0	0	0	0	0	0	0	0	
+Staphylococcus haemolyticus	staphylococcus_haemolyticus	lineage	twin-k31	800-or-more	gbt	0	0	0	0	0	0	0	0	
+Staphylococcus haemolyticus	staphylococcus_haemolyticus	lineage	twin-k31	800-or-more	lasso	0	0	0	0	0	0	0	0	
+Staphylococcus haemolyticus	staphylococcus_haemolyticus	study	cmh-4000-k31	all	rf	0	0	0	0	0	0	0	0	
+Staphylococcus haemolyticus	staphylococcus_haemolyticus	study	cmh-4000-k31	all	gbt	0	0	0	0	0	0	0	0	
+Staphylococcus haemolyticus	staphylococcus_haemolyticus	study	cmh-4000-k31	all	lasso	0	0	0	0	0	0	0	0	
+Staphylococcus haemolyticus	staphylococcus_haemolyticus	study	cmh-16000-k31	all	rf	0	0	0	0	0	0	0	0	
+Staphylococcus haemolyticus	staphylococcus_haemolyticus	study	cmh-16000-k31	all	gbt	0	0	0	0	0	0	0	0	
+Staphylococcus haemolyticus	staphylococcus_haemolyticus	study	cmh-16000-k31	all	lasso	0	0	0	0	0	0	0	0	
+Staphylococcus haemolyticus	staphylococcus_haemolyticus	study	floor-3-k31	800-or-more	scm	0	0	0	0	0	0	0	0	
+Staphylococcus haemolyticus	staphylococcus_haemolyticus	study	floor-3-k31	800-or-more	cart	0	0	0	0	0	0	0	0	
+Staphylococcus haemolyticus	staphylococcus_haemolyticus	study	floor-3-k31	800-or-more	rf	0	0	0	0	0	0	0	0	
+Staphylococcus haemolyticus	staphylococcus_haemolyticus	study	floor-3-k31	800-or-more	gbt	0	0	0	0	0	0	0	0	
+Staphylococcus haemolyticus	staphylococcus_haemolyticus	study	floor-3-k31	800-or-more	lasso	0	0	0	0	0	0	0	0	
+Streptococcus agalactiae	streptococcus_agalactiae	lineage	cmh-4000-k31	all	rf	0	3	3	0	0	0	0	3	0.0
+Streptococcus agalactiae	streptococcus_agalactiae	lineage	cmh-4000-k31	all	gbt	0	3	3	0	0	2	0	1	0.023578595317
+Streptococcus agalactiae	streptococcus_agalactiae	lineage	cmh-4000-k31	all	lasso	0	3	3	0	0	0	0	3	0.004310344828
+Streptococcus agalactiae	streptococcus_agalactiae	lineage	cmh-16000-k31	all	rf	0	3	3	0	0	0	0	3	-0.001449275362
+Streptococcus agalactiae	streptococcus_agalactiae	lineage	cmh-16000-k31	all	gbt	0	3	3	0	0	1	0	2	0.010977011495
+Streptococcus agalactiae	streptococcus_agalactiae	lineage	cmh-16000-k31	all	lasso	0	3	3	0	0	0	0	3	0.001602564103
+Streptococcus agalactiae	streptococcus_agalactiae	lineage	floor-3-k31	800-or-more	scm	0	0	0	0	0	0	0	0	
+Streptococcus agalactiae	streptococcus_agalactiae	lineage	floor-3-k31	800-or-more	cart	0	0	0	0	0	0	0	0	
+Streptococcus agalactiae	streptococcus_agalactiae	lineage	floor-3-k31	800-or-more	rf	0	0	0	0	0	0	0	0	
+Streptococcus agalactiae	streptococcus_agalactiae	lineage	floor-3-k31	800-or-more	gbt	0	0	0	0	0	0	0	0	
+Streptococcus agalactiae	streptococcus_agalactiae	lineage	floor-3-k31	800-or-more	lasso	0	0	0	0	0	0	0	0	
+Streptococcus agalactiae	streptococcus_agalactiae	lineage	twin-k31	all	scm	0	3	3	0	0	0	1	2	-0.00641025641
+Streptococcus agalactiae	streptococcus_agalactiae	lineage	twin-k31	all	cart	0	3	3	0	0	0	0	3	-0.001449275362
+Streptococcus agalactiae	streptococcus_agalactiae	lineage	twin-k31	all	rf	0	3	3	0	0	0	0	3	-0.003205128205
+Streptococcus agalactiae	streptococcus_agalactiae	lineage	twin-k31	all	gbt	0	3	3	0	0	0	0	3	-0.003205128205
+Streptococcus agalactiae	streptococcus_agalactiae	lineage	twin-k31	all	lasso	0	3	3	0	0	0	0	3	0.004807692308
+Streptococcus agalactiae	streptococcus_agalactiae	lineage	twin-k31	800-or-more	scm	0	0	0	0	0	0	0	0	
+Streptococcus agalactiae	streptococcus_agalactiae	lineage	twin-k31	800-or-more	cart	0	0	0	0	0	0	0	0	
+Streptococcus agalactiae	streptococcus_agalactiae	lineage	twin-k31	800-or-more	rf	0	0	0	0	0	0	0	0	
+Streptococcus agalactiae	streptococcus_agalactiae	lineage	twin-k31	800-or-more	gbt	0	0	0	0	0	0	0	0	
+Streptococcus agalactiae	streptococcus_agalactiae	lineage	twin-k31	800-or-more	lasso	0	0	0	0	0	0	0	0	
+Streptococcus agalactiae	streptococcus_agalactiae	study	cmh-4000-k31	all	rf	0	0	0	0	0	0	0	0	
+Streptococcus agalactiae	streptococcus_agalactiae	study	cmh-4000-k31	all	gbt	0	0	0	0	0	0	0	0	
+Streptococcus agalactiae	streptococcus_agalactiae	study	cmh-4000-k31	all	lasso	0	0	0	0	0	0	0	0	
+Streptococcus agalactiae	streptococcus_agalactiae	study	cmh-16000-k31	all	rf	0	0	0	0	0	0	0	0	
+Streptococcus agalactiae	streptococcus_agalactiae	study	cmh-16000-k31	all	gbt	0	0	0	0	0	0	0	0	
+Streptococcus agalactiae	streptococcus_agalactiae	study	cmh-16000-k31	all	lasso	0	0	0	0	0	0	0	0	
+Streptococcus agalactiae	streptococcus_agalactiae	study	floor-3-k31	800-or-more	scm	0	0	0	0	0	0	0	0	
+Streptococcus agalactiae	streptococcus_agalactiae	study	floor-3-k31	800-or-more	cart	0	0	0	0	0	0	0	0	
+Streptococcus agalactiae	streptococcus_agalactiae	study	floor-3-k31	800-or-more	rf	0	0	0	0	0	0	0	0	
+Streptococcus agalactiae	streptococcus_agalactiae	study	floor-3-k31	800-or-more	gbt	0	0	0	0	0	0	0	0	
+Streptococcus agalactiae	streptococcus_agalactiae	study	floor-3-k31	800-or-more	lasso	0	0	0	0	0	0	0	0	
+Streptococcus pneumoniae	streptococcus_pneumoniae	lineage	cmh-4000-k31	all	rf	0	8	8	0	0	0	2	6	-0.000614397259
+Streptococcus pneumoniae	streptococcus_pneumoniae	lineage	cmh-4000-k31	all	gbt	0	8	8	0	0	1	1	6	-0.004588509317
+Streptococcus pneumoniae	streptococcus_pneumoniae	lineage	cmh-4000-k31	all	lasso	0	8	8	0	0	1	2	5	-0.000183369343
+Streptococcus pneumoniae	streptococcus_pneumoniae	lineage	cmh-16000-k31	all	rf	0	8	8	0	0	0	2	6	-0.001721659179
+Streptococcus pneumoniae	streptococcus_pneumoniae	lineage	cmh-16000-k31	all	gbt	0	8	8	0	0	3	0	5	0.005832552338
+Streptococcus pneumoniae	streptococcus_pneumoniae	lineage	cmh-16000-k31	all	lasso	0	8	8	0	0	2	2	4	-0.000394228128
+Streptococcus pneumoniae	streptococcus_pneumoniae	lineage	floor-3-k31	800-or-more	scm	0	8	8	0	0	0	0	8	0.0
+Streptococcus pneumoniae	streptococcus_pneumoniae	lineage	floor-3-k31	800-or-more	cart	0	8	8	0	0	0	0	8	0.0
+Streptococcus pneumoniae	streptococcus_pneumoniae	lineage	floor-3-k31	800-or-more	rf	0	8	8	0	0	0	0	8	0.0
+Streptococcus pneumoniae	streptococcus_pneumoniae	lineage	floor-3-k31	800-or-more	gbt	0	8	8	0	0	0	1	7	0.0
+Streptococcus pneumoniae	streptococcus_pneumoniae	lineage	floor-3-k31	800-or-more	lasso	0	8	8	0	0	0	0	8	0.0
+Streptococcus pneumoniae	streptococcus_pneumoniae	lineage	twin-k31	all	scm	0	8	8	0	0	0	2	6	-0.002313344493
+Streptococcus pneumoniae	streptococcus_pneumoniae	lineage	twin-k31	all	cart	0	8	8	0	0	1	0	7	7.2463768e-05
+Streptococcus pneumoniae	streptococcus_pneumoniae	lineage	twin-k31	all	rf	0	8	8	0	0	1	0	7	0.000701863199
+Streptococcus pneumoniae	streptococcus_pneumoniae	lineage	twin-k31	all	gbt	0	8	8	0	0	2	1	5	0.004806467702
+Streptococcus pneumoniae	streptococcus_pneumoniae	lineage	twin-k31	all	lasso	0	8	8	0	0	1	0	7	0.005832837005
+Streptococcus pneumoniae	streptococcus_pneumoniae	lineage	twin-k31	800-or-more	scm	0	8	8	0	0	0	2	6	-0.002313344493
+Streptococcus pneumoniae	streptococcus_pneumoniae	lineage	twin-k31	800-or-more	cart	0	8	8	0	0	1	0	7	7.2463768e-05
+Streptococcus pneumoniae	streptococcus_pneumoniae	lineage	twin-k31	800-or-more	rf	0	8	8	0	0	1	0	7	0.000701863199
+Streptococcus pneumoniae	streptococcus_pneumoniae	lineage	twin-k31	800-or-more	gbt	0	8	8	0	0	2	1	5	0.004806467702
+Streptococcus pneumoniae	streptococcus_pneumoniae	lineage	twin-k31	800-or-more	lasso	0	8	8	0	0	1	0	7	0.005832837005
+Streptococcus pneumoniae	streptococcus_pneumoniae	study	cmh-4000-k31	all	rf	0	0	0	0	0	0	0	0	
+Streptococcus pneumoniae	streptococcus_pneumoniae	study	cmh-4000-k31	all	gbt	0	0	0	0	0	0	0	0	
+Streptococcus pneumoniae	streptococcus_pneumoniae	study	cmh-4000-k31	all	lasso	0	0	0	0	0	0	0	0	
+Streptococcus pneumoniae	streptococcus_pneumoniae	study	cmh-16000-k31	all	rf	0	0	0	0	0	0	0	0	
+Streptococcus pneumoniae	streptococcus_pneumoniae	study	cmh-16000-k31	all	gbt	0	0	0	0	0	0	0	0	
+Streptococcus pneumoniae	streptococcus_pneumoniae	study	cmh-16000-k31	all	lasso	0	0	0	0	0	0	0	0	
+Streptococcus pneumoniae	streptococcus_pneumoniae	study	floor-3-k31	800-or-more	scm	0	0	0	0	0	0	0	0	
+Streptococcus pneumoniae	streptococcus_pneumoniae	study	floor-3-k31	800-or-more	cart	0	0	0	0	0	0	0	0	
+Streptococcus pneumoniae	streptococcus_pneumoniae	study	floor-3-k31	800-or-more	rf	0	0	0	0	0	0	0	0	
+Streptococcus pneumoniae	streptococcus_pneumoniae	study	floor-3-k31	800-or-more	gbt	0	0	0	0	0	0	0	0	
+Streptococcus pneumoniae	streptococcus_pneumoniae	study	floor-3-k31	800-or-more	lasso	0	0	0	0	0	0	0	0	
+Vibrio cholerae	vibrio_cholerae	lineage	cmh-4000-k31	all	rf	0	3	3	0	0	1	0	2	0.003401360544
+Vibrio cholerae	vibrio_cholerae	lineage	cmh-4000-k31	all	gbt	0	3	3	0	0	1	0	2	0.009803921569
+Vibrio cholerae	vibrio_cholerae	lineage	cmh-4000-k31	all	lasso	0	3	3	0	0	1	1	1	0.0
+Vibrio cholerae	vibrio_cholerae	lineage	cmh-16000-k31	all	rf	0	3	3	0	0	0	0	3	0.006802721088
+Vibrio cholerae	vibrio_cholerae	lineage	cmh-16000-k31	all	gbt	0	3	3	0	0	1	0	2	0.014705882353
+Vibrio cholerae	vibrio_cholerae	lineage	cmh-16000-k31	all	lasso	0	3	3	0	0	1	1	1	0.0
+Vibrio cholerae	vibrio_cholerae	lineage	floor-3-k31	800-or-more	scm	0	0	0	0	0	0	0	0	
+Vibrio cholerae	vibrio_cholerae	lineage	floor-3-k31	800-or-more	cart	0	0	0	0	0	0	0	0	
+Vibrio cholerae	vibrio_cholerae	lineage	floor-3-k31	800-or-more	rf	0	0	0	0	0	0	0	0	
+Vibrio cholerae	vibrio_cholerae	lineage	floor-3-k31	800-or-more	gbt	0	0	0	0	0	0	0	0	
+Vibrio cholerae	vibrio_cholerae	lineage	floor-3-k31	800-or-more	lasso	0	0	0	0	0	0	0	0	
+Vibrio cholerae	vibrio_cholerae	lineage	twin-k31	all	scm	0	3	3	0	0	0	0	3	0.003401360544
+Vibrio cholerae	vibrio_cholerae	lineage	twin-k31	all	cart	0	3	3	0	0	0	0	3	0.003401360544
+Vibrio cholerae	vibrio_cholerae	lineage	twin-k31	all	rf	0	3	3	0	0	0	1	2	-0.004901960784
+Vibrio cholerae	vibrio_cholerae	lineage	twin-k31	all	gbt	0	3	3	0	0	1	0	2	0.003401360545
+Vibrio cholerae	vibrio_cholerae	lineage	twin-k31	all	lasso	0	3	3	0	0	1	1	1	0.006802721089
+Vibrio cholerae	vibrio_cholerae	lineage	twin-k31	800-or-more	scm	0	0	0	0	0	0	0	0	
+Vibrio cholerae	vibrio_cholerae	lineage	twin-k31	800-or-more	cart	0	0	0	0	0	0	0	0	
+Vibrio cholerae	vibrio_cholerae	lineage	twin-k31	800-or-more	rf	0	0	0	0	0	0	0	0	
+Vibrio cholerae	vibrio_cholerae	lineage	twin-k31	800-or-more	gbt	0	0	0	0	0	0	0	0	
+Vibrio cholerae	vibrio_cholerae	lineage	twin-k31	800-or-more	lasso	0	0	0	0	0	0	0	0	
+Vibrio cholerae	vibrio_cholerae	study	cmh-4000-k31	all	rf	0	0	0	0	0	0	0	0	
+Vibrio cholerae	vibrio_cholerae	study	cmh-4000-k31	all	gbt	0	0	0	0	0	0	0	0	
+Vibrio cholerae	vibrio_cholerae	study	cmh-4000-k31	all	lasso	0	0	0	0	0	0	0	0	
+Vibrio cholerae	vibrio_cholerae	study	cmh-16000-k31	all	rf	0	0	0	0	0	0	0	0	
+Vibrio cholerae	vibrio_cholerae	study	cmh-16000-k31	all	gbt	0	0	0	0	0	0	0	0	
+Vibrio cholerae	vibrio_cholerae	study	cmh-16000-k31	all	lasso	0	0	0	0	0	0	0	0	
+Vibrio cholerae	vibrio_cholerae	study	floor-3-k31	800-or-more	scm	0	0	0	0	0	0	0	0	
+Vibrio cholerae	vibrio_cholerae	study	floor-3-k31	800-or-more	cart	0	0	0	0	0	0	0	0	
+Vibrio cholerae	vibrio_cholerae	study	floor-3-k31	800-or-more	rf	0	0	0	0	0	0	0	0	
+Vibrio cholerae	vibrio_cholerae	study	floor-3-k31	800-or-more	gbt	0	0	0	0	0	0	0	0	
+Vibrio cholerae	vibrio_cholerae	study	floor-3-k31	800-or-more	lasso	0	0	0	0	0	0	0	0	

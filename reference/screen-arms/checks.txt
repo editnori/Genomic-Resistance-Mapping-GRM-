@@ -1,0 +1,12 @@
+PASS the first run's species, each once: 23 folders for 23 species; missing [], more []
+PASS each species ended DONE, any FAILED older than its DONE: 23 of 23
+PASS each species' SHA256SUMS holds every file of the run's rule, each at its sha256: 6207 files
+PASS score/score.log stays out of SHA256SUMS
+PASS each DONE names its species, its binary.txt's binary and code, its results and its SHA256SUMS
+PASS every species ran one commit and one code sha256: 1 commits, 1 code sha256, 1 binaries
+PASS each lists.txt names its species' first-run datasets, seeds 42, 43 and 44, twin 45, 46 and 47 and the three arms
+PASS each expect.tsv is expect.py's list from lists.tsv: 3715 results
+PASS each species holds every listed result or refusal record and inputs file, and no other
+PASS each refusal record is a study run scored as the constant model on five learners, and each constant-model row a refusal record's: 0 refusal records, 0 constant-model rows
+PASS no genome id in any file that will be read or published: 0 genome ids in 6253 files, against 23757 ids
+CHECKS 11 of 11
