@@ -308,6 +308,43 @@ enum Command {
         /// the earlier.
         #[arg(long, value_enum, default_value_t = PickTieArg::Later, requires = "exp_pick")]
         exp_pick_tie: PickTieArg,
+        /// Experiment, off by default (docs/input-arms.md, plan block C3):
+        /// fit the arm's matrix in place of the 31-mer projection, from the
+        /// AMRFinderPlus program's per-genome tables in
+        /// --exp-program-tables: its columns alone (program), or its
+        /// columns then the 31-mer rows (k31-program). Writes no report;
+        /// the results are --exp-pick's files, which needs
+        /// --exp-pick-inner 0, and <exp-pick dir>/<dataset>.<tag>.inputs.json
+        /// of column counts. Needs --force and one species. Refused beside
+        /// --learner-seed, the --exp-tie-* options, --exp-null-refit,
+        /// --exp-mic and --exp-cohort.
+        #[arg(
+            long,
+            value_enum,
+            requires_all = ["exp_pick", "exp_program_tables", "force"],
+            conflicts_with_all = [
+                "learner_seed",
+                "exp_tie_rule",
+                "exp_tie_trace",
+                "exp_tie_out",
+                "exp_null_refit",
+                "exp_mic",
+                "exp_cohort",
+            ]
+        )]
+        exp_inputs: Option<InputArmArg>,
+        /// The species' program tables for --exp-inputs: <genome id>.tsv,
+        /// each as the program wrote it.
+        #[arg(long, requires = "exp_inputs")]
+        exp_program_tables: Option<PathBuf>,
+        /// What one program column is for --exp-inputs: the table's
+        /// element symbol, subclass or class.
+        #[arg(long, value_enum, default_value_t = ProgramColumnArg::Symbol, requires = "exp_inputs")]
+        exp_program_column: ProgramColumnArg,
+        /// Which table rows give a column for --exp-inputs: Type AMR, or
+        /// every row.
+        #[arg(long, value_enum, default_value_t = ProgramRowsArg::Amr, requires = "exp_inputs")]
+        exp_program_rows: ProgramRowsArg,
     },
     /// Run fetch, count, structure, matrix, and learn for each species, then
     /// build the report. Stages skip work that is already on disk.
@@ -624,10 +661,25 @@ fn run(cli: Cli) -> Result<()> {
             exp_pick,
             exp_pick_inner,
             exp_pick_tie,
+            exp_inputs,
+            exp_program_tables,
+            exp_program_column,
+            exp_program_rows,
             ..
         } => {
             if let Some(dir) = &exp_pick {
                 grm::learn::inner_pick::enable(dir, exp_pick_inner, exp_pick_tie.into())?;
+            }
+            if let Some(arm) = exp_inputs {
+                enable_input_arm(
+                    &species,
+                    arm,
+                    exp_program_tables.as_deref(),
+                    exp_program_column,
+                    exp_program_rows,
+                    exp_pick.as_deref(),
+                    exp_pick_inner,
+                )?;
             }
             learn_fold_file(
                 &layout,
@@ -652,6 +704,10 @@ fn run(cli: Cli) -> Result<()> {
             exp_pick,
             exp_pick_inner,
             exp_pick_tie,
+            exp_inputs,
+            exp_program_tables,
+            exp_program_column,
+            exp_program_rows,
             ..
         } => {
             let cfg = learn_config(screened_features, seed, learner_seed, exp_tie_rule.into());
@@ -668,6 +724,17 @@ fn run(cli: Cli) -> Result<()> {
             }
             if let Some(dir) = &exp_pick {
                 grm::learn::inner_pick::enable(dir, exp_pick_inner, exp_pick_tie.into())?;
+            }
+            if let Some(arm) = exp_inputs {
+                enable_input_arm(
+                    &species,
+                    arm,
+                    exp_program_tables.as_deref(),
+                    exp_program_column,
+                    exp_program_rows,
+                    exp_pick.as_deref(),
+                    exp_pick_inner,
+                )?;
             }
             species
                 .iter()
@@ -1561,6 +1628,69 @@ impl From<PickTieArg> for grm::report::PickTie {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, clap::ValueEnum)]
+enum InputArmArg {
+    Program,
+    K31Program,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, clap::ValueEnum)]
+enum ProgramColumnArg {
+    Symbol,
+    Subclass,
+    Class,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, clap::ValueEnum)]
+enum ProgramRowsArg {
+    Amr,
+    All,
+}
+
+/// Turns the C3 input arm on (`input_arms::enable`), after checking what
+/// clap cannot: one species, and the C9 writer with no inner fit.
+fn enable_input_arm(
+    species: &[String],
+    arm: InputArmArg,
+    tables: Option<&std::path::Path>,
+    column: ProgramColumnArg,
+    rows: ProgramRowsArg,
+    pick_dir: Option<&std::path::Path>,
+    pick_inner: usize,
+) -> Result<()> {
+    use grm::input_arms::{Arm, Column, Rows, Settings};
+    anyhow::ensure!(
+        species.len() == 1,
+        "--exp-inputs reads one species' program tables, so it takes one species, not {}",
+        species.len()
+    );
+    anyhow::ensure!(
+        pick_inner == 0,
+        "--exp-inputs scores the arm's own outer fits only: give --exp-pick-inner 0"
+    );
+    grm::input_arms::enable(Settings {
+        arm: match arm {
+            InputArmArg::Program => Arm::Program,
+            InputArmArg::K31Program => Arm::K31Program,
+        },
+        tables: tables
+            .context("--exp-inputs needs --exp-program-tables")?
+            .to_path_buf(),
+        column: match column {
+            ProgramColumnArg::Symbol => Column::Symbol,
+            ProgramColumnArg::Subclass => Column::Subclass,
+            ProgramColumnArg::Class => Column::Class,
+        },
+        rows: match rows {
+            ProgramRowsArg::Amr => Rows::Amr,
+            ProgramRowsArg::All => Rows::All,
+        },
+        out: pick_dir
+            .context("--exp-inputs needs --exp-pick")?
+            .to_path_buf(),
+    })
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, clap::ValueEnum)]
 enum TieRuleArg {
     Float,
     Exact,
@@ -2323,6 +2453,103 @@ mod tests {
             &["--exp-mic", "released"][..],
         ] {
             let mut args = vec!["grm", "learn", "--species", "s", "--exp-pick", "p"];
+            args.extend_from_slice(other);
+            assert_eq!(kind(&args), Some(ArgumentConflict), "{other:?}");
+        }
+    }
+
+    /// `--exp-inputs` is off unless given, needs `--exp-pick`,
+    /// `--exp-program-tables` and `--force`, its settings need it, and it is
+    /// refused beside the experiments that change or add fits.
+    #[test]
+    fn learn_takes_the_c3_input_arm_only_when_asked() {
+        use clap::error::ErrorKind::{ArgumentConflict, MissingRequiredArgument};
+        let parse = |args: &[&str]| Cli::try_parse_from(args.iter().copied());
+        let Command::Learn {
+            exp_inputs,
+            exp_program_tables,
+            exp_program_column,
+            exp_program_rows,
+            ..
+        } = parse(&["grm", "learn", "--species", "s"]).unwrap().command
+        else {
+            panic!("parsed another command");
+        };
+        assert_eq!(
+            (
+                exp_inputs,
+                exp_program_tables,
+                exp_program_column,
+                exp_program_rows
+            ),
+            (None, None, ProgramColumnArg::Symbol, ProgramRowsArg::Amr)
+        );
+        let full = [
+            "grm",
+            "learn",
+            "--species",
+            "s",
+            "--force",
+            "--exp-pick",
+            "p",
+            "--exp-pick-inner",
+            "0",
+            "--exp-inputs",
+            "k31-program",
+            "--exp-program-tables",
+            "t",
+        ];
+        let Command::Learn {
+            exp_inputs,
+            exp_program_tables,
+            ..
+        } = parse(&full).unwrap().command
+        else {
+            panic!("parsed another command");
+        };
+        assert_eq!(
+            (exp_inputs, exp_program_tables),
+            (Some(InputArmArg::K31Program), Some(PathBuf::from("t")))
+        );
+        let kind = |args: &[&str]| parse(args).err().map(|e| e.kind());
+        for left_out in ["--force", "--exp-pick", "--exp-program-tables"] {
+            let mut args: Vec<&str> = Vec::new();
+            let mut skip = false;
+            for a in full {
+                if skip {
+                    skip = false;
+                    continue;
+                }
+                if a == left_out {
+                    skip = a != "--force";
+                    continue;
+                }
+                if left_out == "--exp-pick" && a == "--exp-pick-inner" {
+                    skip = true;
+                    continue;
+                }
+                args.push(a);
+            }
+            assert_eq!(kind(&args), Some(MissingRequiredArgument), "{left_out}");
+        }
+        for (flag, value) in [
+            ("--exp-program-tables", "t"),
+            ("--exp-program-column", "class"),
+            ("--exp-program-rows", "all"),
+        ] {
+            assert_eq!(
+                kind(&["grm", "learn", "--species", "s", flag, value]),
+                Some(MissingRequiredArgument),
+                "{flag}"
+            );
+        }
+        for other in [
+            &["--learner-seed", "7"][..],
+            &["--exp-tie-rule", "exact"][..],
+            &["--exp-null-refit", "n"][..],
+            &["--exp-mic", "released"][..],
+        ] {
+            let mut args = full.to_vec();
             args.extend_from_slice(other);
             assert_eq!(kind(&args), Some(ArgumentConflict), "{other:?}");
         }

@@ -342,3 +342,55 @@ The refit of the release's rule ended on its 23 species and 238 datasets at 20:3
 **Cost.** The inner pick took 0.19 to 0.44 of each dataset's release learning seconds. At 0.44, the first run costs 18.12 xlarge-hours central. Of those, 3.47 go to fetching genomes and building matrices again on each box, which the plan's 17 for all 268 leaves out. At the plan's 1.5 it costs 24.03.
 
 **Written.** This entry was written at 19:54Z on 22 Nov 2026, from the design fixed at 19:19Z, the lists and the pilot, and the rulings of 20:36Z were added after a review of the block. No score of any C9 run had been read.
+
+## C3 design
+
+**Block.** Plan block C3 asks whether other inputs separate the classes better than the presence of 31-mers (K31). The design was fixed at 23:22Z on 22 Nov 2026, before any code ran on real data, and `docs/input-arms.md` gives the method. No comparison result has been read.
+
+**Arms.** Five arms stand against K31, the release's rule refitted in the same run. Two are built behind `grm learn --exp-inputs`: the AMRFinderPlus program's calls alone, and those calls joined before the K31 rows, less a K31 row a program column repeats. K31 plus k-mer counts, unitigs and K31 plus amino-acid k-mers are designed; the lead ruled their tools at 00:47Z on 23 Nov 2026, and they wait to be built and reviewed. A program column is one element symbol of the program's Type AMR rows, kept by the cohort range K31 uses.
+
+**Folds.** Each arm hands the release's code a new matrix. The support floor, the collapse of identical patterns and the chi-square screen to 4,000 then run on each fit's own training genomes, over both blocks of a joined arm at once. What an arm builds per dataset reads no label, and its cohort range is implied by every training subset, so no outer test genome can change a fit's candidates.
+
+**Measure.** Per learner, the lineage balanced accuracy is primary, with recall, specificity, both error rates with Wilson intervals, and log loss beside it. A dataset's value is the mean of seeds 42, 43 and 44; the twin is K31 at seeds 45, 46 and 47. Each arm meets K31 on its own datasets and the same folds, which the scorer checks.
+
+**Count.** Better, worse or the same by 0.02 at 12 decimals, the arm's value less the default's, the median difference with its species interval, and the one-sided sign test. Holm runs over 30 lineage pairs, 6 arm rows by 5 learners, the twin's included. The family is fixed, so the count is taken once, after every arm has run, and `score.py --count` refuses before that. By the lead's addition to question 12, the family stays 30: an arm withdrawn before it runs keeps its five pairs at p = 1, `score.py --count --withdrawn ARM` takes it, and this entry names the arm and the time. No arm has been withdrawn. By the lead's ruling 15 at 00:47Z on 23 Nov 2026, a learner carries the change when it meets conditions 1 and 2 both, and at least 3 of 5 must carry it; 4 holds for all five; 5 holds for each learner that carries. The ruling first read condition 3 on the twin the same way, the twin carrying in fewer than 3 learners. A twin that meets 1 in three learners and 2 in none would pass that reading and fail the plan's. At 02:08Z on 23 Nov 2026, before any C3 score was read, condition 3 went back to the plan's words: it holds when the twin meets 1 in fewer than 3 of 5 learners and 2 in fewer than 3 of 5, each read apart. `conditions.tsv` writes the stricter reading beside it, 2 and 5 for all five, and that one decides nothing.
+
+**No candidate.** Only a `--fold-file` run refuses for a fold whose training genomes give no candidate feature, and it refuses the dataset's whole study run; a drawn split's fold with no candidate gets the release's fits on no feature. By the lead's ruling 16 at 00:47Z on 23 Nov 2026, an arm refused this way where the default is not is scored as the constant model on the default's folds: each fold's training majority, R on a tie, with a score equal to its R share, clipped. Those datasets enter the count, `count.tsv` gives their number, and the count without them is written beside it and decides nothing. The run script records such a refusal and goes on; before this, it stopped the species.
+
+**Study.** The first-run datasets in S, 55 for the arms on L and 54 for the arms on A, get one study run per arm on their reviewed `study-whole` plans, at the release's seeds, with no twin. That departs from the plan's Rules, Draws, as C9's ruling 6 did (question 11).
+
+| Set | Datasets | Species | Less M, the first run | First run in S |
+|---|---:|---:|---:|---:|
+| L | 268 | 23 | 233 | 55 |
+| A | 237 | 21 | 204 | 54 |
+
+**Labels.** On the datasets not in M, three of the four label rules give the same labels. Of L's 233, 32 hold an S and R pair and depend on the most resistant call against the other three; of A's 204, 21 do. The rest depend on none of the four.
+
+**Questions.** The design leaves fourteen questions to the lead, each with the answer taken and the other one. Each is one argument of the code or the run script. The lead ruled at 00:47Z on 23 Nov 2026, with no C3 score read: question 1 changed, 2 to 14 as taken, and an addition to 12.
+
+| Question | Taken | Other |
+|---|---|---|
+| 1. Unitig graph | changed by the lead: the graph over every 31-mer of the species' genomes, single-genome ones included; GRM's own compaction if its unitigs equal bcalm2's or Bifrost's as a set on the pilot species, else that program | GRM's own compaction of the species matrix's 31-mers, the design's answer, not taken |
+| 2. Unitig presence | every 31-mer of the unitig in the genome; the inputs file also counts the genome and unitig pairs held in part | any 31-mer; a share of them |
+| 3. Unitig scope | the whole cohort, with no label | each outer training fold |
+| 4. Gene caller | Prodigal 2.6.3, single mode, table 11 | Pyrodigal |
+| 5. Amino-acid k | 10, spanning 30 nucleotides | 8 or 12 |
+| 6. Counts | GRM's own counter, one bin, count of 2 or more, checked on SYNTHETIC sequence against a recount written apart | KMC or Jellyfish; bins 2, 3 and 5 |
+| 7. Program column | element symbol | subclass; class |
+| 8. Program rows | Type AMR, both scopes, every method | every Type; core scope only |
+| 9. Join | one candidate pass and one screen over both blocks | a screen per block |
+| 10. Collapse order | the arm's columns before K31's | K31's first |
+| 11. Study draws | one run at the release's seeds, no twin | a seed under this flag only |
+| 12. Holm | 30 pairs, the twin's included; an arm withdrawn before it runs keeps its 5 pairs at p = 1 | a family per arm |
+| 13. First run | L and A less M | all of L and A |
+| 14. Default and twin | C3's own, in the same run as its arms | shared with another block's runs |
+
+**One run.** By the lead's ruling 17, no C3 fit starts on the two built arms alone. One run with one binary covers the default, the twin and all five arms after the three waiting arms are built and reviewed, since the default is refitted in the same run with the same binary. This replaces the design's later boxes of their own for unitigs and amino-acid k-mers.
+
+**Pilot.** One draw of *Klebsiella aerogenes* with ertapenem, imipenem and meropenem, 93 genomes, ran end to end on a 16-CPU box from 00:03:48Z to 00:12:32Z on 23 Nov 2026. The program took 372.69 s for the 93 tables, each equal to its recorded sha256. The fits took 17.98 s for K31, 2.74 s for the program alone and 11.79 s for K31 plus the program, each under 940,000 KB at peak. K31's seed-42 reports equal the release's in all 3 datasets.
+
+**Fault.** A first pilot stopped at K31 plus the program: a K31 row repeated a program column over the cohort, and the final models need each cohort pattern once. The joined arm now leaves such a K31 row out, as its training collapse already did, and counts it: 9, 9 and 7 rows in the three datasets. A synthetic test and planted fault 2d hold it.
+
+**Cost.** Each arm's fit costs its pilot ratio to the release's learning seconds: 1.08 for K31, 0.17 for the program alone and 0.71 for K31 plus the program. The program takes 0.0178 core-hours a genome, 2.7 times the release's 0.0065, on 21,625 genomes. The built arms' part of the one run, with K31 and the twin, comes to 40.42 xlarge-hours, 24.07 of them the program; with data steps and loads, 47.12 box-hours over 23 boxes. The three waiting arms add their own, measured on their pilots.
+
+**Written.** This entry was written at 00:16Z on 23 Nov 2026, from the design fixed at 23:22Z on 22 Nov, the lists and the second pilot. The lead's rulings of 00:47Z were carried into it from 01:20Z to 01:24Z, in a review with a recount before filing (ruling 18). No comparison result had been read.
