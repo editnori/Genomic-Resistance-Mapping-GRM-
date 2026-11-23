@@ -156,6 +156,31 @@ class Curve(unittest.TestCase):
         self.assertEqual(rows["4+"]["share_covered"], f"{10 / 11:.12f}")
 
 
+class Genes(unittest.TestCase):
+    def test_a_gene_seen_in_under_5_genomes_is_not_named(self):
+        dets = {"synR": {("synR", "a"), ("synR", "b")}, "synK": {("synK", "c")}, "synG": {("synG", "d")}}
+        sets = [{"synR"}] * 6 + [{"synR", "synK"}] * 2 + [{"synG"}]
+        rows = {r["gene"]: r for r in tb.gene_rows("Synthia s0", "rifampin", False, dets, sets)}
+        self.assertEqual(set(rows), {"synR", tb.FOLDED_GENES})
+        self.assertEqual((rows["synR"]["catalogue_variants"], rows["synR"]["resistant_with_gene"]), (2, "8"))
+        folded = rows[tb.FOLDED_GENES]
+        self.assertEqual((folded["catalogue_variants"], folded["resistant_with_gene"]), (2, "under 5"))
+
+    def test_a_gene_in_5_genomes_is_named(self):
+        rows = tb.gene_rows("Synthia s0", "rifampin", False, {"synK": {("synK", "c")}}, [{"synK"}] * 5)
+        self.assertEqual([(r["gene"], r["resistant_with_gene"]) for r in rows], [("synK", "5")])
+
+
+class SmallCurve(unittest.TestCase):
+    def test_no_curve_over_under_5_resistant_genomes(self):
+        groups = {"lineage1": {"dets": {("synR", "a")}, "genomes": 3, "without": 0},
+                  "lineage2": {"dets": set(), "genomes": 1, "without": 1}}
+        self.assertEqual(tb.curve_rows("Synthia s0", "rifampin", False, "main_lineage", groups), [])
+        groups["lineage2"]["genomes"] = 2
+        rows = tb.curve_rows("Synthia s0", "rifampin", False, "main_lineage", groups)
+        self.assertEqual([r["resistant"] for r in rows], ["5", "5"])
+
+
 class EndToEnd(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -242,9 +267,9 @@ class EndToEnd(unittest.TestCase):
         rc, out, err = run_tb(self.top, run, bed, rdir, lp)
         self.assertEqual(rc, 0, err)
         summary = json.loads((out / "m4-summary.json").read_text())
-        self.assertEqual(summary["genomes_failed"], 2)
+        self.assertEqual(summary["genomes_failed"], "under 5")
         rif = [e for e in summary["endpoints"] if e["antibiotic"] == "rifampin"][0]
-        self.assertEqual((rif["resistant_with_result"], rif["resistant_no_result"]), (24, 2))
+        self.assertEqual((rif["resistant_with_result"], rif["resistant_no_result"]), ("24", "under 5"))
 
     def test_a_genome_neither_run_nor_failed_refuses(self):
         *_, run, bed, rdir, lp = self.build()

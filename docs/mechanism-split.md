@@ -56,7 +56,7 @@ M4 is the lineage curve for Mycobacterium tuberculosis. `tb_curve.py` reads TBPr
 - how many determinants are seen in 1, 2, 3 and 4 or more lineages, and the resistant genomes each count covers;
 - per gene as the WHO catalogue names it, the count of its graded variants seen.
 
-A variant's own name enters no output until the owner rules on it. A dataset in M is marked. No run has been made: the tool must run again first, and the brief gives M4 no dry run.
+A gene seen in 1 to 4 resistant genomes of an antibiotic is not named: such genes share one row, `genes seen in under 5 genomes`. No curve is written over under 5 resistant genomes, and the run's summary writes its genome counts as the tables do. A variant's own name enters no output until the owner rules on it. A dataset in M is marked. No run has been made: the tool must run again first, and the brief gives M4 no dry run.
 
 ## What a table can and cannot say
 

@@ -64,6 +64,7 @@ ORDERS = 1000
 GROUPINGS = ("main_lineage", "sub_lineage", "cluster")
 CONVERGENCE_GROUPINGS = ("main_lineage", "sub_lineage")
 BUCKETS = ("1", "2", "3", "4+")
+FOLDED_GENES = "genes seen in under 5 genomes"
 
 
 class Refusal(Exception):
@@ -162,12 +163,15 @@ def curve_rows(species, antibiotic, in_m, grouping, groups):
         seen |= groups[k]["dets"]
         largest.append(len(seen))
     resistant = sum(g["genomes"] for g in groups.values())
+    if resistant < FLOOR:
+        # a curve over 1 to 4 genomes would stand for those genomes: none is written
+        return []
     rows = []
     for step in range(n):
         vals = sorted(steps[step])
         mid = vals[len(vals) // 2] if len(vals) % 2 else (vals[len(vals) // 2 - 1] + vals[len(vals) // 2]) / 2
         rows.append({"species": species, "antibiotic": antibiotic, "in_M": "1" if in_m else "0",
-                     "grouping": grouping, "groups": n, "resistant": resistant, "step": step + 1,
+                     "grouping": grouping, "groups": n, "resistant": shown(resistant), "step": step + 1,
                      "determinants_median": r12(mid), "determinants_lo": percentile(vals, 0.025),
                      "determinants_hi": percentile(vals, 0.975), "determinants_largest_first": largest[step]})
     return rows
@@ -216,12 +220,19 @@ def convergence_rows(species, antibiotic, in_m, grouping, per_genome):
     return rows
 
 
-def gene_rows(species, antibiotic, in_m, dets_by_gene, genomes_by_gene):
-    rows = []
-    for gene in sorted(dets_by_gene):
-        rows.append({"species": species, "antibiotic": antibiotic, "in_M": "1" if in_m else "0",
-                     "gene": gene, "catalogue_variants": len(dets_by_gene[gene]),
-                     "resistant_with_gene": shown(genomes_by_gene[gene])})
+def gene_rows(species, antibiotic, in_m, dets_by_gene, gene_sets):
+    """Per gene, its graded variants seen and the resistant genomes with one.
+    `gene_sets` holds each resistant genome's genes. A gene seen in 1 to 4
+    genomes is not named: it joins one row under FOLDED_GENES."""
+    base = {"species": species, "antibiotic": antibiotic, "in_M": "1" if in_m else "0"}
+    genomes_by_gene = collections.Counter(g for genes in gene_sets for g in genes)
+    named = [g for g in sorted(dets_by_gene) if genomes_by_gene[g] >= FLOOR]
+    folded = {g for g in dets_by_gene if genomes_by_gene[g] < FLOOR}
+    rows = [dict(base, gene=g, catalogue_variants=len(dets_by_gene[g]),
+                 resistant_with_gene=shown(genomes_by_gene[g])) for g in named]
+    if folded:
+        rows.append(dict(base, gene=FOLDED_GENES, catalogue_variants=sum(len(dets_by_gene[g]) for g in folded),
+                         resistant_with_gene=shown(sum(1 for genes in gene_sets if genes & folded))))
     return rows
 
 
@@ -275,8 +286,9 @@ def run(args):
 
     curve, coverage, convergence, genes = [], [], [], []
     summary = {"tool": WANT_TOOL, "database_commit": WANT_DB, "orders": ORDERS, "species": args.species,
-               "tool_drugs": tool_drugs, "genomes_planned": len(plan), "genomes_with_result": len(evidence),
-               "genomes_failed": len(failed), "endpoints": [], "not_scored_reports": []}
+               "tool_drugs": tool_drugs, "genomes_planned": shown(len(plan)),
+               "genomes_with_result": shown(len(evidence)), "genomes_failed": shown(len(failed)), "endpoints": [],
+               "not_scored_reports": []}
     for rep in reports:
         antibiotic = rep["antibiotic"]
         kind, drugs = drug_map(antibiotic, tool_drugs)
@@ -300,15 +312,12 @@ def run(args):
                             "cluster": None if s.get("lineage") is None else f"cluster_{s['lineage']}", "dets": dets})
 
         dets_by_gene = collections.defaultdict(set)
-        genomes_by_gene = collections.Counter()
+        gene_sets = []
         for m in members:
-            genes_here = set()
             for gene, change in m["dets"]:
                 dets_by_gene[gene].add((gene, change))
-                genes_here.add(gene)
-            for gene in genes_here:
-                genomes_by_gene[gene] += 1
-        genes += gene_rows(species, antibiotic, is_m, dets_by_gene, genomes_by_gene)
+            gene_sets.append({gene for gene, _ in m["dets"]})
+        genes += gene_rows(species, antibiotic, is_m, dets_by_gene, gene_sets)
 
         for grouping in GROUPINGS:
             groups = collections.defaultdict(lambda: {"dets": set(), "genomes": 0, "without": 0})
@@ -336,8 +345,9 @@ def run(args):
             if per_genome:
                 convergence += convergence_rows(species, antibiotic, is_m, grouping, per_genome)
         summary["endpoints"].append({"antibiotic": antibiotic, "kind": kind, "tool_drugs": list(drugs),
-                                     "in_M": is_m, "resistant_with_result": total, "resistant_no_result": no_result,
-                                     "resistant_with_no_group": {gr: sum(1 for m in members if m[gr] is None)
+                                     "in_M": is_m, "resistant_with_result": shown(total),
+                                     "resistant_no_result": shown(no_result),
+                                     "resistant_with_no_group": {gr: shown(sum(1 for m in members if m[gr] is None))
                                                                  for gr in GROUPINGS}})
 
     os.makedirs(args.out, exist_ok=True)
