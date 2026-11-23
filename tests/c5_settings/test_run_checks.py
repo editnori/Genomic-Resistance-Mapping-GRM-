@@ -69,6 +69,17 @@ class Check(Case):
                       "2026-11-23T12:00:00Z", report)
         self.assertEqual(report[-1], "CHECKS 11 of 11")
 
+    def test_a_failed_file_with_no_time_is_refused_and_not_set_aside(self):
+        for i, text in enumerate(("", "FAILED synthia_beta 1 score\n", "FAILED synthia_beta 1 score 12:00\n")):
+            self.top = Path(self.tmp.name) / f"timeless{i}"
+            self.top.mkdir()
+
+            def after(copies, text=text):
+                (copies / "synthia_beta" / "FAILED").write_text(text, encoding="utf-8")
+            report = self.run_checks(after=after)
+            self.assertTrue(self.line(report, "each species ended DONE").startswith("FAIL"), text)
+            self.assertFalse([x for x in report if x.startswith("SET ASIDE")], text)
+
     def test_a_file_changed_after_its_sha256sums_is_refused(self):
         def after(copies):
             (copies / "synthia_gamma" / "check" / "refit.tsv").write_text("check\tpassed\nSYNTHETIC\t0\n",
