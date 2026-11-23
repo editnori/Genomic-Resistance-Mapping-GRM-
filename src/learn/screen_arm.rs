@@ -762,6 +762,54 @@ mod tests {
         assert_eq!(s.kept_at_zero, 2);
     }
 
+    /// D and V are summed over the informative strata in ascending lineage
+    /// id, to the bit. SYNTHETIC: 400 samples in 23 strata whose ids come in
+    /// no order, 80 rows, two thirds fitting. The test sums each row itself
+    /// from the samples; f64 addition is not associative, so the reverse
+    /// order differs in some row's last bits, which the test checks too.
+    #[test]
+    fn the_statistic_sums_its_strata_in_ascending_lineage_order_to_the_bit() {
+        let n = 400;
+        let (x, y, lineage) = random_cohort(31, n, 80, 23);
+        let fit = Bits::from_indices(n, (0..n).filter(|i| i % 3 != 0));
+        let (stats, _, informative) = cmh_statistics(&x, &y, &fit, &lineage);
+        let mut ids = lineage.clone();
+        ids.sort_unstable();
+        ids.dedup();
+        let present = |f: usize, i: usize| (x.row(f)[i / 64] >> (i % 64)) & 1 == 1;
+        let sum = |f: usize, order: &[u32]| -> f64 {
+            let (mut d, mut v) = (0.0f64, 0.0f64);
+            for &id in order {
+                let inside: Vec<usize> = fit.iter_ones().filter(|&i| lineage[i] == id).collect();
+                let n = inside.len() as u64;
+                let r = inside.iter().filter(|&&i| y.contains(i)).count() as u64;
+                if n < 2 || r == 0 || r == n {
+                    continue;
+                }
+                let m = inside.iter().filter(|&&i| present(f, i)).count() as u64;
+                let a = inside
+                    .iter()
+                    .filter(|&&i| present(f, i) && y.contains(i))
+                    .count() as u64;
+                d += a as f64 - (m * r) as f64 / n as f64;
+                v += (m * (n - m)) as f64 * (r * (n - r)) as f64 / (n * n * (n - 1)) as f64;
+            }
+            if v > 0.0 { d * d / v } else { 0.0 }
+        };
+        assert!(informative >= 20, "{informative}");
+        let reversed: Vec<u32> = ids.iter().rev().copied().collect();
+        let mut moved = 0;
+        assert_eq!(stats.len(), x.rows);
+        for (f, stat) in stats.iter().enumerate() {
+            assert_eq!(stat.to_bits(), sum(f, &ids).to_bits(), "row {f}");
+            moved += (sum(f, &reversed).to_bits() != stat.to_bits()) as usize;
+        }
+        assert!(
+            moved > 0,
+            "the reverse order moves no row: the test has no teeth"
+        );
+    }
+
     #[test]
     fn the_statistic_matches_the_plain_python_implementation_on_synthetic_tables() {
         // tests/c4_screen/cmh_cases.json: written by scripts/c4-screen/cmh_plain.py
