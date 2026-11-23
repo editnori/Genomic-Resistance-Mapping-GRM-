@@ -382,6 +382,27 @@ class MatrixArms(unittest.TestCase):
         self.assertEqual(rc, 1)
         self.assertEqual(failed(checks), [SCREEN_INSIDE])
 
+    def test_a_learner_that_screened_fewer_than_4000_of_more_candidates_fails(self):
+        # Each block's passed count is inside its candidates and the two sum to the screened count, but the
+        # screen kept 3,999 of 5,000 candidates where it keeps 4,000 (or all when fewer).
+        for learner in (0, 1, 2):
+            with self.subTest(learner=learner):
+                changed = []
+
+                def change_screen(r, s, learner=learner):
+                    if r[2] == "k31-counts" and r[5] == 43:
+                        x = s["folds"][2]["learners"][learner]
+                        self.assertEqual(s["folds"][2]["candidates_first"] + s["folds"][2]["candidates_k31"], 5000)
+                        self.assertEqual(x["screened"], 4000)
+                        x["screened"], x["passed_first"] = x["screened"] - 1, x["passed_first"] - 1
+                        changed.append(r)
+
+                rows, docs, files, releases = common.full_run(arms=common.ALL_ARMS, change_screen=change_screen)
+                self.assertTrue(changed)
+                rc, _, checks, _, _ = run(rows, docs, files, releases)
+                self.assertEqual(rc, 1)
+                self.assertEqual(failed(checks), [SCREEN_INSIDE])
+
     def test_a_screen_count_of_other_folds_or_another_run_fails(self):
         for what in ("fold", "train", "seed", "block"):
             with self.subTest(what=what):
