@@ -22,7 +22,10 @@ struct Cli {
     command: Command,
 }
 
+// Learn holds every experiment's flags, blocks C3's, C4's and C5's among them, and
+// the enum is parsed once per run: boxing that variant would buy nothing.
 #[derive(Subcommand)]
+#[allow(clippy::large_enum_variant)]
 enum Command {
     /// Download records and assemblies from BV-BRC.
     Fetch {
