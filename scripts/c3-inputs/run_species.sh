@@ -26,7 +26,8 @@
 # aerogenes, 93 genomes, and on Escherichia coli, 2,000: docs/input-arms.md);
 # bcalm2, the outside program, whose unitigs GRM reads; or check, both, with
 # GRM's graph used and the two compared, the equality counts written in the
-# build's record.
+# build's record, and any unitig or 31-mer in one build only stopping the
+# species.
 # SEEDS must hold 42, the release's seed: the default's seed-42 reports are
 # checked against the release's before any arm runs. KIT holds these files,
 # checked against the sha256 pinned here before anything else runs:
@@ -76,8 +77,9 @@
 # removes what it no longer needs (the proteins, bcalm2's unitigs). Every
 # start holds each built matrix to its recorded sha256 again before any fit.
 # A build the kernel kills for want of memory fails its step as any failure
-# does: OUT/FAILED names it, nothing after it runs, and a restart on a
-# machine with more memory runs that step again and skips the finished ones.
+# does: OUT/FAILED names it, nothing after it runs, and a restart with a
+# smaller JOBS (fewer threads, so fewer genomes and buckets held at once; 32 GB
+# is the largest box) runs that step again and skips the finished ones.
 #
 # Fits, per seed of SEEDS: the default, grm learn --seed s --exp-pick
 # results/picks/k31, then each arm, grm learn --seed s --exp-inputs ARM,
@@ -195,7 +197,7 @@ step() {  # step <name> <function>: once, timed, in a shell that stops at the fi
     bash -euo pipefail -c "$(declare -f say pinned master keep_build "$2"); $2" < /dev/null > "$OUT/logs/$1.log" 2>&1 \
     || { scrub "$OUT/logs/$1.log"; tail -n 30 "$OUT/logs/$1.log"
          ! grep -q 'signal 9' "$OUT/logs/$1.time" \
-           || say "$1: killed by signal 9, as the kernel kills a program when memory runs out; restart on a machine with more memory"
+           || say "$1: killed by signal 9, as the kernel kills a program when memory runs out; restart with a smaller JOBS, which holds fewer genomes and buckets at once"
          false; }
   scrub "$OUT/logs/$1.log"
   touch "$OUT/flags/$1.done"
@@ -438,6 +440,16 @@ inputs_unitigs() {
              --outside-unitigs "$W/bcalm/graph.unitigs.fa" --out "$INPUTS/unitigs" ;;
   esac
   keep_build unitigs
+  # Check mode: by ruling 1 GRM's graph stands only while its unitigs equal
+  # bcalm2's as a set, so any unitig or 31-mer in one build only stops the
+  # species here; it then runs again in a fresh OUT with GRAPH bcalm2.
+  if [ "$GRAPH" = check ]; then
+    python3 -I -c 'import json, sys
+e = json.load(open(sys.argv[1]))["equality"]
+print("graph check: " + ", ".join(f"{k} {v}" for k, v in sorted(e.items())))
+sys.exit(1 if any(v for k, v in e.items() if k.endswith("_only")) else 0)' "$INPUTS/unitigs/build.json" \
+      || { say "GRM's unitigs differ from bcalm2's as a set: by ruling 1 the species runs again in a fresh OUT with GRAPH bcalm2"; false; }
+  fi
   rm -rf "$W/bcalm"
 }
 if has_arm k31-aa || { has_arm unitigs && [ "$GRAPH" != grm ]; }; then step tools tools; fi
