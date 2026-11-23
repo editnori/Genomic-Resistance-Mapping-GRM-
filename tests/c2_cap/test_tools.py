@@ -189,6 +189,45 @@ class Runner(unittest.TestCase):
         study = t[t.index('fit "study-cap-2000-$d"'):t.index("STEP=timing")]
         self.assertNotRegex(study, r"&\s*$|& *\n")
 
+    def memory_rule(self, mem_kb, peaks_kb, at_once, last=None, killed=False):
+        """(LIMIT, N) from the runner's own at_once() and start block, run in bash on a SYNTHETIC meminfo,
+        SYNTHETIC fit time records, the last start's at-once.txt and its memory-killed flag."""
+        t = self.text
+        start = t.index("at_once() {")
+        fn = t[start:t.index("\n}\n", start) + 3].replace("/proc/meminfo", '"$MEMINFO"')
+        block = t[t.index("  LIMIT=$AT_ONCE\n"):t.index('  echo "$LIMIT" > "$OUT/results/at-once.txt"\n')]
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp)
+            for d in ("logs", "results", "flags"):
+                (out / d).mkdir()
+            (out / "meminfo").write_text(f"MemTotal:       {mem_kb} kB\nMemFree:        1 kB\n", encoding="utf-8")
+            for i, kb in enumerate(peaks_kb):
+                (out / "logs" / f"fit-x{i}.time").write_text(
+                    f"fit-x{i} 41.20 s wall, {kb} KB peak, 300.10 s user, 2.00 s sys\n", encoding="utf-8")
+            if last is not None:
+                (out / "results" / "at-once.txt").write_text(f"{last}\n", encoding="utf-8")
+            if killed:
+                (out / "flags" / "memory-killed").touch()
+            script = (f'set -e\nOUT={tmp}\nMEMINFO={tmp}/meminfo\nAT_ONCE={at_once}\nsay() {{ :; }}\n{fn}{block}'
+                      'echo "$LIMIT $(at_once)"\n')
+            got = subprocess.run(["bash", "-c", script], capture_output=True, text=True, check=True).stdout.split()
+            self.assertFalse((out / "flags" / "memory-killed").exists())
+        return int(got[0]), int(got[1])
+
+    @unittest.skipUnless(shutil.which("bash"), "no bash")
+    def test_the_memory_rule_reads_the_largest_peak_keeps_4_gib_and_halves_the_n_in_force_after_a_kill(self):
+        # 32 GiB less 4 GiB over the largest peak, 9,000,000 KB: 3 at once, under AT_ONCE 4.
+        self.assertEqual(self.memory_rule(33554432, [3000000, 9000000, 5000000], 4), (4, 3))
+        # 8 GiB less 4 GiB over 2,000,000 KB: 2, where the whole 8 GiB would give 4.
+        self.assertEqual(self.memory_rule(8388608, [2000000], 4), (4, 2))
+        # No fit has run: 1.
+        self.assertEqual(self.memory_rule(33554432, [], 4), (4, 1))
+        # The last start ran 3 at once and a fit was killed for memory: this start runs at most 1 (3 / 2).
+        self.assertEqual(self.memory_rule(33554432, [3000000], 4, last=3, killed=True), (1, 1))
+        # Killed at 4 at once: at most 2; a restart with no kill keeps the N in force, 2.
+        self.assertEqual(self.memory_rule(33554432, [3000000], 4, last=4, killed=True), (2, 2))
+        self.assertEqual(self.memory_rule(33554432, [3000000], 4, last=2), (2, 2))
+
     def test_a_none_added_arm_is_not_fitted_and_its_check_reads_the_cohort_count(self):
         t = self.text
         self.assertLess(t.index('if none_added "$arm" "$d"; then'), t.index('--arm "$arm" --blocks K'))
