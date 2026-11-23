@@ -412,7 +412,7 @@ The refit of the release's rule ended on its 23 species and 238 datasets at 20:3
 | Question | Taken | Other | Ruled |
 |---|---|---|---|
 | 1. `POINT_DISRUPT` rows | gene, as the brief words it, with those genomes counted beside each stratum | point | changed: point, with those genomes counted beside each stratum and, in point only and both, the genomes whose point rows are `POINT_DISRUPT` alone; the same in M2 and the time-split link |
-| 2. "Under 5" | covers zero | show 0 | changed: 0 is written 0, 1 to 4 "under 5" |
+| 2. "Under 5" | covers zero | show 0 | changed: 0 is written 0, 1 to 4 "under 5"; withdrawn at 05:30Z by question 12 |
 | 3. Species interval | none under 6 species | an interval at any count | as taken |
 | 4. BioProject vote | 5 or more genomes in the period; the rest enter the share per genome only | every BioProject | as taken |
 | 5. Flagged BioProject | resistant share over the datasets whose rule names the class | every dataset | as taken |
@@ -422,13 +422,15 @@ The refit of the release's rule ended on its 23 species and 238 datasets at 20:3
 | 9. M4 names | no variant name in any output until ruled | the catalogue's variant names | as taken |
 | 10. `POINT_DISRUPT` family | the gene_family before the underscore, if the catalogue lists it with that subtype | out of the family mix | closed by question 1: a `POINT_DISRUPT` row enters no family mix, which is over Subtype `AMR` rows alone |
 | 11. Log loss in M1 | recall alone, as the brief fixes M1 | the log loss of each stratum's resistant genomes beside recall | as taken |
+| 12. A count of 1 to 4 written "under 5" | as ruled on question 2 | the count as it is | changed: every count as it is, 0 to 4 included, and "under 5" dropped; a recall over 10 or more resistant genomes, an M2 share only in a cell whose BioProject vote passes, M4's shares over 5 or more; a family or gene named only where 5 or more genomes carry it, the rest in one row |
+| 13. The flagged guard's years | a BioProject over its genomes in every year | over the cell's periods | as taken: the flag describes the study, whose design does not change by period |
 
-An eleventh came while the text was written. The project's wording rules put recall beside log loss, and M1 as fixed gives recall alone.
+An eleventh came while the text was written. The project's wording rules put recall beside log loss, and M1 as fixed gives recall alone. The review raised two more. A count written "under 5" could be read back from the cells beside it, such as the all-genomes row less the other strata. Its recount read the flag over the cell's periods, where the script reads every year.
 
-**Rulings.** The lead ruled on the eleven questions at 04:13Z on 23 Nov 2026, before any result was read. The plan file stays unchanged; the changes are dated beside the review's report and carried into the scripts, their tests and `docs/mechanism-split.md`.
+**Rulings.** The lead ruled on the eleven questions at 04:13Z on 23 Nov 2026, and on questions 12 and 13 at 05:30Z, before any result was read. The plan file stays unchanged; the changes are dated beside the review's report and carried into the scripts, their tests and `docs/mechanism-split.md`. The lineage guard's count of differing pairs counts each pair of genomes once, as the plan words it; the first script counted a pair once per pair of reports it differed in.
 
-**Checks.** 116 SYNTHETIC tests in `tests/mechanism` (18 on M4). The ten planted faults and the review's 28 each fail a test; 14 of the review's passed every test before its patches. The dry run on Klebsiella aerogenes (93 genomes, 3 datasets) ran end to end in 2.5 s with 30.6 MB at peak; the hard check passed on 3 of 3 datasets, 36 of 36 rows, and its scan found no genome id. Run again after the patches, the hard check passed on the same rows and the scan, which now also reads each table's counts, found no hit.
+**Checks.** 121 SYNTHETIC tests in `tests/mechanism` (18 on M4). The ten planted faults and the review's 28 each fail a test; 14 of the review's passed every test before its patches. Two of the 28 no longer apply under the rulings of 05:30Z, and the review's nine faults on the rulings' rules each fail a test. The dry run on Klebsiella aerogenes (93 genomes, 3 datasets) ran end to end in 2.5 s with 30.6 MB at peak; the hard check passed on 3 of 3 datasets, 36 of 36 rows, and its scan found no genome id. Run again after the patches, the hard check passed on the same rows and the scan, which now also reads each table's counts, found no hit.
 
 **Cost.** Where the tables are given, about 565 s of compute for the 21 species, from the dry run's steps and a timing on 2,000 SYNTHETIC genomes. Where the program must run again, about 265 CPU hours on 21,625 genomes, from the refit's own run of the program on the same 93.
 
-**Written.** This entry was written at 03:48Z on 23 Nov 2026, after the dry run, and M4's script and question 11 were added at 04:06Z. The rulings of 04:13Z were carried in with the review's patches from 04:27Z to 04:49Z, and these checks at 05:11Z. No result of any block had been read.
+**Written.** This entry was written at 03:48Z on 23 Nov 2026, after the dry run, and M4's script and question 11 were added at 04:06Z. The rulings of 04:13Z were carried in with the review's patches from 04:27Z to 04:49Z, and these checks at 05:11Z. The rulings of 05:30Z were carried in from 05:38Z to 05:47Z. No result of any block had been read.
