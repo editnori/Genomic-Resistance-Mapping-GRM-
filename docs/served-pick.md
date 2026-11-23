@@ -90,7 +90,7 @@ Each step's log is copied with every genome id of the species written as `[genom
 
 ## Tests and planted faults
 
-`learn::inner_pick` holds 10 SYNTHETIC tests on a fixture of 150 genomes in 30 lineages, and `src/main.rs` one more on the flags. `tests/c9_pick` holds 40 SYNTHETIC tests of the scorer, the lists and the expected results. `scripts/c9-pick/planted_faults.py` plants each fault below in a copy of the tree and runs the test meant to catch it, which must fail.
+`learn::inner_pick` holds 10 SYNTHETIC tests on a fixture of 150 genomes in 30 lineages, and `src/main.rs` one more on the flags. `tests/c9_pick` holds 74 tests: 40 SYNTHETIC tests of the scorer, the lists and the expected results, 20 SYNTHETIC tests of the result page's table script (`scripts/c9-pick/page_tables.py`), and 14 tests of `docs/served-pick-result.md` against `reference/served-pick/`. `scripts/c9-pick/planted_faults.py` plants each fault below in a copy of the tree and runs the test meant to catch it, which must fail.
 
 | Fault | Caught by |
 |---|---|
@@ -100,6 +100,13 @@ Each step's log is copied with every genome id of the species written as `[genom
 | 4. A tie sent the wrong way: in `grm` (4a) or in the scorer's re-pick (4b) | `a_tie_goes_where_the_rule_says_and_is_listed`; `Served.test_a_tie_is_picked_again_by_the_scorers_rule` |
 | 5. The default pick read from the lineage split | `the_default_pick_reads_the_random_split_as_the_release_does` |
 | 6. The picked learner scored on its inner folds in place of the outer test fold | `Served.test_the_served_figure_is_each_folds_pick_on_its_outer_test_fold` |
+| 7. A twin row read as the inner pick's | `Tables.test_the_inner_figure_is_the_inner_picks_and_the_twin_stands_apart` |
+| 8. A beside answer read as the read one | `Tables.test_the_read_answer_is_the_reading_and_the_beside_answers_stand_apart` |
+| 8b. A read folder scored under a beside answer's options passed | `Gates.test_an_answer_scored_under_other_options_is_refused` |
+| 9. A species dropped | `Gates.test_a_species_missing_from_the_reading_is_refused` |
+| 10. A dataset of M counted | `Gates.test_a_dataset_of_m_is_refused` |
+| 11. A study row counted on the lineage split | `Tables.test_a_study_row_stays_on_the_study_split` |
+| 12. A missing draw read as zero | `Tables.test_a_draw_not_scored_leaves_its_dataset_unscored_not_zero` |
 
 ## What it does not do
 
