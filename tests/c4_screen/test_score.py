@@ -282,6 +282,18 @@ class Count(unittest.TestCase):
         got = {(r["arm"], r["reading"], r["condition"]): r for r in score.conditions(counted)}
         self.assertEqual(got[("floor-3", "stricter, 800 genomes or more", "1")]["learners"], 5)
 
+    def test_a_dataset_of_exactly_800_genomes_is_in_the_floor_arms_set_and_one_of_799_is_not(self):
+        # SYNTHETIC: datasets alternate between 800 and 799 genomes. max(3, 800 / 200) is 4, so the floor arm
+        # can move a dataset of 800; at 799 the default's floor is 3 already. The set holds the 800s alone.
+        edge = lambda i: 800 if i % 2 == 0 else 799
+        self.assertEqual([score.floor_moves(g) for g in (799, 800, "800")], [False, True, True])
+        rows = count_rows(genomes=edge, datasets=10)
+        self.assertEqual(sorted({r["dataset"] for r in score.moved_rows(rows)}),
+                         sorted({r["dataset"] for r in rows if r["genomes"] == 800}))
+        floor = [r for r in score.count(rows) if r["pair"] == "floor-3-k31" and r["split"] == "lineage"
+                 and r["measure"] == score.PRIMARY]
+        self.assertEqual({(r["set"], r["datasets"]) for r in floor}, {("800-or-more", 5)})
+
     def test_the_twin_is_read_on_each_arms_set(self):
         # SYNTHETIC: the twin moves on the datasets of 800 genomes or more alone. It voids condition 3 for the
         # floor arm, read over those datasets, and not for the screen arms, read over every dataset.
