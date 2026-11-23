@@ -82,6 +82,7 @@ CHOICE_NAME = re.compile(r"(?P<dataset>[a-z0-9_]+__[a-z0-9_]+)\.(?P<scheme>linea
                          r"\.f(?P<fold>\d+)\.choices\.json")
 SYNTHETIC_LOSS = (0.0126, 0.0088, 0.0163)
 EQUAL_BY_CONSTRUCTION = "equal by construction: the cutoff arm moves no score"
+TWIN_NOTE = "the twin: read for condition 3 alone, never as an arm"
 GATES = [
     (1, "files", "the reading holds reading.txt, count/ with score.py --count's four tables, and score/; no score.log "
                  "is in it; the run's checks.txt says every check passed"),
@@ -623,12 +624,13 @@ def by_construction(r):
 
 def page_count(counts):
     """count.tsv's rows, the count that decides, each marked: in the Holm family or not, conditions 1 and 2 read on
-    each family row, and the cutoff arm's log loss rows equal by construction, deciding nothing."""
+    each family row, the cutoff arm's log loss rows equal by construction, deciding nothing, and the twin's rows
+    read for condition 3 alone."""
     out = []
     for r in counts["count.tsv"]:
         equal = by_construction(r)
         row = {"decides": int(not equal), **r, "family": int(r["holm_p"] != ""), "meets_1": "", "meets_2": "",
-               "note": EQUAL_BY_CONSTRUCTION if equal else ""}
+               "note": EQUAL_BY_CONSTRUCTION if equal else TWIN_NOTE if arm_of(r["pair"]) == TWIN else ""}
         if row["family"]:
             c1, c2 = meets(r)
             row["meets_1"], row["meets_2"] = int(c1), int(c2)

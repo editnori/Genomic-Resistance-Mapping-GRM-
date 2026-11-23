@@ -255,6 +255,9 @@ class Tables(Case):
         self.assertEqual({(r["split"], r["measure"]) for r in family}, {("lineage", "balanced_accuracy")})
         self.assertEqual({r["pair"] for r in family}, {"search-default", "cutoff-default", "twin-default"})
         self.assertFalse([r for r in rows if r["split"] == "study" and r["pair"] == "twin-default"])
+        twin = [r for r in rows if r["pair"] == "twin-default"]
+        self.assertEqual(len(twin), 30)
+        self.assertTrue(all(r["note"] == page.TWIN_NOTE for r in twin))
 
     def test_the_plain_best_and_the_count_without_constant_models_decide_nothing(self):
         tables = self.written(constant=True)
