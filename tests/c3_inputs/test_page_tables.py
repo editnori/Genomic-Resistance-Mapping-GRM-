@@ -482,6 +482,46 @@ class TieAndMargin(unittest.TestCase):
         self.assertEqual(page.tally([0.02, -0.021], "log_loss"), (1, 0, 1))
 
 
+class ScoreConditions(Built):
+    """score.py's conditions: condition 5 with no learner carrying, and conditions.tsv read off count.tsv (SYNTHETIC)."""
+
+    def datasets(self, reading):
+        return [reading / "score" / slug / "datasets.tsv" for slug in R.SPECIES]
+
+    def test_condition_5_is_not_met_where_no_learner_carries(self):
+        rows = [r for p in self.datasets(self.reading) for r in page.load(p)]
+        counted = score.count(rows)
+        for r in counted:
+            if (r["split"], r["pair"], r["measure"]) == ("lineage", "unitigs-k31", page.PRIMARY):
+                r["interval_lo"] = -0.01
+        five = next(r for r in score.conditions(counted)
+                    if (r["arm"], r["reading"], r["condition"]) == ("unitigs", page.DECIDING, "5"))
+        self.assertEqual((int(five["met"]), int(five["learners"])), (0, 0))
+
+    def test_conditions_tsv_is_read_off_the_count_that_decides(self):
+        reading = self.copy()
+        paths = self.datasets(reading)
+        study = sorted({r["dataset"] for p in paths for r in page.load(p)
+                        if (r["arm"], r["split"]) == ("unitigs", "study")})
+        for p in paths:
+            rows = page.load(p)
+            for r in rows:
+                if (r["arm"], r["split"]) == ("unitigs", "study") and r["dataset"] in study[:-1]:
+                    r["constant_draws"], r[page.PRIMARY] = "1", "0.0"
+            score.write_tsv(p, rows, score.DATASET_COLUMNS)
+        rows = [r for p in paths for r in page.load(p)]
+
+        def key(conditions):
+            return [(r["arm"], r["reading"], r["condition"], str(r["met"]), str(r["learners"])) for r in conditions]
+
+        kept = key(score.conditions(score.count(rows)))
+        self.assertNotEqual(kept, key(score.conditions(score.count(rows, keep_constant=False))))
+        out = reading.parent / "count-again"
+        with contextlib.redirect_stdout(io.StringIO()):
+            score.main(["--count", str(out)] + [str(p) for p in paths])
+        self.assertEqual(key(page.load(out / "conditions.tsv")), kept)
+
+
 class Withdrawn(unittest.TestCase):
     def test_a_withdrawn_arm_has_no_rows_no_build_and_its_five_pairs(self):
         with tempfile.TemporaryDirectory() as tmp:
