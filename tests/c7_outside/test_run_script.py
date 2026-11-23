@@ -4,10 +4,12 @@ No genome, call or result is read: the expect lists, species files, logs and the
 written by the test.
 """
 
+import hashlib
 import json
 import re
 import stat
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -108,6 +110,25 @@ class Fits(unittest.TestCase):
             self.assertIn("the elastic net 16 at once", go(8)[0])
             self.assertIn("the elastic net 3 at once", go(1 << 43, "3")[0])
 
+    def test_the_elastic_net_can_be_left_out(self):
+        m = re.search(r"^STEP=fits\n.*?^done\n", SCRIPT, re.S | re.M)
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            rows = expect.rows(C.SPECIES, [C.DATASET], [C.DATASET], [42, 43, 44], [45], [42, 43, 44],
+                               ("xgboost", "lightgbm"))
+            (tmp / "expect.tsv").write_text("\t".join(expect.COLUMNS) + "\n"
+                                            + "".join("\t".join(map(str, r)) + "\n" for r in rows))
+            env = {"PATH": "/usr/bin:/bin", "OUT": str(tmp), "W": str(tmp), "UNITIGS": str(tmp / "none"), "JOBS": "4",
+                   "ENET": "leave-out"}
+            cmd = 'say() { echo "$*"; }\nfit() { echo "$1" >> "$OUT/calls"; }\nexport -f fit\nENET_JOBS=\n' + m.group(0)
+            p = subprocess.run(["bash", "-c", cmd], env=env, capture_output=True, text=True, check=True)
+            calls = (tmp / "calls").read_text().split()
+        self.assertIn("the elastic net left out", p.stdout)
+        self.assertEqual(sorted(set(calls)), ["lightgbm", "xgboost"])
+        self.assertEqual(len(calls), 2 * 4)
+        self.assertIn('  leave-out) ARMS=xgboost,lightgbm ;;', SCRIPT)
+        self.assertIn('"$SEEDS" "$TWIN" "$ARM_SEEDS" \\\n  "$ARMS" > "$OUT/expect.tsv.part"', SCRIPT)
+
     def test_a_fits_log_comes_back_with_each_genome_id_masked(self):
         with tempfile.TemporaryDirectory() as tmp:
             tmp = Path(tmp)
@@ -123,14 +144,163 @@ class Fits(unittest.TestCase):
             self.assertIn("1234.5 ", (tmp / "work" / "raw-logs" / "a.log").read_text())
 
 
-class Rules(unittest.TestCase):
-    def test_the_arms_run_at_seed_42_alone_until_grm_export_takes_a_seed(self):
-        self.assertIn('[ "$ARM_SEEDS" = 42 ] || { say "grm export writes seed 42\'s plans only (question 1)', SCRIPT)
+class Stage1(unittest.TestCase):
+    """c3_stage on SYNTHETIC C3 run folders: read and checked on the C3 machine, run only on a new box."""
 
-    def test_stage_one_is_c3s_run_with_the_unitig_arm_and_grms_graph(self):
-        self.assertRegex(SCRIPT, r'bash "\$REPO/scripts/c3-inputs/run_species.sh" "\$KIT" "\$SP" "\$DATASETS" "\$C3" '
-                                 r'"\$JOBS" "\$SEEDS" "\$TWIN" unitigs "" grm')
-        self.assertIn('if [ -e "$C3/DONE" ]; then', SCRIPT)
+    COMMIT = "8bfd4ca8a64678c69431a6bc22b869af6d5cb81b"
+
+    def c3_run(self, top, done=True, commit=COMMIT, score_changed=False, other_changed=False):
+        run = top / "c3-run"
+        (run / "results").mkdir(parents=True)
+        (run / "score").mkdir()
+        (run / "results" / "a.json").write_text("{}")
+        (run / "score" / "count.tsv").write_text("sealed")
+        grm = top / "grm"
+        grm.write_text("binary")
+        sha = lambda p: hashlib.sha256(p.read_bytes()).hexdigest()  # noqa: E731
+        (run / "binary.txt").write_text(f"commit {commit}\ngrm {sha(grm)}\ncode {'0' * 64}\n")
+        (run / "SHA256SUMS").write_text(f"{sha(run / 'results' / 'a.json')}  results/a.json\n"
+                                        f"{sha(run / 'score' / 'count.tsv')}  score/count.tsv\n"
+                                        f"{sha(run / 'binary.txt')}  binary.txt\n")
+        if done:
+            (run / "DONE").write_text(f"DONE {C.SPECIES} 2026-11-23T00:00:00Z binary x code y results 1 SHA256SUMS "
+                                      f"{sha(run / 'SHA256SUMS')}\n")
+        if score_changed:
+            (run / "score" / "count.tsv").write_text("changed")
+        if other_changed:
+            (run / "results" / "a.json").write_text("[]")
+        return run, grm
+
+    def go(self, top, run, grm, link=True):
+        out = top / "out"
+        out.mkdir()
+        c3 = out / "c3"
+        if link:
+            c3.symlink_to(run)
+        else:
+            run.rename(c3)
+        calls = top / "calls"
+        repo = top / "repo"
+        (repo / "scripts" / "c3-inputs").mkdir(parents=True)
+        (repo / "scripts" / "c3-inputs" / "run_species.sh").write_text(f'echo stage1 >> "{calls}"\nexit 1\n')
+        env = {"PATH": "/usr/bin:/bin", "C3": str(c3), "GRM": str(grm), "REPO": str(repo), "C3_COMMIT": self.COMMIT,
+               "SP": C.SPECIES}
+        cmd = 'say() { echo "$*"; }\n' + function("c3_stage") + "c3_stage"
+        p = subprocess.run(["bash", "-e", "-c", cmd], env=env, capture_output=True, text=True)
+        return p.returncode, p.stdout, calls.exists()
+
+    def test_on_the_c3_machine_a_done_run_at_8bfd4ca_is_read_and_stage_one_never_runs(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            top = Path(tmp)
+            rc, out, ran = self.go(top, *self.c3_run(top, score_changed=True))
+            self.assertEqual((rc, ran), (0, False), out)
+            self.assertIn("read and not run", out)
+            self.assertIn("2 files outside score/ held to SHA256SUMS", out)
+
+    def test_on_the_c3_machine_a_run_with_no_done_is_refused_and_not_run(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            top = Path(tmp)
+            rc, out, ran = self.go(top, *self.c3_run(top, done=False))
+            self.assertEqual((rc != 0, ran), (True, False), out)
+            self.assertIn("has no DONE", out)
+
+    def test_a_c3_run_of_another_commit_or_a_changed_file_is_refused(self):
+        for kw, msg in (({"commit": "0" * 40}, "was built at"), ({"other_changed": True}, "outside score/ is not")):
+            with tempfile.TemporaryDirectory() as tmp:
+                top = Path(tmp)
+                rc, out, ran = self.go(top, *self.c3_run(top, **kw))
+                self.assertEqual((rc != 0, ran), (True, False), out)
+                self.assertIn(msg, out)
+
+    def test_on_a_new_box_stage_one_is_c3s_run_with_the_unitig_arm_and_grms_graph(self):
+        self.assertRegex(function("c3_stage"), r'bash "\$REPO/scripts/c3-inputs/run_species.sh" "\$KIT" "\$SP" '
+                                               r'"\$DATASETS" "\$C3" "\$JOBS" "\$SEEDS" "\$TWIN" unitigs "" grm')
+        with tempfile.TemporaryDirectory() as tmp:
+            top = Path(tmp)
+            rc, out, ran = self.go(top, *self.c3_run(top, done=False), link=False)
+            self.assertEqual((rc != 0, ran), (True, True), out)
+
+
+class PlansCheck(unittest.TestCase):
+    """plans.py on SYNTHETIC exports, default results and release reports."""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.top = Path(self._tmp.name)
+        self.rows = expect.rows(C.SPECIES, [C.DATASET], [], [42, 43], [45], [42, 43])
+        self.expect = self.top / "expect.tsv"
+        self.expect.write_text("\t".join(expect.COLUMNS) + "\n" + "".join("\t".join(map(str, r)) + "\n" for r in self.rows))
+        for s in (42, 43):
+            C.write_export(self.top / "work" / f"export-s{s}", seed=s)
+            self.default(s)
+        rel = self.top / "release" / "datasets"
+        rel.mkdir(parents=True)
+        (rel / f"{C.DATASET}.json").write_text(json.dumps({"input_fingerprint": "synthetic-" + C.DATASET}))
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def default(self, s, change=None):
+        """The default's SYNTHETIC result at seed s, on the export's lineage folds by class, counted here."""
+        meta = json.loads((self.top / "work" / f"export-s{s}" / C.DATASET / "dataset.json").read_text())
+        plan = next(x["plan"] for x in meta["splits"] if x["plan"]["scheme"] == "lineage")
+        y = meta["resistant"]
+        folds = []
+        for f in range(plan["k"]):
+            test = [o == f for o in plan["outer"]]
+            folds.append({"fold": f, "train": test.count(False), "train_resistant": sum(r and not t for r, t in zip(y, test)),
+                          "test": test.count(True), "test_resistant": sum(r and t for r, t in zip(y, test))})
+        doc = {"folds": folds, "tested": len(y), "tested_resistant": sum(y), "unavailable_reason": None}
+        if change:
+            change(doc)
+        path = self.top / expect.picked("k31", C.DATASET, "lineage", s)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(doc))
+
+    def go(self):
+        p = subprocess.run([sys.executable, "-I", "-B", str(C.KIT / "plans.py"), str(self.expect), str(self.top),
+                            str(self.top / "release"), str(self.top / "work" / "export-s{seed}")],
+                           capture_output=True, text=True)
+        return p.returncode, p.stdout + p.stderr
+
+    def test_exports_on_the_defaults_folds_pass(self):
+        rc, out = self.go()
+        self.assertEqual(rc, 0, out)
+        self.assertIn("plans: 5 of 5 checks pass, 2 dataset seeds", out)
+
+    def test_a_plan_that_differs_from_the_defaults_by_class_is_refused(self):
+        def change(doc):
+            doc["folds"][0]["test_resistant"] += 1
+            doc["folds"][0]["train_resistant"] -= 1
+        self.default(43, change)
+        rc, out = self.go()
+        self.assertEqual(rc, 1, out)
+        self.assertIn(f"failed: {C.DATASET} seed 43: the plan's folds by class are the default's", out)
+
+    def test_an_export_of_another_seed_is_refused(self):
+        import shutil
+        shutil.rmtree(self.top / "work" / "export-s43")
+        shutil.copytree(self.top / "work" / "export-s42", self.top / "work" / "export-s43")
+        rc, out = self.go()
+        self.assertEqual(rc, 1, out)
+        self.assertIn("seed 42, not 43", out)
+
+    def test_a_seed_42_fingerprint_that_is_not_the_releases_is_refused(self):
+        (self.top / "release" / "datasets" / f"{C.DATASET}.json").write_text(json.dumps({"input_fingerprint": "other"}))
+        rc, out = self.go()
+        self.assertEqual(rc, 1, out)
+        self.assertIn("the input fingerprint is the release report's", out)
+
+
+class Rules(unittest.TestCase):
+    def test_the_arms_run_at_the_defaults_seeds_and_the_export_at_each(self):
+        self.assertIn("ARM_SEEDS=${8:-$SEEDS}", SCRIPT)
+        self.assertIn('export --species "$SP" --only "$DATASETS" --seed "$s"', function("export_step"))
+        self.assertIn('"$EXPORT_GRM" --data', function("export_step"))
+
+    def test_the_plans_are_checked_before_any_fit(self):
+        self.assertLess(SCRIPT.index('"$HERE/plans.py" "$OUT/expect.tsv" "$OUT" "$R" "$W/export-s{seed}"'),
+                        SCRIPT.index("STEP=fits"))
 
     def test_the_libraries_are_installed_by_hash_and_each_fit_has_one_thread(self):
         self.assertIn('pip" install --quiet --no-deps --require-hashes -r "$HERE/requirements.txt"', SCRIPT)

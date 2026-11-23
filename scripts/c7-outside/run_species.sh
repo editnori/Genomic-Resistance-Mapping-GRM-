@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# run_species.sh KIT SPECIES DATASETS OUT [JOBS] [SEEDS] [TWIN] [ARM_SEEDS] [ENET_JOBS]
+# run_species.sh KIT SPECIES DATASETS OUT [JOBS] [SEEDS] [TWIN] [ARM_SEEDS] [ENET_JOBS] [ENET]
 #
 # The outside-learner run of one species (plan block C7, docs/outside-learners.md)
-# on a fresh box with no agent attached: no prompt, one log, and a restart that
-# skips every finished step and every finished result. Run it from a clean
-# checkout of this branch:
+# with no agent attached: no prompt, one log, and a restart that skips every
+# finished step and every finished result. Run it from a clean checkout of
+# this branch:
 #
 #   setsid nohup bash scripts/c7-outside/run_species.sh KIT SPECIES DATASETS OUT 16 > /dev/null 2>&1 < /dev/null &
 #
@@ -12,33 +12,42 @@
 # (scripts/c7-outside/lists.tsv, first_run 1, so none is M). KIT is C3's kit
 # (scripts/c3-inputs/run_species.sh lists it; the unitig arm with GRAPH grm
 # needs no outside program). SEEDS (default 42,43,44) are the default's
-# draws, TWIN (default 45,46,47) the twin's, ARM_SEEDS (default 42) the
-# library arms': grm export writes seed 42's plans only, so until question 1
-# gives it a seed ARM_SEEDS must be 42. ENET_JOBS is how many elastic net fits
-# run at once (default: as many as three quarters of the box's memory holds,
-# from 1 to JOBS; see the fits step); the boosters run JOBS at once.
+# draws, TWIN (default 45,46,47) the twin's, ARM_SEEDS (default SEEDS) the
+# library arms' (the Rules fix three draws). ENET_JOBS is how many elastic net
+# fits run at once (default: as many as three quarters of the box's memory
+# holds, from 1 to JOBS; see the fits step); the boosters run JOBS at once.
+# ENET is run (the default) or leave-out: left out, no elastic net fit is
+# listed or run, and the count names the arm withdrawn (score.py --count
+# --withdrawn elasticnet).
 #
-# Stage 1 is C3's run as it is (question 12): scripts/c3-inputs/run_species.sh
-# KIT SPECIES DATASETS OUT/c3 JOBS SEEDS TWIN unitigs "" grm. It checks the
-# kit, builds grm from this checkout, builds the data root from BV-BRC, builds
-# the unitig matrix once with GRM's graph, fits the default (k31) and the twin
-# by grm learn --exp-pick at no inner fold, holds the default's seed-42
-# reports to the release's, fits the study default, fits C3's unitig arm
-# (which decides nothing here), scans its own outputs for a genome id and
-# writes OUT/c3/DONE. A restart skips it when OUT/c3/DONE exists, and
-# otherwise restarts it, which skips its own finished steps.
+# The default (k31) and the twin are a C3 run's. On the species' C3 machine
+# OUT/c3 is a link to that run's folder (the lead's ruling on question 11):
+# nothing of stage 1 runs again, and the run refuses unless that run ended
+# DONE, built at 8bfd4ca (binary.txt's commit), with its SHA256SUMS that
+# DONE names and every line of it outside score/ holding; nothing under its
+# score/ is opened. On a new box (OUT/c3 not a link) stage 1 is C3's run as
+# it is (question 12): scripts/c3-inputs/run_species.sh KIT SPECIES DATASETS
+# OUT/c3 JOBS SEEDS TWIN unitigs "" grm, which builds grm and the data root,
+# the unitig matrix with GRM's graph, the default and the twin by grm learn
+# --exp-pick at no inner fold, and writes OUT/c3/DONE. A restart skips it
+# when OUT/c3/DONE exists, and otherwise restarts it.
 #
 # Then, each once, in OUT: libraries (a venv of the box's python3 with the
 # wheels of requirements.txt, each held to its sha256 on pypi.org, and the
-# versions read back from the imports); export (grm export of the listed
-# datasets with stage 1's binary and data root, no network, into
-# work/export-s42, every listed dataset's folder present); expect.tsv
-# (expect.py, the study datasets those with a reviewed study plan in stage 1);
+# versions read back from the imports); build (grm from this checkout into
+# work/target for the export alone, since the C3 run's binary has no
+# --seed; export-binary.txt records it); export (grm export --seed s of the
+# listed datasets with the C3 run's data root, no network, into
+# work/export-s<s> for each seed of ARM_SEEDS, every listed dataset's folder
+# present); expect.tsv (expect.py, the study datasets those with a reviewed
+# study plan in stage 1); plans (plans.py: each export's lineage plan at seed
+# s equals the default's folds at seed s by class, and at seed 42 the
+# export's input fingerprint equals the release report's, or the run stops);
 # the fits, one outside.py fit per arm, dataset, split and seed whose result
 # is missing, JOBS at once, one thread each, timed by GNU time; score
 # (score.py, its output in score/score.log, kept out of logs/); the genome-id
 # scan (scan.py) of results/, score/ and logs/; SHA256SUMS and OUT/DONE:
-#   DONE <species> <time> grm <sha256> code <sha256> results <n> SHA256SUMS <sha256>
+#   DONE <species> <time> grm <sha256> code <sha256> export-grm <sha256> elasticnet <run|leave-out> results <n> SHA256SUMS <sha256>
 # A fit's log goes to work/raw-logs and logs/fits/ gets it back with each
 # genome id of the species written as [genome id]. Any failure writes
 # OUT/FAILED naming the step and exits 1; a fit that fails stops the run after
@@ -52,13 +61,16 @@
 # logs: these hold genome ids and stay on the box).
 set -Eeuo pipefail
 KIT=$(cd "${1:?kit folder}" && pwd); SP=${2:?species slug}; DATASETS=${3:?datasets}
-OUT=${4:?out folder}; JOBS=${5:-$(nproc)}; SEEDS=${6:-42,43,44}; TWIN=${7:-45,46,47}; ARM_SEEDS=${8:-42}; ENET_JOBS=${9:-}
+OUT=${4:?out folder}; JOBS=${5:-$(nproc)}; SEEDS=${6:-42,43,44}; TWIN=${7:-45,46,47}; ARM_SEEDS=${8:-$SEEDS}
+ENET_JOBS=${9:-}; ENET=${10:-run}
+# The commit every C3 run was built at; a C3 run read on its own machine must be of it.
+C3_COMMIT=8bfd4ca8a64678c69431a6bc22b869af6d5cb81b
 mkdir -p "$OUT"/logs/fits "$OUT"/flags "$OUT"/work "$OUT"/results/outside "$OUT"/score; OUT=$(cd "$OUT" && pwd)
 exec >> "$OUT/logs/run.log" 2>&1
 REPO=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 HERE=$REPO/scripts/c7-outside
 C3=$OUT/c3; W=$OUT/work; GRM=$C3/work/target/release/grm; ROOT=$C3/work/root; R=$C3/work/release/rev14-274-20261112
-PLANS=$C3/work/plans; VENV=$W/venv; PY=$W/venv/bin/python; ARMS="xgboost lightgbm elasticnet"
+PLANS=$C3/work/plans; VENV=$W/venv; PY=$W/venv/bin/python; EXPORT_GRM=$W/target/release/grm
 UNITIGS=$C3/work/inputs/unitigs/matrix
 exec 9> "$OUT/run.lock"
 flock -n 9 || { echo "$(date -u +%FT%TZ) another start runs on this OUT; this one ends"; exit 1; }
@@ -75,14 +87,18 @@ say "start $SP, $JOBS jobs, repo $(git -C "$REPO" rev-parse HEAD)"
 
 STEP=check
 [ -z "$(git -C "$REPO" status --porcelain)" ] || { say "the checkout has changes; the run must be its commit"; false; }
-for tool in python3 flock /usr/bin/time unshare sha256sum; do
+for tool in python3 flock /usr/bin/time unshare sha256sum cargo git; do
   command -v "$tool" > /dev/null || { say "$tool is not installed, which a later step needs"; false; }
 done
 python3 -I -c 'import ensurepip, venv' 2> /dev/null || { say "python3 cannot make a venv; install python3-venv"; false; }
 for list in "$SEEDS" "$TWIN" "$ARM_SEEDS"; do
   echo "$list" | grep -Eq '^[0-9]+(,[0-9]+)*$' || { say "SEEDS, TWIN and ARM_SEEDS are comma lists of seeds"; false; }
 done
-[ "$ARM_SEEDS" = 42 ] || { say "grm export writes seed 42's plans only (question 1): ARM_SEEDS must be 42"; false; }
+case "$ENET" in
+  run) ARMS=xgboost,lightgbm,elasticnet ;;
+  leave-out) ARMS=xgboost,lightgbm ;;
+  *) say "ENET is run or leave-out, not $ENET"; false ;;
+esac
 echo "$JOBS" | grep -Eq '^[1-9][0-9]*$' || { say "JOBS is a whole number from 1"; false; }
 [ -z "$ENET_JOBS" ] || echo "$ENET_JOBS" | grep -Eq '^[1-9][0-9]*$' || { say "ENET_JOBS is empty or a whole number from 1"; false; }
 python3 -I -c '
@@ -95,7 +111,8 @@ if bad or len(set(listed)) != len(listed):
     print(f"{len(bad)} listed datasets are not first-run datasets of the species, or one is listed twice: " + ",".join(bad))
     sys.exit(1)
 ' "$HERE/lists.tsv" "$DATASETS" "$SP" || { say "the list must hold first-run datasets of $SP, each once"; false; }
-printf 'species\t%s\ndatasets\t%s\nseeds\t%s\ntwin\t%s\narm_seeds\t%s\n' "$SP" "$DATASETS" "$SEEDS" "$TWIN" "$ARM_SEEDS" > "$OUT/lists.txt.part"
+printf 'species\t%s\ndatasets\t%s\nseeds\t%s\ntwin\t%s\narm_seeds\t%s\narms\t%s\n' "$SP" "$DATASETS" "$SEEDS" "$TWIN" \
+  "$ARM_SEEDS" "$ARMS" > "$OUT/lists.txt.part"
 if [ -s "$OUT/lists.txt" ] && ! cmp -s "$OUT/lists.txt" "$OUT/lists.txt.part"; then
   say "the dataset list or the seeds differ from the first start's; use a fresh OUT"; false
 fi
@@ -128,20 +145,37 @@ step() {  # step <name> <function>: once, timed, in a shell that stops at the fi
   touch "$OUT/flags/$1.done"
   say "$1: end, $(cat "$OUT/logs/$1.time")"
 }
-export KIT SP DATASETS OUT JOBS SEEDS TWIN ARM_SEEDS ENET_JOBS REPO HERE C3 W GRM ROOT R PLANS VENV PY ARMS UNITIGS
+export KIT SP DATASETS OUT JOBS SEEDS TWIN ARM_SEEDS ENET_JOBS ENET REPO HERE C3 W GRM EXPORT_GRM ROOT R PLANS VENV PY
+export ARMS UNITIGS C3_COMMIT
 
+# c3_stage: the C3 run C7 reads. On the C3 machine (OUT/c3 a link) it is read and checked, never run; on a new box
+# it is run when it has no DONE. Either way it must end DONE with its SHA256SUMS holding outside score/.
+c3_stage() {
+  if [ -L "$C3" ]; then
+    [ -e "$C3/DONE" ] || { say "c3: the C3 run at $(readlink "$C3") has no DONE; on its machine stage 1 never runs"; false; }
+    [ "$(sed -n 's/^commit //p' "$C3/binary.txt")" = "$C3_COMMIT" ] \
+      || { say "c3: the C3 run was built at $(sed -n 's/^commit //p' "$C3/binary.txt"), not $C3_COMMIT"; false; }
+    say "c3: the C3 run on this machine, read and not run: $(cat "$C3/DONE")"
+  elif [ -e "$C3/DONE" ]; then
+    say "c3: done before, skipped: $(cat "$C3/DONE")"
+  else
+    say "c3: start, scripts/c3-inputs/run_species.sh into $C3 (its log is $C3/logs/run.log)"
+    bash "$REPO/scripts/c3-inputs/run_species.sh" "$KIT" "$SP" "$DATASETS" "$C3" "$JOBS" "$SEEDS" "$TWIN" unitigs "" grm \
+      < /dev/null > /dev/null 2>&1 || { say "c3: stopped: $(cat "$C3/FAILED" 2> /dev/null || echo 'no FAILED file')"; false; }
+    [ -e "$C3/DONE" ] || { say "c3: ended with no DONE"; false; }
+    say "c3: end, $(cat "$C3/DONE")"
+  fi
+  [ "$(sed -n 's/.* SHA256SUMS \([0-9a-f]\{64\}\)$/\1/p' "$C3/DONE")" = "$(sha256sum "$C3/SHA256SUMS" | cut -c1-64)" ] \
+    || { say "c3: the C3 run's SHA256SUMS is not the one its DONE names"; false; }
+  # Lines of files under score/ are left out: C7 opens nothing there.
+  (cd "$C3" && grep -v '^[0-9a-f]\{64\}  score/' SHA256SUMS | sha256sum -c --quiet --strict -) \
+    || { say "c3: a file of the C3 run outside score/ is not the one its SHA256SUMS names"; false; }
+  [ "$(sed -n 's/^grm //p' "$C3/binary.txt")" = "$(sha256sum "$GRM" | cut -c1-64)" ] \
+    || { say "c3: the C3 run's binary changed since its build"; false; }
+  say "c3: checked, $(grep -vc '^[0-9a-f]\{64\}  score/' "$C3/SHA256SUMS") files outside score/ held to SHA256SUMS"
+}
 STEP=c3
-if [ -e "$C3/DONE" ]; then
-  say "c3: done before, skipped: $(cat "$C3/DONE")"
-else
-  say "c3: start, scripts/c3-inputs/run_species.sh into $C3 (its log is $C3/logs/run.log)"
-  bash "$REPO/scripts/c3-inputs/run_species.sh" "$KIT" "$SP" "$DATASETS" "$C3" "$JOBS" "$SEEDS" "$TWIN" unitigs "" grm \
-    < /dev/null > /dev/null 2>&1 || { say "c3: stopped: $(cat "$C3/FAILED" 2> /dev/null || echo 'no FAILED file')"; false; }
-  [ -e "$C3/DONE" ] || { say "c3: ended with no DONE"; false; }
-  say "c3: end, $(cat "$C3/DONE")"
-fi
-[ "$(sed -n 's/^grm //p' "$C3/binary.txt")" = "$(sha256sum "$GRM" | cut -c1-64)" ] \
-  || { say "stage 1's binary changed since its build"; false; }
+c3_stage
 
 libraries() {
   rm -rf "$VENV"
@@ -156,10 +190,20 @@ for m in (numpy, scipy, sklearn, xgboost, lightgbm):
 }
 step libraries libraries
 
+build() {
+  cd "$REPO" && CARGO_TARGET_DIR=$W/target cargo build --release --locked --bin grm
+  printf 'commit %s\ngrm %s\n' "$(git -C "$REPO" rev-parse HEAD)" "$(sha256sum "$EXPORT_GRM" | cut -c1-64)" \
+    | tee "$OUT/export-binary.txt"
+}
+step build build
+[ "$(sed -n 's/^grm //p' "$OUT/export-binary.txt")" = "$(sha256sum "$EXPORT_GRM" | cut -c1-64)" ] \
+  || { say "the export's binary changed since its build"; false; }
+
 export_step() {
   for s in $(echo "$ARM_SEEDS" | tr ',' ' '); do
     rm -rf "$W/export-s$s"
-    unshare -rn "$GRM" --data "$ROOT" export --species "$SP" --only "$DATASETS" --out "$W/export-s$s" --force
+    unshare -rn "$EXPORT_GRM" --data "$ROOT" export --species "$SP" --only "$DATASETS" --seed "$s" --out "$W/export-s$s" \
+      --force
     for d in $(echo "$DATASETS" | tr ',' ' '); do
       test -f "$W/export-s$s/$d/dataset.json" || { echo "the export has no $d"; exit 1; }
     done
@@ -170,9 +214,15 @@ step export export_step
 
 STEP=expect
 python3 -I -B "$HERE/expect.py" "$SP" "$DATASETS" "$(paste -sd, "$PLANS/study.txt")" "$SEEDS" "$TWIN" "$ARM_SEEDS" \
-  > "$OUT/expect.tsv.part"
+  "$ARMS" > "$OUT/expect.tsv.part"
 mv "$OUT/expect.tsv.part" "$OUT/expect.tsv"
 say "expect: $(($(wc -l < "$OUT/expect.tsv") - 1)) results, of them the library arms' $(grep -c 'results/outside/' "$OUT/expect.tsv")"
+
+STEP=plans
+"$PY" -I -B "$HERE/plans.py" "$OUT/expect.tsv" "$OUT" "$R" "$W/export-s{seed}" > "$OUT/logs/plans.log" 2>&1 \
+  || { scrub "$OUT/logs/plans.log"; tail -n 20 "$OUT/logs/plans.log"; say "plans: an export is not the C3 run's folds"; false; }
+scrub "$OUT/logs/plans.log"
+say "$(tail -n 1 "$OUT/logs/plans.log")"
 
 # fit <arm> <dataset> <scheme> <seed>: one fit, skipped when its report exists.
 fit() {
@@ -198,13 +248,16 @@ awk -F'\t' 'NR > 1 && $8 ~ /^results\/outside\// { print $3, $1, $5, $6 }' "$OUT
 # (docs/outside-learners.md). Unless ENET_JOBS is given, those fits run as many at once as three quarters of the
 # box's memory holds at 6 times patterns.bin each, from 1 to JOBS. The boosters read the export's screened rows
 # only and run JOBS at once, first.
-if [ -z "$ENET_JOBS" ]; then
+if [ "$ENET" = leave-out ]; then
+  ENET_JOBS=1
+elif [ -z "$ENET_JOBS" ]; then
   build_kb=$(( $(stat -c %s "$UNITIGS/patterns.bin") / 1024 )); mem_kb=$(awk '/^MemTotal/ { print $2 }' /proc/meminfo)
   ENET_JOBS=$(( mem_kb * 3 / 4 / (6 * build_kb + 1) ))
 fi
 [ "$ENET_JOBS" -ge 1 ] || ENET_JOBS=1
 [ "$ENET_JOBS" -le "$JOBS" ] || ENET_JOBS=$JOBS
-say "fits: start, the boosters $JOBS at once, the elastic net $ENET_JOBS at once"
+if [ "$ENET" = leave-out ]; then say "fits: start, the boosters $JOBS at once, the elastic net left out"
+else say "fits: start, the boosters $JOBS at once, the elastic net $ENET_JOBS at once"; fi
 for group in boosters elasticnet; do
   if [ "$group" = boosters ]; then n=$JOBS; pick='$1 != "elasticnet"'; else n=$ENET_JOBS; pick='$1 == "elasticnet"'; fi
   awk "$pick" "$W/fits.txt" | xargs -r -P "$n" -L 1 bash -c 'fit "$@"' fit \
@@ -235,7 +288,7 @@ STEP=done
 cd "$OUT"
 python3 -I -B "$HERE/scan.py" "$R/species/$SP.json" results score logs
 { find results score -type f \( -name '*.json' -o -name '*.tsv' \); echo libraries.txt; echo expect.tsv; echo lists.txt
-  echo logs/timing.tsv; } | LC_ALL=C sort | xargs sha256sum > SHA256SUMS
-line="DONE $SP $(date -u +%FT%TZ) grm $(sed -n 's/^grm //p' "$C3/binary.txt") code $(sed -n 's/^code //p' "$C3/binary.txt") results $(find results/outside -name '*.outside.json' | wc -l) SHA256SUMS $(sha256sum SHA256SUMS | cut -c1-64)"
+  echo export-binary.txt; echo logs/timing.tsv; } | LC_ALL=C sort | xargs sha256sum > SHA256SUMS
+line="DONE $SP $(date -u +%FT%TZ) grm $(sed -n 's/^grm //p' "$C3/binary.txt") code $(sed -n 's/^code //p' "$C3/binary.txt") export-grm $(sed -n 's/^grm //p' export-binary.txt) elasticnet $ENET results $(find results/outside -name '*.outside.json' | wc -l) SHA256SUMS $(sha256sum SHA256SUMS | cut -c1-64)"
 echo "$line" > DONE
 say "$line"
