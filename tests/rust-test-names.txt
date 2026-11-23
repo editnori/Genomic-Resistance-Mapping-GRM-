@@ -130,6 +130,7 @@ src/lib.rs analysis::tests::reports_of_another_draw_get_a_folder_outside_results
 src/lib.rs analysis::tests::reports_use_the_reported_cohort_and_record_its_counts_and_k
 src/lib.rs analysis::tests::rows_follow_matrix_columns_rather_than_genome_ids
 src/lib.rs analysis::tests::swapping_genomes_with_identical_columns_changes_the_matrix_digest
+src/lib.rs analysis::tests::the_c4_floor_arm_fixes_the_drawn_projections_floor_on_both_sides_of_800
 src/lib.rs analysis::tests::the_default_fingerprint_is_the_one_main_computes
 src/lib.rs analysis::tests::the_default_input_key_is_the_one_main_computes
 src/lib.rs analysis::tests::the_disk_sparse_learn_writes_reports_only_through_real_directories
@@ -329,6 +330,7 @@ src/lib.rs learn::eval::tests::a_screen_count_reads_each_learners_own_fitting_ge
 src/lib.rs learn::eval::tests::a_split_that_did_not_run_keeps_no_fold_models
 src/lib.rs learn::eval::tests::a_supplied_partition_is_refused_while_the_null_fold_refit_is_on
 src/lib.rs learn::eval::tests::a_supplied_partition_that_cannot_be_scored_fairly_is_refused
+src/lib.rs learn::eval::tests::a_supplied_partition_under_the_adjusted_arm_screens_each_fit_on_its_training_lineages
 src/lib.rs learn::eval::tests::a_tested_sample_takes_its_own_score_wherever_it_sits_in_the_sample_order
 src/lib.rs learn::eval::tests::a_training_prevalence_of_exactly_one_half_is_a_resistant_call
 src/lib.rs learn::eval::tests::a_weightless_lasso_fold_scored_its_test_samples_at_its_training_prevalence
@@ -482,6 +484,7 @@ src/lib.rs learn::screen_arm::tests::a_stratum_of_one_class_or_one_sample_change
 src/lib.rs learn::screen_arm::tests::negative_control_permuted_labels_within_strata_carry_no_lineage_signal
 src/lib.rs learn::screen_arm::tests::no_sample_outside_the_fit_changes_the_screen
 src/lib.rs learn::screen_arm::tests::the_statistic_matches_the_plain_python_implementation_on_synthetic_tables
+src/lib.rs learn::screen_arm::tests::the_statistic_sums_its_strata_in_ascending_lineage_order_to_the_bit
 src/lib.rs learn::screen_arm::tests::the_strata_do_not_change_with_the_labels
 src/lib.rs learn::screen_arm::tests::ties_break_by_the_lower_row_and_the_budget_fills_with_zeros
 src/lib.rs learn::screen_arm::tests::with_one_stratum_the_statistic_is_the_chi_square_times_n_less_one_over_n
