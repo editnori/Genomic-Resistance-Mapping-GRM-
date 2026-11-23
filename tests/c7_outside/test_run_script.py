@@ -165,6 +165,24 @@ class Fits(unittest.TestCase):
                 self.assertEqual(rc, 1, this)
                 self.assertIn("differ from the first start's; use a fresh OUT", out)
 
+    def test_the_timing_table_is_written_from_each_fits_timing_file(self):
+        # The step ran after every fit; before this test it stopped every run that fitted anything with a SyntaxError.
+        m = re.search(r"^STEP=timing\n.*?(?=^STEP=score\n)", SCRIPT, re.S | re.M)
+        self.assertIsNotNone(m, "run_species.sh has no timing block")
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            (tmp / "logs" / "fits").mkdir(parents=True)
+            for name, t in (("xgboost-a-lineage-s42", (1.5, 0.72, 129552)), ("elasticnet-a-lineage-s43", (610.0, 600.63, 318480))):
+                (tmp / "logs" / "fits" / f"{name}.json").write_text(
+                    json.dumps({"wall_s": t[0], "cpu_s": t[1], "peak_kb": t[2]}))
+            (tmp / "logs" / "fits" / "xgboost-a-lineage-s42.log").write_text("not a timing file\n")
+            p = subprocess.run(["bash", "-c", "set -Eeuo pipefail\n" + m.group(0)], env={"PATH": "/usr/bin:/bin", "OUT": str(tmp)},
+                               capture_output=True, text=True)
+            self.assertEqual(p.returncode, 0, p.stderr)
+            self.assertEqual((tmp / "logs" / "timing.tsv").read_text(),
+                             "fit\twall_s\tcpu_s\tpeak_kb\nelasticnet-a-lineage-s43\t610.0\t600.63\t318480\n"
+                             "xgboost-a-lineage-s42\t1.5\t0.72\t129552\n")
+
     def test_a_fits_log_comes_back_with_each_genome_id_masked(self):
         with tempfile.TemporaryDirectory() as tmp:
             tmp = Path(tmp)

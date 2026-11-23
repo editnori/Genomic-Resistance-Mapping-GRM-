@@ -280,14 +280,15 @@ done
 say "fits: end, $(find "$OUT/results/outside" -name '*.outside.json' | wc -l) reports"
 
 STEP=timing
-{ printf 'fit\twall_s\tcpu_s\tpeak_kb\n'
-  for f in "$OUT"/logs/fits/*.json; do
-    python3 -I -c '
-import json, sys
-t = json.load(open(sys.argv[1]))
-print(f"{sys.argv[2]}\t{t[\"wall_s\"]}\t{t[\"cpu_s\"]}\t{t[\"peak_kb\"]}")
-' "$f" "$(basename "$f" .json)"
-  done; } > "$OUT/logs/timing.tsv"
+# One python writes the table, so a failure's FAILED line goes to run.log and not into timing.tsv.
+python3 -I -c '
+import json, pathlib, sys
+rows = ["fit\twall_s\tcpu_s\tpeak_kb"]
+for p in sorted(pathlib.Path(sys.argv[1]).glob("*.json")):
+    t = json.loads(p.read_text())
+    rows.append("\t".join([p.stem, str(t["wall_s"]), str(t["cpu_s"]), str(t["peak_kb"])]))
+pathlib.Path(sys.argv[2]).write_text("\n".join(rows) + "\n")
+' "$OUT/logs/fits" "$OUT/logs/timing.tsv"
 
 STEP=score
 say "score: start"
