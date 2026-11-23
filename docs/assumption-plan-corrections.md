@@ -649,3 +649,91 @@ An eleventh came while the text was written. The project's wording rules put rec
 **After the review.** The lead ruled two points at 11:26Z on 23 Nov 2026, with no C7 score read. saga's stop stays at tol 1e-4 and 2,000 iterations: a tighter stop would raise the elastic net's 370.92 CPU hours, and the page names the limit, which every elastic net result carries. A missing draw stays a failed check that stops its species' score, as the scorer has it and as blocks C3, C4 and C5 have it. The design's words left only the dataset unscored; the code holds, so no dataset can drop out of a count unseen, and a species with a fit missing is run again or ruled on before any of its scores is written.
 
 **Written.** This entry was written at 08:51Z on 23 Nov 2026, from the design fixed at 07:37Z, the lists, the pilot and the SYNTHETIC timings. The rulings of 09:05Z, the three-seed pilot and the cost at three draws were added at 09:39Z. No comparison result had been read, and no pilot's report was opened.
+
+## C2 design
+
+**Block.** Plan block C2 asks whether fitting more than 2,000 genomes a species helps, scored on the same held-out genomes. The design was fixed at 08:13Z on 23 Nov 2026, before any code ran on real data, and `docs/cap-arms.md` gives the method. No comparison result has been read. Nothing in `src/` changes, so the release's output bytes stay the same, and the release keeps its cap of 2,000 genomes a species.
+
+**Arms.** Three arms stand against the release's 2,000, refitted in the same run: the top 4,000 and the top 4,096 by the release's selection rule on the rebuilt revision 14 table, and a twin of the default. The ranking does not depend on the cap, so the cohorts nest, and the release's 2,000 lie in the top 4,000 in all 8 species. The wider arms add 2,000 and 2,096 genomes in 7 species. *Enterococcus faecium* ranks 2,907, so its two wider arms are one cohort with 907 added genomes, fitted once.
+
+**Folds.** The lineage split runs through `grm arm` with `common_outer_test_set_balanced`: every arm is scored on the default's outer test folds, the same in every arm, and an added genome only trains, never in a fold whose scored genomes share its lineage or its k-mer duplicate group. The study split is `grm learn --fold-file` on the default's `study-whole` test folds; an added genome trains in every fold or in none, and only when its BioProject is known and no tested genome has it or its k-mer digest. `check_folds.py` holds every fit to this on the run box and stops the species on a breach.
+
+**Measure.** As C3's: per learner, the lineage balanced accuracy is primary, with recall, specificity, both error rates with Wilson intervals, and log loss beside it. A dataset's value is the mean of 3 draws, `grm arm` slots 0 to 2 at evaluation seed 42; the twin is the default at slots 3 to 5.
+
+**Count.** C3's count on a family of its own: `cap-4000`, `cap-all` and the twin against `cap-2000`, Holm over 15 lineage pairs, 3 arms by 5 learners, taken once after every species has run. `score.py --count` refuses part of the family and a row given twice. Study rows are one fit each, read beside the count.
+
+**Datasets.** The CAP datasets: 166 in the 8 species, 23 of them in M, so 143 in the first run, 39 of those in S. Of the 143, 115 depend on none of the four label rules and 28 on the most resistant call against the other three.
+
+**Study.** `master-genome-meta.jsonl.gz` holds no BioProject for the genomes added in *Escherichia coli*, *Enterococcus faecium*, *Klebsiella pneumoniae* and *Streptococcus pneumoniae*. It holds one for 1,694 of the 2,000 added at 4,000 in *Mycobacterium tuberculosis*, 1,652 in *Salmonella enterica* and 1,137 in *Staphylococcus aureus*. Without question 4, a wider arm adds no study genome on 33 of the 39 datasets in S.
+
+**Pilot.** *Enterococcus faecium* with vancomycin, ampicillin and gentamicin, one lineage slot of `cap-2000` and `cap-all`, scores moved unread, ran on a 16-CPU box from 08:23:24Z to 08:36:46Z on 23 Nov 2026, after a restart for the runner fault below. The fetch took 439.58 s for 2,907 genomes with no failure; 363 release genomes differ in bytes from the master list, none in length, contig count or N50. The `cap-all` count took 129.53 s, its matrix 105.81 s at 3,206,332 KB peak, and each fit 38.86 to 54.05 s at most 3,655,908 KB. Every fold check passed, with no balance drop and no duplicate in training. Over the 5 outer folds, the 901 added genomes labelled for vancomycin trained in 3,644 fold places and were kept out by lineage in 861; for ampicillin, 188 genomes, 753 and 187. No added genome carries a gentamicin call, so on gentamicin `cap-all`'s fit repeats the default's (question 10).
+
+**Fault.** The first pilot fit stopped on a group file named `1000`: the runner's variable was `GROUPS`, which bash sets to the user's group ids. It is now `GROUPING`, and a runner test fails on any bash special variable.
+
+**Checks.** `tests/c2_cap` holds 62 SYNTHETIC tests. The ten faults of `docs/cap-arms.md`, three of them planted in two places, 13 in all, are each caught by the one test named for it, and one test holds each fault's text to one occurrence in its file at this tree.
+
+**Cost.** Scaled from the pilot: a fit costs 1.7873 s of `grm arm` wall a second of the release's learning, times its genomes over 2,000. On the species' refit boxes, which hold the release's 2,000 FASTA files, the run comes to 53.83 xlarge-hours central and 157.76 upper, $10.77 and $31.55; on new boxes, 54.50 and 158.77, $10.90 and $31.75. Per arm, central and upper hours: `cap-2000` 8.83 and 26.50, the twin 7.49 and 22.46, `cap-4000` 17.52 and 51.99, `cap-all` 18.35 and 54.42; the data steps every arm shares 0.99 and 1.41; the fetch 0.65 and 0.98 on a refit box, 1.33 and 1.99 on a new one. Nothing beyond the pilot has run.
+
+**Questions.** The design leaves ten questions open, each with the answer taken and the other one.
+
+| Question | Taken | Other |
+|---|---|---|
+| 1. Path | `grm arm` for every cohort, the default refitted, no change to `src/` | a `grm learn` flag adding training genomes to the release's drawn split, so that C3's default and twin serve |
+| 2. Draws | `grm arm` slots 0 to 2, the twin 3 to 5, at evaluation seed 42 | seeds 42 to 44 and 45 to 47, which `grm arm` does not take |
+| 3. Study default | fitted here | C3's study files of the default, held to their sha256 |
+| 4. BioProjects of added genomes | none fetched; an added genome with no known BioProject stays unused | the BV-BRC genome records of the added genomes fetched by id |
+| 5. *Enterococcus faecium* | one cohort of 2,907, fitted once, counted under both wider arms and marked | counted under `cap-all` only |
+| 6. 4,000 and 4,096 | both run | one dropped; they differ by 96 genomes in 7 species |
+| 7. Final models for block T1 | none built | a final fit per dataset on a passing arm's cohort |
+| 8. Shell helpers | the runner's own `step` and `scrub` | a shared file after C3 finishes |
+| 9. Fits at once | one dataset at a time; a pilot fit used 3.8 to 4.7 CPU seconds a wall second of 16 | four datasets at once, cutting the fits' wall about fourfold |
+| 10. A wider arm with no added genome labelled | fitted; its lineage fit repeats the default's | marked none-added and not fitted, as the study split does |
+
+**Written.** This entry was written at 08:55Z on 23 Nov 2026, from the design fixed at 08:13Z, the lists and the pilot. No comparison result had been read.
+
+## C2 rulings
+
+**Rulings.** The ten questions of the C2 design were ruled at 09:22Z on 23 Nov 2026, before any fit of the full run. No comparison result had been read.
+
+| Question | Ruling |
+|---|---|
+| 1. Path | as taken: every arm, the default included, is fitted by `grm arm`, so the default's figures here are not the release report's figures and are never set beside them as if they were |
+| 2. Draws | as taken, a deviation from the plan (below) |
+| 3. Study default | as taken: fitted here |
+| 4. BioProjects of added genomes | the other: the added genomes' BV-BRC genome records fetched by genome id, the genome table only, `genome_id` and `bioproject_accession` only |
+| 5. *Enterococcus faecium* | the other: its one wider cohort counted under `cap-all` only |
+| 6. 4,000 and 4,096 | `cap-4000` withdrawn before any fit (below) |
+| 7. Final models for block T1 | as taken: none built |
+| 8. Shell helpers | as taken: the runner's own `step` and `scrub` |
+| 9. Fits at once | the other: up to four datasets' lineage fits at once, under a memory guard |
+| 10. A wider arm with no added genome labelled | the other: none-added, not fitted and out of the count's denominator, on both splits |
+
+**Draws.** The plan names `grm learn` seeds 42 to 44 for the draws and 45 to 47 for the twin. `grm arm` takes no seed of its own; its keyed slots are its draws, each with its own repeat seed, partitions and learner draws. So the draws are the default's slots 0 to 2 and the twin its slots 3 to 5, all at evaluation seed 42. This deviates from the plan's seeds, because the lineage split's pairing, `common_outer_test_set_balanced`, runs on `grm arm` only.
+
+**Withdrawn.** `cap-4000` was withdrawn at 09:22Z on 23 Nov 2026, before any fit. It differs from `cap-all` by 96 genomes in 7 species and is the same cohort in *Enterococcus faecium*, so one result would be paid for twice. The family stays at 15 pairs: `score.py --count --withdrawn cap-4000` keeps its five lineage pairs at p = 1 and names it withdrawn in `count.tsv` and `conditions.tsv`. The runner builds no `cap-4000` root; the arm's code and tests stay.
+
+**BioProjects.** `bioprojects.py` asked `https://www.bv-brc.org/api/genome/` on 23 Nov 2026, from 09:45:37Z to 09:45:53Z, for the 2,096 `cap-all` added genomes of each species with a dataset in S, and every one was answered. With a BioProject: *Escherichia coli* 985, *Klebsiella pneumoniae* 2,006, *Mycobacterium tuberculosis* 1,771, *Salmonella enterica* 1,748 and *Staphylococcus aureus* 1,137. Where the master genome rows also name one, 4,530 genomes, both name the same. Before the k-mer digest check, an added genome may train on 27 of the 39 datasets in S, 1,978 in all.
+
+**None-added.** `cohorts.py` now writes, per dataset and wider arm, with the species and antibiotic in full, the added genomes with a label by class. Under `cap-all`, 27 of the 143 first-run datasets have none (`docs/cap-arms.md` names them). No threshold is set.
+
+**Fits at once.** No limit in `grm arm`'s fit path depends on wall time (`docs/cap-arms.md`). On the pilot's data, 8 fits run four at once wrote the same files as each fit run alone, 56 of 56, with 80 `seconds` values set aside. The runner at this text then ran the pilot's three datasets on the pilot's binary at `AT_ONCE` 4: vancomycin's chain alone, then ampicillin's and gentamicin's at once. Gentamicin's `cap-all` was none-added and not fitted, and the other 5 fits' 20 files equal those of the pilot's fits, which ran one at a time. N is 4 for *Enterococcus faecium*, *Neisseria gonorrhoeae*, *Staphylococcus aureus* and *Streptococcus pneumoniae*; 3 for *Escherichia coli*, *Mycobacterium tuberculosis* and *Salmonella enterica*; 2 for *Klebsiella pneumoniae*.
+
+**Cost.** On new boxes, with no `cap-4000`, no fit of a none-added dataset and lineage fits at once: 37.59 xlarge-hours central and 130.26 upper, $7.52 and $26.05, in box lifetimes of 133.25 hours ($26.65). The lineage fits take 27.37 hours central, against 60.70 one at a time. Fits are costed at the proof's alone pace, 1.49 to 2.09 times the pilot's wall. The upper is past the plan's 66 to 99.
+
+**Checks.** The four faults this round adds, one of them planted in two places, are each caught by the one test named for it: 14 faults, 18 plantings in all.
+
+**Written.** This entry was written at 09:59Z on 23 Nov 2026, after the rulings, from the fetch, the cohort counts and the two checks on the pilot's data. No comparison result had been read.
+
+## C2 review
+
+**Review.** An independent review of the C2 branch at `7d64574` recounted, with programs of its own, the cohorts by the selection rule, the study split, the BioProject answers, the none-added datasets, the scorer's count on SYNTHETIC draws and the cost. Every recount equals the branch's figures. The review read no comparison result and no score.
+
+**Refused draws.** `grm arm` writes a lineage trace line's and prediction row's `repeat` as the slot, while the slot's plan holds the keyed repeat, which differs once a refused draw is replaced. `check_folds.py` and `score.py` read by the keyed repeat, so one replaced draw would have stopped the species. Both now read by slot. When the replacements are refused too, the scripts stopped the species, where H-1's ruling leaves the dataset's lineage runs not produced and lets the run go on. They now follow that ruling (`docs/cap-arms.md`, Refused draws), a rule the lead confirms before the run.
+
+**Limits.** The page now gives the study split's counts per dataset behind the 1,978 added genomes that may train on 27 of the 39 datasets in S, the 2,138 tested genomes with no BioProject known, and the 19 fitted datasets that add 1 to 19 labelled genomes, 105 in all.
+
+**Tests.** Seven of the review's 13 planted faults passed every test: genomes of one score sorted otherwise than by id as text; three breaches of the lineage fold check that no test reached (a scored genome in training, a default genome that trains otherwise than in the default, a cohort plan whose lineage count differs); a draw's counts not held to its prediction rows; and the runner's memory rule, held to its text only. Each now has a SYNTHETIC test, and with the refused-draw tests `tests/c2_cap` holds 95.
+
+**Written.** This entry was written at 10:49Z on 23 Nov 2026, during the review. No comparison result had been read.
+
+**After the review.** The lead ruled two points at 12:19Z on 23 Nov 2026, with no C2 score read. H-1's ruling on a refused repeat holds for C2: a dataset whose lineage draws are refused past both replacements leaves the lineage count of every arm and the twin alike, the result page names it with its reason, and its study rows are scored as before. Every arm is scored on the default's test folds, so such a dataset has no lineage test for any arm, and leaving it out favours none. The 19 fitted datasets that add 1 to 19 labelled genomes stay in `cap-all`'s count of 116: the count was fixed with no threshold before the cohorts were listed, and a threshold set now would be chosen with the lists in hand. The result page gives the count over the other 97 datasets beside it, deciding nothing.
