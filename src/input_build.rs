@@ -131,6 +131,8 @@ pub fn for_each_aa_kmer(protein: &[u8], mut f: impl FnMut(u64)) {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Called {
     pub contig: String,
+    /// Prodigal's number for the contig, from 1 in file order (`ID=<n>_<gene>`).
+    pub seq: usize,
     /// 1-based, inclusive, on the contig's forward strand.
     pub start: usize,
     pub end: usize,
@@ -165,6 +167,13 @@ pub fn parse_header(header: &str) -> Result<Called> {
         "-1" => false,
         _ => bail!("a protein strand that is not 1 or -1"),
     };
+    let seq: usize = parts[4]
+        .split(';')
+        .find_map(|kv| kv.strip_prefix("ID="))
+        .and_then(|id| id.split_once('_'))
+        .and_then(|(n, _)| n.parse().ok())
+        .filter(|&n| n >= 1)
+        .context("a protein header with no ID=<sequence>_<gene>")?;
     let partial = parts[4]
         .split(';')
         .find_map(|kv| kv.strip_prefix("partial="))
@@ -180,6 +189,7 @@ pub fn parse_header(header: &str) -> Result<Called> {
     );
     Ok(Called {
         contig: contig.to_string(),
+        seq,
         start,
         end,
         forward,
@@ -279,17 +289,28 @@ pub fn protein_matches(contig: &[u8], c: &Called) -> bool {
 /// after every protein is held to the genome's contigs. A protein that GRM's
 /// translation does not give stops the build (question 20 of the C3 arms
 /// entry in docs/assumption-plan-corrections.md).
+///
+/// Each protein is held to the contig Prodigal numbered (`ID=<n>_<gene>`, from
+/// 1 in file order), read as Prodigal 2.6.3 reads a sequence line: it keeps
+/// only the bytes `A` to `z`, so a space or a `-` in a line moves no
+/// coordinate, and two contigs of one first word or a header with no name are
+/// still told apart.
 pub fn aa_values(genome: &Path, proteins: &Path, space: &KmerSpace) -> Result<(Vec<u64>, usize)> {
-    let mut contigs: HashMap<String, Vec<u8>> = HashMap::new();
-    crate::fasta::for_each_record(genome, |name, seq| {
-        contigs.insert(name.to_string(), seq.to_vec());
+    let mut contigs: Vec<Vec<u8>> = Vec::new();
+    crate::fasta::for_each_record(genome, |_, seq| {
+        contigs.push(
+            seq.iter()
+                .copied()
+                .filter(|b| (b'A'..=b'z').contains(b))
+                .collect(),
+        );
     })?;
     let called = read_proteins(proteins)?;
     let bad = called
         .iter()
         .filter(|c| {
             contigs
-                .get(&c.contig)
+                .get(c.seq - 1)
                 .is_none_or(|s| !protein_matches(s, c))
         })
         .count();
@@ -1072,6 +1093,88 @@ mod tests {
         )
         .unwrap();
         assert!(aa_values(&dir.join("g.fna"), &dir.join("bad.faa"), &space).is_err());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn a_protein_is_held_to_the_contig_prodigal_numbered_read_as_prodigal_reads_it() {
+        // SYNTHETIC: three contigs, the first two of one first word, the third
+        // with no name, the first with a space at each line end and a '-'
+        // before its gene. Prodigal 2.6.3 numbers the contigs 1, 2, 3, names
+        // the third Prodigal_Seq_3, and keeps only the bytes 'A' to 'z' of a
+        // sequence line, so its coordinates skip the space and the '-'.
+        let g1 = gene(70, 21);
+        let g2 = gene(50, 22);
+        let g3 = gene(40, 23);
+        let a = format!("{}-{}{g1}{}", seq(37, 24), seq(20, 25), seq(30, 26));
+        let b = format!("{}{}{}", seq(45, 27), rc(&g2), seq(25, 28));
+        let c = format!("{}{g3}{}", seq(33, 29), seq(35, 30));
+        let lines = |s: &str, end: &str| {
+            s.as_bytes()
+                .chunks(60)
+                .map(|l| format!("{}{end}\n", std::str::from_utf8(l).unwrap()))
+                .collect::<String>()
+        };
+        let dir = tmp("aa-prodigal-read");
+        std::fs::write(
+            dir.join("g.fna"),
+            format!(
+                ">c1 synthetic\n{}>c1 synthetic again\n{}>\n{}",
+                lines(&a, " "),
+                lines(&b, ""),
+                lines(&c, "")
+            ),
+        )
+        .unwrap();
+        let s1 = 37 + 20 + 1;
+        let e1 = s1 + g1.len() - 1;
+        let s2 = 45 + 1;
+        let e2 = s2 + g2.len() - 1;
+        let s3 = 33 + 1;
+        let e3 = s3 + g3.len() - 1;
+        let m = |g: &str| {
+            let mut p = translate11(g.as_bytes());
+            p[0] = b'M';
+            String::from_utf8(p).unwrap()
+        };
+        let h = |name: &str, n: usize, s: usize, e: usize, st: &str| {
+            format!(
+                ">{name}_1 # {s} # {e} # {st} # ID={n}_1;partial=00;start_type=ATG;rbs_motif=None\n"
+            )
+        };
+        std::fs::write(
+            dir.join("g.faa"),
+            format!(
+                "{}{}\n{}{}\n{}{}\n",
+                h("c1", 1, s1, e1, "1"),
+                m(&g1),
+                h("c1", 2, s2, e2, "-1"),
+                m(&g2),
+                h("Prodigal_Seq_3", 3, s3, e3, "1"),
+                m(&g3)
+            ),
+        )
+        .unwrap();
+        let space = KmerSpace::new(AA_SPACE_K);
+        let (_, n) = aa_values(&dir.join("g.fna"), &dir.join("g.faa"), &space).unwrap();
+        assert_eq!(n, 3);
+        // A protein put on the other contig of the same first word stops the build.
+        std::fs::write(
+            dir.join("swap.faa"),
+            format!("{}{}\n", h("c1", 1, s2, e2, "-1"), m(&g2)),
+        )
+        .unwrap();
+        assert!(aa_values(&dir.join("g.fna"), &dir.join("swap.faa"), &space).is_err());
+        // A header with no ID= is not Prodigal's.
+        std::fs::write(
+            dir.join("noid.faa"),
+            format!(
+                ">c1_1 # {s1} # {e1} # 1 # partial=00;start_type=ATG\n{}\n",
+                m(&g1)
+            ),
+        )
+        .unwrap();
+        assert!(aa_values(&dir.join("g.fna"), &dir.join("noid.faa"), &space).is_err());
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
