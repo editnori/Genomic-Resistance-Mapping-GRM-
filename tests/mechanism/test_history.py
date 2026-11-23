@@ -105,14 +105,20 @@ class Families(unittest.TestCase):
         with self.assertRaises(amr.Refusal):
             self.db.family("madeUp-1")
 
-    def test_a_disrupted_core_gene_takes_its_catalogue_family(self):
-        self.assertEqual(self.db.family("synR_Q11Ter42", "POINT_DISRUPT"), "synR")
-        # only a family the catalogue lists with Subtype POINT_DISRUPT, and only for that subtype
-        with self.assertRaises(amr.Refusal) as cm:
-            self.db.family("synQ_Q11Ter42", "POINT_DISRUPT")
-        self.assertNotIn("Q11", str(cm.exception))
+    def test_a_disrupted_core_gene_enters_no_family_mix(self):
+        # the lead's rulings on questions 1 and 10: a POINT_DISRUPT row is read with point
+        for subtype in ("POINT_DISRUPT", "POINT"):
+            with self.assertRaises(amr.Refusal) as cm:
+                self.db.family("synR_Q11Ter42", subtype)
+            self.assertNotIn("Q11", str(cm.exception))
         with self.assertRaises(amr.Refusal):
             self.db.family("synR_Q11Ter42", "AMR")
+        rows = [{"symbol": "synR_Q11Ter42", "scope": "core", "type": "AMR", "subtype": "POINT_DISRUPT",
+                 "class": "QUINOLONE", "subclass": "QUINOLONE", "method": "BLASTX"},
+                {"symbol": "qnrS1", "scope": "core", "type": "AMR", "subtype": "AMR",
+                 "class": "QUINOLONE", "subclass": "QUINOLONE", "method": "EXACTX"}]
+        self.assertEqual(history.genome_cells(rows, self.db)["QUINOLONE"], (True, True, frozenset({"qnrS"}), True))
+        self.assertEqual(history.genome_cells(rows[:1], self.db)["QUINOLONE"], (True, False, frozenset(), True))
 
     def test_a_rule_names_a_class_by_c_or_by_a_subclass_of_it(self):
         self.assertTrue(self.db.rule_names_class([["C:QUINOLONE"]], "QUINOLONE"))
@@ -258,7 +264,7 @@ class Guards(unittest.TestCase):
         tmp = Path(self.tmp.name)
         c.write_table(tmp / "t.tsv", "partial")
         rows = amr.read_table(tmp / "t.tsv")
-        self.assertEqual(history.genome_cells(rows, self.db)["QUINOLONE"], (False, True, frozenset({"qnrB"})))
+        self.assertEqual(history.genome_cells(rows, self.db)["QUINOLONE"], (False, True, frozenset({"qnrB"}), False))
         self.assertEqual(history.genome_cells(rows, self.db, "tool_default_intact"), {})
 
     def test_plus_scope_and_another_class_are_not_counted(self):
@@ -275,11 +281,13 @@ class TimeSplit(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
         self.top = Path(self.tmp.name)
 
-    def go(self, train_kind="gene"):
+    def go(self, train_kind="gene", test_kind="both"):
         g = scenario()
         for x in g:
             if x["year"] in ("2010", "2012", "2014"):
                 x["kind"] = train_kind if x["kind"] == "gene" else x["kind"]
+            if x["year"] in ("2015", "2017", "2019"):
+                x["kind"] = test_kind if x["kind"] == "both" else x["kind"]
         sha = layout(self.top, g)
         folds = self.top / "ts" / "fold-files"
         folds.mkdir(parents=True)
@@ -306,6 +314,15 @@ class TimeSplit(unittest.TestCase):
         self.assertEqual(rc, 0, err)
         r = {r["reading"]: r for r in c.read_tsv(out / "timesplit.tsv")}["point_as_one"]
         self.assertEqual((r["with_unseen_determinant"], r["share_unseen"]), ("0", "0.000000000000"))
+
+    def test_a_point_disrupt_row_seen_in_training_is_read_as_point(self):
+        # the lead's ruling on question 1: a POINT_DISRUPT row is point in the time-split link too
+        rc, err, out = self.go(train_kind="disrupt", test_kind="point")
+        self.assertEqual(rc, 0, err)
+        rows = {r["reading"]: r for r in c.read_tsv(out / "timesplit.tsv")}
+        self.assertEqual((rows["point_as_one"]["with_unseen_determinant"], rows["point_as_one"]["share_unseen"]),
+                         ("0", "0.000000000000"))
+        self.assertEqual(rows["point_by_symbol"]["with_unseen_determinant"], "9")
 
     def test_a_fold_file_not_in_the_design_stops(self):
         g = scenario()

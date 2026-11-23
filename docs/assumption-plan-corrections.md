@@ -409,21 +409,23 @@ The refit of the release's rule ended on its 23 species and 238 datasets at 20:3
 
 **Questions.** The plan leaves nine questions to the lead, each with the option taken and the other. A tenth came from the dry run, which stopped at M2 on a row of Subtype `POINT_DISRUPT`: the program names a disrupted core gene `<gene_family>_<change>`, which neither the catalogue's alleles nor its hierarchy hold. Taken: the gene_family before the underscore, when the catalogue lists that family with Subtype `POINT_DISRUPT`; any other symbol still stops the species. Other: leave `POINT_DISRUPT` rows out of the family mix. The plan file is unchanged.
 
-| Question | Taken | Other |
-|---|---|---|
-| 1. `POINT_DISRUPT` rows | gene, as the brief words it, with those genomes counted beside each stratum | point |
-| 2. "Under 5" | covers zero | show 0 |
-| 3. Species interval | none under 6 species | an interval at any count |
-| 4. BioProject vote | 5 or more genomes in the period; the rest enter the share per genome only | every BioProject |
-| 5. Flagged BioProject | resistant share over the datasets whose rule names the class | every dataset |
-| 6. Family | the allele's gene_family, the symbol where it is one, else its first family in the hierarchy | the symbol |
-| 7. Lineage clusters | joined over the species' reports, given only where they agree | per report |
-| 8. Time-split determinant | a point row as one token "point", its symbol beside | each symbol |
-| 9. M4 names | no variant name in any output until ruled | the catalogue's variant names |
-| 10. `POINT_DISRUPT` family | the gene_family before the underscore, if the catalogue lists it with that subtype | out of the family mix |
-| 11. Log loss in M1 | recall alone, as the brief fixes M1 | the log loss of each stratum's resistant genomes beside recall |
+| Question | Taken | Other | Ruled |
+|---|---|---|---|
+| 1. `POINT_DISRUPT` rows | gene, as the brief words it, with those genomes counted beside each stratum | point | changed: point, with those genomes counted beside each stratum and, in point only and both, the genomes whose point rows are `POINT_DISRUPT` alone; the same in M2 and the time-split link |
+| 2. "Under 5" | covers zero | show 0 | changed: 0 is written 0, 1 to 4 "under 5" |
+| 3. Species interval | none under 6 species | an interval at any count | as taken |
+| 4. BioProject vote | 5 or more genomes in the period; the rest enter the share per genome only | every BioProject | as taken |
+| 5. Flagged BioProject | resistant share over the datasets whose rule names the class | every dataset | as taken |
+| 6. Family | the allele's gene_family, the symbol where it is one, else its first family in the hierarchy | the symbol | as taken |
+| 7. Lineage clusters | joined over the species' reports, given only where they agree | per report | as taken |
+| 8. Time-split determinant | a point row as one token "point", its symbol beside | each symbol | as taken |
+| 9. M4 names | no variant name in any output until ruled | the catalogue's variant names | as taken |
+| 10. `POINT_DISRUPT` family | the gene_family before the underscore, if the catalogue lists it with that subtype | out of the family mix | closed by question 1: a `POINT_DISRUPT` row enters no family mix, which is over Subtype `AMR` rows alone |
+| 11. Log loss in M1 | recall alone, as the brief fixes M1 | the log loss of each stratum's resistant genomes beside recall | as taken |
 
 An eleventh came while the text was written. The project's wording rules put recall beside log loss, and M1 as fixed gives recall alone.
+
+**Rulings.** The lead ruled on the eleven questions at 04:13Z on 23 Nov 2026, before any result was read. The plan file stays unchanged; the changes are dated beside the review's report and carried into the scripts, their tests and `docs/mechanism-split.md`.
 
 **Checks.** 82 SYNTHETIC tests in `tests/mechanism` (14 on M4), and ten planted faults, each caught by its test. The dry run on Klebsiella aerogenes (93 genomes, 3 datasets) ran end to end in 2.5 s with 30.6 MB at peak; the hard check passed on 3 of 3 datasets, 36 of 36 rows, and its scan found no genome id.
 

@@ -35,7 +35,7 @@ history = fixtures.load("history")
 def label_strata(samples, tables, rule):
     # fault 1: a susceptible genome is put in "neither" whatever its table holds
     return [None if tables.get(s["id"]) is None else
-            (strata.stratum_of(tables[s["id"]], rule) if s["resistant"] else ("neither", False, False))
+            (strata.stratum_of(tables[s["id"]], rule) if s["resistant"] else ("neither", False, False, False))
             for s in samples]
 
 

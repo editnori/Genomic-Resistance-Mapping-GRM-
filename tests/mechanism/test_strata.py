@@ -54,15 +54,17 @@ class Strata(unittest.TestCase):
         rc, err, out = self.go()
         self.assertEqual(rc, 0, err)
         got = cells(out)
-        self.assertEqual(got[(c.DATASET, "lineage", "scm", "point_only")]["resistant"], "10")
+        # 10 POINT genomes and 5 POINT_DISRUPT genomes: both read with point (the lead's ruling on question 1)
+        self.assertEqual(got[(c.DATASET, "lineage", "scm", "point_only")]["resistant"], "15")
         self.assertEqual(got[(c.DATASET, "lineage", "scm", "both")]["resistant"], "6")
+        self.assertEqual(got[(c.DATASET, "lineage", "scm", "gene_only")]["resistant"], "18")
 
     def test_stratum_comes_from_the_table_not_the_label(self):
         rc, err, out = self.go()
         self.assertEqual(rc, 0, err)
         got = cells(out)
-        # gene 12 + partial 6 + disrupt 5 resistant; the 6 susceptible genomes with a gene row are gene only too
-        self.assertEqual(got[(c.DATASET, "lineage", "scm", "gene_only")]["resistant"], "23")
+        # gene 12 + partial 6 resistant (POINT_DISRUPT is read with point); the 6 susceptible genomes with a gene row are gene only too
+        self.assertEqual(got[(c.DATASET, "lineage", "scm", "gene_only")]["resistant"], "18")
         self.assertEqual(got[(c.DATASET, "lineage", "scm", "gene_only")]["susceptible"], "6")
         self.assertEqual(got[(c.DATASET, "lineage", "scm", "neither")]["susceptible"], "20")
         self.assertEqual(got[(c.DATASET, "lineage", "scm", "neither")]["resistant"], "9")
@@ -71,9 +73,28 @@ class Strata(unittest.TestCase):
         rc, err, out = self.go()
         self.assertEqual(rc, 0, err)
         got = cells(out)
-        self.assertEqual(got[(c.DATASET, "lineage", "scm", "partial_only")]["resistant"], "6")
-        self.assertEqual(got[(c.DATASET, "lineage", "scm", "with_point_disrupt")]["resistant"], "5")
+        self.assertEqual(got[(c.DATASET, "lineage", "scm", "partial_only:gene_only")]["resistant"], "6")
+        self.assertEqual(got[(c.DATASET, "lineage", "scm", "partial_only:point_only")]["resistant"], "0")
+        self.assertEqual(got[(c.DATASET, "lineage", "scm", "with_point_disrupt:point_only")]["resistant"], "5")
+        self.assertEqual(got[(c.DATASET, "lineage", "scm", "with_point_disrupt:gene_only")]["resistant"], "0")
+        self.assertEqual(got[(c.DATASET, "lineage", "scm", "point_disrupt_alone:point_only")]["resistant"], "5")
+        self.assertEqual(got[(c.DATASET, "lineage", "scm", "point_disrupt_alone:both")]["resistant"], "0")
         self.assertEqual(got[(c.DATASET, "lineage", "scm", "all")]["resistant"], "48")
+
+    def test_point_disrupt_is_read_with_point_and_counted_beside(self):
+        # a genome with a POINT row and a POINT_DISRUPT row: point only, with POINT_DISRUPT, not alone
+        c.ROWS["point_and_disrupt"] = c.ROWS["point"] + c.ROWS["disrupt"]
+        self.addCleanup(c.ROWS.pop, "point_and_disrupt")
+        g = (c.genomes("9101", 10, "point_and_disrupt", True) + c.genomes("9102", 10, "disrupt", True)
+             + c.genomes("9103", 10, "gene", True) + c.genomes("9104", 5, "neither", False))
+        rc, err, out = self.go({c.DATASET: (g, {})})
+        self.assertEqual(rc, 0, err)
+        got = cells(out)
+        key = (c.DATASET, "random", "gbt")
+        self.assertEqual(got[key + ("point_only",)]["resistant"], "20")
+        self.assertEqual(got[key + ("gene_only",)]["resistant"], "10")
+        self.assertEqual(got[key + ("with_point_disrupt:point_only",)]["resistant"], "20")
+        self.assertEqual(got[key + ("point_disrupt_alone:point_only",)]["resistant"], "10")
 
     def test_recall_only_over_ten_resistant_and_small_counts_hidden(self):
         rc, err, out = self.go()
@@ -89,12 +110,12 @@ class Strata(unittest.TestCase):
 
     def test_scores_are_read_from_their_own_split_and_learner(self):
         def scores(split, learner, i, g):
-            hit = split == "lineage" and learner == "cart" and g["kind"] == "point"
+            hit = split == "lineage" and learner == "cart" and g["kind"] in ("point", "disrupt")
             return 0.9 if hit else 0.1
         rc, err, out = self.go({c.DATASET: (mixed(), {"scores": scores})})
         self.assertEqual(rc, 0, err)
         got = cells(out)
-        self.assertEqual(got[(c.DATASET, "lineage", "cart", "point_only")]["resistant_called"], "10")
+        self.assertEqual(got[(c.DATASET, "lineage", "cart", "point_only")]["resistant_called"], "15")
         self.assertEqual(got[(c.DATASET, "lineage", "scm", "point_only")]["resistant_called"], "0")
         self.assertEqual(got[(c.DATASET, "random", "cart", "point_only")]["resistant_called"], "0")
         self.assertEqual(got[(c.DATASET, "lineage", "cart", "point_only")]["recall"], "1.000000000000")
@@ -106,7 +127,7 @@ class Strata(unittest.TestCase):
         got = cells(out)
         self.assertEqual(got[(c.DATASET, "lineage", "program", "neither")]["resistant_called"], "0")
         self.assertEqual(got[(c.DATASET, "lineage", "program", "gene_only")]["susceptible_called"], "6")
-        self.assertEqual(got[(c.DATASET, "lineage", "catalog", "point_only")]["resistant_called"], "10")
+        self.assertEqual(got[(c.DATASET, "lineage", "catalog", "point_only")]["resistant_called"], "15")
 
     def test_hard_check_fails_when_metrics_differ(self):
         c.write_species(self.top, {c.DATASET: (mixed(), {})})

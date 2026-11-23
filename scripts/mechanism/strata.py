@@ -22,8 +22,13 @@ Checks, before any stratum is counted (PLAN.md, M1):
 A dataset that fails any check is named in datasets.tsv and left out.
 
 Strata, from the counted rows that meet the dataset's rule, never from the
-label: point only, gene only, both, neither; beside them, partial only and
-with a POINT_DISRUPT row, and all genomes.
+label: a row of Subtype POINT or POINT_DISRUPT is point and a row of Subtype
+AMR is gene (the lead's ruling on question 1); point only, gene only, both,
+neither. Beside each stratum: its genomes whose rule-meeting rows are all
+partial calls (partial_only:<stratum>), its genomes with a POINT_DISRUPT row
+(with_point_disrupt:<stratum>), and in the two point strata the genomes whose
+point rows are POINT_DISRUPT alone (point_disrupt_alone:<stratum>); and all
+genomes.
 
 Python 3.12, standard library only; run with -I.
 """
@@ -43,7 +48,9 @@ ROWS = LEARNERS + ("catalog", "program")
 SPLITS = ("lineage", "random")
 CUTOFF = 0.5  # predict::CALL_CUTOFF
 STRATA = ("point_only", "gene_only", "both", "neither")
-BESIDE = ("partial_only", "with_point_disrupt", "all")
+POINT_STRATA = ("point_only", "both")
+BESIDE = tuple(f"partial_only:{s}" for s in STRATA[:3]) + tuple(f"with_point_disrupt:{s}" for s in STRATA[:3]) \
+    + tuple(f"point_disrupt_alone:{s}" for s in POINT_STRATA) + ("all",)
 ROW_NAMES = {"catalog": "GRM's known-gene rule (catalog row)", "program": "the AMRFinderPlus program"}
 
 STRATA_HEADER = ["dataset", "species_slug", "species", "antibiotic", "drug_class", "set", "labels_depend_on",
@@ -121,20 +128,23 @@ def hard_check(report):
 
 
 def stratum_of(rows, rule):
-    """(stratum, partial only, with POINT_DISRUPT) of one genome in one
-    dataset, from its table rows and the dataset's rule alone."""
+    """(stratum, partial only, with POINT_DISRUPT, POINT_DISRUPT alone among
+    the point rows) of one genome in one dataset, from its table rows and the
+    dataset's rule alone."""
     met = ar.rule_rows(rows, rule)
-    point = any(ar.is_point(r) for r in met)
+    point_rows = [r for r in met if ar.is_point(r)]
+    point = bool(point_rows)
     gene = any(not ar.is_point(r) for r in met)
     stratum = "both" if point and gene else "point_only" if point else "gene_only" if gene else "neither"
     partial_only = bool(met) and all(ar.is_partial(r) for r in met)
-    disrupt = any(r["subtype"] == "POINT_DISRUPT" for r in met)
-    return stratum, partial_only, disrupt
+    disrupt = any(ar.is_disrupt(r) for r in met)
+    disrupt_alone = point and all(ar.is_disrupt(r) for r in point_rows)
+    return stratum, partial_only, disrupt, disrupt_alone
 
 
 def genome_strata(samples, tables, rule):
-    """Per sample, (stratum, partial only, with POINT_DISRUPT), or None
-    where the genome has no table (the program failed on it)."""
+    """Per sample, (stratum, partial only, with POINT_DISRUPT, POINT_DISRUPT
+    alone), or None where the genome has no table (the program failed on it)."""
     return [None if tables.get(s["id"]) is None else stratum_of(tables[s["id"]], rule) for s in samples]
 
 
@@ -153,12 +163,14 @@ def dataset_tables(report, tables, rule, row_calls, program, keep):
             for i, k in enumerate(keep):
                 if not k:
                     continue
-                st, partial, disrupt = strata[i]
+                st, partial, disrupt, alone = strata[i]
                 names = [(st, "stratum"), ("all", "beside")]
                 if partial:
-                    names.append(("partial_only", "beside"))
+                    names.append((f"partial_only:{st}", "beside"))
                 if disrupt:
-                    names.append(("with_point_disrupt", "beside"))
+                    names.append((f"with_point_disrupt:{st}", "beside"))
+                if alone:
+                    names.append((f"point_disrupt_alone:{st}", "beside"))
                 for name in names:
                     cell = cells[name]
                     if truth[i]:

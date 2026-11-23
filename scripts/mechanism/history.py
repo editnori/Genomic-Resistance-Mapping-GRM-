@@ -52,8 +52,8 @@ YEAR_RE = re.compile(r"[0-9]{4}")
 
 CELLS_HEADER = ["species_slug", "species", "cell", "class", "dataset", "antibiotic", "periods", "guard",
                 "genomes", "with_year_share", "earlier_genomes", "later_genomes", "earlier_units", "later_units",
-                "passes", "earlier_point", "later_point", "d_point", "p_point", "earlier_gene", "later_gene",
-                "d_gene", "tvd", "p_tvd", "note"]
+                "passes", "earlier_point", "later_point", "d_point", "p_point", "earlier_point_disrupt",
+                "later_point_disrupt", "earlier_gene", "later_gene", "d_gene", "tvd", "p_tvd", "note"]
 FAMILIES_HEADER = ["species_slug", "species", "class", "periods", "family", "earlier_mix", "later_mix"]
 YEARS_HEADER = ["species_slug", "species", "years", "genomes"]
 LINEAGE_HEADER = ["species_slug", "species", "reports", "report_pairs", "differing_genome_pairs", "given"]
@@ -204,20 +204,24 @@ def lineage_components(reports, genomes):
 # ---------------------------------------------------------------- calls
 
 def genome_cells(rows, db, variant="tool_default", rule=None):
-    """class -> (point, gene, families) for one genome. With `rule`, only the
-    rows that meet the rule count and the class is the single key ''."""
+    """class -> (point, gene, families, POINT_DISRUPT) for one genome. A row
+    of Subtype POINT or POINT_DISRUPT is point and enters no family mix; a
+    row of Subtype AMR is gene, with its family (the lead's rulings on
+    questions 1 and 10). With `rule`, only the rows that meet the rule count
+    and the class is the single key ''."""
     out = {}
     use = ar.rule_rows(rows, rule, variant) if rule is not None else ar.counted(rows, variant)
     for r in use:
         keys = [""] if rule is not None else ar.classes_of(r)
         for c in keys:
-            p, g, fams = out.get(c, (False, False, frozenset()))
+            p, g, fams, d = out.get(c, (False, False, frozenset(), False))
             if ar.is_point(r):
                 p = True
+                d = d or ar.is_disrupt(r)
             else:
                 g = True
                 fams = fams | {db.family(r["symbol"], r["subtype"])}
-            out[c] = (p, g, fams)
+            out[c] = (p, g, fams, d)
     return out
 
 
@@ -324,7 +328,9 @@ def vote_row(base, guard, units, seed_stub, note=""):
     passes = ne >= MIN_UNITS and nl >= MIN_UNITS
     row = dict(base, guard=guard, earlier_units=shown(ne), later_units=shown(nl), passes=int(passes),
                earlier_genomes=shown(sum(len(u[2]) for u in units if u[0] == "earlier")),
-               later_genomes=shown(sum(len(u[2]) for u in units if u[0] == "later")), note=note)
+               later_genomes=shown(sum(len(u[2]) for u in units if u[0] == "later")),
+               earlier_point_disrupt=shown(sum(v[3] for u in units if u[0] == "earlier" for v in u[2])),
+               later_point_disrupt=shown(sum(v[3] for u in units if u[0] == "later" for v in u[2])), note=note)
     if not units:
         return row, None
     summaries = [unit_summary(u[2]) for u in units]
@@ -349,7 +355,9 @@ def pooled_row(base, gids, genomes, periods, cell_of):
         if p:
             per[p].append(cell_of(gid))
     row = dict(base, guard="pooled", earlier_genomes=shown(len(per["earlier"])),
-               later_genomes=shown(len(per["later"])), passes="", note="per genome; no vote, no p")
+               later_genomes=shown(len(per["later"])), passes="", note="per genome; no vote, no p",
+               earlier_point_disrupt=shown(sum(v[3] for v in per["earlier"])),
+               later_point_disrupt=shown(sum(v[3] for v in per["later"])))
     if len(per["earlier"]) < MIN_UNIT_GENOMES or len(per["later"]) < MIN_UNIT_GENOMES:
         row["note"] += "; a period under 5 genomes, no share written"
         return row
@@ -407,7 +415,7 @@ def cell_rows(base, gids, genomes, cells_main, cells_intact, cls, periods, linea
     """Every guard's row for one cell and one period pair."""
     def cell_of_from(cells):
         def f(gid):
-            return cells[gid].get(cls, (False, False, frozenset()))
+            return cells[gid].get(cls, (False, False, frozenset(), False))
         return f
 
     cell_of = cell_of_from(cells_main)

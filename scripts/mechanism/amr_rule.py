@@ -42,8 +42,11 @@ VARIANTS = {
     "tool_default_intact": (POINT, CORE, PARTIAL_METHODS),
 }
 NEVER_COUNTED = frozenset(("AMR-SUSCEPTIBLE",))
-# The one subtype this lane reads as a point mutation (PLAN.md, M1 and M2).
-POINT_SUBTYPE = "POINT"
+# The subtypes read with point (the lead's ruling on question 1, 04:13Z on 23
+# Nov 2026): a POINT row, and a POINT_DISRUPT row, a change in a core gene.
+# Subtype AMR is gene. M1, M2 and the time-split link read them alike.
+POINT_SUBTYPES = frozenset(("POINT", "POINT_DISRUPT"))
+DISRUPT_SUBTYPE = "POINT_DISRUPT"
 
 
 class Refusal(Exception):
@@ -135,7 +138,11 @@ def classes_of(row):
 
 
 def is_point(row):
-    return row["subtype"] == POINT_SUBTYPE
+    return row["subtype"] in POINT_SUBTYPES
+
+
+def is_disrupt(row):
+    return row["subtype"] == DISRUPT_SUBTYPE
 
 
 def is_partial(row):
@@ -165,7 +172,7 @@ class Database:
         cat = os.path.join(directory, "ReferenceGeneCatalog.txt")
         hier = os.path.join(directory, "ReferenceGeneHierarchy.txt")
         self.allele_family, self.families = {}, set()
-        self.subclass_classes, self.disrupt_families = {}, set()
+        self.subclass_classes = {}
         with open(cat, encoding="utf-8", newline="") as f:
             for row in csv.DictReader(f, delimiter="\t", quoting=csv.QUOTE_NONE):
                 fam = (row.get("gene_family") or "").strip()
@@ -175,8 +182,6 @@ class Database:
                 allele = (row.get("allele") or "").strip()
                 if allele:
                     self.allele_family[allele] = fam
-                if (row.get("subtype") or "").strip() == "POINT_DISRUPT":
-                    self.disrupt_families.add(fam)
                 classes = [t.strip() for t in (row.get("class") or "").split("/") if t.strip()]
                 for s in (row.get("subclass") or "").split("/"):
                     s = s.strip()
@@ -194,10 +199,12 @@ class Database:
     def family(self, symbol, subtype="AMR"):
         """The family of an element symbol, as the database names it: the
         allele's gene_family; else the symbol where it is a gene_family; else
-        its first ancestor in the hierarchy that is a gene_family. A row of
-        Subtype POINT_DISRUPT names a disrupted core gene as
-        <gene_family>_<change>; its family is that gene_family when the
-        catalogue lists it with Subtype POINT_DISRUPT (lane question 10)."""
+        its first ancestor in the hierarchy that is a gene_family. Only a row
+        of Subtype AMR enters a family mix: a POINT or POINT_DISRUPT row is
+        read with point and has no family here (the lead's rulings on
+        questions 1 and 10, 23 Nov 2026)."""
+        if subtype != "AMR":
+            refuse(f"a row of Subtype {subtype} is read with point and enters no family mix")
         if symbol in self.allele_family:
             return self.allele_family[symbol]
         if symbol in self.families:
@@ -208,10 +215,6 @@ class Database:
                 return node
             seen.add(node)
             node = self.parent.get(node)
-        if subtype == "POINT_DISRUPT" and "_" in symbol:
-            head = symbol.split("_", 1)[0]
-            if head in self.disrupt_families:
-                return head
         # The message names no symbol: a mutation's name holds a position.
         refuse(f"an element symbol of Subtype {subtype}: neither the catalogue nor the hierarchy gives it a family")
 
