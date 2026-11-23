@@ -407,32 +407,86 @@ class Count(unittest.TestCase):
 
         rc, _, conditions = count(count_rows(shift))
         self.assertEqual(rc, 0)
-        at = {(r["arm"], r["condition"]): r for r in conditions}
-        self.assertEqual(at[("k31-program", "1")]["met"], "1")
-        self.assertEqual(at[("k31-program", "1")]["learners"], "3")
-        self.assertEqual(at[("k31-program", "2")]["met"], "1")
-        self.assertEqual(at[("k31-program", "3")]["met"], "1")
-        self.assertEqual(at[("k31-program", "5")]["met"], "1")
-        self.assertEqual(at[("program", "1")]["met"], "0")
-        self.assertEqual(at[("k31-program", "6")]["met"], "")
+        at = {(r["arm"], r["reading"], r["condition"]): r for r in conditions}
+        self.assertEqual(at[("k31-program", "ruling 15", "1 and 2")]["met"], "1")
+        self.assertEqual(at[("k31-program", "ruling 15", "1 and 2")]["learners"], "3")
+        self.assertEqual(at[("k31-program", "ruling 15", "3")]["met"], "1")
+        self.assertEqual(at[("k31-program", "ruling 15", "5")]["met"], "1")
+        self.assertEqual(at[("program", "ruling 15", "1 and 2")]["met"], "0")
+        self.assertEqual(at[("k31-program", "ruling 15", "6")]["met"], "")
+        # The stricter reading beside it, which decides nothing: 2 and 5 for all five learners.
+        self.assertEqual(at[("k31-program", "stricter", "1")]["met"], "1")
+        self.assertEqual(at[("k31-program", "stricter", "2")]["met"], "0")
+        self.assertEqual(at[("k31-program", "stricter", "5")]["met"], "0")
+        self.assertEqual(len(conditions), 5 * 11)
+
+    def test_a_learner_carries_only_when_it_meets_one_and_two_both(self):
+        # In k31-aa, cart and rf meet 1 and 2, scm meets 1 alone (+0.01, inside the margin) and gbt meets 2
+        # alone (+0.05 in three species, 0 in synthia_0, whose resamples hold the interval's low end at 0):
+        # three learners meet 1 and three meet 2, but only two carry the change.
+        rows = count_rows(lambda arm, learner, m: 0.0, n=20, species=4)
+        for r in rows:
+            if r["arm"] == "k31-aa":
+                up = {"cart": 0.05, "rf": 0.05, "scm": 0.01,
+                      "gbt": 0.0 if r["species_slug"] == "synthia_0" else 0.05}.get(r["learner"], 0.0)
+                r["balanced_accuracy"] += up
+        rc, counted, conditions = count(rows)
+        self.assertEqual(rc, 0)
+        at = {(r["arm"], r["reading"], r["condition"]): r for r in conditions}
+        self.assertEqual((at[("k31-aa", "stricter", "1")]["met"], at[("k31-aa", "stricter", "1")]["learners"]), ("1", "3"))
+        self.assertEqual(at[("k31-aa", "stricter", "2")]["learners"], "3")
+        self.assertEqual((at[("k31-aa", "ruling 15", "1 and 2")]["met"], at[("k31-aa", "ruling 15", "1 and 2")]["learners"]),
+                         ("0", "2"))
+        gbt = {(r["split"], r["pair"], r["learner"], r["measure"]): r for r in counted}[
+            ("lineage", "k31-aa-k31", "gbt", "balanced_accuracy")]
+        self.assertEqual((float(gbt["interval_lo"]), int(gbt["better"]), int(gbt["worse"])), (0.0, 15, 0))
+        self.assertLess(float(gbt["holm_p"]), 0.05)
+
+    def test_condition_three_reads_the_twin_as_an_arm_is_read(self):
+        # The twin moves +0.01 in every learner: it meets 1 in all five and 2 in none, so it carries in none.
+        def shift(arm, learner, m):
+            return 0.01 if arm == "twin" and m == "balanced_accuracy" else 0.0
+
+        _, _, conditions = count(count_rows(shift))
+        at = {(r["arm"], r["reading"], r["condition"]): r for r in conditions}
+        self.assertEqual((at[("program", "ruling 15", "3")]["met"], at[("program", "ruling 15", "3")]["learners"]), ("1", "0"))
+        self.assertEqual(at[("program", "stricter", "3")]["met"], "0")
+
+    def test_condition_five_reads_the_learners_that_carry(self):
+        # program carries in cart, rf and gbt, each with a study median of its lineage sign; scm moves +0.01
+        # on the lineage split and -0.05 on the study split, and carries nothing.
+        rows = count_rows(lambda arm, learner, m: 0.0)
+        for r in rows:
+            if r["arm"] == "program":
+                if r["learner"] in ("cart", "rf", "gbt"):
+                    r["balanced_accuracy"] += 0.05
+                elif r["learner"] == "scm":
+                    r["balanced_accuracy"] += 0.01 if r["split"] == "lineage" else -0.05
+        _, _, conditions = count(rows)
+        at = {(r["arm"], r["reading"], r["condition"]): r for r in conditions}
+        self.assertEqual(at[("program", "ruling 15", "1 and 2")]["learners"], "3")
+        self.assertEqual((at[("program", "ruling 15", "5")]["met"], at[("program", "ruling 15", "5")]["learners"]), ("1", "3"))
+        self.assertEqual(at[("program", "stricter", "5")]["met"], "0")
 
     def test_a_twin_that_moves_voids_condition_three(self):
         def shift(arm, learner, m):
             return 0.05 if arm in ("twin", "program") and m == "balanced_accuracy" else 0.0
 
         _, _, conditions = count(count_rows(shift))
-        at = {(r["arm"], r["condition"]): r for r in conditions}
-        self.assertEqual(at[("program", "1")]["met"], "1")
-        self.assertEqual(at[("program", "3")]["met"], "0")
+        at = {(r["arm"], r["reading"], r["condition"]): r for r in conditions}
+        self.assertEqual(at[("program", "ruling 15", "1 and 2")]["met"], "1")
+        self.assertEqual(at[("program", "ruling 15", "3")]["met"], "0")
+        self.assertEqual(at[("program", "stricter", "3")]["met"], "0")
 
     def test_a_recall_interval_below_the_margin_fails_condition_four(self):
         def shift(arm, learner, m):
             return -0.05 if arm == "program" and m == "recall" and learner == "scm" else 0.0
 
         _, _, conditions = count(count_rows(shift))
-        at = {(r["arm"], r["condition"]): r for r in conditions}
-        self.assertEqual(at[("program", "4")]["met"], "0")
-        self.assertEqual(at[("program", "4")]["learners"], "4")
+        at = {(r["arm"], r["reading"], r["condition"]): r for r in conditions}
+        for reading in ("ruling 15", "stricter"):
+            self.assertEqual(at[("program", reading, "4")]["met"], "0")
+            self.assertEqual(at[("program", reading, "4")]["learners"], "4")
 
     def test_a_constant_model_dataset_enters_the_count_and_is_left_out_beside_it(self):
         rows = count_rows(lambda arm, learner, m: 0.0)

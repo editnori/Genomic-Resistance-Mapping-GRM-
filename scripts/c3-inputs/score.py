@@ -57,6 +57,14 @@ rounded to 12 decimals before it is compared. Datasets with a constant-model
 draw enter the count, and count.tsv gives their number per row (`constant`);
 count-no-constant.tsv is the same count with them left out, with Holm over
 its own 30 rows, and decides nothing.
+
+conditions.tsv reads the plan's conditions per arm two ways. Ruling 15, the
+one that decides: a learner carries the change when it meets 1 and 2 both,
+and at least 3 of 5 must carry it; 3 holds when the twin, read the same
+way, carries in fewer than 3; 4 holds for all five learners; 5 holds for
+each learner that carries. The stricter reading, written beside it and
+deciding nothing: 1 for at least 3 of 5, 2 and 5 for all five, 3 the twin
+meeting neither of those, 4 for all five. 6 is the maintainer's.
 """
 
 import importlib.util
@@ -320,48 +328,71 @@ def count(rows, keep_constant=True):
 
 
 def conditions(count_rows):
-    """conditions.tsv's rows: per arm, the plan's change conditions 1 to 5 as the count reads them.
+    """conditions.tsv's rows: per arm, the plan's change conditions as the count reads them, two ways.
 
-    An input arm touches all five learners, so 1 and 2 need at least 3 of 5
-    learners, 4 holds for all five, and 5 asks each learner that meets 1 for
-    a study median of its lineage median's sign. 3 reads the twin as 1 and
-    2 read an arm. 6 is the maintainer's.
+    Ruling 15 (it decides): a learner carries the change when it meets 1
+    (its lineage median difference's interval lies wholly above 0) and 2
+    (better beats worse by the one-sided sign test at p < 0.05 after Holm
+    over 30) both, and at least 3 of 5 must carry it; 3 holds when the twin,
+    read the same way, carries in fewer than 3; 4 holds for all five; 5
+    holds for each learner that carries. The stricter reading (it decides
+    nothing): 1 for at least 3 of 5, 2 and 5 for all five, 3 the twin meeting
+    neither of those, 4 for all five. 6 is the maintainer's.
     """
     at = {(r["split"], r["pair"], r["learner"], r["measure"]): r for r in count_rows}
     sign = lambda x: None if x in (None, "") else (float(x) > 0) - (float(x) < 0)
 
+    def lin(arm, learner, measure=PRIMARY):
+        return at[("lineage", f"{arm}-{DEFAULT}", learner, measure)]
+
     def c1(arm):
-        rs = [at[("lineage", f"{arm}-{DEFAULT}", l, PRIMARY)] for l in LEARNERS]
-        return [l for l, r in zip(LEARNERS, rs) if r["interval_lo"] not in (None, "") and float(r["interval_lo"]) > 0]
+        return {l for l in LEARNERS if lin(arm, l)["interval_lo"] not in (None, "") and float(lin(arm, l)["interval_lo"]) > 0}
 
     def c2(arm):
-        rs = [at[("lineage", f"{arm}-{DEFAULT}", l, PRIMARY)] for l in LEARNERS]
-        return [l for l, r in zip(LEARNERS, rs) if r["holm_p"] not in (None, "") and float(r["holm_p"]) < HOLM_ALPHA
-                and int(r["better"]) > int(r["worse"])]
+        return {l for l in LEARNERS if lin(arm, l)["holm_p"] not in (None, "") and float(lin(arm, l)["holm_p"]) < HOLM_ALPHA
+                and int(lin(arm, l)["better"]) > int(lin(arm, l)["worse"])}
 
-    twin_quiet = len(c1(TWIN)) < TOUCHED_AT_LEAST and len(c2(TWIN)) < TOUCHED_AT_LEAST
+    def same_sign(arm, learners):
+        out = set()
+        for l in learners:
+            study = at.get(("study", f"{arm}-{DEFAULT}", l, PRIMARY))
+            s_lin = sign(lin(arm, l)["median_difference"])
+            if study is not None and s_lin not in (None, 0) and sign(study["median_difference"]) == s_lin:
+                out.add(l)
+        return out
+
+    twin_carry = c1(TWIN) & c2(TWIN)
+    twin_strict = len(c1(TWIN)) >= TOUCHED_AT_LEAST or len(c2(TWIN)) == len(LEARNERS)
     out = []
     for arm in [a for a in FAMILY if a != TWIN]:
         one, two = c1(arm), c2(arm)
-        low = [l for l in LEARNERS if at[("lineage", f"{arm}-{DEFAULT}", l, "recall")]["interval_hi"] not in (None, "")
-               and float(at[("lineage", f"{arm}-{DEFAULT}", l, "recall")]["interval_hi"]) < -MARGIN]
-        study = at.get(("study", f"{arm}-{DEFAULT}", LEARNERS[0], PRIMARY))
-        same_sign = [l for l in one
-                     if sign(at[("lineage", f"{arm}-{DEFAULT}", l, PRIMARY)]["median_difference"]) not in (None, 0)
-                     and sign(at[("study", f"{arm}-{DEFAULT}", l, PRIMARY)]["median_difference"])
-                     == sign(at[("lineage", f"{arm}-{DEFAULT}", l, PRIMARY)]["median_difference"])] if study else []
+        carry = one & two
+        low = [l for l in LEARNERS if lin(arm, l, "recall")["interval_hi"] not in (None, "")
+               and float(lin(arm, l, "recall")["interval_hi"]) < -MARGIN]
+        carried = same_sign(arm, carry)
+        all_five = same_sign(arm, LEARNERS)
         rows = [
-            (1, "the lineage median difference's interval lies wholly above 0, for at least 3 of 5 learners",
+            ("ruling 15", "1 and 2", "a learner carries when its lineage median difference's interval lies wholly above 0 "
+             "and better beats worse by the one-sided sign test at p < 0.05 after Holm over 30; at least 3 of 5 carry",
+             len(carry) >= TOUCHED_AT_LEAST, len(carry)),
+            ("ruling 15", "3", "the twin, read the same way, carries in fewer than 3 of 5 learners",
+             len(twin_carry) < TOUCHED_AT_LEAST, len(twin_carry)),
+            ("ruling 15", "4", "no learner's recall interval lies wholly below -0.02, for all five", not low, 5 - len(low)),
+            ("ruling 15", "5", "each learner that carries has a study median of its lineage median's sign",
+             bool(carry) and carried == carry, len(carried)),
+            ("ruling 15", "6", "the maintainer rules the change", "", ""),
+            ("stricter", "1", "the lineage median difference's interval lies wholly above 0, for at least 3 of 5 learners",
              len(one) >= TOUCHED_AT_LEAST, len(one)),
-            (2, "better beats worse by the one-sided sign test at p < 0.05 after Holm over 30, for at least 3 of 5",
-             len(two) >= TOUCHED_AT_LEAST, len(two)),
-            (3, "the twin meets neither 1 nor 2", twin_quiet, ""),
-            (4, "no learner's recall interval lies wholly below -0.02", not low, 5 - len(low)),
-            (5, "each learner meeting 1 has a study median of its lineage median's sign",
-             bool(one) and len(same_sign) == len(one), len(same_sign)),
+            ("stricter", "2", "better beats worse by the one-sided sign test at p < 0.05 after Holm over 30, for all five",
+             len(two) == len(LEARNERS), len(two)),
+            ("stricter", "3", "the twin meets neither 1 nor 2 as this reading reads them", not twin_strict, ""),
+            ("stricter", "4", "no learner's recall interval lies wholly below -0.02, for all five", not low, 5 - len(low)),
+            ("stricter", "5", "each of the five learners has a study median of its lineage median's sign",
+             len(all_five) == len(LEARNERS), len(all_five)),
+            ("stricter", "6", "the maintainer rules the change", "", ""),
         ]
-        out += [{"arm": arm, "condition": n, "reads": text, "met": int(bool(m)), "learners": k} for n, text, m, k in rows]
-        out.append({"arm": arm, "condition": 6, "reads": "the maintainer rules the change", "met": "", "learners": ""})
+        out += [{"arm": arm, "reading": reading, "condition": n, "reads": text,
+                 "met": "" if m == "" else int(bool(m)), "learners": k} for reading, n, text, m, k in rows]
     return out
 
 
@@ -375,6 +406,7 @@ DATASET_COLUMNS = ["dataset", "species_slug", "species", "antibiotic", "split", 
                    "constant_draws", "scored", "n", "tp", "fp", "tn", "fn"] + MEASURES
 COUNT_COLUMNS = ["split", "pair", "learner", "measure", "orientation", "datasets", "entered", "not_scored", "constant", "better", "worse", "same", "median_difference", "species", "interval_lo", "interval_hi",
                  "sign_p", "holm_p"]
+CONDITION_COLUMNS = ["arm", "reading", "condition", "reads", "met", "learners"]
 
 
 def load(path):
@@ -397,7 +429,7 @@ def main(argv):
         out.mkdir(parents=True, exist_ok=True)
         write_tsv(out / "count.tsv", counted, COUNT_COLUMNS)
         write_tsv(out / "count-no-constant.tsv", count(rows, keep_constant=False), COUNT_COLUMNS)
-        write_tsv(out / "conditions.tsv", conditions(counted), ["arm", "condition", "reads", "met", "learners"])
+        write_tsv(out / "conditions.tsv", conditions(counted), CONDITION_COLUMNS)
         print(f"count: {len(rows)} dataset rows from {len(rest)} files")
         return 0
     if len(argv) != 4:
