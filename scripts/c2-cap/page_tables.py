@@ -768,14 +768,21 @@ CHECK_COLUMNS = ["check", "passed", "made", "species"]
 
 
 def page_binaries(runs):
-    groups = {}
+    """Per commit and code sha256, its species named; and under each, every binary sha256 with its species (the
+    lead's answer 3: two binaries under one code sha256 are named, not failed)."""
+    groups, grms = {}, {}
     for slug in sorted(runs):
         b = runs[slug]["binary"]
         groups.setdefault((b["commit"], b["code"]), []).append(runs[slug]["cohorts"]["species"])
-    return [{"commit": c, "code": k, "species": len(v), "names": ", ".join(v)} for (c, k), v in sorted(groups.items())]
+        grms.setdefault((b["commit"], b["code"]), {}).setdefault(b.get("grm", ""), []).append(
+            runs[slug]["cohorts"]["species"])
+    return [{"commit": c, "code": k, "species": len(v), "names": ", ".join(v),
+             "binaries": len(grms[(c, k)]),
+             "binary_names": "; ".join(f"{g}: {', '.join(s)}" for g, s in sorted(grms[(c, k)].items()))}
+            for (c, k), v in sorted(groups.items())]
 
 
-BINARY_COLUMNS = ["commit", "code", "species", "names"]
+BINARY_COLUMNS = ["commit", "code", "species", "names", "binaries", "binary_names"]
 
 
 FIT = re.compile(r"^(fit|study)-(cap-2000|cap-4000|cap-all)-(.+)$")
@@ -830,7 +837,7 @@ This directory holds the tables behind [docs/cap-arms-result.md](../../docs/cap-
 | `page-not-fitted.tsv` | the datasets an arm does not score, named in full with the reason |
 | `page-study.tsv` | per study dataset: the added genomes that may train under `cap-all` and those that trained; deciding nothing |
 | `page-checks.tsv` | the scorer's checks per name, passed over made |
-| `page-binaries.tsv` | each binary by commit and code sha256, with its species named |
+| `page-binaries.tsv` | each binary by commit and code sha256, with its species named, and under it each binary sha256 with its species |
 | `page-times.tsv` | the fits' wall and CPU seconds and peak memory per arm and split, as sums and medians |
 
 A dataset's figure is the mean of its draws: `grm arm` slots 0 to 2 for each arm and 3 to 5 for the twin, at evaluation seed 42; the study split has one fit per dataset and arm. An added genome only trains and is never scored, so every arm is read on the default's held-out genomes. A split by lineage or study is a retrospective split inside one database, never external validation.
@@ -1011,8 +1018,10 @@ def print_checks(rows):
 
 
 def print_binaries(rows):
-    return table(["Commit", "Code sha256", "Species"], [[f"`{r['commit'][:7]}`", f"`{r['code'][:12]}`", r["names"]]
-                                                       for r in rows])
+    return table(["Commit", "Code sha256", "Species", "Binary sha256s"],
+                 [[f"`{r['commit'][:7]}`", f"`{r['code'][:12]}`", r["names"],
+                   "; ".join(f"`{x.split(': ', 1)[0][:12]}`: {x.split(': ', 1)[1]}" if ": " in x else x
+                             for x in r.get("binary_names", "").split("; ") if x) or "none"] for r in rows])
 
 
 def print_times(rows):

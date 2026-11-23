@@ -192,5 +192,35 @@ class Unlisted(Copies):
         self.assertIn(f"not listed: {slug}/score/extra.tsv", got["SHA256SUMS"])
 
 
+class Binaries(Copies):
+    def test_two_binary_sha256s_under_one_code_are_named_and_pass(self):
+        slug = self.r.slugs[7]
+        self.r.binary[slug] = (base.pc.COMMIT, "d" * 64, base.pc.CODE)
+        self.r.write_species(slug)
+        self.seal(slug)
+        got, ok = self.run_checks()
+        self.assertTrue(ok, got["one binary"])
+        self.assertIn(f"binary {'d' * 64}: 1 species ({slug})", got["one binary"])
+        self.assertIn(f"binary {base.pc.GRM}: 7 species", got["one binary"])
+
+    def test_two_commits_fail_the_one_binary_check(self):
+        slug = self.r.slugs[3]
+        self.r.binary[slug] = ("e" * 40, base.pc.GRM, base.pc.CODE)
+        self.r.write_species(slug)
+        self.seal(slug)
+        got = self.fails("one binary")
+        self.assertIn(f"commit {'e' * 40} code {base.pc.CODE}: 1 species ({slug})", got["one binary"])
+
+    def test_the_page_names_each_binary_sha256_with_its_species(self):
+        page = base.common.load("page_tables")
+        runs = {s: {"binary": {"commit": "c" * 40, "code": "b" * 64, "grm": ("d" if s == "s2" else "a") * 64},
+                    "cohorts": {"species": f"Synthetic species {s}"}} for s in ("s1", "s2", "s3")}
+        rows = page.page_binaries(runs)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["binaries"], 2)
+        self.assertIn(f"{'d' * 64}: Synthetic species s2", rows[0]["binary_names"])
+        self.assertIn(f"{'a' * 64}: Synthetic species s1, Synthetic species s3", rows[0]["binary_names"])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -29,7 +29,9 @@ Checks, each printed with its counts and none with a genome id:
   DONE is named and set aside by time, and a FAILED with no newer DONE
   fails;
 - one binary: every species' binary.txt names the same commit and code
-  sha256; else each binary is named with its species;
+  sha256; else each is named with its species, and the check fails; two
+  binary sha256s under one code sha256 are each named with their species,
+  and the check does not fail on them (the lead's answer 3);
 - expect.py: each expect.tsv is expect.py's from the run's lists.txt,
   roots.json, added-labelled.tsv and the study fold files' table
   (study-files-<arm>.tsv: a dataset with a study plan, and its file
@@ -351,8 +353,18 @@ def run(runs, release, lrows, selection=None, lists=()):
     for slug in slugs:
         b = binary_of(runs / slug)
         groups.setdefault((b.get("commit"), b.get("code")), []).append(slug)
-    say("one binary", len(groups) == 1, "; ".join(f"commit {c} code {k}: {len(v)} species ({', '.join(v)})"
-                                                 for (c, k), v in sorted(groups.items(), key=lambda x: str(x[0]))))
+    grms = {}
+    for slug in slugs:
+        b = binary_of(runs / slug)
+        grms.setdefault((b.get("commit"), b.get("code")), {}).setdefault(b.get("grm"), []).append(slug)
+    named = "".join(f"; under code {k}, binary {g}: {len(v)} species ({', '.join(v)})"
+                    for (c, k), by in sorted(grms.items(), key=lambda x: str(x[0])) if len(by) > 1
+                    for g, v in sorted(by.items(), key=lambda x: str(x[0])))
+    whole = all(c and k for c, k in groups)
+    say("one binary", len(groups) == 1 and whole,
+        "; ".join(f"commit {c} code {k}: {len(v)} species ({', '.join(v)})"
+                  for (c, k), v in sorted(groups.items(), key=lambda x: str(x[0]))) + named
+        + ("" if whole else "; a binary.txt names no commit or no code sha256"))
 
     same, rows_n = 0, 0
     for slug in slugs:
