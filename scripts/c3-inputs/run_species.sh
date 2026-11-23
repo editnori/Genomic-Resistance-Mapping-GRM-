@@ -189,6 +189,13 @@ for k, v in (b.get("equality") or {}).items():
     print(f"equality {k} {v}")
 ' "$INPUTS/$1/build.json"
 }
+# killed_for_memory <time file>: whether GNU time's record says the kernel's
+# SIGKILL ended the program, as it ends one when memory runs out. A program
+# time runs itself is "terminated by signal 9"; a step runs in bash, whose exit
+# is then 137, which time writes as "non-zero status 137".
+killed_for_memory() {
+  grep -qE 'terminated by signal 9|non-zero status 137' "$1"
+}
 step() {  # step <name> <function>: once, timed, in a shell that stops at the first failure
   STEP=$1
   if [ -e "$OUT/flags/$1.done" ]; then say "$1: done before, skipped"; return 0; fi
@@ -196,7 +203,7 @@ step() {  # step <name> <function>: once, timed, in a shell that stops at the fi
   /usr/bin/time -f "$1 %e s wall, %M KB peak, %U s user, %S s sys" -o "$OUT/logs/$1.time" \
     bash -euo pipefail -c "$(declare -f say pinned master keep_build "$2"); $2" < /dev/null > "$OUT/logs/$1.log" 2>&1 \
     || { scrub "$OUT/logs/$1.log"; tail -n 30 "$OUT/logs/$1.log"
-         ! grep -q 'signal 9' "$OUT/logs/$1.time" \
+         ! killed_for_memory "$OUT/logs/$1.time" \
            || say "$1: killed by signal 9, as the kernel kills a program when memory runs out; restart with a smaller JOBS, which holds fewer genomes and buckets at once"
          false; }
   scrub "$OUT/logs/$1.log"
@@ -599,7 +606,10 @@ fit() {
   STEP=$name
   say "$name: start"
   /usr/bin/time -v -o "$OUT/logs/$name.time" "$GRM" --data "$ROOT" learn --species "$SP" "$@" \
-    < /dev/null > "$OUT/logs/$name.log" 2>&1 || { scrub "$OUT/logs/$name.log"; tail -n 30 "$OUT/logs/$name.log"; false; }
+    < /dev/null > "$OUT/logs/$name.log" 2>&1 || { scrub "$OUT/logs/$name.log"; tail -n 30 "$OUT/logs/$name.log"
+      ! killed_for_memory "$OUT/logs/$name.time" \
+        || say "$name: killed by signal 9, as the kernel kills a program when memory runs out; restart with a smaller JOBS"
+      false; }
   scrub "$OUT/logs/$name.log"
   say "$name: end, $(grep -E 'Elapsed|Maximum resident' "$OUT/logs/$name.time" | sed 's/^\s*//' | tr '\n' ';')"
 }
