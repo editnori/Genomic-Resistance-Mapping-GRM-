@@ -8,6 +8,7 @@ scripts/c4-screen/lists.tsv, which holds no score.
 import contextlib
 import hashlib
 import io
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -344,6 +345,54 @@ class Gates(Built):
         rows = fx.read(path)
         fx.rewrite(path, rows + [dict(rows[0], arm="twin")], fx.header(path))
         self.stops(root, 16)
+
+
+class GatesHeld(Built):
+    """Gates 2, 3, 4, 5 and 16 on a reading a fault in each would let pass (SYNTHETIC)."""
+
+    def test_a_species_folder_the_first_run_does_not_hold_is_refused(self):
+        root = self.fresh()
+        shutil.copytree(root / "reading" / "score" / "synthia_gamma", root / "reading" / "score" / "synthia_delta")
+        self.stops(root, 2)
+
+    def test_a_genome_count_other_than_the_lists_is_refused(self):
+        root = self.fresh()
+        path = root / "reading" / "score" / "synthia_alpha" / "datasets.tsv"
+        rows = fx.read(path)
+        for r in rows:
+            if r["dataset"] == "synthia_alpha__synthetic_drug_1":
+                r["genomes"] = str(int(r["genomes"]) + 1)
+        fx.rewrite(path, rows, fx.header(path))
+        self.stops(root, 3)
+
+    def test_a_study_run_at_a_draw_seed_is_refused(self):
+        root = self.fresh()
+        path = root / "reading" / "score" / "synthia_alpha" / "draws.tsv"
+        rows = fx.read(path)
+        for r in rows:
+            if r["role"] == "study":
+                r["seed"] = "43"
+        fx.rewrite(path, rows, fx.header(path))
+        self.stops(root, 4)
+
+    def test_the_twin_at_a_draw_seed_is_refused(self):
+        root = self.fresh()
+        path = root / "reading" / "score" / "synthia_alpha" / "draws.tsv"
+        rows = fx.read(path)
+        k = next(i for i, r in enumerate(rows) if r["role"] == "twin")
+        rows[k]["seed"] = "44"
+        fx.rewrite(path, rows, fx.header(path))
+        self.stops(root, 5)
+
+    def test_a_fit_with_no_cpu_time_or_no_peak_is_refused(self):
+        for column in ("cpu_seconds", "peak_kb"):
+            root = self.fresh()
+            path = root / "reading" / "score" / "synthia_alpha" / "fits.tsv"
+            rows = fx.read(path)
+            rows[0][column] = ""
+            fx.rewrite(path, rows, fx.header(path))
+            with self.subTest(column=column):
+                self.stops(root, 16)
 
 
 class CartOff(Built):
