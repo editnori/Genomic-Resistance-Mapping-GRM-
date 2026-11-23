@@ -131,5 +131,23 @@ class Times(Copies):
         self.assertNotIn("set aside", got["DONE"])
 
 
+class GenomeIds(Copies):
+    def test_a_genome_id_joined_to_a_word_fails(self):
+        for i, text in enumerate(("genome_{}", "id{}", "fit-{}:")):
+            with self.subTest(text=text):
+                slug = self.r.slugs[i]
+                p = self.folder(slug) / "logs" / "run.log"
+                p.write_text(text.format(self.ids[slug][1]) + "\n", encoding="utf-8")
+                got = self.fails("genome ids and BioProjects")
+                self.assertIn("1 genome ids", got["genome ids and BioProjects"])
+                p.unlink()
+
+    def test_an_id_inside_a_longer_number_is_no_id(self):
+        slug = self.r.slugs[2]
+        (self.folder(slug) / "logs" / "run.log").write_text(f"1{self.ids[slug][1]}1\n", encoding="utf-8")
+        got, ok = self.run_checks()
+        self.assertTrue(ok, got["genome ids and BioProjects"])
+
+
 if __name__ == "__main__":
     unittest.main()

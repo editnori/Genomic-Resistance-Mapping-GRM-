@@ -36,8 +36,10 @@ Checks, each printed with its counts and none with a genome id:
 - genome ids and BioProjects: 0 of the release's genome ids of the 8
   species, or of any <id list> given (one id a line, as the cohort lists
   on the box), and 0 BioProject accessions in every file that will be read
-  or published (everything above but score/score.log), with scrub.py's
-  token for a genome id;
+  or published (everything above but score/score.log), with a genome id
+  read as digits, a dot and digits with no digit or dot before it
+  (scrub.py's token lets no letter or underscore stand there, and misses an
+  id joined to a word);
 - refused lineage draws: the datasets whose lineage split is unavailable,
   from the fold check's logs, and their refused slots, counted.
 
@@ -69,6 +71,9 @@ SELECTION = {
 }
 DEFAULT_GENOMES, GATE = 2000, 4096
 BIOPROJECT = re.compile(rb"PRJ[A-Z]{2}[0-9]+")
+# A genome id as a token: scrub.py's pattern lets no word character stand before an id, so it misses
+# genome_1280.1234 and id1280.1234; here only a digit or a dot may not stand before it.
+ID_TOKEN = re.compile(rb"(?<![\d.])\d+\.\d+(?!\d)")
 # run_species.sh writes DONE's and FAILED's time with date -u +%FT%TZ; any other form is not a time.
 TIME = re.compile(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ")
 REFUSED = re.compile(r"^(\S+): lineage split unavailable: ([0-9]+) default slot plans refused")
@@ -246,7 +251,7 @@ def scan(files, ids, texts=()):
     """(genome ids found, BioProject accessions found) in the files and in score.tar's tables' bytes."""
     found_ids = found_bp = 0
     for text in [p.read_bytes() for p in files] + list(texts):
-        found_ids += sum(1 for t in scrub.TOKEN.findall(text) if t in ids)
+        found_ids += sum(1 for t in ID_TOKEN.findall(text) if t in ids)
         found_bp += len(BIOPROJECT.findall(text))
     return found_ids, found_bp
 
