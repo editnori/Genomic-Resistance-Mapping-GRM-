@@ -1097,6 +1097,73 @@ mod tests {
     }
 
     #[test]
+    fn a_partial_genes_first_residue_is_m_only_where_its_own_start_is_real() {
+        // SYNTHETIC: Prodigal writes M for a real start codon of any kind (GTG
+        // here, which table 11 reads as V) and the codon's own residue where
+        // the gene runs off the contig at its 5' end. partial=LR is in contig
+        // order, so on the reverse strand the 5' end is the right one.
+        let mut g = gene(60, 31);
+        g.replace_range(0..3, "GTG");
+        let n = g.len();
+        let (head, tail) = (seq(30, 32), seq(40, 33));
+        let called =
+            |start: usize, end: usize, forward: bool, partial: (bool, bool), protein: Vec<u8>| {
+                Called {
+                    contig: "c1".to_string(),
+                    seq: 1,
+                    start,
+                    end,
+                    forward,
+                    partial,
+                    protein,
+                }
+            };
+        let with_m = |cds: &str| {
+            let mut p = translate11(cds.as_bytes());
+            p[0] = b'M';
+            p
+        };
+        let off_start = translate11(&g.as_bytes()[9..]);
+        assert_ne!(off_start[0], b'M');
+        let cases = [
+            // forward, the 5' end off the contig's left end: the codon's own residue
+            (
+                format!("{}{tail}", &g[9..]),
+                called(1, n - 9, true, (true, false), off_start.clone()),
+            ),
+            // forward, the 3' end off the right end: M, no stop
+            (
+                format!("{head}{}", &g[..n - 9]),
+                called(31, 30 + n - 9, true, (false, true), with_m(&g[..n - 9])),
+            ),
+            // reverse, the 5' end off the right end: the codon's own residue
+            (
+                format!("{head}{}", rc(&g[9..])),
+                called(31, 30 + n - 9, false, (false, true), off_start.clone()),
+            ),
+            // reverse, the 3' end off the left end: M, no stop
+            (
+                format!("{}{tail}", rc(&g[..n - 9])),
+                called(1, n - 9, false, (true, false), with_m(&g[..n - 9])),
+            ),
+        ];
+        for (contig, c) in &cases {
+            assert!(protein_matches(contig.as_bytes(), c), "{:?}", c.partial);
+            let mut other = c.clone();
+            other.protein[0] = if c.protein[0] == b'M' {
+                translate11(b"GTG")[0]
+            } else {
+                b'M'
+            };
+            assert!(
+                !protein_matches(contig.as_bytes(), &other),
+                "{:?}",
+                c.partial
+            );
+        }
+    }
+
+    #[test]
     fn a_protein_is_held_to_the_contig_prodigal_numbered_read_as_prodigal_reads_it() {
         // SYNTHETIC: three contigs, the first two of one first word, the third
         // with no name, the first with a space at each line end and a '-'
