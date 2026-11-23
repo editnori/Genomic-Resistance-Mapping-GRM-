@@ -281,7 +281,8 @@ jobs:
           # test_page.py alone reads committed tables: it checks docs/served-pick-result.md against reference/served-pick.
           - suite: tests/c9_pick
             top: .
-          # SYNTHETIC results, inputs files, reports and dataset rows built in the test; it runs score.py, lists.py and expect.py under scripts/c3-inputs and fits nothing.
+          # SYNTHETIC results, inputs files, reports, dataset rows, readings and run copies built in the test; it runs score.py, lists.py, expect.py,
+          # page_tables.py and run_checks.py under scripts/c3-inputs and fits nothing. test_page_faults.py reads scripts/c3-inputs/page_faults.py and the files it plants in.
           # test_lists.py also reads the committed lists scripts/c9-pick/l.tsv, reference/amrfinderplus-comparison/datasets.tsv and scripts/c3-inputs/lists.tsv.
           - suite: tests/c3_inputs
             top: .
