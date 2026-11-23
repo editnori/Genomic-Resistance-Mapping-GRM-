@@ -154,15 +154,24 @@ def table(path):
         return list(csv.DictReader(f, delimiter="\t"))
 
 
-TOP = OUT = None
+TOP = OUT = STOPPED = None
 
 
 def setUpModule():
-    global TOP, OUT
+    # A gate that stops the whole reading is kept, not raised, so a test that builds its own copy still runs.
+    global TOP, OUT, STOPPED
     TOP = Path(tempfile.mkdtemp())
     build(TOP)
     OUT = TOP / "out"
-    page.write(TOP / "reading", TOP / "l.tsv", OUT)
+    try:
+        page.write(TOP / "reading", TOP / "l.tsv", OUT)
+    except page.Stop as e:
+        STOPPED = e
+
+
+def written(test):
+    if STOPPED is not None:
+        test.fail(f"the whole SYNTHETIC reading was refused: {STOPPED}")
 
 
 def tearDownModule():
@@ -190,6 +199,7 @@ class Gates(unittest.TestCase):
         self.assertFalse((tmp / "out").exists(), "nothing is written when a gate stops")
 
     def test_a_whole_reading_passes_every_gate_and_writes_its_files(self):
+        written(self)
         files = sorted(p.relative_to(OUT).as_posix() for p in OUT.rglob("*") if p.is_file())
         want = ["README.md", "SHA256SUMS", "gates.txt", "page-conditions.tsv", "page-count.tsv", "page-datasets.tsv",
                 "page-pick-pairs.tsv", "page-picks.tsv", "page-pooled.tsv", "page-species.tsv", "reading.txt"]
@@ -273,6 +283,9 @@ class Gates(unittest.TestCase):
 
 
 class Tables(unittest.TestCase):
+    def setUp(self):
+        written(self)
+
     def test_the_conditions_and_the_count_are_the_scorers(self):
         conds = table(OUT / "page-conditions.tsv")
         for a in page.ANSWERS:
@@ -371,6 +384,9 @@ class Tables(unittest.TestCase):
 
 
 class Printing(unittest.TestCase):
+    def setUp(self):
+        written(self)
+
     def test_print_gives_each_table_with_names_in_full_and_no_genome(self):
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
