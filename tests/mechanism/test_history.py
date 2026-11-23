@@ -259,6 +259,15 @@ class Vote(unittest.TestCase):
         self.assertIn("BioProjects flagged: 6", r["note"])
         self.assertEqual((r["passes"], r["earlier_genomes"], r["later_genomes"]), ("0", "5", "0"))
 
+    def test_the_intact_row_leaves_partial_calls_out(self):
+        g = [dict(x, kind="partial") if x["id"].startswith("8103.") else x for x in scenario()]
+        rc, err, out = self.go(g)
+        self.assertEqual(rc, 0, err)
+        # PRJNA900003's genomes carry a gene row only through a partial call
+        self.assertEqual(row(out, "bioproject")["earlier_gene"], "1.000000000000")
+        r = row(out, "intact")
+        self.assertEqual((r["passes"], r["earlier_genomes"], r["earlier_gene"]), ("1", "17", f"{2 / 3:.12f}"))
+
     def test_lineage_clusters_vote_when_reports_agree(self):
         rc, err, out = self.go()
         self.assertEqual(row(out, "lineage")["passes"], "1")
