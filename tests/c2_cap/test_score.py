@@ -59,14 +59,16 @@ WIDE_FOLDS = [(52, 10, 4), (55, 8, 3), (50, 9, 4)]
 class Run:
     """A SYNTHETIC C2 run of one or two datasets: the default's and cap-all's lineage fits and study picks."""
 
-    def __init__(self, tmp, datasets=(D,), study=True, keyed=None):
+    def __init__(self, tmp, datasets=(D,), study=True, keyed=None, refused=()):
         self.t = Path(tmp)
         self.sp = common.Species()
         self.expect = []
         for d in datasets:
-            common.lineage_fits(self.sp, self.t / "fits", d, DRAWS + TWIN, DRAWS, keyed=keyed)
-            common.predictions(self.t / "fits", "cap-2000", d, range(DRAWS + TWIN))
-            common.predictions(self.t / "fits", "cap-all", d, range(DRAWS))
+            common.lineage_fits(self.sp, self.t / "fits", d, DRAWS + TWIN, DRAWS, keyed=keyed, refused=refused)
+            # With a refused default plan grm arm writes no lineage row for the default, nor for an arm that
+            # reaches a refused slot among its draws.
+            common.predictions(self.t / "fits", "cap-2000", d, [] if refused else range(DRAWS + TWIN))
+            common.predictions(self.t / "fits", "cap-all", d, [] if any(s < DRAWS for s in refused) else range(DRAWS))
             self.expect += lineage_rows(d)
             if study:
                 common.write_json(self.t / "picks" / "cap-2000" / f"{d}.study-whole-s42.pick.json", pick(d, BASE_FOLDS))
@@ -116,6 +118,20 @@ class Checks(unittest.TestCase):
         self.assertEqual(len(lineage), (DRAWS + TWIN + 2 * DRAWS) * 5)
         self.assertEqual(sorted({r["slot"] for r in lineage}), ["0", "1", "2", "3"])
         self.assertTrue(all(r["n"] == "60" for r in lineage))
+
+    def test_an_unavailable_lineage_split_is_scored_zero_on_every_arm_and_the_run_goes_on(self):
+        # A draw slot (1) and a twin slot (3) refused past grm arm's replacements: in the second, cap-all's own
+        # draws ran and wrote rows, yet no pair with the default exists, so none is read.
+        for refused in ({1}, {3}):
+            with self.subTest(refused=refused), tempfile.TemporaryDirectory() as tmp:
+                rc, text, checks, draws, datasets = Run(tmp, refused=refused).run()
+                self.assertEqual(rc, 0, failed(checks))
+                lineage = [r for r in draws if r["split"] == "lineage"]
+                self.assertEqual(len(lineage), (DRAWS + TWIN + 2 * DRAWS) * 5)
+                self.assertEqual({(r["scored"], r["why"]) for r in lineage}, {("0", "lineage split unavailable")})
+                self.assertEqual({r["scored"] for r in draws if r["split"] == "study"}, {"1"})
+                self.assertEqual({r["scored"] for r in datasets if r["split"] == "lineage"}, {"0"})
+                self.assertEqual({r["scored"] for r in datasets if r["split"] == "study"}, {"1"})
 
     def test_an_arm_scored_on_other_genomes_than_the_defaults_outer_test_folds_fails(self):
         with tempfile.TemporaryDirectory() as tmp:

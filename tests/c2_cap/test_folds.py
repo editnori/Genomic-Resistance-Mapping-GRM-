@@ -20,7 +20,7 @@ DRAWS, TWIN = 2, 2
 
 
 class Lineage(unittest.TestCase):
-    def run_check(self, breach=None, edit=None, none_added=0, keyed=None):
+    def run_check(self, breach=None, edit=None, none_added=0, keyed=None, refused=()):
         """(exit code, printed text, rows written) of check_folds.py lineage on a SYNTHETIC run."""
         sp = common.Species()
         with tempfile.TemporaryDirectory() as tmp:
@@ -29,7 +29,8 @@ class Lineage(unittest.TestCase):
             sp.cohorts(t / "cohorts")
             common.write_json(t / "roots.json", {"fits": {"cap-all": "cap-all"}, "same_as": {"cap-4000": "cap-all"},
                                                  "genomes": {"cap-2000": 60, "cap-4000": 90, "cap-all": 90}})
-            common.lineage_fits(sp, t / "fits", D, DRAWS + TWIN, DRAWS, breach=breach, keyed=keyed)
+            common.lineage_fits(sp, t / "fits", D, DRAWS + TWIN, DRAWS, breach=breach, keyed=keyed,
+                                refused=refused)
             if edit:
                 edit(t / "fits")
             (t / "added-labelled.tsv").write_text(
@@ -71,6 +72,29 @@ class Lineage(unittest.TestCase):
         rc, text, _ = self.run_check(edit=edit)
         self.assertEqual(rc, 1)
         self.assertIn("breach: cap-all: a cohort plan made from another plan than the default's slot: 1", text)
+
+    def test_an_unavailable_lineage_split_is_not_produced_and_does_not_stop_the_run(self):
+        # grm arm refused the default's slot-1 draw past its two replacements: every lineage run of the dataset is
+        # unavailable and not produced, and the run goes on (docs/input-comparison-runner.md, A refused repeat).
+        rc, text, rows = self.run_check(refused={1})
+        self.assertEqual(rc, 0, text)
+        self.assertIn("lineage split unavailable: 1 default slot plans refused", text)
+        self.assertNotIn("breach", text)
+        body = [r.split("\t") for r in rows[1:]]
+        # cap-all traced slot 0 before it reached the refused slot; those folds are still checked.
+        self.assertEqual(sorted({(r[1], r[3]) for r in body}), [("cap-all", "0")])
+        self.assertEqual(len(body), common.K)
+
+    def test_a_cohort_plan_or_a_default_trace_line_of_an_unavailable_split_breaches(self):
+        def edit(fits):
+            common.write_json(fits / "cap-all" / D / "plans" / "lineage-1.cohort.json", {"repeat": 1})
+            p = fits / "cap-2000" / D / "training.jsonl"
+            line = json.dumps({"split": "lineage", "repeat": 0, "fold": 0, "train": []})
+            p.write_text(p.read_text(encoding="utf-8") + line + "\n", encoding="utf-8")
+        rc, text, _ = self.run_check(refused={1}, edit=edit)
+        self.assertEqual(rc, 1)
+        self.assertIn("breach: cap-all: a cohort plan made from a refused default plan: 1", text)
+        self.assertIn("breach: a trace line of an unavailable lineage split: 1", text)
 
     def test_an_added_genome_of_a_held_out_lineage_in_training_breaches(self):
         rc, text, _ = self.run_check("lineage")

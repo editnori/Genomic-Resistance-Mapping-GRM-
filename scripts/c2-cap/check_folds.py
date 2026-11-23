@@ -28,6 +28,17 @@ fit of a none-added arm breaches). Per slot and outer fold f:
 - the cohort plan's lineage_dropped counts the added genomes of a scored
   lineage, and its balance_dropped is 0.
 
+A default plan with an unavailable_reason is a lineage draw grm arm refused
+past its replacements (src/ablate/arm.rs, arm_plans): every lineage run of
+the dataset is then unavailable and not produced, as H-1's ruling has it
+(docs/input-comparison-runner.md, A refused repeat), and the run goes on.
+The default then traces no lineage fold (a trace line breaches), a wider
+arm has no cohort plan at a refused slot (one breaches), and a fold with no
+training trace is not a breach; the cohort plans and trace lines a wider
+arm wrote before its first refused slot are checked as above. The check
+prints the dataset's lineage split as unavailable with the count of
+refused slots.
+
 Writes one row per dataset, arm, split, slot and fold: scored, trained,
 trained_added, kept_out_lineage, kept_out_duplicate, balance_dropped.
 
@@ -109,16 +120,24 @@ def lineage(fits, dataset, cohorts, structure, roots, draws, twin, bad, empty=fr
     if not set(base_ids) <= set(read_ids(Path(cohorts) / f"{DEFAULT}.txt")):
         bad.add("a default genome outside the default's cohort")
     base_set = set(base_ids)
-    rows, tests = [], {}
+    rows, tests, plans = [], {}, {}
     for slot in range(draws + twin):
         p = base_dir / "plans" / f"lineage-{slot}.json"
         if not p.is_file():
             bad.add("a default slot with no plan")
             continue
         doc = load_json(p)
-        plan = doc["plan"]
         if doc["sample_ids"] != base_ids:
             bad.add("a default plan over other genomes than its trace")
+            continue
+        plans[slot] = doc["plan"]
+    refused = {s for s, plan in plans.items() if plan.get("unavailable_reason") is not None}
+    if refused:
+        print(f"{dataset}: lineage split unavailable: {len(refused)} default slot plans refused past grm arm's "
+              "replacements; no lineage run is produced")
+        bad.add("a trace line of an unavailable lineage split", sum(1 for k in base_train if k[0] == "lineage"))
+    for slot, plan in sorted(plans.items()):
+        if slot in refused:
             continue
         folds = {}
         for i, f in enumerate(plan["outer"]):
@@ -129,7 +148,7 @@ def lineage(fits, dataset, cohorts, structure, roots, draws, twin, bad, empty=fr
         for f, test in sorted(folds.items()):
             train = base_train.get(("lineage", slot, f))
             if train is None:
-                bad.add("a default fold with no training trace")
+                bad.add("a default fold with no training trace", int(not refused))
                 continue
             bad.add("a default fold that trains on other genomes than the rest", int(train != base_set - test))
             rows.append([dataset, DEFAULT, "lineage", slot, f, len(test), len(train), 0, 0, 0, 0])
@@ -144,6 +163,9 @@ def lineage(fits, dataset, cohorts, structure, roots, draws, twin, bad, empty=fr
         added = set(ids) - base_set
         for slot in range(draws):
             p = arm_dir / "plans" / f"lineage-{slot}.cohort.json"
+            if slot in refused:
+                bad.add(f"{arm}: a cohort plan made from a refused default plan", int(p.is_file()))
+                continue
             if not p.is_file() or slot not in tests:
                 bad.add(f"{arm}: a slot with no cohort plan")
                 continue
@@ -162,7 +184,7 @@ def lineage(fits, dataset, cohorts, structure, roots, draws, twin, bad, empty=fr
                 bad.add("an added genome in an outer test fold", len(s & added))
                 train = arm_train.get(("lineage", slot, f))
                 if train is None:
-                    bad.add(f"{arm}: a fold with no training trace")
+                    bad.add(f"{arm}: a fold with no training trace", int(not refused))
                     continue
                 bad.add("a scored genome in training", len(train & s))
                 lineages = {lin[g] for g in s}

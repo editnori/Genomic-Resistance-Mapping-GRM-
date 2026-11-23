@@ -75,13 +75,17 @@ class Species:
         write_ids(folder / "cap-all.txt", sorted(self.base + self.added))
 
 
-def lineage_fits(sp, fits, dataset, slots, draws, arms=("cap-all",), breach=None, keyed=None):
+def lineage_fits(sp, fits, dataset, slots, draws, arms=("cap-all",), breach=None, keyed=None, refused=()):
     """Writes the default's and each arm's plans and training traces as grm arm does for a correct fit, then
     plants `breach`: 'lineage' (an added genome of a scored lineage trains), 'differs' (a default test genome
     left out of an arm's scored set), 'added-scored' (an added genome scored beside the default's test genomes),
     'copy' (an added copy of a scored genome trains). `keyed` maps a slot to the keyed repeat that replaced its
-    refused draw: the plans and cohort plans hold that repeat, the trace lines the slot, as grm arm writes them."""
+    refused draw: the plans and cohort plans hold that repeat, the trace lines the slot, as grm arm writes them.
+    `refused` lists slots whose default plan grm arm refused past its replacements: those plans hold an
+    unavailable_reason, the default traces no lineage fold, and each arm has no cohort plan at a refused slot and
+    traces only the slots before the first one, as grm arm does when the default's lineage split is unavailable."""
     keyed = keyed or {}
+    cut = min(refused) if refused else None
     base = sorted(sp.base)
     lineages = sorted({sp.lineage[g] for g in base})
     for slot in range(slots):
@@ -91,15 +95,19 @@ def lineage_fits(sp, fits, dataset, slots, draws, arms=("cap-all",), breach=None
         fold_of_lineage = {c: i % K for i, c in enumerate(order)}
         outer = [fold_of_lineage[sp.lineage[g]] for g in base]
         plan = {"repeat": keyed.get(slot, slot), "k": K, "outer": outer, "sha256": f"plan{slot}"}
+        if slot in refused:
+            plan["unavailable_reason"] = "SYNTHETIC: refused past the replacements"
         write_json(fits / "cap-2000" / dataset / "plans" / f"lineage-{slot}.json",
                    {"sample_ids": base, "y": [int(sp.y[g]) for g in base], "plan": plan})
     with_trace(fits / "cap-2000" / dataset, base,
-               {(slot, f): [g for g, o in zip(base, plan_outer(fits, dataset, slot)) if o != f]
-                for slot in range(slots) for f in range(K)})
+               {} if refused else {(slot, f): [g for g, o in zip(base, plan_outer(fits, dataset, slot)) if o != f]
+                                   for slot in range(slots) for f in range(K)})
     for arm in arms:
         ids = sorted(sp.base + sp.added)
         train = {}
         for slot in range(draws):
+            if slot in refused:
+                continue
             outer_base = dict(zip(base, plan_outer(fits, dataset, slot)))
             outer = [outer_base.get(g) for g in ids]
             lineage_dropped, balance = [], []
@@ -131,7 +139,7 @@ def lineage_fits(sp, fits, dataset, slots, draws, arms=("cap-all",), breach=None
             write_json(fits / arm / dataset / "plans" / f"lineage-{slot}.cohort.json",
                        {"reference_sha256": f"plan{slot}", "repeat": keyed.get(slot, slot), "k": K, "outer": outer,
                         "lineage_dropped": lineage_dropped, "balance_dropped": balance})
-        with_trace(fits / arm / dataset, ids, train)
+        with_trace(fits / arm / dataset, ids, {k: v for k, v in train.items() if cut is None or k[0] < cut})
 
 
 def plan_outer(fits, dataset, slot):

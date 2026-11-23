@@ -16,6 +16,13 @@ never logs/). Checks, per row:
   draw has; twin rows from any other folder stop the scorer;
 - a wider arm's scored genomes in each outer fold are the default's test
   genomes of that fold at the same slot;
+- a default lineage plan with an unavailable_reason (a draw grm arm refused
+  past its replacements) makes every lineage row of the dataset, on every
+  arm and the twin, unavailable: not produced, as H-1's ruling has it
+  (docs/input-comparison-runner.md, A refused repeat), so its prediction
+  rows are not read and it is scored 0 with why "lineage split
+  unavailable", out of each arm's count; the study rows are scored as
+  usual;
 - a study row has its grm learn --exp-pick file (format grm-c9-pick-1, the
   dataset, scheme study-whole, seed 42, no inner fold), and a wider arm's
   test folds hold the default's tested and resistant counts, fold by fold,
@@ -223,11 +230,28 @@ def score(expect, fits, picks):
     lin = Lineage(fits)
     base_lineage, base_study = {}, {}
     ok_rows = []
+    refused = {}
+
+    def lineage_refused(d):
+        """True when a default lineage plan of d holds an unavailable_reason."""
+        if d not in refused:
+            slots = sorted({int(x["slot"]) for x in expect
+                            if x["dataset"] == d and x["split"] == "lineage" and x["fit"] == DEFAULT})
+            plans = [lin.plan(DEFAULT, d, s) for s in slots]
+            refused[d] = any(p is not None and p.get("unavailable_reason") is not None for p in plans)
+        return refused[d]
+
     for e in expect:
         if e["dataset"] not in names:
             checks.append((e["dataset"], "the dataset is in the first run (CAP, not M)", False, ""))
             continue
         if e["role"] in ("none-added", "same-cohort"):
+            continue
+        if e["split"] == "lineage" and lineage_refused(e["dataset"]):
+            checks.append((f"{e['fit']}/{e['dataset']} lineage slot {e['slot']}",
+                           "the lineage split is unavailable (a default plan refused past grm arm's replacements); "
+                           "not produced", True, ""))
+            ok_rows.append((e, None))
             continue
         if e["split"] == "lineage":
             folds = lineage_checks(e, lin, draw_slots, checks)
@@ -244,7 +268,7 @@ def score(expect, fits, picks):
                 base_study[e["dataset"]] = doc
             ok_rows.append((e, doc))
     for e, got in ok_rows:
-        if e["arm"] in (DEFAULT, TWIN):
+        if e["arm"] in (DEFAULT, TWIN) or got is None:
             continue
         where = f"{e['fit']}/{e['dataset']} {e['split']} slot {e['slot']}"
         if e["split"] == "lineage":
@@ -263,7 +287,9 @@ def score(expect, fits, picks):
         base = {"dataset": e["dataset"], "species": sp, "antibiotic": ab, "arm": e["arm"], "fit": e["fit"],
                 "split": e["split"], "slot": e["slot"], "role": e["role"], "constant": 0}
         for learner in LEARNERS:
-            if e["split"] == "lineage":
+            if e["split"] == "lineage" and got is None:
+                draws.append(dict(base, learner=learner, scored=0, why="lineage split unavailable"))
+            elif e["split"] == "lineage":
                 draws.append(dict(base, learner=learner, scored=1, why="", **C9.measures(summed(got[learner]))))
             elif got.get("unavailable_reason") is not None:
                 draws.append(dict(base, learner=learner, scored=0, why="split unavailable"))
