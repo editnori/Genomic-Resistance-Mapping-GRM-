@@ -422,6 +422,63 @@ enum Command {
             ]
         )]
         exp_floor: Option<u32>,
+        /// Experiment, off by default (docs/settings-arms.md, plan block
+        /// C5): fit each trial of this settings file (grm-c5-settings-1) on
+        /// the --fold-file's folds, each learner at the trial's setting,
+        /// every fit seeded from the file's seed and tuned on its groups,
+        /// and write <fold-out>/<dataset>.<scheme>.t<trial>.json per trial:
+        /// each learner's balanced accuracy per fold and its calls per fold
+        /// at 0.5 and at each cutoff the file names, no genome id. Writes
+        /// no fold file result and no report. Needs --fold-file and
+        /// --force. Refused beside --learner-seed, the --exp-tie-* options,
+        /// --exp-null-refit, --exp-mic, --exp-cohort, --exp-pick,
+        /// --exp-inputs, --exp-settings-folds, --exp-screen and --exp-floor.
+        #[arg(
+            long,
+            requires_all = ["fold_file", "force"],
+            conflicts_with_all = [
+                "learner_seed",
+                "exp_tie_rule",
+                "exp_tie_trace",
+                "exp_tie_out",
+                "exp_null_refit",
+                "exp_mic",
+                "exp_cohort",
+                "exp_pick",
+                "exp_inputs",
+                "exp_settings_folds",
+                "exp_screen",
+                "exp_floor",
+            ]
+        )]
+        exp_settings: Option<PathBuf>,
+        /// Experiment, off by default (docs/settings-arms.md, plan block
+        /// C5): after each dataset's evaluation, write the lineage split's
+        /// outer folds, or with --fold-file the file's, and inside each
+        /// outer fold's training genomes the inner folds grouped by lineage
+        /// that the release's scm and cart tune on, to
+        /// <dir>/<dataset>.<scheme>-s<seed>.folds.json. The file names
+        /// genomes; reports, fold file results and every fit are those of a
+        /// run without it. Needs --force. Refused beside --learner-seed, the
+        /// --exp-tie-* options, --exp-null-refit, --exp-mic, --exp-cohort,
+        /// --exp-inputs, --exp-screen and --exp-floor.
+        #[arg(
+            long,
+            requires = "force",
+            conflicts_with_all = [
+                "learner_seed",
+                "exp_tie_rule",
+                "exp_tie_trace",
+                "exp_tie_out",
+                "exp_null_refit",
+                "exp_mic",
+                "exp_cohort",
+                "exp_inputs",
+                "exp_screen",
+                "exp_floor",
+            ]
+        )]
+        exp_settings_folds: Option<PathBuf>,
     },
     /// Run fetch, count, structure, matrix, and learn for each species, then
     /// build the report. Stages skip work that is already on disk.
@@ -774,6 +831,8 @@ fn run(cli: Cli) -> Result<()> {
             exp_program_rows,
             exp_screen,
             exp_floor,
+            exp_settings,
+            exp_settings_folds,
             ..
         } => {
             if let Some(dir) = &exp_pick {
@@ -798,6 +857,12 @@ fn run(cli: Cli) -> Result<()> {
                 exp_pick.as_deref(),
                 exp_pick_inner,
             )?;
+            if let Some(path) = &exp_settings {
+                grm::learn::settings::enable_trials(path)?;
+            }
+            if let Some(dir) = &exp_settings_folds {
+                grm::learn::settings::enable_folds(dir)?;
+            }
             learn_fold_file(
                 &layout,
                 &species,
@@ -828,6 +893,7 @@ fn run(cli: Cli) -> Result<()> {
             exp_program_rows,
             exp_screen,
             exp_floor,
+            exp_settings_folds,
             ..
         } => {
             let cfg = learn_config(screened_features, seed, learner_seed, exp_tie_rule.into());
@@ -864,6 +930,9 @@ fn run(cli: Cli) -> Result<()> {
                 exp_pick.as_deref(),
                 exp_pick_inner,
             )?;
+            if let Some(dir) = &exp_settings_folds {
+                grm::learn::settings::enable_folds(dir)?;
+            }
             species
                 .iter()
                 .try_for_each(|s| learn_in(&layout, s, &only, force, &cfg, exp_tie_out.as_deref()))
@@ -1507,7 +1576,14 @@ fn learn_fold_file(
     };
     let written =
         grm::analysis::evaluate_fold_file(layout, slug, fold_file, fold_out, force, &cfg)?;
-    eprintln!("{slug}: fold file result written to {}", written.display());
+    if grm::learn::settings::trials().is_some() {
+        eprintln!(
+            "{slug}: settings trials written, the last to {}",
+            written.display()
+        );
+    } else {
+        eprintln!("{slug}: fold file result written to {}", written.display());
+    }
     Ok(())
 }
 
@@ -4210,6 +4286,103 @@ mod tests {
             panic!("parsed another command");
         };
         assert_eq!((fold_file, exp_null_refit), (None, Some("r.jsonl".into())));
+    }
+
+    /// The C5 experiment's flags are off by default, need `--force` as
+    /// `--exp-inputs` does, `--exp-settings` needs `--fold-file`, and each
+    /// is refused beside the flags it cannot stand with, in either order.
+    #[test]
+    fn learn_takes_the_settings_flags_only_with_force_and_alone() {
+        let parse = |args: &[&str]| {
+            let all = [&["grm", "learn", "--species", "s"][..], args].concat();
+            Cli::try_parse_from(all)
+        };
+        let Command::Learn {
+            exp_settings,
+            exp_settings_folds,
+            ..
+        } = parse(&[]).unwrap().command
+        else {
+            panic!("parsed another command");
+        };
+        assert_eq!((exp_settings, exp_settings_folds), (None, None));
+        let file = ["--fold-file", "f.json", "--fold-out", "o"];
+        let trials = ["--exp-settings", "s.json"];
+        let folds = ["--exp-settings-folds", "d"];
+        let ok = [
+            [&file[..], &trials[..], &["--force"][..]].concat(),
+            [&folds[..], &["--force"][..]].concat(),
+            [&folds[..], &["--force", "--seed", "43"][..]].concat(),
+            [
+                &folds[..],
+                &["--force", "--exp-pick", "p", "--exp-pick-inner", "0"][..],
+            ]
+            .concat(),
+            [&file[..], &folds[..], &["--force", "--exp-pick", "p"][..]].concat(),
+        ];
+        for args in ok {
+            assert!(parse(&args).is_ok(), "{args:?}: {:?}", parse(&args).err());
+        }
+        for missing in [
+            [&trials[..], &["--force"][..]].concat(),
+            [&file[..], &trials[..]].concat(),
+            folds.to_vec(),
+        ] {
+            let error = parse(&missing)
+                .err()
+                .unwrap_or_else(|| panic!("{missing:?} parsed"));
+            assert_eq!(
+                error.kind(),
+                clap::error::ErrorKind::MissingRequiredArgument,
+                "{missing:?}"
+            );
+        }
+        let base_trials = [&file[..], &trials[..], &["--force"][..]].concat();
+        let base_folds = [&folds[..], &["--force"][..]].concat();
+        let beside: [&[&str]; 9] = [
+            &["--learner-seed", "7"],
+            &["--exp-tie-rule", "exact"],
+            &["--exp-tie-trace", "t.jsonl"],
+            &["--exp-tie-out", "x"],
+            &["--exp-null-refit", "r.jsonl"],
+            &["--exp-mic", "released"],
+            &["--exp-cohort", "c", "--exp-cohort-out", "co"],
+            &[
+                "--exp-inputs",
+                "program",
+                "--exp-program-tables",
+                "t",
+                "--exp-pick",
+                "p",
+            ],
+            &["--exp-pick", "p"],
+        ];
+        for (i, other) in beside.iter().enumerate() {
+            let mut cases = vec![
+                [&base_trials[..], *other].concat(),
+                [*other, &base_trials[..]].concat(),
+            ];
+            // --exp-settings-folds stands beside --exp-pick alone.
+            if i < 8 {
+                cases.push([&base_folds[..], *other].concat());
+                cases.push([*other, &base_folds[..]].concat());
+            }
+            for bad in cases {
+                let error = parse(&bad)
+                    .err()
+                    .unwrap_or_else(|| panic!("{bad:?} parsed"));
+                assert_eq!(
+                    error.kind(),
+                    clap::error::ErrorKind::ArgumentConflict,
+                    "{bad:?}"
+                );
+            }
+        }
+        let both = [&base_trials[..], &folds[..]].concat();
+        assert_eq!(
+            parse(&both).err().map(|e| e.kind()),
+            Some(clap::error::ErrorKind::ArgumentConflict)
+        );
     }
 
     /// The null-fold experiment fits its fallbacks under production's tie
