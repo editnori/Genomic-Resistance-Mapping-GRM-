@@ -14,6 +14,7 @@ pub mod micplan;
 pub mod null_refit;
 pub mod planned;
 pub mod scm;
+pub mod screen_arm;
 pub mod tie;
 pub mod tree;
 

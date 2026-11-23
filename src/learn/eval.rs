@@ -55,6 +55,7 @@ use super::inner_pick;
 use super::lasso;
 use super::null_refit;
 use super::scm::{self, Kind, Rule};
+use super::screen_arm;
 use super::tie::TieRule;
 use super::tree::{self, ForestParams, TreeParams};
 use super::{
@@ -600,7 +601,7 @@ pub(crate) fn fit_rf(
     cfg: &EvalConfig,
     seed: u64,
 ) -> (Scored, std::collections::HashMap<u32, f64>) {
-    let feats = screen(x, y, train, cfg.screened_features);
+    let feats = screen_arm::screen_fit(x, y, train, cfg.screened_features);
     let mut screened = BitMatrix::with_cols(x.cols);
     for &f in &feats {
         screened.push_row(x.row(f as usize));
@@ -660,7 +661,7 @@ fn fit_gbt(
     draws: u64,
 ) -> Result<(Scored, gbt::Gbt)> {
     let (fit_m, val) = tuning_holdout(train, y, groups, unit, GBT_HOLDOUT, seed)?;
-    let feats = screen(x, y, &fit_m, cfg.screened_features);
+    let feats = screen_arm::screen_fit(x, y, &fit_m, cfg.screened_features);
     let m = gbt::fit(
         x,
         &Objective::Logistic { y },
@@ -748,7 +749,7 @@ fn fit_lasso_traced(
 ) -> Result<(Scored, Option<lasso::LassoModel>)> {
     let unit = tuning_unit(context.scheme);
     let (fit_m, val) = tuning_holdout(train, y, groups, unit, LASSO_HOLDOUT, seed)?;
-    let feats = screen(x, y, &fit_m, cfg.screened_features);
+    let feats = screen_arm::screen_fit(x, y, &fit_m, cfg.screened_features);
     let path =
         lasso::fit_path_with_status(x, y, &fit_m, &feats, cfg.lasso_lambdas, 400, &mut |p| {
             progress("path", p)
@@ -1147,6 +1148,9 @@ pub fn evaluate(
     let started = Instant::now();
     let n = x.cols;
     check_inputs(x, y, groups, duplicates, min_support, cfg)?;
+    // The C4 experiment, off by default (`screen_arm`): its strata are the
+    // lineage clusters, each fit reading its own fitting samples' alone.
+    let arm = screen_arm::install(groups);
     if let Some(m) = &mic {
         ensure!(m.mic.len() == n, "MIC dimensions differ");
     }
@@ -1222,6 +1226,10 @@ pub fn evaluate(
     let mic_result = mic.and_then(|m| evaluate_mic(x, y, min_support, &m, cfg));
     let tuning = final_tuning(groups, duplicates);
     let finals = final_models(dataset, x, y, tuning.as_deref(), min_support, cfg)?;
+    if arm.is_some() {
+        screen_arm::finish(dataset, "drawn", cfg.seed, cfg.screened_features, min_support, n, x.rows)?;
+    }
+    drop(arm);
     Ok(EvalOutput {
         splits,
         fold_models,
@@ -1488,8 +1496,13 @@ fn fit_outer_folds(
                 fi, &cx, &rows, first, y, train, tuning, scheme, cfg,
             )?);
         }
+        // The C4 experiment, off by default (`screen_arm`): counts and fit
+        // times for its own file. Without it these do nothing.
+        screen_arm::note_fold(scheme, fi, train.count() as usize, cx.rows);
         for (li, learner) in LEARNERS.iter().enumerate() {
             let t0 = Instant::now();
+            screen_arm::label(scheme, Some(fi), learner);
+            let clock = screen_arm::start_fit();
             let context = LassoContext {
                 dataset,
                 scheme,
@@ -1497,6 +1510,7 @@ fn fit_outer_folds(
             };
             let (fit, model) = fit_fold(learner, &cx, y, train, tuning, cfg, context)?;
             seconds[li] += t0.elapsed().as_secs_f64();
+            screen_arm::end_fit(clock, scheme, fi, learner);
             // The null-fold experiment, off by default, writes only its
             // own file and changes no fit, score or fold model.
             if fit.scores.is_none() && null_refit::enabled() {
@@ -1628,8 +1642,12 @@ pub struct AssignedSplit {
 /// feature is present in, and absent from, at least this many of a fold's
 /// training samples (`training_candidates`). A report takes it from its
 /// whole cohort, a supplied partition from the samples it uses
-/// (`supplied_support_floor`).
+/// (`supplied_support_floor`). The C4 floor arm, off by default
+/// (`screen_arm::floor`), fixes it in place of max(3, n/200).
 pub fn support_floor(samples: usize) -> u32 {
+    if let Some(floor) = screen_arm::floor() {
+        return floor;
+    }
     (samples as u32 / 200).max(3)
 }
 
@@ -1694,6 +1712,8 @@ pub fn evaluate_assigned(
     check_inputs(x, y, groups, duplicates, min_support, cfg)?;
     let n = x.cols;
     ensure!(roles.len() == n, "{} roles for {n} samples", roles.len());
+    // The C4 experiment, off by default (`screen_arm`), as in `evaluate`.
+    let arm = screen_arm::install(groups);
     let used = |i: usize| roles[i] != Role::Unused;
     let duplicates: Vec<Vec<usize>> = duplicates
         .iter()
@@ -1829,6 +1849,11 @@ pub fn evaluate_assigned(
             cfg,
         )?;
     }
+    if arm.is_some() {
+        let used_samples = (0..n).filter(|&i| used(i)).count();
+        screen_arm::finish(dataset, scheme, cfg.seed, cfg.screened_features, min_support, used_samples, x.rows)?;
+    }
+    drop(arm);
     Ok(AssignedSplit {
         result: SplitResult {
             scheme: scheme.to_string(),
@@ -2021,6 +2046,7 @@ fn final_models(
             tie: cfg.tie_rule,
         },
     );
+    screen_arm::label("final", None, "lasso");
     let (lasso_scored, lasso_model) = final_lasso(
         dataset,
         x,
@@ -2031,7 +2057,9 @@ fn final_models(
         &mut |_, _| {},
     )?;
     let draws = draw_seed(cfg);
+    screen_arm::label("final", None, "rf");
     let (_, rf_importance) = fit_rf(x, y, &all, cfg, draws.wrapping_add(17));
+    screen_arm::label("final", None, "gbt");
     let (_, gbt_model) = fit_gbt(
         x,
         y,
@@ -2137,7 +2165,8 @@ pub(crate) fn final_scores(
     // `fit_rf` on every sample, with the forest kept: its trees read the
     // screened rows, so `scored` is screened on the same features.
     let draws = draw_seed(cfg);
-    let feats = screen(x, y, &all, cfg.screened_features);
+    screen_arm::label("final", None, "rf");
+    let feats = screen_arm::screen_fit(x, y, &all, cfg.screened_features);
     let (mut screened, mut scored_screened) = (
         BitMatrix::with_cols(x.cols),
         BitMatrix::with_cols(scored.cols),
