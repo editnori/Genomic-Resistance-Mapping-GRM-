@@ -27,11 +27,12 @@ def choices(base, k, dataset, scheme, seed, change=None):
         if l != "scm" and d["fn"] > 0:
             moved.update(tp=d["tp"] + 1, fn=d["fn"] - 1)
         rows.append({"learner": l, "status": "picked", "trials": 31, "failed_trials": 0, "picked_trial": 0,
-                     "picked_setting": "release", "plain_best_trial": 4, "tied_at_best": 1,
+                     "picked_setting": "release", "plain_best_trial": 4, "plain_best_refitted": True,
+                     "plain_best_note": None, "tied_at_best": 1,
                      "release_inner_mean": 0.7, "best_inner_mean": 0.72, "trials_above_gamma": 0,
                      "trials_better": 3, "trials_same": 0, "trials_worse": 27, "cutoff": 0.45 if l != "scm" else 0.5,
                      "cutoff_inner_balanced_accuracy": 0.71, "half_inner_balanced_accuracy": 0.7, "search_note": None,
-                     "outer": {"default": d, "search": dict(d), "cutoff": moved},
+                     "outer": {"default": d, "search": dict(d), "cutoff": moved, "plain-best": dict(d)},
                      "seconds_inner": 1.0, "seconds_outer": 0.1})
     doc = {"format": "grm-c5-choices-1", "evaluation_revision": 14, "dataset": dataset, "scheme": scheme,
            "seed": seed, "fold": k, "tuning": "lineage" if scheme == "lineage" else "copies", "inner_seed": 1,
@@ -123,14 +124,15 @@ class Score(unittest.TestCase):
         gone = E.choices_name(common.OTHER, "lineage", 43, 2)
         rc, text = score(write_run(self.top, drop={gone}))
         self.assertEqual(rc, 0, text)
-        self.assertIn("missing draws 2", text)
+        # The search, the cutoff arm and the plain best share the missing file.
+        self.assertIn("missing draws 3", text)
         draws = [r for r in tsv(self.top / "score" / "draws.tsv")
-                 if r["dataset"] == common.OTHER and r["seed"] == "43" and r["arm"] in ("search", "cutoff")]
-        self.assertEqual(len(draws), 10)
+                 if r["dataset"] == common.OTHER and r["seed"] == "43" and r["arm"] in ("search", "cutoff", "plain-best")]
+        self.assertEqual(len(draws), 15)
         for r in draws:
             self.assertEqual((r["scored"], r["why"], r["balanced_accuracy"], r["n"]), ("0", "missing draw", "", ""))
         for r in tsv(self.top / "score" / "datasets.tsv"):
-            if r["dataset"] == common.OTHER and r["split"] == "lineage" and r["arm"] in ("search", "cutoff"):
+            if r["dataset"] == common.OTHER and r["split"] == "lineage" and r["arm"] in ("search", "cutoff", "plain-best"):
                 self.assertEqual((r["scored"], r["balanced_accuracy"]), ("0", ""), r["arm"])
 
     def test_a_choices_file_whose_default_is_not_the_defaults_fit_fails(self):
@@ -161,6 +163,33 @@ class Score(unittest.TestCase):
         self.assertEqual(rc, 1)
         bad = [r["check"] for r in tsv(self.top / "score" / "checks.tsv") if r["passed"] != "1"]
         self.assertEqual(bad, ["fold 2 scm: the cutoff arm's calls are the default's"])
+
+    def test_the_plain_best_is_scored_beside_the_two_arms(self):
+        rc, text = score(write_run(self.top))
+        self.assertEqual(rc, 0, text)
+        ds = tsv(self.top / "score" / "datasets.tsv")
+        self.assertIn((common.DATASET, "study", "plain-best"), {(r["dataset"], r["split"], r["arm"]) for r in ds})
+        self.assertIn((common.OTHER, "lineage", "plain-best"), {(r["dataset"], r["split"], r["arm"]) for r in ds})
+
+    def test_a_plain_best_that_is_the_pick_but_not_its_result_fails(self):
+        def change(name, doc):
+            r = doc["learners"][2]
+            r.update(picked_trial=4, plain_best_trial=4, release_inner_mean=0.7, best_inner_mean=0.8)
+            r["outer"]["search"] = dict(r["outer"]["default"], n=r["outer"]["default"]["n"])
+            r["outer"]["plain-best"] = dict(r["outer"]["search"], loss_sum=r["outer"]["search"]["loss_sum"] + 1.0)
+        rc, _ = score(write_run(self.top, change=change))
+        self.assertEqual(rc, 1)
+        checks = tsv(self.top / "score" / "checks.tsv")
+        bad = {c["check"] for c in checks if c["passed"] != "1"}
+        self.assertTrue(bad and all("plain best" in c for c in bad), bad)
+
+    def test_a_plain_best_of_trial_0_that_is_not_the_defaults_calls_fails(self):
+        def change(name, doc):
+            r = doc["learners"][1]
+            r["plain_best_trial"] = 0
+            r["outer"]["plain-best"] = dict(r["outer"]["default"], loss_sum=r["outer"]["default"]["loss_sum"] + 1.0)
+        rc, _ = score(write_run(self.top, change=change))
+        self.assertEqual(rc, 1)
 
     def test_an_arm_at_a_twin_seed_fails(self):
         args = write_run(self.top)
@@ -229,6 +258,27 @@ class Count(unittest.TestCase):
         self.assertEqual((three["met"], three["learners"]), (1, 0))
         cut = next(r for r in cond if r["arm"] == "cutoff" and r["reading"] == "ruling 15" and r["condition"] == "1 and 2")
         self.assertEqual(cut["met"], 0)
+
+    def test_the_plain_best_is_counted_beside_in_no_family(self):
+        rows = dataset_rows(arms=("default", "search", "cutoff", "twin", "plain-best"), better=("plain-best",))
+        held = [r for r in S.C3.count(rows) if r["holm_p"] is not None]
+        self.assertEqual(len(held), 15)
+        self.assertNotIn("plain-best-default", {r["pair"] for r in held})
+        self.assertEqual({r["arm"] for r in S.C3.conditions(S.C3.count(rows))}, {"search", "cutoff"})
+        plain = S.plain_count(rows)
+        self.assertEqual({r["pair"] for r in plain}, {"plain-best-default"})
+        self.assertTrue(all(r["holm_p"] is None for r in plain))
+        lin = [r for r in plain if r["split"] == "lineage" and r["measure"] == "balanced_accuracy"]
+        self.assertEqual([(r["better"], r["worse"]) for r in lin], [(24, 0)] * 5)
+        # The family is the module's own again after the count beside.
+        self.assertEqual(S.C3.FAMILY, ["search", "cutoff", "twin"])
+        with tempfile.TemporaryDirectory() as tmp:
+            p = Path(tmp) / "datasets.tsv"
+            S.write_tsv(p, rows, list(rows[0]))
+            rc, text = score(["--count", str(Path(tmp) / "out"), str(p)])
+            self.assertEqual(rc, 0, text)
+            self.assertTrue((Path(tmp) / "out" / "count-plain-best.tsv").is_file())
+            self.assertIn("plain best, no anchor", text)
 
     def test_the_count_refuses_a_family_without_the_twin(self):
         with self.assertRaises(SystemExit):

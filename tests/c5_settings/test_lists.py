@@ -41,8 +41,11 @@ class Expect(unittest.TestCase):
 
     def test_each_draw_holds_the_default_and_both_arms_and_the_twin_its_own_seeds(self):
         rows = self.rows()
-        # Per dataset: 3 draws and, for the first, 1 study run, each with 3 rows; 3 twin rows.
-        self.assertEqual(len(rows), (4 * 3 + 3) + (3 * 3 + 3))
+        # Per dataset: 3 draws and, for the first, 1 study run, each with 4 rows (the default, the search, the
+        # cutoff arm and the plain best beside them); 3 twin rows.
+        self.assertEqual(len(rows), (4 * 4 + 3) + (3 * 4 + 3))
+        self.assertIn([common.DATASET, common.SPECIES, "plain-best", "lineage", "lineage", 43, "draw",
+                       f"choices/{common.DATASET}.lineage-s43.f<k>.choices.json"], rows)
         self.assertIn([common.DATASET, common.SPECIES, "search", "study", "study-whole", 42, "study",
                        f"choices/{common.DATASET}.study-whole-s42.f<k>.choices.json"], rows)
         self.assertIn([common.OTHER, common.SPECIES, "default", "lineage", "lineage", 44, "draw",

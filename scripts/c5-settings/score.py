@@ -34,7 +34,11 @@ learner, each arm against the default on the same datasets; Holm over the
 15 lineage rows of the primary measure (search, cutoff and the twin by five
 learners); conditions read two ways, ruling 15 deciding, with condition 3
 read from the twin as corrected. It refuses unless the search, the cutoff
-and the twin all have lineage rows.
+and the twin all have lineage rows. Beside them it writes
+count-plain-best.tsv: the plain best, no anchor (the highest inner mean,
+ties to the lowest trial id, refitted on the outer training genomes, as the
+lead ruled on question 3), counted against the default the same way, in no
+Holm family (its holm_p is empty) and in no condition; it decides nothing.
 """
 
 import importlib.util
@@ -45,8 +49,11 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 DEFAULT = "default"
 TWIN = "twin"
-ARMS = ["search", "cutoff"]
-FAMILY = ARMS + [TWIN]
+PLAIN = "plain-best"
+PLAIN_LABEL = "plain best, no anchor"
+FAMILY = ["search", "cutoff", TWIN]
+# Every arm read from the choices files: the family's two and the plain best beside them.
+ARMS = ["search", "cutoff", PLAIN]
 CHOICE_FORMAT = "grm-c5-choices-1"
 SAMPLER_SEED = 20261030
 GAMMA = 0.04
@@ -122,9 +129,33 @@ def check_choices(exp, files, base):
                and (r["picked_trial"] == 0) == (lead is None or lead <= GAMMA)
                and (r["picked_trial"] == 0 or r["picked_trial"] == r["plain_best_trial"]))
             ok(f"fold {k} {l}: the cutoff is a grid point or 0.5", r["cutoff"] in GRID or r["cutoff"] == HALF)
+            plain = r["plain_best_trial"]
+            ok(f"fold {k} {l}: the plain best is the pick's result where it is the pick, the default's where it "
+               "is trial 0 or none",
+               (plain is None and r.get("plain_best_note") is not None
+                and same_calls(r["outer"][PLAIN], r["outer"]["default"]))
+               or (plain == 0 and same_calls(r["outer"][PLAIN], r["outer"]["default"]))
+               or (plain is not None and plain == r["picked_trial"] and plain != 0
+                   and same_calls(r["outer"][PLAIN], r["outer"]["search"]))
+               or (plain not in (None, 0, r["picked_trial"]) and 0 < plain <= TRIALS
+                   and r["status"] in ("picked", "release failed inside")))
             if l == "scm":
                 ok(f"fold {k} scm: the cutoff arm's calls are the default's", same_calls(r["outer"]["cutoff"], want))
     return out
+
+
+def plain_count(rows, keep_constant=True):
+    """count-plain-best.tsv's rows: the plain best against the default, as C3's count reads an arm, with no
+    Holm figure; it is in no family and no condition."""
+    saved = C3.FAMILY
+    C3.FAMILY = [PLAIN]
+    try:
+        counted = C3.count([r for r in rows if r["arm"] in (DEFAULT, PLAIN)], keep_constant=keep_constant)
+    finally:
+        C3.FAMILY = saved
+    for r in counted:
+        r["holm_p"] = None
+    return counted
 
 
 def arm_doc(files, arm):
@@ -161,6 +192,11 @@ def main(argv):
         write_tsv(out / "count.tsv", counted, C3.COUNT_COLUMNS)
         write_tsv(out / "count-no-constant.tsv", C3.count(rows, keep_constant=False), C3.COUNT_COLUMNS)
         write_tsv(out / "conditions.tsv", C3.conditions(counted), C3.CONDITION_COLUMNS)
+        if any(r["arm"] == PLAIN and r["split"] == "lineage" for r in rows):
+            write_tsv(out / "count-plain-best.tsv", plain_count(rows), C3.COUNT_COLUMNS)
+            print(f"count-plain-best.tsv: the {PLAIN_LABEL}, beside, in no Holm family")
+        else:
+            raise SystemExit(f"no lineage row of the {PLAIN_LABEL}: it is counted beside the family")
         print(f"count: {len(rows)} dataset rows from {len(argv) - 2} files")
         return 0
     if len(argv) != 4:

@@ -5,6 +5,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from tests.c5_settings import common
 
@@ -45,7 +46,7 @@ class Drive(unittest.TestCase):
         self.assertEqual(got["counts"], {"train": 48, "train_resistant": 24, "test": 12, "test_resistant": 6})
         for r in got["learners"]:
             self.assertEqual(r["trials"], 31)
-            for arm in ("default", "search", "cutoff"):
+            for arm in ("default", "search", "cutoff", "plain-best"):
                 self.assertEqual(r["outer"][arm]["n"], 12)
         # Ten grm runs, one inner and one outer per learner, each timed.
         self.assertEqual([t["step"] for t in got["timing"]], [f"{s}-{l}" for s in ("inner", "outer") for l in LEARNERS])
@@ -167,7 +168,45 @@ class Drive(unittest.TestCase):
         self.assertFalse(any((self.top / "out").glob("*")) if (self.top / "out").exists() else False)
 
 
+    def test_the_plain_best_is_refitted_beside_only_when_it_is_neither_the_release_nor_the_pick(self):
+        # SYNTHETIC: the rule's answers are set per learner, in drive order. scm's plain best is its pick (4);
+        # cart's is trial 0; rf's is trial 6 with the pick at the release (its lead within gamma); gbt's release
+        # failed inside and its plain best is 9; every lasso trial failed.
+        forced = {"scm": (4, 4, "picked"), "cart": (0, 0, "picked"), "rf": (0, 6, "picked"),
+                  "gbt": (0, 9, "release failed inside"), "lasso": (0, None, "release failed inside")}
+        order, real = iter(LEARNERS), D.pick
+
+        def rule(means, gamma=D.GAMMA):
+            picked, plain, status = forced[next(order)]
+            return dict(real(means, gamma), picked=picked, plain_best=plain, status=status)
+
+        doc = common.folds_doc()
+        with mock.patch.object(D, "pick", rule):
+            got, root, _ = run(self.top, doc, fold=1)
+        w = json.loads((root / "fake.json").read_text())
+        test = sorted(outer_test(doc, 1))
+        by = {r["learner"]: r for r in got["learners"]}
+        outer = [c["trials"] for c in common.calls_log(root) if c["scheme"].startswith("c5o-")]
+        self.assertEqual(outer, [[0, 4], [0], [0, 6], [0, 9], [0]])
+        self.assertEqual([by[l]["plain_best_refitted"] for l in LEARNERS], [False, False, True, True, False])
+        self.assertEqual(by["scm"]["outer"]["plain-best"], by["scm"]["outer"]["search"])
+        self.assertEqual(by["cart"]["outer"]["plain-best"], by["cart"]["outer"]["default"])
+        self.assertEqual(by["rf"]["outer"]["plain-best"], F.calls(w, test, "rf", 6, 0.5, True))
+        self.assertEqual(by["rf"]["outer"]["search"], by["rf"]["outer"]["default"])
+        self.assertEqual(by["gbt"]["outer"]["plain-best"], F.calls(w, test, "gbt", 9, 0.5, True))
+        self.assertEqual(by["lasso"]["outer"]["plain-best"], by["lasso"]["outer"]["default"])
+        self.assertIsNotNone(by["lasso"]["plain_best_note"])
+        self.assertTrue(all(by[l]["plain_best_note"] is None for l in LEARNERS[:4]))
+
+
 class Rule(unittest.TestCase):
+    def test_the_plain_best_is_the_best_inner_mean_ties_lowest_also_when_the_release_failed(self):
+        self.assertEqual(D.pick({0: 0.70, 3: 0.73, 5: 0.73})["plain_best"], 3)
+        self.assertEqual(D.pick({0: 0.70, 3: 0.73, 5: 0.73})["picked"], 0)
+        got = D.pick({0: None, 2: 0.9, 1: 0.9, 4: 0.5})
+        self.assertEqual((got["picked"], got["plain_best"], got["status"]), (0, 1, "release failed inside"))
+        self.assertIsNone(D.pick({0: None, 1: None})["plain_best"])
+
     def test_the_release_is_kept_unless_the_best_beats_it_by_more_than_gamma(self):
         self.assertEqual(D.pick({0: 0.70, 1: 0.74, 2: 0.73})["picked"], 0)
         self.assertEqual(D.pick({0: 0.70, 1: 0.740000000001, 2: 0.73})["picked"], 1)

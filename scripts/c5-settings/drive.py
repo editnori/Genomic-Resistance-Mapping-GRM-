@@ -24,11 +24,14 @@ On outer fold <fold>, for the five learners at once:
 4. only then writes the outer fold file (test: fold <fold>; train: T_f) and
    runs, per learner, the release's setting and the picked one once on it,
    at the seed the default fitted that fold with, and checks that the
-   release's calls at 0.5 are the default's calls on that fold;
+   release's calls at 0.5 are the default's calls on that fold; the plain
+   best (the highest inner mean, ties to the lowest trial id) is refitted
+   beside them when it is neither trial 0 nor the pick, as the lead ruled
+   on question 3: an arm in no Holm family that decides nothing;
 5. writes <out dir>/<dataset>.<scheme>-s<seed>.f<fold>.choices.json: per
    learner the trial picked and its setting, the rule's rank counts, the
-   cutoff, and the outer calls of the default, the search and the cutoff
-   arm, as counts. It names no genome. <work dir>/<stem>/timing.json holds
+   cutoff, and the outer calls of the default, the search, the cutoff arm
+   and the plain best, as counts. It names no genome. <work dir>/<stem>/timing.json holds
    each grm run's wall time, CPU time and peak memory and nothing else.
 
 A restart skips a step whose files exist. Every file under <work dir> may
@@ -186,15 +189,18 @@ def pick(means, gamma=GAMMA):
     """The default-anchored rule: keep trial 0 unless the best inner mean beats it by more than gamma.
 
     A tie at the best goes to the lowest trial id. Every mean and difference
-    is compared at 12 decimals. The plain best is returned beside the pick.
+    is compared at 12 decimals. The plain best, the highest inner mean of the
+    trials that did not fail with ties to the lowest trial id, is returned
+    beside the pick, also when trial 0 failed; it is None only when every
+    trial failed.
     """
     ok = {t: m for t, m in means.items() if m is not None}
     counts = {"trials": len(means), "failed": len(means) - len(ok)}
-    if 0 not in ok:
-        return dict(counts, picked=0, plain_best=None, tied=[], status="release failed inside", release_mean=None,
-                    best_mean=None, above_gamma=0, better=0, same=0, worse=0)
-    best = max(ok.values())
+    best = max(ok.values()) if ok else None
     tied = sorted(t for t, m in ok.items() if m == best)
+    if 0 not in ok:
+        return dict(counts, picked=0, plain_best=tied[0] if tied else None, tied=tied, status="release failed inside",
+                    release_mean=None, best_mean=best, above_gamma=0, better=0, same=0, worse=0)
     lead = r12(best - ok[0])
     above = sum(1 for t, m in ok.items() if t and r12(m - ok[0]) > gamma)
     return dict(counts, picked=tied[0] if lead > gamma else 0, plain_best=tied[0], tied=tied, status="picked",
@@ -306,11 +312,20 @@ def inner_settings(learner, seed, tune, ids):
             "trials": [{"id": t, "learners": {learner: setting(learner, t)}} for t in ids]}
 
 
+def plain_refit(c):
+    """The plain best's trial when it needs an outer fit of its own: not trial 0, not the pick, not None."""
+    p = c["plain_best"]
+    return p if p not in (None, 0, c["picked"]) else None
+
+
 def outer_settings(learner, c, seed, tune):
-    """The release's setting (trial 0) with its cutoff, and the picked setting when it is another."""
+    """The release's setting (trial 0) with its cutoff, the picked setting when it is another, and the plain
+    best when it is neither."""
     trials = [{"id": 0, "learners": {learner: "release"}, "cutoffs": {learner: c["cutoff"]}}]
     if c["picked"] != 0:
         trials.append({"id": c["picked"], "learners": {learner: setting(learner, c["picked"])}})
+    if plain_refit(c) is not None:
+        trials.append({"id": c["plain_best"], "learners": {learner: setting(learner, c["plain_best"])}})
     # Calls at 0.5 and at the cutoff alone: the outer fold gives no figure at another grid point.
     return {"format": SETTINGS_FORMAT, "seed": seed, "tuning": tune, "cutoffs": [], "trials": trials}
 
@@ -392,16 +407,29 @@ def drive(grm, root, species, folds_path, pick_path, fold, work, out, trials=TRI
             search = outer_calls(outer_docs[l], c["picked"], l, HALF)
             if search is None:
                 search, why = release, "the picked setting's outer fit failed; the release's is served"
+        # The plain best, no anchor: the pick's result where it is the pick, the release's where it is trial 0
+        # or no trial scored, else its own refit.
+        plain, plain_why = search, None
+        if c["plain_best"] is None:
+            plain, plain_why = release, "no trial scored inside; the release's is served"
+        elif c["plain_best"] == 0:
+            plain = release
+        elif plain_refit(c) is not None:
+            plain = outer_calls(outer_docs[l], c["plain_best"], l, HALF)
+            if plain is None:
+                plain, plain_why = release, "the plain best's outer fit failed; the release's is served"
         rows.append({
             "learner": l, "status": c["status"], "trials": c["trials"], "failed_trials": c["failed"],
             "picked_trial": c["picked"], "picked_setting": setting(l, c["picked"]),
-            "plain_best_trial": c["plain_best"], "tied_at_best": len(c["tied"]),
+            "plain_best_trial": c["plain_best"], "plain_best_refitted": plain_refit(c) is not None,
+            "plain_best_note": plain_why, "tied_at_best": len(c["tied"]),
             "release_inner_mean": c["release_mean"], "best_inner_mean": c["best_mean"],
             "trials_above_gamma": c["above_gamma"], "trials_better": c["better"], "trials_same": c["same"],
             "trials_worse": c["worse"], "cutoff": c["cutoff"],
             "cutoff_inner_balanced_accuracy": c["cutoff_inner_balanced_accuracy"],
             "half_inner_balanced_accuracy": c["half_inner_balanced_accuracy"], "search_note": why,
-            "outer": {"default": default[l], "search": search, "cutoff": outer_calls(outer_docs[l], 0, l, c["cutoff"])},
+            "outer": {"default": default[l], "search": search, "cutoff": outer_calls(outer_docs[l], 0, l, c["cutoff"]),
+                      "plain-best": plain},
             "seconds_inner": round(sum(d["learners"][0]["seconds"] for d in inner_docs[l].values()), 3),
             "seconds_outer": round(sum(d["learners"][0]["seconds"] for d in outer_docs[l].values()), 3),
         })

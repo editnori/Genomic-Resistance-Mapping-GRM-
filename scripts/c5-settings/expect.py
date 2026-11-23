@@ -8,7 +8,8 @@ C3's rows (scripts/c3-inputs/expect.py, with no arm beside them), with the
 default named `default`: per dataset a lineage result at every seed of
 <seeds> (role draw), one study result at seed 42 (role study) for a study
 dataset, and the twin, the default at every seed of <twin seeds> (role twin,
-lineage only). The search and the cutoff arm stand beside each draw and
+lineage only). The search, the cutoff arm and the plain best (no anchor, in
+no Holm family, as the lead ruled on question 3) stand beside each draw and
 study result of the default and of no twin: they share the driver's choices
 files, one per outer fold, choices/<dataset>.<scheme>-s<seed>.f<k>.choices.json
 for k from 0 to FOLDS - 1, and their file column is that name with <k>
@@ -24,7 +25,8 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 DEFAULT = "default"
 TWIN = "twin"
-ARMS = ("search", "cutoff")
+PLAIN = "plain-best"
+ARMS = ("search", "cutoff", PLAIN)
 FOLDS = 5
 COLUMNS = ["dataset", "species_slug", "arm", "split", "scheme", "seed", "role", "file"]
 
