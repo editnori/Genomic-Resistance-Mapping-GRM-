@@ -160,6 +160,12 @@ class RunChecks(unittest.TestCase):
         (back / "synthia_coli" / "logs" / "run.log").write_text(f"SYNTHETIC: {F.genome_ids('synthia_coli')[1]}\n")
         self.assertIn("FAIL genome ids", self.lines(self.run_on(back)))
 
+    def test_a_genome_id_joined_to_a_word_fails(self):
+        for text in (f"genome_{F.genome_ids('synthia_coli')[1]}", f"id{F.genome_ids('synthia_coli')[2]}"):
+            back = self.back()
+            (back / "synthia_coli" / "logs" / "run.log").write_text(f"SYNTHETIC: {text}\n")
+            self.assertIn("FAIL genome ids", self.lines(self.run_on(back)), text)
+
     def test_a_column_name_in_a_log_fails(self):
         back = self.back()
         (back / "fictus_aureus" / "logs" / "run.log").write_text("SYNTHETIC: Column_12\n")

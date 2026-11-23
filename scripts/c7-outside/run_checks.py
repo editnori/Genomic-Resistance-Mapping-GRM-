@@ -88,7 +88,8 @@ FAILED_LINE = re.compile(r"FAILED (?P<species>\S+) (?P<how>at|stopped at) (?P<st
                          r"(?P<time>\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ)")
 ASIDE = re.compile(r"(?P<slug>[a-z0-9_]+)\.(?P<time>(?P<d>\d{8})T(?P<t>\d{6})Z)")
 TIME = re.compile(r"\d{4}-\d\d-\d\dT\d\d:\d\d(:\d\d)?Z")
-ID_TOKEN = re.compile(r"(?<![\w.])\d+\.\d+(?!\d)")
+# A genome id is <taxon>.<n>; a letter or _ before it, as in genome_<id> or id<id>, still leaves it an id.
+ID_TOKEN = re.compile(r"(?<![\d.])\d+\.\d+(?!\d)")
 # A unitig or k-mer of 31 or more nucleotides, and the column names LightGBM and XGBoost give a matrix's features.
 FEATURE_TOKENS = (re.compile(r"[ACGTacgt]{31,}"), re.compile(r"Column_\d+"), re.compile(r"(?<![\w.])f\d+(?![\w.])"))
 READ = ("results", "logs")
