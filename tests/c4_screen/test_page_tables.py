@@ -395,6 +395,35 @@ class GatesHeld(Built):
                 self.stops(root, 16)
 
 
+class TieAndFloorSet(unittest.TestCase):
+    """The species table's tally and floor set, on made-up differences and lists rows."""
+
+    def test_a_difference_of_0_02_is_the_same_and_more_is_better_or_worse(self):
+        self.assertEqual(page.tally([0.02, -0.02, 0.021, -0.021, 0.0]), (1, 1, 3))
+        self.assertEqual(page.tally([0.02, -0.021], "log_loss"), (1, 0, 1))
+
+    def test_a_dataset_of_exactly_800_genomes_is_in_the_floor_set(self):
+        rows = [{"dataset": "x800", "samples": "800", "floor_moves": "1"},
+                {"dataset": "x799", "samples": "799", "floor_moves": "0"}]
+        self.assertEqual(page.set_datasets(rows, page.MOVES), ["x800"])
+        self.assertEqual(page.set_datasets(rows, page.ALL), ["x800", "x799"])
+        self.assertEqual((bool(page.score.floor_moves("800")), bool(page.score.floor_moves("799"))), (True, False))
+
+
+class TwinSets(Built):
+    """Condition 3 reads the twin over the arm's own set: every dataset for a screen arm, 800 or more for the floor."""
+
+    def test_each_arm_reads_the_twin_over_its_own_set(self):
+        rows = fx.read(self.root / "reading" / "count" / "count.tsv")
+        for r in rows:
+            if (r["split"], r["pair"], r["measure"]) == ("lineage", "twin-k31", page.PRIMARY):
+                r["interval_lo"] = "0.05" if r["set"] == page.MOVES else "-0.05"
+                r["holm_p"] = "1.0"
+        read = page.read_conditions(rows)
+        self.assertFalse(read[(page.FLOOR_ARM, page.FLOOR_READING, "3")])
+        self.assertTrue(read[("cmh-4000", page.SCREEN_READING, "3")])
+
+
 class CartOff(Built):
     build = {"cart_off": True}
 
