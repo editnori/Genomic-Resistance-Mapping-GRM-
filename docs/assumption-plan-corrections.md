@@ -421,9 +421,12 @@ The refit of the release's rule ended on its 23 species and 238 datasets at 20:3
 | 8. Time-split determinant | a point row as one token "point", its symbol beside | each symbol |
 | 9. M4 names | no variant name in any output until ruled | the catalogue's variant names |
 | 10. `POINT_DISRUPT` family | the gene_family before the underscore, if the catalogue lists it with that subtype | out of the family mix |
+| 11. Log loss in M1 | recall alone, as the brief fixes M1 | the log loss of each stratum's resistant genomes beside recall |
+
+An eleventh came while the text was written. The project's wording rules put recall beside log loss, and M1 as fixed gives recall alone.
 
 **Checks.** 82 SYNTHETIC tests in `tests/mechanism` (14 on M4), and ten planted faults, each caught by its test. The dry run on Klebsiella aerogenes (93 genomes, 3 datasets) ran end to end in 2.5 s with 30.6 MB at peak; the hard check passed on 3 of 3 datasets, 36 of 36 rows, and its scan found no genome id.
 
 **Cost.** Where the tables are given, about 565 s of compute for the 21 species, from the dry run's steps and a timing on 2,000 SYNTHETIC genomes. Where the program must run again, about 265 CPU hours on 21,625 genomes, from the refit's own run of the program on the same 93.
 
-**Written.** This entry was written at 03:48Z on 23 Nov 2026, after the dry run. No result of either block had been read.
+**Written.** This entry was written at 03:48Z on 23 Nov 2026, after the dry run, and M4's script and question 11 were added at 04:06Z. No result of any block had been read.
