@@ -487,3 +487,55 @@ An eleventh came while the text was written. The project's wording rules put rec
 **Proof.** With both fixes, `run_species.sh` ran Streptococcus pneumoniae twice from the refit's 2,000 program tables, once with the refit's copy of database 2026-08-07.1 and once with DB `-`. The first installed nothing. The second installed AMRFinderPlus 4.2.7, then fetched the database from NCBI, 43 of 43 files equal to the kit's list. Both ended DONE, both scans passed, both history log lines counted 7 rows of 7 genomes named at a node above the gene families, as the lead counted `msr`, and the two runs' `results/SHA256SUMS` have the same sha256. No file under `results/` was opened.
 
 **Written.** This entry was written at 07:09Z on 23 Nov 2026 and the proof added at 07:10Z. No result of any block had been read.
+
+## C4 design
+
+**Block.** Plan block C4 asks whether the chi-square screen or the candidate floor removes the inputs that separate the classes, or keeps lineage markers. The design was fixed at 04:03Z on 23 Nov 2026, before any code of the block existed and before anything ran on real data, and `docs/screen-arms.md` gives the method. No comparison result has been read.
+
+**Arms.** Three arms stand against the release's rule, refitted in the same run with the same binary. `grm learn --exp-screen cmh` ranks the candidates of the forest, boosted trees and lasso by the Cochran-Mantel-Haenszel statistic over the release's lineage clusters and keeps the top 4,000 (`cmh-4000`) or, with `--screened-features 16000`, the top 16,000 (`cmh-16000`). `grm learn --exp-floor 3` fixes the support floor at 3 in place of max(3, n/200) (`floor-3`). The twin is the default at seeds 45, 46 and 47.
+
+**Statistic.** D² / V over the informative strata of the fit's own fitting genomes, those of 2 or more genomes and both classes, in ascending cluster order; no continuity correction, two-sided, ties to the lower row, the budget filled with zeros by lower row. A stratum of one genome or one class adds nothing, so a pure lineage marker scores 0. With one stratum it ranks as the chi-square.
+
+**Folds.** The strata read no label and each screen takes them on the genomes it fits, so no outer test genome can change a screen. The candidates are the default's. Folds come from the labels, the lineages and the seed, so each arm meets the default on the same folds, which the scorer checks. A screen arm's SCM and CART read no screen and must make the default's calls in every fold. Below 800 genomes the floor arm is the default and its results must equal the default's, timing apart.
+
+**Count.** As C3's, the arm's value less the default's on the lineage primary measure, with Holm over 16 pairs: `cmh-4000` and `cmh-16000` each on the forest, boosted trees and lasso, `floor-3` and the twin each on all five learners. A screen arm's conditions are read on the three learners it touches (1, 2 and 5 for each, 4 for the three). The floor arm's follow the lead's C3 ruling 15. Condition 3 follows the plan's words as corrected for C3 at 02:08Z on 23 Nov 2026: the twin meets 1 in fewer than 3 of 5 learners and 2 in fewer than 3 of 5, each read apart. The floor arm's count runs over the whole first run, the 141 datasets it cannot move entering at 0; its count over the 92 it moves is written beside it and decides nothing.
+
+**Study.** The first run's 55 datasets in S get one study run per arm on their reviewed `study-whole` plans, at the release's seeds, with no twin, as C9's ruling 6 and C3's question 11 did.
+
+| Set | Datasets | Species | Less M, the first run | First run in S | Floor arm moves |
+|---|---:|---:|---:|---:|---:|
+| L | 268 | 23 | 233 | 55 | 92 in 11 species, 24 in S |
+
+**Questions.** The design leaves seventeen questions to the lead, each with the answer taken and the other one. Each is one argument of the code or the run script. None has been ruled.
+
+| Question | Taken | Other |
+|---|---|---|
+| 1. Continuity correction | none, as the default's statistic | Mantel and Haenszel's 0.5 |
+| 2. Direction | two-sided | one-sided toward resistance |
+| 3. Arithmetic and ties | f64 in fixed stratum order; ties to the lower row; held to exact rationals in a plain Python implementation | exact rationals in the screen |
+| 4. A stratum of one genome or one class | adds 0 to D and V | pooled into one stratum |
+| 5. Most strata uninformative | the budget filled with zeros by lower row, counted in the inputs file | fewer columns than the budget |
+| 6. Strata | the release's lineage clusters on each fit's fitting genomes, on every split | clusters cut again per fold |
+| 7. Candidates | the default's | uncollapsed rows |
+| 8. Budget 16,000 | measured in the pilot | |
+| 9. The floor arm's other changes | the projection's cohort range only | |
+| 10. Floor arm's datasets | the whole first run, 141 at 0; the 92 beside, deciding nothing | the 92 alone |
+| 11. SCM and CART under a screen arm | refitted and checked, not counted | counted as pairs |
+| 12. Holm | 16 pairs, the twin's included | 20, with SCM and CART of the screen arms at p = 1 |
+| 13. Conditions | the learners an arm touches; ruling 15 for the floor arm; condition 3 as corrected | the twin read on three learners |
+| 14. Study draws | one run at the release's seeds, no twin | a seed under this flag only |
+| 15. First run | L less M | all of L |
+| 16. Default and twin | C4's own, in the same run as its arms | shared with C3's run |
+| 17. No candidate (ruling 16) | kept by import; it cannot arise | |
+
+**Negative control.** On a SYNTHETIC cohort of 400 genomes in 20 strata, with 1,000 lineage markers among 2,000 rows and labels permuted within strata 200 times, a permutation rejects when the screen's top 100 hold more markers than a one-sided hypergeometric test at 0.05 allows. The adjusted screen rejected in 7 of 200 against a cut of 15 fixed before it ran; the chi-square, deciding nothing, in 200 of 200.
+
+**Pilot.** One draw of *Enterobacter cloacae* at seed 42, its 9 datasets (cefepime, ciprofloxacin, gentamicin, imipenem, levofloxacin, meropenem, sulfamethoxazole/trimethoprim, tobramycin and trimethoprim; all but trimethoprim in S), the default and the three arms on the drawn splits and the 8 study plans, ran on a 16-CPU box from 04:31:01Z on 23 Nov 2026. It stopped at its score step at 04:37:21Z, as the scorer was not yet committed, and its restart on the same binary ended `DONE` at 04:48:49Z: 68 of 68 results, 2,231 of 2,231 checks, 0 genome ids in what it keeps. Its scores were not opened. The fit steps took 54.27 s for the default with its reports, 31.67 s for `cmh-4000`, 35.59 s for `cmh-16000` and 26.36 s for `floor-3`; each fit process peaked under 1,303,000 KB. No pilot dataset reaches 800 genomes, so the floor arm's moved fits are not timed.
+
+**Unflagged bytes.** `scripts/c4-screen/unflagged.sh` ran `grm` built at main (`6c3697b`) and at this branch, whose code, the binary less its build id, is the pilot's, with no C4 flag and no network, from 05:13:10Z to 05:17:13Z on 23 Nov 2026. On the pilot's data root, with 9 reports and 17 result files a side, the 360 files of the two copies were 317 equal in bytes and 43 equal but for the run clocks, none differing. On the root of 270 SYNTHETIC genomes made from `test_dna.fa`, the 1,141 files were 1,098 and 43, none differing.
+
+**Faults.** 17 planted faults, each in a copy of the tree, were each caught by their test, which passes with no fault.
+
+**Cost.** Each fit costs its pilot ratio of fit wall time to the release's learning seconds of the pilot's datasets (41.43 s): 1.3098 for the default and the twin, 0.7643 for `cmh-4000`, 0.8590 for `cmh-16000` and 0.6362 for `floor-3`, over 3 seeds on the first run's 233 datasets and one study run on its 55. The fits come to 27.10 xlarge-hours, 7.56 of them the default and 6.49 the twin; with C9's data steps and the matrix loads, 34.39 box-hours central over 23 boxes ($6.88) and 97.35 upper ($19.47), above the plan's 25. Sharing the default, the twin and the data roots with C3's run would save 18.93 of the central hours, but needs one binary for both blocks, and C3's run waits for its three unbuilt arms.
+
+**Written.** This entry was written at 05:26Z on 23 Nov 2026, from the design fixed at 04:03Z, the lists, the pilot and the box's checks. No comparison result had been read.
