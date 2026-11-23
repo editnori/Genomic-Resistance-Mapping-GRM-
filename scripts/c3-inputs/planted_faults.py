@@ -87,9 +87,12 @@ FAULTS = [
      "    if missing:\n        raise SystemExit",
      "    if False:\n        raise SystemExit",
      "py", f"{T}.Count.test_the_count_refuses_part_of_the_family"),
+    # The doc line ahead makes the text C3's alone: C4's --exp-screen and --exp-floor take the same requires_all.
     ("10", "an input arm that runs without --force, so a kept report could skip it", "src/main.rs",
-     'requires_all = ["exp_pick", "force"]',
-     'requires_all = ["exp_pick"]',
+     '        /// --exp-mic and --exp-cohort.\n        #[arg(\n            long,\n            value_enum,\n'
+     '            requires_all = ["exp_pick", "force"],',
+     '        /// --exp-mic and --exp-cohort.\n        #[arg(\n            long,\n            value_enum,\n'
+     '            requires_all = ["exp_pick"],',
      "rust-bin", "tests::learn_takes_the_c3_input_arm_only_when_asked"),
     # The three matrix arms (k31-counts, k31-aa, unitigs) and the screen count.
     ("11a", "a matrix arm's added block built from the label", ARMS,
