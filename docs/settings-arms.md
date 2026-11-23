@@ -96,6 +96,8 @@ The run script was rehearsed on the same box with *Pseudomonas aeruginosa* and p
 | 10. A trial fitted at another seed than the default's fold | `the_release_setting_on_one_lineage_fold_reproduces_the_drawn_fold` |
 | 11. `--exp-settings` without `--force` | `learn_takes_the_settings_flags_only_with_force_and_alone` |
 
+All 14 plants were caught on 23 Nov 2026, and each test passes with no fault planted. A first run caught 13: fault 7b's test also failed because its added row had no choices files, so it now passes only when the twin-seed check itself fails.
+
 ## What it does not do
 
 It reads no sealed, held-out, clinical or spent test set: neither the outside-study genomes, nor the other-database genomes, nor the later-records set. It finds, names and ranks no resistance marker; a choices file holds settings and counts only. It changes no default, report, release rule or the site.
