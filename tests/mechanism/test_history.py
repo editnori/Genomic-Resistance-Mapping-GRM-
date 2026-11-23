@@ -78,8 +78,8 @@ def row(out, guard, periods="primary", cell="species_class", cls="QUINOLONE", da
 class Years(unittest.TestCase):
     def test_a_year_is_four_digits_and_nothing_else(self):
         self.assertEqual(history.year_of("2015"), 2015)
-        self.assertEqual(history.year_of(" 2015 "), 2015)
-        for text in (None, "", "2015-06", "c. 2014", "15", "20150", "2014/2015", 2015):
+        for text in (None, "", "2015-06", "c. 2014", "15", "20150", "2014/2015", 2015, " 2015", "2015 ", "2015\n",
+                     "\u0662\u0660\u0661\u0665"):
             self.assertIsNone(history.year_of(text), text)
 
     def test_period_ends_are_inclusive_and_exact(self):

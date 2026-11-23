@@ -69,9 +69,10 @@ TIMESPLIT_HEADER = ["dataset", "species_slug", "species", "antibiotic", "reading
 # ---------------------------------------------------------------- genomes
 
 def year_of(text):
-    """A year from samples[].year: four digits and nothing else, else None."""
-    if isinstance(text, str) and YEAR_RE.fullmatch(text.strip()):
-        return int(text.strip())
+    """A year from samples[].year: four ASCII digits and nothing else, not
+    even a blank, else None (the plan: anything else is no year)."""
+    if isinstance(text, str) and YEAR_RE.fullmatch(text):
+        return int(text)
     return None
 
 
