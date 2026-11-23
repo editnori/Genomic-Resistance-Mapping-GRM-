@@ -368,6 +368,57 @@ enum Command {
         /// every row.
         #[arg(long, value_enum, default_value_t = ProgramRowsArg::Amr, requires = "exp_inputs")]
         exp_program_rows: ProgramRowsArg,
+        /// Experiment, off by default (docs/screen-arms.md, plan block C4):
+        /// rank each forest, boosting and lasso fit's candidates by the
+        /// Cochran-Mantel-Haenszel statistic over the lineage clusters of
+        /// the fit's own fitting genomes, in place of the chi-square, and
+        /// keep --screened-features of them. Writes no report; the results
+        /// are --exp-pick's files, which needs --exp-pick-inner 0, and
+        /// <exp-pick dir>/<dataset>.<tag>-s<seed>.inputs.json of counts and
+        /// fit times. Needs --force. Refused beside --exp-floor,
+        /// --learner-seed, the --exp-tie-* options, --exp-null-refit,
+        /// --exp-mic, --exp-cohort and --exp-inputs.
+        #[arg(
+            long,
+            value_enum,
+            requires_all = ["exp_pick", "force"],
+            conflicts_with_all = [
+                "learner_seed",
+                "exp_tie_rule",
+                "exp_tie_trace",
+                "exp_tie_out",
+                "exp_null_refit",
+                "exp_mic",
+                "exp_cohort",
+                "exp_inputs",
+                "exp_floor",
+            ]
+        )]
+        exp_screen: Option<ScreenArmArg>,
+        /// Experiment, off by default (docs/screen-arms.md, plan block C4):
+        /// fix each fit's support floor, and the projection's, at this
+        /// count in place of max(3, n/200). Writes no report; the results
+        /// are --exp-pick's files, which needs --exp-pick-inner 0, and the
+        /// inputs file --exp-screen writes. Needs --force and the release's
+        /// budget, --screened-features 4000. Refused beside --exp-screen,
+        /// --learner-seed, the --exp-tie-* options, --exp-null-refit,
+        /// --exp-mic, --exp-cohort and --exp-inputs.
+        #[arg(
+            long,
+            value_parser = RangedU64ValueParser::<u32>::new().range(1..),
+            requires_all = ["exp_pick", "force"],
+            conflicts_with_all = [
+                "learner_seed",
+                "exp_tie_rule",
+                "exp_tie_trace",
+                "exp_tie_out",
+                "exp_null_refit",
+                "exp_mic",
+                "exp_cohort",
+                "exp_inputs",
+            ]
+        )]
+        exp_floor: Option<u32>,
     },
     /// Run fetch, count, structure, matrix, and learn for each species, then
     /// build the report. Stages skip work that is already on disk.
@@ -718,6 +769,8 @@ fn run(cli: Cli) -> Result<()> {
             exp_input_matrix,
             exp_program_column,
             exp_program_rows,
+            exp_screen,
+            exp_floor,
             ..
         } => {
             if let Some(dir) = &exp_pick {
@@ -735,6 +788,13 @@ fn run(cli: Cli) -> Result<()> {
                     exp_pick_inner,
                 )?;
             }
+            enable_screen_arm(
+                exp_screen,
+                exp_floor,
+                screened_features,
+                exp_pick.as_deref(),
+                exp_pick_inner,
+            )?;
             learn_fold_file(
                 &layout,
                 &species,
@@ -763,6 +823,8 @@ fn run(cli: Cli) -> Result<()> {
             exp_input_matrix,
             exp_program_column,
             exp_program_rows,
+            exp_screen,
+            exp_floor,
             ..
         } => {
             let cfg = learn_config(screened_features, seed, learner_seed, exp_tie_rule.into());
@@ -792,6 +854,13 @@ fn run(cli: Cli) -> Result<()> {
                     exp_pick_inner,
                 )?;
             }
+            enable_screen_arm(
+                exp_screen,
+                exp_floor,
+                screened_features,
+                exp_pick.as_deref(),
+                exp_pick_inner,
+            )?;
             species
                 .iter()
                 .try_for_each(|s| learn_in(&layout, s, &only, force, &cfg, exp_tie_out.as_deref()))
@@ -1859,6 +1928,45 @@ fn enable_input_arm(
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, clap::ValueEnum)]
+enum ScreenArmArg {
+    Cmh,
+}
+
+/// Turns the C4 screen or floor arm on (`learn::screen_arm::enable`) when
+/// one is asked for, after checking what clap cannot: the C9 writer with no
+/// inner fit, and the floor arm at the release's budget.
+fn enable_screen_arm(
+    screen: Option<ScreenArmArg>,
+    floor: Option<u32>,
+    screened_features: usize,
+    pick_dir: Option<&std::path::Path>,
+    pick_inner: usize,
+) -> Result<()> {
+    use grm::learn::screen_arm::{Rule, Settings};
+    if screen.is_none() && floor.is_none() {
+        return Ok(());
+    }
+    anyhow::ensure!(
+        pick_inner == 0,
+        "--exp-screen and --exp-floor score the arm's own outer fits only: give --exp-pick-inner 0"
+    );
+    anyhow::ensure!(
+        floor.is_none() || screened_features == DEFAULT_SCREENED_FEATURES,
+        "--exp-floor changes the floor alone: keep --screened-features at {DEFAULT_SCREENED_FEATURES}, not {screened_features}"
+    );
+    grm::learn::screen_arm::enable(Settings {
+        rule: match screen {
+            Some(ScreenArmArg::Cmh) => Rule::Cmh,
+            None => Rule::ChiSquare,
+        },
+        floor,
+        out: pick_dir
+            .context("--exp-screen and --exp-floor need --exp-pick")?
+            .to_path_buf(),
+    })
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, clap::ValueEnum)]
 enum TieRuleArg {
     Float,
     Exact,
@@ -2793,6 +2901,120 @@ mod tests {
             ])
             .is_ok()
         );
+    }
+
+    /// The C4 arms (`learn::screen_arm`) are off unless asked for, need
+    /// --force and --exp-pick, and are refused beside each other and the
+    /// other experiments. What clap cannot check is refused before the arm
+    /// is turned on: inner fits, and the floor arm at another budget.
+    #[test]
+    fn learn_takes_the_c4_screen_and_floor_arms_only_when_asked() {
+        use clap::error::ErrorKind::{ArgumentConflict, MissingRequiredArgument, ValueValidation};
+        let parse = |args: &[&str]| Cli::try_parse_from(args.iter().copied());
+        let Command::Learn {
+            exp_screen,
+            exp_floor,
+            ..
+        } = parse(&["grm", "learn", "--species", "s"]).unwrap().command
+        else {
+            panic!("parsed another command");
+        };
+        assert_eq!((exp_screen, exp_floor), (None, None));
+        let base = [
+            "grm",
+            "learn",
+            "--species",
+            "s",
+            "--force",
+            "--exp-pick",
+            "p",
+            "--exp-pick-inner",
+            "0",
+        ];
+        let with = |extra: &[&'static str]| -> Vec<&'static str> {
+            let mut args = base.to_vec();
+            args.extend_from_slice(extra);
+            args
+        };
+        let Command::Learn {
+            exp_screen,
+            exp_floor,
+            screened_features,
+            ..
+        } = parse(&with(&[
+            "--exp-screen",
+            "cmh",
+            "--screened-features",
+            "16000",
+        ]))
+        .unwrap()
+        .command
+        else {
+            panic!("parsed another command");
+        };
+        assert_eq!(
+            (exp_screen, exp_floor, screened_features),
+            (Some(ScreenArmArg::Cmh), None, 16000)
+        );
+        let Command::Learn { exp_floor, .. } = parse(&with(&["--exp-floor", "3"])).unwrap().command
+        else {
+            panic!("parsed another command");
+        };
+        assert_eq!(exp_floor, Some(3));
+        let kind = |args: &[&str]| parse(args).err().map(|e| e.kind());
+        for arm in [&["--exp-screen", "cmh"][..], &["--exp-floor", "3"][..]] {
+            let mut no_force: Vec<&str> =
+                base.iter().copied().filter(|a| *a != "--force").collect();
+            no_force.extend_from_slice(arm);
+            assert_eq!(
+                kind(&no_force),
+                Some(MissingRequiredArgument),
+                "{arm:?} without --force"
+            );
+            let mut no_pick = vec!["grm", "learn", "--species", "s", "--force"];
+            no_pick.extend_from_slice(arm);
+            assert_eq!(
+                kind(&no_pick),
+                Some(MissingRequiredArgument),
+                "{arm:?} without --exp-pick"
+            );
+            for other in [
+                &["--learner-seed", "7"][..],
+                &["--exp-tie-rule", "exact"][..],
+                &["--exp-null-refit", "n"][..],
+                &["--exp-mic", "released"][..],
+                &["--exp-inputs", "program", "--exp-program-tables", "t"][..],
+            ] {
+                let mut args = with(arm);
+                args.extend_from_slice(other);
+                assert_eq!(
+                    kind(&args),
+                    Some(ArgumentConflict),
+                    "{arm:?} beside {other:?}"
+                );
+            }
+        }
+        assert_eq!(
+            kind(&with(&["--exp-screen", "cmh", "--exp-floor", "3"])),
+            Some(ArgumentConflict)
+        );
+        assert_eq!(kind(&with(&["--exp-floor", "0"])), Some(ValueValidation));
+        // No arm asked for: nothing is turned on.
+        let p = std::path::Path::new("p");
+        enable_screen_arm(None, None, 16000, None, 3).unwrap();
+        assert_eq!(grm::learn::screen_arm::active(), None);
+        // Inner fits, and the floor arm beside a budget other than 4000.
+        let inner = enable_screen_arm(Some(ScreenArmArg::Cmh), None, 4000, Some(p), 3).unwrap_err();
+        assert!(
+            format!("{inner:#}").contains("--exp-pick-inner 0"),
+            "{inner:#}"
+        );
+        let budget = enable_screen_arm(None, Some(3), 16000, Some(p), 0).unwrap_err();
+        assert!(
+            format!("{budget:#}").contains("--screened-features at 4000"),
+            "{budget:#}"
+        );
+        assert_eq!(grm::learn::screen_arm::active(), None);
     }
 
     /// refuses `--column-blocks` and `--drop-ksets`.

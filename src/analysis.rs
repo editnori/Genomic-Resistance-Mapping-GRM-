@@ -727,7 +727,9 @@ fn analyze_dataset_as(
     )?;
     // The C3 experiment (`input_arms`) writes its counts and the C9 writer's
     // per-fold calls; its rows carry no k-mer to annotate, so no report.
-    if crate::input_arms::active().is_some() {
+    // The C4 experiment (`screen_arm`) writes its counts and those calls
+    // too, and no report.
+    if experiment_arm_active() {
         return Ok(None);
     }
 
@@ -946,6 +948,12 @@ fn eval_inputs<'a>(input: &'a SpeciesInputs, spec: &DatasetSpec) -> Result<Optio
     }
     let min_support = eval::support_floor(c.rows.len());
     project_cohort(input, c, min_support, &spec.id, "drawn").map(Some)
+}
+
+/// Whether the C3 input arm (`input_arms`) or the C4 screen arm
+/// (`learn::screen_arm`) is on: either writes its own files and no report.
+fn experiment_arm_active() -> bool {
+    crate::input_arms::active().is_some() || crate::learn::screen_arm::active().is_some()
 }
 
 /// `eval_inputs` for a cohort already drawn, projected at `min_support`.
@@ -1966,9 +1974,10 @@ fn analyze_species_as(
                 );
                 written.push(spec.id.clone());
             }
-            None if crate::input_arms::active().is_some() => {
-                // An input arm writes no report and removes none; its
-                // results are the files `input_arms` and the C9 writer made.
+            None if experiment_arm_active() => {
+                // An input or screen arm writes no report and removes none;
+                // its results are the files `input_arms` or `screen_arm` and
+                // the C9 writer made.
                 eprintln!("    {}: input arm, no report written or removed", spec.id);
             }
             None => {
@@ -3947,6 +3956,30 @@ mod tests {
                 })
                 .collect(),
             datasets: vec![dataset("meropenem")],
+        }
+    }
+
+    /// The C4 floor arm (`learn::screen_arm`) fixes the drawn run's
+    /// projection floor as it fixes the fits'; without it the floor is
+    /// max(3, n/200). SYNTHETIC cohorts of 799, 800 and 1600 genomes.
+    #[test]
+    fn the_c4_floor_arm_fixes_the_drawn_projections_floor_on_both_sides_of_800() {
+        use crate::learn::screen_arm::{self, Rule, Settings};
+        let dir = tempfile::tempdir().unwrap();
+        for (n, default) in [(799, 3), (800, 4), (1600, 8)] {
+            let input = scan_inputs_of(n, &[]);
+            let spec = &input.datasets[0];
+            let plain = eval_inputs(&input, spec).unwrap().unwrap();
+            assert_eq!((plain.cohort.rows.len(), plain.min_support), (n, default));
+            let settings = Settings {
+                rule: Rule::ChiSquare,
+                floor: Some(3),
+                out: dir.path().to_path_buf(),
+            };
+            let fixed = screen_arm::with_settings(settings, || {
+                eval_inputs(&input, spec).unwrap().unwrap().min_support
+            });
+            assert_eq!(fixed, 3, "{n} genomes");
         }
     }
 

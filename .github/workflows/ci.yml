@@ -288,6 +288,11 @@ jobs:
           # SYNTHETIC reports, AMRFinderPlus tables, a database, a BV-BRC genome table and TBProfiler result files built in the test; it runs the scripts under scripts/mechanism, plants ten faults in them in turn and fits nothing.
           - suite: tests/mechanism
             top: .
+          # SYNTHETIC results, inputs files, reports, tables and folders built in the test; it runs score.py, lists.py, expect.py, cmh_plain.py and unflagged.py under scripts/c4-screen and fits nothing.
+          # test_lists.py also reads the committed lists scripts/c3-inputs/lists.tsv and scripts/c4-screen/lists.tsv, and test_cmh_plain.py tests/c4_screen/cmh_cases.json.
+          # test_faults.py reads the planted-fault runners under scripts/c3-inputs, scripts/c9-pick and scripts/c4-screen and the files they plant in.
+          - suite: tests/c4_screen
+            top: .
     env:
       SUITE: ${{ matrix.suite }}
       TOP: ${{ matrix.top }}
