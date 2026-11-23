@@ -194,6 +194,18 @@ class RunChecks(unittest.TestCase):
         self.assertEqual((self.root / "withdrawn" / "reading" / "withdrawn.tsv").read_text(),
                          "arm\treason\ttime\nelasticnet\t" + "\t".join(F.WITHDRAWN["elasticnet"]) + "\n")
 
+    def test_gather_refuses_a_withdrawal_time_later_than_its_clock(self):
+        back = self.back("withdrawn")
+        reading = back.parent / "reading"
+        with self.assertRaisesRegex(SystemExit, "later than this clock"):
+            checks.gather(back, self.root / "withdrawn" / "lists.tsv", self.root / "withdrawn" / "release", reading,
+                          {"elasticnet": ("SYNTHETIC: cost", "2099-01-01T00:00Z")})
+        self.assertFalse(reading.exists())
+        self.assertTrue(checks.later_than_now("2026-11-23T09:00:01Z", checks.datetime(2026, 11, 23, 9, 0,
+                                                                                       tzinfo=checks.timezone.utc)))
+        self.assertFalse(checks.later_than_now("2026-11-23T09:00Z", checks.datetime(2026, 11, 23, 9, 0,
+                                                                                     tzinfo=checks.timezone.utc)))
+
     def test_a_withdrawn_arm_needs_a_reason_and_a_utc_time(self):
         for argv in (["--withdrawn", "elasticnet", "", "2026-11-23T09:00Z"],
                      ["--withdrawn", "elasticnet", "cost", "23 Nov"], ["--withdrawn", "twin", "cost", "2026-11-23T09:00Z"],

@@ -56,7 +56,8 @@ and on a new box its c3/score/, are neither read nor counted nor copied: the
 record keeps score.py's three tables alone. back.tar, the archive a copy came
 in, is not read. No score is printed.
 
-`gather` runs the same checks and, only when every one passes, writes the
+`gather` refuses a withdrawal whose time is later than its own clock read. It
+runs the same checks and, only when every one passes, writes the
 reading directory page_tables.py reads: checks.txt (the printout), withdrawn.tsv,
 reading.txt (this command's outputs with their sha256), score/<species>/ with
 checks.tsv, draws.tsv and datasets.tsv read from score.tar, and run/<species>/
@@ -74,6 +75,7 @@ import re
 import shutil
 import sys
 import tarfile
+from datetime import datetime, timezone
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -368,11 +370,23 @@ def run(back, l_path, release, withdrawn=None, ids_also=()):
     return rep
 
 
+def later_than_now(time, now=None):
+    """True when a withdrawal's UTC time (%Y-%m-%dT%H:%M or with seconds, then Z) is later than the clock."""
+    now = now or datetime.now(timezone.utc)
+    form = "%Y-%m-%dT%H:%M:%SZ" if len(time) == 20 else "%Y-%m-%dT%H:%MZ"
+    return datetime.strptime(time, form).replace(tzinfo=timezone.utc) > now
+
+
 def gather(back, l_path, release, reading, withdrawn=None, ids_also=()):
     """Write the reading directory from the copies, only when every check passes. Returns the report."""
     back, reading = Path(back), Path(reading)
     if reading.exists() and any(reading.iterdir()):
         raise SystemExit(f"{reading} is not empty")
+    now = datetime.now(timezone.utc)
+    for arm, (_, time) in sorted((withdrawn or {}).items()):
+        if later_than_now(time, now):
+            raise SystemExit(f"--withdrawn {arm}: its time {time} is later than this clock's "
+                             f"{now.strftime('%Y-%m-%dT%H:%M:%SZ')}; nothing written")
     rep = run(back, l_path, release, withdrawn, ids_also)
     if rep.failed:
         return rep
