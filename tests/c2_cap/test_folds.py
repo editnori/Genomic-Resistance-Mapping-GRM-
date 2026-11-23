@@ -134,6 +134,50 @@ class Lineage(unittest.TestCase):
         self.assertEqual(rc, 1)
         self.assertIn("breach: cap-all: a slot with no cohort plan: 1", text)
 
+    @staticmethod
+    def edit_trace(fits, arm, change):
+        """Rewrites arm's slot-0, fold-0 lineage trace line through change(train list, plan)."""
+        p = fits / arm / D / "training.jsonl"
+        lines = p.read_text(encoding="utf-8").splitlines()
+        base = json.loads((fits / "cap-2000" / D / "plans" / "lineage-0.json").read_text(encoding="utf-8"))
+        for i, line in enumerate(lines[1:], 1):
+            r = json.loads(line)
+            if (r["split"], r["repeat"], r["fold"]) == ("lineage", 0, 0):
+                r["train"] = sorted(change(list(r["train"]), base))
+                lines[i] = json.dumps(r)
+        p.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    def test_a_scored_genome_in_training_breaches(self):
+        def edit(fits):
+            def add_scored(train, base):
+                scored = next(g for g, o in zip(base["sample_ids"], base["plan"]["outer"]) if o == 0)
+                return train + [scored]
+            self.edit_trace(fits, "cap-all", add_scored)
+        rc, text, _ = self.run_check(edit=edit)
+        self.assertEqual(rc, 1)
+        self.assertIn("breach: a scored genome in training: 1", text)
+
+    def test_a_default_genome_that_trains_otherwise_than_in_the_default_breaches(self):
+        def edit(fits):
+            def drop_default(train, base):
+                gone = next(g for g in train if g.endswith(".1"))
+                return [g for g in train if g != gone]
+            self.edit_trace(fits, "cap-all", drop_default)
+        rc, text, _ = self.run_check(edit=edit)
+        self.assertEqual(rc, 1)
+        self.assertIn("breach: a default genome that trains otherwise than in the default: 1", text)
+        self.assertNotIn("a scored genome in training", text)
+
+    def test_a_cohort_plan_whose_lineage_count_differs_breaches(self):
+        def edit(fits):
+            p = fits / "cap-all" / D / "plans" / "lineage-0.cohort.json"
+            doc = json.loads(p.read_text(encoding="utf-8"))
+            doc["lineage_dropped"][0] += 1
+            p.write_text(json.dumps(doc), encoding="utf-8")
+        rc, text, _ = self.run_check(edit=edit)
+        self.assertEqual(rc, 1)
+        self.assertIn("breach: a cohort plan whose lineage count differs: 1", text)
+
     def test_a_balance_drop_breaches(self):
         def edit(fits):
             p = fits / "cap-all" / D / "plans" / "lineage-0.cohort.json"
