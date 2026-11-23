@@ -394,3 +394,36 @@ The refit of the release's rule ended on its 23 species and 238 datasets at 20:3
 **Cost.** Each arm's fit costs its pilot ratio to the release's learning seconds: 1.08 for K31, 0.17 for the program alone and 0.71 for K31 plus the program. The program takes 0.0178 core-hours a genome, 2.7 times the release's 0.0065, on 21,625 genomes. The built arms' part of the one run, with K31 and the twin, comes to 40.42 xlarge-hours, 24.07 of them the program; with data steps and loads, 47.12 box-hours over 23 boxes. The three waiting arms add their own, measured on their pilots.
 
 **Written.** This entry was written at 00:16Z on 23 Nov 2026, from the design fixed at 23:22Z on 22 Nov, the lists and the second pilot. The lead's rulings of 00:47Z were carried into it from 01:20Z to 01:24Z, in a review with a recount before filing (ruling 18). No comparison result had been read.
+
+## Mechanism design
+
+**Blocks.** Plan blocks M1 and M2 read the AMRFinderPlus program's tables beside the release's reports and fit nothing. M1 asks whether each learner's recall differs between resistant genomes whose catalogue calls are point mutations and those whose calls are acquired genes. M2 asks whether the mix of catalogue calls among deposited genomes moves between collection years. The design was fixed at 03:22Z on 23 Nov 2026, before any script of these blocks read a real table, score, stratum or share, and `docs/mechanism-split.md` gives the method. No result has been read.
+
+**Rule.** Both blocks reuse the AMRFinderPlus comparison's rule as it stands: each report's published rule, written for the 237 datasets of A as `scripts/mechanism/drug_rules.tsv`, and the adapter's counted rows (`tool_default`). Each run holds its own calls to the kit's adapter on every genome and its counts to the comparison's record.
+
+**M1.** On the 204 datasets of A not in M, the lineage split is primary. A hard check recomputes each learner row's counts from its scores before any stratum is counted. A genome's stratum (point only, gene only, both, neither) comes from its rule-meeting rows, never from its label. Per learner, the median of recall on gene only less recall on point only, over datasets with 10 or more resistant genomes in both, with its species interval, the sign test and Holm over the five learners.
+
+**M2.** Periods 2010 to 2014 against 2015 to 2019, then 2000 to 2009 against 2010 to 2019. A cell is a species with a drug class. One vote per BioProject with 5 or more genomes in a period, 3 or more such BioProjects a period, and a permutation over BioProjects, with Holm over the cells that pass. Six guards stand beside it and decide nothing.
+
+**Not built.** M3 is not built: a feature card names a gene in 1,432 of the release's 21,443 final-model cards, in none of the cards of 6 of the 23 species with cards (the plan wrote 7; the probe's output gives 6), and by BV-BRC's annotation rather than the catalogue's name. M4, the lineage curve for Mycobacterium tuberculosis, is a plan with no script.
+
+**Questions.** The plan leaves nine questions to the lead, each with the option taken and the other. A tenth came from the dry run, which stopped at M2 on a row of Subtype `POINT_DISRUPT`: the program names a disrupted core gene `<gene_family>_<change>`, which neither the catalogue's alleles nor its hierarchy hold. Taken: the gene_family before the underscore, when the catalogue lists that family with Subtype `POINT_DISRUPT`; any other symbol still stops the species. Other: leave `POINT_DISRUPT` rows out of the family mix. The plan file is unchanged.
+
+| Question | Taken | Other |
+|---|---|---|
+| 1. `POINT_DISRUPT` rows | gene, as the brief words it, with those genomes counted beside each stratum | point |
+| 2. "Under 5" | covers zero | show 0 |
+| 3. Species interval | none under 6 species | an interval at any count |
+| 4. BioProject vote | 5 or more genomes in the period; the rest enter the share per genome only | every BioProject |
+| 5. Flagged BioProject | resistant share over the datasets whose rule names the class | every dataset |
+| 6. Family | the allele's gene_family, the symbol where it is one, else its first family in the hierarchy | the symbol |
+| 7. Lineage clusters | joined over the species' reports, given only where they agree | per report |
+| 8. Time-split determinant | a point row as one token "point", its symbol beside | each symbol |
+| 9. M4 names | no variant name in any output until ruled | the catalogue's variant names |
+| 10. `POINT_DISRUPT` family | the gene_family before the underscore, if the catalogue lists it with that subtype | out of the family mix |
+
+**Checks.** 68 SYNTHETIC tests in `tests/mechanism`, and ten planted faults, each caught by its test. The dry run on Klebsiella aerogenes (93 genomes, 3 datasets) ran end to end in 2.5 s with 30.6 MB at peak; the hard check passed on 3 of 3 datasets, 36 of 36 rows, and its scan found no genome id.
+
+**Cost.** Where the tables are given, about 565 s of compute for the 21 species, from the dry run's steps and a timing on 2,000 SYNTHETIC genomes. Where the program must run again, about 265 CPU hours on 21,625 genomes, from the refit's own run of the program on the same 93.
+
+**Written.** This entry was written at 03:48Z on 23 Nov 2026, after the dry run. No result of either block had been read.

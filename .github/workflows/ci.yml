@@ -284,6 +284,9 @@ jobs:
           # test_lists.py also reads the committed lists scripts/c9-pick/l.tsv, reference/amrfinderplus-comparison/datasets.tsv and scripts/c3-inputs/lists.tsv.
           - suite: tests/c3_inputs
             top: .
+          # SYNTHETIC reports, AMRFinderPlus tables, a database and a BV-BRC genome table built in the test; it runs the scripts under scripts/mechanism, plants ten faults in them in turn and fits nothing.
+          - suite: tests/mechanism
+            top: .
     env:
       SUITE: ${{ matrix.suite }}
       TOP: ${{ matrix.top }}
