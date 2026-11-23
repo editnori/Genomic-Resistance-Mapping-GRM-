@@ -287,6 +287,55 @@ class RunChecks(unittest.TestCase):
             self.assertIn("FAIL DONE and binary.txt", lines(rep), text)
             self.assertFalse([line for line in rep.lines if "named and set aside" in line], text)
 
+    def test_a_failed_at_the_second_of_its_done_is_not_set_aside(self):
+        (self.back / "mockella_minor" / "FAILED").write_text("FAILED mockella_minor at build 2026-11-23T10:00:00Z\n")
+        rep = self.run_checks(set_aside=("mockella_minor",))
+        self.assertIn("FAIL DONE and binary.txt", lines(rep))
+        self.assertFalse([line for line in rep.lines if "named and set aside" in line])
+
+    def test_a_sha256sums_listing_a_file_beyond_the_runs_rule_fails(self):
+        slug = "mockella_minor"
+        copy = self.back / slug
+        self.unpack(slug)
+        (copy / "score.tar").unlink()
+        (copy / "results" / "extra.bin").write_bytes(b"SYNTHETIC")
+        (copy / "SHA256SUMS").write_text(sums(copy) + f"{hashlib.sha256(b'SYNTHETIC').hexdigest()}  results/extra.bin\n")
+        done(copy, slug)
+        pack(copy)
+        self.assertIn("FAIL SHA256SUMS", lines(self.run_checks()))
+
+    def test_a_species_run_without_one_arm_fails(self):
+        slug = "synthia_coli"
+        copy = self.back / slug
+        self.unpack(slug)
+        ds = [d for d in R.FIRST if d.startswith(slug + "__")]
+        a = [d for d in ds if d in R.IN_A]
+        st = [d for d in ds if d in R.IN_S]
+        arms = [x for x in ARMS.split(",") if x != "k31-aa"]
+        rows = expect.rows(slug, ds, a, st, [42, 43, 44], [45, 46, 47], arms)
+        kept = {name for r in rows for name in (r[7], r[8])}
+        for r in expect.rows(slug, ds, a, st, [42, 43, 44], [45, 46, 47], ARMS.split(",")):
+            for name in (r[7], r[8]):
+                path = copy / "results" / "picks" / name
+                if name != "-" and name not in kept and path.is_file():
+                    path.unlink()
+        (copy / "expect.tsv").write_text(checks.expect_text(rows))
+        text = (copy / "lists.txt").read_text()
+        (copy / "lists.txt").write_text(text.replace(f"arms\t{ARMS}\n", f"arms\t{','.join(arms)}\n"))
+        self.repack(slug)
+        self.assertIn("FAIL expect.py", lines(self.run_checks()))
+
+    def test_a_refusal_whose_constant_rows_miss_a_learner_fails(self):
+        slug = "synthia_coli"
+        self.unpack(slug)
+        path = self.back / slug / "score" / "draws.tsv"
+        rows = R.page.load(path)
+        row = next(r for r in rows if r["constant"] == "1")
+        row["constant"], row["why"] = "0", ""
+        R.score.write_tsv(path, rows, R.score.DRAW_COLUMNS)
+        self.repack(slug)
+        self.assertIn("FAIL refusals", lines(self.run_checks()))
+
     def repack_after_unpack(self, slug):
         self.unpack(slug)
         self.repack(slug)
