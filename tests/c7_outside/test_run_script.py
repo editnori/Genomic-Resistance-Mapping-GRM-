@@ -160,7 +160,8 @@ class Fits(unittest.TestCase):
             self.assertIn("the elastic net, left out at the first start, is listed now", out)
             for first, this in ((lists(all_three), lists(boosters)), (lists(boosters), lists(all_three, seeds="42,43")),
                                 (lists(boosters), lists(all_three, datasets=f"{C.DATASET},{C.OTHER}")),
-                                (lists(boosters), lists("xgboost,lightgbm,elasticnet,other"))):
+                                (lists(boosters), lists("xgboost,lightgbm,elasticnet,other")),
+                                (lists("xgboost"), lists(all_three)), (lists("elasticnet"), lists(all_three))):
                 rc, out = go(first, this)
                 self.assertEqual(rc, 1, this)
                 self.assertIn("differ from the first start's; use a fresh OUT", out)
