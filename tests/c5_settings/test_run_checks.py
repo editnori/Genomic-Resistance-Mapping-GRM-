@@ -131,6 +131,28 @@ class Check(Case):
         self.assertTrue(line.startswith("FAIL"))
         self.assertIn(": 1 genome ids", line)
 
+    def test_a_genome_id_after_a_letter_or_underscore_is_refused(self):
+        for i, text in enumerate((f"genome_{fx.genome('synthia_alpha', 2)}", f"id{fx.genome('synthia_alpha', 3)}")):
+            self.top = Path(self.tmp.name) / f"prefixed{i}"
+            self.top.mkdir()
+
+            def change(slug, out, text=text):
+                if slug == "synthia_alpha":
+                    with open(out / "check" / "refit.tsv", "a", encoding="utf-8") as f:
+                        f.write(f"{text}\t1\n")
+            line = self.line(self.run_checks(change), "no genome id")
+            self.assertTrue(line.startswith("FAIL"), text)
+            self.assertIn(": 1 genome ids", line)
+
+    def test_a_longer_number_holding_a_genome_id_is_not_one(self):
+        gid = fx.genome("synthia_alpha", 2)
+
+        def change(slug, out):
+            if slug == "synthia_alpha":
+                with open(out / "check" / "refit.tsv", "a", encoding="utf-8") as f:
+                    f.write(f"1{gid}\t0.{gid.replace('.', '')}\n")
+        self.assertTrue(self.line(self.run_checks(change), "no genome id").startswith("PASS"))
+
     def test_a_refusal_record_with_no_constant_model_rows_is_refused(self):
         def change(slug, out):
             if slug == "synthia_gamma":

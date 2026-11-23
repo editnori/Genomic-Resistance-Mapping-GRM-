@@ -52,7 +52,8 @@ expect = _load("c5_settings_expect_for_checks", HERE / "expect.py")
 CHOICE_ARMS = tuple(expect.ARMS)
 SEEDS, TWIN_SEEDS = (42, 43, 44), (45, 46, 47)
 LEARNERS = 5
-TOKEN = re.compile(r"(?<![\w.])\d+\.\d+(?!\d)")
+# A genome id as BV-BRC writes it, after any character but a digit or a dot: genome_<id> and id<id> count too.
+TOKEN = re.compile(r"(?<![\d.])\d+\.\d+(?!\d)")
 NAMED = ("binary.txt", "expect.tsv", "lists.txt", "logs/timing.tsv", "logs/drive-timing.tsv")
 SCORE_LOG = "score/score.log"
 STAMP = re.compile(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ")
