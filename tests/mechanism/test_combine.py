@@ -4,7 +4,10 @@ Every species, dataset, table row and figure is SYNTHETIC.
 """
 
 import contextlib
+import hashlib
 import io
+import random
+import statistics
 import tempfile
 import unittest
 from pathlib import Path
@@ -178,6 +181,28 @@ class Shared(unittest.TestCase):
         self.assertLessEqual(a[0], a[1])
         self.assertEqual(C.species_interval({f"s{i}": [1.0] for i in range(5)}, "x"), (None, None))
 
+
+    def test_species_interval_ends_are_the_101st_and_3900th_of_4000(self):
+        # the plan's words drawn again by a plain loop: resamples of the sorted
+        # species, seeded by the row's name, medians to 12 decimals, the ends
+        # at the 101st and 3,900th of 4,000 (the 2nd and 39th of 40)
+        by = {f"s{i:02d}": [(i * 37 % 101) / 101 + i / 10 ** 6] for i in range(60)}
+        name = "m1|lineage|primary|scm|gene_only-point_only"
+
+        def medians(draws):
+            rng = random.Random(int(hashlib.sha256(name.encode("utf-8")).hexdigest(), 16))
+            keys = sorted(by)
+            out = []
+            for _ in range(draws):
+                vals = [v for _ in keys for v in by[keys[rng.randrange(len(keys))]]]
+                out.append(round(statistics.median(vals), 12))
+            return sorted(out)
+
+        meds = medians(4000)
+        self.assertEqual(C.species_interval(by, name), (meds[100], meds[3899]))
+        few = medians(40)
+        self.assertNotEqual((few[0], few[39]), (few[1], few[38]))
+        self.assertEqual(C.species_interval(by, name, resamples=40), (few[1], few[38]))
 
 if __name__ == "__main__":
     unittest.main()
