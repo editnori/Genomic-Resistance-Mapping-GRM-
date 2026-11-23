@@ -1,4 +1,4 @@
-"""scripts/mechanism/planted_faults.py: each of the ten planted faults is caught by its test (docs/mechanism-split.md).
+"""scripts/mechanism/planted_faults.py: each planted fault is caught by its test (docs/mechanism-split.md).
 
 The faults are planted in the scripts in memory only; every input is SYNTHETIC.
 """
@@ -13,7 +13,7 @@ faults = c.load("planted_faults")
 class Planted(unittest.TestCase):
     def test_every_fault_is_caught_by_its_test(self):
         rows = faults.run_all()
-        self.assertEqual([r["fault"] for r in rows], list(range(1, 11)))
+        self.assertEqual([r["fault"] for r in rows], list(range(1, 14)))
         for r in rows:
             with self.subTest(fault=r["fault"]):
                 self.assertEqual((r["as_written"], r["with_fault"], r["caught"]), ("pass", "fail", "yes"), r["planted"])

@@ -10,7 +10,10 @@ samples of any of the species' release reports in DIR. Year: samples[].year,
 a text of four digits, else no year; nothing is imputed. BioProject:
 `bioproject_accession` of the BV-BRC genome table (--meta), held to its
 sha256. Rows: the AMRFinderPlus program's counted rows of `tool_default`.
-Family: the database's own `gene_family` (amr_rule.Database.family).
+Family: the database's own `gene_family` (amr_rule.Database.family), or,
+for a symbol the program names at a hierarchy node above the gene families,
+that node's own name (the lead's ruling on question 14, 23 Nov 2026); the
+last log line counts those rows and their genomes.
 
 Writes aggregate tables only (PLAN.md, M2): per cell, period pair and
 guard, the shares, the differences and the permutation p values, with no
@@ -609,6 +612,10 @@ def run(args):
     tables = {gid: ar.read_table(os.path.join(args.tables, gid + ".tsv")) for gid in genomes}
     cells_main = {gid: genome_cells(rows, db) for gid, rows in tables.items()}
     cells_intact = {gid: genome_cells(rows, db, "tool_default_intact") for gid, rows in tables.items()}
+    # counted Subtype AMR rows named at a hierarchy node above the gene
+    # families (question 14), each row once, and the genomes that hold one
+    at_node = {gid: sum(1 for r in ar.counted(rows) if not ar.is_point(r) and db.named_at_node(r["symbol"]))
+               for gid, rows in tables.items()}
     lineage, pairs, differ = lineage_components(reports, genomes)
     lineage_note = (f"same-cluster relation differs in {differ} genome pairs; not given" if lineage is None
                     else f"clusters joined over {len(reports)} reports")
@@ -671,7 +678,9 @@ def run(args):
                 and r.get("periods") == "primary")
     print(f"history: {args.species}: {len(gids)} genomes with a table, {len(classes)} classes, {cells} cells, "
           f"{passing} pass the BioProject vote on the primary periods; {len(rows)} rows; "
-          f"lineage given {int(lineage is not None)}; time-split rows {len(ts_rows)}")
+          f"lineage given {int(lineage is not None)}; time-split rows {len(ts_rows)}; "
+          f"gene rows named at a hierarchy node above the gene families: {sum(at_node.values())} rows "
+          f"of {sum(1 for k in at_node.values() if k)} genomes")
     return 0
 
 

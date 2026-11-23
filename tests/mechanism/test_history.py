@@ -54,7 +54,7 @@ def layout(top, genomes, other=None, folds=None):
     return sha
 
 
-def run(top, sha, folds=None, design_sha=None):
+def run(top, sha, folds=None, design_sha=None, printed=None):
     top = Path(top)
     argv = ["--species", c.SPECIES, "--reports", str(top / "reports"), "--lists", str(top / "lists.tsv"),
             "--drug-rules", str(top / "drug_rules.tsv"), "--tables", str(top / "tool" / c.SPECIES),
@@ -63,9 +63,37 @@ def run(top, sha, folds=None, design_sha=None):
         argv += ["--folds", str(folds), "--design", str(folds.parent / "design.sha256")]
     with mock.patch.object(history, "META_SHA256", sha), \
             mock.patch.object(history, "DESIGN_SHA256", design_sha or history.DESIGN_SHA256), \
-            contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
+            contextlib.redirect_stdout(printed if printed is not None else io.StringIO()), \
+            contextlib.redirect_stderr(io.StringIO()) as err:
         rc = history.main(argv)
     return rc, err.getvalue(), top / "out"
+
+
+# A SYNTHETIC node above the gene families, as the AMRFinderPlus program
+# names some hits (the first run's defect B, 23 Nov 2026): synM's chain runs
+# synM > abc-z > AMR, and its children synM1 and synM2 are gene families.
+NODE_CATALOG = [("synM1-1", "synM1", "MACROLIDE", "MACROLIDE", "AMR"), ("", "synM2", "MACROLIDE", "MACROLIDE", "AMR")]
+NODE_HIERARCHY = [("synM", "abc-z"), ("abc-z", "AMR"), ("synM1", "synM"), ("synM2", "synM"), ("synM1-1", "synM1")]
+NODE_ROWS = {
+    "node": [("synM", "core", "AMR", "AMR", "MACROLIDE", "MACROLIDE", "INTERNAL_STOP")],
+    "node_two": [("synM", "core", "AMR", "AMR", "LINCOSAMIDE/STREPTOGRAMIN", "LINCOSAMIDE/STREPTOGRAMIN", "BLASTX"),
+                 ("abc-z", "core", "AMR", "AMR", "MACROLIDE", "MACROLIDE", "PARTIALX"),
+                 ("qnrS1", "core", "AMR", "AMR", "QUINOLONE", "QUINOLONE", "EXACTX")],
+    "node_plus": [("synM", "plus", "AMR", "AMR", "MACROLIDE", "MACROLIDE", "BLASTX")],
+    "node_q": [("synM", "core", "AMR", "AMR", "QUINOLONE", "QUINOLONE", "BLASTX")],
+}
+
+
+def write_node_db(directory):
+    """The SYNTHETIC database of common.write_db with the node rows added."""
+    d = c.write_db(directory)
+    with open(d / "ReferenceGeneCatalog.txt", "a", encoding="utf-8") as f:
+        for allele, fam, cls, sub, subtype in NODE_CATALOG:
+            f.write(f"{allele}\t{fam}\t\tmade up\tcore\tAMR\t{subtype}\t{cls}\t{sub}\n")
+    with open(d / "ReferenceGeneHierarchy.txt", "a", encoding="utf-8") as f:
+        for node, parent in NODE_HIERARCHY:
+            f.write(f"{node}\t{parent}\t{node}\n")
+    return d
 
 
 def row(out, guard, periods="primary", cell="species_class", cls="QUINOLONE", dataset=""):
@@ -124,6 +152,93 @@ class Families(unittest.TestCase):
         self.assertTrue(self.db.rule_names_class([["C:QUINOLONE"]], "QUINOLONE"))
         self.assertTrue(self.db.rule_names_class([["S:CARBAPENEM"]], "BETA-LACTAM"))
         self.assertFalse(self.db.rule_names_class([["S:CARBAPENEM"]], "QUINOLONE"))
+
+
+class NodeFamilies(Families):
+    """The lead's ruling on question 14 (06:56Z, 23 Nov 2026): a Subtype AMR
+    row whose symbol is a hierarchy node with no gene_family at or above it
+    is counted under that node's own name; a symbol in neither file still
+    stops the run. The tests of Families run here again, unchanged, on the
+    database with the node added."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.db = amr.Database(write_node_db(Path(self.tmp.name) / "db"))
+
+    def test_a_node_above_the_families_is_its_own_family(self):
+        self.assertEqual(self.db.family("synM"), "synM")
+        self.assertEqual(self.db.family("abc-z"), "abc-z")
+        self.assertTrue(self.db.named_at_node("synM"))
+        # below the node, the families and their alleles are as before
+        self.assertEqual((self.db.family("synM1"), self.db.family("synM1-1"), self.db.family("synM2")),
+                         ("synM1", "synM1", "synM2"))
+        self.assertFalse(any(self.db.named_at_node(s) for s in ("synM1", "synM1-1", "synM2", "qnrS1", "blaX-9")))
+
+    def test_a_symbol_in_neither_file_still_refuses(self):
+        for symbol in ("madeUp-1", "synM3", "abc"):
+            with self.assertRaises(amr.Refusal) as cm:
+                self.db.family(symbol)
+            self.assertNotIn(symbol, str(cm.exception))
+            self.assertFalse(self.db.named_at_node(symbol))
+        # a node above the families read with point still enters no family mix
+        with self.assertRaises(amr.Refusal):
+            self.db.family("synM", "POINT")
+
+    def test_a_symbol_that_resolved_before_keeps_its_family(self):
+        before = amr.Database(c.write_db(Path(self.tmp.name) / "before"))
+        symbols = [a for a, *_ in c.DB_CATALOG if a] + [f for _, f, *_ in c.DB_CATALOG] + ["blaX-9"]
+        for symbol in symbols:
+            self.assertEqual(self.db.family(symbol), before.family(symbol), symbol)
+
+
+class NodeRun(unittest.TestCase):
+    """history.py over SYNTHETIC genomes with rows named at the node."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.top = Path(self.tmp.name)
+
+    def go(self, kinds):
+        g = scenario()
+        for x in g:
+            x["kind"] = kinds.get(x["id"], x["kind"])
+        with mock.patch.dict(c.ROWS, NODE_ROWS):
+            sha = layout(self.top, g)
+        write_node_db(self.top / "db")
+        printed = io.StringIO()
+        rc, err, out = run(self.top, sha, printed=printed)
+        return rc, err, out, printed.getvalue().strip().split("\n")[-1]
+
+    def test_the_last_log_line_counts_the_rows_and_genomes_named_at_a_node(self):
+        # 1 + 1 + 2 counted rows in 3 genomes; a row of two classes is one
+        # row, and a plus-scope row is not counted by tool_default
+        rc, err, out, last = self.go({"8101.1": "node", "8101.2": "node", "8104.1": "node_two",
+                                      "8105.1": "node_plus"})
+        self.assertEqual(rc, 0, err)
+        self.assertTrue(last.endswith("; gene rows named at a hierarchy node above the gene families: 4 rows of 3 "
+                                      "genomes"), last)
+        rc, err, out, last = self.go({})
+        self.assertTrue(last.endswith("above the gene families: 0 rows of 0 genomes"), last)
+
+    def test_the_floor_on_names_holds_for_a_nodes_name(self):
+        five = {f"{p}.{i}": "node_q" for p in ("8103", "8104") for i in range(1, 6)}
+        rc, err, out, _ = self.go(five)
+        self.assertEqual(rc, 0, err)
+        fams = {r["family"]: r for r in c.read_tsv(out / "m2-families.tsv") if r["periods"] == "primary"}
+        self.assertEqual((fams["synM"]["earlier_genomes"], fams["synM"]["later_genomes"]), ("5", "5"))
+        four = dict(five)
+        del four["8103.5"]
+        rc, err, out, _ = self.go(four)
+        self.assertEqual(rc, 0, err)
+        fams = {r["family"]: r for r in c.read_tsv(out / "m2-families.tsv") if r["periods"] == "primary"}
+        self.assertNotIn("synM", fams)
+        self.assertIn(history.FOLDED_FAMILIES, fams)
+        ids = self.top / "species.json"
+        ids.write_text(json.dumps({"genomes": [{"id": g["id"]} for g in scenario()]}))
+        with contextlib.redirect_stdout(io.StringIO()) as said:
+            self.assertEqual(scan.main(["--ids", str(ids), str(out)]), 0, said.getvalue())
 
 
 class Vote(unittest.TestCase):
