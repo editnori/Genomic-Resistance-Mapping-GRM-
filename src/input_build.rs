@@ -361,7 +361,10 @@ impl Table {
 }
 
 /// Every distinct value of the ksets: the union over the species' genomes,
-/// sorted. A value held by one genome is kept.
+/// sorted. A value held by one genome is kept. Each bucket is read over
+/// every genome, then only its distinct values are kept, so the memory is
+/// the distinct values twice plus one bucket's reads a thread, not the sum
+/// of every genome's values.
 pub fn union_values(readers: &[KsetReader]) -> Result<Vec<u64>> {
     let parts: Vec<Vec<u64>> = (0..BUCKETS)
         .into_par_iter()
@@ -373,7 +376,7 @@ pub fn union_values(readers: &[KsetReader]) -> Result<Vec<u64>> {
             }
             out.sort_unstable();
             out.dedup();
-            Ok(out)
+            Ok(out.as_slice().to_vec())
         })
         .collect::<Result<_>>()?;
     let mut all = Vec::with_capacity(parts.iter().map(Vec::len).sum());
