@@ -71,5 +71,29 @@ class ScoreOutput(unittest.TestCase):
         self.assertIsNone(re.search(r"(cat|tail|head)[^\n|;]*score\.log", SCRIPT))
 
 
+class Builds(unittest.TestCase):
+    def test_a_builds_sha256_list_holds_every_file_of_the_build(self):
+        # Every start holds each built matrix to this list, so a file it leaves out could change unseen.
+        with tempfile.TemporaryDirectory() as d:
+            inputs, out = os.path.join(d, "inputs"), os.path.join(d, "out")
+            os.makedirs(os.path.join(inputs, "counts", "matrix"))
+            os.makedirs(os.path.join(out, "logs"))
+            for name, text in (("build.json", '{"kind": "counts", "genomes": 8}'), ("genomes.tsv", "made-up\n"),
+                               ("matrix/matrix.json", "{}"), ("matrix/patterns.bin", "made-up patterns")):
+                with open(os.path.join(inputs, "counts", name), "w") as f:
+                    f.write(text)
+            r = subprocess.run(["bash", "-euo", "pipefail", "-c", function("keep_build") + "keep_build counts"],
+                               env={"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "INPUTS": inputs, "OUT": out},
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            self.assertEqual(r.returncode, 0)
+            with open(os.path.join(out, "logs", "inputs-counts.sha256")) as f:
+                listed = sorted(line.split("  ", 1)[1].strip() for line in f)
+        self.assertEqual(listed, ["counts/build.json", "counts/genomes.tsv", "counts/matrix/matrix.json",
+                                  "counts/matrix/patterns.bin"])
+
+    def test_the_end_counts_genome_ids_in_every_folder_that_is_copied_back(self):
+        self.assertIn('\' "$R/species/$SP.json" results check score logs\n', SCRIPT)
+
+
 if __name__ == "__main__":
     unittest.main()
