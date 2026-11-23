@@ -232,6 +232,26 @@ class Arms(Temp):
         self.assertEqual(ra["null_fit_folds"], 0)
         self.assertTrue(all(f["screened"] == 3 < f["candidates"] for f in ra["folds"]))
 
+    def test_every_elastic_net_column_scale_is_read_on_that_fits_genomes(self):
+        # A 0/1 column's scale is its support. Read over every genome it would be a support count over the outer test
+        # genomes, which the design bars and which no score shows when only those genomes' labels change.
+        current, reads, real = {}, [], O.scaled
+
+        def fit(U, y, fo, floor):
+            current["fo"] = fo
+            return O.fit_elasticnet(U, y, fo, floor)
+
+        def scaled(X, rows):
+            fo, at = current["fo"], np.zeros(X.shape[0], dtype=bool)
+            at[np.asarray(rows)] = True
+            fits = [fo["train"]] + [fo["train"] & (fo["inner"] != j) for j in range(O.INNER_K)]
+            reads.append(any(np.array_equal(at, m) for m in fits))
+            return real(X, rows)
+
+        with small_grid(), mock.patch.object(O, "scaled", scaled):
+            O.run("elasticnet", self.export(), "lineage", 42, unitigs=self.unitigs(), fitter=fit)
+        self.assertEqual((len(reads), sum(reads)), (5 * (1 + O.INNER_K),) * 2)
+
     def test_two_runs_write_the_same_bytes(self):
         d = self.export()
         u = self.unitigs()
