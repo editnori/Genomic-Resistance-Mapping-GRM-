@@ -296,7 +296,8 @@ jobs:
           # SYNTHETIC folds files, picks and choices built in the test; it runs drive.py against a fake grm in the
           # test, and score.py, lists.py and expect.py under scripts/c5-settings (block C3's, loaded by import), and
           # fits nothing. test_lists.py also reads the committed lists scripts/c3-inputs/lists.tsv and
-          # scripts/c5-settings/lists.tsv.
+          # scripts/c5-settings/lists.tsv. test_faults.py reads scripts/c5-settings/planted_faults.py and the files it
+          # plants in.
           - suite: tests/c5_settings
             top: .
     env:

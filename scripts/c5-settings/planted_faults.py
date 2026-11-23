@@ -69,9 +69,10 @@ FAULTS = [
      "        if lineage_fold.setdefault(doc[\"lineage\"][i], inner[i]) != inner[i]:",
      "        if lineage_fold.setdefault(doc[\"lineage\"][i], inner[i]) != inner[i] and False:",
      "py", f"{TD}.test_a_folds_file_that_splits_a_lineage_is_refused"),
+    # The forest's screen, as C4 routes it through its arm (src/learn/screen_arm.rs).
     ("3", "the screen fitted on the fold's test genomes too", "src/learn/eval.rs",
-     "    let feats = screen(x, y, train, cfg.screened_features);",
-     "    let feats = screen(x, y, &Bits::ones(x.cols), cfg.screened_features);",
+     "    let feats = screen_arm::screen_fit(x, y, train, cfg.screened_features);",
+     "    let feats = screen_arm::screen_fit(x, y, &Bits::ones(x.cols), cfg.screened_features);",
      "rust", "learn::settings::tests::no_test_genomes_label_reaches_its_folds_fit"),
     ("4", "the cutoff chosen on outer scores", DRIVE,
      '"cutoff": outer_calls(outer_docs[l], 0, l, c["cutoff"]),',
