@@ -193,8 +193,9 @@ class Strata(unittest.TestCase):
         rc, err, out = self.go()
         ids = self.top / "species.json"
         ids.write_text(json.dumps({"genomes": [{"id": g["id"]} for g in mixed()]}))
-        with contextlib.redirect_stdout(io.StringIO()):
-            self.assertEqual(scan.main(["--ids", str(ids), str(out)]), 0)
+        with contextlib.redirect_stdout(io.StringIO()) as printed:
+            rc = scan.main(["--ids", str(ids), str(out)])
+        self.assertEqual(rc, 0, printed.getvalue())
 
     def test_a_missing_table_refuses_without_naming_the_genome(self):
         c.write_species(self.top, {c.DATASET: (mixed(), {})})

@@ -13,6 +13,7 @@ from pathlib import Path
 from tests.mechanism import common as c
 
 tb = c.load("tb_curve")
+scan = c.load("scan")
 TB = "synthia_tuberculosis"
 DRUGS = ("rifampicin", "isoniazid", "levofloxacin", "moxifloxacin", "ethionamide")
 
@@ -222,6 +223,16 @@ class EndToEnd(unittest.TestCase):
         summary = json.loads((out / "m4-summary.json").read_text())
         self.assertEqual([e["antibiotic"] for e in summary["endpoints"]], ["ciprofloxacin", "rifampin"])
         self.assertEqual(summary["not_scored_reports"][0]["antibiotic"], "amoxicillin")
+
+    def test_the_scan_passes_m4s_tables(self):
+        *_, run, bed, rdir, lp = self.build()
+        rc, out, err = run_tb(self.top, run, bed, rdir, lp)
+        self.assertEqual(rc, 0, err)
+        ids = self.top / "species.json"
+        ids.write_text(json.dumps({"genomes": [{"id": "8000.1"}, {"id": "8001.1"}]}))
+        with contextlib.redirect_stdout(io.StringIO()) as printed:
+            self.assertEqual(scan.main(["--ids", str(ids), str(out)]), 0, printed.getvalue())
+        self.assertIn("4 tables", printed.getvalue())
 
     def test_gene_rows_count_catalogue_variants_and_genomes(self):
         *_, run, bed, rdir, lp = self.build()
