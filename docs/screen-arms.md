@@ -18,7 +18,7 @@ Any split here is a retrospective split inside one public database. A split by l
 
 The two screen arms take the default's candidates and change only how `rf`, `gbt` and `lasso` rank them. `scm` and `cart` read no screen, so under a screen arm they are refitted and must make the default's calls in every fold. The floor arm changes the floor alone, in each fit and in the dataset's projection (`Dataset::project`), since a fit at floor 3 can need any row a projection at 3 holds. Where n < 800, max(3, n/200) is 3 already and the floor arm is the default. The twin is the default at seeds of its own.
 
-`--exp-screen` and `--exp-floor` each need `--force`, so a kept report can never skip an arm, and `--exp-pick` with `--exp-pick-inner 0`. Each is refused beside the other, `--learner-seed`, `--exp-tie-rule`, `--exp-tie-trace`, `--exp-tie-out`, `--exp-null-refit`, `--exp-mic`, `--exp-cohort` and `--exp-inputs`. `--exp-floor` is refused beside a budget other than 4,000, so the floor arm cannot change the budget.
+`--exp-screen` and `--exp-floor` each need `--force`, so a kept report can never skip an arm, and `--exp-pick` with `--exp-pick-inner 0`. Each is refused beside the other, `--learner-seed`, `--exp-tie-rule`, `--exp-tie-trace`, `--exp-tie-out`, `--exp-null-refit`, `--exp-mic`, `--exp-cohort`, `--exp-inputs` and block C5's `--exp-settings` and `--exp-settings-folds`. `--exp-floor` is refused beside a budget other than 4,000, so the floor arm cannot change the budget.
 
 ## The statistic
 

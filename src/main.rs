@@ -380,7 +380,8 @@ enum Command {
         /// <exp-pick dir>/<dataset>.<tag>-s<seed>.inputs.json of counts and
         /// fit times. Needs --force. Refused beside --exp-floor,
         /// --learner-seed, the --exp-tie-* options, --exp-null-refit,
-        /// --exp-mic, --exp-cohort and --exp-inputs.
+        /// --exp-mic, --exp-cohort, --exp-inputs, --exp-settings and
+        /// --exp-settings-folds.
         #[arg(
             long,
             value_enum,
@@ -405,7 +406,8 @@ enum Command {
         /// inputs file --exp-screen writes. Needs --force and the release's
         /// budget, --screened-features 4000. Refused beside --exp-screen,
         /// --learner-seed, the --exp-tie-* options, --exp-null-refit,
-        /// --exp-mic, --exp-cohort and --exp-inputs.
+        /// --exp-mic, --exp-cohort, --exp-inputs, --exp-settings and
+        /// --exp-settings-folds.
         #[arg(
             long,
             value_parser = RangedU64ValueParser::<u32>::new().range(1..),
@@ -4383,6 +4385,39 @@ mod tests {
             parse(&both).err().map(|e| e.kind()),
             Some(clap::error::ErrorKind::ArgumentConflict)
         );
+    }
+
+    /// The C5 flags refuse the C4 arms in either order. --exp-settings
+    /// refuses --exp-pick, which the arms need; --exp-settings-folds stands
+    /// beside --exp-pick, so only its own refusal keeps it from an arm's
+    /// fit.
+    #[test]
+    fn learn_refuses_the_settings_flags_beside_the_c4_arms() {
+        let parse = |args: &[&str]| {
+            let all = [&["grm", "learn", "--species", "s"][..], args].concat();
+            Cli::try_parse_from(all)
+        };
+        let pick = ["--force", "--exp-pick", "p", "--exp-pick-inner", "0"];
+        let file = ["--fold-file", "f.json", "--fold-out", "o"];
+        let trials = [&file[..], &["--exp-settings", "s.json"][..]].concat();
+        let folds = ["--exp-settings-folds", "d"];
+        for arm in [&["--exp-screen", "cmh"][..], &["--exp-floor", "3"][..]] {
+            assert!(parse(&[&pick[..], arm].concat()).is_ok(), "{arm:?}");
+            for flag in [&trials[..], &folds[..]] {
+                let after = [&pick[..], arm, flag].concat();
+                let before = [flag, &pick[..], arm].concat();
+                for bad in [after, before] {
+                    let error = parse(&bad)
+                        .err()
+                        .unwrap_or_else(|| panic!("{bad:?} parsed"));
+                    assert_eq!(
+                        error.kind(),
+                        clap::error::ErrorKind::ArgumentConflict,
+                        "{bad:?}"
+                    );
+                }
+            }
+        }
     }
 
     /// The null-fold experiment fits its fallbacks under production's tie
