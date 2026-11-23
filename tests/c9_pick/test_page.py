@@ -200,7 +200,9 @@ class Page(unittest.TestCase):
             self.assertTrue(line.startswith(f"{n} "))
             name, words = line.split(" ", 1)[1].split(": ", 1)
             self.assertEqual(self.lines.count(f"| {n}. {name} | {words} |"), 1, line)
-        self.assertIn(f"All {len(gates)} passed", method)
+        self.assertEqual(len(gates), 8)
+        self.assertIn("checked the reading against eight gates and wrote `reference/served-pick/`. All eight passed:",
+                      method)
 
     def test_the_fault_table_names_each_planted_faults_test(self):
         mine = [f for f in planted.FAULTS if f[2] == "scripts/c9-pick/page_tables.py"]
