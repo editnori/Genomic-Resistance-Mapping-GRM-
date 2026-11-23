@@ -354,6 +354,8 @@ These points were seen in the tables after the reading. The rules did not ask fo
 
 **Few datasets.** The M1 reading stands on 19 datasets in 5 species, 11 of them in *Klebsiella pneumoniae*. Datasets of one species can share genomes, and the sign test counts them apart. Under 6 species the method gives no species interval.
 
+**No difference shown.** On M1, "no difference shown" is the rule's reading on 19 datasets in 5 species and is no statement that recall is equal.
+
 **A rule in two parts.** On sulfamethoxazole/trimethoprim a stratum counts a row that meets one part of the rule (section Seen after). The maintainer has not ruled on it.
 
 **Labels.** The datasets in M wait for the maintainer's label rule. They are marked and never join the primary reading.

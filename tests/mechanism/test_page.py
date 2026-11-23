@@ -116,6 +116,9 @@ class Page(unittest.TestCase):
         self.assertIn("With 5 species there is no species interval, since the method gives none under 6.", reading)
         self.assertIn("The sign test after Holm over the five learners gives 0.318 for each, so each learner reads "
                       "\"no difference shown\".", reading)
+        (datasets, species), = {(r["datasets"], r["species"]) for r in learners}
+        self.assertIn(f"**No difference shown.** On M1, \"no difference shown\" is the rule's reading on {datasets} "
+                      f"datasets in {species} species and is no statement that recall is equal.", self.sections["Limits"])
 
     def test_the_two_callers_beside_stand_as_their_rows_give(self):
         read, ds = m1(), reading_datasets()
