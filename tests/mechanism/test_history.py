@@ -171,6 +171,35 @@ class Vote(unittest.TestCase):
         self.assertGreater(p, 0.05)
         self.assertLess(p, 0.2)
 
+    def test_a_bioproject_of_4_genomes_in_a_period_does_not_vote(self):
+        g = [x for x in scenario() if x["id"] != "8103.5"]
+        rc, err, out = self.go(genomes=g)
+        self.assertEqual(rc, 0, err)
+        r = row(out, "bioproject")
+        # two earlier BioProjects vote; 8103's 4 genomes do not
+        self.assertEqual((r["passes"], r["earlier_genomes"]), ("0", "12"))
+
+    def test_the_p_is_one_plus_hits_over_1001(self):
+        rc, err, out = self.go()
+        for col in ("p_point", "p_tvd"):
+            k = float(row(out, "bioproject")[col]) * 1001
+            self.assertAlmostEqual(k, round(k), places=6, msg=col)
+            self.assertGreaterEqual(round(k), 1)
+
+    def test_the_point_p_is_two_sided(self):
+        g = scenario()
+        for x in g:
+            if x["year"] in ("2010", "2012", "2014") and x["kind"] in ("gene", "gene_b"):
+                x["kind"] = "both"
+            elif x["year"] in ("2015", "2017", "2019") and x["kind"] == "both":
+                x["kind"] = "gene"
+        rc, err, out = self.go(genomes=g)
+        self.assertEqual(rc, 0, err)
+        r = row(out, "bioproject")
+        self.assertEqual(r["d_point"], "-1.000000000000")
+        # |d| = 1 in 2 of the 20 ways to label 3 of 6 BioProjects later, whichever sign
+        self.assertLess(float(r["p_point"]), 0.2)
+
     def test_permutation_is_seeded_by_the_cell_name(self):
         rc, err, out = self.go()
         first = (out / "m2-cells.tsv").read_bytes()
