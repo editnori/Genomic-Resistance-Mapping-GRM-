@@ -470,6 +470,8 @@ These points are seen in the tables after the reading. They change no rule and n
 
 **The program.** A program-call arm would enter only with the program's version pinned. A program column is named only as the AMRFinderPlus program's table names it.
 
+**The catalogue.** The AMRFinderPlus program reads a catalogue curated from published resistance work. A lineage or a study held out of a fit is still inside that catalogue. So the program's calls bring knowledge from outside the training folds, and 31-mer presence brings none. These tables do not measure how much of the difference comes from that.
+
 **Binaries.** One binary: every species' `binary.txt` gives the commit `8bfd4ca` and the code sha256 `d3de72fcc10f6ef9503eb43f8cb5fd1449bca137d5f0a1594caf6fda0c614363`, 23 of 23 species, with no restart.
 
 **Unread files.** A file under `score/` that neither `SHA256SUMS` lists nor the run's rule covers stays unchecked and unread. `score/score.log` in each `score.tar` was never opened, hashed or copied out.
