@@ -399,6 +399,42 @@ class Count(unittest.TestCase):
             count(rows)
         self.assertIn("unitigs", str(e.exception))
 
+    def test_a_withdrawn_arm_keeps_its_five_pairs_at_p_one(self):
+        # The addition to question 12: the family stays 30, so Holm still multiplies the smallest p by 30.
+        def shift(arm, learner, m):
+            return 0.05 if arm == "program" and m == "balanced_accuracy" else 0.0
+
+        rows = count_rows(shift, arms=[a for a in score.FAMILY if a != "unitigs"])
+        rc, counted, conditions = count(rows, "--withdrawn", "unitigs")
+        self.assertEqual(rc, 0)
+        family = [r for r in counted if r["split"] == "lineage" and r["measure"] == "balanced_accuracy"]
+        self.assertEqual(len(family), 30)
+        gone = [r for r in family if r["pair"] == "unitigs-k31"]
+        self.assertEqual(len(gone), 5)
+        self.assertTrue(all((r["withdrawn"], r["datasets"], float(r["sign_p"])) == ("1", "0", 1.0) for r in gone))
+        self.assertTrue(all(float(r["holm_p"]) == 1.0 for r in gone))
+        p = 0.5 ** 12
+        self.assertTrue(all(float(r["holm_p"]) == 30 * p for r in family if r["pair"] == "program-k31"))
+        self.assertEqual({r["withdrawn"] for r in counted if r["pair"] != "unitigs-k31"}, {"0"})
+        at = {(r["arm"], r["reading"], r["condition"]): r for r in conditions}
+        self.assertEqual(at[("unitigs", "ruling 15", "1 and 2")]["met"], "0")
+
+    def test_the_count_still_refuses_an_arm_neither_run_nor_withdrawn(self):
+        rows = count_rows(lambda a, l, m: 0.0, arms=[a for a in score.FAMILY if a not in ("unitigs", "k31-aa")])
+        with self.assertRaises(SystemExit) as e:
+            count(rows, "--withdrawn", "unitigs")
+        self.assertIn("k31-aa", str(e.exception))
+        self.assertNotIn("unitigs", str(e.exception))
+
+    def test_a_withdrawn_arm_must_be_an_arm_of_the_family_with_no_result(self):
+        rows = count_rows(lambda a, l, m: 0.0)
+        for arm, words in (("program", "a withdrawn arm has results: program"), ("twin", "other than the twin"),
+                           ("k31", "other than the twin"), ("k31-program-2", "other than the twin")):
+            with self.subTest(arm=arm):
+                with self.assertRaises(SystemExit) as e:
+                    count(rows, "--withdrawn", arm)
+                self.assertIn(words, str(e.exception))
+
     def test_conditions_read_three_of_five_learners_and_the_twin(self):
         def shift(arm, learner, m):
             if arm == "k31-program" and m == "balanced_accuracy" and learner in ("rf", "gbt", "lasso"):

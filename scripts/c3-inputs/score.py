@@ -1,7 +1,7 @@
 """The scorer of plan block C3 (docs/input-arms.md, measures and files).
 
   python3 -I score.py <expect.tsv> <picks dir> <release dir> <out dir>
-  python3 -I score.py --count <out dir> <datasets.tsv> [<datasets.tsv> ...]
+  python3 -I score.py --count <out dir> [--withdrawn <arm> ...] <datasets.tsv> [<datasets.tsv> ...]
 
 The first form checks every result expect.py lists, then scores it. Each
 result is a grm learn --exp-pick file at no inner fold, so the checks of
@@ -43,8 +43,10 @@ only. Exits 1, scoring nothing, when a check fails.
 The second form writes count.tsv, count-no-constant.tsv and conditions.tsv
 over several species' datasets.tsv, and prints the row count only. It
 refuses unless every arm of the family (unitigs, k31-counts, k31-aa,
-program, k31-program and the twin) has lineage rows: the family is fixed,
-and the count is taken once. Per
+program, k31-program and the twin) has lineage rows or is named with
+--withdrawn: the family is fixed at 30 pairs, and the count is taken once.
+An arm withdrawn before it runs keeps its five pairs in the family at
+p = 1 (the lead's addition to question 12); it may hold no row. Per
 split, arm, learner and measure, each arm against the default (k31) on the
 arm's own datasets: the datasets better, worse and the same by more than
 MARGIN (lower is better for log loss and the two error rates), the median
@@ -260,14 +262,22 @@ def row_seed(split, pair, learner, measure):
     return C9.row_seed(split, f"{pair}|{learner}", measure)
 
 
-def count(rows, keep_constant=True):
+def count(rows, withdrawn=(), keep_constant=True):
     """count.tsv's rows from several species' datasets.tsv rows.
 
-    With keep_constant False, a dataset with a constant-model draw is left
-    out (count-no-constant.tsv, which decides nothing).
+    withdrawn names arms withdrawn before they ran: each keeps its five
+    lineage pairs in the family at p = 1 and may hold no row. With
+    keep_constant False, a dataset with a constant-model draw is left out
+    (count-no-constant.tsv, which decides nothing).
     """
+    withdrawn = set(withdrawn)
+    if not withdrawn <= set(FAMILY) - {TWIN}:
+        raise SystemExit(f"only an arm of the family other than the twin can be withdrawn, not {sorted(withdrawn)}")
+    held = sorted(withdrawn & {r["arm"] for r in rows})
+    if held:
+        raise SystemExit(f"a withdrawn arm has results: {', '.join(held)}")
     have = {r["arm"] for r in rows if r["split"] == "lineage"}
-    missing = [a for a in FAMILY if a not in have]
+    missing = [a for a in FAMILY if a not in have and a not in withdrawn]
     if missing:
         raise SystemExit(f"the family is not complete: no lineage result for {', '.join(missing)}; "
                          "the count is taken once, over every arm")
@@ -297,12 +307,13 @@ def count(rows, keep_constant=True):
                     up = -1 if m in LOWER_IS_BETTER else 1
                     better = sum(1 for x in diffs if up * x > MARGIN)
                     worse = sum(1 for x in diffs if up * x < -MARGIN)
-                    row = {"split": split, "pair": pair, "learner": learner, "measure": m, "datasets": len(ds),
+                    row = {"split": split, "pair": pair, "learner": learner, "measure": m,
+                           "withdrawn": int(arm in withdrawn), "datasets": len(ds),
                            "entered": len(diffs), "not_scored": unscored, "constant": constant, "better": better,
                            "worse": worse, "same": len(diffs) - better - worse,
                            "median_difference": r12(float(np.median(diffs))) if diffs else None,
                            "species": len(set(sps)), "interval_lo": None, "interval_hi": None,
-                           "sign_p": C9.sign_p(better, worse), "holm_p": None,
+                           "sign_p": 1.0 if arm in withdrawn else C9.sign_p(better, worse), "holm_p": None,
                            "orientation": "lower" if m in LOWER_IS_BETTER else "higher"}
                     if diffs and len(set(diffs)) == 1:
                         # Every resample's median is that one value.
@@ -404,7 +415,8 @@ DRAW_COLUMNS = ["dataset", "species", "antibiotic", "arm", "split", "seed", "rol
     "balanced_accuracy", "log_loss"]
 DATASET_COLUMNS = ["dataset", "species_slug", "species", "antibiotic", "split", "arm", "learner", "draws", "scored_draws",
                    "constant_draws", "scored", "n", "tp", "fp", "tn", "fn"] + MEASURES
-COUNT_COLUMNS = ["split", "pair", "learner", "measure", "orientation", "datasets", "entered", "not_scored", "constant", "better", "worse", "same", "median_difference", "species", "interval_lo", "interval_hi",
+COUNT_COLUMNS = ["split", "pair", "learner", "measure", "orientation", "withdrawn", "datasets", "entered", "not_scored",
+                 "constant", "better", "worse", "same", "median_difference", "species", "interval_lo", "interval_hi",
                  "sign_p", "holm_p"]
 CONDITION_COLUMNS = ["arm", "reading", "condition", "reads", "met", "learners"]
 
@@ -420,15 +432,23 @@ def main(argv):
             print(__doc__.strip().splitlines()[3], file=sys.stderr)
             return 2
         out = Path(argv[1])
-        rest = argv[2:]
+        rest, withdrawn = argv[2:], []
+        while rest and rest[0] == "--withdrawn":
+            if len(rest) < 2:
+                raise SystemExit("--withdrawn takes an arm")
+            withdrawn.append(rest[1])
+            rest = rest[2:]
+        if not rest:
+            print(__doc__.strip().splitlines()[3], file=sys.stderr)
+            return 2
         rows = [r for p in rest for r in read_tsv(p)]
         keys = [(r["dataset"], r["split"], r["arm"], r["learner"]) for r in rows]
         if len(set(keys)) != len(keys):
             raise SystemExit("a dataset, split, arm and learner is listed twice")
-        counted = count(rows)
+        counted = count(rows, withdrawn)
         out.mkdir(parents=True, exist_ok=True)
         write_tsv(out / "count.tsv", counted, COUNT_COLUMNS)
-        write_tsv(out / "count-no-constant.tsv", count(rows, keep_constant=False), COUNT_COLUMNS)
+        write_tsv(out / "count-no-constant.tsv", count(rows, withdrawn, keep_constant=False), COUNT_COLUMNS)
         write_tsv(out / "conditions.tsv", conditions(counted), CONDITION_COLUMNS)
         print(f"count: {len(rows)} dataset rows from {len(rest)} files")
         return 0

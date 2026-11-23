@@ -353,7 +353,7 @@ The refit of the release's rule ended on its 23 species and 238 datasets at 20:3
 
 **Measure.** Per learner, the lineage balanced accuracy is primary, with recall, specificity, both error rates with Wilson intervals, and log loss beside it. A dataset's value is the mean of seeds 42, 43 and 44; the twin is K31 at seeds 45, 46 and 47. Each arm meets K31 on its own datasets and the same folds, which the scorer checks.
 
-**Count.** Better, worse or the same by 0.02 at 12 decimals, the arm's value less the default's, the median difference with its species interval, and the one-sided sign test. Holm runs over 30 lineage pairs, 6 arm rows by 5 learners, the twin's included. The family is fixed, so the count is taken once, after every arm has run, and `score.py --count` refuses before that. By the lead's ruling 15 at 00:47Z on 23 Nov 2026, a learner carries the change when it meets conditions 1 and 2 both, and at least 3 of 5 must carry it; 3 reads the twin the same way; 4 holds for all five; 5 holds for each learner that carries. `conditions.tsv` writes the stricter reading beside it, 2 and 5 for all five, and that one decides nothing.
+**Count.** Better, worse or the same by 0.02 at 12 decimals, the arm's value less the default's, the median difference with its species interval, and the one-sided sign test. Holm runs over 30 lineage pairs, 6 arm rows by 5 learners, the twin's included. The family is fixed, so the count is taken once, after every arm has run, and `score.py --count` refuses before that. By the lead's addition to question 12, the family stays 30: an arm withdrawn before it runs keeps its five pairs at p = 1, `score.py --count --withdrawn ARM` takes it, and this entry names the arm and the time. No arm has been withdrawn. By the lead's ruling 15 at 00:47Z on 23 Nov 2026, a learner carries the change when it meets conditions 1 and 2 both, and at least 3 of 5 must carry it; 3 reads the twin the same way; 4 holds for all five; 5 holds for each learner that carries. `conditions.tsv` writes the stricter reading beside it, 2 and 5 for all five, and that one decides nothing.
 
 **No candidate.** Only a `--fold-file` run refuses for a fold whose training genomes give no candidate feature, and it refuses the dataset's whole study run; a drawn split's fold with no candidate gets the release's fits on no feature. By the lead's ruling 16 at 00:47Z on 23 Nov 2026, an arm refused this way where the default is not is scored as the constant model on the default's folds: each fold's training majority, R on a tie, with a score equal to its R share, clipped. Those datasets enter the count, `count.tsv` gives their number, and the count without them is written beside it and decides nothing. The run script records such a refusal and goes on; before this, it stopped the species.
 
@@ -381,7 +381,7 @@ The refit of the release's rule ended on its 23 species and 238 datasets at 20:3
 | 9. Join | one candidate pass and one screen over both blocks | a screen per block |
 | 10. Collapse order | the arm's columns before K31's | K31's first |
 | 11. Study draws | one run at the release's seeds, no twin | a seed under this flag only |
-| 12. Holm | 30 pairs, the twin's included | a family per arm |
+| 12. Holm | 30 pairs, the twin's included; an arm withdrawn before it runs keeps its 5 pairs at p = 1 | a family per arm |
 | 13. First run | L and A less M | all of L and A |
 | 14. Default and twin | C3's own, in the same run as its arms | shared with another block's runs |
 
