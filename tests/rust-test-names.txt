@@ -375,7 +375,9 @@ src/lib.rs learn::eval::tests::saved_scores_are_held_out_fits_that_reproduce_eve
 src/lib.rs learn::eval::tests::scm_cart_boosting_and_lasso_tune_on_the_splits_tuning_groups
 src/lib.rs learn::eval::tests::seed_sums_wrap_at_the_largest_seed
 src/lib.rs learn::eval::tests::serialized_scores_preserve_threshold_calls_and_ranks
+src/lib.rs learn::eval::tests::the_c4_arms_leave_unflagged_fits_alone_and_screen_every_fit_by_their_rule
 src/lib.rs learn::eval::tests::the_features_and_labels_of_unused_samples_and_the_labels_of_tested_ones_cannot_change_a_folds_scores
+src/lib.rs learn::eval::tests::the_floor_arm_fixes_the_support_floor
 src/lib.rs learn::eval::tests::the_learner_seed_moves_the_forest_and_boosting_and_no_partition
 src/lib.rs learn::eval::tests::the_learner_seed_reaches_boosting_the_final_models_and_the_mic_regression
 src/lib.rs learn::eval::tests::the_recorded_config_leaves_out_seeds_each_fit_replaces
@@ -474,6 +476,15 @@ src/lib.rs learn::scm::tests::conjunction_finds_two_required_features
 src/lib.rs learn::scm::tests::disjunction_finds_alternative_mechanisms
 src/lib.rs learn::scm::tests::fit_ignores_samples_outside_train
 src/lib.rs learn::scm::tests::records_equivalent_rules
+src/lib.rs learn::screen_arm::tests::a_fit_under_the_adjusted_arm_takes_its_screen_and_with_no_arm_the_chi_square
+src/lib.rs learn::screen_arm::tests::a_pure_lineage_marker_scores_zero_and_the_chi_square_tops_it
+src/lib.rs learn::screen_arm::tests::a_stratum_of_one_class_or_one_sample_changes_no_statistic
+src/lib.rs learn::screen_arm::tests::negative_control_permuted_labels_within_strata_carry_no_lineage_signal
+src/lib.rs learn::screen_arm::tests::no_sample_outside_the_fit_changes_the_screen
+src/lib.rs learn::screen_arm::tests::the_statistic_matches_the_plain_python_implementation_on_synthetic_tables
+src/lib.rs learn::screen_arm::tests::the_strata_do_not_change_with_the_labels
+src/lib.rs learn::screen_arm::tests::ties_break_by_the_lower_row_and_the_budget_fills_with_zeros
+src/lib.rs learn::screen_arm::tests::with_one_stratum_the_statistic_is_the_chi_square_times_n_less_one_over_n
 src/lib.rs learn::tests::a_large_single_class_group_does_not_exclude_the_other_class
 src/lib.rs learn::tests::auprc_is_one_for_perfect_ranking
 src/lib.rs learn::tests::grouped_folds_never_split_a_group
@@ -740,6 +751,7 @@ src/main.rs tests::learn_takes_a_c3_matrix_arm_with_its_build_only
 src/main.rs tests::learn_takes_a_fold_file_only_with_its_output_directory_and_one_species
 src/main.rs tests::learn_takes_a_seed_and_a_learner_seed_and_the_pipeline_takes_neither
 src/main.rs tests::learn_takes_the_c3_input_arm_only_when_asked
+src/main.rs tests::learn_takes_the_c4_screen_and_floor_arms_only_when_asked
 src/main.rs tests::learn_takes_the_c9_pick_only_when_asked
 src/main.rs tests::learn_takes_the_cohort_experiment_only_with_an_output_and_no_other_experiment
 src/main.rs tests::learn_takes_the_mic_experiment_only_with_an_output_and_no_other_experiment
