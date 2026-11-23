@@ -161,7 +161,7 @@ python3 -I scripts/c3-inputs/page_tables.py print reference/input-arms
 | 12. conditions | ruling 15's rows decide and the stricter reading's decide nothing, and conditions 1 and 2 as read here off `count.tsv` equal `conditions.tsv`'s |
 | 13. count | `count.tsv`, `count-no-constant.tsv` and `conditions.tsv` are what `score.py --count` writes from the `datasets.tsv` files, with the arms `count.tsv` marks withdrawn |
 
-**Tests.** `tests/c3_inputs/test_page_tables.py` holds 40 SYNTHETIC tests of the table script and `tests/c3_inputs/test_run_checks.py` 16 of the run's checks, on three made-up species, and `tests/c3_inputs/test_page_faults.py` 4 of the fault runner. `scripts/c3-inputs/page_faults.py` plants each fault below in a copy of the tree and runs the test meant to catch it, which must fail; `tests/c3_inputs/test_page_faults.py` checks that each fault's text occurs once in its file and that its test exists. All 28 were caught.
+**Tests.** `tests/c3_inputs/test_page_tables.py` holds 53 SYNTHETIC tests of the table script and `tests/c3_inputs/test_run_checks.py` 24 of the run's checks, on three made-up species, and `tests/c3_inputs/test_page_faults.py` 4 of the fault runner. `scripts/c3-inputs/page_faults.py` plants each fault below in a copy of the tree and runs the test meant to catch it, which must fail; `tests/c3_inputs/test_page_faults.py` checks that each fault's text occurs once in its file and that its test exists. All 29 were caught.
 
 | Fault | Caught by |
 |---|---|
