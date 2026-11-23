@@ -134,7 +134,8 @@ def build(root, withdrawn=(), codes=None, cart_off=False):
     root.mkdir(parents=True, exist_ok=True)
     rows = list_rows()
     write_lists(root / "lists.tsv", rows)
-    (root / "checks.txt").write_text("PASS every species' SHA256SUMS\nCHECKS 1 of 1\n", encoding="utf-8")
+    (root / "checks.txt").write_text("".join(f"PASS SYNTHETIC check {i}\n" for i in range(1, 12)) + "CHECKS 11 of 11\n",
+                                     encoding="utf-8")
     reading = root / "reading"
     arms = [a for a in score.ARMS if a not in withdrawn]
     paths = []

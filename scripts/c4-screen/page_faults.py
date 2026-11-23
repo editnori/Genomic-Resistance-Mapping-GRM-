@@ -38,6 +38,10 @@ R = "tests.c4_screen.test_run_checks."
 FAULTS = [
     ("P1", "a score.log in the reading passes", PAGE,
      "    if logs:\n", "    if False:\n", "1 files", T + "Gates.test_a_score_log_in_the_reading_is_refused"),
+    ("P24", "a printout of fewer checks than 11 passes", PAGE,
+     '    if not lines or lines[-1] != f"CHECKS {RUN_CHECKS} of {RUN_CHECKS}" or',
+     '    if not lines or not re.fullmatch(r"CHECKS (\\d+) of \\1", lines[-1]) or', "1 files",
+     T + "Gates.test_a_printout_of_fewer_checks_than_eleven_is_refused"),
     ("P2", "the species are those found, not those of the first run", PAGE,
      '    species = sorted({r["species_slug"] for r in run})\n',
      '    species = sorted(p.name for p in (reading / "score").iterdir() if p.is_dir())\n', "2 species",

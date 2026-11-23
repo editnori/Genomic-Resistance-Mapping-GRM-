@@ -227,6 +227,20 @@ class Gates(Built):
         (root / "checks.txt").write_text("FAIL every species' SHA256SUMS\nCHECKS 0 of 1\n", encoding="utf-8")
         self.stops(root, 1)
 
+    def test_a_printout_of_fewer_checks_than_eleven_is_refused(self):
+        root = self.fresh()
+        (root / "checks.txt").write_text("PASS a\nPASS b\nPASS c\nCHECKS 3 of 3\n", encoding="utf-8")
+        self.stops(root, 1)
+        (root / "checks.txt").write_text("PASS a\nCHECKS 11 of 11\nFAIL b\nCHECKS 11 of 11\n", encoding="utf-8")
+        self.stops(root, 1)
+
+    def test_gate_1_reads_as_many_checks_as_run_checks_py_makes(self):
+        checks = common.load("run_checks")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = fx.build_copies(Path(tmp))
+            lines = checks.report(*checks.check(root / "copies", root / "lists.tsv", root / "release"))
+        self.assertEqual(lines[-1], f"CHECKS {page.RUN_CHECKS} of {page.RUN_CHECKS}")
+
     def test_a_species_missing_from_the_reading_is_refused(self):
         root = self.fresh()
         for f in (root / "reading" / "score" / "synthia_gamma").iterdir():

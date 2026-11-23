@@ -121,7 +121,7 @@ python3 -I scripts/c4-screen/page_tables.py print reference/screen-arms
 
 | Gate | What must hold |
 |---|---|
-| 1. files | the reading holds reading.txt, count/ with score.py --count's four tables and withdrawn.txt, and score/; no score.log is in it; the run's checks.txt says every check passed |
+| 1. files | the reading holds reading.txt, count/ with score.py --count's four tables and withdrawn.txt, and score/; no score.log is in it; the run's checks.txt ends CHECKS 11 of 11 with no FAIL line |
 | 2. species | score/ holds each species of lists.tsv's first run once and no other, each with its five files |
 | 3. datasets | each datasets.tsv holds exactly its species' first-run datasets, none in M: the default, each arm not withdrawn and the twin on the lineage split, and the default and each arm not withdrawn on the study split for those in S, each for the five learners; species, antibiotic and genome count equal lists.tsv's, and the floor arm moves the datasets of 800 genomes or more |
 | 4. study | every study row is a study run at seed 42, and no study row stands on the lineage split |
@@ -143,6 +143,7 @@ python3 -I scripts/c4-screen/page_tables.py print reference/screen-arms
 | Fault | Planted | Gate | Caught by |
 |---|---|---|---|
 | P1 | a score.log in the reading passes | 1 files | `Gates.test_a_score_log_in_the_reading_is_refused` |
+| P24 | a printout of fewer checks than 11 passes | 1 files | `Gates.test_a_printout_of_fewer_checks_than_eleven_is_refused` |
 | P2 | the species are those found, not those of the first run | 2 species | `Gates.test_a_species_missing_from_the_reading_is_refused` |
 | P3 | a dataset more than the first run's, as one of M, passes | 3 datasets | `Gates.test_a_dataset_of_m_in_the_reading_is_refused` |
 | P4 | a study row on the lineage split passes | 4 study | `Gates.test_a_study_row_on_the_lineage_split_is_refused` |

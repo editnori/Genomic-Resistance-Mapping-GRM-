@@ -68,6 +68,8 @@ ALL, MOVES = score.ALL, score.MOVES
 SEEDS, TWIN_SEEDS, STUDY_SEED = (42, 43, 44), (45, 46, 47), 42
 COUNT_FILES = ("count.tsv", "count-no-constant.tsv", "conditions.tsv", "count-floor-all.tsv")
 SPECIES_FILES = ("checks.tsv", "draws.tsv", "datasets.tsv", "fits.tsv", "binary.txt")
+# run_checks.py check makes 11 checks; its printout ends "CHECKS 11 of 11" when all pass (the lead's ruling 2).
+RUN_CHECKS = 11
 REFUSED_WHY = "constant model: refused for no candidate"
 # The count's parts per split, (arm, set), as score.py --count writes them.
 PARTS = {"lineage": list(score.FAMILY_PARTS), "study": [("cmh-4000", ALL), ("cmh-16000", ALL), (FLOOR_ARM, MOVES)]}
@@ -76,7 +78,7 @@ SCREEN_READING = "the learners it touches, every dataset"
 FLOOR_READING = "ruling 15, 800 genomes or more"
 GATES = [
     (1, "files", "the reading holds reading.txt, count/ with score.py --count's four tables and withdrawn.txt, and "
-                 "score/; no score.log is in it; the run's checks.txt says every check passed"),
+                 "score/; no score.log is in it; the run's checks.txt ends CHECKS 11 of 11 with no FAIL line"),
     (2, "species", "score/ holds each species of lists.tsv's first run once and no other, each with its five files"),
     (3, "datasets", "each datasets.tsv holds exactly its species' first-run datasets, none in M: the default, each arm "
                     "not withdrawn and the twin on the lineage split, and the default and each arm not withdrawn on "
@@ -214,9 +216,8 @@ def check_reading(reading, lrows, checks_path):
     if logs:
         stop(1, f"score.log stays out of the record, and the reading holds {', '.join(logs)}")
     lines = Path(checks_path).read_text(encoding="utf-8").splitlines()
-    tail = re.fullmatch(r"CHECKS (\d+) of (\d+)", lines[-1]) if lines else None
-    if not tail or tail.group(1) != tail.group(2) or any(line.startswith("FAIL") for line in lines):
-        stop(1, "the run's checks.txt does not say that every check passed")
+    if not lines or lines[-1] != f"CHECKS {RUN_CHECKS} of {RUN_CHECKS}" or any(x.startswith("FAIL") for x in lines):
+        stop(1, f"the run's checks.txt does not end CHECKS {RUN_CHECKS} of {RUN_CHECKS} with no FAIL line")
 
     # 2 species
     species = sorted({r["species_slug"] for r in run})
