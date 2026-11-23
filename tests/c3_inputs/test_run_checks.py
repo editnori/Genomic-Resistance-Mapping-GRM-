@@ -272,6 +272,14 @@ class RunChecks(unittest.TestCase):
         done(copy, "fakeria_maxima")
         self.assertIn("FAIL SHA256SUMS", lines(self.run_checks()))
 
+    def test_a_genome_id_after_a_letter_or_underscore_is_counted(self):
+        for text in ("made up: genome_90001.11\n", "made up: id90001.12\n"):
+            (self.back / "synthia_coli" / "logs" / "run.log").write_text(text)
+            got = lines(self.run_checks())
+            self.assertIn("1 genome ids in", got.get("FAIL genome ids", ""), text)
+        (self.back / "synthia_coli" / "logs" / "run.log").write_text("made up: 190001.11 and 0.9000111\n")
+        self.assertIn("PASS genome ids", lines(self.run_checks()))
+
     def test_a_failed_with_no_time_of_run_species_form_is_not_set_aside(self):
         for text in ("FAILED mockella_minor at build 08:00\n", "FAILED mockella_minor at build 1\n"):
             (self.back / "mockella_minor" / "FAILED").write_text(text)

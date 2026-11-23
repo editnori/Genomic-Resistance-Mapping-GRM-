@@ -55,7 +55,9 @@ STAMP = r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ"
 DONE_LINE = re.compile(rf"DONE (?P<species>\S+) (?P<time>{STAMP}) binary (?P<binary>[0-9a-f]{{64}}) "
                        r"code (?P<code>[0-9a-f]{64}) results (?P<results>\d+) SHA256SUMS (?P<sums>[0-9a-f]{64})")
 FAILED_LINE = re.compile(rf"FAILED (?P<species>\S+) (?P<how>at|stopped at) (?P<step>\S+) (?P<time>{STAMP})")
-ID_TOKEN = re.compile(r"(?<![\w.])\d+\.\d+(?!\d)")
+# A genome id is any <digits>.<digits> not inside a longer number: after a letter or an underscore it still counts
+# (genome_<id>, id<id>).
+ID_TOKEN = re.compile(r"(?<![\d.])\d+\.\d+(?!\d)")
 READ = ("results", "check", "logs")
 READ_FILES = ("expect.tsv", "lists.txt", "binary.txt", "DONE", "SHA256SUMS")
 SCORE_LOG = "score/score.log"
