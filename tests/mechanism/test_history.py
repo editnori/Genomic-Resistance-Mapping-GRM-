@@ -299,6 +299,19 @@ class Vote(unittest.TestCase):
         self.assertEqual((lin["given"], lin["differing_genome_pairs"]), ("0", str(8 + 5)))
         self.assertIn("not given", row(out, "lineage")["note"])
 
+    def test_a_differing_lineage_pair_is_counted_once(self):
+        def rep(lin):
+            return {"samples": [{"id": g, "lineage": k} for g, k in lin.items()]}
+
+        a = rep({"1.1": 1, "1.2": 1, "1.3": 2, "1.4": 2, "1.5": 3, "1.6": None})
+        b = rep({"1.1": 1, "1.2": 1, "1.3": 1, "1.4": 2, "1.5": 1, "1.6": 1})
+        genomes = {g: {} for g in ("1.1", "1.2", "1.3", "1.4", "1.6")}  # 1.5 has no table
+        lineage, pairs, differ = history.lineage_components([a, b, dict(b)], genomes)
+        # (1.1, 1.3) and (1.2, 1.3) share a cluster in b only, (1.3, 1.4) in a only: 3 genome pairs,
+        # each differing in two report pairs; 1.5 has no table and 1.6 no cluster in a
+        self.assertEqual((lineage, pairs, differ), (None, 3, 3))
+        self.assertEqual(history.lineage_components([b, dict(b)], genomes)[2], 0)
+
     def test_a_pooled_share_is_written_only_where_the_vote_passes(self):
         shares = ("earlier_point", "later_point", "d_point", "earlier_gene", "later_gene", "d_gene", "tvd")
         rc, err, out = self.go()

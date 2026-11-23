@@ -165,7 +165,11 @@ def genome_table(reports, tables_dir, meta):
 
 def lineage_components(reports, genomes):
     """Join lineage clusters over the reports. Returns (component per genome
-    or None where the relation differs, report pairs, differing pairs)."""
+    or None where the relation differs, report pairs, differing pairs). A
+    differing pair is a pair of genomes of `genomes`, each with a cluster in
+    two reports, that shares a cluster in one of them and not in the other;
+    it is counted once however many report pairs it differs in (the plan's
+    "the count of differing pairs")."""
     parent = {}
 
     def find(x):
@@ -184,7 +188,8 @@ def lineage_components(reports, genomes):
                 parent[find(gid)] = find(first[c])
             else:
                 first[c] = gid
-    pairs, differ = 0, 0
+    index = {g: k for k, g in enumerate(sorted(genomes))}
+    pairs, differing = 0, set()
     for i in range(len(by_report)):
         for j in range(i + 1, len(by_report)):
             a, b = by_report[i], by_report[j]
@@ -192,15 +197,19 @@ def lineage_components(reports, genomes):
             if not shared:
                 continue
             pairs += 1
-            na, nb, nab = collections.Counter(), collections.Counter(), collections.Counter()
-            for g in shared:
-                na[a[g]] += 1
-                nb[b[g]] += 1
-                nab[(a[g], b[g])] += 1
-            same_a = sum(n * (n - 1) // 2 for n in na.values())
-            same_b = sum(n * (n - 1) // 2 for n in nb.values())
-            same_ab = sum(n * (n - 1) // 2 for n in nab.values())
-            differ += same_a + same_b - 2 * same_ab
+            # pairs that share a cluster in x and sit in two clusters of y
+            for x, y in ((a, b), (b, a)):
+                parts = collections.defaultdict(lambda: collections.defaultdict(list))
+                for g in shared:
+                    parts[x[g]][y[g]].append(index[g])
+                for sub in parts.values():
+                    groups = list(sub.values())
+                    for p in range(len(groups)):
+                        for q in range(p + 1, len(groups)):
+                            for u in groups[p]:
+                                for v in groups[q]:
+                                    differing.add((min(u, v), max(u, v)))
+    differ = len(differing)
     if differ:
         return None, pairs, differ
     return {g: find(g) for g in genomes if g in parent}, pairs, 0
