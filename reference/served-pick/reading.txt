@@ -1,0 +1,557 @@
+The reading of plan block C9, 2026-11-23T06:43:51Z. scorer scripts/c9-pick/score.py sha256 b09ee91a824c8a4c9058e78db6b4aa8343512a5c78e83f67ecb3c86d9caaf457
+Commands run from the lane's folder on the run box; <copy> is a species' copy of its run, <release> the public release data-rev14-274-20261112.
+
+read: the run's own score/ of each species, copied (its SHA256SUMS held in 23 of 23)
+    07a8bcefcc028a5473e5c10067eb976cc31ee9d41d8be1065329112825c8bf48  acinetobacter_baumannii/checks.tsv
+    97226ea9be9be2beef65998416d84e46ba71563ec6afee60e579134e279544fa  acinetobacter_baumannii/datasets.tsv
+    8c102799b514318b62151b10eddc786fe3ddad708b5a23d8838c379eb52c152f  acinetobacter_baumannii/draws.tsv
+    d60f29a0b1a3ee25c01395985bb94f7b90a3433e832ea1c79a21fd3264be23c3  acinetobacter_baumannii/options.txt
+    33a8596f6957d8aaf1690f25c60bd5f1173a71857591c839d30f5632a39cad62  acinetobacter_baumannii/picks.tsv
+    23563a3cd6c7db5b50520adf9e00b26f8a48521edf07f753c8dedf6636c4e64c  campylobacter_coli/checks.tsv
+    9f625774bc03498f6bb70cc014cd1efad1cede0dc218731d38cc39037477e2ca  campylobacter_coli/datasets.tsv
+    1e099653298005c4fae7556ecf2a58a2e1fff83b0595f9530b1062a2ea716d70  campylobacter_coli/draws.tsv
+    d60f29a0b1a3ee25c01395985bb94f7b90a3433e832ea1c79a21fd3264be23c3  campylobacter_coli/options.txt
+    0bb202cdfd15dcc26544da472d20b429e97707112624fb3ecada202277be98e9  campylobacter_coli/picks.tsv
+    0757750a4a97d20b24d3dfbeee4debf7aa415fc199c0afa132db1e3e3a9c72c1  campylobacter_jejuni/checks.tsv
+    675e1e3c39606211a6ef100eaf0f89342191d9e4c3c410a646514d5e60f0bd29  campylobacter_jejuni/datasets.tsv
+    45d57442b02dcb28a1d2e7a9cec5952fc6e596e2f7be69a5a8df17acc5164c6a  campylobacter_jejuni/draws.tsv
+    d60f29a0b1a3ee25c01395985bb94f7b90a3433e832ea1c79a21fd3264be23c3  campylobacter_jejuni/options.txt
+    b4a72232d7adedc91944aa827345fc061b7911b66bfe4a915ccf3c0a43ade48a  campylobacter_jejuni/picks.tsv
+    9b5e2b694c341f7cfb100d5d2ef14f1428832296c062ca8284232dd34c768628  clostridioides_difficile/checks.tsv
+    df51ef0b8f09f090cfbdb64432accb37e61841fcadd9939facdb089e7c04406e  clostridioides_difficile/datasets.tsv
+    a9eb9afd95a029ccf8cfd67d5e691639e7d52e3b93f8e86c08c590678e7f4b0d  clostridioides_difficile/draws.tsv
+    d60f29a0b1a3ee25c01395985bb94f7b90a3433e832ea1c79a21fd3264be23c3  clostridioides_difficile/options.txt
+    74d93bc2c085865bd7ffb09ea6b9aed620518be47687c1c93f6d645992cf8472  clostridioides_difficile/picks.tsv
+    b88f8770e6519f1fb18771b2fbad4ea02e771553cf4e5ba52ad378b92cf1e7e0  corynebacterium_diphtheriae/checks.tsv
+    97bc620355a196e0cdfee47ca6cee876e7ba0bc0db2b96a12a1c14dee0aecda0  corynebacterium_diphtheriae/datasets.tsv
+    2466884603f0cc643d782f99c0b8e434dde26b56cdbd269768ab4c5968edafce  corynebacterium_diphtheriae/draws.tsv
+    d60f29a0b1a3ee25c01395985bb94f7b90a3433e832ea1c79a21fd3264be23c3  corynebacterium_diphtheriae/options.txt
+    9f03897833e10cf712ebc130040506b0469e037f02513c492157b89bbae3161a  corynebacterium_diphtheriae/picks.tsv
+    7eecbf3a2004de0156cd43d8f5a4ebadcead016b6ffc67ad8b20ec6643ef26a5  enterobacter_cloacae/checks.tsv
+    64f41549449905c94a06107f516b22bee3b7b29fc12c66ea06cf8d8856f2a5d0  enterobacter_cloacae/datasets.tsv
+    c3d362f1b017754c38ae65526601436ae03ae68114f4107e4da1a2aa3f372649  enterobacter_cloacae/draws.tsv
+    d60f29a0b1a3ee25c01395985bb94f7b90a3433e832ea1c79a21fd3264be23c3  enterobacter_cloacae/options.txt
+    1806156e3194f5e53223d426ac64f8191fdbcc8b3173725641e9a625110dca29  enterobacter_cloacae/picks.tsv
+    ce46baa517d3c223026883c7d09fd542ed674b0cb1572ef5a28051dd25db3896  enterococcus_faecium/checks.tsv
+    eba13849f1f1a91cf7b30b06e8f2408260578f59e24ed1f55cc7f73ee3321df4  enterococcus_faecium/datasets.tsv
+    30cb44e2973b7011858d03a80aa45f77925760bbbfb5011bc040e3bc4cb9a5a3  enterococcus_faecium/draws.tsv
+    d60f29a0b1a3ee25c01395985bb94f7b90a3433e832ea1c79a21fd3264be23c3  enterococcus_faecium/options.txt
+    8dbe8af7d86953e15fd7995a13a8ad2f7bbbdcc3835cd6d39630a966ac2f56f6  enterococcus_faecium/picks.tsv
+    68bd853f7a258dd19053e05ac9536d859b998be3c22630ce2c283a179e93a115  escherichia_coli/checks.tsv
+    e129df91be196a8e9a81cfed2d37a25d0410dbb1090009d69f521df55850c848  escherichia_coli/datasets.tsv
+    87c4540d3260aef8ae7ab9b875722e42562dad206094859f6736796290fb41ca  escherichia_coli/draws.tsv
+    d60f29a0b1a3ee25c01395985bb94f7b90a3433e832ea1c79a21fd3264be23c3  escherichia_coli/options.txt
+    6c3bd680df8f8b32ea29fabebbcf2a770b56bcba72172dddbc77f4a5a03232e4  escherichia_coli/picks.tsv
+    f6db723114ac3537557bd9530a1b520e83db5cbf14c627c07cd9b1af2a6dd73c  klebsiella_aerogenes/checks.tsv
+    57e9316ea6ed5cb63dc25cbbbbe001a6dc42eb2a23dc5294404c383146a822e5  klebsiella_aerogenes/datasets.tsv
+    c30d1f7065c01e9a88f8f2179057256889ae12e4b8f34b7fae84d95e1dee505e  klebsiella_aerogenes/draws.tsv
+    d60f29a0b1a3ee25c01395985bb94f7b90a3433e832ea1c79a21fd3264be23c3  klebsiella_aerogenes/options.txt
+    3f4e432c543e957ab7f120f925175c19c65fc77db4975c1e9537a416f5325fe9  klebsiella_aerogenes/picks.tsv
+    f2dc3c2f747ea1dc5705b737a196f5a2d657785df6d4fcfb03fb0c3abff1c539  klebsiella_oxytoca/checks.tsv
+    41321fb43434e89087c748bb282b3aa2cdaf85c0ab7765aa3ad2c99f7fe1e8de  klebsiella_oxytoca/datasets.tsv
+    4683cb8bffb63ecbaf60f09b7a0902bece8461c4eade36094ac32366374cd5cf  klebsiella_oxytoca/draws.tsv
+    d60f29a0b1a3ee25c01395985bb94f7b90a3433e832ea1c79a21fd3264be23c3  klebsiella_oxytoca/options.txt
+    c5ffa40b635bf8027af3bc66d464dc4544253ea6497d36a6e79606d784a563f0  klebsiella_oxytoca/picks.tsv
+    17a41a344a74d1a9ae432728e84f0b0f7cadf08b25a464ca32599fefece4a387  klebsiella_pneumoniae/checks.tsv
+    88b3fa70394662163aecb56f0d3f0c629e0dadd23f40b657e4e92725d7b3b2cf  klebsiella_pneumoniae/datasets.tsv
+    b41aeeccb2aa769b43c5c41925bcd71463d7e4a3c1f71a82ce44ff6d4d24494d  klebsiella_pneumoniae/draws.tsv
+    d60f29a0b1a3ee25c01395985bb94f7b90a3433e832ea1c79a21fd3264be23c3  klebsiella_pneumoniae/options.txt
+    21c80eb2a49b943020aa58892aa6729812133f1fce34fddb95ee929f2bce7809  klebsiella_pneumoniae/picks.tsv
+    8175b1a99dc7422ca029bd1ae6d11f6aa752de96fa4f29298158a568401f0e48  klebsiella_quasipneumoniae/checks.tsv
+    b9697835b8f163538fb4fdec1e73042094beb5d4be9cc07f943011a33f30df8d  klebsiella_quasipneumoniae/datasets.tsv
+    f0d0f2b935a54341f8c9eb5a8977d7bd9f031c204f82cb4262f733213ce73ffe  klebsiella_quasipneumoniae/draws.tsv
+    d60f29a0b1a3ee25c01395985bb94f7b90a3433e832ea1c79a21fd3264be23c3  klebsiella_quasipneumoniae/options.txt
+    880ec2b75b226f1322f574cb389dce742f722ca1a1a7a91903063eaa4d4782c7  klebsiella_quasipneumoniae/picks.tsv
+    c2eb5f2ebc1c2d55bd2bb0f9a00637bf6851880e56ce5279d3d106988ed326ed  mycobacterium_tuberculosis/checks.tsv
+    f4c2b944085439d2c4eb72b0534b5e7247ffcf97e16b52d52b0af3733f3b8727  mycobacterium_tuberculosis/datasets.tsv
+    6dc1041f7b9bc008599e70acdb3a0de0d1b30301f785788b35d548e607ec7ad2  mycobacterium_tuberculosis/draws.tsv
+    d60f29a0b1a3ee25c01395985bb94f7b90a3433e832ea1c79a21fd3264be23c3  mycobacterium_tuberculosis/options.txt
+    95e5ae1f68f6742a63ebe4ec22b05f616941c35dfe7c63a79a32a5802bb9b49b  mycobacterium_tuberculosis/picks.tsv
+    32ab0c2a2d238116c5c33c89d388b9badfa5b74cc477a277b3529622be87e774  neisseria_gonorrhoeae/checks.tsv
+    2000cfb4559589db3c54ef0d7225dd133b09d71b9b132d3b7db90646cbb0095e  neisseria_gonorrhoeae/datasets.tsv
+    cc5fa38b529ac880c89b5cab7855855443072b7e7976845317929f2b2b327f38  neisseria_gonorrhoeae/draws.tsv
+    d60f29a0b1a3ee25c01395985bb94f7b90a3433e832ea1c79a21fd3264be23c3  neisseria_gonorrhoeae/options.txt
+    c69e0dd7506aa6c38dab41c17596af1ec8232e59d3681e4dc523703eb8648cfd  neisseria_gonorrhoeae/picks.tsv
+    b8c2f4001c6c99738e54e78632383ccf4234b0b21783bdf5bddd9e413de73687  pseudomonas_aeruginosa/checks.tsv
+    a27da636c048082b16187c7a137bd6db99e4e98c96b5fb41f2c4a31125fc3f16  pseudomonas_aeruginosa/datasets.tsv
+    2d9e3ef499d2712dc17050e9c7e48787058d6b23effa1e37a2b5476409e81ee6  pseudomonas_aeruginosa/draws.tsv
+    d60f29a0b1a3ee25c01395985bb94f7b90a3433e832ea1c79a21fd3264be23c3  pseudomonas_aeruginosa/options.txt
+    ecc8847c7c379e804db5ff98f6e2bfc2c0faa0930ff83da07cd8a35e35596ae1  pseudomonas_aeruginosa/picks.tsv
+    17118d7b0d636c58f80ab48b174647723677f40ad54b10ac4c5009dcf0e2fcb2  salmonella_enterica/checks.tsv
+    4ff561a13d4a356bf80b1611a885c0095f21ce10dd727b249fe92fe71692fc43  salmonella_enterica/datasets.tsv
+    6c4fce428cf9be7e45fb9578f4277d713c31eb3a25acb704a1814d3e4b420e18  salmonella_enterica/draws.tsv
+    d60f29a0b1a3ee25c01395985bb94f7b90a3433e832ea1c79a21fd3264be23c3  salmonella_enterica/options.txt
+    457faca53667be50312f7641e3a41462e98d93f5a83ca15a820f9bba474bd6c1  salmonella_enterica/picks.tsv
+    658d79b78788588dad8a5fa90636b58847c0388e1ef183e8f7a4525655a74e53  shigella_flexneri/checks.tsv
+    a662e1daa9593723b1e95e0b51a2f16b21d114f02bba6c84f45f2c1b4e8fbfc2  shigella_flexneri/datasets.tsv
+    615a2445a4a1a630517acaa656e5fe3a3d9dfe531b3f25bf898394b7c000329d  shigella_flexneri/draws.tsv
+    d60f29a0b1a3ee25c01395985bb94f7b90a3433e832ea1c79a21fd3264be23c3  shigella_flexneri/options.txt
+    c0510b396de0612b964abb173ac6cf1011afb4f21309a9849fc29b1af477056e  shigella_flexneri/picks.tsv
+    31741f3b6e1c1e4caa571dde8cb53d7cddb995afe340e4224e1d34b9d04568f4  shigella_sonnei/checks.tsv
+    8fd69268ff9150ceb433b858be7764ecc62bbe791a42b128f1f76e96119dee69  shigella_sonnei/datasets.tsv
+    8273be0aae9c996196e8830ecb3ab552ff3c55c459e75f7f467155db5b3f47f8  shigella_sonnei/draws.tsv
+    d60f29a0b1a3ee25c01395985bb94f7b90a3433e832ea1c79a21fd3264be23c3  shigella_sonnei/options.txt
+    1fa005c2e51d644f91562dc2b5dd14a957dd6b74dc79f54ab0987d609a94090d  shigella_sonnei/picks.tsv
+    9c87956272c44f789641610a283117b4ee496f8c03305fca06ec56602af46da8  staphylococcus_aureus/checks.tsv
+    cdba594ce35b19d6f4911f0862f8cf76fc7435557a7f4830804ff03d4ade810c  staphylococcus_aureus/datasets.tsv
+    a137c0792d365ffbb3ff10433bcc82dfd430a9044f6318cbe579910f8e0abebb  staphylococcus_aureus/draws.tsv
+    d60f29a0b1a3ee25c01395985bb94f7b90a3433e832ea1c79a21fd3264be23c3  staphylococcus_aureus/options.txt
+    3d2043b7e65282b4e41fccaa3a92ed77f9734ca68883b0782372d34e7a48b40f  staphylococcus_aureus/picks.tsv
+    9543e3dc695053c0c559b47de021e6e245503154fe0586131fe803c63adf453a  staphylococcus_haemolyticus/checks.tsv
+    cb46dcd0422c3150af5d3a3d45f6a20df3ce4e02392210513ca4de8946ed87dc  staphylococcus_haemolyticus/datasets.tsv
+    f0342fdcd0913e5d7c1459aad4ad4c9b048dc761925744d7851c123618711588  staphylococcus_haemolyticus/draws.tsv
+    d60f29a0b1a3ee25c01395985bb94f7b90a3433e832ea1c79a21fd3264be23c3  staphylococcus_haemolyticus/options.txt
+    dfbe1134f931d0c4069cd7aa756bfd0a4a11fe15c6f6994eb056ae18cf35c64c  staphylococcus_haemolyticus/picks.tsv
+    a045d951946cdae897c071a09ab82e6d3fd6acbec19016ea021a3132fa811b6a  streptococcus_agalactiae/checks.tsv
+    3f02bb6bdb907eb4597e1bfebe8b48987b1c62a7ff67e1beec4fd2a4234683db  streptococcus_agalactiae/datasets.tsv
+    90275dae61e00d40bdcb494049ab6de9fb063d97b814f8db44d183c7c4ec0cde  streptococcus_agalactiae/draws.tsv
+    d60f29a0b1a3ee25c01395985bb94f7b90a3433e832ea1c79a21fd3264be23c3  streptococcus_agalactiae/options.txt
+    0cddfdbfc922073acae6ecfbe1eb9f5bf7d21187dfea310c13ea657716e1caa8  streptococcus_agalactiae/picks.tsv
+    e8db179fd540e139c1d3da993942cdaef1739e679ca2a2bfc9f51a26b6d96736  streptococcus_pneumoniae/checks.tsv
+    130646257c6ab4d9afcf0d8e5cbbba6b1f8a3f64adcf5fcb0d1656dfcac4acc4  streptococcus_pneumoniae/datasets.tsv
+    3d1136b879b788a0c19dd8044a462837ea27ccad08ecfd683452fcd5d919332b  streptococcus_pneumoniae/draws.tsv
+    d60f29a0b1a3ee25c01395985bb94f7b90a3433e832ea1c79a21fd3264be23c3  streptococcus_pneumoniae/options.txt
+    69cbd6cb956f26474e83f72551a3f87cce84395656f615ddb37bb720e9581bab  streptococcus_pneumoniae/picks.tsv
+    2cdd9c440119064d82adbca1630acfd710449cdf87f10674daaacd3438afc483  vibrio_cholerae/checks.tsv
+    5085ece96408ee928939c60ec2b680b4202c4ecd60b2ced5b114952d6bf02ef4  vibrio_cholerae/datasets.tsv
+    0dee3f1755479b3245fd4dd5f5d025983de51d89b4f5c8e023dff40af6113de3  vibrio_cholerae/draws.tsv
+    d60f29a0b1a3ee25c01395985bb94f7b90a3433e832ea1c79a21fd3264be23c3  vibrio_cholerae/options.txt
+    15bbf3e80f72501e4a6760134bdafe79e06e0f504cb4c052e5af5b25a93cfa2d  vibrio_cholerae/picks.tsv
+python3 -I score.py --count read/count read/score/<species>/datasets.tsv (23 files)
+  printed: count: 809 dataset rows from 23 files
+    c4adf107dc804e4f950959e4388e416731ba7b96a7f8ccce5e36e9f7be5d0093  conditions.tsv
+    028be2e2c775df40950511f673e40bce585b0050c81ead77cd8a2fe04144f7ff  count.tsv
+
+tie-earlier: python3 -I score.py <copy>/expect.tsv <copy>/results/picks <release> tie-earlier/score/<species> --tie earlier
+  acinetobacter_baumannii printed: checks: 1173 of 1173 pass; results 44 of 44; lineage or study split unavailable in 0
+  campylobacter_coli printed: checks: 1272 of 1272 pass; results 48 of 48; lineage or study split unavailable in 0
+  campylobacter_jejuni printed: checks: 636 of 636 pass; results 24 of 24; lineage or study split unavailable in 0
+  clostridioides_difficile printed: checks: 636 of 636 pass; results 24 of 24; lineage or study split unavailable in 0
+  corynebacterium_diphtheriae printed: checks: 477 of 477 pass; results 18 of 18; lineage or study split unavailable in 0
+  enterobacter_cloacae printed: checks: 1617 of 1617 pass; results 62 of 62; lineage or study split unavailable in 0
+  enterococcus_faecium printed: checks: 1749 of 1749 pass; results 66 of 66; lineage or study split unavailable in 0
+  escherichia_coli printed: checks: 5019 of 5019 pass; results 189 of 189; lineage or study split unavailable in 0
+  klebsiella_aerogenes printed: checks: 459 of 459 pass; results 18 of 18; lineage or study split unavailable in 0
+  klebsiella_oxytoca printed: checks: 636 of 636 pass; results 24 of 24; lineage or study split unavailable in 0
+  klebsiella_pneumoniae printed: checks: 5496 of 5496 pass; results 210 of 210; lineage or study split unavailable in 2
+  klebsiella_quasipneumoniae printed: checks: 477 of 477 pass; results 18 of 18; lineage or study split unavailable in 0
+  mycobacterium_tuberculosis printed: checks: 3210 of 3210 pass; results 121 of 121; lineage or study split unavailable in 0
+  neisseria_gonorrhoeae printed: checks: 918 of 918 pass; results 36 of 36; lineage or study split unavailable in 0
+  pseudomonas_aeruginosa printed: checks: 2088 of 2088 pass; results 78 of 78; lineage or study split unavailable in 0
+  salmonella_enterica printed: checks: 3786 of 3786 pass; results 145 of 145; lineage or study split unavailable in 0
+  shigella_flexneri printed: checks: 636 of 636 pass; results 24 of 24; lineage or study split unavailable in 0
+  shigella_sonnei printed: checks: 3162 of 3162 pass; results 120 of 120; lineage or study split unavailable in 0
+  staphylococcus_aureus printed: checks: 2169 of 2169 pass; results 82 of 82; lineage or study split unavailable in 0
+  staphylococcus_haemolyticus printed: checks: 477 of 477 pass; results 18 of 18; lineage or study split unavailable in 0
+  streptococcus_agalactiae printed: checks: 477 of 477 pass; results 18 of 18; lineage or study split unavailable in 0
+  streptococcus_pneumoniae printed: checks: 1270 of 1270 pass; results 48 of 48; lineage or study split unavailable in 0
+  vibrio_cholerae printed: checks: 477 of 477 pass; results 18 of 18; lineage or study split unavailable in 0
+    07a8bcefcc028a5473e5c10067eb976cc31ee9d41d8be1065329112825c8bf48  acinetobacter_baumannii/checks.tsv
+    c9e4bc73606d1dfc0c001d7a250158c58bad606ade6dcb06a7246081a855eb61  acinetobacter_baumannii/datasets.tsv
+    eaebea502df38f13d3ced16043c9d6c5cd5d849e754537a6bdb906c61cd13e33  acinetobacter_baumannii/draws.tsv
+    d9e165e065d719e0944e276f83f7ad2eba458223353cc2ebc665ee4f2e0f4779  acinetobacter_baumannii/options.txt
+    93f7cd0e159f108a3243e684c6b9e1b1c8598fa636684cee2babc770cb8bdbdc  acinetobacter_baumannii/picks.tsv
+    23563a3cd6c7db5b50520adf9e00b26f8a48521edf07f753c8dedf6636c4e64c  campylobacter_coli/checks.tsv
+    d2e98c98888aecac16ee6127fb281086fa4b7e2924a19b51bca5c0f6318024cd  campylobacter_coli/datasets.tsv
+    7ef38bd37b0dda7369d76dce4dc5ee9accd67578cde8fe283d58615255a843d1  campylobacter_coli/draws.tsv
+    d9e165e065d719e0944e276f83f7ad2eba458223353cc2ebc665ee4f2e0f4779  campylobacter_coli/options.txt
+    fc69e08937bf137db5b7a5729dfcdc1ab83c630d4d8467697f66a564cbdeb342  campylobacter_coli/picks.tsv
+    0757750a4a97d20b24d3dfbeee4debf7aa415fc199c0afa132db1e3e3a9c72c1  campylobacter_jejuni/checks.tsv
+    9be7eb403787b58fbb5d4d89756c8d705091dba4161c61373e9ff20f4061d8ef  campylobacter_jejuni/datasets.tsv
+    65908ba63f4b7dcffbe365873714002bf90137eebc1b5cf4d7d5239bfe7d0681  campylobacter_jejuni/draws.tsv
+    d9e165e065d719e0944e276f83f7ad2eba458223353cc2ebc665ee4f2e0f4779  campylobacter_jejuni/options.txt
+    1ee6e7e82304ce3e5cddbb66e536d0a32ab4f7eade0d125c6273edac9d801b44  campylobacter_jejuni/picks.tsv
+    9b5e2b694c341f7cfb100d5d2ef14f1428832296c062ca8284232dd34c768628  clostridioides_difficile/checks.tsv
+    cbca9edcb269c1195f8d277a7bafa16c16b37eacc3b68bf0acbcc03e2ecd80af  clostridioides_difficile/datasets.tsv
+    b30eb085e1307c764e3d27337e8a1c7e792ea77a4992522f1ef89d840a342a43  clostridioides_difficile/draws.tsv
+    d9e165e065d719e0944e276f83f7ad2eba458223353cc2ebc665ee4f2e0f4779  clostridioides_difficile/options.txt
+    e500c44f4bb3ec33cba2ec966285b98cc4f70f12ba4df2121f10d5d712f6248a  clostridioides_difficile/picks.tsv
+    b88f8770e6519f1fb18771b2fbad4ea02e771553cf4e5ba52ad378b92cf1e7e0  corynebacterium_diphtheriae/checks.tsv
+    0ec090ed303037834d0034057db810044c87abe65b091498dab6de92360611c3  corynebacterium_diphtheriae/datasets.tsv
+    05f00a0f2e005acc29ac7dc5d6bf8329cac8e537a73f450947397a243f3cda14  corynebacterium_diphtheriae/draws.tsv
+    d9e165e065d719e0944e276f83f7ad2eba458223353cc2ebc665ee4f2e0f4779  corynebacterium_diphtheriae/options.txt
+    4c59675559f9851aa3a88ba9f2b23a6fddf4a9b879b90221cb842387df9ced1a  corynebacterium_diphtheriae/picks.tsv
+    7eecbf3a2004de0156cd43d8f5a4ebadcead016b6ffc67ad8b20ec6643ef26a5  enterobacter_cloacae/checks.tsv
+    a837ee60b5db184e4e050079e61b13e27c9518ea2a42d8ec1442fc72dbd7270b  enterobacter_cloacae/datasets.tsv
+    b9f88c4cbf7f66976ac99d53f664dcba26a363339ba177c5e7dfc1fd07010c5c  enterobacter_cloacae/draws.tsv
+    d9e165e065d719e0944e276f83f7ad2eba458223353cc2ebc665ee4f2e0f4779  enterobacter_cloacae/options.txt
+    727e7e6678f4689b456bcfcbeace0b15c6b79ecd07ee14ef954ae4ebbcf824da  enterobacter_cloacae/picks.tsv
+    ce46baa517d3c223026883c7d09fd542ed674b0cb1572ef5a28051dd25db3896  enterococcus_faecium/checks.tsv
+    9d6d67da20aa412cb7c9f66ae0a38394a5262d6c20c24cc45c385e7b55010110  enterococcus_faecium/datasets.tsv
+    70696f011884fe6c8a8f8a55f5052feada94c3e0f23f3a87e59e326145226607  enterococcus_faecium/draws.tsv
+    d9e165e065d719e0944e276f83f7ad2eba458223353cc2ebc665ee4f2e0f4779  enterococcus_faecium/options.txt
+    408025955e51366f5100e78f317a1b006f9a08265d28838b840e26b4d23142e1  enterococcus_faecium/picks.tsv
+    68bd853f7a258dd19053e05ac9536d859b998be3c22630ce2c283a179e93a115  escherichia_coli/checks.tsv
+    108b3032417dd2bc6fe2fc999e10dd01c42121f79e52e5ec5c7aa5422c9eec6a  escherichia_coli/datasets.tsv
+    a66e6089912c4b976d6e01676d418286bed80f8cec80eb24bc84d2899b411dee  escherichia_coli/draws.tsv
+    d9e165e065d719e0944e276f83f7ad2eba458223353cc2ebc665ee4f2e0f4779  escherichia_coli/options.txt
+    4d3b9b963aa50e7f2f1ef6c0f33ed879060954f4b32b84cf996287cb0c6d4813  escherichia_coli/picks.tsv
+    f6db723114ac3537557bd9530a1b520e83db5cbf14c627c07cd9b1af2a6dd73c  klebsiella_aerogenes/checks.tsv
+    019d066516ce8b98b3de72e67027b8de3edd5aa19c1457a34a750e715cece6be  klebsiella_aerogenes/datasets.tsv
+    daafc03df998b07daf35f9d3840a16fe3d21119cc0169aec1f1cb2a5f5bee2c4  klebsiella_aerogenes/draws.tsv
+    d9e165e065d719e0944e276f83f7ad2eba458223353cc2ebc665ee4f2e0f4779  klebsiella_aerogenes/options.txt
+    8e29e2eecf3095ec45bf81c0f5623b3f68b5e1c12222e5b3a4b055e1cbec7520  klebsiella_aerogenes/picks.tsv
+    f2dc3c2f747ea1dc5705b737a196f5a2d657785df6d4fcfb03fb0c3abff1c539  klebsiella_oxytoca/checks.tsv
+    092ed61340e0d0ebfdf61230b3b9145013ae233de3205629cfcfcd1f39915c48  klebsiella_oxytoca/datasets.tsv
+    eae1310200dc62a06f1fac3308160599817a4f4c5d120a6c66af6c05e259988b  klebsiella_oxytoca/draws.tsv
+    d9e165e065d719e0944e276f83f7ad2eba458223353cc2ebc665ee4f2e0f4779  klebsiella_oxytoca/options.txt
+    79c31d03b1657fcad42f050b1f356a6cc062bde0155e977d8b40a19d37762ff6  klebsiella_oxytoca/picks.tsv
+    17a41a344a74d1a9ae432728e84f0b0f7cadf08b25a464ca32599fefece4a387  klebsiella_pneumoniae/checks.tsv
+    71e73813877efc5a4b8a3ec9fd0c78b90cfd72644263d90907f919d9de6e9535  klebsiella_pneumoniae/datasets.tsv
+    4681653de3be47eb7eb81fce37d163ab04695362c34001ad851e7c1937482341  klebsiella_pneumoniae/draws.tsv
+    d9e165e065d719e0944e276f83f7ad2eba458223353cc2ebc665ee4f2e0f4779  klebsiella_pneumoniae/options.txt
+    51e90a310dd5357975d6291759efa856a962baccbb12e426bbf34913e08b6ea5  klebsiella_pneumoniae/picks.tsv
+    8175b1a99dc7422ca029bd1ae6d11f6aa752de96fa4f29298158a568401f0e48  klebsiella_quasipneumoniae/checks.tsv
+    80a3923f04a475876f1b0aded9027da61c76fadf5ae119edb084127da45f2ab9  klebsiella_quasipneumoniae/datasets.tsv
+    9f7c544e4f1162f0633e17c0ef2f13c369821a96569498b4673e70e62b942795  klebsiella_quasipneumoniae/draws.tsv
+    d9e165e065d719e0944e276f83f7ad2eba458223353cc2ebc665ee4f2e0f4779  klebsiella_quasipneumoniae/options.txt
+    dd9dfcf2486a69499c424d3973c1e7cdcb19285cc4118015455c35a2f55dbe84  klebsiella_quasipneumoniae/picks.tsv
+    c2eb5f2ebc1c2d55bd2bb0f9a00637bf6851880e56ce5279d3d106988ed326ed  mycobacterium_tuberculosis/checks.tsv
+    7e61ac8467fe0f5254a1c06fcf462db9030fe1022b12ac57a029938ad9e74f22  mycobacterium_tuberculosis/datasets.tsv
+    dd8e750cbf09ea2b9d405d2d0371e9e3efb3e037411809b5f8390e3550a14873  mycobacterium_tuberculosis/draws.tsv
+    d9e165e065d719e0944e276f83f7ad2eba458223353cc2ebc665ee4f2e0f4779  mycobacterium_tuberculosis/options.txt
+    2e03a197b2c3b1805f4c6e1319feaf4e6b94344139e23df0d678a56ecffa63b1  mycobacterium_tuberculosis/picks.tsv
+    32ab0c2a2d238116c5c33c89d388b9badfa5b74cc477a277b3529622be87e774  neisseria_gonorrhoeae/checks.tsv
+    0fe5b5fa18fa7f9c3503b81073846b40c01f2cbf8986e32160e0baae386cee05  neisseria_gonorrhoeae/datasets.tsv
+    50d1f063257bc1339efa6130aec77cc52ec7bec9f41a2786f164dd85a97e0167  neisseria_gonorrhoeae/draws.tsv
+    d9e165e065d719e0944e276f83f7ad2eba458223353cc2ebc665ee4f2e0f4779  neisseria_gonorrhoeae/options.txt
+    32a373d02dca036d2db9ae6c8a692ac48a557de1111c79d2b46fe0e86e5897ca  neisseria_gonorrhoeae/picks.tsv
+    b8c2f4001c6c99738e54e78632383ccf4234b0b21783bdf5bddd9e413de73687  pseudomonas_aeruginosa/checks.tsv
+    d89a5b60c8c5104957d2a848a8e1b133047b134c0593ff9c8a797e82f595d631  pseudomonas_aeruginosa/datasets.tsv
+    fcb965b808d9637c15c8db1279d4d1ad3bc90719de3017652c1ff72119bea027  pseudomonas_aeruginosa/draws.tsv
+    d9e165e065d719e0944e276f83f7ad2eba458223353cc2ebc665ee4f2e0f4779  pseudomonas_aeruginosa/options.txt
+    29924857639520d1856054f83fa44b54c225cdae07df742e8caef1a78b0875ad  pseudomonas_aeruginosa/picks.tsv
+    17118d7b0d636c58f80ab48b174647723677f40ad54b10ac4c5009dcf0e2fcb2  salmonella_enterica/checks.tsv
+    e3b83fd8cdf666885b64805a239cabf59721354d269529020ac70e8064dad134  salmonella_enterica/datasets.tsv
+    ff27e64701cba7df7fb48e8408e3f79f6dbadc0aed8704209a287169d540160e  salmonella_enterica/draws.tsv
+    d9e165e065d719e0944e276f83f7ad2eba458223353cc2ebc665ee4f2e0f4779  salmonella_enterica/options.txt
+    e91b14db0e1709fa63e9f0eb3a8c773b580e0772fbd22215bc51234f54bed61f  salmonella_enterica/picks.tsv
+    658d79b78788588dad8a5fa90636b58847c0388e1ef183e8f7a4525655a74e53  shigella_flexneri/checks.tsv
+    122059bb9aad8551a1b44e9e721878e8234d934a0f429747e82e2fafa607c7e0  shigella_flexneri/datasets.tsv
+    4c3ca6fa7fc3e1abd18bf3e4dc5eb97e63e02fc85d7b5e5991b23cff7011c659  shigella_flexneri/draws.tsv
+    d9e165e065d719e0944e276f83f7ad2eba458223353cc2ebc665ee4f2e0f4779  shigella_flexneri/options.txt
+    7692680e655bc34a0b13ffe46d95b04de7f5bb51fe374d42a64951d0f4601f14  shigella_flexneri/picks.tsv
+    31741f3b6e1c1e4caa571dde8cb53d7cddb995afe340e4224e1d34b9d04568f4  shigella_sonnei/checks.tsv
+    572f1790ea44f486adae10b361044cecf9894bf35dc439301b69537d39840341  shigella_sonnei/datasets.tsv
+    a9867b845597f97c97539b0380bc6a819e847eb422e1b79ba9697b7dca60c66e  shigella_sonnei/draws.tsv
+    d9e165e065d719e0944e276f83f7ad2eba458223353cc2ebc665ee4f2e0f4779  shigella_sonnei/options.txt
+    b422dfb23cc6bbff804a7addf6ca51ea1fce318e7eb7da882eb503029b359784  shigella_sonnei/picks.tsv
+    9c87956272c44f789641610a283117b4ee496f8c03305fca06ec56602af46da8  staphylococcus_aureus/checks.tsv
+    def7bc5e9e34ffe92af5e0d21decc8569ed66b7588cb78adadac963ba7e10b1d  staphylococcus_aureus/datasets.tsv
+    f5a7bc6a56f5c7777f5359d694a6a6b39c7063a0be9d44cae9ecf06f417b2c4e  staphylococcus_aureus/draws.tsv
+    d9e165e065d719e0944e276f83f7ad2eba458223353cc2ebc665ee4f2e0f4779  staphylococcus_aureus/options.txt
+    59c759c841199e70df61cb1a341d8e7af639103d35809c6f29cd423532bcb1e2  staphylococcus_aureus/picks.tsv
+    9543e3dc695053c0c559b47de021e6e245503154fe0586131fe803c63adf453a  staphylococcus_haemolyticus/checks.tsv
+    30f776882d9982c5cfdf09184ba0646b01593b76cc293d26dbe25f9198579dcf  staphylococcus_haemolyticus/datasets.tsv
+    4344e2de3292e75cc42791b518c7e2376ec4405cd7868beeddb542fc4dac19c3  staphylococcus_haemolyticus/draws.tsv
+    d9e165e065d719e0944e276f83f7ad2eba458223353cc2ebc665ee4f2e0f4779  staphylococcus_haemolyticus/options.txt
+    fdf137890873601b4eb7b090cc8d112c75b55cde5bf12c8b3609631b30d9652f  staphylococcus_haemolyticus/picks.tsv
+    a045d951946cdae897c071a09ab82e6d3fd6acbec19016ea021a3132fa811b6a  streptococcus_agalactiae/checks.tsv
+    6b579d1bf9e7f2fce8fa139e6837398cd4e4d76a813e45f8c5ea0f06975fcc1c  streptococcus_agalactiae/datasets.tsv
+    eecdcda02c2bf6c21a7d94e0e87f4f02ced0c9fee7594c598d8eddbc52094605  streptococcus_agalactiae/draws.tsv
+    d9e165e065d719e0944e276f83f7ad2eba458223353cc2ebc665ee4f2e0f4779  streptococcus_agalactiae/options.txt
+    d9c7041392996d123390dc0c3d4ded99961ff42c19e328e31e8a359470255491  streptococcus_agalactiae/picks.tsv
+    e8db179fd540e139c1d3da993942cdaef1739e679ca2a2bfc9f51a26b6d96736  streptococcus_pneumoniae/checks.tsv
+    9ff6a2bce914ba35d3efc4e6b7a37baa9f0193430a8c2bfaa5966539109eb10f  streptococcus_pneumoniae/datasets.tsv
+    e964124d597c42bd919bf3e7e5a68ad3b729f911404b049c4795d71794b56c7d  streptococcus_pneumoniae/draws.tsv
+    d9e165e065d719e0944e276f83f7ad2eba458223353cc2ebc665ee4f2e0f4779  streptococcus_pneumoniae/options.txt
+    b6b882cf69616879d5aff1d7e78dfcaddb92448bb8b9ddf77f34cb408d0018c3  streptococcus_pneumoniae/picks.tsv
+    2cdd9c440119064d82adbca1630acfd710449cdf87f10674daaacd3438afc483  vibrio_cholerae/checks.tsv
+    14ba220d28e887daf0e43bc94ad5a3dbd56e6d6fdceaded42165b95c34dbe693  vibrio_cholerae/datasets.tsv
+    9d897e5888c19f0cdc477c455fc8bc12ac89c7d25ed7037a05b30f9f72786f86  vibrio_cholerae/draws.tsv
+    d9e165e065d719e0944e276f83f7ad2eba458223353cc2ebc665ee4f2e0f4779  vibrio_cholerae/options.txt
+    1d16412ebe4bbb35b608eb1618a6ba94c4ddbf9d26a7d90582eabc4fce370335  vibrio_cholerae/picks.tsv
+python3 -I score.py --count tie-earlier/count tie-earlier/score/<species>/datasets.tsv (23 files)
+  printed: count: 809 dataset rows from 23 files
+    c4adf107dc804e4f950959e4388e416731ba7b96a7f8ccce5e36e9f7be5d0093  conditions.tsv
+    62eb3fb6e1ef1d4eb42bc84b2a7eee276da268b1957950bf9bb7cd5059bffd21  count.tsv
+
+tie-default: python3 -I score.py <copy>/expect.tsv <copy>/results/picks <release> tie-default/score/<species> --tie default
+  acinetobacter_baumannii printed: checks: 1173 of 1173 pass; results 44 of 44; lineage or study split unavailable in 0
+  campylobacter_coli printed: checks: 1272 of 1272 pass; results 48 of 48; lineage or study split unavailable in 0
+  campylobacter_jejuni printed: checks: 636 of 636 pass; results 24 of 24; lineage or study split unavailable in 0
+  clostridioides_difficile printed: checks: 636 of 636 pass; results 24 of 24; lineage or study split unavailable in 0
+  corynebacterium_diphtheriae printed: checks: 477 of 477 pass; results 18 of 18; lineage or study split unavailable in 0
+  enterobacter_cloacae printed: checks: 1617 of 1617 pass; results 62 of 62; lineage or study split unavailable in 0
+  enterococcus_faecium printed: checks: 1749 of 1749 pass; results 66 of 66; lineage or study split unavailable in 0
+  escherichia_coli printed: checks: 5019 of 5019 pass; results 189 of 189; lineage or study split unavailable in 0
+  klebsiella_aerogenes printed: checks: 459 of 459 pass; results 18 of 18; lineage or study split unavailable in 0
+  klebsiella_oxytoca printed: checks: 636 of 636 pass; results 24 of 24; lineage or study split unavailable in 0
+  klebsiella_pneumoniae printed: checks: 5496 of 5496 pass; results 210 of 210; lineage or study split unavailable in 2
+  klebsiella_quasipneumoniae printed: checks: 477 of 477 pass; results 18 of 18; lineage or study split unavailable in 0
+  mycobacterium_tuberculosis printed: checks: 3210 of 3210 pass; results 121 of 121; lineage or study split unavailable in 0
+  neisseria_gonorrhoeae printed: checks: 918 of 918 pass; results 36 of 36; lineage or study split unavailable in 0
+  pseudomonas_aeruginosa printed: checks: 2088 of 2088 pass; results 78 of 78; lineage or study split unavailable in 0
+  salmonella_enterica printed: checks: 3786 of 3786 pass; results 145 of 145; lineage or study split unavailable in 0
+  shigella_flexneri printed: checks: 636 of 636 pass; results 24 of 24; lineage or study split unavailable in 0
+  shigella_sonnei printed: checks: 3162 of 3162 pass; results 120 of 120; lineage or study split unavailable in 0
+  staphylococcus_aureus printed: checks: 2169 of 2169 pass; results 82 of 82; lineage or study split unavailable in 0
+  staphylococcus_haemolyticus printed: checks: 477 of 477 pass; results 18 of 18; lineage or study split unavailable in 0
+  streptococcus_agalactiae printed: checks: 477 of 477 pass; results 18 of 18; lineage or study split unavailable in 0
+  streptococcus_pneumoniae printed: checks: 1270 of 1270 pass; results 48 of 48; lineage or study split unavailable in 0
+  vibrio_cholerae printed: checks: 477 of 477 pass; results 18 of 18; lineage or study split unavailable in 0
+    07a8bcefcc028a5473e5c10067eb976cc31ee9d41d8be1065329112825c8bf48  acinetobacter_baumannii/checks.tsv
+    8a6f015c27381b0da52f03bb2bcf0d1ba07bb00419a9347dd888e9a388b28f27  acinetobacter_baumannii/datasets.tsv
+    56a05623c680dea31c41d7c954bb0427f38fb4b15855a784c0a0c443f6aabf17  acinetobacter_baumannii/draws.tsv
+    57b96f2e036c0f16bb66dda4efe72b492b47de9ce5a712f622e6da931f5cd873  acinetobacter_baumannii/options.txt
+    860c1e8aac0ad51ce98ce324c8e1efd94d8dd0de4fb44b7f67a237bbe58514de  acinetobacter_baumannii/picks.tsv
+    23563a3cd6c7db5b50520adf9e00b26f8a48521edf07f753c8dedf6636c4e64c  campylobacter_coli/checks.tsv
+    cd35a8dba26cff356d6976ffd409168b883a6a3ce208a37a5a3976f0752a7f67  campylobacter_coli/datasets.tsv
+    5ce220e7ba2a5ef378966f69216c884effaf52a295b8277d4d126382360444bc  campylobacter_coli/draws.tsv
+    57b96f2e036c0f16bb66dda4efe72b492b47de9ce5a712f622e6da931f5cd873  campylobacter_coli/options.txt
+    e5774c45e1666ea46a63367a9ee962b892f4471f941e39494ea1f3649657d4d2  campylobacter_coli/picks.tsv
+    0757750a4a97d20b24d3dfbeee4debf7aa415fc199c0afa132db1e3e3a9c72c1  campylobacter_jejuni/checks.tsv
+    97aa9efb614c5401d2f81a71b3a614c08c3db7eda635aec1a8c891acf9e95a4a  campylobacter_jejuni/datasets.tsv
+    6fc11a3c4aff3da7ca3ba13601530cf8bcd19544eca00e01e2d4e3122fe07171  campylobacter_jejuni/draws.tsv
+    57b96f2e036c0f16bb66dda4efe72b492b47de9ce5a712f622e6da931f5cd873  campylobacter_jejuni/options.txt
+    ad8e0eba5c07229f12d801c7c2a57fca6a4c90557d42ca9ecc08f32cb2e8a7c8  campylobacter_jejuni/picks.tsv
+    9b5e2b694c341f7cfb100d5d2ef14f1428832296c062ca8284232dd34c768628  clostridioides_difficile/checks.tsv
+    873390392735b54e491752b14dee414c68c85ad01a5ba8772dd86e99f649bbe8  clostridioides_difficile/datasets.tsv
+    4234833798ee283fb0338a299e64d5eae5e4b33793dbd68d83f387b16f16211b  clostridioides_difficile/draws.tsv
+    57b96f2e036c0f16bb66dda4efe72b492b47de9ce5a712f622e6da931f5cd873  clostridioides_difficile/options.txt
+    ca5cd5578e264a1fd697a541f258da0c2d5992aaff0d3d804c4ffb9d8baac099  clostridioides_difficile/picks.tsv
+    b88f8770e6519f1fb18771b2fbad4ea02e771553cf4e5ba52ad378b92cf1e7e0  corynebacterium_diphtheriae/checks.tsv
+    97bc620355a196e0cdfee47ca6cee876e7ba0bc0db2b96a12a1c14dee0aecda0  corynebacterium_diphtheriae/datasets.tsv
+    2466884603f0cc643d782f99c0b8e434dde26b56cdbd269768ab4c5968edafce  corynebacterium_diphtheriae/draws.tsv
+    57b96f2e036c0f16bb66dda4efe72b492b47de9ce5a712f622e6da931f5cd873  corynebacterium_diphtheriae/options.txt
+    9f03897833e10cf712ebc130040506b0469e037f02513c492157b89bbae3161a  corynebacterium_diphtheriae/picks.tsv
+    7eecbf3a2004de0156cd43d8f5a4ebadcead016b6ffc67ad8b20ec6643ef26a5  enterobacter_cloacae/checks.tsv
+    ce5d2e490fb87bb838495d4622e96cd61f0eb0cded2881ec813ccb6a4e3d5ab8  enterobacter_cloacae/datasets.tsv
+    0eb5af85f7f97ad124dcc107ee5a876412dd63baacb308819a11c6c7027fbef8  enterobacter_cloacae/draws.tsv
+    57b96f2e036c0f16bb66dda4efe72b492b47de9ce5a712f622e6da931f5cd873  enterobacter_cloacae/options.txt
+    d3219427b506c0e94455f222626e04d83ec8d9ea3962428b4bc012e331ce3762  enterobacter_cloacae/picks.tsv
+    ce46baa517d3c223026883c7d09fd542ed674b0cb1572ef5a28051dd25db3896  enterococcus_faecium/checks.tsv
+    9c9fc42c278f7ef1f7810f25acc75fdba9bfea74a005a7282fc56fc9c85754f6  enterococcus_faecium/datasets.tsv
+    38aaf97c62e114f0a8bbfa2a3ef5303a06ebf2ee2f915a7a66303231777a89f0  enterococcus_faecium/draws.tsv
+    57b96f2e036c0f16bb66dda4efe72b492b47de9ce5a712f622e6da931f5cd873  enterococcus_faecium/options.txt
+    8b6020221597f14dc333f3e3b833c2401700323dee2ea9509842f62b6a017b52  enterococcus_faecium/picks.tsv
+    68bd853f7a258dd19053e05ac9536d859b998be3c22630ce2c283a179e93a115  escherichia_coli/checks.tsv
+    1efe45a296537793f447a829ebdc2b0b821609121d52a52e1cf20bdce85d7cbc  escherichia_coli/datasets.tsv
+    7a595ebdd2e0aafa52b68c75fa0d8cef3bb3cc8932a08294d91d1c9f7fc63d24  escherichia_coli/draws.tsv
+    57b96f2e036c0f16bb66dda4efe72b492b47de9ce5a712f622e6da931f5cd873  escherichia_coli/options.txt
+    639bf4dab2b145567f2c0ce000fc63a4f996f3df1e112d6cec7af0bfa6dec79a  escherichia_coli/picks.tsv
+    f6db723114ac3537557bd9530a1b520e83db5cbf14c627c07cd9b1af2a6dd73c  klebsiella_aerogenes/checks.tsv
+    57e9316ea6ed5cb63dc25cbbbbe001a6dc42eb2a23dc5294404c383146a822e5  klebsiella_aerogenes/datasets.tsv
+    c30d1f7065c01e9a88f8f2179057256889ae12e4b8f34b7fae84d95e1dee505e  klebsiella_aerogenes/draws.tsv
+    57b96f2e036c0f16bb66dda4efe72b492b47de9ce5a712f622e6da931f5cd873  klebsiella_aerogenes/options.txt
+    3f4e432c543e957ab7f120f925175c19c65fc77db4975c1e9537a416f5325fe9  klebsiella_aerogenes/picks.tsv
+    f2dc3c2f747ea1dc5705b737a196f5a2d657785df6d4fcfb03fb0c3abff1c539  klebsiella_oxytoca/checks.tsv
+    b7b142eed05b42eb819ac5bd55b17d2cac6ed56a3fc9f68b7504260b6b689b6e  klebsiella_oxytoca/datasets.tsv
+    3be4f31f8ed13c6e574563c1afd9330e909da39a7b80cd1e3b1ab3a8bc68a688  klebsiella_oxytoca/draws.tsv
+    57b96f2e036c0f16bb66dda4efe72b492b47de9ce5a712f622e6da931f5cd873  klebsiella_oxytoca/options.txt
+    473931f61eb5ef77cba191762395ca9935b362eb2795580a9e1a12dae2c24c0c  klebsiella_oxytoca/picks.tsv
+    17a41a344a74d1a9ae432728e84f0b0f7cadf08b25a464ca32599fefece4a387  klebsiella_pneumoniae/checks.tsv
+    1ca2369871690f97fe308ac6431208947c34792fbd0a9023debcce4397dc7585  klebsiella_pneumoniae/datasets.tsv
+    546beb234497236ee92cb79734ad6a5ad145f009941fc986c7bc359d28c9af76  klebsiella_pneumoniae/draws.tsv
+    57b96f2e036c0f16bb66dda4efe72b492b47de9ce5a712f622e6da931f5cd873  klebsiella_pneumoniae/options.txt
+    416633575ec13973d43ebcdba80f33ec26cd54ddf4e39926a8551886c1a9ada7  klebsiella_pneumoniae/picks.tsv
+    8175b1a99dc7422ca029bd1ae6d11f6aa752de96fa4f29298158a568401f0e48  klebsiella_quasipneumoniae/checks.tsv
+    4b5e6affbe0dd31ce0fbae3567e93b18db1839eea8f7ecb12fd4fa56ec8581f0  klebsiella_quasipneumoniae/datasets.tsv
+    b446997b622b5a45ec06070360ffa50adce766c6d766329920d84c561fc1e314  klebsiella_quasipneumoniae/draws.tsv
+    57b96f2e036c0f16bb66dda4efe72b492b47de9ce5a712f622e6da931f5cd873  klebsiella_quasipneumoniae/options.txt
+    46a2f7af1d68b04caba1f97490e0bc6985fbedcc855109d0976058fd481ccec1  klebsiella_quasipneumoniae/picks.tsv
+    c2eb5f2ebc1c2d55bd2bb0f9a00637bf6851880e56ce5279d3d106988ed326ed  mycobacterium_tuberculosis/checks.tsv
+    c7871e2aa8d63e53ed5f28cc20dfa58b23371a98305af82053f382d68ea92f9d  mycobacterium_tuberculosis/datasets.tsv
+    3ab39ca43368fb9e6f337015d61f36da962ea9f6432de412cc9895618282ee7a  mycobacterium_tuberculosis/draws.tsv
+    57b96f2e036c0f16bb66dda4efe72b492b47de9ce5a712f622e6da931f5cd873  mycobacterium_tuberculosis/options.txt
+    c8f51c7ec70923c62c8314e9641f2f3c0a9a47becef5ec88f06e7206c0b1dc3e  mycobacterium_tuberculosis/picks.tsv
+    32ab0c2a2d238116c5c33c89d388b9badfa5b74cc477a277b3529622be87e774  neisseria_gonorrhoeae/checks.tsv
+    f2e39d450fef77645ab7a53273820762277e9eb937696df87643d53ee7c02bd2  neisseria_gonorrhoeae/datasets.tsv
+    2366bcfe2d9c3969bebc59b8945c39083b04225ed8be8012ff336b1b4dc495fa  neisseria_gonorrhoeae/draws.tsv
+    57b96f2e036c0f16bb66dda4efe72b492b47de9ce5a712f622e6da931f5cd873  neisseria_gonorrhoeae/options.txt
+    df70e58e9d3d90af5e6dd9eb557c99f463fa8a7b6c5b7fc261481d8cbaeef1e6  neisseria_gonorrhoeae/picks.tsv
+    b8c2f4001c6c99738e54e78632383ccf4234b0b21783bdf5bddd9e413de73687  pseudomonas_aeruginosa/checks.tsv
+    a27da636c048082b16187c7a137bd6db99e4e98c96b5fb41f2c4a31125fc3f16  pseudomonas_aeruginosa/datasets.tsv
+    2d9e3ef499d2712dc17050e9c7e48787058d6b23effa1e37a2b5476409e81ee6  pseudomonas_aeruginosa/draws.tsv
+    57b96f2e036c0f16bb66dda4efe72b492b47de9ce5a712f622e6da931f5cd873  pseudomonas_aeruginosa/options.txt
+    ecc8847c7c379e804db5ff98f6e2bfc2c0faa0930ff83da07cd8a35e35596ae1  pseudomonas_aeruginosa/picks.tsv
+    17118d7b0d636c58f80ab48b174647723677f40ad54b10ac4c5009dcf0e2fcb2  salmonella_enterica/checks.tsv
+    89ad1fcd34636018235b0407937384c9e1c92ca1bc749cc3a1504ad966b1d883  salmonella_enterica/datasets.tsv
+    b491ab9a752fd88d19ff1abf52bbd296d0e4b7a0e75797456c16f0d29048fc3a  salmonella_enterica/draws.tsv
+    57b96f2e036c0f16bb66dda4efe72b492b47de9ce5a712f622e6da931f5cd873  salmonella_enterica/options.txt
+    14df7900d25873305de04fd14843fcea67d564e8321ad1cb99ea0ae32d3fca01  salmonella_enterica/picks.tsv
+    658d79b78788588dad8a5fa90636b58847c0388e1ef183e8f7a4525655a74e53  shigella_flexneri/checks.tsv
+    43e995a07d4f1de9b418ecf89bca1b52a0dc49673e1f13a158f9745c07a303e2  shigella_flexneri/datasets.tsv
+    fffa350d4a219404870c5eae80f7647ccee76e886deb3868653e684c846c1712  shigella_flexneri/draws.tsv
+    57b96f2e036c0f16bb66dda4efe72b492b47de9ce5a712f622e6da931f5cd873  shigella_flexneri/options.txt
+    ba6cd9e2bceed1b472ed92bd4b2fc6cf1266b040559af4f130093c772ec39b76  shigella_flexneri/picks.tsv
+    31741f3b6e1c1e4caa571dde8cb53d7cddb995afe340e4224e1d34b9d04568f4  shigella_sonnei/checks.tsv
+    fa186b26d4e0d425fb983059c2c8583475c15249b4c3b15642075a13b74ea2c7  shigella_sonnei/datasets.tsv
+    ef0aff1d14470823af1d83f1eb16f77903bfba7adc91be71c9f3fdf8d3c8ea8d  shigella_sonnei/draws.tsv
+    57b96f2e036c0f16bb66dda4efe72b492b47de9ce5a712f622e6da931f5cd873  shigella_sonnei/options.txt
+    aa9f38a25b7edd90320c3a42ca35759d1f8e6a05f3b3a2ccd45025b41514be0e  shigella_sonnei/picks.tsv
+    9c87956272c44f789641610a283117b4ee496f8c03305fca06ec56602af46da8  staphylococcus_aureus/checks.tsv
+    89b86a421183e8c84c3bf31f253db048e530824a3a5816cb1a5122351611c633  staphylococcus_aureus/datasets.tsv
+    932e19efbc1c2d21625e70da01242e586cef0804ba2e53d863b145458d07d0df  staphylococcus_aureus/draws.tsv
+    57b96f2e036c0f16bb66dda4efe72b492b47de9ce5a712f622e6da931f5cd873  staphylococcus_aureus/options.txt
+    76026eb031b17734f58ae4cec10a4beff00e3df3bfe69eb45ab62511097756f8  staphylococcus_aureus/picks.tsv
+    9543e3dc695053c0c559b47de021e6e245503154fe0586131fe803c63adf453a  staphylococcus_haemolyticus/checks.tsv
+    2936d27064177d40a9ad5d44dabc8b9ad440ef4b16d5ba0084f030783639be70  staphylococcus_haemolyticus/datasets.tsv
+    eb1bb3d81d1164ab4f04cbba44d7ce6e6424ceb4b2ccac33eb3756e324fc2161  staphylococcus_haemolyticus/draws.tsv
+    57b96f2e036c0f16bb66dda4efe72b492b47de9ce5a712f622e6da931f5cd873  staphylococcus_haemolyticus/options.txt
+    2df60fc47ff707e0c966442142e872102fce1f741a7cd0f24926b4f641ba9f20  staphylococcus_haemolyticus/picks.tsv
+    a045d951946cdae897c071a09ab82e6d3fd6acbec19016ea021a3132fa811b6a  streptococcus_agalactiae/checks.tsv
+    47068e06ce70bae8239c6b8a359d21f5c2652f7af4a426247330b87f2239dfec  streptococcus_agalactiae/datasets.tsv
+    9c942d58067d9961cdf11fb1788e45a1f3b7dc1895dc8434b3a263bba0965aaf  streptococcus_agalactiae/draws.tsv
+    57b96f2e036c0f16bb66dda4efe72b492b47de9ce5a712f622e6da931f5cd873  streptococcus_agalactiae/options.txt
+    7fb5a46b18e2407265e7b73c04c9303e7fa868b6af0d4fcbe9e418899e4a08c9  streptococcus_agalactiae/picks.tsv
+    e8db179fd540e139c1d3da993942cdaef1739e679ca2a2bfc9f51a26b6d96736  streptococcus_pneumoniae/checks.tsv
+    45f6995a8c5c61d14281aab76aeef07da41bf9a61b18338c4db32c6c85161ef2  streptococcus_pneumoniae/datasets.tsv
+    7ce4b00f52fa2304f07cda2e0bd0b6914deda3e00d2ae40d7b4fbee460f4d184  streptococcus_pneumoniae/draws.tsv
+    57b96f2e036c0f16bb66dda4efe72b492b47de9ce5a712f622e6da931f5cd873  streptococcus_pneumoniae/options.txt
+    ce18fbddc98191b911abeaef69587b54da9769a937fa4e926a8af7367f63656c  streptococcus_pneumoniae/picks.tsv
+    2cdd9c440119064d82adbca1630acfd710449cdf87f10674daaacd3438afc483  vibrio_cholerae/checks.tsv
+    c8c49ad4ffd451eae5b2305902314a85802eab3fef1e14f563579e5c4e59d097  vibrio_cholerae/datasets.tsv
+    021a4b1c2247654c8cba5811e2d037c4fa51d99a94fa913f0bb8388932781ba5  vibrio_cholerae/draws.tsv
+    57b96f2e036c0f16bb66dda4efe72b492b47de9ce5a712f622e6da931f5cd873  vibrio_cholerae/options.txt
+    196aa03e501bd236ec5b0a183148809b69b4e976349f22b5edc25949e808a448  vibrio_cholerae/picks.tsv
+python3 -I score.py --count tie-default/count tie-default/score/<species>/datasets.tsv (23 files)
+  printed: count: 809 dataset rows from 23 files
+    c4adf107dc804e4f950959e4388e416731ba7b96a7f8ccce5e36e9f7be5d0093  conditions.tsv
+    eb6e5334321d73c28f25d7bf4aa39b66375fb2356c0dfbbfd315b0f09413adcc  count.tsv
+
+default-seed42: python3 -I score.py <copy>/expect.tsv <copy>/results/picks <release> default-seed42/score/<species> --default seed42
+  acinetobacter_baumannii printed: checks: 1173 of 1173 pass; results 44 of 44; lineage or study split unavailable in 0
+  campylobacter_coli printed: checks: 1272 of 1272 pass; results 48 of 48; lineage or study split unavailable in 0
+  campylobacter_jejuni printed: checks: 636 of 636 pass; results 24 of 24; lineage or study split unavailable in 0
+  clostridioides_difficile printed: checks: 636 of 636 pass; results 24 of 24; lineage or study split unavailable in 0
+  corynebacterium_diphtheriae printed: checks: 477 of 477 pass; results 18 of 18; lineage or study split unavailable in 0
+  enterobacter_cloacae printed: checks: 1617 of 1617 pass; results 62 of 62; lineage or study split unavailable in 0
+  enterococcus_faecium printed: checks: 1749 of 1749 pass; results 66 of 66; lineage or study split unavailable in 0
+  escherichia_coli printed: checks: 5019 of 5019 pass; results 189 of 189; lineage or study split unavailable in 0
+  klebsiella_aerogenes printed: checks: 459 of 459 pass; results 18 of 18; lineage or study split unavailable in 0
+  klebsiella_oxytoca printed: checks: 636 of 636 pass; results 24 of 24; lineage or study split unavailable in 0
+  klebsiella_pneumoniae printed: checks: 5496 of 5496 pass; results 210 of 210; lineage or study split unavailable in 2
+  klebsiella_quasipneumoniae printed: checks: 477 of 477 pass; results 18 of 18; lineage or study split unavailable in 0
+  mycobacterium_tuberculosis printed: checks: 3210 of 3210 pass; results 121 of 121; lineage or study split unavailable in 0
+  neisseria_gonorrhoeae printed: checks: 918 of 918 pass; results 36 of 36; lineage or study split unavailable in 0
+  pseudomonas_aeruginosa printed: checks: 2088 of 2088 pass; results 78 of 78; lineage or study split unavailable in 0
+  salmonella_enterica printed: checks: 3786 of 3786 pass; results 145 of 145; lineage or study split unavailable in 0
+  shigella_flexneri printed: checks: 636 of 636 pass; results 24 of 24; lineage or study split unavailable in 0
+  shigella_sonnei printed: checks: 3162 of 3162 pass; results 120 of 120; lineage or study split unavailable in 0
+  staphylococcus_aureus printed: checks: 2169 of 2169 pass; results 82 of 82; lineage or study split unavailable in 0
+  staphylococcus_haemolyticus printed: checks: 477 of 477 pass; results 18 of 18; lineage or study split unavailable in 0
+  streptococcus_agalactiae printed: checks: 477 of 477 pass; results 18 of 18; lineage or study split unavailable in 0
+  streptococcus_pneumoniae printed: checks: 1270 of 1270 pass; results 48 of 48; lineage or study split unavailable in 0
+  vibrio_cholerae printed: checks: 477 of 477 pass; results 18 of 18; lineage or study split unavailable in 0
+    07a8bcefcc028a5473e5c10067eb976cc31ee9d41d8be1065329112825c8bf48  acinetobacter_baumannii/checks.tsv
+    905e7b1d5088f49a09bc61eaf236ac34fc36511c19627facba5aaaee95c186e5  acinetobacter_baumannii/datasets.tsv
+    36aff5100a309346f1c34df1c8806321f00df63fb70f242eedd05f6a46ca19c7  acinetobacter_baumannii/draws.tsv
+    f541c7d3602d6c001b7668c8a81c798087697bf6f853fb3f930b0648ef4610e3  acinetobacter_baumannii/options.txt
+    3b8d9c53c4da361d65fbd150e495ce8c482fe6e9b49e8ead69f3694b6fb1e84f  acinetobacter_baumannii/picks.tsv
+    23563a3cd6c7db5b50520adf9e00b26f8a48521edf07f753c8dedf6636c4e64c  campylobacter_coli/checks.tsv
+    2ab8a531d4eba3a572ee9110d9b68b20c9f83f0e38b4ec2d2b9c1e632c58f6fb  campylobacter_coli/datasets.tsv
+    6729fac888553ad403da0e4d3d157485979f7ef9d8a4c5ed0e90805d663a8036  campylobacter_coli/draws.tsv
+    f541c7d3602d6c001b7668c8a81c798087697bf6f853fb3f930b0648ef4610e3  campylobacter_coli/options.txt
+    bffd094725b8f521182d126dc996f3e378d1aacf33b7a139eb9b354ad51e4f50  campylobacter_coli/picks.tsv
+    0757750a4a97d20b24d3dfbeee4debf7aa415fc199c0afa132db1e3e3a9c72c1  campylobacter_jejuni/checks.tsv
+    b72306260277b32d4d1aac72007252dfe10bd9043ba52ee6c285a916b2e950f8  campylobacter_jejuni/datasets.tsv
+    1cf5f8faf714f8939fb45604b2217720ac3dde6bb0270c6e0b961a102051a04f  campylobacter_jejuni/draws.tsv
+    f541c7d3602d6c001b7668c8a81c798087697bf6f853fb3f930b0648ef4610e3  campylobacter_jejuni/options.txt
+    3f88ef57ee682faf0857e6e94cbbc434ecbad14f405fc227c3edd053602204d4  campylobacter_jejuni/picks.tsv
+    9b5e2b694c341f7cfb100d5d2ef14f1428832296c062ca8284232dd34c768628  clostridioides_difficile/checks.tsv
+    cc104b4f992708e8de478163fe005eb2d3a28a339dc9e1a4068681eecfffdb70  clostridioides_difficile/datasets.tsv
+    c43d70a19924d084108b57b5c25c6931655d76e4251ce2a0972d3c9c59643605  clostridioides_difficile/draws.tsv
+    f541c7d3602d6c001b7668c8a81c798087697bf6f853fb3f930b0648ef4610e3  clostridioides_difficile/options.txt
+    152c1bd7fad9ad84922228c0fc35e1dffeb3e4e3f30f33b4f1c9bda82c0e57f5  clostridioides_difficile/picks.tsv
+    b88f8770e6519f1fb18771b2fbad4ea02e771553cf4e5ba52ad378b92cf1e7e0  corynebacterium_diphtheriae/checks.tsv
+    94d75446a0099d54d9593697e8bd4c460ba8148cb57c798162e9eda6f362a2d0  corynebacterium_diphtheriae/datasets.tsv
+    90e25a8fb0812cee148b24ef2399412c23903c1aad0b36d3a81a0d7926d3c8c1  corynebacterium_diphtheriae/draws.tsv
+    f541c7d3602d6c001b7668c8a81c798087697bf6f853fb3f930b0648ef4610e3  corynebacterium_diphtheriae/options.txt
+    06f289b52fd98c17979b307c3a2d1cc832e72fb47e90edef25fa50ac85744a1e  corynebacterium_diphtheriae/picks.tsv
+    7eecbf3a2004de0156cd43d8f5a4ebadcead016b6ffc67ad8b20ec6643ef26a5  enterobacter_cloacae/checks.tsv
+    72035585822e173b3f9e9bd720c645ca032f8e944f4fc243e3f3f415af723c2d  enterobacter_cloacae/datasets.tsv
+    80c3b2e482bb3a236440493964f4e4b0d0f82842c71c9b612f406b9aa8a83b97  enterobacter_cloacae/draws.tsv
+    f541c7d3602d6c001b7668c8a81c798087697bf6f853fb3f930b0648ef4610e3  enterobacter_cloacae/options.txt
+    6959ea2aeef0f4d75d0b62c4d3503e856fe3acfcee8d4e4f54c489a176dcc186  enterobacter_cloacae/picks.tsv
+    ce46baa517d3c223026883c7d09fd542ed674b0cb1572ef5a28051dd25db3896  enterococcus_faecium/checks.tsv
+    a95df6ce2ad610d89927cf46c2449fe4e28bf868b024b9ed390fe54ce30a0e75  enterococcus_faecium/datasets.tsv
+    ab0045dae0d692beaa9569d7fd19de01adc382f1a78079c673502e6041c8da39  enterococcus_faecium/draws.tsv
+    f541c7d3602d6c001b7668c8a81c798087697bf6f853fb3f930b0648ef4610e3  enterococcus_faecium/options.txt
+    f519126bda54e2e21ec82d59e762abfa3ce9287c1622f02086f6b921e58e363d  enterococcus_faecium/picks.tsv
+    68bd853f7a258dd19053e05ac9536d859b998be3c22630ce2c283a179e93a115  escherichia_coli/checks.tsv
+    0332574e5e013f1aa97e7e952dd80fd10da0b0d49ef28321ab505fe26cbfdec3  escherichia_coli/datasets.tsv
+    7c65d5f7f2835cbf053fcfb44403f8da1bf31b963139efcda16d54412de55142  escherichia_coli/draws.tsv
+    f541c7d3602d6c001b7668c8a81c798087697bf6f853fb3f930b0648ef4610e3  escherichia_coli/options.txt
+    95faff04fe2799deb80558834bf09a8e2476ce5149a4cb22b712d84e79b66f44  escherichia_coli/picks.tsv
+    f6db723114ac3537557bd9530a1b520e83db5cbf14c627c07cd9b1af2a6dd73c  klebsiella_aerogenes/checks.tsv
+    653457223c5bb1ad5c5a9ac8358d3ecd68a2298be7fee04fe87f0b8f9a2b844e  klebsiella_aerogenes/datasets.tsv
+    fb47a7f138c335484db2bc8c0956b4f1cf2c0da5ee25a0fd12c90faa08336afc  klebsiella_aerogenes/draws.tsv
+    f541c7d3602d6c001b7668c8a81c798087697bf6f853fb3f930b0648ef4610e3  klebsiella_aerogenes/options.txt
+    fdad2d7ec2475c94feb111a0ea432c43f3332621ff5174b12405041154f2203a  klebsiella_aerogenes/picks.tsv
+    f2dc3c2f747ea1dc5705b737a196f5a2d657785df6d4fcfb03fb0c3abff1c539  klebsiella_oxytoca/checks.tsv
+    a8fbf6c7902182b622cc8fa200ce67d25a2d1feb9aed096d9a2712f7c559cd3d  klebsiella_oxytoca/datasets.tsv
+    600b612ef98bf2911268f4d755340f656ffa3a8f0a71be64113762a4dddd637d  klebsiella_oxytoca/draws.tsv
+    f541c7d3602d6c001b7668c8a81c798087697bf6f853fb3f930b0648ef4610e3  klebsiella_oxytoca/options.txt
+    1fedfc3c633934671c225708fd4a68ba265492e16b1d7e106c47ca9f63c72704  klebsiella_oxytoca/picks.tsv
+    17a41a344a74d1a9ae432728e84f0b0f7cadf08b25a464ca32599fefece4a387  klebsiella_pneumoniae/checks.tsv
+    36e17ab50cb91a9dd77b57b75dfb355b0b44208c9c3ad3f94ac0125c23667d6b  klebsiella_pneumoniae/datasets.tsv
+    1254dcdd562d602eb1fdef5fd85e8f92020e3241a652339608fa2cc0629946a9  klebsiella_pneumoniae/draws.tsv
+    f541c7d3602d6c001b7668c8a81c798087697bf6f853fb3f930b0648ef4610e3  klebsiella_pneumoniae/options.txt
+    67dd2d7823b5f8d2a7093258fcd4a41e1888f9ad951467d685652d6b615f11b9  klebsiella_pneumoniae/picks.tsv
+    8175b1a99dc7422ca029bd1ae6d11f6aa752de96fa4f29298158a568401f0e48  klebsiella_quasipneumoniae/checks.tsv
+    b704c663629ba91bef9bd2254139bc72f2c5a29f0152cb77030772c3e43dc7b9  klebsiella_quasipneumoniae/datasets.tsv
+    9b275e24ee3abbc6cc88e1fd6dec898f74f9aa71d6923d0fa67af1ef439cd028  klebsiella_quasipneumoniae/draws.tsv
+    f541c7d3602d6c001b7668c8a81c798087697bf6f853fb3f930b0648ef4610e3  klebsiella_quasipneumoniae/options.txt
+    8e47841cdb57cc82c51ce5720c65b4d2c0c08c7a020b4857f3caff821383c7c1  klebsiella_quasipneumoniae/picks.tsv
+    c2eb5f2ebc1c2d55bd2bb0f9a00637bf6851880e56ce5279d3d106988ed326ed  mycobacterium_tuberculosis/checks.tsv
+    c1dd4085c2f3e3573dd3801b23867bfae669873fb2e1bb53b906f3d72c7285a7  mycobacterium_tuberculosis/datasets.tsv
+    cb7c7d4b70dca35ad62387b7d008bc4de109df2f0c685949fa025c80f425ceda  mycobacterium_tuberculosis/draws.tsv
+    f541c7d3602d6c001b7668c8a81c798087697bf6f853fb3f930b0648ef4610e3  mycobacterium_tuberculosis/options.txt
+    4dbdc0d2f123db0baf4c65a8c6646655ec2b7640fc3667b9f9f647d86e91b57c  mycobacterium_tuberculosis/picks.tsv
+    32ab0c2a2d238116c5c33c89d388b9badfa5b74cc477a277b3529622be87e774  neisseria_gonorrhoeae/checks.tsv
+    50d1516b4836511daf514dd652b68d1009e11f48a01e362203b1bedd7e553e0d  neisseria_gonorrhoeae/datasets.tsv
+    9004d20146bfcb5187971dd3a94a8336ea26368886ee82f514de93b2c3589a52  neisseria_gonorrhoeae/draws.tsv
+    f541c7d3602d6c001b7668c8a81c798087697bf6f853fb3f930b0648ef4610e3  neisseria_gonorrhoeae/options.txt
+    b105ed308a851449232030bb8ca9480dab9914c9d453386108e2dd3995a4f85f  neisseria_gonorrhoeae/picks.tsv
+    b8c2f4001c6c99738e54e78632383ccf4234b0b21783bdf5bddd9e413de73687  pseudomonas_aeruginosa/checks.tsv
+    d6ef08b51275b9f8db0e8623f28a9240cc0ff218ef31c3d30275f7cd1caf0fc0  pseudomonas_aeruginosa/datasets.tsv
+    7b2824a76c18752fb8a8c30b94f3a615c2defa373e9ac7c5d18a9dd6c2759475  pseudomonas_aeruginosa/draws.tsv
+    f541c7d3602d6c001b7668c8a81c798087697bf6f853fb3f930b0648ef4610e3  pseudomonas_aeruginosa/options.txt
+    374dcb0e37483fcb17439eaef6c89aea2da08a00c98ca9899eb6283f78e88c74  pseudomonas_aeruginosa/picks.tsv
+    17118d7b0d636c58f80ab48b174647723677f40ad54b10ac4c5009dcf0e2fcb2  salmonella_enterica/checks.tsv
+    776966c85f9583c03aad72d602abcc05936b85be5c7e203be91d86398dbeb15c  salmonella_enterica/datasets.tsv
+    530855c7dc40b78e6d41c66f0ca1458a4e3bc7d5976b722d113bf0031a14d377  salmonella_enterica/draws.tsv
+    f541c7d3602d6c001b7668c8a81c798087697bf6f853fb3f930b0648ef4610e3  salmonella_enterica/options.txt
+    1e26ecfd80db2574cf641ca6d70655a284fe8a8917b24b69c3c94c991dceff9c  salmonella_enterica/picks.tsv
+    658d79b78788588dad8a5fa90636b58847c0388e1ef183e8f7a4525655a74e53  shigella_flexneri/checks.tsv
+    97583575ab3d4615bcfb04252872493b1c8f3b1c38aa702d49cf09d7fa912bff  shigella_flexneri/datasets.tsv
+    051104a9cde40b5a0bf43de2a39deef8fdac7a6e34f3f6f5b4346fb3e4a5890d  shigella_flexneri/draws.tsv
+    f541c7d3602d6c001b7668c8a81c798087697bf6f853fb3f930b0648ef4610e3  shigella_flexneri/options.txt
+    e746fdf7a4a359eca8e2ee05d7f1a10e4a5c10d43b88cba03a5a4bc79d59a3ab  shigella_flexneri/picks.tsv
+    31741f3b6e1c1e4caa571dde8cb53d7cddb995afe340e4224e1d34b9d04568f4  shigella_sonnei/checks.tsv
+    b9fa0f1a2e3a0b9a4fca4101e2a3a9b0840e5ade8ac8cbe9805a844ed963e680  shigella_sonnei/datasets.tsv
+    c8c61ae84cf2fd83994636325a91aa51332da7a0161a418d14c0deb0ce4e6c48  shigella_sonnei/draws.tsv
+    f541c7d3602d6c001b7668c8a81c798087697bf6f853fb3f930b0648ef4610e3  shigella_sonnei/options.txt
+    0a3aee79390bd6bae16696409d200bf5f2ddfd5e811163ba0d14f0df56f3741e  shigella_sonnei/picks.tsv
+    9c87956272c44f789641610a283117b4ee496f8c03305fca06ec56602af46da8  staphylococcus_aureus/checks.tsv
+    db9c7b3a62e7bc69b7e7f0db10f391b8aea112848b4e7ee52c6d1131aa7c203d  staphylococcus_aureus/datasets.tsv
+    7b30a7ef4cf7531958d7862ed2054f170cca56645eb3ea7d6b6eaca613579722  staphylococcus_aureus/draws.tsv
+    f541c7d3602d6c001b7668c8a81c798087697bf6f853fb3f930b0648ef4610e3  staphylococcus_aureus/options.txt
+    868ae2907f7bb992ca9888d00e16508cf6d6a13c6cf97afcf948a6535fc33b30  staphylococcus_aureus/picks.tsv
+    9543e3dc695053c0c559b47de021e6e245503154fe0586131fe803c63adf453a  staphylococcus_haemolyticus/checks.tsv
+    11eeb497058b56136f5be3bb3760e30c1de2ff4ded999d789d247894625a410e  staphylococcus_haemolyticus/datasets.tsv
+    af67c2f8b2374ef2e6ea305ba8c2137e3fbd7c5da3cc7b73b48bcff378355e07  staphylococcus_haemolyticus/draws.tsv
+    f541c7d3602d6c001b7668c8a81c798087697bf6f853fb3f930b0648ef4610e3  staphylococcus_haemolyticus/options.txt
+    1942a4f67e3a95a0887ed2b977a155a8e6368b43db5e34d4fe12f7af14fc7798  staphylococcus_haemolyticus/picks.tsv
+    a045d951946cdae897c071a09ab82e6d3fd6acbec19016ea021a3132fa811b6a  streptococcus_agalactiae/checks.tsv
+    3328805268f67bc3a32a33d55496db92a017d8a641b7c3da2571101f2d2424ff  streptococcus_agalactiae/datasets.tsv
+    f7fcef76806448436ee1cbf9861429d6c3a7c6c8c9158e3a9bacd1e41ff4516b  streptococcus_agalactiae/draws.tsv
+    f541c7d3602d6c001b7668c8a81c798087697bf6f853fb3f930b0648ef4610e3  streptococcus_agalactiae/options.txt
+    d5732b05412316a5269fa3859580c3542890a5b5d7a5a44834d60607174bae28  streptococcus_agalactiae/picks.tsv
+    e8db179fd540e139c1d3da993942cdaef1739e679ca2a2bfc9f51a26b6d96736  streptococcus_pneumoniae/checks.tsv
+    b52cb66b2042b68a262bd5a7b3b196a7ef4fc57fe443c52d0f2ea891438ebfdf  streptococcus_pneumoniae/datasets.tsv
+    51ecc8b203ce5fb5ec7507e192d3a5e94ca1b3a01d0644a4473f70758549bddb  streptococcus_pneumoniae/draws.tsv
+    f541c7d3602d6c001b7668c8a81c798087697bf6f853fb3f930b0648ef4610e3  streptococcus_pneumoniae/options.txt
+    da1b49a238becb1f3eb0ae65bbe2287c9d2bde7009bd99703fd5730397ed4431  streptococcus_pneumoniae/picks.tsv
+    2cdd9c440119064d82adbca1630acfd710449cdf87f10674daaacd3438afc483  vibrio_cholerae/checks.tsv
+    a1f26c0a38466ba58221fb6b4cb77fb751eec4ef14d614b48af0821b41581c01  vibrio_cholerae/datasets.tsv
+    617f29acd43d109470e5be480b13aaf901e43a4f00f2bc6a0b59824f17da707e  vibrio_cholerae/draws.tsv
+    f541c7d3602d6c001b7668c8a81c798087697bf6f853fb3f930b0648ef4610e3  vibrio_cholerae/options.txt
+    97249554485a3f67aecec9b3ef11bd668435fbd758a64155acc2e2b2ae251863  vibrio_cholerae/picks.tsv
+python3 -I score.py --count default-seed42/count default-seed42/score/<species>/datasets.tsv (23 files)
+  printed: count: 809 dataset rows from 23 files
+    c4adf107dc804e4f950959e4388e416731ba7b96a7f8ccce5e36e9f7be5d0093  conditions.tsv
+    d78ebd178eb98eab708375e4852d360f377fd8d0e7d2fc3b5c8439db2395492b  count.tsv
+
+ended 2026-11-23T06:44:30Z

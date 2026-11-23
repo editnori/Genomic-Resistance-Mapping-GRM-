@@ -1,0 +1,17 @@
+answer	split	arm	draws	folds	scm	cart	rf	gbt	lasso	no_pick	tied	same_as_default	differs
+read	lineage	default	698	3490	820	530	455	790	895				
+read	lineage	inner	698	3490	903	755	463	563	806	170	486	1073	2247
+read	study	default	55	275	65	35	40	65	70				
+read	study	inner	55	275	77	46	32	58	62	0	15	85	190
+tie-earlier	lineage	default	698	3490	820	530	455	790	895				
+tie-earlier	lineage	inner	698	3490	1325	590	480	508	587	170	486	978	2342
+tie-earlier	study	default	55	275	65	35	40	65	70				
+tie-earlier	study	inner	55	275	88	44	31	58	54	0	15	85	190
+tie-default	lineage	default	698	3490	820	530	455	790	895				
+tie-default	lineage	inner	698	3490	948	783	475	556	728	170	486	1195	2125
+tie-default	study	default	55	275	65	35	40	65	70				
+tie-default	study	inner	55	275	79	50	31	59	56	0	15	92	183
+default-seed42	lineage	default	698	3490	685	585	405	840	975				
+default-seed42	lineage	inner	698	3490	908	748	445	569	820	170	486	1086	2234
+default-seed42	study	default	55	275	65	35	40	65	70				
+default-seed42	study	inner	55	275	77	46	32	58	62	0	15	85	190

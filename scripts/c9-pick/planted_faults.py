@@ -1,9 +1,9 @@
 """Plant each fault of docs/served-pick.md's table and run the test meant to catch it.
 
-  python3 -I planted_faults.py <out dir>
+  python3 -I planted_faults.py <out dir> [fault ...]
 
 Copies this checkout's last commit to <out dir>/tree (git archive) and, one
-fault at a time, changes one piece of text there, runs the one test named
+fault at a time (every fault, or those named), changes one piece of text there, runs the one test named
 for it, and puts the text back. A fault is caught when its test fails and
 the tree still builds; each test must also pass with no fault planted.
 Rust tests always build in <out dir>/target, whatever CARGO_TARGET_DIR
@@ -61,6 +61,34 @@ FAULTS = [
      '        c = add(c, dict(n=sum(inner[learner][k] for k in k4), loss_sum=0.0, **{k: inner[learner][k] for k in k4})\n'
      '                if learner in inner else f["outer"][LEARNERS.index(learner)])',
      "py", "tests.c9_pick.test_score.Served.test_the_served_figure_is_each_folds_pick_on_its_outer_test_fold"),
+    ("7", "a twin row read as the inner pick's", "scripts/c9-pick/page_tables.py",
+     'inner = cells[(d, split, "inner")]',
+     'inner = cells.get((d, split, "twin"), cells[(d, split, "inner")])',
+     "py", "tests.c9_pick.test_page_tables.Tables.test_the_inner_figure_is_the_inner_picks_and_the_twin_stands_apart"),
+    ("8", "a beside answer read as the read one", "scripts/c9-pick/page_tables.py",
+     'READ = "read"',
+     'READ = "tie-earlier"',
+     "py", "tests.c9_pick.test_page_tables.Tables.test_the_read_answer_is_the_reading_and_the_beside_answers_stand_apart"),
+    ("8b", "a read folder scored under a beside answer's options passed", "scripts/c9-pick/page_tables.py",
+     'if answers[a][slug]["options"] != options_text(opts):',
+     'if False:',
+     "py", "tests.c9_pick.test_page_tables.Gates.test_an_answer_scored_under_other_options_is_refused"),
+    ("9", "a species dropped", "scripts/c9-pick/page_tables.py",
+     "        if got != species:",
+     "        if not set(got) <= set(species):",
+     "py", "tests.c9_pick.test_page_tables.Gates.test_a_species_missing_from_the_reading_is_refused"),
+    ("10", "a dataset of M counted", "scripts/c9-pick/page_tables.py",
+     'return [r for r in lrows if r["first_run"] == "1"]',
+     'return [r for r in lrows if r["first_run"] in ("0", "1")]',
+     "py", "tests.c9_pick.test_page_tables.Gates.test_a_dataset_of_m_is_refused"),
+    ("11", "a study row counted on the lineage split", "scripts/c9-pick/page_tables.py",
+     '    mine = [r for r in rows if r["split"] == split]',
+     '    mine = [r for r in rows if r["split"] != "random"]',
+     "py", "tests.c9_pick.test_page_tables.Tables.test_a_study_row_stays_on_the_study_split"),
+    ("12", "a missing draw read as zero", "scripts/c9-pick/page_tables.py",
+     '    return None if x in ("", None) else float(x)',
+     '    return 0.0 if x in ("", None) else float(x)',
+     "py", "tests.c9_pick.test_page_tables.Tables.test_a_draw_not_scored_leaves_its_dataset_unscored_not_zero"),
 ]
 
 
@@ -81,9 +109,13 @@ def run_test(tree, kind, name, log, env):
 
 
 def main(argv):
-    if len(argv) != 1:
+    if not argv:
         print(__doc__.strip().splitlines()[2], file=sys.stderr)
         return 2
+    chosen = argv[1:]
+    unknown = sorted(set(chosen) - {f[0] for f in FAULTS})
+    if unknown:
+        raise SystemExit(f"no fault {', '.join(unknown)}")
     out = Path(argv[0]).resolve()
     (out / "logs").mkdir(parents=True, exist_ok=True)
     tree = out / "tree"
@@ -95,6 +127,8 @@ def main(argv):
     env["CARGO_TARGET_DIR"] = str(out / "target")
     rows, bad = [], 0
     for n, what, path, old, new, kind, test in FAULTS:
+        if chosen and n not in chosen:
+            continue
         target = tree / path
         text = target.read_text()
         if text.count(old) != 1:
