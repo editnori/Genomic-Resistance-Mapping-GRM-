@@ -1309,6 +1309,103 @@ mod tests {
     }
 
     #[test]
+    fn a_unitig_arm_sums_its_cohorts_pairs_and_refuses_a_build_of_other_genomes() {
+        // SYNTHETIC: a unitig build over a species matrix of 50 genomes, the
+        // cohort its first 30. Genome i holds i + 1 unitigs whole and 2(i + 1)
+        // in part, so the cohort's sums are 465 and 930. A build whose genomes
+        // are the species matrix's in another order is refused, as is one with
+        // no row for a cohort genome.
+        let (_, ds) = cohort(30, 4, 20, 37);
+        let m = species_matrix(50, 40, 41);
+        let species = m.summary.genomes.clone();
+        let ids = species[..30].to_vec();
+        let pairs: HashMap<String, (u64, u64)> = species
+            .iter()
+            .enumerate()
+            .map(|(i, g)| (g.clone(), (i as u64 + 1, 2 * (i as u64 + 1))))
+            .collect();
+        let settings = Settings {
+            arm: Arm::Unitigs,
+            tables: None,
+            matrix: None,
+            column: Column::Symbol,
+            rows: Rows::Amr,
+            out: std::env::temp_dir(),
+        };
+        let build = Build {
+            kind: "unitigs".to_string(),
+            ..Build::default()
+        };
+        let copy = |ds: &Dataset| Dataset {
+            x: ds.x.clone(),
+            y: ds.y.clone(),
+            columns: ds.columns.clone(),
+            feature_offsets: ds.feature_offsets.clone(),
+            feature_patterns: Vec::new(),
+        };
+        let added = Added {
+            matrix: species_matrix(50, 40, 41),
+            build: build.clone(),
+            pairs: Some(pairs.clone()),
+        };
+        let (_, result) = matrix_dataset(
+            &settings,
+            &added,
+            copy(&ds),
+            "synthetic__drug",
+            "drawn",
+            &ids,
+            &species,
+            3,
+        )
+        .unwrap();
+        assert_eq!(
+            (result.unitig_pairs_held, result.unitig_pairs_in_part),
+            (Some(465), Some(930))
+        );
+        let mut other = species_matrix(50, 40, 41);
+        other.summary.genomes.reverse();
+        let reordered = Added {
+            matrix: other,
+            build: build.clone(),
+            pairs: Some(pairs.clone()),
+        };
+        assert!(
+            matrix_dataset(
+                &settings,
+                &reordered,
+                copy(&ds),
+                "synthetic__drug",
+                "drawn",
+                &ids,
+                &species,
+                3
+            )
+            .is_err()
+        );
+        let mut short = pairs;
+        short.remove(&ids[29]);
+        let missing = Added {
+            matrix: m,
+            build,
+            pairs: Some(short),
+        };
+        assert!(
+            matrix_dataset(
+                &settings,
+                &missing,
+                copy(&ds),
+                "synthetic__drug",
+                "drawn",
+                &ids,
+                &species,
+                3
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
     fn the_arm_dataset_keeps_labels_and_columns_and_counts_its_rows() {
         let (calls, ds) = cohort(40, 10, 20, 13);
         let dir = std::env::temp_dir().join(format!("grm-c3-arm-{}", std::process::id()));
