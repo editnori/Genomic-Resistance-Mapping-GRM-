@@ -1070,6 +1070,53 @@ mod tests {
         }
     }
 
+    /// No test genome's label reaches its own fold's fit: with the labels of
+    /// fold 0's test genomes turned round, fold 0's fits call the same number
+    /// of its genomes resistant at every cutoff and are as complex, for the
+    /// release's setting and a sampled one. A screen that read a test
+    /// genome's label could change what the forest, boosting and the lasso
+    /// see, and so what they call.
+    #[test]
+    fn no_test_genomes_label_reaches_its_folds_fit() {
+        let (x, y, groups) = fixture();
+        let folds: Vec<usize> = (0..96).map(|i| (i / 4) % 3).collect();
+        let roles = roles_from(&folds);
+        let turned = Bits::from_indices(96, (0..96).filter(|&i| y.contains(i) != (folds[i] == 0)));
+        for trials in [RELEASE_ALL, SAMPLED] {
+            let a = run(
+                &x,
+                &y,
+                &groups,
+                &roles,
+                3,
+                &settings_json(11, "copies", trials),
+            );
+            let b = run(
+                &x,
+                &turned,
+                &groups,
+                &roles,
+                3,
+                &settings_json(11, "copies", trials),
+            );
+            for (p, q) in a[0].learners.iter().zip(&b[0].learners) {
+                assert_eq!(p.status, "ok", "{}: {:?}", p.learner, p.reason);
+                assert_eq!(q.status, "ok", "{}: {:?}", q.learner, q.reason);
+                assert_eq!(p.fold_complexity[0], q.fold_complexity[0], "{}", p.learner);
+                for (k, m) in p.calls.iter().zip(&q.calls) {
+                    let called = |c: &Calls| c.tp + c.fp;
+                    assert_eq!(
+                        called(&k.folds[0]),
+                        called(&m.folds[0]),
+                        "{} at {}",
+                        p.learner,
+                        k.cutoff
+                    );
+                }
+            }
+        }
+    }
+
     /// A sampled setting is fitted as given: scm keeps at most its rules,
     /// cart at most 2^depth leaves, the forest its trees.
     #[test]
