@@ -277,7 +277,8 @@ pub fn protein_matches(contig: &[u8], c: &Called) -> bool {
 
 /// One genome's amino-acid 10-mers, mixed into the 50-bit space and sorted,
 /// after every protein is held to the genome's contigs. A protein that GRM's
-/// translation does not give stops the build (the design's question 21).
+/// translation does not give stops the build (question 20 of the C3 arms
+/// entry in docs/assumption-plan-corrections.md).
 pub fn aa_values(genome: &Path, proteins: &Path, space: &KmerSpace) -> Result<(Vec<u64>, usize)> {
     let mut contigs: HashMap<String, Vec<u8>> = HashMap::new();
     crate::fasta::for_each_record(genome, |name, seq| {
