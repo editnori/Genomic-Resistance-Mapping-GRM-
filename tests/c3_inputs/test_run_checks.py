@@ -336,6 +336,23 @@ class RunChecks(unittest.TestCase):
         self.repack(slug)
         self.assertIn("FAIL refusals", lines(self.run_checks()))
 
+    def test_a_refusal_whose_mark_moved_to_a_lineage_row_fails(self):
+        # The record's study run keeps four marks and its lineage draw takes the fifth: the rows still number five
+        # a record, so only the count per refused study run can refuse it.
+        slug = "synthia_coli"
+        self.unpack(slug)
+        path = self.back / slug / "score" / "draws.tsv"
+        rows = R.page.load(path)
+        row = next(r for r in rows if r["constant"] == "1")
+        row["constant"], row["why"] = "0", ""
+        other = next(r for r in rows if (r["dataset"], r["arm"], r["split"]) == (row["dataset"], row["arm"], "lineage"))
+        other["constant"] = "1"
+        R.score.write_tsv(path, rows, R.score.DRAW_COLUMNS)
+        self.repack(slug)
+        got = lines(self.run_checks())
+        self.assertIn("FAIL refusals", got)
+        self.assertIn("5 constant-model rows in draws.tsv", got["FAIL refusals"])
+
     def repack_after_unpack(self, slug):
         self.unpack(slug)
         self.repack(slug)

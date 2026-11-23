@@ -93,7 +93,7 @@ The pilot of all five arms ran the same draw at seed 42, with no twin, `GRAPH` c
 
 ## Tests and planted faults
 
-`input_arms` holds 14 SYNTHETIC tests, `input_build` 8, `learn::eval` one on the screen count and `src/main.rs` 2 on the flags. `tests/c3_inputs` holds 146 SYNTHETIC tests: 71 of the scorer, the refusal record, the lists, the expected results and the run script's rules, and 75 of the result page's table script, the run's checks and their fault runner (`docs/input-arms-result.md`, Method). `scripts/c3-inputs/planted_faults.py` plants each fault below in a copy of the tree and runs the test meant to catch it, which must fail.
+`input_arms` holds 14 SYNTHETIC tests, `input_build` 8, `learn::eval` one on the screen count and `src/main.rs` 2 on the flags. `tests/c3_inputs` holds 147 SYNTHETIC tests: 71 of the scorer, the refusal record, the lists, the expected results and the run script's rules, and 76 of the result page's table script, the run's checks and their fault runner (`docs/input-arms-result.md`, Method). `scripts/c3-inputs/planted_faults.py` plants each fault below in a copy of the tree and runs the test meant to catch it, which must fail.
 
 | Fault | Caught by |
 |---|---|
