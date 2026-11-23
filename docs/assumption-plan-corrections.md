@@ -643,3 +643,36 @@ An eleventh came while the text was written. The project's wording rules put rec
 | 10. A wider arm with no added genome labelled | fitted; its lineage fit repeats the default's | marked none-added and not fitted, as the study split does |
 
 **Written.** This entry was written at 08:55Z on 23 Nov 2026, from the design fixed at 08:13Z, the lists and the pilot. No comparison result had been read.
+
+## C2 rulings
+
+**Rulings.** The ten questions of the C2 design were ruled at 09:22Z on 23 Nov 2026, before any fit of the full run. No comparison result had been read.
+
+| Question | Ruling |
+|---|---|
+| 1. Path | as taken: every arm, the default included, is fitted by `grm arm`, so the default's figures here are not the release report's figures and are never set beside them as if they were |
+| 2. Draws | as taken, a deviation from the plan (below) |
+| 3. Study default | as taken: fitted here |
+| 4. BioProjects of added genomes | the other: the added genomes' BV-BRC genome records fetched by genome id, the genome table only, `genome_id` and `bioproject_accession` only |
+| 5. *Enterococcus faecium* | the other: its one wider cohort counted under `cap-all` only |
+| 6. 4,000 and 4,096 | `cap-4000` withdrawn before any fit (below) |
+| 7. Final models for block T1 | as taken: none built |
+| 8. Shell helpers | as taken: the runner's own `step` and `scrub` |
+| 9. Fits at once | the other: up to four datasets' lineage fits at once, under a memory guard |
+| 10. A wider arm with no added genome labelled | the other: none-added, not fitted and out of the count's denominator, on both splits |
+
+**Draws.** The plan names `grm learn` seeds 42 to 44 for the draws and 45 to 47 for the twin. `grm arm` takes no seed of its own; its keyed slots are its draws, each with its own repeat seed, partitions and learner draws. So the draws are the default's slots 0 to 2 and the twin its slots 3 to 5, all at evaluation seed 42. This deviates from the plan's seeds, because the lineage split's pairing, `common_outer_test_set_balanced`, runs on `grm arm` only.
+
+**Withdrawn.** `cap-4000` was withdrawn at 09:22Z on 23 Nov 2026, before any fit. It differs from `cap-all` by 96 genomes in 7 species and is the same cohort in *Enterococcus faecium*, so one result would be paid for twice. The family stays at 15 pairs: `score.py --count --withdrawn cap-4000` keeps its five lineage pairs at p = 1 and names it withdrawn in `count.tsv` and `conditions.tsv`. The runner builds no `cap-4000` root; the arm's code and tests stay.
+
+**BioProjects.** `bioprojects.py` asked `https://www.bv-brc.org/api/genome/` on 23 Nov 2026, from 09:45:37Z to 09:45:53Z, for the 2,096 `cap-all` added genomes of each species with a dataset in S, and every one was answered. With a BioProject: *Escherichia coli* 985, *Klebsiella pneumoniae* 2,006, *Mycobacterium tuberculosis* 1,771, *Salmonella enterica* 1,748 and *Staphylococcus aureus* 1,137. Where the master genome rows also name one, 4,530 genomes, both name the same. Before the k-mer digest check, an added genome may train on 27 of the 39 datasets in S, 1,978 in all.
+
+**None-added.** `cohorts.py` now writes, per dataset and wider arm, with the species and antibiotic in full, the added genomes with a label by class. Under `cap-all`, 27 of the 143 first-run datasets have none (`docs/cap-arms.md` names them). No threshold is set.
+
+**Fits at once.** No limit in `grm arm`'s fit path depends on wall time (`docs/cap-arms.md`). On the pilot's data, 8 fits run four at once wrote the same files as each fit run alone, 56 of 56, with 80 `seconds` values set aside. The runner at this text then ran the pilot's three datasets on the pilot's binary at `AT_ONCE` 4: vancomycin's chain alone, then ampicillin's and gentamicin's at once. Gentamicin's `cap-all` was none-added and not fitted, and the other 5 fits' 20 files equal those of the pilot's fits, which ran one at a time. N is 4 for *Enterococcus faecium*, *Neisseria gonorrhoeae*, *Staphylococcus aureus* and *Streptococcus pneumoniae*; 3 for *Escherichia coli*, *Mycobacterium tuberculosis* and *Salmonella enterica*; 2 for *Klebsiella pneumoniae*.
+
+**Cost.** On new boxes, with no `cap-4000`, no fit of a none-added dataset and lineage fits at once: 37.59 xlarge-hours central and 130.26 upper, $7.52 and $26.05, in box lifetimes of 133.25 hours ($26.65). The lineage fits take 27.37 hours central, against 60.70 one at a time. Fits are costed at the proof's alone pace, 1.49 to 2.09 times the pilot's wall. The upper is past the plan's 66 to 99.
+
+**Checks.** The four faults this round adds, one of them planted in two places, are each caught by the one test named for it: 14 faults, 18 plantings in all.
+
+**Written.** This entry was written at 09:59Z on 23 Nov 2026, after the rulings, from the fetch, the cohort counts and the two checks on the pilot's data. No comparison result had been read.
