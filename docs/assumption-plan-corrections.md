@@ -427,8 +427,8 @@ An eleventh came while the text was written. The project's wording rules put rec
 
 **Rulings.** The lead ruled on the eleven questions at 04:13Z on 23 Nov 2026, before any result was read. The plan file stays unchanged; the changes are dated beside the review's report and carried into the scripts, their tests and `docs/mechanism-split.md`.
 
-**Checks.** 82 SYNTHETIC tests in `tests/mechanism` (14 on M4), and ten planted faults, each caught by its test. The dry run on Klebsiella aerogenes (93 genomes, 3 datasets) ran end to end in 2.5 s with 30.6 MB at peak; the hard check passed on 3 of 3 datasets, 36 of 36 rows, and its scan found no genome id.
+**Checks.** 110 SYNTHETIC tests in `tests/mechanism` (18 on M4). The ten planted faults and the review's 20 each fail a test; 11 of the review's passed every test before its patches. The dry run on Klebsiella aerogenes (93 genomes, 3 datasets) ran end to end in 2.5 s with 30.6 MB at peak; the hard check passed on 3 of 3 datasets, 36 of 36 rows, and its scan found no genome id. Run again after the patches, the hard check passed on the same rows and the scan, which now also reads each table's counts, found no hit.
 
 **Cost.** Where the tables are given, about 565 s of compute for the 21 species, from the dry run's steps and a timing on 2,000 SYNTHETIC genomes. Where the program must run again, about 265 CPU hours on 21,625 genomes, from the refit's own run of the program on the same 93.
 
-**Written.** This entry was written at 03:48Z on 23 Nov 2026, after the dry run, and M4's script and question 11 were added at 04:06Z. No result of any block had been read.
+**Written.** This entry was written at 03:48Z on 23 Nov 2026, after the dry run, and M4's script and question 11 were added at 04:06Z. The rulings of 04:13Z were carried in with the review's patches from 04:27Z to 04:49Z, and these checks at 04:57Z. No result of any block had been read.

@@ -84,6 +84,6 @@ It stops on a result file of another tool or database version and on a planned g
 
 ## Checks
 
-`tests/mechanism` has 82 SYNTHETIC tests, 14 of them on `tb_curve.py`. `planted_faults.py` plants ten faults in turn, from a stratum read from the label to a family named other than as the database names it, and each is caught by its test.
+`tests/mechanism` has 110 SYNTHETIC tests, 18 of them on `tb_curve.py`. `planted_faults.py` plants ten faults in turn, from a stratum read from the label to a family named other than as the database names it, and each is caught by its test. A review planted 20 more, in the scripts and in `run_species.sh`, from a score of exactly 0.5 not called resistant to a scan that skips `logs/`. Of the 20, 11 passed every test at first; each now fails a test.
 
-The dry run on Klebsiella aerogenes (93 genomes, 3 datasets) ran end to end in 2.5 s with 30.6 MB at peak. The hard check passed on 3 of 3 datasets (36 of 36 rows), and the scan found no genome id in 28 files. From it and a timing on 2,000 SYNTHETIC genomes, the 21 species need about 10 minutes of compute where the tables are given, and about 265 CPU hours where the program must run again.
+The dry run on Klebsiella aerogenes (93 genomes, 3 datasets) ran end to end in 2.5 s with 30.6 MB at peak. The hard check passed on 3 of 3 datasets (36 of 36 rows), and the scan found no genome id in 28 files. Run again after the review's patches, the hard check passed on the same 36 rows, and the scan, which now also reads each table's counts, found no hit in 28 files, 9 of them tables. From the first run and a timing on 2,000 SYNTHETIC genomes, the 21 species need about 10 minutes of compute where the tables are given, and about 265 CPU hours where the program must run again.
