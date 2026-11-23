@@ -236,6 +236,42 @@ class Prefixed(Copies):
         self.assertEqual(self.failed(root), [])
 
 
+class Held(Copies):
+    """Checks a fault in each would let pass, on SYNTHETIC copies."""
+
+    def test_a_failed_at_the_second_of_its_done_is_refused(self):
+        root = self.fresh()
+        (root / "copies" / "synthia_beta" / "FAILED").write_text(
+            "FAILED synthia_beta stopped fit 2026-11-23T13:00:00Z\n", encoding="utf-8")
+        got, aside = self.run_checks(root)
+        self.assertEqual([n for n, (p, _) in got.items() if not p], [NAMES[1]])
+        self.assertEqual(aside, [])
+
+    def test_a_genome_id_in_quotes_is_refused(self):
+        root = self.fresh()
+        out = root / "copies" / "synthia_alpha"
+        with open(out / "check" / "refit.tsv", "a", encoding="utf-8") as f:
+            f.write(f'"{fx.GENOME_IDS[0]}"\t1\n')
+        reseal(out, "synthia_alpha")
+        got, _ = self.run_checks(root)
+        self.assertEqual([n for n, (p, _) in got.items() if not p], [NAMES[10]])
+
+    def test_a_lists_txt_naming_other_arms_is_refused(self):
+        root = self.fresh()
+        out = root / "copies" / "synthia_alpha"
+        text = (out / "lists.txt").read_text(encoding="utf-8")
+        (out / "lists.txt").write_text(text.replace("arms\tcmh-4000,cmh-16000,floor-3", "arms\tcmh-4000,floor-3"),
+                                       encoding="utf-8")
+        reseal(out, "synthia_alpha")
+        self.assertEqual(self.failed(root), [NAMES[6]])
+
+    def test_a_done_naming_one_result_more_is_refused(self):
+        root = self.fresh()
+        out = root / "copies" / "synthia_alpha"
+        fx.done(out, "synthia_alpha", len(list((out / "results" / "picks").rglob("*.pick.json"))) + 1)
+        self.assertEqual(self.failed(root), [NAMES[4]])
+
+
 class TwoBinaries(Copies):
     build = {"codes": {"synthia_beta": "d" * 64}}
 
