@@ -420,6 +420,13 @@ class Tables(Base):
         self.assertEqual(seen.call_count, 1)
         self.assertEqual(seen.call_args[0][0], F.score.count(rows, []))
 
+    def test_the_count_rows_keep_score_pys_own_pair_name_beside_the_pages(self):
+        rows = self.table("page-count.tsv")
+        counted = rows_of(self.root / "run" / "reading" / "count" / "count.tsv")
+        self.assertEqual([r["score_pair"] for r in rows if r["file"] == "count.tsv"], [r["pair"] for r in counted])
+        for r in rows:
+            self.assertEqual(page.pair_name(page.pair_arm(r["score_pair"]), r["learner"]), r["pair"])
+
     def test_the_count_rows_decide_for_count_tsv_alone(self):
         rows = self.table("page-count.tsv")
         self.assertEqual({r["file"] for r in rows if r["decides"] == "1"}, {"count.tsv"})

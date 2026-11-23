@@ -667,7 +667,8 @@ def page_count(data):
         for r in data.count[name]:
             arm = pair_arm(r["pair"])
             row = {"file": name, "decides": int(name == DECIDING_COUNT), **r,
-                   "pair": pair_name(arm, r["learner"]), "against": against(arm), "meets_1": "", "meets_2": ""}
+                   "pair": pair_name(arm, r["learner"]), "score_pair": r["pair"], "against": against(arm),
+                   "meets_1": "", "meets_2": ""}
             if name == DECIDING_COUNT and r["split"] == "lineage" and r["measure"] == PRIMARY:
                 c1, c2 = meets(r)
                 row["meets_1"], row["meets_2"] = int(c1), int(c2)
@@ -675,10 +676,10 @@ def page_count(data):
     return out
 
 
-COUNT_TABLE_COLUMNS = ["file", "decides", "split", "pair", "against", "learner", "measure", "orientation", "withdrawn",
-                       "datasets", "entered", "not_scored", "constant", "unconverged", "better", "worse", "same",
-                       "median_difference", "species", "interval_lo", "interval_hi", "sign_p", "holm_p", "meets_1",
-                       "meets_2"]
+COUNT_TABLE_COLUMNS = ["file", "decides", "split", "pair", "score_pair", "against", "learner", "measure", "orientation",
+                       "withdrawn", "datasets", "entered", "not_scored", "constant", "unconverged", "better", "worse",
+                       "same", "median_difference", "species", "interval_lo", "interval_hi", "sign_p", "holm_p",
+                       "meets_1", "meets_2"]
 
 
 def page_withdrawn(data):
@@ -908,7 +909,7 @@ This directory holds the tables behind [docs/outside-learners-result.md](../../d
 | `count/count-no-unconverged.tsv` | the count with the datasets whose elastic net draws hold a refit that reached 2,000 epochs left out, which decides nothing |
 | `count/conditions.tsv` | the plan's conditions per arm; the arm against its own learner's twin pair alone stands beside with `decides` 0 |
 | `page-conditions.tsv` | `conditions.tsv` per arm, with its pair and whether the arm was withdrawn |
-| `page-count.tsv` | every row of the three counts, with `decides` 1 for `count.tsv` alone, the pair as the page names it, the row it is read against, and conditions 1 and 2 on the deciding lineage rows of the primary measure |
+| `page-count.tsv` | every row of the three counts, with `decides` 1 for `count.tsv` alone, the pair as the page names it and, in `score_pair`, as `score.py` names it, the row it is read against, and conditions 1 and 2 on the deciding lineage rows of the primary measure |
 | `page-withdrawn.tsv` | each arm withdrawn, with the reason and the time the lead gave, and how many species had run a second pass with it |
 | `page-species.tsv` | per species, named in full, split and pair: datasets better, worse and the same of those entered, which decides nothing |
 | `page-datasets.tsv` | per dataset, split and pair, species and antibiotic in full: the arm's balanced accuracy and recall, the default learner's at the arm's seeds, the differences, the draws scored and the dataset's genomes |
