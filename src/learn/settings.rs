@@ -1141,6 +1141,78 @@ mod tests {
         }
     }
 
+    /// Each value of each learner's space reaches its fit: a setting and the
+    /// same setting with one value moved inside its space give other calls
+    /// or another complexity, value by value, for the five learners. A value
+    /// read nowhere would leave both trials the same. SYNTHETIC fixture.
+    #[test]
+    fn each_sampled_value_reaches_its_learners_fit() {
+        let (x, y, groups) = fixture();
+        let folds: Vec<usize> = (0..96).map(|i| (i / 4) % 3).collect();
+        let roles = roles_from(&folds);
+        let bases = [
+            ("scm", r#"{"kind":"conjunction","p":1.0,"max_rules":3}"#),
+            ("cart", r#"{"max_depth":4,"min_leaf":1}"#),
+            (
+                "rf",
+                r#"{"n_trees":100,"subsample":0.632,"max_depth":10,"min_leaf":1}"#,
+            ),
+            (
+                "gbt",
+                r#"{"rounds":800,"learning_rate":0.02,"max_depth":4,"lambda":1.0,"min_child_weight":1.0,"colsample":0.5}"#,
+            ),
+            ("lasso", r#"{"n_lambdas":30}"#),
+        ];
+        let moves: Vec<(&str, &str, serde_json::Value)> = vec![
+            ("scm", "kind", "disjunction".into()),
+            ("scm", "p", 10.0.into()),
+            ("scm", "max_rules", 1.into()),
+            ("cart", "max_depth", 1.into()),
+            ("cart", "min_leaf", 20.into()),
+            ("rf", "n_trees", 50.into()),
+            ("rf", "subsample", 0.3.into()),
+            ("rf", "max_depth", 2.into()),
+            ("rf", "min_leaf", 10.into()),
+            ("gbt", "rounds", 50.into()),
+            ("gbt", "learning_rate", 0.3.into()),
+            ("gbt", "max_depth", 1.into()),
+            ("gbt", "lambda", 10.0.into()),
+            ("gbt", "min_child_weight", 10.0.into()),
+            ("gbt", "colsample", 0.1.into()),
+            ("lasso", "n_lambdas", 10.into()),
+        ];
+        let mut unmoved = Vec::new();
+        for (learner, field, value) in moves {
+            let base: serde_json::Value =
+                serde_json::from_str(bases.iter().find(|b| b.0 == learner).unwrap().1).unwrap();
+            let mut moved = base.clone();
+            moved[field] = value;
+            let trials = format!(
+                r#"[{{"id":1,"learners":{{"{learner}":{base}}}}},{{"id":2,"learners":{{"{learner}":{moved}}}}}]"#
+            );
+            let got = run(
+                &x,
+                &y,
+                &groups,
+                &roles,
+                3,
+                &settings_json(5, "copies", &trials),
+            );
+            let sig = |t: &TrialResult| {
+                let row = t.learners.iter().find(|r| r.learner == learner).unwrap();
+                assert_eq!(row.status, "ok", "{learner} {field}: {:?}", row.reason);
+                serde_json::to_string(&(&row.calls, &row.fold_complexity)).unwrap()
+            };
+            if sig(&got[0]) == sig(&got[1]) {
+                unmoved.push(format!("{learner} {field}"));
+            }
+        }
+        assert!(
+            unmoved.is_empty(),
+            "moving these values changed no fit: {unmoved:?}"
+        );
+    }
+
     /// A learner whose fits fail is written as failed with its reason and
     /// the others are still fitted.
     #[test]
