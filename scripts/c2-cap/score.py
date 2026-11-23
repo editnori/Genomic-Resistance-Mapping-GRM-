@@ -93,7 +93,8 @@ def loss(y, score):
 
 
 def predictions(path):
-    """{(learner, repeat): {fold: [(sample_id, y, called, score)]}} of the lineage split's rows."""
+    """{(learner, slot): {fold: [(sample_id, y, called, score)]}} of the lineage split's rows (a row's `repeat` is
+    its slot)."""
     out = {}
     with open(path, encoding="utf-8") as f:
         for line in f:
@@ -164,7 +165,9 @@ def lineage_checks(e, lin, draw_slots, checks):
         return None
     out = {}
     for learner in LEARNERS:
-        folds = rows.get((learner, plan["repeat"]))
+        # Prediction rows carry the slot as `repeat`; the plan's `repeat` is the keyed repeat, another number
+        # when grm arm replaced a refused draw (src/ablate/arm.rs).
+        folds = rows.get((learner, int(e["slot"])))
         checks.append((where, f"{learner} has rows", folds is not None, ""))
         if folds is None:
             return None

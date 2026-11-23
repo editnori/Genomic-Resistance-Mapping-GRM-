@@ -75,7 +75,9 @@ def grouping(structure):
 
 
 def trace(path):
-    """(sample ids, {(split, repeat, fold): set of training ids})."""
+    """(sample ids, {(split, slot, fold): set of training ids}). grm arm writes a trace line's `repeat` as the
+    slot, while a plan's `repeat` is the keyed repeat, which differs from the slot when a refused draw was
+    replaced (src/ablate/arm.rs, arm_plans), so traces are read by slot."""
     with open(path, encoding="utf-8") as f:
         ids = json.loads(f.readline())["sample_ids"]
         out = {}
@@ -125,7 +127,7 @@ def lineage(fits, dataset, cohorts, structure, roots, draws, twin, bad, empty=fr
             bad.add("a default plan whose outer folds are not 0 to k-1")
         tests[slot] = (plan, folds)
         for f, test in sorted(folds.items()):
-            train = base_train.get(("lineage", plan["repeat"], f))
+            train = base_train.get(("lineage", slot, f))
             if train is None:
                 bad.add("a default fold with no training trace")
                 continue
@@ -147,7 +149,7 @@ def lineage(fits, dataset, cohorts, structure, roots, draws, twin, bad, empty=fr
                 continue
             c = load_json(p)
             plan, folds = tests[slot]
-            if c["reference_sha256"] != plan["sha256"]:
+            if c["reference_sha256"] != plan["sha256"] or c["repeat"] != plan["repeat"]:
                 bad.add(f"{arm}: a cohort plan made from another plan than the default's slot")
             scored = {}
             for i, f in enumerate(c["outer"]):
@@ -158,7 +160,7 @@ def lineage(fits, dataset, cohorts, structure, roots, draws, twin, bad, empty=fr
                 test = folds.get(f, set())
                 bad.add("an outer test fold that differs between arms", int(s != test))
                 bad.add("an added genome in an outer test fold", len(s & added))
-                train = arm_train.get(("lineage", c["repeat"], f))
+                train = arm_train.get(("lineage", slot, f))
                 if train is None:
                     bad.add(f"{arm}: a fold with no training trace")
                     continue
@@ -168,7 +170,7 @@ def lineage(fits, dataset, cohorts, structure, roots, draws, twin, bad, empty=fr
                 t_added = train & added
                 bad.add("an added genome of a held-out lineage in training", sum(lin[g] in lineages for g in t_added))
                 bad.add("an added copy of a scored genome in training", sum(digest[g] in digests for g in t_added))
-                base_f = base_train.get(("lineage", plan["repeat"], f))
+                base_f = base_train.get(("lineage", slot, f))
                 if base_f is not None:
                     bad.add("a default genome that trains otherwise than in the default", int((train & base_set) != base_f))
                 kept_lin = sum(lin[g] in lineages for g in added)

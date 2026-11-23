@@ -20,7 +20,7 @@ DRAWS, TWIN = 2, 2
 
 
 class Lineage(unittest.TestCase):
-    def run_check(self, breach=None, edit=None, none_added=0):
+    def run_check(self, breach=None, edit=None, none_added=0, keyed=None):
         """(exit code, printed text, rows written) of check_folds.py lineage on a SYNTHETIC run."""
         sp = common.Species()
         with tempfile.TemporaryDirectory() as tmp:
@@ -29,7 +29,7 @@ class Lineage(unittest.TestCase):
             sp.cohorts(t / "cohorts")
             common.write_json(t / "roots.json", {"fits": {"cap-all": "cap-all"}, "same_as": {"cap-4000": "cap-all"},
                                                  "genomes": {"cap-2000": 60, "cap-4000": 90, "cap-all": 90}})
-            common.lineage_fits(sp, t / "fits", D, DRAWS + TWIN, DRAWS, breach=breach)
+            common.lineage_fits(sp, t / "fits", D, DRAWS + TWIN, DRAWS, breach=breach, keyed=keyed)
             if edit:
                 edit(t / "fits")
             (t / "added-labelled.tsv").write_text(
@@ -53,6 +53,24 @@ class Lineage(unittest.TestCase):
         # Each fold keeps out the added genomes of the lineages it scores.
         self.assertTrue(all(int(r[8]) > 0 for r in arm))
         self.assertEqual(sum(int(r[5]) for r in arm), 60 * DRAWS)
+
+    def test_a_replaced_draw_is_read_at_its_slot_not_its_keyed_repeat(self):
+        # grm arm replaces a refused default lineage draw by the next keyed repeat past the slots: the plan and
+        # the cohort plan hold that repeat, the trace line the slot (src/ablate/arm.rs, arm_plans).
+        rc, text, rows = self.run_check(keyed={1: DRAWS + TWIN, 3: DRAWS + TWIN + 1})
+        self.assertEqual(rc, 0, text)
+        self.assertNotIn("breach", text)
+        self.assertEqual(len(rows) - 1, common.K * (DRAWS + TWIN) + common.K * DRAWS)
+
+    def test_a_cohort_plan_of_another_keyed_repeat_breaches(self):
+        def edit(fits):
+            p = fits / "cap-all" / D / "plans" / "lineage-1.cohort.json"
+            doc = json.loads(p.read_text(encoding="utf-8"))
+            doc["repeat"] = DRAWS + TWIN
+            p.write_text(json.dumps(doc), encoding="utf-8")
+        rc, text, _ = self.run_check(edit=edit)
+        self.assertEqual(rc, 1)
+        self.assertIn("breach: cap-all: a cohort plan made from another plan than the default's slot: 1", text)
 
     def test_an_added_genome_of_a_held_out_lineage_in_training_breaches(self):
         rc, text, _ = self.run_check("lineage")

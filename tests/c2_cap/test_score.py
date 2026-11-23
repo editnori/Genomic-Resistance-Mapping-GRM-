@@ -59,12 +59,12 @@ WIDE_FOLDS = [(52, 10, 4), (55, 8, 3), (50, 9, 4)]
 class Run:
     """A SYNTHETIC C2 run of one or two datasets: the default's and cap-all's lineage fits and study picks."""
 
-    def __init__(self, tmp, datasets=(D,), study=True):
+    def __init__(self, tmp, datasets=(D,), study=True, keyed=None):
         self.t = Path(tmp)
         self.sp = common.Species()
         self.expect = []
         for d in datasets:
-            common.lineage_fits(self.sp, self.t / "fits", d, DRAWS + TWIN, DRAWS)
+            common.lineage_fits(self.sp, self.t / "fits", d, DRAWS + TWIN, DRAWS, keyed=keyed)
             common.predictions(self.t / "fits", "cap-2000", d, range(DRAWS + TWIN))
             common.predictions(self.t / "fits", "cap-all", d, range(DRAWS))
             self.expect += lineage_rows(d)
@@ -105,6 +105,17 @@ class Checks(unittest.TestCase):
         self.assertEqual(sorted({(r["arm"], r["draws"]) for r in datasets if r["split"] == "lineage"}),
                          [("cap-2000", "2"), ("cap-4000", "2"), ("cap-all", "2"), ("twin", "2")])
         self.assertIn(f"checks: {len(checks)} of {len(checks)} pass", text)
+
+    def test_a_replaced_draw_is_scored_at_its_slot_not_its_keyed_repeat(self):
+        # Slot 1's refused draw replaced by keyed repeat 4, slot 3's by 5: plans hold 4 and 5, prediction rows the
+        # slots 1 and 3, as grm arm writes them (src/ablate/arm.rs).
+        with tempfile.TemporaryDirectory() as tmp:
+            rc, text, checks, draws, _ = Run(tmp, keyed={1: DRAWS + TWIN, 3: DRAWS + TWIN + 1}).run()
+        self.assertEqual(rc, 0, failed(checks))
+        lineage = [r for r in draws if r["split"] == "lineage"]
+        self.assertEqual(len(lineage), (DRAWS + TWIN + 2 * DRAWS) * 5)
+        self.assertEqual(sorted({r["slot"] for r in lineage}), ["0", "1", "2", "3"])
+        self.assertTrue(all(r["n"] == "60" for r in lineage))
 
     def test_an_arm_scored_on_other_genomes_than_the_defaults_outer_test_folds_fails(self):
         with tempfile.TemporaryDirectory() as tmp:
