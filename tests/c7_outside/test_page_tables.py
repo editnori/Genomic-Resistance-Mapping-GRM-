@@ -90,6 +90,13 @@ class Gates(Base):
         (reading / "checks.txt").write_text(text)
         self.refused(reading, "1 reading")
 
+    def test_a_checks_txt_short_of_a_check_is_refused(self):
+        reading = self.reading()
+        lines = (reading / "checks.txt").read_text().splitlines(keepends=True)
+        keep = [x for x in lines if not x.startswith("PASS features") and not x.startswith("CHECKS")]
+        (reading / "checks.txt").write_text("".join(keep) + "CHECKS 5 of 5\n")
+        self.refused(reading, "1 reading")
+
     def test_an_arm_count_tsv_marks_withdrawn_with_no_reason_is_refused(self):
         reading = self.reading("withdrawn")
         (reading / "withdrawn.tsv").write_text("arm\treason\ttime\n")

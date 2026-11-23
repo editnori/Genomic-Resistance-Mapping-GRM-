@@ -85,6 +85,8 @@ DONE_LINE = re.compile(r"DONE (?P<species>\S+) (?P<time>\S+) grm (?P<grm>[0-9a-f
 ASIDE = re.compile(r"(?P<slug>[a-z0-9_]+)\.(?P<time>\d{8}T\d{6}Z)")
 PLANS_LINE = re.compile(r"plans: (?P<passed>\d+) of (?P<made>\d+) checks pass, (?P<seeds>\d+) dataset seeds")
 CHECKS_LINE = re.compile(r"CHECKS (?P<passed>\d+) of (?P<made>\d+)")
+# run_checks.py makes six checks: species, SHA256SUMS, DONE, expect.py, genome ids and features.
+RUN_CHECKS = ("species", "SHA256SUMS", "DONE", "expect.py", "genome ids", "features")
 TIME = re.compile(r"\d{4}-\d\d-\d\dT\d\d:\d\d(:\d\d)?Z")
 # run_checks.py's species line when the elastic net is withdrawn: how many species ran a second pass, set aside.
 SECOND_PASSES = re.compile(r"; the elastic net withdrawn: (?P<n>\d+) species ran a second pass, \d+ second-pass copies "
@@ -303,6 +305,10 @@ def check_reading(folder, lrows):
     last = CHECKS_LINE.fullmatch(lines[-1]) if lines else None
     if last is None or last["passed"] != last["made"] or any(x.startswith("FAIL") for x in lines):
         raise Stop("gate 1 reading: checks.txt does not say that every check of the run passed")
+    passed = [x.split(":")[0][len("PASS "):] for x in lines if x.startswith("PASS ")]
+    if int(last["made"]) != len(RUN_CHECKS) or passed != list(RUN_CHECKS):
+        raise Stop(f"gate 1 reading: checks.txt does not hold run_checks.py's {len(RUN_CHECKS)} checks, each passed "
+                   "once, in order")
     data.count = {name: load(top / "count" / name) for name in COUNT_FILES}
     rows = load(top / "withdrawn.tsv")
     if rows and list(rows[0]) != ["arm", "reason", "time"]:
