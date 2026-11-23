@@ -80,6 +80,34 @@ class Fits(unittest.TestCase):
             self.assertEqual(calls.read_text().count("run"), 2)
             self.assertTrue((out / "logs" / "fits" / f"xgboost-{C.DATASET}-lineage-s42.time").exists())
 
+    def test_the_elastic_net_runs_after_the_boosters_as_many_at_once_as_memory_holds(self):
+        m = re.search(r"^STEP=fits\n.*?^done\n", SCRIPT, re.S | re.M)
+        self.assertIsNotNone(m, "run_species.sh has no fits block")
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            rows = expect.rows(C.SPECIES, [C.DATASET, C.OTHER], [], [42], [45], [42])
+            (tmp / "expect.tsv").write_text("\t".join(expect.COLUMNS) + "\n"
+                                            + "".join("\t".join(map(str, r)) + "\n" for r in rows))
+            unitigs = tmp / "u"
+            unitigs.mkdir()
+            env = {"PATH": "/usr/bin:/bin", "OUT": str(tmp), "W": str(tmp), "UNITIGS": str(unitigs), "JOBS": "16"}
+            cmd = ('say() { echo "$*"; }\nfit() { echo "$1" >> "$OUT/calls"; }\nexport -f fit\n'
+                   'ENET_JOBS=$1\n' + m.group(0))
+
+            def go(size, given=""):
+                with open(unitigs / "patterns.bin", "wb") as f:
+                    f.truncate(size)  # a sparse file: only its size is read
+                (tmp / "calls").unlink(missing_ok=True)
+                p = subprocess.run(["bash", "-c", cmd, "x", given], env=env, capture_output=True, text=True, check=True)
+                return p.stdout, (tmp / "calls").read_text().split()
+
+            out, calls = go(1 << 43)
+            self.assertIn("the boosters 16 at once, the elastic net 1 at once", out)
+            self.assertEqual(sorted(calls[:4]), ["lightgbm", "lightgbm", "xgboost", "xgboost"])
+            self.assertEqual(calls[4:], ["elasticnet", "elasticnet"])
+            self.assertIn("the elastic net 16 at once", go(8)[0])
+            self.assertIn("the elastic net 3 at once", go(1 << 43, "3")[0])
+
     def test_a_fits_log_comes_back_with_each_genome_id_masked(self):
         with tempfile.TemporaryDirectory() as tmp:
             tmp = Path(tmp)

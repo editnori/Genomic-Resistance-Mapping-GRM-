@@ -197,6 +197,11 @@ def flipped_scores(case, arm, scheme="lineage", fold=2, **kw):
     return sa[test], sb[test], ra, rb
 
 
+def small_grid():
+    """A grid of 2 mixes and 3 penalties, for the tests that read a report's bytes or keys and no fit's value."""
+    return mock.patch.multiple(O, MIXES=(0.5, 1.0), PENALTIES=3)
+
+
 class Arms(Temp):
     def unitigs(self):
         return C.write_unitigs(self.top)
@@ -221,8 +226,10 @@ class Arms(Temp):
     def test_two_runs_write_the_same_bytes(self):
         d = self.export()
         u = self.unitigs()
-        for arm, kw in (("xgboost", {}), ("lightgbm", {}), ("elasticnet", {"unitigs": u})):
-            self.assertEqual(O.dump(O.run(arm, d, "lineage", 42, **kw)[0]), O.dump(O.run(arm, d, "lineage", 42, **kw)[0]), arm)
+        with small_grid():
+            for arm, kw in (("xgboost", {}), ("lightgbm", {}), ("elasticnet", {"unitigs": u})):
+                self.assertEqual(O.dump(O.run(arm, d, "lineage", 42, **kw)[0]), O.dump(O.run(arm, d, "lineage", 42, **kw)[0]),
+                                 arm)
 
     def test_the_study_split_runs_on_its_own_folds(self):
         d = self.export()
@@ -256,7 +263,8 @@ class Arms(Temp):
     def test_the_report_holds_only_its_listed_keys_and_no_genome(self):
         d = self.export()
         for arm, kw in (("xgboost", {}), ("elasticnet", {"unitigs": self.unitigs()})):
-            r, _ = O.run(arm, d, "lineage", 42, **kw)
+            with small_grid():
+                r, _ = O.run(arm, d, "lineage", 42, **kw)
             self.assertLessEqual(set(r), O.REPORT_KEYS)
             for row in r["folds"]:
                 self.assertLessEqual(set(row), O.FOLD_KEYS)

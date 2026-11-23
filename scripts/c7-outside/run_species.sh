@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# run_species.sh KIT SPECIES DATASETS OUT [JOBS] [SEEDS] [TWIN] [ARM_SEEDS]
+# run_species.sh KIT SPECIES DATASETS OUT [JOBS] [SEEDS] [TWIN] [ARM_SEEDS] [ENET_JOBS]
 #
 # The outside-learner run of one species (plan block C7, docs/outside-learners.md)
 # on a fresh box with no agent attached: no prompt, one log, and a restart that
@@ -14,7 +14,9 @@
 # needs no outside program). SEEDS (default 42,43,44) are the default's
 # draws, TWIN (default 45,46,47) the twin's, ARM_SEEDS (default 42) the
 # library arms': grm export writes seed 42's plans only, so until question 1
-# gives it a seed ARM_SEEDS must be 42.
+# gives it a seed ARM_SEEDS must be 42. ENET_JOBS is how many elastic net fits
+# run at once (default: as many as three quarters of the box's memory holds,
+# from 1 to JOBS; see the fits step); the boosters run JOBS at once.
 #
 # Stage 1 is C3's run as it is (question 12): scripts/c3-inputs/run_species.sh
 # KIT SPECIES DATASETS OUT/c3 JOBS SEEDS TWIN unitigs "" grm. It checks the
@@ -50,7 +52,7 @@
 # logs: these hold genome ids and stay on the box).
 set -Eeuo pipefail
 KIT=$(cd "${1:?kit folder}" && pwd); SP=${2:?species slug}; DATASETS=${3:?datasets}
-OUT=${4:?out folder}; JOBS=${5:-$(nproc)}; SEEDS=${6:-42,43,44}; TWIN=${7:-45,46,47}; ARM_SEEDS=${8:-42}
+OUT=${4:?out folder}; JOBS=${5:-$(nproc)}; SEEDS=${6:-42,43,44}; TWIN=${7:-45,46,47}; ARM_SEEDS=${8:-42}; ENET_JOBS=${9:-}
 mkdir -p "$OUT"/logs/fits "$OUT"/flags "$OUT"/work "$OUT"/results/outside "$OUT"/score; OUT=$(cd "$OUT" && pwd)
 exec >> "$OUT/logs/run.log" 2>&1
 REPO=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
@@ -81,6 +83,8 @@ for list in "$SEEDS" "$TWIN" "$ARM_SEEDS"; do
   echo "$list" | grep -Eq '^[0-9]+(,[0-9]+)*$' || { say "SEEDS, TWIN and ARM_SEEDS are comma lists of seeds"; false; }
 done
 [ "$ARM_SEEDS" = 42 ] || { say "grm export writes seed 42's plans only (question 1): ARM_SEEDS must be 42"; false; }
+echo "$JOBS" | grep -Eq '^[1-9][0-9]*$' || { say "JOBS is a whole number from 1"; false; }
+[ -z "$ENET_JOBS" ] || echo "$ENET_JOBS" | grep -Eq '^[1-9][0-9]*$' || { say "ENET_JOBS is empty or a whole number from 1"; false; }
 python3 -I -c '
 import csv, sys
 with open(sys.argv[1], encoding="utf-8", newline="") as f:
@@ -124,7 +128,7 @@ step() {  # step <name> <function>: once, timed, in a shell that stops at the fi
   touch "$OUT/flags/$1.done"
   say "$1: end, $(cat "$OUT/logs/$1.time")"
 }
-export KIT SP DATASETS OUT JOBS SEEDS TWIN ARM_SEEDS REPO HERE C3 W GRM ROOT R PLANS VENV PY ARMS UNITIGS
+export KIT SP DATASETS OUT JOBS SEEDS TWIN ARM_SEEDS ENET_JOBS REPO HERE C3 W GRM ROOT R PLANS VENV PY ARMS UNITIGS
 
 STEP=c3
 if [ -e "$C3/DONE" ]; then
@@ -188,10 +192,24 @@ fit() {
 }
 export -f fit scrub
 STEP=fits
-say "fits: start, $JOBS at once"
-awk -F'\t' 'NR > 1 && $8 ~ /^results\/outside\// { print $3, $1, $5, $6 }' "$OUT/expect.tsv" \
-  | xargs -P "$JOBS" -L 1 bash -c 'fit "$@"' fit \
-  || { say "fits: a fit failed; its log is under logs/fits"; false; }
+awk -F'\t' 'NR > 1 && $8 ~ /^results\/outside\// { print $3, $1, $5, $6 }' "$OUT/expect.tsv" > "$W/fits.txt"
+# An elastic net fit holds its cohort's projection of the unitig build, which peaks at about 5.2 times the build's
+# patterns.bin: 4,364,420 KB for a SYNTHETIC build of Escherichia coli's size, 3,351,087 patterns over 2,000 genomes
+# (docs/outside-learners.md). Unless ENET_JOBS is given, those fits run as many at once as three quarters of the
+# box's memory holds at 6 times patterns.bin each, from 1 to JOBS. The boosters read the export's screened rows
+# only and run JOBS at once, first.
+if [ -z "$ENET_JOBS" ]; then
+  build_kb=$(( $(stat -c %s "$UNITIGS/patterns.bin") / 1024 )); mem_kb=$(awk '/^MemTotal/ { print $2 }' /proc/meminfo)
+  ENET_JOBS=$(( mem_kb * 3 / 4 / (6 * build_kb + 1) ))
+fi
+[ "$ENET_JOBS" -ge 1 ] || ENET_JOBS=1
+[ "$ENET_JOBS" -le "$JOBS" ] || ENET_JOBS=$JOBS
+say "fits: start, the boosters $JOBS at once, the elastic net $ENET_JOBS at once"
+for group in boosters elasticnet; do
+  if [ "$group" = boosters ]; then n=$JOBS; pick='$1 != "elasticnet"'; else n=$ENET_JOBS; pick='$1 == "elasticnet"'; fi
+  awk "$pick" "$W/fits.txt" | xargs -r -P "$n" -L 1 bash -c 'fit "$@"' fit \
+    || { say "fits: a fit failed; its log is under logs/fits"; false; }
+done
 say "fits: end, $(find "$OUT/results/outside" -name '*.outside.json' | wc -l) reports"
 
 STEP=timing
