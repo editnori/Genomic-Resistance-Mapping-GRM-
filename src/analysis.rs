@@ -969,7 +969,14 @@ fn project_cohort<'a>(
     let ds = Dataset::project(&input.matrix, c.columns.clone(), &resistant, min_support);
     let ds = if crate::input_arms::active().is_some() {
         let ids: Vec<String> = c.rows.iter().map(|p| p.genome_id.clone()).collect();
-        crate::input_arms::apply(ds, dataset, tag, &ids, min_support)?
+        crate::input_arms::apply(
+            ds,
+            dataset,
+            tag,
+            &ids,
+            &input.matrix.summary.genomes,
+            min_support,
+        )?
     } else {
         ds
     };

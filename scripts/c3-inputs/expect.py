@@ -5,8 +5,8 @@
 <datasets>, <A datasets> and <study datasets> are comma lists ("-" or empty
 for none); the A and study datasets must be listed datasets. <arms> is a
 comma list of the arms the run fits beside the default and the twin
-(default: program,k31-program, the arms built so far); the program arms run
-on the A datasets only.
+(default: all five, program, k31-program, k31-counts, k31-aa and unitigs);
+the program arms run on the A datasets only, the others on every dataset.
 
 Each dataset has, for the default (k31) and each arm it runs, a lineage
 result at every seed of <seeds> (role draw) and, if it is a study dataset,
@@ -31,7 +31,7 @@ DEFAULT = "k31"
 TWIN = "twin"
 L_ARMS = ("k31-counts", "unitigs", "k31-aa")
 A_ARMS = ("program", "k31-program")
-BUILT = ("program", "k31-program")
+BUILT = ("program", "k31-program", "k31-counts", "k31-aa", "unitigs")
 COLUMNS = ["dataset", "species_slug", "arm", "split", "scheme", "seed", "role", "file", "inputs"]
 
 

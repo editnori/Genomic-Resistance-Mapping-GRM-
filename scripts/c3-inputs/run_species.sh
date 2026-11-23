@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# run_species.sh KIT SPECIES DATASETS OUT [JOBS] [SEEDS] [TWIN] [ARMS] [TABLES]
+# run_species.sh KIT SPECIES DATASETS OUT [JOBS] [SEEDS] [TWIN] [ARMS] [TABLES] [GRAPH]
 #
 # The input-arm run of one species (plan block C3, docs/input-arms.md) on a
 # fresh box with no agent attached: no prompt, nothing read from another
@@ -13,13 +13,21 @@
 # M. The program arms run on those of them in A (scripts/c3-inputs/lists.tsv,
 # in_A). SEEDS (default 42,43,44) are the draws of the default (k31) and of
 # each arm; TWIN (default 45,46,47, or - for none) the twin's seeds, the
-# default fitted again. ARMS (default program,k31-program, the arms built so
-# far) are the arms fitted beside the default. TABLES (default none) is a
+# default fitted again. ARMS (default all five: program, k31-program,
+# k31-counts, k31-aa and unitigs) are the arms fitted beside the default;
+# k31-counts, k31-aa and unitigs run on every listed dataset. TABLES (default none) is a
 # folder of the program's tables made before, as TABLES/SPECIES/<genome>.tsv:
 # when it is given the program is neither installed nor run, and each table
 # of the cohort is copied from it and held to its recorded sha256. Every fit
 # runs with --exp-pick-inner 0: each outer fold's calls per learner, no
-# inner pick.
+# inner pick. GRAPH (default grm) is who builds the unitig graph: grm, GRM's
+# own compaction, which the lead's ruling allows only once its unitigs equal
+# an outside build's as a set on a pilot species (they did on Klebsiella
+# aerogenes, 93 genomes, and on Escherichia coli, 2,000: docs/input-arms.md);
+# bcalm2, the outside program, whose unitigs GRM reads; or check, both, with
+# GRM's graph used and the two compared, the equality counts written in the
+# build's record, and any unitig or 31-mer in one build only stopping the
+# species.
 # SEEDS must hold 42, the release's seed: the default's seed-42 reports are
 # checked against the release's before any arm runs. KIT holds these files,
 # checked against the sha256 pinned here before anything else runs:
@@ -35,6 +43,11 @@
 #                               the AMRFinderPlus kit (AMRFinderPlus 4.2.7,
 #                               database 2026-08-07.1) and the sha256 of each
 #                               program table the release recorded
+#   prodigal.linux              with k31-aa: Prodigal 2.6.3, the v2.6.3
+#                               release's Linux binary (hyattpd/Prodigal)
+#   bcalm-binaries-v2.2.3-Linux.tar.gz
+#                               with unitigs and GRAPH bcalm2 or check:
+#                               bcalm2 2.2.3's release binaries (GATB/bcalm)
 #
 # Steps, each once: the release; grm built from this checkout, with its
 # commit, sha256 and code sha256; the data root (the curated table with the
@@ -51,9 +64,28 @@
 # (expect.py). Every start, a restart too, holds the tables to
 # their recorded sha256 again before any fit.
 #
+# The matrix arms' builds, after matrix, each once, timed and reading no
+# label, phenotype, fold or seed (docs/input-arms.md): tools (Prodigal and
+# bcalm2 from the kit, their version and sha256 written in binary.txt);
+# inputs_counts (grm exp-input-build counts); prodigal (Prodigal 2.6.3 on
+# every genome, -p single -g 11, a separate program) and inputs_aa (grm
+# exp-input-build aa, which holds every protein to GRM's own table 11
+# translation); bcalm (bcalm2 over every genome, k 31, abundance 1) and
+# inputs_unitigs (grm exp-input-build unitigs). Each writes its matrix under
+# work/inputs/<kind>, the sha256 of its files in logs/inputs-<kind>.sha256
+# and its counts-only record in results/builds/<kind>.build.json, and
+# removes what it no longer needs (the proteins, bcalm2's unitigs). Every
+# start holds each built matrix to its recorded sha256 again before any fit.
+# A build the kernel kills for want of memory fails its step as any failure
+# does: OUT/FAILED names it, nothing after it runs, and a restart with a
+# smaller JOBS (fewer threads, so fewer genomes and buckets held at once; 32 GB
+# is the largest box) runs that step again and skips the finished ones.
+#
 # Fits, per seed of SEEDS: the default, grm learn --seed s --exp-pick
-# results/picks/k31, then each arm, grm learn --seed s --exp-inputs ARM
-# --exp-program-tables <the tables> --exp-pick results/picks/ARM, each over
+# results/picks/k31, then each arm, grm learn --seed s --exp-inputs ARM,
+# with --exp-program-tables <the tables> for the program arms and
+# --exp-input-matrix work/inputs/<kind> for the others, and --exp-pick
+# results/picks/ARM, each over
 # the datasets whose result at that seed is missing (--only, --force). After
 # the default's seed-42 run, scripts/refit/refit_check.py compares each
 # seed-42 report with the release's; any difference stops the run before
@@ -80,7 +112,8 @@
 # the study results: these hold genome ids and stay on the box),
 # results/picks/<arm>/ (one result per dataset, split and seed and one inputs
 # file per dataset: counts and calls, no genome id), check/ (refit_check.py's
-# tables), score/ (score.py's tables), binary.txt, lists.txt and expect.tsv.
+# tables), score/ (score.py's tables and its output, score.log, kept out of
+# logs/ and run.log), binary.txt, lists.txt and expect.tsv.
 # The end checks that no file under results/, check/, score/ or logs/ names a
 # genome of the species, then writes SHA256SUMS and OUT/DONE:
 #   DONE <species> <time> binary <sha256> code <sha256> results <n> SHA256SUMS <sha256>
@@ -89,8 +122,8 @@
 # leaves a finished OUT as it was: DONE stays and no FAILED is written.
 set -Eeuo pipefail
 KIT=$(cd "${1:?kit folder}" && pwd); SP=${2:?species slug}; DATASETS=${3:?datasets}
-OUT=${4:?out folder}; JOBS=${5:-$(nproc)}; SEEDS=${6:-42,43,44}; TWIN=${7:-45,46,47}; ARMS=${8:-program,k31-program}
-TABLES_FROM=${9:-}
+OUT=${4:?out folder}; JOBS=${5:-$(nproc)}; SEEDS=${6:-42,43,44}; TWIN=${7:-45,46,47}; ARMS=${8:-program,k31-program,k31-counts,k31-aa,unitigs}
+TABLES_FROM=${9:-}; GRAPH=${10:-grm}
 mkdir -p "$OUT"/flags "$OUT"/logs "$OUT"/work "$OUT"/results "$OUT"/check "$OUT"/score; OUT=$(cd "$OUT" && pwd)
 exec >> "$OUT/logs/run.log" 2>&1
 REPO=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
@@ -98,6 +131,7 @@ HERE=$REPO/scripts/c3-inputs
 W=$OUT/work; ROOT=$W/root; R=$W/release/rev14-274-20261112; M=$KIT/MASTER-MANIFEST.sha256
 GRM=$W/target/release/grm; PLANS=$W/plans; PICKS=$OUT/results/picks; STUDY=$W/study; AMR=$W/amr
 TABLES=$AMR/tool/$SP; REPORTS=$ROOT/species/$SP/results
+INPUTS=$W/inputs; PRODIGAL=$W/tools/prodigal; BCALM=$W/tools/bcalm-binaries-v2.2.3-Linux/bin/bcalm
 export RUSTUP_TOOLCHAIN=1.98.1 CARGO_BUILD_JOBS=$JOBS RAYON_NUM_THREADS=$JOBS
 export PATH=$HOME/.cargo/bin:/usr/local/cargo/bin:$PATH
 # One start at a time on an OUT: a second one would share its steps and files.
@@ -142,19 +176,45 @@ for line in sys.stdin.buffer:
     sys.stdout.buffer.write(token.sub(lambda m: b"[genome id]" if m.group(0) in ids else m.group(0), line))
 ' "$R/species/$SP.json" < "$raw" > "$1"
 }
+# keep_build <kind>: the sha256 of the built matrix, held again at every
+# start, and the build's counts-only record among the results. A step that
+# builds one runs it in its own shell, so step() hands it over.
+keep_build() {
+  ( cd "$INPUTS" && find "$1" -type f | LC_ALL=C sort | xargs sha256sum ) > "$OUT/logs/inputs-$1.sha256"
+  mkdir -p "$OUT/results/builds"; cp "$INPUTS/$1/build.json" "$OUT/results/builds/$1.build.json"
+  python3 -I -c '
+import json, sys
+b = json.load(open(sys.argv[1]))
+print(" ".join(f"{k} {v}" for k, v in b.items() if isinstance(v, int) and not isinstance(v, bool)))
+for k, v in (b.get("equality") or {}).items():
+    print(f"equality {k} {v}")
+' "$INPUTS/$1/build.json"
+}
+# killed_for_memory <time file>: whether GNU time's record says the kernel's
+# SIGKILL ended the program, as it ends one when memory runs out. A program
+# time runs itself is "terminated by signal 9"; a step runs in bash, whose exit
+# is then 137, which time writes as "non-zero status 137".
+killed_for_memory() {
+  grep -qE 'terminated by signal 9|non-zero status 137' "$1"
+}
 step() {  # step <name> <function>: once, timed, in a shell that stops at the first failure
   STEP=$1
   if [ -e "$OUT/flags/$1.done" ]; then say "$1: done before, skipped"; return 0; fi
   say "$1: start"
   /usr/bin/time -f "$1 %e s wall, %M KB peak, %U s user, %S s sys" -o "$OUT/logs/$1.time" \
-    bash -euo pipefail -c "$(declare -f say pinned master "$2"); $2" < /dev/null > "$OUT/logs/$1.log" 2>&1 \
-    || { scrub "$OUT/logs/$1.log"; tail -n 30 "$OUT/logs/$1.log"; false; }
+    bash -euo pipefail -c "$(declare -f say pinned master keep_build "$2"); $2" < /dev/null > "$OUT/logs/$1.log" 2>&1 \
+    || { scrub "$OUT/logs/$1.log"; tail -n 30 "$OUT/logs/$1.log"
+         ! killed_for_memory "$OUT/logs/$1.time" \
+           || say "$1: killed by signal 9, as the kernel kills a program when memory runs out; restart with a smaller JOBS, which holds fewer genomes and buckets at once"
+         false; }
   scrub "$OUT/logs/$1.log"
   touch "$OUT/flags/$1.done"
   disk "$1"
   say "$1: end, $(cat "$OUT/logs/$1.time")"
 }
-export KIT SP DATASETS OUT JOBS SEEDS TWIN ARMS TABLES_FROM REPO HERE W ROOT R M GRM PLANS PICKS STUDY AMR TABLES REPORTS
+export KIT SP DATASETS OUT JOBS SEEDS TWIN ARMS TABLES_FROM GRAPH REPO HERE W ROOT R M GRM PLANS PICKS STUDY AMR TABLES REPORTS
+export INPUTS PRODIGAL BCALM
+has_arm() { echo ",$ARMS," | grep -q ",$1,"; }
 
 STEP=kit
 ulimit -n "$(ulimit -Hn)" 2>/dev/null || true
@@ -196,8 +256,20 @@ if gone or m:
 echo "$SEEDS" | grep -Eq '^[0-9]+(,[0-9]+)*$' || { say "SEEDS is a comma list of seeds"; false; }
 [ "$TWIN" = - ] || echo "$TWIN" | grep -Eq '^[0-9]+(,[0-9]+)*$' || { say "TWIN is a comma list of seeds or -"; false; }
 echo ",$SEEDS," | grep -q ',42,' || { say "SEEDS must hold 42, the release's seed"; false; }
-echo "$ARMS" | grep -Eq '^(program|k31-program)(,(program|k31-program))*$' \
-  || { say "ARMS is a comma list of the built arms, program and k31-program; the others have no fit code yet"; false; }
+ARM_NAMES='program|k31-program|k31-counts|k31-aa|unitigs'
+echo "$ARMS" | grep -Eq "^($ARM_NAMES)(,($ARM_NAMES))*\$" \
+  || { say "ARMS is a comma list of the arms: program, k31-program, k31-counts, k31-aa, unitigs"; false; }
+case $GRAPH in grm|bcalm2|check) ;; *) say "GRAPH is grm, bcalm2 or check"; false ;; esac
+# The outside programs of the matrix arms, refused here when the kit lacks them.
+if has_arm k31-aa; then
+  [ -f "$KIT/prodigal.linux" ] || { say "k31-aa needs Prodigal 2.6.3, the kit's prodigal.linux, which is absent"; false; }
+  pinned "$KIT/prodigal.linux" 80a3d7acb08ba9f63dde6b6ef4e95ec356128ac355f36960ea722f381150f246
+fi
+if has_arm unitigs && [ "$GRAPH" != grm ]; then
+  [ -f "$KIT/bcalm-binaries-v2.2.3-Linux.tar.gz" ] \
+    || { say "unitigs with GRAPH $GRAPH needs bcalm2 2.2.3, the kit's bcalm-binaries-v2.2.3-Linux.tar.gz, which is absent"; false; }
+  pinned "$KIT/bcalm-binaries-v2.2.3-Linux.tar.gz" 20479729a9447980a53164f9b62bc04ce8e08246fffb24af9d49e9d07858e2ff
+fi
 if [ -n "$TABLES_FROM" ]; then
   [ -d "$TABLES_FROM/$SP" ] || { say "TABLES has no folder $SP"; false; }
   TABLES_FROM=$(cd "$TABLES_FROM" && pwd)
@@ -210,7 +282,7 @@ with open(sys.argv[1], encoding="utf-8", newline="") as f:
 print(",".join(d for d in sys.argv[2].split(",") if d in a))
 ' "$HERE/lists.tsv" "$DATASETS")
 export A_LIST
-printf 'species\t%s\ndatasets\t%s\na\t%s\nseeds\t%s\ntwin\t%s\narms\t%s\n' "$SP" "$DATASETS" "$A_LIST" "$SEEDS" "$TWIN" "$ARMS" > "$OUT/lists.txt.part"
+printf 'species\t%s\ndatasets\t%s\na\t%s\nseeds\t%s\ntwin\t%s\narms\t%s\ngraph\t%s\n' "$SP" "$DATASETS" "$A_LIST" "$SEEDS" "$TWIN" "$ARMS" "$GRAPH" > "$OUT/lists.txt.part"
 if [ -s "$OUT/lists.txt" ] && ! cmp -s "$OUT/lists.txt" "$OUT/lists.txt.part"; then
   say "the dataset list, the seeds or the arms differ from the first start's; use a fresh OUT"; false
 fi
@@ -317,6 +389,94 @@ step structure structure
 matrix() { unshare -rn "$GRM" --data "$ROOT" matrix --species "$SP"; }
 step matrix matrix
 
+# The matrix arms' label-free builds, once per species over all its genomes.
+# Each reads the genomes, the species' ksets or an outside program's output;
+# none reads a label, a phenotype, a fold or a seed.
+tools() {
+  rm -rf "$W/tools"; mkdir -p "$W/tools"
+  case ",$ARMS," in *,k31-aa,*)
+    install -m 755 "$KIT/prodigal.linux" "$PRODIGAL"
+    "$PRODIGAL" -v 2>&1 | grep -q 'Prodigal V2\.6\.3' || { echo "the kit's Prodigal is not 2.6.3"; exit 1; }
+    echo "prodigal 2.6.3 $(sha256sum "$PRODIGAL" | cut -c1-64)" >> "$OUT/binary.txt" ;;
+  esac
+  case ",$ARMS,:$GRAPH" in *,unitigs,*:bcalm2 | *,unitigs,*:check)
+    tar -xzf "$KIT/bcalm-binaries-v2.2.3-Linux.tar.gz" -C "$W/tools"
+    "$BCALM" -version 2>&1 | grep -q 'version v2\.2\.3' || { echo "the kit's bcalm is not 2.2.3"; exit 1; }
+    echo "bcalm 2.2.3 $(sha256sum "$BCALM" | cut -c1-64)" >> "$OUT/binary.txt" ;;
+  esac
+  grep -E '^(prodigal|bcalm) ' "$OUT/binary.txt" || echo "no outside program needed"
+}
+inputs_counts() {
+  rm -rf "$INPUTS/counts"
+  unshare -rn "$GRM" --data "$ROOT" exp-input-build counts --species "$SP" --out "$INPUTS/counts"
+  keep_build counts
+}
+prodigal() {
+  rm -rf "$W/prodigal"; mkdir -p "$W/prodigal"
+  one() {
+    zcat "$ROOT/fasta/$1.fna.gz" > "$W/prodigal/$1.fna"
+    "$PRODIGAL" -i "$W/prodigal/$1.fna" -a "$W/prodigal/$1.faa.part" -p single -g 11 -q -o /dev/null
+    mv "$W/prodigal/$1.faa.part" "$W/prodigal/$1.faa"; rm -f "$W/prodigal/$1.fna"
+  }
+  export -f one
+  xargs -P "$JOBS" -I{} bash -euo pipefail -c 'one "$1"' _ {} < "$ROOT/species/$SP/genomes.txt"
+  n=$(find "$W/prodigal" -name '*.faa' | wc -l); want=$(wc -l < "$ROOT/species/$SP/genomes.txt")
+  echo "proteins: Prodigal's file for $n of $want genomes, $(du -sb "$W/prodigal" | cut -f1) bytes"
+  [ "$n" -eq "$want" ]
+}
+inputs_aa() {
+  rm -rf "$INPUTS/aa"
+  unshare -rn "$GRM" --data "$ROOT" exp-input-build aa --species "$SP" --proteins "$W/prodigal" --out "$INPUTS/aa"
+  keep_build aa
+  rm -rf "$W/prodigal"
+}
+bcalm() {
+  rm -rf "$W/bcalm"; mkdir -p "$W/bcalm/tmp"; cd "$W/bcalm"
+  sed "s#^#$ROOT/fasta/#; s#\$#.fna.gz#" "$ROOT/species/$SP/genomes.txt" > list.txt
+  mem=$(awk '/^MemTotal/ { print int($2 / 2048) }' /proc/meminfo)
+  "$BCALM" -in list.txt -kmer-size 31 -abundance-min 1 -nb-cores "$JOBS" -max-memory "$mem" -out graph -out-tmp tmp
+  rm -rf tmp graph.h5 graph.unitigs.fa.glue* list.txt
+  echo "bcalm2: $(grep -c '^>' graph.unitigs.fa) unitigs, $(stat -c %s graph.unitigs.fa) bytes"
+}
+inputs_unitigs() {
+  rm -rf "$INPUTS/unitigs"
+  case $GRAPH in
+    grm) unshare -rn "$GRM" --data "$ROOT" exp-input-build unitigs --species "$SP" --graph grm --out "$INPUTS/unitigs" ;;
+    bcalm2) unshare -rn "$GRM" --data "$ROOT" exp-input-build unitigs --species "$SP" --graph outside \
+              --outside-unitigs "$W/bcalm/graph.unitigs.fa" --out "$INPUTS/unitigs" ;;
+    check) unshare -rn "$GRM" --data "$ROOT" exp-input-build unitigs --species "$SP" --graph grm \
+             --outside-unitigs "$W/bcalm/graph.unitigs.fa" --out "$INPUTS/unitigs" ;;
+  esac
+  keep_build unitigs
+  # Check mode: by ruling 1 GRM's graph stands only while its unitigs equal
+  # bcalm2's as a set, so any unitig or 31-mer in one build only stops the
+  # species here; it then runs again in a fresh OUT with GRAPH bcalm2.
+  if [ "$GRAPH" = check ]; then
+    python3 -I -c 'import json, sys
+e = json.load(open(sys.argv[1]))["equality"]
+print("graph check: " + ", ".join(f"{k} {v}" for k, v in sorted(e.items())))
+sys.exit(1 if any(v for k, v in e.items() if k.endswith("_only")) else 0)' "$INPUTS/unitigs/build.json" \
+      || { say "GRM's unitigs differ from bcalm2's as a set: by ruling 1 the species runs again in a fresh OUT with GRAPH bcalm2"; false; }
+  fi
+  rm -rf "$W/bcalm"
+}
+if has_arm k31-aa || { has_arm unitigs && [ "$GRAPH" != grm ]; }; then step tools tools; fi
+if has_arm k31-counts; then step inputs_counts inputs_counts; fi
+if has_arm k31-aa; then step prodigal prodigal; step inputs_aa inputs_aa; fi
+if has_arm unitigs; then
+  [ "$GRAPH" = grm ] || step bcalm bcalm
+  step inputs_unitigs inputs_unitigs
+fi
+# Every start holds each built matrix to the sha256 its step recorded: a
+# restart skips the step that built it, and the fits read it.
+for kind in counts aa unitigs; do
+  [ -e "$OUT/flags/inputs_$kind.done" ] || continue
+  STEP=inputs-check-$kind
+  ( cd "$INPUTS" && sha256sum --quiet -c "$OUT/logs/inputs-$kind.sha256" ) \
+    || { say "the $kind matrix differs from the sha256 its build recorded"; false; }
+  say "inputs: the $kind matrix equals its recorded sha256, $(wc -l < "$OUT/logs/inputs-$kind.sha256") files"
+done
+
 plans() {
   rm -rf "$PLANS"; mkdir -p "$PLANS/reviewed/folds"
   names=()
@@ -408,8 +568,10 @@ program_tables() {
   fi
   echo "every tool table equals its recorded sha256; the program was not run"
 }
-if [ -z "$A_LIST" ]; then
-  say "program: no listed dataset is in A, so no program arm runs"
+PROGRAM_RUNS=0
+if [ -n "$A_LIST" ] && { has_arm program || has_arm k31-program; }; then PROGRAM_RUNS=1; fi
+if [ "$PROGRAM_RUNS" = 0 ]; then
+  say "program: no listed dataset is in A or ARMS holds no program arm, so no program arm runs"
 elif [ -e "$OUT/flags/program_run.done" ] || { [ -z "$TABLES_FROM" ] && [ ! -e "$OUT/flags/program_tables.done" ]; }; then
   step program_env program_env
   step program_run program_run
@@ -419,7 +581,7 @@ else
 fi
 # Every start holds the tables to their recorded sha256 again before any
 # fit: a restart skips the step that made them, and the fits read them.
-if [ -n "$A_LIST" ]; then
+if [ "$PROGRAM_RUNS" = 1 ]; then
   STEP=tables-check
   grep "  $SP/" "$KIT/tool-tables.sha256" | sort -k2 > "$AMR/tables.recorded.again"
   ( cd "$AMR/tool" && find "$SP" -name '*.tsv' | sort | xargs -r sha256sum ) | sort -k2 > "$AMR/tables.again"
@@ -445,7 +607,10 @@ fit() {
   STEP=$name
   say "$name: start"
   /usr/bin/time -v -o "$OUT/logs/$name.time" "$GRM" --data "$ROOT" learn --species "$SP" "$@" \
-    < /dev/null > "$OUT/logs/$name.log" 2>&1 || { scrub "$OUT/logs/$name.log"; tail -n 30 "$OUT/logs/$name.log"; false; }
+    < /dev/null > "$OUT/logs/$name.log" 2>&1 || { scrub "$OUT/logs/$name.log"; tail -n 30 "$OUT/logs/$name.log"
+      ! killed_for_memory "$OUT/logs/$name.time" \
+        || say "$name: killed by signal 9, as the kernel kills a program when memory runs out; restart with a smaller JOBS"
+      false; }
   scrub "$OUT/logs/$name.log"
   say "$name: end, $(grep -E 'Elapsed|Maximum resident' "$OUT/logs/$name.time" | sed 's/^\s*//' | tr '\n' ';')"
 }
@@ -464,7 +629,13 @@ check42() {
   cat "$OUT/logs/check.log"
 }
 arm_args() {  # arm_args <arm>: the flags of an arm's fit, beside --exp-pick
-  [ "$1" = k31 ] || [ "$1" = twin ] || echo "--exp-inputs $1 --exp-program-tables $TABLES"
+  case $1 in
+    k31 | twin) ;;
+    program | k31-program) echo "--exp-inputs $1 --exp-program-tables $TABLES" ;;
+    k31-counts) echo "--exp-inputs $1 --exp-input-matrix $INPUTS/counts" ;;
+    k31-aa) echo "--exp-inputs $1 --exp-input-matrix $INPUTS/aa" ;;
+    unitigs) echo "--exp-inputs $1 --exp-input-matrix $INPUTS/unitigs" ;;
+  esac
 }
 lineage_fit() {  # lineage_fit <arm> <seed>
   local arm=$1 seed=$2 todo left
@@ -483,8 +654,9 @@ for s in $(echo "$SEEDS" | tr ',' '\n'); do
   lineage_fit k31 "$s"
   # The gate: no arm runs unless the default's seed-42 reports are the release's.
   [ "$s" != 42 ] || check42
+  # The program arms run on the A datasets, the others on every listed one.
   for arm in $(echo "$ARMS" | tr ',' '\n'); do
-    [ -z "$A_LIST" ] || lineage_fit "$arm" "$s"
+    case $arm in program | k31-program) [ "$PROGRAM_RUNS" = 0 ] || lineage_fit "$arm" "$s" ;; *) lineage_fit "$arm" "$s" ;; esac
   done
 done
 [ "$TWIN" = - ] || for s in $(echo "$TWIN" | tr ',' '\n'); do lineage_fit twin "$s"; done
@@ -519,7 +691,7 @@ study_fit() {  # study_fit <arm> <dataset>
 while read -r d; do
   [ -n "$d" ] || continue
   for arm in k31 $(echo "$ARMS" | tr ',' '\n'); do
-    case $arm in k31) ;; *) echo ",$A_LIST," | grep -q ",$d," || continue ;; esac
+    case $arm in program | k31-program) echo ",$A_LIST," | grep -q ",$d," || continue ;; esac
     STEP=study-$arm-$d
     if study_have "$arm" "$d"; then say "study-$arm-$d: result present, skipped"; continue; fi
     mkdir -p "$PICKS/$arm" "$STUDY/$arm"
@@ -545,11 +717,13 @@ STEP=timing
 
 STEP=score
 say "score: start"
-# score.py prints the check counts only; its tables stay in score/.
-python3 -I -B "$HERE/score.py" "$OUT/expect.tsv" "$PICKS" "$R" "$OUT/score" > "$OUT/logs/score.log" 2>&1 \
-  || { scrub "$OUT/logs/score.log"; cat "$OUT/logs/score.log"; false; }
-scrub "$OUT/logs/score.log"
-cat "$OUT/logs/score.log"
+# score.py prints the check counts, or why it stopped. Its output stays with
+# its tables in score/, which no one opens before every species has run: not
+# in logs/ and not in run.log, which are read while the run goes on.
+python3 -I -B "$HERE/score.py" "$OUT/expect.tsv" "$PICKS" "$R" "$OUT/score" > "$OUT/score/score.log" 2>&1 \
+  || { scrub "$OUT/score/score.log"; say "score: stopped; its output is in score/score.log"; false; }
+scrub "$OUT/score/score.log"
+say "score: end"
 
 STEP=done
 cd "$OUT"
@@ -567,7 +741,8 @@ for top in sys.argv[2:]:
 print("genome ids in results, check, score and logs:", hit)
 sys.exit(hit != 0)
 ' "$R/species/$SP.json" results check score logs
-{ find results check score -type f \( -name '*.json' -o -name '*.tsv' -o -name '*.txt' \); echo binary.txt; echo expect.tsv; echo lists.txt; echo logs/timing.tsv; } \
+{ find results check score -type f \( -name '*.json' -o -name '*.tsv' -o -name '*.txt' \); echo binary.txt; echo expect.tsv; echo lists.txt; echo logs/timing.tsv
+  find logs -name 'inputs-*.sha256'; } \
   | LC_ALL=C sort | xargs sha256sum > SHA256SUMS
 disk done
 say "arm results refused for no candidate: $(find results/picks -name '*.refused.json' | wc -l)"

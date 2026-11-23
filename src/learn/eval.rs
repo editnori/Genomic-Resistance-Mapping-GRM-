@@ -1475,10 +1475,19 @@ fn fit_outer_folds(
     let mut seconds = vec![0.0; LEARNERS.len()];
     let mut prevalence = Vec::with_capacity(trains.len());
     let mut candidates = Vec::with_capacity(trains.len());
+    // The C3 experiment's screen count, off by default: a joined arm's
+    // first-block rows in `x`, when `input_arms` made it.
+    let joined = crate::input_arms::joined_rows(dataset);
+    let mut screens = Vec::new();
     for (fi, train) in trains.iter().enumerate() {
         prevalence.push(train_prevalence(y, train));
         let (cx, rows) = training_candidates(x, train, min_support);
         candidates.push(cx.rows);
+        if let Some(first) = joined {
+            screens.push(screen_fold(
+                fi, &cx, &rows, first, y, train, tuning, scheme, cfg,
+            )?);
+        }
         for (li, learner) in LEARNERS.iter().enumerate() {
             let t0 = Instant::now();
             let context = LassoContext {
@@ -1509,12 +1518,75 @@ fn fit_outer_folds(
             models.push(model, &rows);
         }
     }
+    if joined.is_some() {
+        crate::input_arms::write_screen(
+            dataset,
+            scheme,
+            cfg.seed,
+            cfg.screened_features,
+            &screens,
+        )?;
+    }
     Ok(OuterFits {
         fits,
         models,
         seconds,
         prevalence,
         candidates,
+    })
+}
+
+/// The C3 experiment's screen count of one outer fold (`input_arms`): the
+/// candidates of a joined arm's first block (rows of `x` below `first`)
+/// and of K31, and for each learner that screens, the screen it runs on its
+/// own fitting genomes: the outer training genomes for the forest
+/// (`fit_rf`), and the fitting part of the tuning holdout drawn at the
+/// fold's seed for boosting and the lasso (`fit_gbt`, `fit_lasso`). It
+/// changes no fit.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn screen_fold(
+    fold: usize,
+    cx: &BitMatrix,
+    rows: &[u32],
+    first: usize,
+    y: &Bits,
+    train: &Bits,
+    groups: Option<&[u32]>,
+    scheme: &str,
+    cfg: &EvalConfig,
+) -> Result<crate::input_arms::ScreenFold> {
+    let in_first = |f: u32| (rows[f as usize] as usize) < first;
+    let candidates_first = (0..rows.len() as u32).filter(|&f| in_first(f)).count();
+    let seed = fold_seed(cfg, fold);
+    let unit = tuning_unit(scheme);
+    let mut learners = Vec::with_capacity(3);
+    for (learner, fit) in [
+        ("rf", train.clone()),
+        (
+            "gbt",
+            tuning_holdout(train, y, groups, unit, GBT_HOLDOUT, seed)?.0,
+        ),
+        (
+            "lasso",
+            tuning_holdout(train, y, groups, unit, LASSO_HOLDOUT, seed)?.0,
+        ),
+    ] {
+        let feats = screen(cx, y, &fit, cfg.screened_features);
+        let passed_first = feats.iter().filter(|&&f| in_first(f)).count();
+        learners.push(crate::input_arms::ScreenLearner {
+            learner,
+            fitting: fit.count() as usize,
+            screened: feats.len(),
+            passed_first,
+            passed_k31: feats.len() - passed_first,
+        });
+    }
+    Ok(crate::input_arms::ScreenFold {
+        fold,
+        train: train.count() as usize,
+        candidates_first,
+        candidates_k31: rows.len() - candidates_first,
+        learners,
     })
 }
 
@@ -6194,5 +6266,84 @@ mod tests {
         // The seed, the tuning groups, the candidates and the draws seed
         // each move some record.
         assert_eq!(moved, [true; 4]);
+    }
+
+    /// SYNTHETIC: 60 samples, 30 rows, the first 8 a joined arm's first block.
+    fn screen_case(seed: u64) -> (BitMatrix, Bits, Bits) {
+        let n = 60;
+        let mut s = seed;
+        let mut next = move || {
+            s ^= s << 13;
+            s ^= s >> 7;
+            s ^= s << 17;
+            s
+        };
+        let mut x = BitMatrix::with_cols(n);
+        for _ in 0..30 {
+            let on: Vec<usize> = (0..n).filter(|_| next() % 3 == 0).collect();
+            x.push_row(Bits::from_indices(n, on).words());
+        }
+        let y = Bits::from_indices(n, (0..n).filter(|i| i % 5 < 2));
+        let train = Bits::from_indices(n, (0..n).filter(|i| i % 6 != 0));
+        (x, y, train)
+    }
+
+    #[test]
+    fn a_screen_count_reads_each_learners_own_fitting_genomes_only() {
+        let (x, y, train) = screen_case(7);
+        let cfg = EvalConfig {
+            screened_features: 5,
+            ..small_config()
+        };
+        let first = 8;
+        let (cx, rows) = training_candidates(&x, &train, 3);
+        assert!(cx.rows > 5, "the case screens");
+        let got = screen_fold(1, &cx, &rows, first, &y, &train, None, "lineage", &cfg).unwrap();
+        let in_first = |f: &u32| (rows[*f as usize] as usize) < first;
+        let seed = fold_seed(&cfg, 1);
+        let unit = tuning_unit("lineage");
+        let fits = [
+            train.clone(),
+            tuning_holdout(&train, &y, None, unit, GBT_HOLDOUT, seed)
+                .unwrap()
+                .0,
+            tuning_holdout(&train, &y, None, unit, LASSO_HOLDOUT, seed)
+                .unwrap()
+                .0,
+        ];
+        assert_eq!((got.fold, got.train), (1, train.count() as usize));
+        assert_eq!(
+            got.candidates_first,
+            (0..cx.rows as u32).filter(|f| in_first(f)).count()
+        );
+        assert_eq!(got.candidates_first + got.candidates_k31, cx.rows);
+        assert_eq!(got.learners.len(), 3);
+        for ((l, fit), name) in got.learners.iter().zip(&fits).zip(["rf", "gbt", "lasso"]) {
+            let feats = screen(&cx, &y, fit, 5);
+            assert_eq!(l.learner, name);
+            assert_eq!(l.fitting, fit.count() as usize, "{name}");
+            assert_eq!(l.screened, feats.len(), "{name}");
+            assert_eq!(
+                l.passed_first,
+                feats.iter().filter(|f| in_first(f)).count(),
+                "{name}"
+            );
+            assert_eq!(l.passed_first + l.passed_k31, l.screened, "{name}");
+        }
+        // No outer test genome moves it: their labels and values flipped.
+        let test = train.not();
+        let flipped_y = y.and(&train).or(&test.and_not(&y));
+        let mut flipped_x = BitMatrix::with_cols(x.cols);
+        for r in 0..x.rows {
+            let row = Bits::from_words(x.cols, x.row(r).to_vec());
+            flipped_x.push_row(row.and(&train).or(&test.and_not(&row)).words());
+        }
+        let (fx, frows) = training_candidates(&flipped_x, &train, 3);
+        assert_eq!(frows, rows);
+        let again = screen_fold(
+            1, &fx, &frows, first, &flipped_y, &train, None, "lineage", &cfg,
+        )
+        .unwrap();
+        assert_eq!(again, got);
     }
 }
