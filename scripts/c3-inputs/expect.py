@@ -17,7 +17,10 @@ the release's seeds; the twin is the default at every seed of <twin seeds>
 Columns: dataset, species_slug, arm, split, scheme, seed, role, file (the
 result under the picks folder, <arm>/<name> as grm learn --exp-pick writes
 it) and inputs (the arm's column counts, <arm>/<dataset>.<tag>.inputs.json,
-or "-" for the default and the twin, which write none).
+or "-" for the default and the twin, which write none). An arm's study
+result that grm learn refused for no candidate stands as the refusal record
+run_species.sh writes beside it, <arm>/<dataset>.study-whole-s42.refused.json,
+which score.py scores as the constant model (ruling 16).
 """
 
 import sys

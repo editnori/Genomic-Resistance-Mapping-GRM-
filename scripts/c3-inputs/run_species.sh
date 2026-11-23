@@ -53,7 +53,15 @@
 # another fit. Then the twin at each seed of TWIN into results/picks/twin;
 # then, at the release's seeds, grm learn --fold-file for the default and
 # each arm on each dataset with a study plan whose result is missing. After
-# each run every result it should have written must exist. A restart on a
+# each run every result it should have written must exist. When grm learn
+# refuses an arm's study fit because an outer fold's training genomes give
+# no candidate feature, and the default's study result at that dataset
+# exists, refused.py writes results/picks/ARM/<dataset>.study-whole-s42.refused.json
+# (the reason and the fold's counts) in place of the result and the run goes
+# on: score.py scores it as the constant model on the default's folds (the
+# lead's ruling 16 of 23 Nov 2026). Any other failure, and that refusal of
+# the default, stops the run. The drawn splits never refuse for it: a fold
+# with no candidate gets the release's fits on no feature. A restart on a
 # later checkout goes on when the binary is unchanged and the commits differ
 # only under scripts/c3-inputs/, docs/, tests/ and .github/; it writes a
 # restart line in binary.txt.
@@ -430,8 +438,33 @@ for s in $(echo "$SEEDS" | tr ',' '\n'); do
   done
 done
 [ "$TWIN" = - ] || for s in $(echo "$TWIN" | tr ',' '\n'); do lineage_fit twin "$s"; done
-study_have() {  # study_have <arm> <dataset>: its study result, and an arm's inputs file, exist
-  [ -e "$PICKS/$1/$2.study-whole-s42.pick.json" ] && { [ "$1" = k31 ] || [ -e "$PICKS/$1/$2.study-whole.inputs.json" ]; }
+study_have() {  # study_have <arm> <dataset>: its study result (or an arm's refusal record) and an arm's inputs file exist
+  { [ -e "$PICKS/$1/$2.study-whole-s42.pick.json" ] \
+    || { [ "$1" != k31 ] && [ -e "$PICKS/$1/$2.study-whole-s42.refused.json" ]; }; } \
+    && { [ "$1" = k31 ] || [ -e "$PICKS/$1/$2.study-whole.inputs.json" ]; }
+}
+# One study fit, as fit, except that an arm's refusal for no candidate,
+# where the default's study result exists, becomes a refusal record and the
+# run goes on (ruling 16). The default's refusal stops the run.
+study_fit() {  # study_fit <arm> <dataset>
+  local arm=$1 d=$2 name=study-$1-$2 rc=0
+  STEP=$name
+  say "$name: start"
+  # shellcheck disable=SC2046
+  /usr/bin/time -v -o "$OUT/logs/$name.time" "$GRM" --data "$ROOT" learn --species "$SP" \
+    --fold-file "$PLANS/reviewed/folds/$d.study-whole.json" --fold-out "$STUDY/$arm" \
+    --exp-pick "$PICKS/$arm" --exp-pick-inner 0 --force $(arm_args "$arm") \
+    < /dev/null > "$OUT/logs/$name.log" 2>&1 || rc=$?
+  scrub "$OUT/logs/$name.log"
+  if [ "$rc" != 0 ]; then
+    if [ "$arm" != k31 ] && [ -e "$PICKS/k31/$d.study-whole-s42.pick.json" ] \
+      && python3 -I -B "$HERE/refused.py" "$OUT/logs/$name.log" "$d" "$arm" "$PICKS/$arm/$d.study-whole-s42.refused.json"; then
+      say "$name: $arm/$d.study-whole-s42.refused.json written, to be scored as the constant model"
+    else
+      tail -n 30 "$OUT/logs/$name.log"; false
+    fi
+  fi
+  say "$name: end, $(grep -E 'Elapsed|Maximum resident' "$OUT/logs/$name.time" | sed 's/^\s*//' | tr '\n' ';')"
 }
 while read -r d; do
   [ -n "$d" ] || continue
@@ -440,9 +473,7 @@ while read -r d; do
     STEP=study-$arm-$d
     if study_have "$arm" "$d"; then say "study-$arm-$d: result present, skipped"; continue; fi
     mkdir -p "$PICKS/$arm" "$STUDY/$arm"
-    # shellcheck disable=SC2046
-    fit "study-$arm-$d" --fold-file "$PLANS/reviewed/folds/$d.study-whole.json" --fold-out "$STUDY/$arm" \
-      --exp-pick "$PICKS/$arm" --exp-pick-inner 0 --force $(arm_args "$arm")
+    study_fit "$arm" "$d"
     study_have "$arm" "$d" || { say "study-$arm-$d: no result written"; false; }
     disk "study-$arm-$d"
   done
@@ -489,6 +520,7 @@ sys.exit(hit != 0)
 { find results check score -type f \( -name '*.json' -o -name '*.tsv' -o -name '*.txt' \); echo binary.txt; echo expect.tsv; echo lists.txt; echo logs/timing.tsv; } \
   | LC_ALL=C sort | xargs sha256sum > SHA256SUMS
 disk done
+say "arm results refused for no candidate: $(find results/picks -name '*.refused.json' | wc -l)"
 line="DONE $SP $(date -u +%FT%TZ) binary $(sed -n 's/^grm //p' binary.txt) code $(sed -n 's/^code //p' binary.txt) results $(find results/picks -name '*.pick.json' | wc -l) SHA256SUMS $(sha256sum SHA256SUMS | cut -c1-64)"
 echo "$line" > DONE
 say "$line"

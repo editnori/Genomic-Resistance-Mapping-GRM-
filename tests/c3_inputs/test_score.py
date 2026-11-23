@@ -7,6 +7,7 @@ import contextlib
 import csv
 import io
 import json
+import math
 import tempfile
 import unittest
 from pathlib import Path
@@ -41,6 +42,24 @@ def failed(checks):
 
 
 FOLDS = "the folds are the default's at the same dataset, split and seed, by class"
+STUDY_ARM = f"program/{common.DATASET}.study-whole-s42.pick.json"
+STUDY_DEFAULT = f"k31/{common.DATASET}.study-whole-s42.pick.json"
+
+
+def refusal(dataset=common.DATASET, arm="program", scheme="study-whole", seed=42, reason="no candidate"):
+    """A SYNTHETIC refusal record as scripts/c3-inputs/refused.py writes it."""
+    return {"format": "grm-c3-refused-1", "dataset": dataset, "arm": arm, "scheme": scheme, "seed": seed,
+            "reason": reason, "fold": 1, "training_genomes": 100, "support_floor": 3,
+            "detail": f"{scheme} outer fold 1's 100 training samples give no candidate feature: none is present in "
+                      "at least 3 of them and absent from at least 3"}
+
+
+def refused_run(name=STUDY_ARM, record=None):
+    """A whole SYNTHETIC run with the result `name` replaced by a refusal record."""
+    rows, docs, files, releases = common.full_run()
+    del docs[name]
+    extra = {name.replace(".pick.json", ".refused.json"): record or refusal()}
+    return rows, docs, files, releases, extra
 
 
 def shift_folds(d):
@@ -228,6 +247,80 @@ class Checks(unittest.TestCase):
             self.assertFalse({k for k in t[0] if "genome" in k or "kmer" in k or "sequence" in k})
 
 
+class Refused(unittest.TestCase):
+    """Ruling 16: an arm refused for no candidate where the default is scored is the constant model."""
+
+    def test_an_arm_refused_for_no_candidate_is_scored_as_the_constant_model(self):
+        rows, docs, files, releases, extra = refused_run()
+        rc, out, checks, draws, datasets = run(rows, docs, files, releases, extra)
+        self.assertEqual(rc, 0, failed(checks))
+        self.assertIn("refused for no candidate 1", out)
+        mine = [r for r in draws if r["arm"] == "program" and r["split"] == "study"]
+        self.assertEqual(len(mine), 5)
+        # Each of the default's study folds trains on 100 genomes, 40 of them R, so the constant model
+        # calls every test genome S with a score of 0.4.
+        folds = docs[STUDY_DEFAULT]["folds"]
+        r = sum(f["test_resistant"] for f in folds)
+        s = sum(f["test"] - f["test_resistant"] for f in folds)
+        for row in mine:
+            self.assertEqual((row["scored"], row["constant"]), ("1", "1"))
+            self.assertEqual((int(row["tp"]), int(row["fp"]), int(row["tn"]), int(row["fn"])), (0, 0, s, r))
+            self.assertEqual(float(row["balanced_accuracy"]), 0.5)
+            self.assertAlmostEqual(float(row["log_loss"]), -(r * math.log(0.4) + s * math.log(0.6)) / (r + s),
+                                   places=12)
+        self.assertEqual({r["constant"] for r in draws if r not in mine}, {"0"})
+        study = [r for r in datasets if r["arm"] == "program" and r["split"] == "study"]
+        self.assertEqual({r["constant_draws"] for r in study}, {"1"})
+        self.assertEqual({r["constant_draws"] for r in datasets if r not in study}, {"0"})
+
+    def test_the_constant_model_calls_each_fold_by_its_training_majority_r_on_a_tie(self):
+        base = {"folds": [{"train": 10, "train_resistant": 6, "test": 5, "test_resistant": 2},
+                          {"train": 10, "train_resistant": 5, "test": 4, "test_resistant": 1},
+                          {"train": 10, "train_resistant": 0, "test": 3, "test_resistant": 3}]}
+        c = score.constant_calls(base)
+        # Fold 0's R share is 0.6 and fold 1's a tie, so both call R; fold 2's is 0, so it calls S, and its
+        # score is clipped to 0.0001 as log loss clips.
+        self.assertEqual((c["n"], c["tp"], c["fp"], c["tn"], c["fn"]), (12, 3, 6, 0, 3))
+        want = -(2 * math.log(0.6) + 3 * math.log(0.4)) - 4 * math.log(0.5) - 3 * math.log(0.0001)
+        self.assertAlmostEqual(c["loss_sum"], want, places=9)
+        # Balanced accuracy is 0.5 only when every fold's training majority is one class.
+        self.assertEqual(score.measures(c)["balanced_accuracy"], 0.25)
+
+    def test_a_refusal_of_the_default_fails(self):
+        rows, docs, files, releases, extra = refused_run(STUDY_DEFAULT, refusal(arm="k31"))
+        rc, _, checks, draws, _ = run(rows, docs, files, releases, extra)
+        self.assertEqual(rc, 1)
+        self.assertIn("refused: an arm's result, not the default's or the twin's", failed(checks))
+        self.assertEqual(draws, [])
+
+    def test_a_refusal_of_another_run_or_for_another_reason_fails(self):
+        for key, value, check in (
+                ("reason", "lack a class", "refused: for no candidate"),
+                ("seed", 43, "refused: format, dataset, arm, scheme and seed of its run"),
+                ("dataset", common.OTHER, "refused: format, dataset, arm, scheme and seed of its run"),
+                ("arm", "k31-program", "refused: format, dataset, arm, scheme and seed of its run"),
+                ("format", "grm-c3-refused-0", "refused: format, dataset, arm, scheme and seed of its run")):
+            with self.subTest(key=key):
+                record = dict(refusal(), **{key: value})
+                rc, _, checks, _, _ = run(*refused_run(record=record))
+                self.assertEqual(rc, 1)
+                self.assertEqual(failed(checks), [check])
+
+    def test_a_refusal_of_a_drawn_split_fails(self):
+        # grm learn refuses only a --fold-file run for no candidate.
+        name = f"program/{common.DATASET}.lineage-s43.pick.json"
+        rc, _, checks, _, _ = run(*refused_run(name, refusal(scheme="lineage", seed=43)))
+        self.assertEqual(rc, 1)
+        self.assertEqual(failed(checks), ["refused: a study run, the only one grm learn refuses for no candidate"])
+
+    def test_a_refused_arm_still_needs_its_inputs_file(self):
+        rows, docs, files, releases, extra = refused_run()
+        files = {k: v for k, v in files.items() if k != f"program/{common.DATASET}.study-whole.inputs.json"}
+        rc, _, checks, _, _ = run(rows, docs, files, releases, extra)
+        self.assertEqual(rc, 1)
+        self.assertEqual(failed(checks), ["inputs: the arm's file exists"])
+
+
 def count_rows(arm_shift, n=12, species=4, arms=score.FAMILY, study=True):
     """SYNTHETIC datasets.tsv rows: n datasets in `species` species, each arm's value the default's plus
     arm_shift(arm, learner, measure)."""
@@ -249,15 +342,21 @@ def count_rows(arm_shift, n=12, species=4, arms=score.FAMILY, study=True):
     return out
 
 
-def count(rows):
+def count_files(rows, *args):
+    """score.py --count on SYNTHETIC rows: (exit code, {file name: rows})."""
     with tempfile.TemporaryDirectory() as tmp:
         path = Path(tmp) / "datasets.tsv"
         score.write_tsv(path, rows, score.DATASET_COLUMNS)
         out = Path(tmp) / "count"
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
-            rc = score.main(["--count", str(out), str(path)])
-        return rc, table(out / "count.tsv"), table(out / "conditions.tsv")
+            rc = score.main(["--count", str(out), *args, str(path)])
+        return rc, {p.name: table(p) for p in sorted(out.glob("*.tsv"))}
+
+
+def count(rows, *args):
+    rc, t = count_files(rows, *args)
+    return rc, t["count.tsv"], t["conditions.tsv"]
 
 
 class Count(unittest.TestCase):
@@ -334,6 +433,24 @@ class Count(unittest.TestCase):
         at = {(r["arm"], r["condition"]): r for r in conditions}
         self.assertEqual(at[("program", "4")]["met"], "0")
         self.assertEqual(at[("program", "4")]["learners"], "4")
+
+    def test_a_constant_model_dataset_enters_the_count_and_is_left_out_beside_it(self):
+        rows = count_rows(lambda arm, learner, m: 0.0)
+        for r in rows:
+            if r["dataset"] == "synthia_0__drug_0" and r["split"] == "study" and r["arm"] == "program":
+                r["constant_draws"] = 1
+        rc, t = count_files(rows)
+        self.assertEqual(rc, 0)
+        key = lambda r: (r["split"], r["pair"], r["learner"], r["measure"])
+        kept = {key(r): r for r in t["count.tsv"]}
+        apart = {key(r): r for r in t["count-no-constant.tsv"]}
+        self.assertEqual(set(kept), set(apart))
+        for k, r in kept.items():
+            moved = k[0] == "study" and k[1] == "program-k31"
+            self.assertEqual((r["constant"], r["entered"], r["not_scored"]), ("1", "12", "0") if moved else ("0", "12", "0"))
+            self.assertEqual((apart[k]["constant"], apart[k]["entered"], apart[k]["not_scored"]),
+                             ("0", "11", "1") if moved else ("0", "12", "0"))
+        self.assertEqual(len([r for r in t["count-no-constant.tsv"] if r["holm_p"] != ""]), 30)
 
     def test_the_species_interval_resamples_species(self):
         # Two species: one where the arm gains 0.1 on every dataset, one where it gains nothing.

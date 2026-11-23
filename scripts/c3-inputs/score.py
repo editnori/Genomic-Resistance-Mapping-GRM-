@@ -20,20 +20,31 @@ served learner must be the release report's. Beside them, per result:
 - an arm's inputs file has the format, revision, dataset, arm and tag of
   its run, read a table for every cohort genome, and its rows add up: the
   program names seen are those out of range, collapsed and kept, and the
-  arm's rows are the program's, plus K31's for k31-program.
+  arm's rows are the program's, plus K31's for k31-program;
+- an arm's result that grm learn refused for no candidate (a --fold-file
+  fit stops when an outer fold's training genomes give no candidate; the
+  run script writes <arm>/<dataset>.<scheme>-s<seed>.refused.json in place
+  of the result) names its run and that reason, and the default's result at
+  the same dataset, split and seed is scored.
 
 Scores, per dataset, arm, split, seed and learner: the learner's outer
 calls summed over the folds, and from them balanced accuracy, recall,
 specificity, the very major and the major error rate, each with its count,
-denominator and Wilson 95% interval, and log loss. Writes checks.tsv,
-draws.tsv and datasets.tsv (per dataset, split, arm and learner: the mean of
-each measure over the draws), and prints the check counts only. Exits 1,
-scoring nothing, when a check fails.
+denominator and Wilson 95% interval, and log loss. A refused arm result is
+scored as the constant model on the default's folds of that dataset, split
+and seed (the lead's ruling 16 of 23 Nov 2026): every test genome of a fold
+gets the majority class of the fold's training genomes, R on a tie, and a
+score equal to their R share, clipped as log loss clips; its draws.tsv rows
+say so in `constant`. Writes checks.tsv, draws.tsv and datasets.tsv (per
+dataset, split, arm and learner: the mean of each measure over the draws,
+and how many draws are the constant model), and prints the check counts
+only. Exits 1, scoring nothing, when a check fails.
 
-The second form writes count.tsv and conditions.tsv over several species'
-datasets.tsv, and prints the row count only. It refuses unless every arm of
-the family (unitigs, k31-counts, k31-aa, program, k31-program and the twin)
-has lineage rows: the family is fixed, and the count is taken once. Per
+The second form writes count.tsv, count-no-constant.tsv and conditions.tsv
+over several species' datasets.tsv, and prints the row count only. It
+refuses unless every arm of the family (unitigs, k31-counts, k31-aa,
+program, k31-program and the twin) has lineage rows: the family is fixed,
+and the count is taken once. Per
 split, arm, learner and measure, each arm against the default (k31) on the
 arm's own datasets: the datasets better, worse and the same by more than
 MARGIN (lower is better for log loss and the two error rates), the median
@@ -42,11 +53,15 @@ from RESAMPLES species resamples (the 101st and 3,900th sorted values, each
 row seeded from the sha256 of split|pair|learner|measure), the one-sided
 sign test of better against worse, and Holm over the 30 lineage rows of the
 primary measure, the twin's included. Every difference and median is
-rounded to 12 decimals before it is compared.
+rounded to 12 decimals before it is compared. Datasets with a constant-model
+draw enter the count, and count.tsv gives their number per row (`constant`);
+count-no-constant.tsv is the same count with them left out, with Holm over
+its own 30 rows, and decides nothing.
 """
 
 import importlib.util
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -80,6 +95,29 @@ TWIN = "twin"
 FAMILY = ["unitigs", "k31-counts", "k31-aa", "program", "k31-program", TWIN]
 JOINED = {"k31-program", "k31-counts", "k31-aa"}
 TOUCHED_AT_LEAST = 3
+REFUSED_FORMAT = "grm-c3-refused-1"
+NO_CANDIDATE = "no candidate"
+# Log loss clips each score to [LOSS_CLIP, 1 - LOSS_CLIP], as grm does (src/cutoff.rs).
+LOSS_CLIP = 1e-4
+
+
+def refused_name(file):
+    """The refusal record the run script writes in place of an arm's result file."""
+    return file[: -len(".pick.json")] + ".refused.json"
+
+
+def constant_calls(base):
+    """The constant model of ruling 16 on the default's folds `base`: one call per fold, summed."""
+    c = dict(C9.ZERO)
+    for f in base["folds"]:
+        r, s = f["test_resistant"], f["test"] - f["test_resistant"]
+        share = f["train_resistant"] / f["train"]
+        p = min(max(share, LOSS_CLIP), 1 - LOSS_CLIP)
+        resistant = share >= 0.5
+        c = C9.add(c, {"n": r + s, "tp": r if resistant else 0, "fp": s if resistant else 0,
+                       "tn": 0 if resistant else s, "fn": 0 if resistant else r,
+                       "loss_sum": -(r * math.log(p) + s * math.log(1 - p))})
+    return c
 
 
 def fold_shape(doc):
@@ -89,18 +127,43 @@ def fold_shape(doc):
         (doc["tested"], doc["tested_resistant"]),)
 
 
-def check(exp, doc, base, inputs, stray_inputs, release=None, served_learner=None, draw_seeds=(), twin_seeds=()):
+def check_refused(exp, refusal, base):
+    """[(check name, passed, detail)] for an arm result grm learn refused for no candidate (ruling 16)."""
+    out = []
+
+    def ok(name, cond):
+        out.append((name, bool(cond), ""))
+
+    ok("refused: format, dataset, arm, scheme and seed of its run",
+       (refusal.get("format"), refusal.get("dataset"), refusal.get("arm"), refusal.get("scheme"), refusal.get("seed"))
+       == (REFUSED_FORMAT, exp["dataset"], exp["arm"], exp["scheme"], int(exp["seed"])))
+    ok("refused: for no candidate", refusal.get("reason") == NO_CANDIDATE)
+    ok("refused: an arm's result, not the default's or the twin's", exp["arm"] not in (DEFAULT, TWIN))
+    # grm learn refuses only a --fold-file run for it; a drawn split's fold with no candidate gets null fits.
+    ok("refused: a study run, the only one grm learn refuses for no candidate", exp["split"] == "study")
+    ok("refused: the default's result at the same dataset, split and seed is scored",
+       base is not None and base.get("unavailable_reason") is None and bool(base.get("folds"))
+       and all(f["train"] > 0 for f in base["folds"]))
+    return out
+
+
+def check(exp, doc, base, inputs, stray_inputs, release=None, served_learner=None, draw_seeds=(), twin_seeds=(),
+          refused=False):
     """[(check name, passed, detail)] for one result.
 
     base is the default's result at the same dataset, split and seed (None
     when this is the default's own); inputs is the arm's inputs file (None
     when it has none); stray_inputs counts inputs files in the default's or
-    the twin's folder for this dataset.
+    the twin's folder for this dataset. With refused, doc is the refusal
+    record that stands for the arm's result.
     """
     arm = exp["arm"]
     e9 = dict(exp, inner=0)
     is_default = arm == DEFAULT
-    out = C9.check(e9, doc, release if is_default else None, served_learner if is_default else None)
+    if refused:
+        out = check_refused(exp, doc, base)
+    else:
+        out = C9.check(e9, doc, release if is_default else None, served_learner if is_default else None)
 
     def ok(name, cond, detail=""):
         out.append((name, bool(cond), detail))
@@ -113,7 +176,7 @@ def check(exp, doc, base, inputs, stray_inputs, release=None, served_learner=Non
         ok("the default and the twin write no inputs file", inputs is None and stray_inputs == 0)
     if arm == TWIN:
         ok("a twin seed is the twin's and no draw's", seed in twin_seeds and seed not in draw_seeds)
-    if arm not in (DEFAULT, TWIN):
+    if arm not in (DEFAULT, TWIN) and not refused:
         ok("the folds are the default's at the same dataset, split and seed, by class",
            base is not None and fold_shape(base) == fold_shape(doc))
     if arm not in (DEFAULT, TWIN):
@@ -139,19 +202,27 @@ def check(exp, doc, base, inputs, stray_inputs, release=None, served_learner=Non
 
 # ---------- scores ----------
 
-def score_rows(expect, docs, names):
-    """draws.tsv's rows: per result and learner."""
+def score_rows(expect, docs, names, refused=None):
+    """draws.tsv's rows: per result and learner. refused maps a refused arm result's file to the default's
+    result at its dataset, split and seed, on whose folds it is scored as the constant model."""
+    refused = refused or {}
     rows = []
     for e in expect:
-        doc = docs[e["file"]]
         sp, ab = names[e["dataset"]]
         base = {"dataset": e["dataset"], "species": sp, "antibiotic": ab, "arm": e["arm"], "split": e["split"],
                 "seed": int(e["seed"]), "role": e["role"]}
+        if e["file"] in refused:
+            c = measures(constant_calls(refused[e["file"]]))
+            for learner in LEARNERS:
+                rows.append(dict(base, learner=learner, scored=1, constant=1,
+                                 why="constant model: refused for no candidate", **c))
+            continue
+        doc = docs[e["file"]]
         for learner in LEARNERS:
             if doc.get("unavailable_reason") is not None:
-                rows.append(dict(base, learner=learner, scored=0, why="split unavailable"))
+                rows.append(dict(base, learner=learner, scored=0, constant=0, why="split unavailable"))
             else:
-                rows.append(dict(base, learner=learner, scored=1, why="", **measures(fixed(doc, learner))))
+                rows.append(dict(base, learner=learner, scored=1, constant=0, why="", **measures(fixed(doc, learner))))
     return rows
 
 
@@ -163,7 +234,8 @@ def dataset_rows(draws):
     out = []
     for (d, s, a, learner), rs in sorted(groups.items()):
         row = {"dataset": d, "species_slug": d.split("__")[0], "species": rs[0]["species"], "antibiotic": rs[0]["antibiotic"],
-               "split": s, "arm": a, "learner": learner, "draws": len(rs), "scored_draws": sum(r["scored"] for r in rs)}
+               "split": s, "arm": a, "learner": learner, "draws": len(rs), "scored_draws": sum(r["scored"] for r in rs),
+               "constant_draws": sum(r.get("constant", 0) for r in rs)}
         row["scored"] = int(row["scored_draws"] == row["draws"])
         for m in MEASURES:
             vals = [r.get(m) for r in rs]
@@ -180,8 +252,12 @@ def row_seed(split, pair, learner, measure):
     return C9.row_seed(split, f"{pair}|{learner}", measure)
 
 
-def count(rows):
-    """count.tsv's rows from several species' datasets.tsv rows."""
+def count(rows, keep_constant=True):
+    """count.tsv's rows from several species' datasets.tsv rows.
+
+    With keep_constant False, a dataset with a constant-model draw is left
+    out (count-no-constant.tsv, which decides nothing).
+    """
     have = {r["arm"] for r in rows if r["split"] == "lineage"}
     missing = [a for a in FAMILY if a not in have]
     if missing:
@@ -195,22 +271,27 @@ def count(rows):
             for learner in LEARNERS:
                 for m in MEASURES:
                     ds = sorted({d for d, s, a, l in cell if s == split and a == arm and l == learner})
-                    diffs, sps, unscored = [], [], 0
+                    diffs, sps, unscored, constant = [], [], 0, 0
                     for d in ds:
                         a, b = cell[(d, split, arm, learner)], cell.get((d, split, DEFAULT, learner))
+                        is_constant = int(a.get("constant_draws") or 0) > 0
+                        if not keep_constant and is_constant:
+                            unscored += 1
+                            continue
                         if b is None or not int(a["scored"]) or not int(b["scored"]) or a[m] in (None, "") or b[m] in (None, ""):
                             unscored += 1
                             continue
                         diffs.append(r12(float(a[m]) - float(b[m])))
                         sps.append(a["species_slug"])
+                        constant += is_constant
                     # Every difference, median and interval is the arm's value less the default's;
                     # only better and worse turn round where lower is better.
                     up = -1 if m in LOWER_IS_BETTER else 1
                     better = sum(1 for x in diffs if up * x > MARGIN)
                     worse = sum(1 for x in diffs if up * x < -MARGIN)
                     row = {"split": split, "pair": pair, "learner": learner, "measure": m, "datasets": len(ds),
-                           "entered": len(diffs), "not_scored": unscored, "better": better, "worse": worse,
-                           "same": len(diffs) - better - worse,
+                           "entered": len(diffs), "not_scored": unscored, "constant": constant, "better": better,
+                           "worse": worse, "same": len(diffs) - better - worse,
                            "median_difference": r12(float(np.median(diffs))) if diffs else None,
                            "species": len(set(sps)), "interval_lo": None, "interval_hi": None,
                            "sign_p": C9.sign_p(better, worse), "holm_p": None,
@@ -286,14 +367,14 @@ def conditions(count_rows):
 
 # ---------- files ----------
 
-DRAW_COLUMNS = ["dataset", "species", "antibiotic", "arm", "split", "seed", "role", "learner", "scored", "why", "n",
+DRAW_COLUMNS = ["dataset", "species", "antibiotic", "arm", "split", "seed", "role", "learner", "scored", "constant", "why", "n",
                 "resistant", "susceptible", "tp", "fp", "tn", "fn"] + [c for m in ("recall", "specificity", "vme", "me")
                                                                          for c in (m, f"{m}_lo", f"{m}_hi")] + [
     "balanced_accuracy", "log_loss"]
 DATASET_COLUMNS = ["dataset", "species_slug", "species", "antibiotic", "split", "arm", "learner", "draws", "scored_draws",
-                   "scored", "n", "tp", "fp", "tn", "fn"] + MEASURES
-COUNT_COLUMNS = ["split", "pair", "learner", "measure", "orientation", "datasets", "entered", "not_scored", "better",
-                 "worse", "same", "median_difference", "species", "interval_lo", "interval_hi", "sign_p", "holm_p"]
+                   "constant_draws", "scored", "n", "tp", "fp", "tn", "fn"] + MEASURES
+COUNT_COLUMNS = ["split", "pair", "learner", "measure", "orientation", "datasets", "entered", "not_scored", "constant", "better", "worse", "same", "median_difference", "species", "interval_lo", "interval_hi",
+                 "sign_p", "holm_p"]
 
 
 def load(path):
@@ -307,15 +388,17 @@ def main(argv):
             print(__doc__.strip().splitlines()[3], file=sys.stderr)
             return 2
         out = Path(argv[1])
-        rows = [r for p in argv[2:] for r in read_tsv(p)]
+        rest = argv[2:]
+        rows = [r for p in rest for r in read_tsv(p)]
         keys = [(r["dataset"], r["split"], r["arm"], r["learner"]) for r in rows]
         if len(set(keys)) != len(keys):
             raise SystemExit("a dataset, split, arm and learner is listed twice")
         counted = count(rows)
         out.mkdir(parents=True, exist_ok=True)
         write_tsv(out / "count.tsv", counted, COUNT_COLUMNS)
+        write_tsv(out / "count-no-constant.tsv", count(rows, keep_constant=False), COUNT_COLUMNS)
         write_tsv(out / "conditions.tsv", conditions(counted), ["arm", "condition", "reads", "met", "learners"])
-        print(f"count: {len(rows)} dataset rows from {len(argv) - 2} files")
+        print(f"count: {len(rows)} dataset rows from {len(rest)} files")
         return 0
     if len(argv) != 4:
         print(__doc__.strip().splitlines()[2], file=sys.stderr)
@@ -327,21 +410,25 @@ def main(argv):
     served_by = {}
     if (release / "index.json").is_file():
         served_by = {x["id"]: x.get("best_learner") for x in load(release / "index.json").get("datasets", [])}
-    docs, names, checks = {}, {}, []
+    docs, names, checks, refusals = {}, {}, [], {}
     for e in expect:
         path = picks / e["file"]
         if path.is_file():
             docs[e["file"]] = load(path)
+        elif (picks / refused_name(e["file"])).is_file():
+            refusals[e["file"]] = load(picks / refused_name(e["file"]))
         rel_path = release / "datasets" / f"{e['dataset']}.json"
         if rel_path.is_file() and e["dataset"] not in names:
             rel = load(rel_path)
             names[e["dataset"]] = (rel["species"], rel["antibiotic"])
     base_of = {(e["dataset"], e["split"], e["seed"]): e["file"] for e in expect if e["arm"] == DEFAULT}
+    constant = {}
     for e in expect:
-        if e["file"] not in docs:
+        is_refused = e["file"] in refusals
+        if e["file"] not in docs and not is_refused:
             checks.append((e["file"], "exists", False, ""))
             continue
-        checks.append((e["file"], "exists", True, ""))
+        checks.append((e["file"], "exists" if not is_refused else "exists, as a refusal for no candidate", True, ""))
         checks.append((e["file"], "release report", e["dataset"] in names, ""))
         rel = None
         if e["arm"] == DEFAULT and int(e["seed"]) == RELEASE_SEED and e["dataset"] in names:
@@ -352,19 +439,22 @@ def main(argv):
         stray = 0
         if e["arm"] in (DEFAULT, TWIN):
             stray = sum(1 for _ in (picks / e["arm"]).glob(f"{e['dataset']}.*.inputs.json"))
-        for name, passed, detail in check(e, docs[e["file"]], base, inputs, stray, rel, served_by.get(e["dataset"]),
-                                          draw_seeds, twin_seeds):
+        doc = refusals[e["file"]] if is_refused else docs[e["file"]]
+        for name, passed, detail in check(e, doc, base, inputs, stray, rel, served_by.get(e["dataset"]),
+                                          draw_seeds, twin_seeds, refused=is_refused):
             checks.append((e["file"], name, passed, detail))
+        if is_refused:
+            constant[e["file"]] = base
     out.mkdir(parents=True, exist_ok=True)
     write_tsv(out / "checks.tsv", [{"file": f, "check": c, "passed": p, "detail": d} for f, c, p, d in checks],
               ["file", "check", "passed", "detail"])
     failed = [c for c in checks if not c[2]]
     unavailable = sum(1 for d in docs.values() if d.get("unavailable_reason") is not None)
-    print(f"checks: {len(checks) - len(failed)} of {len(checks)} pass; results {len(docs)} of {len(expect)}; "
-          f"lineage or study split unavailable in {unavailable}")
+    print(f"checks: {len(checks) - len(failed)} of {len(checks)} pass; results {len(docs)} of {len(expect)}, "
+          f"refused for no candidate {len(refusals)}; lineage or study split unavailable in {unavailable}")
     if failed:
         return 1
-    draws = score_rows(expect, docs, names)
+    draws = score_rows(expect, docs, names, constant)
     write_tsv(out / "draws.tsv", draws, DRAW_COLUMNS)
     write_tsv(out / "datasets.tsv", dataset_rows(draws), DATASET_COLUMNS)
     return 0

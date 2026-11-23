@@ -355,6 +355,8 @@ The refit of the release's rule ended on its 23 species and 238 datasets at 20:3
 
 **Count.** Better, worse or the same by 0.02 at 12 decimals, the arm's value less the default's, the median difference with its species interval, and the one-sided sign test. Holm runs over 30 lineage pairs, 6 arm rows by 5 learners, the twin's included. The family is fixed, so the count is taken once, after every arm has run, and `score.py --count` refuses before that.
 
+**No candidate.** Only a `--fold-file` run refuses for a fold whose training genomes give no candidate feature, and it refuses the dataset's whole study run; a drawn split's fold with no candidate gets the release's fits on no feature. By the lead's ruling 16 at 00:47Z on 23 Nov 2026, an arm refused this way where the default is not is scored as the constant model on the default's folds: each fold's training majority, R on a tie, with a score equal to its R share, clipped. Those datasets enter the count, `count.tsv` gives their number, and the count without them is written beside it and decides nothing. The run script records such a refusal and goes on; before this, it stopped the species.
+
 **Study.** The first-run datasets in S, 55 for the arms on L and 54 for the arms on A, get one study run per arm on their reviewed `study-whole` plans, at the release's seeds, with no twin. That departs from the plan's Rules, Draws, as C9's ruling 6 did (question 11).
 
 | Set | Datasets | Species | Less M, the first run | First run in S |
