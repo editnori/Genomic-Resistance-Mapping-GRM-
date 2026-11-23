@@ -391,10 +391,6 @@ fn build(
     let started = Instant::now();
     let set = settings();
     let n = x.cols;
-    ensure!(
-        tested.len() == test_fold.len(),
-        "one outer fold per tested sample"
-    );
     let truth = |i: usize| y.contains(i);
     let mut result = PickResult {
         format: FORMAT,
@@ -432,9 +428,15 @@ fn build(
         folds: vec![],
         seconds_inner: 0.0,
     };
+    // A split that could not be drawn has no fold and no tested sample:
+    // its result is the reason alone.
     if result.unavailable_reason.is_some() {
         return Ok(result);
     }
+    ensure!(
+        tested.len() == test_fold.len(),
+        "one outer fold per tested sample"
+    );
     ensure!(
         learners.len() >= LEARNERS.len()
             && LEARNERS.iter().zip(learners).all(|(l, r)| r.learner == *l),
@@ -731,6 +733,37 @@ mod tests {
         assert_eq!(r["tested"], 150);
         // Off, nothing is captured and nothing is written.
         assert!(!enabled());
+    }
+
+    /// A draw whose lineage split cannot be made still writes its result:
+    /// the reason, no fold and no tested genome. The run goes on to the
+    /// next dataset, and the scorer counts the draw as unavailable.
+    #[test]
+    fn an_unavailable_lineage_split_writes_its_reason_and_no_fold() {
+        let (x, y, _) = fixture();
+        // SYNTHETIC: five lineages of thirty, fewer than twice the three
+        // folds, so the lineage split is refused and the random one is not.
+        let groups: Vec<u32> = (0..150u32).map(|i| i / 30).collect();
+        let cfg = config();
+        for k in [3, 0] {
+            let (out, files) = capture(k, PickTie::Later, || {
+                evaluate("synthetic__drug", &x, &y, &groups, &[], 3, None, &cfg).unwrap()
+            });
+            let lineage = out.splits.iter().find(|s| s.scheme == "lineage").unwrap();
+            let reason = lineage.unavailable_reason.clone().unwrap();
+            let random = out.splits.iter().find(|s| s.scheme == "random").unwrap();
+            assert!(random.unavailable_reason.is_none());
+            assert_eq!(files[0].0, "synthetic__drug.lineage-s42.pick.json");
+            let r = one(&files);
+            assert_eq!(r["unavailable_reason"], reason);
+            assert_eq!(r["samples"], 150);
+            assert_eq!(r["tested"], 0);
+            assert_eq!(r["tested_resistant"], 0);
+            assert_eq!(r["folds"].as_array().unwrap().len(), 0);
+            let learners = r["learners"].as_array().unwrap();
+            assert_eq!(learners.len(), LEARNERS.len());
+            assert!(learners.iter().all(|l| l["balanced_accuracy"].is_null()));
+        }
     }
 
     #[test]
