@@ -112,7 +112,8 @@
 # the study results: these hold genome ids and stay on the box),
 # results/picks/<arm>/ (one result per dataset, split and seed and one inputs
 # file per dataset: counts and calls, no genome id), check/ (refit_check.py's
-# tables), score/ (score.py's tables), binary.txt, lists.txt and expect.tsv.
+# tables), score/ (score.py's tables and its output, score.log, kept out of
+# logs/ and run.log), binary.txt, lists.txt and expect.tsv.
 # The end checks that no file under results/, check/, score/ or logs/ names a
 # genome of the species, then writes SHA256SUMS and OUT/DONE:
 #   DONE <species> <time> binary <sha256> code <sha256> results <n> SHA256SUMS <sha256>
@@ -716,11 +717,13 @@ STEP=timing
 
 STEP=score
 say "score: start"
-# score.py prints the check counts only; its tables stay in score/.
-python3 -I -B "$HERE/score.py" "$OUT/expect.tsv" "$PICKS" "$R" "$OUT/score" > "$OUT/logs/score.log" 2>&1 \
-  || { scrub "$OUT/logs/score.log"; cat "$OUT/logs/score.log"; false; }
-scrub "$OUT/logs/score.log"
-cat "$OUT/logs/score.log"
+# score.py prints the check counts, or why it stopped. Its output stays with
+# its tables in score/, which no one opens before every species has run: not
+# in logs/ and not in run.log, which are read while the run goes on.
+python3 -I -B "$HERE/score.py" "$OUT/expect.tsv" "$PICKS" "$R" "$OUT/score" > "$OUT/score/score.log" 2>&1 \
+  || { scrub "$OUT/score/score.log"; say "score: stopped; its output is in score/score.log"; false; }
+scrub "$OUT/score/score.log"
+say "score: end"
 
 STEP=done
 cd "$OUT"
