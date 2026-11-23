@@ -725,6 +725,20 @@ fn analyze_dataset_as(
         }),
         cfg,
     )?;
+    // The C5 experiment's folds file, off by default (`learn::settings`):
+    // it names genomes and changes no fit or report.
+    if let Some(dir) = crate::learn::settings::folds_dir() {
+        let genomes: Vec<String> = rows.iter().map(|p| p.genome_id.clone()).collect();
+        crate::learn::settings::write_drawn_folds(
+            dir,
+            &spec.id,
+            &genomes,
+            &ds.y,
+            &groups,
+            &out.splits,
+            cfg,
+        )?;
+    }
     // The C3 experiment (`input_arms`) writes its counts and the C9 writer's
     // per-fold calls; its rows carry no k-mer to annotate, so no report.
     // The C4 experiment (`screen_arm`) writes its counts and those calls
@@ -1186,6 +1200,32 @@ pub fn evaluate_fold_file(
             }
         }
     }
+    // The C5 experiment, off by default (`learn::settings`): the trials of
+    // its settings file on this partition, one result per trial, and no
+    // fold file result.
+    if let Some(settings) = crate::learn::settings::trials() {
+        let trials = crate::learn::settings::run_trials(
+            &spec.id,
+            &file.scheme,
+            &e.ds.x,
+            &e.ds.y,
+            &e.groups,
+            &e.duplicates,
+            &roles,
+            file.folds(),
+            cfg,
+            settings,
+            &loaded.sha256,
+        )
+        .with_context(|| format!("fold file {}", fold_file.display()))?;
+        std::fs::create_dir_all(out).with_context(|| format!("create {}", out.display()))?;
+        let mut written = out.to_path_buf();
+        for trial in &trials {
+            written = crate::learn::settings::trial_path(out, &spec.id, &file.scheme, trial.trial);
+            write_atomic(&written, &serde_json::to_vec(trial)?)?;
+        }
+        return Ok(written);
+    }
     let assigned = eval::evaluate_assigned(
         &spec.id,
         &file.scheme,
@@ -1198,6 +1238,19 @@ pub fn evaluate_fold_file(
         cfg,
     )
     .with_context(|| format!("fold file {}", fold_file.display()))?;
+    if let Some(dir) = crate::learn::settings::folds_dir() {
+        crate::learn::settings::write_assigned_folds(
+            dir,
+            &spec.id,
+            &file.scheme,
+            &sample_ids,
+            &e.ds.y,
+            &e.groups,
+            &roles,
+            file.folds(),
+            cfg,
+        )?;
+    }
     let samples: Vec<TestedSample> = assigned
         .tested
         .iter()

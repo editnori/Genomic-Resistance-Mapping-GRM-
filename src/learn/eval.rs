@@ -900,6 +900,19 @@ fn fold_draw_seed(cfg: &EvalConfig, fold: usize) -> u64 {
     crate::ablate::plan::fold_seed(draw_seed(cfg), fold)
 }
 
+/// One learner's fit on one outer fold, as `fit_fold` makes it:
+/// (learner, candidates, labels, training samples, tuning groups, config,
+/// context naming the fold).
+pub(crate) type FitFn<'a> = &'a dyn Fn(
+    &str,
+    &BitMatrix,
+    &Bits,
+    &Bits,
+    Option<&[u32]>,
+    &EvalConfig,
+    LassoContext<'_>,
+) -> Result<(Scored, FoldModel)>;
+
 /// One learner's fit on outer fold `fold`'s training samples, scoring every
 /// sample, with the fitted model as `FoldSplit` keeps it: its features are
 /// rows of `x`. Evaluation and any rebuild of a saved score call this alone.
@@ -1196,6 +1209,8 @@ pub fn evaluate(
             tuning.as_deref(),
             min_support,
             cfg,
+            &LEARNERS,
+            &fit_fold,
         )?;
         let learners = LEARNERS
             .iter()
@@ -1475,6 +1490,10 @@ struct OuterFits {
 /// (`null_refit::enabled`), each boosting or lasso fold that comes out null
 /// is refitted after its timer with these same inputs and seeds and recorded
 /// (`null_refit::record_fold`); `evaluate_assigned` refuses to run then.
+///
+/// `learners` are fitted in their order, each by `fit`: `evaluate` and
+/// `evaluate_assigned` pass `LEARNERS` and `fit_fold`; the C5 experiment
+/// (`settings`) passes one learner and a fit at a setting of its own.
 #[allow(clippy::too_many_arguments)]
 fn fit_outer_folds(
     dataset: &str,
@@ -1485,10 +1504,12 @@ fn fit_outer_folds(
     tuning: Option<&[u32]>,
     min_support: u32,
     cfg: &EvalConfig,
+    learners: &[&str],
+    fit: FitFn<'_>,
 ) -> Result<OuterFits> {
-    let mut fits: Vec<Vec<Scored>> = LEARNERS.iter().map(|_| Vec::new()).collect();
+    let mut fits: Vec<Vec<Scored>> = learners.iter().map(|_| Vec::new()).collect();
     let mut models = FoldSplit::new(scheme);
-    let mut seconds = vec![0.0; LEARNERS.len()];
+    let mut seconds = vec![0.0; learners.len()];
     let mut prevalence = Vec::with_capacity(trains.len());
     let mut candidates = Vec::with_capacity(trains.len());
     // The C3 experiment's screen count, off by default: a joined arm's
@@ -1507,7 +1528,7 @@ fn fit_outer_folds(
         // The C4 experiment, off by default (`screen_arm`): counts and fit
         // times for its own file. Without it these do nothing.
         screen_arm::note_fold(scheme, fi, train.count() as usize, cx.rows);
-        for (li, learner) in LEARNERS.iter().enumerate() {
+        for (li, learner) in learners.iter().enumerate() {
             let t0 = Instant::now();
             screen_arm::label(scheme, Some(fi), learner);
             let clock = screen_arm::start_fit();
@@ -1516,7 +1537,7 @@ fn fit_outer_folds(
                 scheme,
                 outer_fold: Some(fi),
             };
-            let (fit, model) = fit_fold(learner, &cx, y, train, tuning, cfg, context)?;
+            let (fit, model) = fit(learner, &cx, y, train, tuning, cfg, context)?;
             seconds[li] += t0.elapsed().as_secs_f64();
             screen_arm::end_fit(clock, scheme, fi, learner);
             // The null-fold experiment, off by default, writes only its
@@ -1712,6 +1733,37 @@ pub fn evaluate_assigned(
     folds: usize,
     cfg: &EvalConfig,
 ) -> Result<AssignedSplit> {
+    evaluate_assigned_with(
+        dataset, scheme, x, y, groups, duplicates, roles, folds, cfg, None,
+    )
+}
+
+/// What the C5 experiment (`settings`) changes in `evaluate_assigned`: the
+/// learners fitted, in this order, the fit of each, and the split whose
+/// tuning groups the fits keep whole (`tuning_groups`; "lineage" for the
+/// lineage groups, else the supplied split's own, the duplicate groups).
+pub(crate) struct AssignedPlan<'a> {
+    pub(crate) learners: &'a [&'a str],
+    pub(crate) fit: FitFn<'a>,
+    pub(crate) tuning_scheme: &'a str,
+}
+
+/// `evaluate_assigned`, with `plan` in place of its learners, fits and
+/// tuning groups when given. With a plan, the C9 experiment's hook is not
+/// run: `grm learn` refuses `--exp-pick` beside `--exp-settings`.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn evaluate_assigned_with(
+    dataset: &str,
+    scheme: &str,
+    x: &BitMatrix,
+    y: &Bits,
+    groups: &[u32],
+    duplicates: &[Vec<usize>],
+    roles: &[Role],
+    folds: usize,
+    cfg: &EvalConfig,
+    plan: Option<&AssignedPlan<'_>>,
+) -> Result<AssignedSplit> {
     ensure!(
         !null_refit::enabled(),
         "the null-fold refit records the folds grm learn draws; it does not run on a supplied partition"
@@ -1747,7 +1799,7 @@ pub fn evaluate_assigned(
             .all(|r| !matches!(r, Role::Test(f) if *f >= folds)),
         "a sample is tested in an outer fold outside 0..{folds}"
     );
-    let tuning = tuning_groups(scheme, groups, duplicates);
+    let tuning = tuning_groups(plan.map_or(scheme, |p| p.tuning_scheme), groups, duplicates);
     let mut trains = Vec::with_capacity(folds);
     let mut counts = Vec::with_capacity(folds);
     for f in 0..folds {
@@ -1809,6 +1861,11 @@ pub fn evaluate_assigned(
         tuning.as_deref(),
         min_support,
         cfg,
+        plan.map_or(&LEARNERS[..], |p| p.learners),
+        match plan {
+            Some(p) => p.fit,
+            None => &fit_fold,
+        },
     )?;
     for (count, candidates) in counts.iter_mut().zip(candidates) {
         count.candidates = candidates;
@@ -1824,7 +1881,8 @@ pub fn evaluate_assigned(
             _ => unreachable!("a tested sample has an outer fold"),
         })
         .collect();
-    let learners = LEARNERS
+    let learners = plan
+        .map_or(&LEARNERS[..], |p| p.learners)
         .iter()
         .zip(fits)
         .zip(seconds)
@@ -1841,7 +1899,7 @@ pub fn evaluate_assigned(
         })
         .collect::<Result<Vec<LearnerResult>>>()?;
     // The C9 experiment, off by default (`inner_pick`), as in `evaluate`.
-    if inner_pick::enabled() {
+    if plan.is_none() && inner_pick::enabled() {
         inner_pick::record_assigned(
             dataset,
             scheme,

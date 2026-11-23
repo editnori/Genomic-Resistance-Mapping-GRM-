@@ -465,6 +465,8 @@ def conditions(count_rows):
                 out.add(l)
         return out
 
+    # The family's size: 30 here; a block that sets FAMILY to its own arms has its own count.
+    holm_n = len(FAMILY) * len(LEARNERS)
     twin_one, twin_two = c1(TWIN), c2(TWIN)
     twin_most = max(len(twin_one), len(twin_two))
     twin_strict = len(twin_one) >= TOUCHED_AT_LEAST or len(twin_two) == len(LEARNERS)
@@ -478,7 +480,7 @@ def conditions(count_rows):
         all_five = same_sign(arm, LEARNERS)
         rows = [
             ("ruling 15", "1 and 2", "a learner carries when its lineage median difference's interval lies wholly above 0 "
-             "and better beats worse by the one-sided sign test at p < 0.05 after Holm over 30; at least 3 of 5 carry",
+             f"and better beats worse by the one-sided sign test at p < 0.05 after Holm over {holm_n}; at least 3 of 5 carry",
              len(carry) >= TOUCHED_AT_LEAST, len(carry)),
             ("ruling 15", "3", "the twin meets 1 in fewer than 3 of 5 learners and 2 in fewer than 3 of 5, each read "
              "apart (learners: the larger of the twin's two counts)", twin_most < TOUCHED_AT_LEAST, twin_most),
@@ -488,7 +490,7 @@ def conditions(count_rows):
             ("ruling 15", "6", "the maintainer rules the change", "", ""),
             ("stricter", "1", "the lineage median difference's interval lies wholly above 0, for at least 3 of 5 learners",
              len(one) >= TOUCHED_AT_LEAST, len(one)),
-            ("stricter", "2", "better beats worse by the one-sided sign test at p < 0.05 after Holm over 30, for all five",
+            ("stricter", "2", f"better beats worse by the one-sided sign test at p < 0.05 after Holm over {holm_n}, for all five",
              len(two) == len(LEARNERS), len(two)),
             ("stricter", "3", "the twin meets neither 1 nor 2 as this reading reads them", not twin_strict, ""),
             ("stricter", "4", "no learner's recall interval lies wholly below -0.02, for all five", not low, 5 - len(low)),

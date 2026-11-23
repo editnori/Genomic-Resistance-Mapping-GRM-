@@ -539,3 +539,52 @@ An eleventh came while the text was written. The project's wording rules put rec
 **Cost.** Each fit costs its pilot ratio of fit wall time to the release's learning seconds of the pilot's datasets (41.43 s): 1.3098 for the default and the twin, 0.7643 for `cmh-4000`, 0.8590 for `cmh-16000` and 0.6362 for `floor-3`, over 3 seeds on the first run's 233 datasets and one study run on its 55. The fits come to 27.10 xlarge-hours, 7.56 of them the default and 6.49 the twin; with C9's data steps and the matrix loads, 34.39 box-hours central over 23 boxes ($6.88) and 97.35 upper ($19.47), above the plan's 25. Sharing the default, the twin and the data roots with C3's run would save 18.93 of the central hours, but needs one binary for both blocks, and C3's run waits for its three unbuilt arms.
 
 **Written.** This entry was written at 05:26Z on 23 Nov 2026, from the design fixed at 04:03Z, the lists, the pilot and the box's checks. No comparison result had been read.
+
+## C5 design
+
+**Block.** Plan block C5 asks whether a search over each learner's settings, made inside the training folds, beats the release's rule, which already chooses some settings inside each fit; and whether a call cutoff chosen on inner scores beats 0.5. The design was fixed at 04:08Z on 23 Nov 2026, before any code ran on real data, and `docs/settings-arms.md` gives the method. No comparison result has been read.
+
+**Arms.** Two arms stand against the default, the release's rule refitted in the same run with the same binary, both behind `grm learn --exp-settings`. The search: per learner and outer fold, 31 trials (the release's own setting and 30 random settings from the spaces frozen in `scripts/hyperopt/protocol.py`, the same 30 everywhere, from the sampler seed 20261030), each scored by the mean balanced accuracy of 3 inner folds inside the outer fold's training genomes; the default-anchored rule at γ = 0.04 picks, a tie goes to the lowest trial id, and the pick is refitted once on the whole training set. The cutoff: the release's own fit, untouched, with its calls made at the point of the grid 0.05 to 0.95 that gives the best pooled inner balanced accuracy, a tie going to the point nearest 0.5 and then to the lower. The lasso's space is one integer, so its 30 draws hold 28 distinct settings.
+
+**Folds.** The inner folds are the release's own tuning partition of each outer training set, grouped by lineage, so no lineage cluster is split. On the study split they keep every lineage whole but can split a BioProject, since `grm learn` holds no BioProject per genome. The outer test genomes are unused in the inner run and reach no fit; the outer run starts only after the picks and cutoffs are written. Each inner fit redoes the screen on its own fitting genomes.
+
+**Measure and count.** As C3's: per learner, the lineage balanced accuracy is primary; a dataset's value is the mean of seeds 42, 43 and 44; the twin is the default at seeds 45, 46 and 47. Holm runs over 15 lineage pairs, the search, the cutoff and the twin by 5 learners. The conditions are read with the lead's C3 rulings 15 and 16 and condition 3 as corrected at 02:08Z on 23 Nov 2026, each of the twin's two counts read apart. The cutoff arm's scores do not move, so its log loss equals the default's and decides nothing. SCM's result is read beside the synthetic loss of 0.0126 (0.0088 to 0.0163) the plan names.
+
+**Study.** Each of the 55 first-run datasets has a reviewed `study-whole` plan and gets one study run per arm at the release's seeds, with no twin, as C3 and C9 did (question 8).
+
+| Set | Datasets | Species | Less M, the first run |
+|---|---:|---:|---:|
+| S and L | 69 | 9 | 55 in 8 species |
+
+**Questions.** The design leaves fourteen questions to the lead, each with the answer taken and the other one, each one argument of the code or the run script. The design writes no other answer for questions 4, 7 and 14. The lead ruled all fourteen at 05:52Z on 23 Nov 2026, with no C5 score read: each as taken, with two additions. Question 3: the default-anchored rule at 0.04 is the arm read, and the plain best (the highest inner mean, ties to the lowest trial id) is refitted on the outer training genomes and scored on the outer test fold as an arm beside it, labelled "plain best, no anchor", in no Holm family and deciding nothing; where it equals the anchored pick it takes that pick's result and no refit runs. Question 13: a cut is decided on cost alone, before any score is read, and named in this entry.
+
+| Question | Taken | Other |
+|---|---|---|
+| 1. The 30 settings | sampler seed 20261030, the same 30 everywhere, the release's setting as trial 0 beside them (31 trials) | a seed per dataset; 30 trials with trial 0 among them |
+| 2. Inner folds | the release's tuning partition by lineage; on the study split, by lineage inside each study training fold | BioProject groups joined with their copy groups |
+| 3. Rule and ties | default-anchored, γ = 0.04, ties to the lowest trial id; ruled: the plain best refitted beside it, in no family | pooled inner balanced accuracy |
+| 4. What the release chooses | each sampled setting fixes every value of its space; the release's inner choices run only in trial 0 | - |
+| 5. The screen | redone in each inner fit on its own fitting genomes | the outer fold's screen |
+| 6. Cutoff | grid 0.05 to 0.95, pooled inner balanced accuracy, ties nearest 0.5 then lower | every midpoint between inner scores |
+| 7. Log loss of the cutoff arm | the default's, deciding nothing | - |
+| 8. Study draws | one run at the release's seeds, no twin | three draws |
+| 9. Holm | 15 pairs, the twin's included | a family per arm |
+| 10. Conditions | ruling 15 and corrected condition 3 | a per-learner reading |
+| 11. Default and twin | C5's own, in the same run | shared with C3's run under one binary |
+| 12. First run | S and L less M | all 69 |
+| 13. Cut order past 46 xlarge-hours | the costliest learner's study search, then its seeds 43 and 44; ruled: on cost alone, before any score is read | the lead rules the rest |
+| 14. Test families | the 15 lineage pairs; study split and other measures in no family | - |
+
+**As built.** Two departures from the design, neither a change of method. The driver runs `grm learn` once per learner for the inner trials and once per learner for the outer refit, in place of one run for all five, so each learner's time and memory are measured apart. The outer settings file gives no grid, so the outer run writes calls at 0.5 and at the chosen cutoff only.
+
+**Pilot.** *Pseudomonas aeruginosa* with piperacillin/tazobactam (210 genomes) and with aztreonam (235 genomes), seed 42, both splits, five learners, the default and both arms, on one 16-CPU, 32 GB box, 8 outer folds at once with 2 threads each: 04:43:02Z to 04:51:49Z and 04:52:59Z to 05:02:30Z on 23 Nov 2026. A fold took 274.05 s on average, under 1,890,000 KB at peak. Per fold, a learner's 31 inner trials took 39.71 s (rf) to 57.07 s (scm) and its outer refit 7.22 s to 11.47 s. 200 of 200 `grm learn` runs ended 0, the 20 choices files share one shape, and none names a genome. No score was opened.
+
+**Run script.** `scripts/c5-settings/run_species.sh` was rehearsed on the pilot's box with *Pseudomonas aeruginosa* and piperacillin/tazobactam alone, seed 42 and twin seed 45: 05:09:33Z to 05:28:53Z on 23 Nov 2026, exit 0. The seed-42 report equalled the release's in 12 of 12 learner rows, the scorer's 323 checks passed with 7 of 7 results present, and no kept file names a genome. A second start skipped its 12 finished steps and 10 finished drives and wrote the same list of output files; a start with another seed list was refused and left `DONE` in place.
+
+**Faults.** The 14 plants of 11 faults, each run as its own test on a copy of the tree, were all caught on 23 Nov 2026, the brief's eight among them: a setting picked on the outer test fold, an inner fold that splits a lineage, the screen fitted on test genomes, the cutoff chosen on outer scores, a tie broken by the outer score, the default refitted with a searched setting, the twin scored as an arm and a missing draw read as a zero. A first run caught 13 of 14; the test of the scorer's twin-seed check then failed for a second reason too, and now fails only on that check.
+
+**Bytes.** With no new flag, the branch's outputs equal main's on the pilot: 6 of 6 files equal once the recorded wall-clock seconds are set to 0 (the only fields that differ between two runs of one binary), `grm predict` on `test_dna.fa` equal byte for byte, and the seed-42 report equal to the release's in 12 of 12 learner rows. `test_dna.fa` feeds only the AMRFinderPlus fixture, so the pilot's runs carry the proof for `grm learn`.
+
+**Cost.** A fold costs its pilot wall a release-second of learning time, 8.16, times the dataset's release seconds, and never less than ten matrix loads; 1,100 folds over the 8 species, 8 at once, 6 for *Escherichia coli* and *Klebsiella pneumoniae*, whose fits hold more memory. With the default, the twin, the data steps and the fixed steps, the first run comes to 28.07 xlarge-hours central and 80.41 upper, against the plan's 46. The search is 19.61 central, the cutoff 2.24, the default 2.03, the twin 1.71 and the steps every species runs 2.49. The plain best adds one fit inside the outer run of each learner whose plain best is neither trial 0 nor the pick. Taken on every learner of every fold, it is half the outer runs' share of a fold's wall (0.1498 in the pilot): 1.64 xlarge-hours central and 4.91 upper, or 3.27 and 9.82 if each costs a whole outer run. With it, the first run is 29.71 central and 85.32 upper. The central cost is under 46, so nothing is cut. *Klebsiella pneumoniae* is 14.41 central and *Escherichia coli* 9.44. The pilot's datasets are small, so the upper is three times the central for every fit.
+
+**Written.** This entry was written at 05:12Z on 23 Nov 2026, from the design fixed at 04:08Z, the lists and the pilot; the run script and fault lines were added at 05:48Z. No comparison result had been read.

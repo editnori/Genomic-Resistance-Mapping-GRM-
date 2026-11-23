@@ -222,6 +222,14 @@ pub struct Calls {
 
 /// `Calls` of `scores` against `truth`.
 pub fn calls(truth: &[bool], scores: &[f64]) -> Calls {
+    calls_at(truth, scores, CALL_CUTOFF)
+}
+
+/// `calls` with a score at or above `cutoff` called resistant in place of
+/// `CALL_CUTOFF`. The log loss sum reads the scores alone, so it is the
+/// same at every cutoff. The C5 experiment's cutoff arm counts with it
+/// (`learn::settings`).
+pub fn calls_at(truth: &[bool], scores: &[f64], cutoff: f64) -> Calls {
     assert_eq!(
         truth.len(),
         scores.len(),
@@ -233,7 +241,7 @@ pub fn calls(truth: &[bool], scores: &[f64]) -> Calls {
     };
     for (&t, &s) in truth.iter().zip(scores) {
         let p = s.clamp(LOSS_CLIP, 1.0 - LOSS_CLIP);
-        match (t, s >= CALL_CUTOFF) {
+        match (t, s >= cutoff) {
             (true, true) => c.tp += 1,
             (true, false) => c.fn_ += 1,
             (false, true) => c.fp += 1,
