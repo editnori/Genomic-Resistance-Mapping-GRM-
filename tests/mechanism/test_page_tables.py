@@ -236,6 +236,26 @@ class Gates(unittest.TestCase):
         reading = lay_reading(self.top, species=["synthia_alba", "synthia_borea"])
         msg = self.refused(reading, 2)
         self.assertIn("synthia_cana", msg)
+        # a species more than A is refused too
+        sub = self.top / "more"
+        sub.mkdir()
+        reading = lay_reading(sub)
+        (reading / "runs" / "synthia_dubia").mkdir()
+        with self.assertRaises(page.Stop) as cm:
+            write(sub, reading)
+        self.assertIn("gate 2", str(cm.exception))
+        # combine.py's tables missing, or a file it does not write, stop at gate 1
+        for case in ("missing", "extra"):
+            sub = self.top / case
+            sub.mkdir()
+            reading = lay_reading(sub)
+            if case == "missing":
+                (reading / "combined" / "m2-summary.tsv").unlink()
+            else:
+                (reading / "combined" / "extra.tsv").write_text("x\n")
+            with self.assertRaises(page.Stop) as cm:
+                write(sub, reading)
+            self.assertIn("gate 1", str(cm.exception), case)
 
     def test_a_dataset_of_m_marked_primary_is_refused(self):
         def tamper(slug, tables):
@@ -245,6 +265,28 @@ class Gates(unittest.TestCase):
                                                         and r["set"] == "M"):
                         r["set"], r["labels_depend_on"] = "primary", ""
         self.refused(lay_reading(self.top, tamper=tamper), 4)
+
+        # strata.tsv alone puts the dataset of M in the primary set; datasets.tsv keeps it in M
+        def strata_only(slug, tables):
+            for r in tables["m1/strata.tsv"][1]:
+                if r["dataset"] in IN_M:
+                    r["set"], r["labels_depend_on"] = "primary", ""
+        sub = self.top / "strata-only"
+        sub.mkdir()
+        with self.assertRaises(page.Stop) as cm:
+            write(sub, lay_reading(sub, tamper=strata_only))
+        self.assertIn("gate 4", str(cm.exception))
+
+        # a dataset of M that waits for another label rule than lists.tsv gives
+        def other_rule(slug, tables):
+            for r in tables["m1/datasets.tsv"][1]:
+                if r["dataset"] in IN_M:
+                    r["labels_depend_on"] = "another rule"
+        sub = self.top / "other-rule"
+        sub.mkdir()
+        with self.assertRaises(page.Stop) as cm:
+            write(sub, lay_reading(sub, tamper=other_rule))
+        self.assertIn("gate 4", str(cm.exception))
 
     def test_the_primary_reading_holds_no_dataset_of_m(self):
         write(self.top, lay_reading(self.top))
@@ -258,6 +300,15 @@ class Gates(unittest.TestCase):
     def test_a_first_run_copy_is_refused(self):
         reading = lay_reading(self.top, commit_of=lambda s: FIRST_RUN if s == "synthia_borea" else COMMIT)
         self.assertIn("synthia_borea", self.refused(reading, 3))
+        # a DONE that names another species is refused
+        sub = self.top / "other-done"
+        sub.mkdir()
+        reading = lay_reading(sub)
+        done = reading / "runs" / "synthia_alba" / "DONE"
+        done.write_text(done.read_text().replace("DONE synthia_alba ", "DONE synthia_borea "))
+        with self.assertRaises(page.Stop) as cm:
+            write(sub, reading)
+        self.assertIn("gate 3", str(cm.exception))
 
     def test_a_table_changed_after_its_run_is_refused(self):
         def after(reading):
@@ -341,6 +392,18 @@ class Tables(unittest.TestCase):
               if r["guard"] == "bioproject" and r["passes"] == "1"}
         for r in lineage:
             self.assertNotEqual(r["holm_p_point"], bp[(r["species"], r["class"], r["periods"])])
+        # with the mix's p apart from the point share's, each statistic keeps its own Holm p and moves
+        def tamper(slug, tables):
+            for r in tables["m2/m2-cells.tsv"][1]:
+                if r["guard"] == "bioproject" and r.get("p_tvd"):
+                    r["p_tvd"] = "0.001000000000"
+        with tempfile.TemporaryDirectory() as tmp:
+            write(tmp, lay_reading(tmp, tamper=tamper))
+            dec = [r for r in c.read_tsv(Path(tmp) / "out" / "page-m2-cells.tsv")
+                   if (r["cell"], r["periods"], r["guard"]) == page.DECIDING and r["passes"] == "1"]
+            self.assertEqual(len(dec), 3)
+            self.assertEqual({(r["moves_point"], r["moves_tvd"]) for r in dec}, {("0", "1")})
+            self.assertTrue(all(r["holm_p_tvd"] != r["holm_p_point"] for r in dec))
 
     def test_the_deciding_count_reads_the_bioproject_vote_alone(self):
         # the BioProject vote's p is 0.5 in every cell and the largest-out guard's 0.001: only a guard moves
@@ -383,6 +446,11 @@ class Tables(unittest.TestCase):
         self.assertEqual((point["ten_or_more"], point["resistant"]), ("4", str(11 * 4 + 9)))
         self.assertNotIn("recall", page.M1_STRATA_COLUMNS)
         self.assertEqual(rows[("M", "lineage", "program", "gene_only")]["datasets"], "1")
+        # neither holds exactly 10 resistant genomes in each dataset, which meets the floor of 10
+        self.assertEqual(rows[("primary", "lineage", "program", "neither")]["ten_or_more"], "5")
+        # a species' count needs both strata at 10: synthia_borea__fictocillin's point only stratum holds 9
+        sp = {r["species"]: r for r in self.rows("page-species.tsv")}
+        self.assertEqual(sp["Synthia borea"]["m1_primary_both_ten"], "1")
 
     def test_the_reading_table_gives_the_five_learners_then_the_two_callers_beside(self):
         printed = page.tables(self.out)["m1_reading"]

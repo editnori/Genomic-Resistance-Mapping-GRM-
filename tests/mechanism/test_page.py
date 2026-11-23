@@ -156,6 +156,11 @@ class Page(unittest.TestCase):
             self.assertIn(f"*{sp}* with {words(abs_)}", data)
         for sp, abs_ in in_m.items():
             self.assertIn(f"*{sp}* with {words(abs_)}", data)
+        most = max(primary, key=lambda sp: len(primary[sp]))
+        sizes = sorted((len(v) for v in primary.values()), reverse=True)
+        self.assertGreater(sizes[0], sizes[1])
+        self.assertIn(f"The M1 reading stands on {sum(map(len, primary.values()))} datasets in {len(primary)} species, "
+                      f"{len(primary[most])} of them in *{most}*.", self.sections["Limits"])
 
     def test_beside_neither_and_strata_stand_as_their_rows_give(self):
         text = self.sections["M1"]
@@ -284,6 +289,11 @@ class Page(unittest.TestCase):
                       f"({d3(dor['rf']['gene_only_recall'])} against {d3(dor['rf']['point_only_recall'])}).", seen)
         self.assertIn("*Klebsiella pneumoniae* with ciprofloxacin and levofloxacin, *Salmonella enterica* with "
                       "nalidixic acid, and *Shigella sonnei* with ciprofloxacin and nalidixic acid", seen)
+        self.assertIn(f"Of the {len(ds)} datasets of the M1 reading, {len(quin)} have the drug class quinolone", seen)
+        self.assertIn(f"On the {len(rest)} others,", seen)
+        self.assertIn(f"`scm`, `gbt` and `lasso` are gene ahead on {sides['scm'].count('gene')} of {len(rest)}. `cart` "
+                      f"is gene ahead on {sides['cart'].count('gene')} and point ahead on {sides['cart'].count('point')},",
+                      seen)
         self.assertEqual(sorted({k[2] for k in rest}), sorted(["cephalosporin (1st-2nd gen)", "cephalosporin (3rd gen)",
                                                                "carbapenem", "penicillin + inhibitor", "aminoglycoside"]))
 
@@ -354,6 +364,10 @@ class Page(unittest.TestCase):
         self.assertEqual((len(sp), total("datasets"), total("in_m"), total("entered"), total("hard_check_pass")),
                          (21, 237, 33, 237, 237))
         self.assertIn(f"2,844 of 2,844 learner and catalog rows", data)
+        self.assertIn(f"A: the {total('datasets')} datasets of the {len(sp)} species with the program's tables "
+                      f"(`scripts/c3-inputs/lists.tsv`), {total('datasets') - total('in_m')} in the primary set and "
+                      f"{total('in_m')} in M, which wait for the maintainer's label rule. All {total('entered')} "
+                      f"entered.", data)
         self.assertEqual((total("learner_rows_equal"), total("learner_rows")), (2844, 2844))
         ds = rows("page-datasets.tsv")
         for col in ("rule_check", "hard_check", "program_check", "record_check", "entered"):
