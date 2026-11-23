@@ -6519,7 +6519,14 @@ mod tests {
                 // The final forest fits every sample; boosting and the lasso
                 // hold out their tuning samples.
                 let fitting = note["fitting"].as_u64().unwrap();
-                assert!(if note["learner"] == "rf" { fitting == 96 } else { fitting < 96 }, "{note}");
+                assert!(
+                    if note["learner"] == "rf" {
+                        fitting == 96
+                    } else {
+                        fitting < 96
+                    },
+                    "{note}"
+                );
                 continue;
             }
             let fold = folds
