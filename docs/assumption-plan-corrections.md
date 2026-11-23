@@ -602,3 +602,46 @@ An eleventh came while the text was written. The project's wording rules put rec
 **Two sentences of the method page.** A check of the result against the run's scripts found two places where the method page's words and the script at main `11c2996` differed, and the script is what ran. The page listed six guards and the script ran seven: the one left out is the lineage clusters voting in both periods, and it moves 0 cells. The page put every resistant later test genome under the time-split link's share, and the script takes the share over those with a catalogue call: 13 of the 24 datasets hold such genomes with no call, and on 2 of the 13 the two shares differ. The link is exploratory and decides nothing. Both pages now state what ran, with the date. No figure changes.
 
 **Written.** This entry was written at 08:18Z on 23 Nov 2026, after the reading, and the paragraph on the method page's two sentences at 09:17Z.
+
+## C7 design
+
+**Block.** Plan block C7 asks whether learners from outside GRM do better than GRM's own on the same folds. The design was fixed at 07:37Z on 23 Nov 2026, before any code ran on real data, and `docs/outside-learners.md` gives the method. No comparison result has been read.
+
+**Arms.** Three arms stand against the release's rule refitted in the same run. XGBoost 3.0.5 and LightGBM 4.6.0 fit the 4,000 rows `grm export` screens for each outer fold and are read against GRM's boosted trees (`gbt`); a scikit-learn 1.7.2 elastic net fits plan block C3's unitig build and is read against GRM's lasso (`lasso`). Each wheel is pinned by its sha256 on pypi.org in `scripts/c7-outside/requirements.txt`, the learner cross-check's file plus LightGBM 4.6.0. The arms are scripts; nothing under `src/` changes, and every output of `grm` stays the same, byte for byte.
+
+**Folds.** The folds are GRM's: on the lineage split the plan `grm export` writes, with its sha256 checked; on the study split the reviewed `study-whole` fold file, with each fold's boosting holdout and 3 inner folds drawn by GRM's rule. Early stopping reads the plan's 15% boosting holdout, and the elastic net's mix and penalty are picked on the 3 inner folds. No outer test genome enters a screen, a holdout, an inner fold or a pick, and a test holds each of those apart.
+
+**Measure.** Per arm, the lineage balanced accuracy is primary, with recall, specificity, both error rates with Wilson intervals, and log loss beside it. `grm export` takes no seed, so the arms run at seed 42 alone, one draw (question 1), and each is read against the default's mean at the seeds the arms ran, `k31-at-arm-seeds`. The twin is the default at seeds 45, 46 and 47.
+
+**Count.** Better, worse or the same by 0.02 at 12 decimals, the arm's value less the default's, the median difference with its species interval, and the one-sided sign test. Holm runs over 5 lineage pairs: `xgboost-gbt`, `lightgbm-gbt`, `elasticnet-lasso`, `twin-gbt` and `twin-lasso`. An arm carries the change when its pair meets conditions 1 and 2; condition 3 reads both twin pairs for the whole block (question 14); 4 and 5 are read per arm. `score.py --count` refuses before all three arms and the twin have lineage rows.
+
+**Study.** The first-run datasets in S, 55, get one study run per arm at seed 42, with no twin.
+
+| Set | Datasets | Species | Less M, the first run | First run in S |
+|---|---:|---:|---:|---:|
+| L | 268 | 23 | 233 | 55 |
+
+**Questions.** The design leaves fourteen questions to the lead, each with the answer taken and the other one. None had been ruled when this entry was written. Each is one argument of the code or the run script, apart from question 1, which needs `src/`.
+
+| Question | Taken | Other |
+|---|---|---|
+| 1. Seeds of the arms | a flag `grm export --seed S`, default 42, with no byte of any output moved without it; not written until ruled, so the arms run at seed 42 alone and `run_species.sh` refuses another | seed 42 alone for good, a departure from the plan's Rules, Draws |
+| 2. Study plans | GRM's rule for the holdout and inner folds on the reviewed fold file's outer folds, the screen by the export's rule | `grm export --fold-file F` |
+| 3. The boosters' rows | the export's forest screen on all training genomes | the chi-square screen again on the fitting genomes |
+| 4. Settings with no GRM knob | the library's default, LightGBM's `min_data_in_leaf` 20 among them | 1 |
+| 5. XGBoost's tree method | `exact`, the learner cross-check's | `hist` |
+| 6. A booster with one tree | kept, scored and counted | scored as GRM's null fit |
+| 7. The elastic net's input | the chi-square top 4,000 of the fold's unitig candidates on each fit's own genomes | every candidate |
+| 8. Column scale | each column over its standard deviation on the fitting genomes | raw 0 and 1 |
+| 9. An unconverged elastic net refit | scored and counted | the dataset stops |
+| 10. Holm | 5 lineage pairs | 8, the twin's five learners |
+| 11. Default and twin | C7's own, in the same run with the same binary | the C3 run's, on each species' C3 box |
+| 12. First stage | `scripts/c3-inputs/run_species.sh` with the unitig arm, as it is | a C7 script without C3's unitig fits |
+| 13. First run | L less M | all of L |
+| 14. Condition 3 | both twin pairs for the whole block | each arm's own learner's twin pair |
+
+**Pilot.** One lineage draw at seed 42 of *Klebsiella aerogenes* with ertapenem (83 genomes, 48 resistant), imipenem (68, 26) and meropenem (78, 26), the default and each arm, one thread a fit, on one 16-CPU box. The nine fits ran from 08:10:13Z to 08:21:55Z on 23 Nov 2026, and the elastic net as built again from 08:23:00Z to 08:34:27Z. Their reports went to a sealed folder that no one opened. CPU seconds a draw: XGBoost 0.70, 0.87 and 0.71; LightGBM 1.23, 0.85 and 1.03; the elastic net 667.37, 600.08 and 686.13, each under 320,000 KB at peak. The runner's screen equals the export's on 5 of 5 lineage folds in each dataset. A scan found 0 genome ids in the 47 files that came back and 0 in the rerun's 12.
+
+**Cost.** The plan gives 15 xlarge-hours plus the elastic net after a pilot. At 2,000 genomes a SYNTHETIC elastic net fold took 603.8 s; a power law through it and the pilot (exponent 0.4697) gives 3,019.0 s a draw, plus the projection. Over the 233 datasets and 55 study runs, the boosters, the export and the libraries take 1.23 box-hours central and 2.34 upper, and the elastic net 30.37 and 117.55. Stage 1 on new boxes, the default, the twin and the unitig build, takes 33.45 and 93.11. On a new box a species the run comes to 65.05 box-hours central and 213.00 upper, $13.01 and $42.60 at xlarge's $0.20 an hour; on each species' C3 box, where stage 1 is there already, 31.61 and 119.89.
+
+**Written.** This entry was written at 08:51Z on 23 Nov 2026, from the design fixed at 07:37Z, the lists, the pilot and the SYNTHETIC timings. No comparison result had been read, and no pilot's report was opened.
