@@ -42,7 +42,9 @@ and the twin all have lineage rows or the arm is named with --withdrawn: the
 family is fixed at 5 pairs and the count is taken once. An arm withdrawn
 before it runs keeps its pair at p = 1 and is named in count.tsv's
 `withdrawn`; the count refuses a withdrawn arm that has results, and the twin
-or the default named as withdrawn (the lead's addition, 23 Nov).
+or the default named as withdrawn (the lead's addition, 23 Nov). It refuses
+a dataset lists.tsv lists outside the first run (in M), and prints how many
+of lists.tsv's first-run datasets it counts.
 count-no-unconverged.tsv leaves out the datasets whose arm draws hold a
 refit that reached saga's epoch cap, and decides nothing (question 9). Pairs, each an arm's learner against
 the default's same learner on the arm's own datasets: xgboost-k31 (gbt),
@@ -329,13 +331,18 @@ def main(argv):
         keys = [(r["dataset"], r["split"], r["arm"], r["learner"]) for r in rows]
         if len(set(keys)) != len(keys):
             raise SystemExit("a dataset, split, arm and learner is listed twice")
+        first = {r["dataset"]: r["first_run"] == "1" for r in read_tsv(HERE / "lists.tsv")}
+        in_m = sorted({r["dataset"] for r in rows if r["dataset"] in first and not first[r["dataset"]]})
+        if in_m:
+            raise SystemExit(f"{len(in_m)} datasets are in M, outside C7's first run, and never counted: {', '.join(in_m)}")
         counted = count(rows, withdrawn)
         out.mkdir(parents=True, exist_ok=True)
         write_tsv(out / "count.tsv", counted, COUNT_COLUMNS)
         write_tsv(out / "count-no-constant.tsv", count(rows, withdrawn, keep_constant=False), COUNT_COLUMNS)
         write_tsv(out / "count-no-unconverged.tsv", count(rows, withdrawn, keep_unconverged=False), COUNT_COLUMNS)
         write_tsv(out / "conditions.tsv", conditions(counted), CONDITION_COLUMNS)
-        print(f"count: {len(rows)} dataset rows from {len(rest)} files")
+        print(f"count: {len(rows)} dataset rows from {len(rest)} files, "
+              f"{len({r['dataset'] for r in rows if first.get(r['dataset'])})} of {sum(first.values())} first-run datasets")
         return 0
     if len(argv) != 4:
         print(__doc__.strip().splitlines()[0], file=sys.stderr)

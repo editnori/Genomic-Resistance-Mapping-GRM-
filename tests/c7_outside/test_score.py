@@ -320,6 +320,31 @@ class Count(unittest.TestCase):
             count(rows)
         self.assertIn("twin (lasso)", str(e.exception))
 
+    def test_the_count_refuses_a_dataset_in_m_and_counts_the_first_run_datasets_it_holds(self):
+        with open(C.KIT / "lists.tsv", encoding="utf-8", newline="") as f:
+            lists = list(csv.DictReader(f, delimiter="\t"))
+        in_m = next(r for r in lists if r["first_run"] == "0")
+        first = next(r for r in lists if r["first_run"] == "1")
+        rows = count_rows(lambda a, l, m: 0.0, n=4)
+        for r in rows:
+            if r["dataset"] == "synthia_1__drug_1":
+                r.update(dataset=in_m["dataset"], species_slug=in_m["species_slug"])
+        with self.assertRaises(SystemExit) as e:
+            count(rows)
+        self.assertIn(f"1 datasets are in M, outside C7's first run, and never counted: {in_m['dataset']}", str(e.exception))
+        for r in rows:
+            if r["dataset"] == in_m["dataset"]:
+                r.update(dataset=first["dataset"], species_slug=first["species_slug"])
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "datasets.tsv"
+            score.write_tsv(path, rows, score.DATASET_COLUMNS)
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                rc = score.main(["--count", str(Path(tmp) / "count"), str(path)])
+        self.assertEqual(rc, 0)
+        n_first = sum(r["first_run"] == "1" for r in lists)
+        self.assertEqual(buf.getvalue(), f"count: {len(rows)} dataset rows from 1 files, 1 of {n_first} first-run datasets\n")
+
     def test_conditions_are_read_for_the_three_arms_and_never_for_the_twin(self):
         rc, t = count(count_rows(lambda a, l, m: 0.0))
         self.assertEqual(rc, 0)
