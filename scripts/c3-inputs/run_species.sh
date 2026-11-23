@@ -42,7 +42,8 @@
 # environment (micromamba, the pinned environment, the database, the kit's
 # own tests and its fixture tables) and the program on every genome of the
 # species with a recorded table, each table equal to its recorded sha256;
-# expect.tsv (expect.py).
+# expect.tsv (expect.py). Every start, a restart too, holds the tables to
+# their recorded sha256 again before any fit.
 #
 # Fits, per seed of SEEDS: the default, grm learn --seed s --exp-pick
 # results/picks/k31, then each arm, grm learn --seed s --exp-inputs ARM
@@ -378,6 +379,18 @@ if [ -n "$A_LIST" ]; then
   step program_run program_run
 else
   say "program: no listed dataset is in A, so no program arm runs"
+fi
+# Every start holds the tables to their recorded sha256 again before any
+# fit: a restart skips the step that made them, and the fits read them.
+if [ -n "$A_LIST" ]; then
+  STEP=tables-check
+  grep "  $SP/" "$KIT/tool-tables.sha256" | sort -k2 > "$AMR/tables.recorded.again"
+  ( cd "$AMR/tool" && find "$SP" -name '*.tsv' | sort | xargs -r sha256sum ) | sort -k2 > "$AMR/tables.again"
+  if ! cmp -s "$AMR/tables.recorded.again" "$AMR/tables.again"; then
+    say "the program's tables differ from their recorded sha256: $(wc -l < "$AMR/tables.again") on the box, $(wc -l < "$AMR/tables.recorded.again") recorded, $(diff "$AMR/tables.recorded.again" "$AMR/tables.again" | grep -c '^[<>]' || true) lines differ"
+    false
+  fi
+  say "tables: $(wc -l < "$AMR/tables.again") of $(wc -l < "$AMR/tables.recorded.again") recorded, each equal to its sha256"
 fi
 
 STEP=expect
