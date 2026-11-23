@@ -23,8 +23,8 @@ outer folds, and the default's and the twin's calls of the learner each arm
 pairs with (gbt and lasso), with balanced accuracy, recall, specificity,
 the very major and the major error rate (each with its count, denominator
 and Wilson 95% interval) and log loss (scripts/c9-pick/score.py, measures).
-A draw that is missing is a failed check and leaves its dataset unscored,
-never a zero. A library arm's fold with no feature, or the elastic net's
+A draw that is missing is a failed check: nothing of its species is scored
+until the draw is there, and it is never read as a zero. A library arm's fold with no feature, or the elastic net's
 null fit, was scored in the report at the fold's training share of
 resistant genomes (ruling 16's constant model); its draws.tsv rows say so
 in `constant`. Writes checks.tsv, draws.tsv and datasets.tsv (C3's
