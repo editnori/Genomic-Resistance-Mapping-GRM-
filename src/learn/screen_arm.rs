@@ -657,7 +657,12 @@ mod tests {
             .collect();
         let marker: Vec<bool> = (0..n).map(|i| i < 20).collect();
         let inside: Vec<bool> = (0..n).map(|i| y[i] != (i % 3 == 0)).collect();
-        (matrix(&[marker, inside]), labels(&y), Bits::ones(n), lineage)
+        (
+            matrix(&[marker, inside]),
+            labels(&y),
+            Bits::ones(n),
+            lineage,
+        )
     }
 
     #[test]
