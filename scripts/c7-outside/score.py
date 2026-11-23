@@ -1,7 +1,7 @@
 """The scorer of plan block C7 (docs/outside-learners.md, measures and files).
 
   python3 -I score.py <expect.tsv> <run dir> <release dir> <out dir>
-  python3 -I score.py --count <out dir> <datasets.tsv> [<datasets.tsv> ...]
+  python3 -I score.py --count <out dir> [--withdrawn <arm> ...] <datasets.tsv> [<datasets.tsv> ...]
 
 The first form checks every result expect.py lists, then scores it. The
 default (k31) and the twin are grm learn --exp-pick results the C3 stage of
@@ -35,10 +35,16 @@ default meet on the same draws; the twin's pairs read every draw)
 and prints the check counts only. Exits 1, scoring nothing, when a check
 fails.
 
-The second form writes count.tsv, count-no-constant.tsv and conditions.tsv
-over several species' datasets.tsv and prints the row count only. It
-refuses unless the three arms and the twin all have lineage rows: the family
-is fixed and the count is taken once. Pairs, each an arm's learner against
+The second form writes count.tsv, count-no-constant.tsv,
+count-no-unconverged.tsv and conditions.tsv over several species'
+datasets.tsv and prints the row count only. It refuses unless the three arms
+and the twin all have lineage rows or the arm is named with --withdrawn: the
+family is fixed at 5 pairs and the count is taken once. An arm withdrawn
+before it runs keeps its pair at p = 1 and is named in count.tsv's
+`withdrawn`; the count refuses a withdrawn arm that has results, and the twin
+or the default named as withdrawn (the lead's addition, 23 Nov).
+count-no-unconverged.tsv leaves out the datasets whose arm draws hold a
+refit that reached saga's epoch cap, and decides nothing (question 9). Pairs, each an arm's learner against
 the default's same learner on the arm's own datasets: xgboost-k31 (gbt),
 lightgbm-k31 (gbt), elasticnet-k31 (lasso), and on the lineage split the
 twin's twin-k31 (gbt) and twin-k31 (lasso). Per split, pair and measure:
@@ -48,7 +54,9 @@ resamples, the one-sided sign test, and Holm over the 5 lineage rows of the
 primary measure, the twin's two included (question 10). conditions.tsv
 reads, per arm, conditions 1, 2, 4 and 5 on its one pair, and condition 3 on
 both of the twin's pairs: it holds when the twin meets 1 in neither pair and
-2 in neither, each read apart (question 14).
+2 in neither, each read apart (question 14). Beside it, in `decides` 0, each
+arm's condition 3 on its own learner's twin pair alone, which decides
+nothing.
 """
 
 import importlib.util
@@ -78,8 +86,8 @@ DEFAULT, TWIN = C3.DEFAULT, C3.TWIN
 ARMS = O.ARMS
 PAIRED = sorted(set(ARMS.values()))
 FAMILY = [(arm, ARMS[arm]) for arm in ("xgboost", "lightgbm", "elasticnet")] + [(TWIN, learner) for learner in PAIRED]
-# The default read at the library arms' seeds only: an arm's pair meets the default on the same draws (until
-# question 1 is ruled the arms run at seed 42 alone, the default at 42, 43 and 44). The twin meets every draw.
+# The default read at the library arms' seeds only: an arm's pair meets the default on the same draws (the arms
+# run at the default's three seeds, 42, 43 and 44, since the lead's ruling on question 1). The twin meets every draw.
 ARM_BASE = "k31-at-arm-seeds"
 
 
@@ -136,14 +144,16 @@ def score_rows(expect, docs, names):
         doc = docs.get(e["file"])
         for learner in learners:
             if doc is None:
-                rows.append(dict(base, learner=learner, scored=0, constant=0, why="draw missing"))
+                rows.append(dict(base, learner=learner, scored=0, constant=0, unconverged=0, why="draw missing"))
             elif doc.get("unavailable_reason") is not None:
-                rows.append(dict(base, learner=learner, scored=0, constant=0, why="split unavailable"))
+                rows.append(dict(base, learner=learner, scored=0, constant=0, unconverged=0, why="split unavailable"))
             elif e["arm"] in (DEFAULT, TWIN):
-                rows.append(dict(base, learner=learner, scored=1, constant=0, why="", **measures(fixed(doc, learner))))
+                rows.append(dict(base, learner=learner, scored=1, constant=0, unconverged=0, why="",
+                                 **measures(fixed(doc, learner))))
             else:
                 constant = int(doc["constant_folds"] > 0)
                 rows.append(dict(base, learner=learner, scored=1, constant=constant,
+                                 unconverged=int(doc["unconverged_refits"] > 0),
                                  why="a fold scored at its training share" if constant else "",
                                  **measures(outside_calls(doc))))
     return rows
@@ -153,7 +163,14 @@ def dataset_rows(draws):
     """datasets.tsv's rows (C3's dataset_rows), with the default also read at the library arms' seeds as ARM_BASE."""
     arm_seeds = {(r["split"], r["seed"]) for r in draws if r["arm"] in ARMS}
     again = [dict(r, arm=ARM_BASE) for r in draws if r["arm"] == DEFAULT and (r["split"], r["seed"]) in arm_seeds]
-    return C3.dataset_rows(draws + again)
+    rows = C3.dataset_rows(draws + again)
+    unconverged = {}
+    for r in draws + again:
+        k = (r["dataset"], r["split"], r["arm"], r["learner"])
+        unconverged[k] = unconverged.get(k, 0) + int(r.get("unconverged", 0))
+    for r in rows:
+        r["unconverged_draws"] = unconverged[(r["dataset"], r["split"], r["arm"], r["learner"])]
+    return rows
 
 
 # ---------- the count ----------
@@ -175,10 +192,22 @@ def interval(diffs, sps, seed):
     return meds[LO_INDEX], meds[HI_INDEX]
 
 
-def count(rows, keep_constant=True):
-    """count.tsv's rows from several species' datasets.tsv rows."""
+def count(rows, withdrawn=(), keep_constant=True, keep_unconverged=True):
+    """count.tsv's rows from several species' datasets.tsv rows.
+
+    withdrawn names library arms withdrawn before they ran: each keeps its pair in the family at p = 1 and holds
+    no row. With keep_constant False, a dataset with a constant-model draw is left out (count-no-constant.tsv); with
+    keep_unconverged False, a dataset with an unconverged refit (count-no-unconverged.tsv). Neither decides.
+    """
+    withdrawn = set(withdrawn)
+    if not withdrawn <= set(ARMS):
+        raise SystemExit(f"only a library arm ({', '.join(sorted(ARMS))}) can be withdrawn, not the twin or the "
+                         f"default: {', '.join(sorted(withdrawn - set(ARMS)))}")
+    held = sorted(withdrawn & {r["arm"] for r in rows})
+    if held:
+        raise SystemExit(f"a withdrawn arm has results: {', '.join(held)}")
     have = {(r["arm"], r["learner"]) for r in rows if r["split"] == "lineage"}
-    missing = [f"{a} ({l})" for a, l in FAMILY if (a, l) not in have]
+    missing = [f"{a} ({l})" for a, l in FAMILY if (a, l) not in have and a not in withdrawn]
     if missing:
         raise SystemExit(f"the family is not complete: no lineage result for {', '.join(missing)}; "
                          "the count is taken once, over every arm and the twin")
@@ -190,11 +219,12 @@ def count(rows, keep_constant=True):
             base_arm = DEFAULT if arm == TWIN else ARM_BASE
             for m in MEASURES:
                 ds = sorted({d for d, s, a, l in cell if s == split and a == arm and l == learner})
-                diffs, sps, unscored, constant = [], [], 0, 0
+                diffs, sps, unscored, constant, unconverged = [], [], 0, 0, 0
                 for d in ds:
                     a, b = cell[(d, split, arm, learner)], cell.get((d, split, base_arm, learner))
                     is_constant = int(a.get("constant_draws") or 0) > 0
-                    if not keep_constant and is_constant:
+                    is_unconverged = int(a.get("unconverged_draws") or 0) > 0
+                    if (not keep_constant and is_constant) or (not keep_unconverged and is_unconverged):
                         unscored += 1
                         continue
                     if b is None or not int(a["scored"]) or not int(b["scored"]) or a[m] in (None, "") or b[m] in (None, ""):
@@ -203,14 +233,17 @@ def count(rows, keep_constant=True):
                     diffs.append(r12(float(a[m]) - float(b[m])))
                     sps.append(a["species_slug"])
                     constant += is_constant
+                    unconverged += is_unconverged
                 up = -1 if m in LOWER_IS_BETTER else 1
                 better = sum(1 for x in diffs if up * x > MARGIN)
                 worse = sum(1 for x in diffs if up * x < -MARGIN)
-                row = {"split": split, "pair": pair, "learner": learner, "measure": m, "datasets": len(ds),
-                       "entered": len(diffs), "not_scored": unscored, "constant": constant, "better": better,
+                row = {"split": split, "pair": pair, "learner": learner, "measure": m,
+                       "withdrawn": int(arm in withdrawn), "datasets": len(ds), "entered": len(diffs),
+                       "not_scored": unscored, "constant": constant, "unconverged": unconverged, "better": better,
                        "worse": worse, "same": len(diffs) - better - worse,
                        "median_difference": r12(float(np.median(diffs))) if diffs else None, "species": len(set(sps)),
-                       "interval_lo": None, "interval_hi": None, "sign_p": C9.sign_p(better, worse), "holm_p": None,
+                       "interval_lo": None, "interval_hi": None,
+                       "sign_p": 1.0 if arm in withdrawn else C9.sign_p(better, worse), "holm_p": None,
                        "orientation": "lower" if m in LOWER_IS_BETTER else "higher"}
                 if diffs:
                     row["interval_lo"], row["interval_hi"] = interval(diffs, sps, C3.row_seed(split, pair, learner, m))
@@ -249,22 +282,32 @@ def conditions(count_rows):
              c2(arm, learner)),
             (3, "the twin meets 1 in neither of its pairs (gbt, lasso) and 2 in neither, each read apart",
              not any(twin_1) and not any(twin_2)),
+            ("3", f"beside, deciding nothing: the twin meets 1 and 2 in neither on {learner}, this arm's learner",
+             not c1(TWIN, learner) and not c2(TWIN, learner)),
             (4, "the recall interval does not lie wholly below -0.02",
              recall["interval_hi"] is not None and recall["interval_hi"] >= -MARGIN),
             (5, "the study median has the lineage median's sign",
              lin is not None and study is not None and sign(lin) != 0 and sign(study) == sign(lin)),
         ]
         for n, text, m in met:
-            out.append({"arm": arm, "learner": learner, "condition": n, "reads": text, "met": int(bool(m))})
-        out.append({"arm": arm, "learner": learner, "condition": 6, "reads": "the maintainer rules the change", "met": ""})
+            out.append({"arm": arm, "learner": learner, "condition": int(n), "decides": int(isinstance(n, int)),
+                        "reads": text, "met": int(bool(m))})
+        out.append({"arm": arm, "learner": learner, "condition": 6, "decides": 1,
+                    "reads": "the maintainer rules the change", "met": ""})
     return out
 
 
-DRAW_COLUMNS = C3.DRAW_COLUMNS
-DATASET_COLUMNS = C3.DATASET_COLUMNS
-COUNT_COLUMNS = ["split", "pair", "learner", "measure", "orientation", "datasets", "entered", "not_scored", "constant",
-                 "better", "worse", "same", "median_difference", "species", "interval_lo", "interval_hi", "sign_p", "holm_p"]
-CONDITION_COLUMNS = ["arm", "learner", "condition", "reads", "met"]
+def _after(columns, at, add):
+    i = columns.index(at) + 1
+    return columns[:i] + [add] + columns[i:]
+
+
+DRAW_COLUMNS = _after(C3.DRAW_COLUMNS, "constant", "unconverged")
+DATASET_COLUMNS = _after(C3.DATASET_COLUMNS, "constant_draws", "unconverged_draws")
+COUNT_COLUMNS = ["split", "pair", "learner", "measure", "orientation", "withdrawn", "datasets", "entered", "not_scored",
+                 "constant", "unconverged", "better", "worse", "same", "median_difference", "species", "interval_lo",
+                 "interval_hi", "sign_p", "holm_p"]
+CONDITION_COLUMNS = ["arm", "learner", "condition", "decides", "reads", "met"]
 
 
 def main(argv):
@@ -273,16 +316,26 @@ def main(argv):
             print(__doc__.strip().splitlines()[1], file=sys.stderr)
             return 2
         out = Path(argv[1])
-        rows = [r for p in argv[2:] for r in read_tsv(p)]
+        rest, withdrawn = argv[2:], []
+        while rest and rest[0] == "--withdrawn":
+            if len(rest) < 2:
+                raise SystemExit("--withdrawn takes an arm")
+            withdrawn.append(rest[1])
+            rest = rest[2:]
+        if not rest:
+            print(__doc__.strip().splitlines()[1], file=sys.stderr)
+            return 2
+        rows = [r for p in rest for r in read_tsv(p)]
         keys = [(r["dataset"], r["split"], r["arm"], r["learner"]) for r in rows]
         if len(set(keys)) != len(keys):
             raise SystemExit("a dataset, split, arm and learner is listed twice")
-        counted = count(rows)
+        counted = count(rows, withdrawn)
         out.mkdir(parents=True, exist_ok=True)
         write_tsv(out / "count.tsv", counted, COUNT_COLUMNS)
-        write_tsv(out / "count-no-constant.tsv", count(rows, keep_constant=False), COUNT_COLUMNS)
+        write_tsv(out / "count-no-constant.tsv", count(rows, withdrawn, keep_constant=False), COUNT_COLUMNS)
+        write_tsv(out / "count-no-unconverged.tsv", count(rows, withdrawn, keep_unconverged=False), COUNT_COLUMNS)
         write_tsv(out / "conditions.tsv", conditions(counted), CONDITION_COLUMNS)
-        print(f"count: {len(rows)} dataset rows from {len(argv) - 2} files")
+        print(f"count: {len(rows)} dataset rows from {len(rest)} files")
         return 0
     if len(argv) != 4:
         print(__doc__.strip().splitlines()[0], file=sys.stderr)

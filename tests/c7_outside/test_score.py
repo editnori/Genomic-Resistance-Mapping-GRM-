@@ -89,6 +89,14 @@ class Expect(unittest.TestCase):
         self.assertIn(f"results/outside/elasticnet/{C.DATASET}.study-whole-s42.outside.json", [r[7] for r in rows])
         self.assertIn(f"c3/results/picks/twin/{C.OTHER}.lineage-s47.pick.json", [r[7] for r in rows])
 
+    def test_the_elastic_net_left_out_has_no_row(self):
+        rows = expect.rows(C.SPECIES, [C.DATASET], [C.DATASET], [42, 43, 44], [45, 46, 47], [42, 43, 44],
+                           ("xgboost", "lightgbm"))
+        self.assertEqual({r[2] for r in rows}, {"k31", "twin", "xgboost", "lightgbm"})
+        self.assertEqual(sum(r[2] == "xgboost" for r in rows), 4)
+        with self.assertRaisesRegex(ValueError, "two boosters"):
+            expect.rows(C.SPECIES, [C.DATASET], [], [42], [45], [42], ("xgboost", "elasticnet"))
+
     def test_bad_lists_are_refused(self):
         for args, msg in (
             (([C.DATASET], [], [43], [45], [43]), "release's seed"),
@@ -115,6 +123,19 @@ class Checks(unittest.TestCase):
         self.assertIn("checks:", out)
         self.assertNotIn("balanced", out)
         self.assertEqual(datasets[0]["species"], "Synthia coli")
+
+    def test_an_unconverged_refit_is_carried_to_the_draw_and_the_dataset(self):
+        def change(r, d):
+            if at("elasticnet", seed=43)(r, d):
+                d["unconverged_refits"] = 1
+        rows, docs, releases = full_run(arm_seeds=(42, 43, 44), change=change)
+        rc, out, checks, draws, datasets = run(rows, docs, releases)
+        self.assertEqual(rc, 0, failed(checks))
+        hit = [(r["arm"], r["split"], r["seed"]) for r in draws if r["unconverged"] == "1"]
+        self.assertEqual(hit, [("elasticnet", "lineage", "43")])
+        hit = [(r["arm"], r["split"], r["unconverged_draws"]) for r in datasets
+               if r["dataset"] == C.DATASET and r["unconverged_draws"] not in ("0", "")]
+        self.assertEqual(hit, [("elasticnet", "lineage", "1")])
 
     def test_each_arm_pairs_with_its_own_grm_learner(self):
         self.assertEqual(O.ARMS, {"xgboost": "gbt", "lightgbm": "gbt", "elasticnet": "lasso"})
@@ -229,7 +250,7 @@ class Checks(unittest.TestCase):
                 self.assertNotIn(name, {"genome", "genomes", "id", "ids", "feature", "features", "rows", "kmer"})
 
 
-def count_rows(shift, n=12, species=4, study=True, base_shift=0.0, constant=()):
+def count_rows(shift, n=12, species=4, study=True, base_shift=0.0, constant=(), unconverged=()):
     """SYNTHETIC datasets.tsv rows: n datasets in `species` species; the default's values, the default at the arms'
     seeds (plus base_shift), and each pair's arm the default's plus shift(arm, learner, measure)."""
     out = []
@@ -244,7 +265,8 @@ def count_rows(shift, n=12, species=4, study=True, base_shift=0.0, constant=()):
                     continue
                 row = {"dataset": d, "species_slug": sp, "species": sp, "antibiotic": f"drug {k}", "split": split,
                        "arm": arm, "learner": learner, "draws": 3, "scored_draws": 3, "scored": 1,
-                       "constant_draws": int(arm in constant and k == 0)}
+                       "constant_draws": int(arm in constant and k == 0),
+                       "unconverged_draws": int(arm in unconverged and k in (0, 1))}
                 for m, v in base.items():
                     add = 0.0 if arm == "k31" else base_shift if arm == score.ARM_BASE else shift(arm, learner, m)
                     row[m] = v + add
@@ -252,14 +274,14 @@ def count_rows(shift, n=12, species=4, study=True, base_shift=0.0, constant=()):
     return out
 
 
-def count(rows):
+def count(rows, withdrawn=()):
     with tempfile.TemporaryDirectory() as tmp:
         path = Path(tmp) / "datasets.tsv"
         score.write_tsv(path, rows, score.DATASET_COLUMNS)
         out = Path(tmp) / "count"
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
-            rc = score.main(["--count", str(out), str(path)])
+            rc = score.main(["--count", str(out)] + [a for w in withdrawn for a in ("--withdrawn", w)] + [str(path)])
         return rc, {p.name: table(p) for p in sorted(out.glob("*.tsv"))}
 
 
@@ -303,7 +325,8 @@ class Count(unittest.TestCase):
         self.assertEqual(rc, 0)
         cond = t["conditions.tsv"]
         self.assertEqual(sorted({r["arm"] for r in cond}), ["elasticnet", "lightgbm", "xgboost"])
-        self.assertEqual(len(cond), 18)
+        self.assertEqual(len(cond), 21)
+        self.assertEqual(sum(r["decides"] == "0" for r in cond), 3)
 
     def test_an_arm_that_gains_everywhere_meets_one_to_five(self):
         def shift(a, l, m):
@@ -311,7 +334,7 @@ class Count(unittest.TestCase):
 
         rc, t = count(count_rows(shift))
         self.assertEqual(rc, 0)
-        met = {(r["arm"], int(r["condition"])): r["met"] for r in t["conditions.tsv"]}
+        met = {(r["arm"], int(r["condition"])): r["met"] for r in t["conditions.tsv"] if r["decides"] == "1"}
         self.assertEqual([met[("elasticnet", c)] for c in range(1, 7)], ["1", "1", "1", "1", "1", ""])
         self.assertEqual([met[("xgboost", c)] for c in range(1, 6)], ["0", "0", "1", "1", "0"])
 
@@ -324,7 +347,7 @@ class Count(unittest.TestCase):
 
             rc, t = count(count_rows(shift))
             self.assertEqual(rc, 0)
-            met = {(r["arm"], int(r["condition"])): r["met"] for r in t["conditions.tsv"]}
+            met = {(r["arm"], int(r["condition"])): r["met"] for r in t["conditions.tsv"] if r["decides"] == "1"}
             self.assertEqual(met[("elasticnet", 1)], "1")
             self.assertEqual(met[("elasticnet", 3)], "0", learner)
 
@@ -333,7 +356,7 @@ class Count(unittest.TestCase):
             return {"balanced_accuracy": 0.05, "recall": -0.05}.get(m, 0.0) if a == "xgboost" else 0.0
 
         rc, t = count(count_rows(shift))
-        met = {(r["arm"], int(r["condition"])): r["met"] for r in t["conditions.tsv"]}
+        met = {(r["arm"], int(r["condition"])): r["met"] for r in t["conditions.tsv"] if r["decides"] == "1"}
         self.assertEqual((met[("xgboost", 1)], met[("xgboost", 4)]), ("1", "0"))
 
     def test_a_constant_fold_dataset_enters_the_count_and_is_left_out_beside_it(self):
@@ -343,6 +366,53 @@ class Count(unittest.TestCase):
         b = by(t["count-no-constant.tsv"])[("lineage", "lightgbm-k31", "gbt", "balanced_accuracy")]
         self.assertEqual((int(a["entered"]), int(a["constant"])), (12, 1))
         self.assertEqual((int(b["entered"]), int(b["not_scored"])), (11, 1))
+
+    def test_each_arm_is_read_beside_against_its_own_learners_twin_pair(self):
+        # The twin meets 1 on gbt only: condition 3 fails for every arm, and the reading beside, which decides
+        # nothing, fails for the two boosters and holds for the elastic net, whose learner is the lasso.
+        def shift(a, l, m):
+            return 0.05 if m == "balanced_accuracy" and a == "twin" and l == "gbt" else 0.0
+
+        rc, t = count(count_rows(shift))
+        self.assertEqual(rc, 0)
+        met = {(r["arm"], int(r["condition"]), r["decides"]): r["met"] for r in t["conditions.tsv"]}
+        self.assertEqual([met[(a, 3, "1")] for a in ("xgboost", "lightgbm", "elasticnet")], ["0", "0", "0"])
+        self.assertEqual([met[(a, 3, "0")] for a in ("xgboost", "lightgbm", "elasticnet")], ["0", "0", "1"])
+
+    def test_a_withdrawn_arm_keeps_its_pair_at_p_one_and_is_named(self):
+        rows = [r for r in count_rows(lambda a, l, m: 0.05 if a == "lightgbm" and m == "balanced_accuracy" else 0.0)
+                if r["arm"] != "elasticnet"]
+        rc, t = count(rows, withdrawn=["elasticnet"])
+        self.assertEqual(rc, 0)
+        family = {r["pair"] + " " + r["learner"]: r for r in t["count.tsv"]
+                  if r["split"] == "lineage" and r["measure"] == "balanced_accuracy"}
+        self.assertEqual(len(family), 5)
+        e = family["elasticnet-k31 lasso"]
+        self.assertEqual((e["withdrawn"], e["entered"], float(e["sign_p"]), float(e["holm_p"])), ("1", "0", 1.0, 1.0))
+        self.assertEqual(float(family["lightgbm-k31 gbt"]["holm_p"]), 5 * 0.5 ** 12)
+        self.assertEqual({r["withdrawn"] for r in t["count.tsv"] if not r["pair"].startswith("elasticnet")}, {"0"})
+
+    def test_a_withdrawn_arm_with_results_is_refused(self):
+        with self.assertRaises(SystemExit) as e:
+            count(count_rows(lambda a, l, m: 0.0), withdrawn=["elasticnet"])
+        self.assertIn("a withdrawn arm has results: elasticnet", str(e.exception))
+
+    def test_the_twin_or_the_default_cannot_be_withdrawn(self):
+        rows = count_rows(lambda a, l, m: 0.0)
+        for arm in ("twin", "k31"):
+            with self.assertRaises(SystemExit) as e:
+                count([r for r in rows if r["arm"] != arm], withdrawn=[arm])
+            self.assertIn("not the twin or the default", str(e.exception), arm)
+
+    def test_an_unconverged_refit_dataset_enters_the_count_and_is_left_out_beside_it(self):
+        rc, t = count(count_rows(lambda a, l, m: 0.0, unconverged=("elasticnet",)))
+        self.assertEqual(rc, 0)
+        key = ("lineage", "elasticnet-k31", "lasso", "balanced_accuracy")
+        a, b = by(t["count.tsv"])[key], by(t["count-no-unconverged.tsv"])[key]
+        self.assertEqual((int(a["entered"]), int(a["unconverged"])), (12, 2))
+        self.assertEqual((int(b["entered"]), int(b["not_scored"])), (10, 2))
+        self.assertEqual(by(t["count-no-unconverged.tsv"])[("lineage", "xgboost-k31", "gbt", "balanced_accuracy")]["entered"],
+                         "12")
 
     def test_a_dataset_listed_twice_is_refused(self):
         rows = count_rows(lambda a, l, m: 0.0)
