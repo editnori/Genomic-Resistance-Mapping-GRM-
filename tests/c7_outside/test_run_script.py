@@ -129,6 +129,42 @@ class Fits(unittest.TestCase):
         self.assertIn('  leave-out) ARMS=xgboost,lightgbm ;;', SCRIPT)
         self.assertIn('"$SEEDS" "$TWIN" "$ARM_SEEDS" \\\n  "$ARMS" > "$OUT/expect.tsv.part"', SCRIPT)
 
+    def test_a_start_with_the_elastic_net_left_out_restarts_with_it_and_nothing_else_changes(self):
+        # The lead's two passes on one OUT: the boosters with ENET=leave-out, then a restart with ENET=run.
+        self.assertIn('lists_check "$OUT/lists.txt" "$OUT/lists.txt.part"\nmv "$OUT/lists.txt.part" "$OUT/lists.txt"\n',
+                      SCRIPT)
+        self.assertIn("printf 'species\\t%s\\ndatasets\\t%s\\nseeds\\t%s\\ntwin\\t%s\\narm_seeds\\t%s\\narms\\t%s\\n'", SCRIPT)
+
+        def lists(arms, seeds="42,43,44", datasets=C.DATASET):
+            return (f"species\t{C.SPECIES}\ndatasets\t{datasets}\nseeds\t{seeds}\ntwin\t45,46,47\n"
+                    f"arm_seeds\t{seeds}\narms\t{arms}\n")
+
+        boosters, all_three = "xgboost,lightgbm", "xgboost,lightgbm,elasticnet"
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+
+            def go(first, this):
+                (tmp / "first").unlink(missing_ok=True)
+                if first is not None:
+                    (tmp / "first").write_text(first)
+                (tmp / "this").write_text(this)
+                p = subprocess.run(["bash", "-c", 'say() { echo "$*"; }\n' + function("lists_check")
+                                    + 'lists_check "$1" "$2"', "x", str(tmp / "first"), str(tmp / "this")],
+                                   env={"PATH": "/usr/bin:/bin"}, capture_output=True, text=True)
+                return p.returncode, p.stdout
+
+            self.assertEqual(go(None, lists(boosters)), (0, ""))
+            self.assertEqual(go(lists(all_three), lists(all_three)), (0, ""))
+            rc, out = go(lists(boosters), lists(all_three))
+            self.assertEqual(rc, 0)
+            self.assertIn("the elastic net, left out at the first start, is listed now", out)
+            for first, this in ((lists(all_three), lists(boosters)), (lists(boosters), lists(all_three, seeds="42,43")),
+                                (lists(boosters), lists(all_three, datasets=f"{C.DATASET},{C.OTHER}")),
+                                (lists(boosters), lists("xgboost,lightgbm,elasticnet,other"))):
+                rc, out = go(first, this)
+                self.assertEqual(rc, 1, this)
+                self.assertIn("differ from the first start's; use a fresh OUT", out)
+
     def test_a_fits_log_comes_back_with_each_genome_id_masked(self):
         with tempfile.TemporaryDirectory() as tmp:
             tmp = Path(tmp)

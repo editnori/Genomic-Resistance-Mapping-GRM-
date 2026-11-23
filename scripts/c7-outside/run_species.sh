@@ -113,9 +113,22 @@ if bad or len(set(listed)) != len(listed):
 ' "$HERE/lists.tsv" "$DATASETS" "$SP" || { say "the list must hold first-run datasets of $SP, each once"; false; }
 printf 'species\t%s\ndatasets\t%s\nseeds\t%s\ntwin\t%s\narm_seeds\t%s\narms\t%s\n' "$SP" "$DATASETS" "$SEEDS" "$TWIN" \
   "$ARM_SEEDS" "$ARMS" > "$OUT/lists.txt.part"
-if [ -s "$OUT/lists.txt" ] && ! cmp -s "$OUT/lists.txt" "$OUT/lists.txt.part"; then
-  say "the dataset list or the seeds differ from the first start's; use a fresh OUT"; false
-fi
+# lists_check <first> <this>: the first start's lists.txt against this start's. They must be the same but for one
+# change, the lead's two passes: a run started with ENET=leave-out restarts with ENET=run, which lists and fits the
+# elastic net and keeps every finished step and fit. Any other change, the elastic net taken out after a start that
+# listed it among them, needs a fresh OUT.
+lists_check() {
+  [ -s "$1" ] || return 0
+  cmp -s "$1" "$2" && return 0
+  local arms_1 arms_2
+  arms_1=$(awk -F'\t' '$1 == "arms" { print $2 }' "$1"); arms_2=$(awk -F'\t' '$1 == "arms" { print $2 }' "$2")
+  if cmp -s <(awk -F'\t' '$1 != "arms"' "$1") <(awk -F'\t' '$1 != "arms"' "$2") && [ "$arms_1" = xgboost,lightgbm ] \
+      && [ "$arms_2" = xgboost,lightgbm,elasticnet ]; then
+    say "the elastic net, left out at the first start, is listed now; finished steps and fits are kept"; return 0
+  fi
+  say "the dataset list, the seeds or the arms differ from the first start's; use a fresh OUT"; return 1
+}
+lists_check "$OUT/lists.txt" "$OUT/lists.txt.part"
 mv "$OUT/lists.txt.part" "$OUT/lists.txt"
 rm -f "$OUT/FAILED" "$OUT/DONE"
 
