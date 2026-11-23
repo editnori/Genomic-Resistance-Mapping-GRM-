@@ -41,7 +41,8 @@
 # work/export-s<s> for each seed of ARM_SEEDS, every listed dataset's folder
 # present); expect.tsv (expect.py, the study datasets those with a reviewed
 # study plan in stage 1); plans (plans.py: each export's lineage plan at seed
-# s equals the default's folds at seed s by class, and at seed 42 the
+# s equals the default's folds at seed s by class and by genome (the C3
+# run's grm learn report at seed s), and at seed 42 the
 # export's input fingerprint equals the release report's, or the run stops);
 # the fits, one outside.py fit per arm, dataset, split and seed whose result
 # is missing, JOBS at once, one thread each, timed by GNU time; score

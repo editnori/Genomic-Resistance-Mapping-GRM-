@@ -292,6 +292,17 @@ class PlansCheck(unittest.TestCase):
         path = self.top / expect.picked("k31", C.DATASET, "lineage", s)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(doc))
+        self.report(s, meta["samples"], plan["outer"])
+
+    def report(self, s, ids, test_fold, seed=None):
+        """The default's SYNTHETIC grm learn report at seed s where grm keeps it: its samples and lineage test folds."""
+        species = self.top / "c3" / "work" / "root" / "species" / C.SPECIES
+        path = species / ("results" if s == 42 else f"draws/seed-{s}") / f"{C.DATASET}.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps({"eval_config": {"seed": s if seed is None else seed},
+                                    "samples": [{"id": i} for i in ids],
+                                    "splits": [{"scheme": "lineage", "test_fold": list(test_fold)},
+                                               {"scheme": "random", "test_fold": [0] * len(ids)}]}))
 
     def go(self):
         p = subprocess.run([sys.executable, "-I", "-B", str(C.KIT / "plans.py"), str(self.expect), str(self.top),
@@ -302,7 +313,7 @@ class PlansCheck(unittest.TestCase):
     def test_exports_on_the_defaults_folds_pass(self):
         rc, out = self.go()
         self.assertEqual(rc, 0, out)
-        self.assertIn("plans: 5 of 5 checks pass, 2 dataset seeds", out)
+        self.assertIn("plans: 7 of 7 checks pass, 2 dataset seeds", out)
 
     def test_a_plan_that_differs_from_the_defaults_by_class_is_refused(self):
         def change(doc):
@@ -312,6 +323,34 @@ class PlansCheck(unittest.TestCase):
         rc, out = self.go()
         self.assertEqual(rc, 1, out)
         self.assertIn(f"failed: {C.DATASET} seed 43: the plan's folds by class are the default's", out)
+
+    def test_two_genomes_of_one_class_swapped_between_folds_pass_by_class_and_are_refused_by_genome(self):
+        meta = json.loads((self.top / "work" / "export-s43" / C.DATASET / "dataset.json").read_text())
+        outer = next(x["plan"] for x in meta["splits"] if x["plan"]["scheme"] == "lineage")["outer"]
+        y = meta["resistant"]
+        a = next(i for i in range(len(y)) if outer[i] == 0)
+        b = next(i for i in range(len(y)) if outer[i] == 1 and y[i] == y[a])
+        swapped = list(outer)
+        swapped[a], swapped[b] = outer[b], outer[a]
+        self.report(43, meta["samples"], swapped)
+        rc, out = self.go()
+        self.assertEqual(rc, 1, out)
+        self.assertIn("plans: 6 of 7 checks pass", out)
+        self.assertIn(f"failed: {C.DATASET} seed 43: the plan's folds by genome are the default's", out)
+        self.assertNotIn("by class are the default's", out)
+        self.assertFalse(any(i in out for i in meta["samples"]), "plans.py printed a genome id")
+
+    def test_a_default_report_of_another_seed_or_none_is_refused(self):
+        meta = json.loads((self.top / "work" / "export-s43" / C.DATASET / "dataset.json").read_text())
+        outer = next(x["plan"] for x in meta["splits"] if x["plan"]["scheme"] == "lineage")["outer"]
+        self.report(43, meta["samples"], outer, seed=42)
+        rc, out = self.go()
+        self.assertEqual(rc, 1, out)
+        self.assertIn("the report is of seed 42, not 43", out)
+        (self.top / "c3" / "work" / "root" / "species" / C.SPECIES / "draws" / "seed-43" / f"{C.DATASET}.json").unlink()
+        rc, out = self.go()
+        self.assertEqual(rc, 1, out)
+        self.assertIn(f"failed: {C.DATASET} seed 43: the default's report at seed 43 is read", out)
 
     def test_an_export_of_another_seed_is_refused(self):
         import shutil
