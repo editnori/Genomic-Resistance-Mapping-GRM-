@@ -394,3 +394,43 @@ The refit of the release's rule ended on its 23 species and 238 datasets at 20:3
 **Cost.** Each arm's fit costs its pilot ratio to the release's learning seconds: 1.08 for K31, 0.17 for the program alone and 0.71 for K31 plus the program. The program takes 0.0178 core-hours a genome, 2.7 times the release's 0.0065, on 21,625 genomes. The built arms' part of the one run, with K31 and the twin, comes to 40.42 xlarge-hours, 24.07 of them the program; with data steps and loads, 47.12 box-hours over 23 boxes. The three waiting arms add their own, measured on their pilots.
 
 **Written.** This entry was written at 00:16Z on 23 Nov 2026, from the design fixed at 23:22Z on 22 Nov, the lists and the second pilot. The lead's rulings of 00:47Z were carried into it from 01:20Z to 01:24Z, in a review with a recount before filing (ruling 18). No comparison result had been read.
+
+## Mechanism design
+
+**Blocks.** Plan blocks M1 and M2 read the AMRFinderPlus program's tables beside the release's reports and fit nothing. M1 asks whether each learner's recall differs between resistant genomes whose catalogue calls are point mutations and those whose calls are acquired genes. M2 asks whether the mix of catalogue calls among deposited genomes moves between collection years. The design was fixed at 03:22Z on 23 Nov 2026, before any script of these blocks read a real table, score, stratum or share, and `docs/mechanism-split.md` gives the method. No result has been read.
+
+**Rule.** Both blocks reuse the AMRFinderPlus comparison's rule as it stands: each report's published rule, written for the 237 datasets of A as `scripts/mechanism/drug_rules.tsv`, and the adapter's counted rows (`tool_default`). Each run holds its own calls to the kit's adapter on every genome and its counts to the comparison's record.
+
+**M1.** On the 204 datasets of A not in M, the lineage split is primary. A hard check recomputes each learner row's counts from its scores before any stratum is counted. A genome's stratum (point only, gene only, both, neither) comes from its rule-meeting rows, never from its label. Per learner, the median of recall on gene only less recall on point only, over datasets with 10 or more resistant genomes in both, with its species interval, the sign test and Holm over the five learners.
+
+**M2.** Periods 2010 to 2014 against 2015 to 2019, then 2000 to 2009 against 2010 to 2019. A cell is a species with a drug class. One vote per BioProject with 5 or more genomes in a period, 3 or more such BioProjects a period, and a permutation over BioProjects, with Holm over the cells that pass. Six guards stand beside it and decide nothing.
+
+**Not built.** M3 is not built: a feature card names a gene in 1,432 of the release's 21,443 final-model cards, in none of the cards of 6 of the 23 species with cards (the plan wrote 7; the probe's output gives 6), and by BV-BRC's annotation rather than the catalogue's name. M4, the lineage curve for Mycobacterium tuberculosis, has a script, `tb_curve.py`, with SYNTHETIC tests and no run: TBProfiler must run again on the 2,000 genomes first.
+
+**Questions.** The plan leaves nine questions to the lead, each with the option taken and the other. A tenth came from the dry run, which stopped at M2 on a row of Subtype `POINT_DISRUPT`: the program names a disrupted core gene `<gene_family>_<change>`, which neither the catalogue's alleles nor its hierarchy hold. Taken: the gene_family before the underscore, when the catalogue lists that family with Subtype `POINT_DISRUPT`; any other symbol still stops the species. Other: leave `POINT_DISRUPT` rows out of the family mix. The plan file is unchanged.
+
+| Question | Taken | Other | Ruled |
+|---|---|---|---|
+| 1. `POINT_DISRUPT` rows | gene, as the brief words it, with those genomes counted beside each stratum | point | changed: point, with those genomes counted beside each stratum and, in point only and both, the genomes whose point rows are `POINT_DISRUPT` alone; the same in M2 and the time-split link |
+| 2. "Under 5" | covers zero | show 0 | changed: 0 is written 0, 1 to 4 "under 5"; withdrawn at 05:30Z by question 12 |
+| 3. Species interval | none under 6 species | an interval at any count | as taken |
+| 4. BioProject vote | 5 or more genomes in the period; the rest enter the share per genome only | every BioProject | as taken |
+| 5. Flagged BioProject | resistant share over the datasets whose rule names the class | every dataset | as taken |
+| 6. Family | the allele's gene_family, the symbol where it is one, else its first family in the hierarchy | the symbol | as taken |
+| 7. Lineage clusters | joined over the species' reports, given only where they agree | per report | as taken |
+| 8. Time-split determinant | a point row as one token "point", its symbol beside | each symbol | as taken |
+| 9. M4 names | no variant name in any output until ruled | the catalogue's variant names | as taken |
+| 10. `POINT_DISRUPT` family | the gene_family before the underscore, if the catalogue lists it with that subtype | out of the family mix | closed by question 1: a `POINT_DISRUPT` row enters no family mix, which is over Subtype `AMR` rows alone |
+| 11. Log loss in M1 | recall alone, as the brief fixes M1 | the log loss of each stratum's resistant genomes beside recall | as taken |
+| 12. A count of 1 to 4 written "under 5" | as ruled on question 2 | the count as it is | changed: every count as it is, 0 to 4 included, and "under 5" dropped; a recall over 10 or more resistant genomes, an M2 share only in a cell whose BioProject vote passes, M4's shares over 5 or more; a family or gene named only where 5 or more genomes carry it, the rest in one row |
+| 13. The flagged guard's years | a BioProject over its genomes in every year | over the cell's periods | as taken: the flag describes the study, whose design does not change by period |
+
+An eleventh came while the text was written. The project's wording rules put recall beside log loss, and M1 as fixed gives recall alone. The review raised two more. A count written "under 5" could be read back from the cells beside it, such as the all-genomes row less the other strata. Its recount read the flag over the cell's periods, where the script reads every year.
+
+**Rulings.** The lead ruled on the eleven questions at 04:13Z on 23 Nov 2026, and on questions 12 and 13 at 05:30Z, before any result was read. The plan file stays unchanged; the changes are dated beside the review's report and carried into the scripts, their tests and `docs/mechanism-split.md`. The lineage guard's count of differing pairs counts each pair of genomes once, as the plan words it; the first script counted a pair once per pair of reports it differed in.
+
+**Checks.** 121 SYNTHETIC tests in `tests/mechanism` (18 on M4). The ten planted faults and the review's 28 each fail a test; 14 of the review's passed every test before its patches. Two of the 28 no longer apply under the rulings of 05:30Z, and the review's nine faults on the rulings' rules each fail a test. The dry run on Klebsiella aerogenes (93 genomes, 3 datasets) ran end to end in 2.5 s with 30.6 MB at peak; the hard check passed on 3 of 3 datasets, 36 of 36 rows, and its scan found no genome id. Run again after the patches, the hard check passed on the same rows and the scan, which now also reads each table's counts, found no hit.
+
+**Cost.** Where the tables are given, about 565 s of compute for the 21 species, from the dry run's steps and a timing on 2,000 SYNTHETIC genomes. Where the program must run again, about 265 CPU hours on 21,625 genomes, from the refit's own run of the program on the same 93.
+
+**Written.** This entry was written at 03:48Z on 23 Nov 2026, after the dry run, and M4's script and question 11 were added at 04:06Z. The rulings of 04:13Z were carried in with the review's patches from 04:27Z to 04:49Z, and these checks at 05:11Z. The rulings of 05:30Z were carried in from 05:38Z to 05:47Z. No result of any block had been read.
