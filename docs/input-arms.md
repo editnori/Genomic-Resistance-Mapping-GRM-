@@ -75,7 +75,7 @@ The pilot, one draw of *Klebsiella aerogenes* with ertapenem, imipenem and merop
 
 ## Tests and planted faults
 
-`input_arms` holds 8 SYNTHETIC tests and `src/main.rs` one more on the flags. `tests/c3_inputs` holds 51 SYNTHETIC tests of the scorer, the refusal record, the lists and the expected results. `scripts/c3-inputs/planted_faults.py` plants each fault below in a copy of the tree and runs the test meant to catch it, which must fail.
+`input_arms` holds 9 SYNTHETIC tests and `src/main.rs` one more on the flags. `tests/c3_inputs` holds 51 SYNTHETIC tests of the scorer, the refusal record, the lists and the expected results. `scripts/c3-inputs/planted_faults.py` plants each fault below in a copy of the tree and runs the test meant to catch it, which must fail.
 
 | Fault | Caught by |
 |---|---|

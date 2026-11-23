@@ -638,6 +638,77 @@ mod tests {
     }
 
     #[test]
+    fn the_folds_at_a_seed_are_the_same_genomes_with_and_without_an_arm() {
+        // SYNTHETIC: one cohort's K31 projection and both arms' matrices,
+        // with the same labels, lineages and duplicate group. `evaluate`
+        // draws each split's outer folds from those and the seed alone, so
+        // every arm's folds at seed s are K31's, genome by genome, which
+        // the scorer can only check by class counts.
+        use crate::learn::eval::{EvalConfig, evaluate};
+        use crate::learn::gbt::GbtParams;
+        use crate::learn::tree::ForestParams;
+        let n = 120;
+        let (calls, ds) = cohort(n, 12, 40, 21);
+        let block = program_block(&calls, 3);
+        assert!(block.x.rows >= 3, "the fixture gives program rows");
+        let groups: Vec<u32> = (0..n).map(|i| (i / 6) as u32).collect();
+        let duplicates = vec![vec![4, 5]];
+        let mut available = 0;
+        for seed in [42, 43, 44] {
+            let cfg = EvalConfig {
+                folds: 5,
+                inner_folds: 2,
+                scm_max_rules: 1,
+                cart_max_depth: 1,
+                forest: ForestParams {
+                    n_trees: 2,
+                    max_depth: 2,
+                    ..Default::default()
+                },
+                gbt: GbtParams {
+                    rounds: 2,
+                    max_depth: 1,
+                    ..Default::default()
+                },
+                screened_features: 4,
+                lasso_lambdas: 2,
+                seed,
+                ..Default::default()
+            };
+            let run = |x: &BitMatrix| {
+                evaluate(
+                    "synthetic__drug",
+                    x,
+                    &ds.y,
+                    &groups,
+                    &duplicates,
+                    3,
+                    None,
+                    &cfg,
+                )
+                .unwrap()
+            };
+            let k31 = run(&ds.x);
+            for arm in [Arm::Program, Arm::K31Program] {
+                let (x, _) = arm_matrix(arm, &ds, &block);
+                assert_ne!(x.rows, ds.x.rows);
+                let got = run(&x);
+                assert_eq!(got.splits.len(), k31.splits.len());
+                for (a, b) in k31.splits.iter().zip(&got.splits) {
+                    assert_eq!(a.scheme, b.scheme);
+                    assert_eq!(a.unavailable_reason, b.unavailable_reason, "{}", a.scheme);
+                    assert_eq!(a.test_fold, b.test_fold, "{} at seed {seed}", a.scheme);
+                    available += (a.unavailable_reason.is_none() && a.scheme == "lineage") as usize;
+                }
+            }
+        }
+        assert!(
+            available > 0,
+            "the fixture's lineage split runs at some seed"
+        );
+    }
+
+    #[test]
     fn a_cohort_genome_without_a_table_stops_the_dataset() {
         let dir = std::env::temp_dir().join(format!("grm-c3-tables-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();

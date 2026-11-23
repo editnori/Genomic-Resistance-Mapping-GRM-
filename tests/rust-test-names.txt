@@ -279,6 +279,7 @@ src/lib.rs input_arms::tests::a_table_gives_the_named_column_of_the_admitted_row
 src/lib.rs input_arms::tests::an_arm_matrix_does_not_change_with_the_labels
 src/lib.rs input_arms::tests::no_outer_test_genome_changes_a_fits_candidates
 src/lib.rs input_arms::tests::the_arm_dataset_keeps_labels_and_columns_and_counts_its_rows
+src/lib.rs input_arms::tests::the_folds_at_a_seed_are_the_same_genomes_with_and_without_an_arm
 src/lib.rs input_arms::tests::the_joined_arm_holds_each_block_once_the_program_first
 src/lib.rs input_arms::tests::the_program_block_keeps_the_cohort_range_and_each_pattern_once
 src/lib.rs intervals::tests::clopper_pearson_boundaries_have_closed_forms
