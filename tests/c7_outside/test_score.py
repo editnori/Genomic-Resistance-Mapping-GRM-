@@ -384,6 +384,41 @@ class Count(unittest.TestCase):
         met = {(r["arm"], int(r["condition"])): r["met"] for r in t["conditions.tsv"] if r["decides"] == "1"}
         self.assertEqual((met[("xgboost", 1)], met[("xgboost", 4)]), ("1", "0"))
 
+    def test_a_recall_interval_that_reaches_above_the_margin_meets_condition_four(self):
+        # Half the species lose 0.05 of recall and half lose nothing: the interval runs from about -0.05 to 0, so it
+        # does not lie wholly below -0.02, and condition 4 is met. Read on the interval's low end it would fail.
+        rows = count_rows(lambda a, l, m: 0.05 if a == "xgboost" and m == "balanced_accuracy" else 0.0)
+        for r in rows:
+            if r["arm"] == "xgboost" and int(r["species_slug"].split("_")[-1]) % 2:
+                r["recall"] -= 0.05
+        rc, t = count(rows)
+        self.assertEqual(rc, 0)
+        recall = by(t["count.tsv"])[("lineage", "xgboost-k31", "gbt", "recall")]
+        self.assertLess(float(recall["interval_lo"]), -0.02)
+        self.assertGreaterEqual(float(recall["interval_hi"]), -0.02)
+        met = {(r["arm"], int(r["condition"])): r["met"] for r in t["conditions.tsv"] if r["decides"] == "1"}
+        self.assertEqual(met[("xgboost", 4)], "1")
+
+    def test_a_difference_inside_the_margin_counts_as_the_same(self):
+        # 0.01 above the default on every dataset: no dataset is better by more than 0.02, so all 12 are the same.
+        rc, t = count(count_rows(lambda a, l, m: 0.01 if a == "lightgbm" else 0.0))
+        self.assertEqual(rc, 0)
+        r = by(t["count.tsv"])[("lineage", "lightgbm-k31", "gbt", "balanced_accuracy")]
+        self.assertEqual((int(r["better"]), int(r["worse"]), int(r["same"])), (0, 0, 12))
+        self.assertEqual(float(r["sign_p"]), 1.0)
+
+    def test_a_higher_log_loss_or_error_rate_counts_as_worse(self):
+        # The arm's log loss, very major error and major error are each 0.05 above the default's: lower is better
+        # for these three, so every dataset is worse, and balanced accuracy, left level, is the same.
+        rc, t = count(count_rows(lambda a, l, m: 0.05 if a == "xgboost" and m in ("log_loss", "vme", "me") else 0.0))
+        self.assertEqual(rc, 0)
+        at_ = by(t["count.tsv"])
+        for m in ("log_loss", "vme", "me"):
+            r = at_[("lineage", "xgboost-k31", "gbt", m)]
+            self.assertEqual((r["orientation"], int(r["better"]), int(r["worse"])), ("lower", 0, 12), m)
+        r = at_[("lineage", "xgboost-k31", "gbt", "balanced_accuracy")]
+        self.assertEqual((int(r["better"]), int(r["worse"]), int(r["same"])), (0, 0, 12))
+
     def test_a_constant_fold_dataset_enters_the_count_and_is_left_out_beside_it(self):
         rc, t = count(count_rows(lambda a, l, m: 0.0, constant=("lightgbm",)))
         self.assertEqual(rc, 0)
