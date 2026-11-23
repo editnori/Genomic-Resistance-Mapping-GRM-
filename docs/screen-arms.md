@@ -93,7 +93,7 @@ The adjusted screen rejects in 7 of 200; the chi-square, beside it and deciding 
 
 ## Tests and planted faults
 
-`learn::screen_arm` holds 9 SYNTHETIC tests, among them the statistic against `scripts/c4-screen/cmh_plain.py`, a second, plain implementation in exact rationals, on the committed SYNTHETIC tables of `tests/c4_screen/cmh_cases.json`; `learn::eval` 2 more and `src/main.rs` one on the flags. `tests/c4_screen` tests the scorer, the lists, the expected results, the plain implementation and the unflagged check on SYNTHETIC files. `scripts/c4-screen/planted_faults.py` plants each fault below in a copy of the tree and runs the test meant to catch it, which must pass with no fault and fail with it.
+`learn::screen_arm` holds 10 SYNTHETIC tests, among them the statistic against `scripts/c4-screen/cmh_plain.py`, a second, plain implementation in exact rationals, on the committed SYNTHETIC tables of `tests/c4_screen/cmh_cases.json`; `learn::eval` 3 more, `analysis` one on the floor at 799 and 800 genomes, and `src/main.rs` one on the flags. `tests/c4_screen` tests the scorer, the lists, the expected results, the plain implementation and the unflagged check on SYNTHETIC files. `scripts/c4-screen/planted_faults.py` plants each fault below in a copy of the tree and runs the test meant to catch it, which must pass with no fault and fail with it.
 
 | Fault | Caught by |
 |---|---|
