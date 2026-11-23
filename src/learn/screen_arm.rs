@@ -648,14 +648,16 @@ mod tests {
     #[test]
     fn a_pure_lineage_marker_scores_zero_and_the_chi_square_tops_it() {
         // Stratum 0 is mostly resistant and stratum 1 mostly susceptible; row 0
-        // is present in stratum 0 alone, row 1 tracks resistance inside both.
+        // is present in stratum 0 alone, row 1 tracks resistance inside both,
+        // with one genome in three the other way. The chi-square is 14.4 for
+        // row 0 and 40/11 for row 1; the adjusted statistic 0 and 2.025.
         let n = 40;
         let lineage: Vec<u32> = (0..n).map(|i| (i >= 20) as u32).collect();
         let y: Vec<bool> = (0..n)
             .map(|i| if i < 20 { i % 5 != 0 } else { i % 5 == 0 })
             .collect();
         let marker: Vec<bool> = (0..n).map(|i| i < 20).collect();
-        let inside: Vec<bool> = (0..n).map(|i| y[i] != (i % 7 == 1)).collect();
+        let inside: Vec<bool> = (0..n).map(|i| y[i] != (i % 3 == 0)).collect();
         let x = matrix(&[marker, inside]);
         let y = labels(&y);
         let fit = Bits::ones(n);

@@ -6506,9 +6506,8 @@ mod tests {
         assert_eq!(schemes, ["random", "lineage"]);
         assert_eq!(folds.len(), schemes.len() * cfg.folds);
         // Each outer fit of rf, gbt and lasso is screened once, and the final
-        // models four times: lasso, the forest's importance fit, boosting and
-        // the kept forest.
-        assert_eq!(screens.len(), folds.len() * 3 + 4);
+        // models three times: lasso, the forest and boosting.
+        assert_eq!(screens.len(), folds.len() * 3 + 3);
         assert_eq!(
             file["fit_times"].as_array().unwrap().len(),
             folds.len() * LEARNERS.len()
