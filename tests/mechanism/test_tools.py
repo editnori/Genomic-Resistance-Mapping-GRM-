@@ -9,6 +9,7 @@ import io
 import json
 import re
 import shutil
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -49,6 +50,12 @@ class Scan(unittest.TestCase):
         rc, out = self.scan("a\tPRJNA123456\n")
         self.assertEqual(rc, 1)
         self.assertNotIn("PRJNA123456", out)
+
+    def test_every_bioproject_prefix_fails(self):
+        for acc in ("PRJEB12345", "PRJDB678", "PRJNA1"):
+            rc, out = self.scan(f"a\t{acc}\n")
+            self.assertEqual(rc, 1, acc)
+            self.assertNotIn(acc, out)
 
     def test_figures_and_other_ids_pass(self):
         rc, out = self.scan("0.500000000000\t9999.1\t19999.11\t9999.110\tunder 5\n")
@@ -238,6 +245,35 @@ class Runner(unittest.TestCase):
         self.assertLess(self.text.index("scan.py"), self.text.index('> "$OUT/DONE"'))
         self.assertIn("trap 'fail at' ERR", self.text)
         self.assertIn("flock -n 9", self.text)
+
+    def scan_step(self, scan_rc):
+        """Run the script's scan step alone, with a stand-in scan.py that
+        writes its arguments and exits `scan_rc`."""
+        block = self.text[self.text.index("STEP=scan\n"):self.text.index('touch "$OUT/flags/scan.done"\n')]
+        block += 'touch "$OUT/flags/scan.done"\n'
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp)
+        (tmp / "here").mkdir()
+        (tmp / "here" / "scan.py").write_text(
+            "import sys\nopen(sys.argv[-1] + '/../args', 'w').write(' '.join(sys.argv[1:]))\n"
+            f"sys.exit({scan_rc})\n")
+        out = tmp / "out"
+        (out / "flags").mkdir(parents=True)
+        (out / "results").mkdir()
+        (out / "logs").mkdir()
+        script = (f"set -Eeuo pipefail\nsay() {{ :; }}\nHERE={tmp / 'here'}\nR={tmp}\nSP=synthia\nOUT={out}\n" + block)
+        r = subprocess.run(["bash", "-c", script], capture_output=True, text=True, timeout=60)
+        return r.returncode, (out / "flags" / "scan.done").exists(), (out / "args").read_text().split()
+
+    def test_the_scan_reads_results_and_logs(self):
+        rc, done, args = self.scan_step(0)
+        self.assertEqual((rc, done), (0, True))
+        self.assertTrue(args[-2].endswith("/out/results") and args[-1].endswith("/out/logs"), args)
+
+    def test_a_failed_scan_stops_the_run_before_its_flag(self):
+        rc, done, _ = self.scan_step(1)
+        self.assertNotEqual(rc, 0)
+        self.assertFalse(done)
 
     def test_the_port_names_the_kit_files_it_copies(self):
         self.assertIn("amr_rule.ADAPTER_SHA256", self.text)
