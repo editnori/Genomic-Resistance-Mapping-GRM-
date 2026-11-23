@@ -278,6 +278,7 @@ src/lib.rs input_arms::tests::a_k31_row_equal_to_a_program_column_enters_once_as
 src/lib.rs input_arms::tests::a_matrix_arm_does_not_change_with_the_labels
 src/lib.rs input_arms::tests::a_matrix_arm_holds_each_block_once_the_added_first
 src/lib.rs input_arms::tests::a_table_gives_the_named_column_of_the_admitted_rows
+src/lib.rs input_arms::tests::a_unitig_arm_sums_its_cohorts_pairs_and_refuses_a_build_of_other_genomes
 src/lib.rs input_arms::tests::an_arm_matrix_does_not_change_with_the_labels
 src/lib.rs input_arms::tests::no_outer_test_genome_changes_a_fits_candidates
 src/lib.rs input_arms::tests::no_outer_test_genome_changes_a_matrix_arms_candidates
@@ -286,6 +287,8 @@ src/lib.rs input_arms::tests::the_folds_at_a_seed_are_the_same_genomes_with_a_ma
 src/lib.rs input_arms::tests::the_folds_at_a_seed_are_the_same_genomes_with_and_without_an_arm
 src/lib.rs input_arms::tests::the_joined_arm_holds_each_block_once_the_program_first
 src/lib.rs input_arms::tests::the_program_block_keeps_the_cohort_range_and_each_pattern_once
+src/lib.rs input_build::tests::a_partial_genes_first_residue_is_m_only_where_its_own_start_is_real
+src/lib.rs input_build::tests::a_protein_is_held_to_the_contig_prodigal_numbered_read_as_prodigal_reads_it
 src/lib.rs input_build::tests::a_protein_must_be_the_table_11_translation_at_its_coordinates
 src/lib.rs input_build::tests::a_unitig_is_held_only_when_every_kmer_of_it_is
 src/lib.rs input_build::tests::grm_and_an_outside_fasta_of_the_same_unitigs_are_equal_as_sets
