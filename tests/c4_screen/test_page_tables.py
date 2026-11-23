@@ -439,6 +439,36 @@ class StudySign(Built):
         self.assertEqual((five["met"], five["learners"]), (0, 0))
 
 
+class ConditionsOffTheCount(Built):
+    """score.py --count reads conditions.tsv off count.tsv, the count with the constant model, and never off the
+    count beside it (SYNTHETIC): cmh-4000's study runs are refused for a constant model on all but one dataset."""
+
+    def test_conditions_tsv_is_read_off_the_count_that_decides(self):
+        score = page.score
+        root = self.fresh()
+        paths = [root / "reading" / "score" / slug / "datasets.tsv"
+                 for slug in ("synthia_alpha", "synthia_beta", "synthia_gamma")]
+        study = sorted({r["dataset"] for p in paths for r in score.read_tsv(p)
+                        if (r["arm"], r["split"]) == ("cmh-4000", "study")})
+        for p in paths:
+            rows = score.read_tsv(p)
+            for r in rows:
+                if (r["arm"], r["split"]) == ("cmh-4000", "study") and r["dataset"] in study[:-1]:
+                    r.update(constant_draws="1", balanced_accuracy="0.0")
+            fx.rewrite(p, rows, fx.header(p))
+        rows = [r for p in paths for r in score.read_tsv(p)]
+
+        def key(conditions):
+            return [(r["arm"], r["reading"], r["condition"], str(r["met"]), str(r["learners"])) for r in conditions]
+
+        kept = key(score.conditions(score.count(rows)))
+        self.assertNotEqual(kept, key(score.conditions(score.count(rows, keep_constant=False))))
+        out = root / "count-again"
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(score.main(["--count", str(out)] + [str(p) for p in paths]), 0)
+        self.assertEqual(key(fx.read(out / "conditions.tsv")), kept)
+
+
 class CartOff(Built):
     build = {"cart_off": True}
 
