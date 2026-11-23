@@ -1,6 +1,6 @@
 # Mechanism split: recall by mechanism and the mechanism mix over collection years
 
-Plan blocks M1 and M2 read the AMRFinderPlus program's tables beside the release's reports. They fit nothing. M1 asks whether the learners call resistant genomes whose catalogue calls are point mutations as often as those whose calls are acquired genes. M2 asks whether the mix of catalogue calls among deposited genomes moves between collection years. M3 is not built, and M4 is a plan. The design was fixed on 23 Nov 2026 before any script of this block read a real table, score, stratum or share. The scripts are in `scripts/mechanism/` and the tests in `tests/mechanism/`. No result of either block has been read: the one real run so far is a dry run on Klebsiella aerogenes for shape and time.
+Plan blocks M1 and M2 read the AMRFinderPlus program's tables beside the release's reports. They fit nothing. M1 asks whether the learners call resistant genomes whose catalogue calls are point mutations as often as those whose calls are acquired genes. M2 asks whether the mix of catalogue calls among deposited genomes moves between collection years. M3 is not built, and M4 has a script that has not run on a real file. The design was fixed on 23 Nov 2026 before any script of this block read a real table, score, stratum or share. The scripts are in `scripts/mechanism/` and the tests in `tests/mechanism/`. No result of either block has been read: the one real run so far is a dry run on Klebsiella aerogenes for shape and time.
 
 ## Three callers, kept apart
 
@@ -49,7 +49,14 @@ The AMRFinderPlus comparison (`docs/amrfinderplus-comparison.md`) turned a table
 
 M3 would set a point share from the feature cards beside C8's families. The cards do not allow it: a card names a gene in 1,432 of the release's 21,443 final-model cards, in none of the cards of 6 of the 23 species with cards, by BV-BRC's annotation rather than the catalogue's name, and never in an rRNA gene. Nothing is built.
 
-M4 is a plan for Mycobacterium tuberculosis: TBProfiler 6.6.3 run again on the 2,000 genomes, the WHO catalogue's graded variants per antibiotic, and the count of distinct ones seen as lineages are added. No script is written yet.
+M4 is the lineage curve for Mycobacterium tuberculosis. `tb_curve.py` reads TBProfiler 6.6.3 run again on the 2,000 genomes with `tbdb` commit `3ed1cb99` (WHO catalogue v2), as the TBProfiler comparison ran it; that run's per-genome output was not kept. A determinant of a drug is a variant the tool reports for it, passing the tool's filter, graded Assoc w R or Assoc w R - Interim (`who_assoc`), and a report's antibiotic meets the tool's drug by the comparison's name map. Over the resistant genomes of each antibiotic in full, grouped by the tool's main lineage, by its sublineage and by the report's lineage cluster:
+
+- the count of distinct determinants as groups are added, over 1,000 random orders seeded by the antibiotic and the grouping (median, 2.5 and 97.5 percentiles), with the order by group size, largest first, beside;
+- the share of resistant genomes with no graded determinant, per group and over all;
+- how many determinants are seen in 1, 2, 3 and 4 or more lineages, and the resistant genomes each count covers;
+- per gene as the WHO catalogue names it, the count of its graded variants seen.
+
+A variant's own name enters no output until the owner rules on it. A dataset in M is marked. No run has been made: the tool must run again first, and the brief gives M4 no dry run.
 
 ## What a table can and cannot say
 
@@ -65,8 +72,18 @@ setsid nohup bash scripts/mechanism/run_species.sh KIT SPECIES OUT META TABLES D
 
 KIT holds the release, `amrkit.tar` and `tool-tables.sha256`, each pinned. TABLES is a folder of the program's tables as `TABLES/SPECIES/<genome>.tsv`, each held to its recorded sha256; with `-` the program is installed from the kit and run on FASTA. The steps run once each, a restart skips finished ones, and a scan fails the run when any file under `results/` or `logs/` names a genome of the species or a BioProject accession. Over species, `combine.py --run OUT ...` reads only runs with `DONE`.
 
+M4 runs on the machine that holds the TBProfiler run, `RUN_DIR` with its `plan.txt`, `failed.tsv` and `results/<genome>.results.json`:
+
+```
+python3 -I scripts/mechanism/tb_curve.py --species mycobacterium_tuberculosis --reports REPORTS \
+  --lists scripts/c3-inputs/lists.tsv --tool-dir RUN_DIR --bed TBDB.bed --out OUT
+python3 -I scripts/mechanism/scan.py --ids SPECIES.json OUT
+```
+
+It stops on a result file of another tool or database version and on a planned genome with neither a result nor a line in `failed.tsv`. Only `OUT` leaves the machine, after the scan.
+
 ## Checks
 
-`tests/mechanism` has 68 SYNTHETIC tests. `planted_faults.py` plants ten faults in turn, from a stratum read from the label to a family named other than as the database names it, and each is caught by its test.
+`tests/mechanism` has 82 SYNTHETIC tests, 14 of them on `tb_curve.py`. `planted_faults.py` plants ten faults in turn, from a stratum read from the label to a family named other than as the database names it, and each is caught by its test.
 
 The dry run on Klebsiella aerogenes (93 genomes, 3 datasets) ran end to end in 2.5 s with 30.6 MB at peak. The hard check passed on 3 of 3 datasets (36 of 36 rows), and the scan found no genome id in 28 files. From it and a timing on 2,000 SYNTHETIC genomes, the 21 species need about 10 minutes of compute where the tables are given, and about 265 CPU hours where the program must run again.

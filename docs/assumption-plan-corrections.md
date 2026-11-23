@@ -405,7 +405,7 @@ The refit of the release's rule ended on its 23 species and 238 datasets at 20:3
 
 **M2.** Periods 2010 to 2014 against 2015 to 2019, then 2000 to 2009 against 2010 to 2019. A cell is a species with a drug class. One vote per BioProject with 5 or more genomes in a period, 3 or more such BioProjects a period, and a permutation over BioProjects, with Holm over the cells that pass. Six guards stand beside it and decide nothing.
 
-**Not built.** M3 is not built: a feature card names a gene in 1,432 of the release's 21,443 final-model cards, in none of the cards of 6 of the 23 species with cards (the plan wrote 7; the probe's output gives 6), and by BV-BRC's annotation rather than the catalogue's name. M4, the lineage curve for Mycobacterium tuberculosis, is a plan with no script.
+**Not built.** M3 is not built: a feature card names a gene in 1,432 of the release's 21,443 final-model cards, in none of the cards of 6 of the 23 species with cards (the plan wrote 7; the probe's output gives 6), and by BV-BRC's annotation rather than the catalogue's name. M4, the lineage curve for Mycobacterium tuberculosis, has a script, `tb_curve.py`, with SYNTHETIC tests and no run: TBProfiler must run again on the 2,000 genomes first.
 
 **Questions.** The plan leaves nine questions to the lead, each with the option taken and the other. A tenth came from the dry run, which stopped at M2 on a row of Subtype `POINT_DISRUPT`: the program names a disrupted core gene `<gene_family>_<change>`, which neither the catalogue's alleles nor its hierarchy hold. Taken: the gene_family before the underscore, when the catalogue lists that family with Subtype `POINT_DISRUPT`; any other symbol still stops the species. Other: leave `POINT_DISRUPT` rows out of the family mix. The plan file is unchanged.
 
@@ -422,7 +422,7 @@ The refit of the release's rule ended on its 23 species and 238 datasets at 20:3
 | 9. M4 names | no variant name in any output until ruled | the catalogue's variant names |
 | 10. `POINT_DISRUPT` family | the gene_family before the underscore, if the catalogue lists it with that subtype | out of the family mix |
 
-**Checks.** 68 SYNTHETIC tests in `tests/mechanism`, and ten planted faults, each caught by its test. The dry run on Klebsiella aerogenes (93 genomes, 3 datasets) ran end to end in 2.5 s with 30.6 MB at peak; the hard check passed on 3 of 3 datasets, 36 of 36 rows, and its scan found no genome id.
+**Checks.** 82 SYNTHETIC tests in `tests/mechanism` (14 on M4), and ten planted faults, each caught by its test. The dry run on Klebsiella aerogenes (93 genomes, 3 datasets) ran end to end in 2.5 s with 30.6 MB at peak; the hard check passed on 3 of 3 datasets, 36 of 36 rows, and its scan found no genome id.
 
 **Cost.** Where the tables are given, about 565 s of compute for the 21 species, from the dry run's steps and a timing on 2,000 SYNTHETIC genomes. Where the program must run again, about 265 CPU hours on 21,625 genomes, from the refit's own run of the program on the same 93.
 
