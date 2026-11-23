@@ -169,6 +169,10 @@ class Score(unittest.TestCase):
                                E.choices_name(common.DATASET, "lineage", 45)]) + "\n")
         rc, _ = score(args)
         self.assertEqual(rc, 1)
+        # The row has no choices files either; the test holds only when the twin-seed check is the one that fails.
+        failed = {(r["file"], r["check"]) for r in tsv(self.top / "score" / "checks.tsv") if r["passed"] != "1"}
+        self.assertIn((E.choices_name(common.DATASET, "lineage", 45),
+                       "an arm runs at a draw's seed or the study's, never the twin's"), failed)
 
     def test_a_default_that_differs_from_the_release_fails(self):
         args = write_run(self.top)
