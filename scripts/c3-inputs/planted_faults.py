@@ -146,11 +146,11 @@ FAULTS = [
      "        let Some(c) = residue_code(b) else {\n            continue;",
      "rust", "input_build::tests::no_amino_acid_10mer_spans_a_stop_or_an_ambiguous_residue"),
     ("17", "a unitig graph that drops the 31-mers of one genome only", BUILD,
-     "            out.sort_unstable();\n            out.dedup();\n            Ok(out)",
+     "            out.sort_unstable();\n            out.dedup();\n            Ok(out.as_slice().to_vec())",
      "            out.sort_unstable();\n"
      "            let twice: std::collections::HashSet<u64> =\n"
      "                out.windows(2).filter(|w| w[0] == w[1]).map(|w| w[0]).collect();\n"
-     "            out.retain(|v| twice.contains(v));\n            out.dedup();\n            Ok(out)",
+     "            out.retain(|v| twice.contains(v));\n            out.dedup();\n            Ok(out.as_slice().to_vec())",
      "rust", "input_build::tests::the_graph_holds_single_genome_kmers_and_breaks_at_their_branch"),
     ("18", "a screen count taken on all samples, the outer test genomes too", EVAL,
      '        ("rf", train.clone()),',
