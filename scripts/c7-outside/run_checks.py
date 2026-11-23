@@ -122,9 +122,9 @@ def iso(aside_time):
     return f"{d[:4]}-{d[4:6]}-{d[6:]}T{t[:2]}:{t[2:4]}:{t[4:]}Z"
 
 
-def score_files(copy):
+def score_files(copy, skipped=None):
     """{name: bytes} of score.py's tables in one copy's score.tar, read in place. score.log and c3/score/ are skipped
-    unread; any other member stops the check."""
+    unread, each member's name added to skipped when it is given; any other member stops the check."""
     out = {}
     tar = copy / "score.tar"
     if not tar.is_file():
@@ -135,6 +135,8 @@ def score_files(copy):
                 continue
             name = member.name[2:] if member.name.startswith("./") else member.name
             if name in NOT_READ or name.startswith(NOT_READ_PREFIX):
+                if skipped is not None:
+                    skipped.append(name)
                 continue
             if not name.startswith("score/") or not name.endswith((".tsv", ".json")):
                 raise SystemExit(f"{copy.name}: score.tar holds a file that is no table of score/")
@@ -224,7 +226,9 @@ def run(back, l_path, release, withdrawn=None, ids_also=()):
               ([f"missing {len(set(species) - set(have))}, more {len(outside)}"] if have != species or outside
                else []) + named + [f"{x}: no newer DONE of a species of the run" for x in bad_aside])
     rep.copy_of = copy_of
-    scores = {s: score_files(copy_of[s]) for s in have}
+    skipped = {s: [] for s in have}
+    scores = {s: score_files(copy_of[s], skipped[s]) for s in have}
+    stage1 = sum(1 for s in have if any(n.startswith(NOT_READ_PREFIX) for n in skipped[s]))
 
     # SHA256SUMS
     good, lines, bad_lines, listed_ok = 0, 0, 0, 0
@@ -254,7 +258,8 @@ def run(back, l_path, release, withdrawn=None, ids_also=()):
         good += ok and same
     rep.check("SHA256SUMS", good == len(species) and bad_lines == 0,
               f"{good} of {len(species)} species; {lines - bad_lines} of {lines} lines hold; results/ and score.tar's "
-              f"tables are the listed files in {listed_ok} of {len(species)}")
+              f"tables are the listed files in {listed_ok} of {len(species)}; stage 1's c3/score/ in the score.tar of "
+              f"{stage1} species, skipped unread")
 
     # DONE
     named_ok, by = 0, {"commit": {}, "grm": {}, "code": {}, "export": {}, "elasticnet": {}}

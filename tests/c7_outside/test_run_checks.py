@@ -284,6 +284,24 @@ class ScoreLog(unittest.TestCase):
                              ["checks.tsv", "datasets.tsv", "draws.tsv"])
             self.assertFalse([p for p in reading.rglob("*.log") if p.name != "plans.log"])
 
+    def test_stage_ones_score_in_a_new_box_score_tar_is_counted_and_never_read(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = F.build(Path(temp) / "run")
+            back = root / "back"
+            copy = back / "synthia_coli"
+            tables = checks.score_files(copy)
+            tables["c3/score/datasets.tsv"] = f"SYNTHETIC {F.genome_ids('synthia_coli')[0]} Column_3\n".encode()
+            tables["c3/score/score.log"] = b"SYNTHETIC stage 1 score log\n"
+            F.pack(copy / "score.tar", tables)
+            skipped = []
+            self.assertEqual(sorted(checks.score_files(copy, skipped)), sorted(checks.SCORE_TABLES))
+            self.assertEqual(sorted(skipped), ["c3/score/datasets.tsv", "c3/score/score.log"])
+            reading = root / "reading-again"
+            rep = checks.gather(back, root / "lists.tsv", root / "release", reading)
+            self.assertEqual(rep.failed, 0, "\n".join(rep.lines))
+            self.assertIn("stage 1's c3/score/ in the score.tar of 1 species, skipped unread", "\n".join(rep.lines))
+            self.assertFalse([p for p in reading.rglob("*") if "c3" in p.parts])
+
 
 if __name__ == "__main__":
     unittest.main()
