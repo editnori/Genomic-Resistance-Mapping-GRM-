@@ -1,13 +1,18 @@
 """scripts/c7-outside/page_tables.py on a SYNTHETIC reading: each gate refuses what it names, and the tables hold
 what docs/outside-learners-result.md prints. Every species, dataset, call and count is made up (page_fixture.py)."""
 
+import contextlib
 import csv
 import hashlib
+import io
 import json
+import re
 import shutil
 import tempfile
+import types
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from tests.c7_outside import page_fixture as F
 
@@ -121,6 +126,59 @@ class Gates(Base):
         shutil.copytree(reading / "score" / "synthia_coli", reading / "score" / "synthia_coli.20261123T080000Z")
         with self.assertRaisesRegex(page.Stop, "^gate 2 species: .*a first copy of synthia_coli set aside"):
             self.write(reading)
+
+    def test_a_withdrawal_time_that_is_no_utc_time_is_refused(self):
+        reading = self.reading("withdrawn")
+        text = (reading / "withdrawn.tsv").read_text()
+        (reading / "withdrawn.tsv").write_text(text.replace(F.WITHDRAWN["elasticnet"][1], "23 Nov"))
+        self.refused(reading, "1 reading", "withdrawn")
+
+    def test_a_row_of_another_species_in_a_species_table_is_refused(self):
+        reading = self.reading()
+        other = rows_of(reading / "score" / "fictus_aureus" / "datasets.tsv")[0]
+        edit(reading / "score" / "synthia_coli" / "datasets.tsv", lambda rows: rows.append(dict(other)))
+        self.refused(reading, "2 species")
+
+    def test_an_antibiotic_named_otherwise_than_in_lists_tsv_is_refused(self):
+        reading = self.reading()
+
+        def rename(rows):
+            rows[0]["antibiotic"] = "drug z"
+        edit(reading / "score" / "synthia_coli" / "datasets.tsv", rename)
+        self.refused(reading, "3 M")
+
+    def test_a_done_of_another_species_is_refused(self):
+        reading = self.reading()
+        done = reading / "run" / "synthia_coli" / "DONE"
+        done.write_text(done.read_text().replace("DONE synthia_coli ", "DONE fictus_aureus ", 1))
+        self.refused(reading, "9 passes")
+
+    def test_a_constant_mark_the_report_does_not_hold_is_refused(self):
+        reading = self.reading()
+        folder = reading / "score" / "fictus_aureus"
+        arm, dataset, split, seed = F.CONSTANT
+
+        def unmark(rows):
+            for r in rows:
+                if (r["arm"], r["dataset"], r["split"], r["seed"]) == (arm, dataset, split, str(seed)):
+                    r["constant"] = "0"
+        edit(folder / "draws.tsv", unmark)
+        draws = [page.typed_draw(r) for r in rows_of(folder / "draws.tsv")]
+        F.C9.write_tsv(folder / "datasets.tsv", F.score.dataset_rows(draws), F.score.DATASET_COLUMNS)
+        with self.assertRaisesRegex(page.Stop, "^gate 13 reports: .* otherwise than its report"):
+            self.write(reading)
+
+    def test_a_plans_log_seed_count_other_than_the_draws_is_refused(self):
+        reading = self.reading()
+        path = reading / "run" / "synthia_coli" / "plans.log"
+        path.write_text(re.sub(r"(\d+) dataset seeds", lambda m: f"{int(m[1]) + 1} dataset seeds", path.read_text()))
+        self.refused(reading, "14 checks")
+
+    def test_a_libraries_txt_short_of_a_library_is_refused(self):
+        reading = self.reading()
+        path = reading / "run" / "synthia_coli" / "libraries.txt"
+        path.write_text("".join(path.read_text().splitlines(keepends=True)[:-1]))
+        self.refused(reading, "15 binary")
 
     def test_a_species_outside_the_first_run_is_refused(self):
         reading = self.reading()
@@ -335,6 +393,25 @@ class Tables(Base):
         files = sorted(p.relative_to(self.run_out).as_posix() for p in self.run_out.rglob("*") if p.is_file())
         self.assertEqual(sorted(list(sums) + ["SHA256SUMS"]), sorted(files))
         self.assertIn("score.py's own tables", (self.run_out / "README.md").read_text())
+
+    def test_the_species_table_counts_on_the_primary_measures_orientation(self):
+        data = types.SimpleNamespace(species=["synthia_coli"], species_name={"synthia_coli": "Synthia coli"},
+                                     withdrawn={})
+        rows = [{"dataset": f"synthia_coli__drug_{x}", "split": "lineage", "pair": "xgboost-gbt", "difference": d}
+                for x, d in (("a", 0.05), ("b", 0.04), ("c", -0.03), ("d", 0.01))]
+        got = [r for r in page.page_species(data, rows) if r["split"] == "lineage" and r["pair"] == "xgboost-gbt"]
+        self.assertEqual([(r["better"], r["worse"], r["same"]) for r in got], [(2, 1, 1)])
+
+    def test_score_pys_conditions_are_read_off_the_deciding_count(self):
+        paths = sorted((self.root / "run" / "reading" / "score").glob("*/datasets.tsv"))
+        rows = [r for p in paths for r in F.C9.read_tsv(p)]
+        self.assertNotEqual(F.score.count(rows, []), F.score.count(rows, [], keep_constant=False))
+        with tempfile.TemporaryDirectory() as temp, \
+                mock.patch.object(F.score, "conditions", wraps=F.score.conditions) as seen, \
+                contextlib.redirect_stdout(io.StringIO()):
+            F.score.main(["--count", str(Path(temp) / "count")] + [str(p) for p in paths])
+        self.assertEqual(seen.call_count, 1)
+        self.assertEqual(seen.call_args[0][0], F.score.count(rows, []))
 
     def test_the_count_rows_decide_for_count_tsv_alone(self):
         rows = self.table("page-count.tsv")

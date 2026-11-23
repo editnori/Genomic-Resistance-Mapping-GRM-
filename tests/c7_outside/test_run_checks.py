@@ -61,6 +61,33 @@ class RunChecks(unittest.TestCase):
         shutil.copytree(back / "synthia_coli", back / "synthia_coli.20261123T120000Z")
         self.assertIn("FAIL species", self.lines(self.run_on(back)))
 
+    def test_a_copy_of_a_species_outside_the_run_fails(self):
+        back = self.back()
+        shutil.copytree(back / "synthia_coli", back / "nullia_species")
+        self.assertIn("FAIL species", self.lines(self.run_on(back)))
+
+    def test_a_sha256sums_other_than_the_one_done_names_fails(self):
+        back = self.back()
+        path = back / "synthia_coli" / "SHA256SUMS"
+        path.write_text("".join(reversed(path.read_text().splitlines(keepends=True))))
+        text = self.lines(self.run_on(back))
+        self.assertIn("FAIL SHA256SUMS", text)
+        self.assertIn("lines hold", text)
+
+    def test_a_lists_txt_whose_arms_are_not_its_done_pass_fails(self):
+        back = self.back("withdrawn")
+        done = back / "fictus_aureus" / "DONE"
+        done.write_text(done.read_text().replace("elasticnet leave-out", "elasticnet run"))
+        self.assertIn("FAIL expect.py", self.lines(self.run_on(back, "withdrawn", F.WITHDRAWN)))
+
+    def test_a_species_with_no_release_list_fails(self):
+        back = self.back()
+        release = back.parent / "release"
+        shutil.copytree(self.root / "run" / "release", release)
+        (release / "species" / "synthia_coli.json").unlink()
+        rep = checks.run(back, self.root / "run" / "lists.tsv", release)
+        self.assertIn("FAIL genome ids", self.lines(rep))
+
     def test_a_failed_older_than_its_done_is_set_aside(self):
         back = self.back()
         (back / "fictus_aureus" / "FAILED").write_text("FAILED fictus_aureus at fits 2026-11-23T09:00:00Z\n")
