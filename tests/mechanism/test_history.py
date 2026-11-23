@@ -260,6 +260,18 @@ class Vote(unittest.TestCase):
         self.assertIn("BioProjects flagged: 6", r["note"])
         self.assertEqual((r["passes"], r["earlier_genomes"], r["later_genomes"]), ("0", "5", "0"))
 
+    def test_a_bioproject_is_flagged_over_its_genomes_in_every_year(self):
+        g = scenario()
+        for x in g:
+            if x["id"].startswith("8110."):
+                x["kind"] = "gene_b"  # PRJNA900001's two 1998 genomes carry qnrB, its seven 2014 genomes qnrS
+        rc, err, out = self.go(g)
+        self.assertEqual(rc, 0, err)
+        r = row(out, "flagged_out")
+        # over every year 7 of its 9 genomes with a gene row carry qnrS, under 0.95: it is not flagged
+        self.assertIn("BioProjects flagged: 5", r["note"])
+        self.assertEqual((r["passes"], r["earlier_genomes"], r["later_genomes"]), ("0", "12", "0"))
+
     def test_the_intact_row_leaves_partial_calls_out(self):
         g = [dict(x, kind="partial") if x["id"].startswith("8103.") else x for x in scenario()]
         rc, err, out = self.go(g)
