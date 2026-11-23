@@ -265,6 +265,19 @@ class Vote(unittest.TestCase):
         lin = c.read_tsv(out / "m2-lineage.tsv")[0]
         self.assertEqual((lin["given"], lin["differing_genome_pairs"]), ("1", "0"))
 
+    def test_lineage_both_votes_only_clusters_in_both_periods(self):
+        rc, err, out = self.go()
+        r = row(out, "lineage_both")
+        self.assertEqual((r["passes"], r["earlier_genomes"], r["later_genomes"]), ("0", "0", "0"))
+        g = scenario()
+        for x in g:
+            if x["id"].startswith("8104."):
+                x["lineage"] = 1  # the 2015 BioProject joins the cluster of the 2014 one
+        rc, err, out = self.go(g)
+        self.assertEqual(rc, 0, err)
+        r = row(out, "lineage_both")
+        self.assertEqual((r["passes"], r["earlier_genomes"], r["later_genomes"]), ("0", "7", "5"))
+
     def test_lineage_guard_not_given_when_reports_differ(self):
         g = scenario()
         other = [dict(x) for x in g]
