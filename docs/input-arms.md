@@ -64,6 +64,8 @@ On the datasets not in M, three of the four label rules give the same labels. Of
 
 It fits the default at each seed and checks its seed-42 reports against the release's with `scripts/refit/refit_check.py` before any arm runs. It then fits each arm at each seed, the twin, and the study plans, scores, writes `logs/timing.tsv` of each step's wall time and peak memory, and writes `OUT/DONE` with the sha256 of its list of output files. Each log is copied with every genome id written as `[genome id]`, and the end fails if a file under `results/`, `check/`, `score/` or `logs/` names one. Run again, it skips finished steps and finished results. Any failure writes `OUT/FAILED` and exits 1.
 
+The pilot, one draw of *Klebsiella aerogenes* with ertapenem, imipenem and meropenem (93 genomes) on a 16-CPU, 32 GB box, took 8 min 44 s end to end: the build 42.26 s, the program's environment 38.73 s, the program 372.69 s, and the fits 17.98 s for K31, 2.74 s for the program alone and 11.79 s for K31 plus the program. The peak was 2,087,888 KB, in the count, and the out folder ended at 6.77 GB. The entry "C3 design" in `docs/assumption-plan-corrections.md` gives the cost of the first run.
+
 ## Tests and planted faults
 
 `input_arms` holds 8 SYNTHETIC tests and `src/main.rs` one more on the flags. `tests/c3_inputs` holds 33 SYNTHETIC tests of the scorer, the lists and the expected results. `scripts/c3-inputs/planted_faults.py` plants each fault below in a copy of the tree and runs the test meant to catch it, which must fail.

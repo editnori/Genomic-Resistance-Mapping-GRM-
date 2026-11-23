@@ -382,3 +382,11 @@ The refit of the release's rule ended on its 23 species and 238 datasets at 20:3
 | 12. Holm | 30 pairs, the twin's included | a family per arm |
 | 13. First run | L and A less M | all of L and A |
 | 14. Default and twin | C3's own, in the same run as its arms | shared with another block's runs |
+
+**Pilot.** One draw of *Klebsiella aerogenes* with ertapenem, imipenem and meropenem, 93 genomes, ran end to end on a 16-CPU box from 00:03:48Z to 00:12:32Z on 23 Nov 2026. The program took 372.69 s for the 93 tables, each equal to its recorded sha256. The fits took 17.98 s for K31, 2.74 s for the program alone and 11.79 s for K31 plus the program, each under 940,000 KB at peak. K31's seed-42 reports equal the release's in all 3 datasets.
+
+**Fault.** A first pilot stopped at K31 plus the program: a K31 row repeated a program column over the cohort, and the final models need each cohort pattern once. The joined arm now leaves such a K31 row out, as its training collapse already did, and counts it: 9, 9 and 7 rows in the three datasets. A synthetic test and planted fault 2d hold it.
+
+**Cost.** Each arm's fit costs its pilot ratio to the release's learning seconds: 1.08 for K31, 0.17 for the program alone and 0.71 for K31 plus the program. The program takes 0.0178 core-hours a genome, 2.7 times the release's 0.0065, on 21,625 genomes. The built arms' first run, with K31 and the twin, comes to 40.42 xlarge-hours, 24.07 of them the program; with data steps and loads, 47.12 box-hours over 23 boxes.
+
+**Written.** This entry was written at 00:16Z on 23 Nov 2026, from the design fixed at 23:22Z on 22 Nov, the lists and the second pilot. No comparison result had been read.
