@@ -645,12 +645,11 @@ mod tests {
         assert_ne!(after, base);
     }
 
-    #[test]
-    fn a_pure_lineage_marker_scores_zero_and_the_chi_square_tops_it() {
-        // Stratum 0 is mostly resistant and stratum 1 mostly susceptible; row 0
-        // is present in stratum 0 alone, row 1 tracks resistance inside both,
-        // with one genome in three the other way. The chi-square is 14.4 for
-        // row 0 and 40/11 for row 1; the adjusted statistic 0 and 2.025.
+    /// Stratum 0 is mostly resistant and stratum 1 mostly susceptible; row 0
+    /// is present in stratum 0 alone, row 1 tracks resistance inside both,
+    /// with one genome in three the other way. The chi-square is 14.4 for
+    /// row 0 and 40/11 for row 1; the adjusted statistic 0 and 2.025.
+    fn marker_case() -> (BitMatrix, Bits, Bits, Vec<u32>) {
         let n = 40;
         let lineage: Vec<u32> = (0..n).map(|i| (i >= 20) as u32).collect();
         let y: Vec<bool> = (0..n)
@@ -658,15 +657,53 @@ mod tests {
             .collect();
         let marker: Vec<bool> = (0..n).map(|i| i < 20).collect();
         let inside: Vec<bool> = (0..n).map(|i| y[i] != (i % 3 == 0)).collect();
-        let x = matrix(&[marker, inside]);
-        let y = labels(&y);
-        let fit = Bits::ones(n);
+        (matrix(&[marker, inside]), labels(&y), Bits::ones(n), lineage)
+    }
+
+    #[test]
+    fn a_pure_lineage_marker_scores_zero_and_the_chi_square_tops_it() {
+        let (x, y, fit, lineage) = marker_case();
         let (stats, _, informative) = cmh_statistics(&x, &y, &fit, &lineage);
         assert_eq!(informative, 2);
         assert_eq!(stats[0], 0.0);
         assert!(stats[1] > 0.0);
         assert_eq!(super::super::screen(&x, &y, &fit, 1), vec![0]);
         assert_eq!(cmh_screen(&x, &y, &fit, &lineage, 1).feats, vec![1]);
+    }
+
+    #[test]
+    fn a_fit_under_the_adjusted_arm_takes_its_screen_and_with_no_arm_the_chi_square() {
+        let (x, y, fit, lineage) = marker_case();
+        let settings = |rule, floor| Settings {
+            rule,
+            floor,
+            out: PathBuf::new(),
+        };
+        let run = |s: Option<Settings>| {
+            let fit_once = || {
+                let arm = install(&lineage);
+                label("lineage", Some(0), "rf");
+                let feats = screen_fit(&x, &y, &fit, 1);
+                let rules: Vec<&str> = CONTEXT.with(|c| {
+                    c.borrow()
+                        .as_ref()
+                        .map(|ctx| ctx.screens.iter().map(|n| n.rule).collect())
+                        .unwrap_or_default()
+                });
+                drop(arm);
+                (feats, rules)
+            };
+            match s {
+                Some(s) => with_settings(s, fit_once),
+                None => fit_once(),
+            }
+        };
+        assert_eq!(run(Some(settings(Rule::Cmh, None))), (vec![1], vec!["cmh"]));
+        assert_eq!(
+            run(Some(settings(Rule::ChiSquare, Some(3)))),
+            (vec![0], vec!["chi-square"])
+        );
+        assert_eq!(run(None), (vec![0], vec![]));
     }
 
     #[test]
