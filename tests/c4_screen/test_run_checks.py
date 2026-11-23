@@ -205,6 +205,16 @@ class Unopened(Copies):
         self.assertEqual(opened, [])
 
 
+class Timeless(Copies):
+    def test_a_failed_with_no_time_is_refused_and_not_set_aside(self):
+        for text in ("", "FAILED synthia_beta stopped fit\n", "FAILED synthia_beta stopped fit 12:00\n"):
+            root = self.fresh()
+            (root / "copies" / "synthia_beta" / "FAILED").write_text(text, encoding="utf-8")
+            got, aside = self.run_checks(root)
+            self.assertEqual([n for n, (p, _) in got.items() if not p], [NAMES[1]], text)
+            self.assertEqual(aside, [], text)
+
+
 class TwoBinaries(Copies):
     build = {"codes": {"synthia_beta": "d" * 64}}
 

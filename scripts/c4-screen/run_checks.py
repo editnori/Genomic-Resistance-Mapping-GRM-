@@ -51,6 +51,7 @@ LEARNERS = 5
 TOKEN = re.compile(r"(?<![\w.])\d+\.\d+(?!\d)")
 NAMED = ("binary.txt", "expect.tsv", "lists.txt", "logs/timing.tsv", "logs/fits.tsv")
 SCORE_LOG = "score/score.log"
+STAMP = re.compile(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ")
 REFUSED_WHY = "constant model: refused for no candidate"
 # What gather copies from a species' copy into the reading, and where.
 GATHER = (("score/checks.tsv", "checks.tsv"), ("score/draws.tsv", "draws.tsv"), ("score/datasets.tsv", "datasets.tsv"),
@@ -103,6 +104,9 @@ def ended(slug, out):
     if "bad" in done:
         return None, failed, None, f"DONE does not read as run_species.sh writes it: {done['bad']}"
     if failed is not None:
+        # Both times as run_species.sh writes them (date -u +%FT%TZ); a FAILED with no such time is never set aside.
+        if not (STAMP.fullmatch(failed) and STAMP.fullmatch(done["time"])):
+            return None, failed, None, f"FAILED names no time to set beside DONE's: '{failed}'"
         if failed < done["time"]:
             return done, failed, f"{slug}/FAILED at {failed}, older than its DONE at {done['time']}", None
         return None, failed, None, f"FAILED at {failed} is not older than DONE at {done['time']}"
