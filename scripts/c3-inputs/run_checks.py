@@ -28,8 +28,9 @@ when one fails:
 
 The score/ files are read from score.tar in place when score/ is not
 unpacked: hashed, counted for genome ids, and draws.tsv's `constant` column
-counted. No score is printed. back.tar, the archive a copy came in, is
-neither read nor published and is not checked here.
+counted. No score is printed. score/score.log is never opened, nor taken
+out of score.tar: a SHA256SUMS line naming it fails. back.tar, the archive a
+copy came in, is neither read nor published and is not checked here.
 """
 
 import csv
@@ -57,6 +58,7 @@ FAILED_LINE = re.compile(rf"FAILED (?P<species>\S+) (?P<how>at|stopped at) (?P<s
 ID_TOKEN = re.compile(r"(?<![\w.])\d+\.\d+(?!\d)")
 READ = ("results", "check", "logs")
 READ_FILES = ("expect.tsv", "lists.txt", "binary.txt", "DONE", "SHA256SUMS")
+SCORE_LOG = "score/score.log"
 
 
 def _expect():
@@ -78,10 +80,16 @@ def sha(data):
 
 
 def score_files(copy):
-    """{name under score/: bytes} of one copy: from score/ when it is unpacked, else from score.tar in place."""
+    """{name under score/: bytes} of one copy, score/score.log apart, which is never opened: from score/ when it is
+    unpacked, else from score.tar in place."""
     folder = copy / "score"
     if folder.is_dir():
-        return {"score/" + p.relative_to(folder).as_posix(): p.read_bytes() for p in folder.rglob("*") if p.is_file()}
+        out = {}
+        for p in folder.rglob("*"):
+            name = "score/" + p.relative_to(folder).as_posix()
+            if p.is_file() and name != SCORE_LOG:
+                out[name] = p.read_bytes()
+        return out
     out = {}
     tar = copy / "score.tar"
     if not tar.is_file():
@@ -93,6 +101,8 @@ def score_files(copy):
             name = member.name[2:] if member.name.startswith("./") else member.name
             if not name.startswith("score/"):
                 raise SystemExit(f"{copy.name}: score.tar holds a file outside score/")
+            if name == SCORE_LOG:
+                continue
             with archive.extractfile(member) as handle:
                 out[name] = handle.read()
     return out

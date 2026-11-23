@@ -7,13 +7,16 @@ logs/, expect.tsv, lists.txt, binary.txt, SHA256SUMS, DONE, and its score/
 packed in score.tar.
 """
 
+import builtins
 import hashlib
+import io
 import json
 import shutil
 import tarfile
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from tests.c3_inputs import common
 from tests.c3_inputs import reading as R
@@ -217,8 +220,8 @@ class RunChecks(unittest.TestCase):
 
     def test_a_genome_id_in_score_tar_is_counted(self):
         self.unpack("fakeria_maxima")
-        path = self.back / "fakeria_maxima" / "score" / "score.log"
-        path.write_text("made up: 90002.21\n")
+        path = self.back / "fakeria_maxima" / "score" / "checks.tsv"
+        path.write_text(path.read_text() + "made up: 90002.21\n")
         self.repack("fakeria_maxima")
         got = lines(self.run_checks())
         self.assertIn("FAIL genome ids", got)
@@ -233,6 +236,41 @@ class RunChecks(unittest.TestCase):
         (self.back / "synthia_coli" / "logs" / "run.log").write_text("made up: [genome id]\n")
         got = lines(self.run_checks(ids_also=(str(extra),)))
         self.assertIn("1 genome ids in", got["FAIL genome ids"])
+
+    def test_score_log_is_never_opened_in_score_or_taken_out_of_score_tar(self):
+        for packed in (True, False):
+            self.tearDown()
+            self.setUp()
+            self.unpack("fakeria_maxima")
+            (self.back / "fakeria_maxima" / "score" / "score.log").write_text("made up: 90002.21\n")
+            self.repack("fakeria_maxima")
+            if not packed:
+                for slug in R.SPECIES:
+                    self.unpack(slug)
+            opened, taken = [], []
+            real_open, real_io_open, real_extract = builtins.open, io.open, tarfile.TarFile.extractfile
+
+            def guard(real):
+                def wrapped(file, *args, **kwargs):
+                    if str(file).endswith("score/score.log"):
+                        opened.append(str(file))
+                    return real(file, *args, **kwargs)
+                return wrapped
+
+            def extract(archive, member):
+                if getattr(member, "name", member).endswith("score/score.log"):
+                    taken.append(member)
+                return real_extract(archive, member)
+
+            with mock.patch("builtins.open", guard(real_open)), mock.patch("io.open", guard(real_io_open)), \
+                    mock.patch.object(tarfile.TarFile, "extractfile", extract):
+                rep = self.run_checks()
+            self.assertEqual(rep.failed, 0, "\n".join(rep.lines))
+            self.assertEqual((opened, taken), ([], []), packed)
+        copy = self.back / "fakeria_maxima"
+        (copy / "SHA256SUMS").write_text((copy / "SHA256SUMS").read_text() + f"{'0' * 64}  score/score.log\n")
+        done(copy, "fakeria_maxima")
+        self.assertIn("FAIL SHA256SUMS", lines(self.run_checks()))
 
     def test_a_failed_with_no_time_of_run_species_form_is_not_set_aside(self):
         for text in ("FAILED mockella_minor at build 08:00\n", "FAILED mockella_minor at build 1\n"):
