@@ -54,7 +54,12 @@ CELLS_HEADER = ["species_slug", "species", "cell", "class", "dataset", "antibiot
                 "genomes", "with_year_share", "earlier_genomes", "later_genomes", "earlier_units", "later_units",
                 "passes", "earlier_point", "later_point", "d_point", "p_point", "earlier_point_disrupt",
                 "later_point_disrupt", "earlier_gene", "later_gene", "d_gene", "tvd", "p_tvd", "note"]
-FAMILIES_HEADER = ["species_slug", "species", "class", "periods", "family", "earlier_mix", "later_mix"]
+FAMILIES_HEADER = ["species_slug", "species", "class", "periods", "family", "earlier_genomes", "later_genomes",
+                   "earlier_mix", "later_mix"]
+# A family seen in 1 to 4 genomes of a period's voting BioProjects is not
+# named: it joins one row under this label, whose mix is written only where
+# its own genome count is 0 or 5 or more.
+FOLDED_FAMILIES = "families seen in under 5 genomes"
 YEARS_HEADER = ["species_slug", "species", "years", "genomes"]
 LINEAGE_HEADER = ["species_slug", "species", "reports", "report_pairs", "differing_genome_pairs", "given"]
 TIMESPLIT_HEADER = ["dataset", "species_slug", "species", "antibiotic", "reading", "resistant_later_test",
@@ -331,20 +336,46 @@ def vote_row(base, guard, units, seed_stub, note=""):
                later_genomes=shown(sum(len(u[2]) for u in units if u[0] == "later")),
                earlier_point_disrupt=shown(sum(v[3] for u in units if u[0] == "earlier" for v in u[2])),
                later_point_disrupt=shown(sum(v[3] for u in units if u[0] == "later" for v in u[2])), note=note)
-    if not units:
+    if not passes:
+        # under 3 voting BioProjects in a period, a share would be one or two
+        # BioProjects' own: no share, mix or p is written
+        row["note"] = (note + "; " if note else "") + "under 3 voting BioProjects in a period, no share written"
         return row, None
     summaries = [unit_summary(u[2]) for u in units]
     labels = [u[0] for u in units]
-    st = statistics_of(summaries, labels)
-    if st is None:
-        return row, None
-    ep, lp, dp, eg, lg, dg, tv, em, lm = st
+    ep, lp, dp, eg, lg, dg, tv, em, lm = statistics_of(summaries, labels)
     row.update(earlier_point=fmt(ep), later_point=fmt(lp), d_point=fmt(dp), earlier_gene=fmt(eg),
                later_gene=fmt(lg), d_gene=fmt(dg), tvd=fmt(tv))
-    if passes:
-        row["p_point"] = fmt(permutation_p(units, dp, seed_stub + f"|{guard}|point", "point"))
-        row["p_tvd"] = fmt(permutation_p(units, tv, seed_stub + f"|{guard}|tvd", "tvd"))
-    return row, (em, lm)
+    row["p_point"] = fmt(permutation_p(units, dp, seed_stub + f"|{guard}|point", "point"))
+    row["p_tvd"] = fmt(permutation_p(units, tv, seed_stub + f"|{guard}|tvd", "tvd"))
+    counts = tuple(collections.Counter(f for u in units if u[0] == period for v in u[2] for f in v[2])
+                   for period in ("earlier", "later"))
+    holders = tuple([v for u in units if u[0] == period for v in u[2]] for period in ("earlier", "later"))
+    return row, (em, lm, counts, holders)
+
+
+def family_rows(base, em, lm, counts, holders):
+    """m2-families rows of a passing cell: a family by name where its genome
+    count in each period is 0 or 5 or more, the rest folded into one row.
+    `holders` are the period's genome cells; each genome is in one unit."""
+    named, folded = [], set()
+    for fam in sorted(set(em) | set(lm)):
+        n = (counts[0].get(fam, 0), counts[1].get(fam, 0))
+        if any(0 < k < MIN_UNIT_GENOMES for k in n):
+            folded.add(fam)
+        else:
+            named.append(fam)
+    out = [dict(base, family=fam, earlier_genomes=shown(counts[0].get(fam, 0)),
+                later_genomes=shown(counts[1].get(fam, 0)), earlier_mix=fmt(em.get(fam, 0.0)),
+                later_mix=fmt(lm.get(fam, 0.0))) for fam in named]
+    if folded:
+        row = dict(base, family=FOLDED_FAMILIES)
+        for period, mix, held in (("earlier", em, holders[0]), ("later", lm, holders[1])):
+            k = sum(1 for v in held if v[2] & folded)
+            row[f"{period}_genomes"] = shown(k)
+            row[f"{period}_mix"] = fmt(sum(mix.get(f, 0.0) for f in folded)) if k == 0 or k >= MIN_UNIT_GENOMES else ""
+        out.append(row)
+    return out
 
 
 def pooled_row(base, gids, genomes, periods, cell_of):
@@ -583,10 +614,8 @@ def run(args):
                                    lineage_note, labelled, db, stub)
             rows.extend(out)
             if mixes and mixes[0] is not None and mixes[1] is not None:
-                for fam in sorted(set(mixes[0]) | set(mixes[1])):
-                    fam_rows.append({"species_slug": args.species, "species": species_name, "class": cls,
-                                     "periods": periods, "family": fam, "earlier_mix": fmt(mixes[0].get(fam, 0.0)),
-                                     "later_mix": fmt(mixes[1].get(fam, 0.0))})
+                fam_rows.extend(family_rows({"species_slug": args.species, "species": species_name, "class": cls,
+                                             "periods": periods}, *mixes))
     # secondary: resistant genomes only, per dataset of A not in M, with the
     # dataset's own rule-meeting rows
     for rep in primary:

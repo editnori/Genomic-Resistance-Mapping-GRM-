@@ -180,9 +180,38 @@ class Vote(unittest.TestCase):
     def test_family_mix_names_the_databases_families(self):
         rc, err, out = self.go()
         fams = {r["family"]: r for r in c.read_tsv(out / "m2-families.tsv") if r["periods"] == "primary"}
-        self.assertEqual(set(fams), {"qnrB", "qnrS"})
+        # qnrB is in 2 earlier genomes: folded, and the fold's earlier mix is not written
+        self.assertEqual(set(fams), {"qnrS", history.FOLDED_FAMILIES})
         self.assertEqual(fams["qnrS"]["earlier_mix"], f"{(1 + 0.6 + 1) / 3:.12f}")
         self.assertEqual(fams["qnrS"]["later_mix"], "1.000000000000")
+        self.assertEqual((fams["qnrS"]["earlier_genomes"], fams["qnrS"]["later_genomes"]), ("15", "15"))
+        fold = fams[history.FOLDED_FAMILIES]
+        self.assertEqual((fold["earlier_genomes"], fold["earlier_mix"]), ("under 5", ""))
+        self.assertEqual((fold["later_genomes"], fold["later_mix"]), ("0", "0.000000000000"))
+
+    def test_a_family_in_5_or_more_genomes_of_each_period_is_named(self):
+        g = scenario()
+        for x in g:
+            if x["bp"] in ("PRJNA900003", "PRJNA900004"):
+                x["kind"] = "gene_b"
+        rc, err, out = self.go(genomes=g)
+        self.assertEqual(rc, 0, err)
+        fams = {r["family"]: r for r in c.read_tsv(out / "m2-families.tsv") if r["periods"] == "primary"}
+        self.assertEqual(set(fams), {"qnrB", "qnrS"})
+        self.assertEqual((fams["qnrB"]["earlier_genomes"], fams["qnrB"]["later_genomes"]), ("7", "5"))
+
+    def test_a_voted_row_that_does_not_pass_writes_no_share(self):
+        rc, err, out = self.go()
+        for guard in ("largest_out", "countries_both"):
+            r = row(out, guard)
+            self.assertEqual(r["passes"], "0")
+            self.assertEqual([r[k] for k in ("earlier_point", "later_point", "d_point", "earlier_gene", "later_gene",
+                                             "d_gene", "tvd", "p_point", "p_tvd")], [""] * 9, guard)
+            self.assertIn("no share written", r["note"])
+        s = row(out, "bioproject", periods="secondary")
+        self.assertEqual((s["passes"], s["d_point"], s["tvd"]), ("0", "", ""))
+        fams = [r for r in c.read_tsv(out / "m2-families.tsv") if r["periods"] == "secondary"]
+        self.assertEqual(fams, [])
 
     def test_largest_bioproject_left_out(self):
         rc, err, out = self.go()
@@ -234,8 +263,9 @@ class Vote(unittest.TestCase):
         rc, err, out = self.go()
         ids = self.top / "species.json"
         ids.write_text(json.dumps({"genomes": [{"id": g["id"]} for g in scenario()]}))
-        with contextlib.redirect_stdout(io.StringIO()):
-            self.assertEqual(scan.main(["--ids", str(ids), str(out)]), 0)
+        with contextlib.redirect_stdout(io.StringIO()) as printed:
+            rc = scan.main(["--ids", str(ids), str(out)])
+        self.assertEqual(rc, 0, printed.getvalue())
 
 
 class Guards(unittest.TestCase):
