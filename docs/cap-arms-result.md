@@ -78,11 +78,11 @@ These points were seen in the tables after the reading. They change no rule and 
 
 ## Method
 
-**Checks of the run.** Before any score was read, `scripts/c2-cap/run_checks.py` read each species' copy and printed counts only: the species, every `SHA256SUMS`, `DONE` and `binary.txt`, one binary, `expect.py`'s rows, the cohorts against the selection rule's counts, genome ids and BioProject accessions, and the refused lineage draws. `score/score.log` is never read by it.
+**Checks of the run.** Before any score was read, `scripts/c2-cap/run_checks.py` read each species' copy and printed counts only: the species, every `SHA256SUMS`, `DONE` and `binary.txt`, one binary, `expect.py`'s rows, the cohorts against the selection rule's counts, genome ids and BioProject accessions, and the refused lineage draws. It reads the tables of each species' `score.tar` in place, without unpacking it, and `score/score.log` is never read or hashed by it. A copy that lacks `lists.txt` takes it rebuilt from `lists.tsv` and the driver's arguments, and the rebuilt text must match its `SHA256SUMS` line.
 
 **Tables.** `scripts/c2-cap/page_tables.py write` checks the reading against its gates and writes `reference/cap-arms/`. `scripts/c2-cap/page_tables.py print` prints this page's tables from those files, rounded to 3 decimals.
 
-**Tests.** `tests/c2_cap/test_page_tables.py` and `tests/c2_cap/test_run_checks.py` hold SYNTHETIC tests of the two scripts. `scripts/c2-cap/page_faults.py` plants each fault of the table script in a copy of the tree and runs the test meant to catch it.
+**Tests.** `tests/c2_cap/test_page_tables.py`, `tests/c2_cap/test_run_checks.py`, `tests/c2_cap/test_review_checks.py` and `tests/c2_cap/test_review_faults.py` hold SYNTHETIC tests of the two scripts. `scripts/c2-cap/page_faults.py` plants each fault of the table script in a copy of the tree and runs the test meant to catch it.
 
 A column that reads 0 by construction stays off the printed page: C2's `score.py` writes `constant` 0 on every draw, so that column is not printed, and its count writes no count without constant learners.
 
