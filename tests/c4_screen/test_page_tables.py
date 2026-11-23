@@ -424,6 +424,21 @@ class TwinSets(Built):
         self.assertTrue(read[("cmh-4000", page.SCREEN_READING, "3")])
 
 
+class StudySign(Built):
+    """score.py's condition 5 on a count whose lineage and study medians are 0 (SYNTHETIC)."""
+
+    def test_a_lineage_median_of_0_meets_no_condition_5(self):
+        score = page.score
+        rows = [r for slug in ("synthia_alpha", "synthia_beta", "synthia_gamma")
+                for r in score.read_tsv(self.root / "reading" / "score" / slug / "datasets.tsv")]
+        counted = score.count(rows)
+        for r in counted:
+            if (r["pair"], r["set"], r["measure"]) == ("cmh-4000-k31", score.ALL, score.PRIMARY):
+                r["median_difference"] = 0.0
+        five = next(r for r in score.conditions(counted) if (r["arm"], r["condition"]) == ("cmh-4000", "5"))
+        self.assertEqual((five["met"], five["learners"]), (0, 0))
+
+
 class CartOff(Built):
     build = {"cart_off": True}
 
