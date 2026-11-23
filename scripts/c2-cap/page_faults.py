@@ -9,8 +9,9 @@ piece of text in scripts/c2-cap/page_tables.py, runs the one test named for
 it, and puts the text back. A fault is caught when its test fails; each test
 must also pass with no fault planted. Writes <out dir>/faults.tsv and
 <out dir>/logs/, prints one line per fault, and exits 1 when a fault is not
-caught. Faults 1 to 13 each turn off one gate of page_tables.GATES (2 to
-14); 14 to 18 break a rule of the page's tables. Every test it runs is
+caught. Fault 0 turns off gate 1's hold on run_checks.py's printout, and
+faults 1 to 13 each turn off one gate of page_tables.GATES (2 to 14); 14 to
+18 break a rule of the page's tables. Every test it runs is
 SYNTHETIC (tests/c2_cap/page_common.py); it reads no data.
 """
 
@@ -24,6 +25,10 @@ G = "tests.c2_cap.test_page_tables.Gates"
 T = "tests.c2_cap.test_page_tables.Tables"
 
 FAULTS = [
+    ("0", "gate 1 inputs: a run checks printout with a FAIL line, passed", PAGE,
+     '    if len(lines) != len(RUN_CHECKS) or passed != list(RUN_CHECKS) or any(line.startswith("FAIL") for line in lines):',
+     "    if False:",
+     "py", f"{G}.test_a_run_checks_printout_with_a_fail_line_is_refused"),
     ("1", "gate 2 species: a species folder missing from the runs, passed", PAGE,
      "    if found != species:",
      "    if False:",

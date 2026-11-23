@@ -1,6 +1,6 @@
 """The tables of docs/cap-arms-result.md: plan block C2's one reading, as files and as the page prints them.
 
-  python3 -I page_tables.py write <count dir> <runs dir> <lists.tsv> <out dir>
+  python3 -I page_tables.py write <count dir> <runs dir> <lists.tsv> <checks.txt> <out dir>
   python3 -I page_tables.py print <out dir>
 
 <count dir> holds what `score.py --count <count dir> --withdrawn cap-4000
@@ -13,12 +13,15 @@ and, where the run wrote them, fetch.json, folds-lineage-<dataset>.tsv,
 folds-study.tsv and study-files-cap-all.tsv), expect.tsv, binary.txt,
 logs/timing.tsv and logs/folds-<dataset>.log. <lists.tsv> is
 scripts/c2-cap/lists.tsv: the first run is its rows with first_run 1 and
-in_M 0.
+in_M 0. <checks.txt> is run_checks.py's printout over the run's copies,
+made before any score was read: gate 1 holds that it says each of
+run_checks.py's checks passed, and the page is not written otherwise.
 
 `write` passes every gate of GATES before it writes a file, and stops at
 the first that fails, naming it. It then writes <out dir> (absent or
-empty): the scorer's count files under count/, copied as they are, the
-page's tables as page-*.tsv, gates.txt, README.md and SHA256SUMS. Where
+empty): the scorer's count files under count/, copied as they are,
+checks.txt, copied, the page's tables as page-*.tsv, gates.txt, README.md
+and SHA256SUMS. Where
 score.py's own tables are the page's files (count.tsv, conditions.tsv),
 the script checks them against score.py's own count of the datasets.tsv
 files and copies them; every other table is summed here from score.py's
@@ -53,14 +56,15 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 
 
-def _score():
-    spec = importlib.util.spec_from_file_location("c2_cap_score_for_page", HERE / "score.py")
+def _load(name):
+    spec = importlib.util.spec_from_file_location(f"c2_cap_{name}_for_page", HERE / f"{name}.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
 
 
-score = _score()
+score = _load("score")
+RUN_CHECKS = tuple(_load("run_checks").CHECKS)
 C3 = score.C3
 LEARNERS = score.LEARNERS
 MEASURES = score.MEASURES
@@ -79,9 +83,10 @@ COUNT_FILES = ("count.tsv", "conditions.tsv")
 SCORED_SAME = "the scored genomes of each outer fold are the default's"
 STUDY_SAME = "the test folds are the default's, with at least its training genomes"
 GATES = [
-    (1, "inputs", "the count directory holds count.tsv and conditions.tsv; each species' folder holds score/checks.tsv, "
-                  "score/draws.tsv, score/datasets.tsv, results/added-labelled.tsv, results/cohorts.json, expect.tsv "
-                  "and binary.txt"),
+    (1, "inputs", "the run's checks printout holds one pass line for each of run_checks.py's checks, in its order, "
+                  "and no line starting FAIL; the count directory holds count.tsv and conditions.tsv; each species' "
+                  "folder holds score/checks.tsv, score/draws.tsv, score/datasets.tsv, results/added-labelled.tsv, "
+                  "results/cohorts.json, expect.tsv and binary.txt"),
     (2, "species", "the runs directory holds every species of lists.tsv's first run once, and no other"),
     (3, "first run", "each species' expect.tsv lists exactly its first-run datasets, and no table holds a dataset of M "
                      "or of another species; species and antibiotic equal lists.tsv's"),
@@ -262,6 +267,15 @@ def typed_draw(r):
 
 
 # ---------- gates ----------
+
+def check_run_checks(checks_path):
+    """Gate 1's first part: run_checks.py's printout says each of its checks passed, one line each. Raises Stop."""
+    lines = Path(checks_path).read_text(encoding="utf-8").splitlines()
+    passed = [line[len("pass "):].split(":", 1)[0] for line in lines if line.startswith("pass ")]
+    if len(lines) != len(RUN_CHECKS) or passed != list(RUN_CHECKS) or any(line.startswith("FAIL") for line in lines):
+        raise Stop(f"gate 1 inputs: the run's checks printout does not say that each of run_checks.py's "
+                   f"{len(RUN_CHECKS)} checks passed")
+
 
 def check_reading(count_dir, runs_dir, lrows):
     """Every gate of GATES, in order. Returns (runs, count rows, condition rows, beside count files); raises Stop
@@ -837,6 +851,7 @@ This directory holds the tables behind [docs/cap-arms-result.md](../../docs/cap-
 | File | Holds |
 |---|---|
 | `gates.txt` | the gates the program passed before it wrote a table |
+| `checks.txt` | the printout of `scripts/c2-cap/run_checks.py`, the checks of the run's copies made before any score was read, counts only; gate 1 holds that each check passed |
 | `count/count.tsv`, `count/conditions.tsv` | the count that decides, and the conditions as the scorer reads them{others} |
 | `page-reading.tsv` | `cap-all`'s deciding conditions under ruling 15, 1 and 2, 3 and 4, and whether all are met; 6 is the maintainer's |
 | `page-conditions.tsv` | the conditions per arm and reading, with which of them decide: ruling 15's 1 and 2, 3 and 4 for `cap-all`; condition 5 reads the study split and decides nothing; the stricter reading decides nothing; `cap-4000`'s rows are withdrawn and not read; 6 is the maintainer's |
@@ -864,11 +879,12 @@ def write_tsv(path, rows, columns):
             handle.write("\t".join(score.C9.fmt(r.get(c)) for c in columns) + "\n")
 
 
-def write(count_dir, runs_dir, l_path, out):
+def write(count_dir, runs_dir, l_path, checks_path, out):
     count_dir, out = Path(count_dir), Path(out)
     lrows = load(l_path)
     if out.exists() and any(out.iterdir()):
         raise Stop(f"{out} is not empty")
+    check_run_checks(checks_path)
     runs, count_rows, cond_rows, others = check_reading(count_dir, runs_dir, lrows)
     names = {r["dataset"]: (r["species"], r["antibiotic"]) for r in first_run(lrows)}
     few = few_added(runs, names)
@@ -878,6 +894,7 @@ def write(count_dir, runs_dir, l_path, out):
     (out / "count").mkdir()
     for name in COUNT_FILES + tuple(others):
         (out / "count" / name).write_bytes((count_dir / name).read_bytes())
+    (out / "checks.txt").write_bytes(Path(checks_path).read_bytes())
     write_tsv(out / "page-reading.tsv", page_reading(cond_rows), READING_COLUMNS)
     write_tsv(out / "page-conditions.tsv", page_conditions(cond_rows), CONDITION_PAGE_COLUMNS)
     write_tsv(out / "page-count.tsv", page_count(count_rows), COUNT_PAGE_COLUMNS)
@@ -1062,9 +1079,9 @@ def tables(folder):
 
 
 def main(argv):
-    if len(argv) == 5 and argv[0] == "write":
+    if len(argv) == 6 and argv[0] == "write":
         try:
-            files = write(argv[1], argv[2], argv[3], argv[4])
+            files = write(argv[1], argv[2], argv[3], argv[4], argv[5])
         except Stop as e:
             print(f"stopped: {e}", file=sys.stderr)
             return 1

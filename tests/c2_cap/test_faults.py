@@ -20,7 +20,7 @@ class Faults(unittest.TestCase):
 
     def test_each_page_faults_text_occurs_once_in_its_file(self):
         faults = common.load("page_faults").FAULTS
-        self.assertEqual(len(faults), 18)
+        self.assertEqual(len(faults), 19)
         self.assertEqual(len({f[0] for f in faults}), len(faults))
         for fault in faults:
             n, path, old = fault[0], fault[2], fault[3]

@@ -26,7 +26,7 @@ class Base(unittest.TestCase):
         self._tmp.cleanup()
 
     def write(self):
-        return page.write(self.r.count, self.r.runs, self.r.lists, self.out)
+        return page.write(self.r.count, self.r.runs, self.r.lists, self.r.checks, self.out)
 
     def stops_at(self, gate):
         with self.assertRaises(page.Stop) as cm:
@@ -52,7 +52,7 @@ class Base(unittest.TestCase):
 class Gates(Base):
     def test_a_clean_reading_passes_every_gate_and_writes_its_tables(self):
         files = self.write()
-        for name in ("count/count.tsv", "count/conditions.tsv", "page-reading.tsv", "page-conditions.tsv",
+        for name in ("count/count.tsv", "count/conditions.tsv", "checks.txt", "page-reading.tsv", "page-conditions.tsv",
                      "page-count.tsv", "page-count-without-few.tsv", "page-few-added.tsv", "page-species.tsv",
                      "page-datasets.tsv", "page-not-fitted.tsv", "page-study.tsv", "page-checks.tsv",
                      "page-binaries.tsv", "page-times.tsv", "gates.txt", "README.md"):
@@ -61,6 +61,23 @@ class Gates(Base):
         self.assertEqual(len((self.out / "gates.txt").read_text().splitlines()), len(page.GATES))
         listed = [line.split("  ", 1)[1] for line in (self.out / "SHA256SUMS").read_text().splitlines()]
         self.assertEqual(listed, files)
+
+    def test_a_run_checks_printout_with_a_fail_line_is_refused(self):
+        lines = self.r.checks.read_text().splitlines()
+        lines[3] = lines[3].replace("pass ", "FAIL ", 1)
+        self.r.checks.write_text("\n".join(lines) + "\n")
+        self.stops_at(1)
+
+    def test_a_run_checks_printout_short_of_one_check_is_refused(self):
+        lines = self.r.checks.read_text().splitlines()
+        self.r.checks.write_text("\n".join(lines[:-1]) + "\n")
+        self.stops_at(1)
+
+    def test_a_run_checks_printout_with_a_check_of_another_name_is_refused(self):
+        lines = self.r.checks.read_text().splitlines()
+        lines[0] = "pass every species: made-up counts"
+        self.r.checks.write_text("\n".join(lines) + "\n")
+        self.stops_at(1)
 
     def test_a_species_folder_missing_from_the_runs_is_refused(self):
         import shutil

@@ -12,6 +12,7 @@ from tests.c2_cap import common
 
 score = common.load("score")
 expect = common.load("expect")
+RUN_CHECKS = common.load("run_checks").CHECKS
 C3, C9 = score.C3, score.C9
 LEARNERS = score.LEARNERS
 SPECIES = [line.split("\t")[:2] for line in (common.KIT / "species.tsv").read_text(encoding="utf-8").splitlines()[1:]]
@@ -55,6 +56,7 @@ class Reading:
         self.lists = tmp / "lists.tsv"
         self.runs = tmp / "runs"
         self.count = tmp / "count"
+        self.checks = tmp / "checks.txt"
         self.slugs = [s for s, _ in SPECIES]
         self.name = dict(SPECIES)
         self.none_added = {(self.slugs[1], f"{self.slugs[1]}__drug_b")}
@@ -159,6 +161,7 @@ class Reading:
 
     def write(self, count_rows=None):
         tsv(self.lists, self.list_rows(), LIST_COLUMNS)
+        self.checks.write_text("".join(f"pass {name}: made-up counts\n" for name in RUN_CHECKS), encoding="utf-8")
         for slug in self.slugs:
             self.write_species(slug)
         self.recount(count_rows)

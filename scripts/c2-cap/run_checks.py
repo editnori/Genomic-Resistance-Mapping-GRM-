@@ -299,6 +299,11 @@ def scan(files, ids, texts=()):
     return found_ids, found_bp
 
 
+# The checks run() prints, in order, one line each; page_tables.py's gate 1 holds the printout to them.
+CHECKS = ("species", "SHA256SUMS", "DONE", "one binary", "expect.py", "cohorts", "genome ids and BioProjects",
+          "refused lineage draws")
+
+
 def run(runs, release, lrows, selection=None, lists=()):
     """(printed lines, all passed)."""
     selection = SELECTION if selection is None else selection
@@ -410,6 +415,8 @@ def run(runs, release, lrows, selection=None, lists=()):
                     refused.append((m.group(1), int(m.group(2))))
     say("refused lineage draws", True, f"{len(refused)} datasets with the lineage split unavailable, "
         f"{sum(n for _, n in refused)} refused default slots" + "".join(f"; {d}: {n}" for d, n in refused))
+    if [line.split(":", 1)[0].split(" ", 1)[1] for line in out] != list(CHECKS):
+        raise SystemExit("run_checks.py printed other checks than its CHECKS")
     return out, ok
 
 
