@@ -488,6 +488,14 @@ src/lib.rs learn::screen_arm::tests::the_statistic_sums_its_strata_in_ascending_
 src/lib.rs learn::screen_arm::tests::the_strata_do_not_change_with_the_labels
 src/lib.rs learn::screen_arm::tests::ties_break_by_the_lower_row_and_the_budget_fills_with_zeros
 src/lib.rs learn::screen_arm::tests::with_one_stratum_the_statistic_is_the_chi_square_times_n_less_one_over_n
+src/lib.rs learn::settings::tests::a_failed_partition_is_recorded_per_learner
+src/lib.rs learn::settings::tests::a_sampled_setting_is_fitted_as_given
+src/lib.rs learn::settings::tests::a_settings_file_outside_its_spaces_is_refused
+src/lib.rs learn::settings::tests::inner_folds_keep_lineages_whole_inside_the_outer_training_genomes
+src/lib.rs learn::settings::tests::no_test_genomes_label_reaches_its_folds_fit
+src/lib.rs learn::settings::tests::the_release_setting_is_the_fold_files_fit_and_a_cutoff_moves_only_the_calls
+src/lib.rs learn::settings::tests::the_release_setting_on_one_lineage_fold_reproduces_the_drawn_fold
+src/lib.rs learn::settings::tests::unused_genomes_change_no_trial
 src/lib.rs learn::tests::a_large_single_class_group_does_not_exclude_the_other_class
 src/lib.rs learn::tests::auprc_is_one_for_perfect_ranking
 src/lib.rs learn::tests::grouped_folds_never_split_a_group
@@ -758,6 +766,7 @@ src/main.rs tests::learn_takes_the_c4_screen_and_floor_arms_only_when_asked
 src/main.rs tests::learn_takes_the_c9_pick_only_when_asked
 src/main.rs tests::learn_takes_the_cohort_experiment_only_with_an_output_and_no_other_experiment
 src/main.rs tests::learn_takes_the_mic_experiment_only_with_an_output_and_no_other_experiment
+src/main.rs tests::learn_takes_the_settings_flags_only_with_force_and_alone
 src/main.rs tests::learn_with_a_fold_file_screens_as_many_features_as_it_is_told
 src/main.rs tests::matrix_and_pipeline_keep_the_stock_path_unless_disk_sparse_is_given
 src/main.rs tests::matrix_column_blocks_reach_the_block_merge_through_run

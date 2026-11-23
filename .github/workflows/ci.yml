@@ -293,6 +293,12 @@ jobs:
           # test_faults.py reads the planted-fault runners under scripts/c3-inputs, scripts/c9-pick and scripts/c4-screen and the files they plant in.
           - suite: tests/c4_screen
             top: .
+          # SYNTHETIC folds files, picks and choices built in the test; it runs drive.py against a fake grm in the
+          # test, and score.py, lists.py and expect.py under scripts/c5-settings (block C3's, loaded by import), and
+          # fits nothing. test_lists.py also reads the committed lists scripts/c3-inputs/lists.tsv and
+          # scripts/c5-settings/lists.tsv.
+          - suite: tests/c5_settings
+            top: .
     env:
       SUITE: ${{ matrix.suite }}
       TOP: ${{ matrix.top }}

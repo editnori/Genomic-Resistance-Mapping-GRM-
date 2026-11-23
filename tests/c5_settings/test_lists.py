@@ -1,7 +1,9 @@
 """Tests of scripts/c5-settings/lists.py and expect.py. The list test reads the committed lists
 scripts/c3-inputs/lists.tsv and scripts/c5-settings/lists.tsv; the expect tests use made-up names."""
 
+import contextlib
 import csv
+import io
 import tempfile
 import unittest
 from pathlib import Path
@@ -15,7 +17,10 @@ E = common.load("expect")
 class Lists(unittest.TestCase):
     def test_the_list_is_s_with_s_less_m_first_and_is_the_committed_one(self):
         with tempfile.TemporaryDirectory() as tmp:
-            self.assertEqual(LISTS.main([str(common.ROOT / "scripts" / "c3-inputs" / "lists.tsv"), tmp]), 0)
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                self.assertEqual(LISTS.main([str(common.ROOT / "scripts" / "c3-inputs" / "lists.tsv"), tmp]), 0)
+            self.assertEqual(buf.getvalue(), "S 69 in 9 species; S less M 55 in 8 species\n")
             made = (Path(tmp) / "lists.tsv").read_bytes()
         self.assertEqual(made, (common.KIT / "lists.tsv").read_bytes())
         with open(common.KIT / "lists.tsv", newline="") as f:
