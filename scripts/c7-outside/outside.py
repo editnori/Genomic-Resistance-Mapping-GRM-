@@ -464,7 +464,12 @@ def enet_path(X, y, w, scale, mix, penalties, seed):
     unpenalized that changes no weight, only the intercept, which is moved back (b - mean . coef), so the model is
     the one stated on the scaled columns; it is done because saga on a sparse matrix damps its intercept steps
     (0.01) and on uncentred 0/1 columns needs several times more epochs. saga visits the genomes in a random order
-    drawn from `seed` (the fold seed), so a fit is the same bytes every time. A weight within ZERO of 0 is 0."""
+    drawn from `seed` (the fold seed), so a fit is the same bytes every time. A weight within ZERO of 0 is 0.
+
+    A penalty at or above this matrix's lambda_max (for this mix) has every weight exactly 0 (the KKT condition at 0
+    with the class-balanced weights, whose null intercept is log of the weighted classes' ratio, 0 here). saga's
+    stopping rule, a change relative to the largest weight, cannot see that and runs to max_iter, which would mark
+    the null fit unconverged and drop it from the pick; so that point is written down as the null fit, converged."""
     import sklearn
     from sklearn.exceptions import ConvergenceWarning
     from sklearn.linear_model import LogisticRegression
@@ -476,8 +481,14 @@ def enet_path(X, y, w, scale, mix, penalties, seed):
     model = LogisticRegression(penalty="elasticnet", solver="saga", l1_ratio=mix, C=1.0, tol=ENET_TOL,
                                max_iter=ENET_MAX_ITER, warm_start=True, fit_intercept=True,
                                random_state=seed % (1 << 31))
+    top = lambda_max(X, y, w, scale, mix)
+    pos, neg = float(np.sum(w[y.astype(bool)])), float(np.sum(w[~y.astype(bool)]))
+    null_b = math.log(pos / neg) if pos > 0 and neg > 0 else 0.0
     out = []
     for lam in penalties:
+        if lam >= top:
+            out.append((np.zeros(X.shape[1]), null_b, True))
+            continue
         model.set_params(C=1.0 / (lam * n))
         with warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter("always")
