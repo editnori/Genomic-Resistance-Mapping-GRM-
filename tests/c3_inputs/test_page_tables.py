@@ -455,6 +455,33 @@ class GatesHeld(Built):
         self.stops(reading, "gate 11 binary: run/synthia_coli/DONE does not name synthia_coli")
 
 
+class TwinMost(Built):
+    """Gate 12 re-reads condition 3 as the larger of the twin's two counts (SYNTHETIC)."""
+
+    def test_a_twin_meeting_1_in_three_learners_and_2_in_none_reads_3(self):
+        reading = self.copy()
+        count = rows_of(reading / "count", "count.tsv")
+        for r in count:
+            if (r["split"], r["pair"], r["measure"]) == ("lineage", "twin-k31", page.PRIMARY):
+                r["interval_lo"] = "0.01" if r["learner"] in ("scm", "cart", "rf") else "-0.01"
+                r["holm_p"] = "1.0"
+        score.write_tsv(reading / "count" / "count.tsv", count, score.COUNT_COLUMNS)
+        conds = score.conditions(count)
+        score.write_tsv(reading / "count" / "conditions.tsv", conds, score.CONDITION_COLUMNS)
+        self.assertEqual({str(r["learners"]) for r in conds if (r["reading"], r["condition"]) == (page.DECIDING, "3")},
+                         {"3"})
+        data = page.check_reading(reading, self.lrows())
+        page.check_tables(data, page.tables_of(data))
+
+
+class TieAndMargin(unittest.TestCase):
+    """The species table's tally: a difference of exactly 0.02 is the same, more is better or worse."""
+
+    def test_a_difference_of_0_02_is_the_same_and_more_is_better_or_worse(self):
+        self.assertEqual(page.tally([0.02, -0.02, 0.021, -0.021, 0.0]), (1, 1, 3))
+        self.assertEqual(page.tally([0.02, -0.021], "log_loss"), (1, 0, 1))
+
+
 class Withdrawn(unittest.TestCase):
     def test_a_withdrawn_arm_has_no_rows_no_build_and_its_five_pairs(self):
         with tempfile.TemporaryDirectory() as tmp:
