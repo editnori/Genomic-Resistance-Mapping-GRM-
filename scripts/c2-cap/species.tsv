@@ -1,0 +1,9 @@
+species_slug	species	cohort	CAP	M	first_run	first_run_in_S
+enterococcus_faecium	Enterococcus faecium	2000	13	2	11	0
+escherichia_coli	Escherichia coli	2000	36	7	29	15
+klebsiella_pneumoniae	Klebsiella pneumoniae	2000	38	6	32	18
+mycobacterium_tuberculosis	Mycobacterium tuberculosis	2000	22	2	20	1
+neisseria_gonorrhoeae	Neisseria gonorrhoeae	2000	7	1	6	0
+salmonella_enterica	Salmonella enterica	2000	24	0	24	1
+staphylococcus_aureus	Staphylococcus aureus	2000	14	1	13	4
+streptococcus_pneumoniae	Streptococcus pneumoniae	2000	12	4	8	0
