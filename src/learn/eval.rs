@@ -1227,7 +1227,15 @@ pub fn evaluate(
     let tuning = final_tuning(groups, duplicates);
     let finals = final_models(dataset, x, y, tuning.as_deref(), min_support, cfg)?;
     if arm.is_some() {
-        screen_arm::finish(dataset, "drawn", cfg.seed, cfg.screened_features, min_support, n, x.rows)?;
+        screen_arm::finish(
+            dataset,
+            "drawn",
+            cfg.seed,
+            cfg.screened_features,
+            min_support,
+            n,
+            x.rows,
+        )?;
     }
     drop(arm);
     Ok(EvalOutput {
@@ -1851,7 +1859,15 @@ pub fn evaluate_assigned(
     }
     if arm.is_some() {
         let used_samples = (0..n).filter(|&i| used(i)).count();
-        screen_arm::finish(dataset, scheme, cfg.seed, cfg.screened_features, min_support, used_samples, x.rows)?;
+        screen_arm::finish(
+            dataset,
+            scheme,
+            cfg.seed,
+            cfg.screened_features,
+            min_support,
+            used_samples,
+            x.rows,
+        )?;
     }
     drop(arm);
     Ok(AssignedSplit {
@@ -6389,7 +6405,10 @@ mod tests {
             (s >> 11) as f64 / (1u64 << 53) as f64
         };
         let groups: Vec<u32> = (0..n).map(|i| (i / 8) as u32).collect();
-        let y = Bits::from_indices(n, (0..n).filter(|&i| next() < 0.2 + 0.6 * (groups[i] % 4) as f64 / 3.0));
+        let y = Bits::from_indices(
+            n,
+            (0..n).filter(|&i| next() < 0.2 + 0.6 * (groups[i] % 4) as f64 / 3.0),
+        );
         let mut x = BitMatrix::with_cols(n);
         for r in 0..30 {
             let row = Bits::from_indices(
@@ -6397,7 +6416,13 @@ mod tests {
                 (0..n).filter(|&i| {
                     let p = match r % 3 {
                         0 => 0.15 + 0.7 * (groups[i] % 4) as f64 / 3.0,
-                        1 => if y.contains(i) { 0.7 } else { 0.3 },
+                        1 => {
+                            if y.contains(i) {
+                                0.7
+                            } else {
+                                0.3
+                            }
+                        }
                         _ => 0.5,
                     };
                     next() < p
@@ -6443,16 +6468,32 @@ mod tests {
         );
         let floor_file = c4_inputs(dir.path(), "drawn");
         assert_eq!(
-            (&floor_file["arm"], &floor_file["rule"], &floor_file["budget"]),
-            (&serde_json::json!("floor"), &serde_json::json!("chi-square"), &serde_json::json!(6))
+            (
+                &floor_file["arm"],
+                &floor_file["rule"],
+                &floor_file["budget"]
+            ),
+            (
+                &serde_json::json!("floor"),
+                &serde_json::json!("chi-square"),
+                &serde_json::json!(6)
+            )
         );
-        std::fs::remove_file(dir.path().join(screen_arm::file_name("fixture__fixturemycin", "drawn", 42))).unwrap();
+        std::fs::remove_file(dir.path().join(screen_arm::file_name(
+            "fixture__fixturemycin",
+            "drawn",
+            42,
+        )))
+        .unwrap();
 
         screen_arm::with_settings(settings(Rule::Cmh, None), || {
             evaluate("fixture__fixturemycin", &x, &y, &groups, &[], 3, None, &cfg).unwrap()
         });
         let file = c4_inputs(dir.path(), "drawn");
-        assert_eq!((&file["arm"], &file["rule"]), (&serde_json::json!("cmh"), &serde_json::json!("cmh")));
+        assert_eq!(
+            (&file["arm"], &file["rule"]),
+            (&serde_json::json!("cmh"), &serde_json::json!("cmh"))
+        );
         assert_eq!(file["dataset_rows"], 30);
         let folds = file["folds"].as_array().unwrap();
         let screens = file["screens"].as_array().unwrap();
@@ -6468,7 +6509,10 @@ mod tests {
         // models four times: lasso, the forest's importance fit, boosting and
         // the kept forest.
         assert_eq!(screens.len(), folds.len() * 3 + 4);
-        assert_eq!(file["fit_times"].as_array().unwrap().len(), folds.len() * LEARNERS.len());
+        assert_eq!(
+            file["fit_times"].as_array().unwrap().len(),
+            folds.len() * LEARNERS.len()
+        );
         for note in screens {
             assert_eq!(note["rule"], "cmh", "{note}");
             assert!(note["kept"].as_u64().unwrap() <= 6);
@@ -6481,7 +6525,10 @@ mod tests {
                 .find(|f| f["split"] == note["split"] && f["fold"] == note["fold"])
                 .unwrap();
             assert_eq!(note["candidates"], fold["candidates"]);
-            let (fitting, train) = (note["fitting"].as_u64().unwrap(), fold["train"].as_u64().unwrap());
+            let (fitting, train) = (
+                note["fitting"].as_u64().unwrap(),
+                fold["train"].as_u64().unwrap(),
+            );
             // The forest screens the outer training samples; boosting and the
             // lasso those less their tuning holdout. No test sample is read.
             if note["learner"] == "rf" {
@@ -6500,7 +6547,9 @@ mod tests {
                 for fold in 0..cfg.folds {
                     let n = screens
                         .iter()
-                        .filter(|s| s["learner"] == learner && s["split"] == *split && s["fold"] == fold)
+                        .filter(|s| {
+                            s["learner"] == learner && s["split"] == *split && s["fold"] == fold
+                        })
                         .count();
                     assert_eq!(n, 1, "{learner} {split} fold {fold}");
                 }
@@ -6521,7 +6570,10 @@ mod tests {
             out: dir.path().to_path_buf(),
         };
         let (fixed, supplied) = screen_arm::with_settings(settings, || {
-            (support_floor(1600), supplied_support_floor(&[Role::Train; 1600]))
+            (
+                support_floor(1600),
+                supplied_support_floor(&[Role::Train; 1600]),
+            )
         });
         assert_eq!((fixed, supplied), (3, 3));
         assert_eq!(support_floor(1600), 8);

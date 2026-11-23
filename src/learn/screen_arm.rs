@@ -67,7 +67,11 @@ pub struct Settings {
 impl Settings {
     /// The arm's name in its inputs file: `cmh` or `floor`.
     pub fn arm(&self) -> &'static str {
-        if self.rule == Rule::Cmh { "cmh" } else { "floor" }
+        if self.rule == Rule::Cmh {
+            "cmh"
+        } else {
+            "floor"
+        }
     }
 }
 
@@ -171,7 +175,12 @@ pub fn fit_strata(
 /// V = Σ m (n − m) r (n − r) / (n² (n − 1)) in ascending stratum order, and
 /// 0 when V is 0. With one stratum it is (n − 1)/n times `learn::screen`'s
 /// chi-square.
-pub fn cmh_statistics(x: &BitMatrix, y: &Bits, fit: &Bits, lineage: &[u32]) -> (Vec<f64>, usize, usize) {
+pub fn cmh_statistics(
+    x: &BitMatrix,
+    y: &Bits,
+    fit: &Bits,
+    lineage: &[u32],
+) -> (Vec<f64>, usize, usize) {
     assert_eq!(x.cols, fit.len());
     let (slot, nr, all) = fit_strata(y, fit, lineage);
     let informative = nr.len();
@@ -554,7 +563,9 @@ mod tests {
 
     fn random_cohort(seed: u64, n: usize, rows: usize, strata: u32) -> (BitMatrix, Bits, Vec<u32>) {
         let mut rng = ChaCha8Rng::seed_from_u64(seed);
-        let lineage: Vec<u32> = (0..n).map(|_| rng.random_range(0..strata) * 7 + 3).collect();
+        let lineage: Vec<u32> = (0..n)
+            .map(|_| rng.random_range(0..strata) * 7 + 3)
+            .collect();
         let y: Vec<bool> = (0..n).map(|_| rng.random_bool(0.45)).collect();
         let x: Vec<Vec<bool>> = (0..rows)
             .map(|_| {
@@ -574,7 +585,11 @@ mod tests {
         let b = bits::and_count(x.row(f), neg.words()) as f64;
         let (c, d) = (np - a, nn - b);
         let denom = (a + b) * (c + d) * np * nn;
-        if denom == 0.0 { 0.0 } else { (np + nn) * (a * d - b * c).powi(2) / denom }
+        if denom == 0.0 {
+            0.0
+        } else {
+            (np + nn) * (a * d - b * c).powi(2) / denom
+        }
     }
 
     #[test]
@@ -587,10 +602,16 @@ mod tests {
         let n = fit.count() as f64;
         for (f, s) in stats.iter().enumerate() {
             let want = pearson(&x, &y, &fit, f) * (n - 1.0) / n;
-            assert!((s - want).abs() <= 1e-9 * want.max(1.0), "row {f}: {s} against {want}");
+            assert!(
+                (s - want).abs() <= 1e-9 * want.max(1.0),
+                "row {f}: {s} against {want}"
+            );
         }
         // So the two screens keep the same rows, in the same order.
-        assert_eq!(cmh_screen(&x, &y, &fit, &one, 12).feats, super::super::screen(&x, &y, &fit, 12));
+        assert_eq!(
+            cmh_screen(&x, &y, &fit, &one, 12).feats,
+            super::super::screen(&x, &y, &fit, 12)
+        );
     }
 
     #[test]
@@ -606,7 +627,9 @@ mod tests {
                 moved[i] = 1_000;
             }
         }
-        let lone = (0..120).find(|&i| !y.contains(i) && lineage[i] == 10).unwrap();
+        let lone = (0..120)
+            .find(|&i| !y.contains(i) && lineage[i] == 10)
+            .unwrap();
         moved[lone] = 2_000;
         let (after, strata, informative) = cmh_statistics(&x, &y, &fit, &moved);
         assert!(strata >= informative + 2);
@@ -628,7 +651,9 @@ mod tests {
         // is present in stratum 0 alone, row 1 tracks resistance inside both.
         let n = 40;
         let lineage: Vec<u32> = (0..n).map(|i| (i >= 20) as u32).collect();
-        let y: Vec<bool> = (0..n).map(|i| if i < 20 { i % 5 != 0 } else { i % 5 == 0 }).collect();
+        let y: Vec<bool> = (0..n)
+            .map(|i| if i < 20 { i % 5 != 0 } else { i % 5 == 0 })
+            .collect();
         let marker: Vec<bool> = (0..n).map(|i| i < 20).collect();
         let inside: Vec<bool> = (0..n).map(|i| y[i] != (i % 7 == 1)).collect();
         let x = matrix(&[marker, inside]);
@@ -658,7 +683,11 @@ mod tests {
             x2.push_row(row.words());
         }
         for i in (0..150).filter(|&i| !fit.contains(i)) {
-            if y2.contains(i) { y2.remove(i) } else { y2.insert(i) }
+            if y2.contains(i) {
+                y2.remove(i)
+            } else {
+                y2.insert(i)
+            }
             lineage2[i] = 99;
         }
         assert_eq!(cmh_screen(&x2, &y2, &fit, &lineage2, 20), want);
@@ -699,11 +728,21 @@ mod tests {
         assert!(cases.len() >= 5);
         for case in cases {
             let parse = |key: &str| -> Vec<bool> {
-                case[key].as_str().unwrap().bytes().map(|b| b == b'1').collect()
+                case[key]
+                    .as_str()
+                    .unwrap()
+                    .bytes()
+                    .map(|b| b == b'1')
+                    .collect()
             };
             let y = labels(&parse("labels"));
             let fit = labels(&parse("fit"));
-            let lineage: Vec<u32> = case["strata"].as_array().unwrap().iter().map(|v| v.as_u64().unwrap() as u32).collect();
+            let lineage: Vec<u32> = case["strata"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|v| v.as_u64().unwrap() as u32)
+                .collect();
             let rows: Vec<Vec<bool>> = case["rows"]
                 .as_array()
                 .unwrap()
@@ -716,13 +755,26 @@ mod tests {
             assert_eq!(informative as u64, case["informative"].as_u64().unwrap());
             for (f, want) in case["statistics"].as_array().unwrap().iter().enumerate() {
                 let want = want.as_f64().unwrap();
-                assert!((stats[f] - want).abs() <= 1e-9 * want.max(1.0), "case {} row {f}: {} against {want}", case["name"], stats[f]);
+                assert!(
+                    (stats[f] - want).abs() <= 1e-9 * want.max(1.0),
+                    "case {} row {f}: {} against {want}",
+                    case["name"],
+                    stats[f]
+                );
             }
             let k = case["k"].as_u64().unwrap() as usize;
-            let order: Vec<u32> = case["top"].as_array().unwrap().iter().map(|v| v.as_u64().unwrap() as u32).collect();
+            let order: Vec<u32> = case["top"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|v| v.as_u64().unwrap() as u32)
+                .collect();
             let got = cmh_screen(&x, &y, &fit, &lineage, k);
             assert_eq!(got.feats, order, "case {}", case["name"]);
-            assert_eq!(got.kept_at_zero as u64, case["top_at_zero"].as_u64().unwrap());
+            assert_eq!(
+                got.kept_at_zero as u64,
+                case["top_at_zero"].as_u64().unwrap()
+            );
         }
     }
 
@@ -734,8 +786,13 @@ mod tests {
     #[test]
     fn negative_control_permuted_labels_within_strata_carry_no_lineage_signal() {
         let (adjusted, chi) = negative_control(200);
-        eprintln!("negative control: adjusted screen rejects in {adjusted} of 200 permutations (cut 15); chi-square in {chi} of 200");
-        assert!(adjusted <= 15, "the adjusted screen rejects in {adjusted} of 200");
+        eprintln!(
+            "negative control: adjusted screen rejects in {adjusted} of 200 permutations (cut 15); chi-square in {chi} of 200"
+        );
+        assert!(
+            adjusted <= 15,
+            "the adjusted screen rejects in {adjusted} of 200"
+        );
     }
 
     /// (adjusted rejections, chi-square rejections) over `perms` permutations.
@@ -766,7 +823,13 @@ mod tests {
             let row = Bits::from_indices(
                 n,
                 (0..n).filter(|&i| {
-                    let p = if !marker { 0.5 } else if high[i / per] { 0.8 } else { 0.2 };
+                    let p = if !marker {
+                        0.5
+                    } else if high[i / per] {
+                        0.8
+                    } else {
+                        0.2
+                    };
                     rng.random_bool(p)
                 }),
             );
@@ -787,7 +850,8 @@ mod tests {
                 }
             }
             let count = |feats: &[u32]| feats.iter().filter(|&&f| kinds[f as usize]).count();
-            adjusted += (count(&cmh_screen(&x, &y, &fit, &lineage, top).feats) >= critical) as usize;
+            adjusted +=
+                (count(&cmh_screen(&x, &y, &fit, &lineage, top).feats) >= critical) as usize;
             chi += (count(&super::super::screen(&x, &y, &fit, top)) >= critical) as usize;
         }
         (adjusted, chi)
@@ -797,13 +861,16 @@ mod tests {
     /// from `total` holding `good`.
     fn hypergeometric_critical(total: usize, good: usize, draws: usize, alpha: f64) -> usize {
         let ln_choose = |n: usize, k: usize| -> f64 {
-            (1..=k).map(|i| ((n - k + i) as f64).ln() - (i as f64).ln()).sum()
+            (1..=k)
+                .map(|i| ((n - k + i) as f64).ln() - (i as f64).ln())
+                .sum()
         };
         let pmf = |x: usize| -> f64 {
             if x > good || draws - x > total - good {
                 return 0.0;
             }
-            (ln_choose(good, x) + ln_choose(total - good, draws - x) - ln_choose(total, draws)).exp()
+            (ln_choose(good, x) + ln_choose(total - good, draws - x) - ln_choose(total, draws))
+                .exp()
         };
         let mut tail = 0.0;
         for c in (0..=draws).rev() {

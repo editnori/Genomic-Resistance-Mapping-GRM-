@@ -2920,7 +2920,17 @@ mod tests {
             panic!("parsed another command");
         };
         assert_eq!((exp_screen, exp_floor), (None, None));
-        let base = ["grm", "learn", "--species", "s", "--force", "--exp-pick", "p", "--exp-pick-inner", "0"];
+        let base = [
+            "grm",
+            "learn",
+            "--species",
+            "s",
+            "--force",
+            "--exp-pick",
+            "p",
+            "--exp-pick-inner",
+            "0",
+        ];
         let with = |extra: &[&str]| {
             let mut args = base.to_vec();
             args.extend_from_slice(extra);
@@ -2931,23 +2941,43 @@ mod tests {
             exp_floor,
             screened_features,
             ..
-        } = parse(&with(&["--exp-screen", "cmh", "--screened-features", "16000"])).unwrap().command
+        } = parse(&with(&[
+            "--exp-screen",
+            "cmh",
+            "--screened-features",
+            "16000",
+        ]))
+        .unwrap()
+        .command
         else {
             panic!("parsed another command");
         };
-        assert_eq!((exp_screen, exp_floor, screened_features), (Some(ScreenArmArg::Cmh), None, 16000));
-        let Command::Learn { exp_floor, .. } = parse(&with(&["--exp-floor", "3"])).unwrap().command else {
+        assert_eq!(
+            (exp_screen, exp_floor, screened_features),
+            (Some(ScreenArmArg::Cmh), None, 16000)
+        );
+        let Command::Learn { exp_floor, .. } = parse(&with(&["--exp-floor", "3"])).unwrap().command
+        else {
             panic!("parsed another command");
         };
         assert_eq!(exp_floor, Some(3));
         let kind = |args: &[&str]| parse(args).err().map(|e| e.kind());
         for arm in [&["--exp-screen", "cmh"][..], &["--exp-floor", "3"][..]] {
-            let mut no_force: Vec<&str> = base.iter().copied().filter(|a| *a != "--force").collect();
+            let mut no_force: Vec<&str> =
+                base.iter().copied().filter(|a| *a != "--force").collect();
             no_force.extend_from_slice(arm);
-            assert_eq!(kind(&no_force), Some(MissingRequiredArgument), "{arm:?} without --force");
+            assert_eq!(
+                kind(&no_force),
+                Some(MissingRequiredArgument),
+                "{arm:?} without --force"
+            );
             let mut no_pick = vec!["grm", "learn", "--species", "s", "--force"];
             no_pick.extend_from_slice(arm);
-            assert_eq!(kind(&no_pick), Some(MissingRequiredArgument), "{arm:?} without --exp-pick");
+            assert_eq!(
+                kind(&no_pick),
+                Some(MissingRequiredArgument),
+                "{arm:?} without --exp-pick"
+            );
             for other in [
                 &["--learner-seed", "7"][..],
                 &["--exp-tie-rule", "exact"][..],
@@ -2957,10 +2987,17 @@ mod tests {
             ] {
                 let mut args = with(arm);
                 args.extend_from_slice(other);
-                assert_eq!(kind(&args), Some(ArgumentConflict), "{arm:?} beside {other:?}");
+                assert_eq!(
+                    kind(&args),
+                    Some(ArgumentConflict),
+                    "{arm:?} beside {other:?}"
+                );
             }
         }
-        assert_eq!(kind(&with(&["--exp-screen", "cmh", "--exp-floor", "3"])), Some(ArgumentConflict));
+        assert_eq!(
+            kind(&with(&["--exp-screen", "cmh", "--exp-floor", "3"])),
+            Some(ArgumentConflict)
+        );
         assert_eq!(kind(&with(&["--exp-floor", "0"])), Some(ValueValidation));
         // No arm asked for: nothing is turned on.
         let p = std::path::Path::new("p");
@@ -2968,9 +3005,15 @@ mod tests {
         assert_eq!(grm::learn::screen_arm::active(), None);
         // Inner fits, and the floor arm beside a budget other than 4000.
         let inner = enable_screen_arm(Some(ScreenArmArg::Cmh), None, 4000, Some(p), 3).unwrap_err();
-        assert!(format!("{inner:#}").contains("--exp-pick-inner 0"), "{inner:#}");
+        assert!(
+            format!("{inner:#}").contains("--exp-pick-inner 0"),
+            "{inner:#}"
+        );
         let budget = enable_screen_arm(None, Some(3), 16000, Some(p), 0).unwrap_err();
-        assert!(format!("{budget:#}").contains("--screened-features at 4000"), "{budget:#}");
+        assert!(
+            format!("{budget:#}").contains("--screened-features at 4000"),
+            "{budget:#}"
+        );
         assert_eq!(grm::learn::screen_arm::active(), None);
     }
 
