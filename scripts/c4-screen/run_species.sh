@@ -109,8 +109,8 @@ say "start $SP, $JOBS jobs, repo $(git -C "$REPO" rev-parse HEAD)"
 disk start
 
 # C3's step functions, read from its script (see the head of this file).
-SHARED="pinned master scrub step release build curated catalog genomes count structure matrix plans fit missing check42 lineage_fit"
-eval "$(sed -n -e '/^\(pinned\|master\|scrub\|step\|release\|build\|curated\|catalog\|genomes\|plans\|fit\|check42\|lineage_fit\)() {/,/^}$/p' \
+SHARED="pinned master scrub keep_build killed_for_memory step release build curated catalog genomes count structure matrix plans fit missing check42 lineage_fit"
+eval "$(sed -n -e '/^\(pinned\|master\|scrub\|keep_build\|killed_for_memory\|step\|release\|build\|curated\|catalog\|genomes\|plans\|fit\|check42\|lineage_fit\)() {/,/^}$/p' \
   -e '/^\(count\|structure\|matrix\)() {.*; }$/p' -e '/^missing() {/,/; }$/p' "$C3/run_species.sh")"
 for f in $SHARED; do
   declare -F "$f" > /dev/null || { say "scripts/c3-inputs/run_species.sh has no function $f"; false; }
