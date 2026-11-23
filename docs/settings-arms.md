@@ -81,7 +81,7 @@ The run script was rehearsed on the same box with *Pseudomonas aeruginosa* and p
 
 ## Tests and planted faults
 
-`src/learn/settings.rs` holds 8 SYNTHETIC tests and `src/main.rs` one more on the flags. `tests/c5_settings` holds 30 SYNTHETIC tests of the driver (against a fake `grm`), the scorer, the lists and the expected results. `scripts/c5-settings/planted_faults.py` plants each fault below in a copy of the tree and runs the test meant to catch it, which must fail.
+`src/learn/settings.rs` holds 9 SYNTHETIC tests and `src/main.rs` two more on the flags. `tests/c5_settings` holds 38 SYNTHETIC tests of the driver (against a fake `grm`), the scorer, the lists and the expected results. `scripts/c5-settings/planted_faults.py` plants each fault below in a copy of the tree and runs the test meant to catch it, which must fail.
 
 | Fault | Caught by |
 |---|---|
