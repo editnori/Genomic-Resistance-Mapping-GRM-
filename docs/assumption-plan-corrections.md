@@ -556,7 +556,7 @@ An eleventh came while the text was written. The project's wording rules put rec
 |---|---:|---:|---:|
 | S and L | 69 | 9 | 55 in 8 species |
 
-**Questions.** The design leaves fourteen questions to the lead, each with the answer taken and the other one, each one argument of the code or the run script. The design writes no other answer for questions 4, 7 and 14. The lead ruled two at 05:52Z on 23 Nov 2026. Question 3: the default-anchored rule at 0.04 is the arm read, and the plain best (the highest inner mean, ties to the lowest trial id) is refitted on the outer training genomes and scored on the outer test fold as an arm beside it, labelled "plain best, no anchor", in no Holm family and deciding nothing; where it equals the anchored pick it takes that pick's result and no refit runs. Question 13: a cut is decided on cost alone, before any score is read, and named in this entry.
+**Questions.** The design leaves fourteen questions to the lead, each with the answer taken and the other one, each one argument of the code or the run script. The design writes no other answer for questions 4, 7 and 14. The lead ruled all fourteen at 05:52Z on 23 Nov 2026, with no C5 score read: each as taken, with two additions. Question 3: the default-anchored rule at 0.04 is the arm read, and the plain best (the highest inner mean, ties to the lowest trial id) is refitted on the outer training genomes and scored on the outer test fold as an arm beside it, labelled "plain best, no anchor", in no Holm family and deciding nothing; where it equals the anchored pick it takes that pick's result and no refit runs. Question 13: a cut is decided on cost alone, before any score is read, and named in this entry.
 
 | Question | Taken | Other |
 |---|---|---|
