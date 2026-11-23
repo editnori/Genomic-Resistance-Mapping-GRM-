@@ -111,5 +111,25 @@ class ScoreLogNeverHashed(Copies):
         self.assertIn("score/score.log listed 1 times", got["SHA256SUMS"])
 
 
+class Times(Copies):
+    def test_a_failed_with_no_time_fails(self):
+        slug = self.r.slugs[5]
+        (self.folder(slug) / "FAILED").write_text("", encoding="utf-8")
+        got = self.fails("DONE")
+        self.assertIn(f"{slug} FAILED with no time in date -u +%FT%TZ form", got["DONE"])
+
+    def test_a_failed_time_in_another_form_fails(self):
+        slug = self.r.slugs[5]
+        (self.folder(slug) / "FAILED").write_text(f"FAILED {slug} at fit 2026-11-23 13:00:00\n", encoding="utf-8")
+        self.fails("DONE")
+
+    def test_a_done_time_in_another_form_fails_beside_a_later_failed(self):
+        slug = self.r.slugs[5]
+        self.seal(slug, time="2026-11-23T9:00:00Z")
+        (self.folder(slug) / "FAILED").write_text(f"FAILED {slug} at fit 2026-11-23T10:00:00Z\n", encoding="utf-8")
+        got = self.fails("DONE")
+        self.assertNotIn("set aside", got["DONE"])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -69,6 +69,8 @@ SELECTION = {
 }
 DEFAULT_GENOMES, GATE = 2000, 4096
 BIOPROJECT = re.compile(rb"PRJ[A-Z]{2}[0-9]+")
+# run_species.sh writes DONE's and FAILED's time with date -u +%FT%TZ; any other form is not a time.
+TIME = re.compile(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ")
 REFUSED = re.compile(r"^(\S+): lineage split unavailable: ([0-9]+) default slot plans refused")
 
 
@@ -152,7 +154,7 @@ def done_of(folder):
     if not p.is_file():
         return None
     parts = p.read_text(encoding="utf-8").split()
-    if len(parts) < 11 or parts[0] != "DONE":
+    if len(parts) < 11 or parts[0] != "DONE" or not TIME.fullmatch(parts[2]):
         return {}
     return {"species": parts[1], "time": parts[2], "binary": parts[4], "code": parts[6], "sums": parts[10]}
 
@@ -162,7 +164,7 @@ def failed_time(folder):
     if not p.is_file():
         return None
     parts = p.read_text(encoding="utf-8").split()
-    return parts[-1] if parts else ""
+    return parts[-1] if parts and TIME.fullmatch(parts[-1]) else ""
 
 
 def binary_of(folder):
@@ -283,11 +285,12 @@ def run(runs, release, lrows, selection=None, lists=()):
         good = (d is not None and d.get("species") == slug and d.get("binary") == b.get("grm")
                 and d.get("code") == b.get("code") and d.get("sums") == sha256(f / "SHA256SUMS"))
         if t_failed is not None:
-            if good and t_failed < d["time"]:
+            if good and t_failed and t_failed < d["time"]:
                 set_aside.append(f"{slug} FAILED at {t_failed}, DONE at {d['time']}")
             else:
                 good = False
-                notes.append(f"{slug} FAILED at {t_failed} with no newer DONE")
+                notes.append(f"{slug} FAILED at {t_failed} with no newer DONE" if t_failed else
+                             f"{slug} FAILED with no time in date -u +%FT%TZ form")
         done_ok += good
     say("DONE", done_ok == len(slugs), f"{done_ok} of {len(slugs)} name their species, binary, code and SHA256SUMS"
         + "".join(f"; set aside: {s}" for s in set_aside) + "".join(f"; {s}" for s in notes))
