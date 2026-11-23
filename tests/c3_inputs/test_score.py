@@ -168,7 +168,7 @@ class Checks(unittest.TestCase):
 
     def test_an_arm_with_no_inputs_file_fails(self):
         rows, docs, files, releases = common.full_run()
-        files = {k: v for k, v in files.items() if not k.startswith("k31-program/")}
+        files = {k: v for k, v in files.items() if not (k.startswith("k31-program/") and k.endswith(".inputs.json"))}
         rc, _, checks, _, _ = run(rows, docs, files, releases)
         self.assertEqual(rc, 1)
         self.assertEqual(failed(checks), ["inputs: the arm's file exists"])
@@ -245,6 +245,166 @@ class Checks(unittest.TestCase):
         _, _, _, draws, datasets = run(rows, docs, files, releases)
         for t in (draws, datasets):
             self.assertFalse({k for k in t[0] if "genome" in k or "kmer" in k or "sequence" in k})
+
+
+ROWS = "inputs: the arm's rows are its blocks', each once"
+SCREEN_FITS = "screen: each learner's fitting genomes are its own, inside the fold's training genomes"
+SCREEN_INSIDE = "screen: the forest, boosted trees and lasso in order, each block's passed count inside its candidates"
+
+
+class MatrixArms(unittest.TestCase):
+    """The three matrix arms (k31-counts, k31-aa, unitigs) and every joined arm's screen count."""
+
+    def test_a_whole_run_of_the_five_arms_passes_with_the_matrix_arms_on_every_dataset(self):
+        rows, docs, files, releases = common.full_run(arms=common.ALL_ARMS)
+        rc, _, checks, draws, _ = run(rows, docs, files, releases)
+        self.assertEqual(rc, 0, failed(checks))
+        self.assertEqual({r["arm"] for r in draws}, {"k31", "twin"} | set(common.ALL_ARMS))
+        for arm in common.MATRIX_ARMS:
+            self.assertEqual({r["dataset"] for r in draws if r["arm"] == arm}, {common.DATASET, common.OTHER})
+        self.assertEqual({r["dataset"] for r in draws if r["arm"] == "k31-program"}, {common.DATASET})
+        screens = [c for c in checks if c["check"].startswith("screen:")]
+        joined = [r for r in rows if r[2] in common.JOINED]
+        self.assertEqual(len(screens), 4 * len(joined))
+
+    def test_a_matrix_arm_that_drops_or_doubles_a_block_fails(self):
+        for arm, n in (("k31-counts", 40), ("k31-counts", 40 + 2 * 98), ("k31-aa", 98), ("unitigs", 80),
+                       ("unitigs", 40 + 100)):
+            with self.subTest(arm=arm, arm_rows=n):
+                def change(r, d, i, arm=arm, n=n):
+                    if i is not None and r[2] == arm:
+                        i["arm_rows"] = n
+
+                rows, docs, files, releases = common.full_run(arms=common.ALL_ARMS, change=change)
+                rc, _, checks, _, _ = run(rows, docs, files, releases)
+                self.assertEqual(rc, 1)
+                self.assertEqual(failed(checks), [ROWS])
+
+    def test_k31_rows_left_out_beyond_the_added_rows_or_in_the_unitig_arm_fail(self):
+        for arm, dropped in (("k31-counts", 41), ("k31-aa", -1), ("unitigs", 0)):
+            with self.subTest(arm=arm, dropped=dropped):
+                def change(r, d, i, arm=arm, n=dropped):
+                    if i is not None and r[2] == arm:
+                        i["k31_rows_as_added"] = n
+                        i["arm_rows"] = i["added_rows"] + (i["k31_rows"] - n if arm != "unitigs" else 0)
+
+                rows, docs, files, releases = common.full_run(arms=common.ALL_ARMS, change=change)
+                rc, _, checks, _, _ = run(rows, docs, files, releases)
+                self.assertEqual(rc, 1)
+                self.assertEqual(failed(checks), [ROWS])
+
+    def test_a_matrix_arm_of_another_build_or_with_a_program_field_fails(self):
+        for arm, key, value in (("k31-counts", "added_build", "aa"), ("k31-aa", "tables_read", 150),
+                                ("unitigs", "program_rows", 4)):
+            with self.subTest(arm=arm, key=key):
+                def change(r, d, i, arm=arm, key=key, value=value):
+                    if i is not None and r[2] == arm:
+                        i[key] = value
+
+                rows, docs, files, releases = common.full_run(arms=common.ALL_ARMS, change=change)
+                rc, _, checks, _, _ = run(rows, docs, files, releases)
+                self.assertEqual(rc, 1)
+                self.assertEqual(failed(checks), ["inputs: a matrix arm names its build and holds no program field"])
+
+    def test_added_rows_beyond_the_builds_patterns_fail(self):
+        def change(r, d, i):
+            if i is not None and r[2] == "k31-aa":
+                i["added_species_patterns"] = i["added_rows"] - 1
+
+        rows, docs, files, releases = common.full_run(arms=common.ALL_ARMS, change=change)
+        rc, _, checks, _, _ = run(rows, docs, files, releases)
+        self.assertEqual(rc, 1)
+        self.assertEqual(failed(checks), ["inputs: the added rows are at most the build's species patterns"])
+
+    def test_unitig_pairs_belong_to_the_unitig_arm_only(self):
+        for arm, value in (("unitigs", None), ("unitigs", -1), ("k31-counts", 5)):
+            with self.subTest(arm=arm, value=value):
+                def change(r, d, i, arm=arm, value=value):
+                    if i is not None and r[2] == arm:
+                        if value is None:
+                            del i["unitig_pairs_in_part"]
+                        else:
+                            i["unitig_pairs_in_part"] = value
+
+                rows, docs, files, releases = common.full_run(arms=common.ALL_ARMS, change=change)
+                rc, _, checks, _, _ = run(rows, docs, files, releases)
+                self.assertEqual(rc, 1)
+                self.assertEqual(failed(checks),
+                                 ["inputs: the unitig arm, and only it, counts the pairs held whole and in part"])
+
+    def test_a_matrix_arm_on_other_folds_fails(self):
+        for arm in common.MATRIX_ARMS:
+            with self.subTest(arm=arm):
+                def change(r, d, i, arm=arm):
+                    if r[2] == arm and r[5] == 44:
+                        shift_folds(d)
+
+                rows, docs, files, releases = common.full_run(arms=common.ALL_ARMS, change=change)
+                rc, _, checks, _, _ = run(rows, docs, files, releases)
+                self.assertEqual(rc, 1)
+                self.assertEqual(failed(checks), [FOLDS])
+
+    def test_a_joined_arm_with_no_screen_count_fails(self):
+        for arm in common.JOINED:
+            with self.subTest(arm=arm):
+                rows, docs, files, releases = common.full_run(arms=common.ALL_ARMS)
+                gone = [n for n in files if n.startswith(f"{arm}/") and n.endswith("-s43.screen.json")]
+                self.assertTrue(gone)
+                for n in gone:
+                    del files[n]
+                rc, _, checks, _, _ = run(rows, docs, files, releases)
+                self.assertEqual(rc, 1)
+                self.assertEqual(failed(checks), ["screen: the joined arm's screen count exists"])
+
+    def test_a_screen_count_taken_on_all_samples_fails(self):
+        # The forest's or boosted trees' screen read every sample, the outer test genomes too.
+        for learner in ("rf", "gbt"):
+            with self.subTest(learner=learner):
+                def change_screen(r, s, learner=learner):
+                    if r[2] == "k31-counts" and r[5] == 42:
+                        for f in s["folds"]:
+                            x = [x for x in f["learners"] if x["learner"] == learner][0]
+                            x["fitting"] = 150
+
+                rows, docs, files, releases = common.full_run(arms=common.ALL_ARMS, change_screen=change_screen)
+                rc, _, checks, _, _ = run(rows, docs, files, releases)
+                self.assertEqual(rc, 1)
+                self.assertEqual(failed(checks), [SCREEN_FITS, SCREEN_INSIDE])
+
+    def test_a_screen_count_outside_its_blocks_candidates_fails(self):
+        def change_screen(r, s):
+            if r[2] == "k31-aa" and r[3] == "study":
+                x = s["folds"][1]["learners"][2]
+                x["passed_first"], x["passed_k31"] = s["folds"][1]["candidates_first"] + 1, x["passed_k31"] - 6
+
+        rows, docs, files, releases = common.full_run(arms=common.ALL_ARMS, change_screen=change_screen)
+        rc, _, checks, _, _ = run(rows, docs, files, releases)
+        self.assertEqual(rc, 1)
+        self.assertEqual(failed(checks), [SCREEN_INSIDE])
+
+    def test_a_screen_count_of_other_folds_or_another_run_fails(self):
+        for what in ("fold", "train", "seed", "block"):
+            with self.subTest(what=what):
+                def change_screen(r, s, what=what):
+                    if r[2] == "k31-program" and r[5] == 44:
+                        if what == "fold":
+                            s["folds"].pop()
+                        elif what == "train":
+                            s["folds"][0]["train"] -= 1
+                            s["folds"][0]["learners"][0]["fitting"] -= 1
+                        elif what == "seed":
+                            s["seed"] = 42
+                        else:
+                            s["first_block"] = "counts"
+
+                rows, docs, files, releases = common.full_run(arms=common.ALL_ARMS, change_screen=change_screen)
+                rc, _, checks, _, _ = run(rows, docs, files, releases)
+                self.assertEqual(rc, 1)
+                want = {"fold": ["screen: one row per outer fold of the result, its training genomes the fold's"],
+                        "train": ["screen: one row per outer fold of the result, its training genomes the fold's"],
+                        "seed": ["screen: format, revision, dataset, scheme, seed, arm and first block of its run"],
+                        "block": ["screen: format, revision, dataset, scheme, seed, arm and first block of its run"]}
+                self.assertEqual(failed(checks), want[what])
 
 
 class Refused(unittest.TestCase):

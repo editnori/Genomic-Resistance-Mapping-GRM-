@@ -19,6 +19,8 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 ARMS = "src/input_arms.rs"
+BUILD = "src/input_build.rs"
+EVAL = "src/learn/eval.rs"
 SCORE = "scripts/c3-inputs/score.py"
 T = "tests.c3_inputs.test_score"
 
@@ -86,9 +88,74 @@ FAULTS = [
      "    if False:\n        raise SystemExit",
      "py", f"{T}.Count.test_the_count_refuses_part_of_the_family"),
     ("10", "an input arm that runs without --force, so a kept report could skip it", "src/main.rs",
-     'requires_all = ["exp_pick", "exp_program_tables", "force"]',
-     'requires_all = ["exp_pick", "exp_program_tables"]',
+     'requires_all = ["exp_pick", "force"]',
+     'requires_all = ["exp_pick"]',
      "rust-bin", "tests::learn_takes_the_c3_input_arm_only_when_asked"),
+    # The three matrix arms (k31-counts, k31-aa, unitigs) and the screen count.
+    ("11a", "a matrix arm's added block built from the label", ARMS,
+     "        x.push_row(added.row(r));\n        first.insert(added.row(r));",
+     "        let leak: Vec<u64> = added.row(r).iter().zip(ds.y.words()).map(|(a, b)| a | b).collect();\n"
+     "        x.push_row(&leak);\n        first.insert(added.row(r));",
+     "rust", "input_arms::tests::a_matrix_arm_does_not_change_with_the_labels"),
+    ("11b", "a matrix arm's floor taken on the cohort's counts, outer test genomes included", ARMS,
+     "    for r in 0..added.rows {\n        x.push_row(added.row(r));",
+     "    for r in (0..added.rows).filter(|&r| crate::bits::count(added.row(r)) >= 6) {\n        x.push_row(added.row(r));",
+     "rust", "input_arms::tests::no_outer_test_genome_changes_a_matrix_arms_candidates"),
+    ("11c", "boosting's screen count taken on a holdout drawn from every sample", EVAL,
+     "            tuning_holdout(train, y, groups, unit, GBT_HOLDOUT, seed)?.0,",
+     "            tuning_holdout(&Bits::ones(train.len()), y, groups, unit, GBT_HOLDOUT, seed)?.0,",
+     "rust", "learn::eval::tests::a_screen_count_reads_each_learners_own_fitting_genomes_only"),
+    ("12a", "a joined matrix arm that drops the K31 block", ARMS,
+     "    if joined {\n        for r in 0..ds.x.rows {",
+     "    if joined && ds.x.rows == 0 {\n        for r in 0..ds.x.rows {",
+     "rust", "input_arms::tests::a_matrix_arm_holds_each_block_once_the_added_first"),
+    ("12b", "a matrix arm that holds its added block twice", ARMS,
+     "    for r in 0..added.rows {\n        x.push_row(added.row(r));",
+     "    for r in (0..added.rows).chain(0..added.rows) {\n        x.push_row(added.row(r));",
+     "rust", "input_arms::tests::a_matrix_arm_holds_each_block_once_the_added_first"),
+    ("12c", "a joined matrix arm that keeps a K31 copy of an added row", ARMS,
+     "            if first.contains(ds.x.row(r)) {",
+     "            if ds.x.rows == 0 && first.contains(ds.x.row(r)) {",
+     "rust", "input_arms::tests::a_matrix_arm_holds_each_block_once_the_added_first"),
+    ("12d", "the scorer passing a matrix arm's inputs file whose rows drop or double a block", SCORE,
+     'and inputs["arm_rows"] == added + (inputs["k31_rows"] - dropped if joined else 0)',
+     'and inputs["arm_rows"] >= added',
+     "py", f"{T}.MatrixArms.test_a_matrix_arm_that_drops_or_doubles_a_block_fails"),
+    ("13", "a matrix arm scored on folds other than the default's", SCORE,
+     "base is not None and fold_shape(base) == fold_shape(doc)",
+     "base is not None",
+     "py", f"{T}.MatrixArms.test_a_matrix_arm_on_other_folds_fails"),
+    ("14", "a count column that is presence: every 31-mer seen once kept", BUILD,
+     "pub const MIN_COUNT: u32 = 2;",
+     "pub const MIN_COUNT: u32 = 1;",
+     "rust", "input_build::tests::the_count_arm_keeps_the_31mers_seen_twice_as_a_recount_from_strings_does"),
+    ("15", "a unitig held on any one of its 31-mers", BUILD,
+     "        if (e - s) as u32 == t.sizes[ids[s] as usize] {",
+     "        if e > s {",
+     "rust", "input_build::tests::a_unitig_is_held_only_when_every_kmer_of_it_is"),
+    ("16a", "a protein read in another frame", BUILD,
+     "    let seg = &contig[c.start - 1..c.end];",
+     "    let seg = &contig[c.start..(c.end + 1).min(contig.len())];",
+     "rust", "input_build::tests::a_protein_must_be_the_table_11_translation_at_its_coordinates"),
+    ("16b", "a protein read with table 4, TGA as W", BUILD,
+     'b"FFLLSSSSYY**CC*WLLLL',
+     'b"FFLLSSSSYY**CCWWLLLL',
+     "rust", "input_build::tests::a_protein_must_be_the_table_11_translation_at_its_coordinates"),
+    ("16c", "an amino-acid 10-mer that spans a stop or an ambiguous residue", BUILD,
+     "        let Some(c) = residue_code(b) else {\n            filled = 0;\n            continue;",
+     "        let Some(c) = residue_code(b) else {\n            continue;",
+     "rust", "input_build::tests::no_amino_acid_10mer_spans_a_stop_or_an_ambiguous_residue"),
+    ("17", "a unitig graph that drops the 31-mers of one genome only", BUILD,
+     "            out.sort_unstable();\n            out.dedup();\n            Ok(out)",
+     "            out.sort_unstable();\n"
+     "            let twice: std::collections::HashSet<u64> =\n"
+     "                out.windows(2).filter(|w| w[0] == w[1]).map(|w| w[0]).collect();\n"
+     "            out.retain(|v| twice.contains(v));\n            out.dedup();\n            Ok(out)",
+     "rust", "input_build::tests::the_graph_holds_single_genome_kmers_and_breaks_at_their_branch"),
+    ("18", "a screen count taken on all samples, the outer test genomes too", EVAL,
+     '        ("rf", train.clone()),',
+     '        ("rf", Bits::ones(train.len())),',
+     "rust", "learn::eval::tests::a_screen_count_reads_each_learners_own_fitting_genomes_only"),
 ]
 
 

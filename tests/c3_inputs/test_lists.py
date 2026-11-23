@@ -73,7 +73,11 @@ class Expect(unittest.TestCase):
         self.assertEqual(by[(common.DATASET, "twin", "lineage")], [45, 46, 47])
         self.assertNotIn((common.OTHER, "program", "lineage"), by)
         self.assertNotIn((common.DATASET, "twin", "study"), by)
-        self.assertEqual(len(rows), 2 * (3 + 3) + 2 * 3 + 3 * 1)
+        # The three matrix arms run on every dataset, the A one and the other.
+        for arm in ("k31-counts", "k31-aa", "unitigs"):
+            self.assertEqual(by[(common.OTHER, arm, "lineage")], [42, 43, 44])
+            self.assertEqual(by[(common.DATASET, arm, "study")], [42])
+        self.assertEqual(len(rows), 2 * (3 + 3) + 2 * 3 + 3 * 1 + 3 * (2 * 3 + 1))
 
     def test_only_an_arm_names_an_inputs_file(self):
         for r in self.rows():

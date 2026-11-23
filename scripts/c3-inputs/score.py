@@ -18,9 +18,22 @@ served learner must be the release report's. Beside them, per result:
 - the default and the twin write no inputs file, and a twin seed is no
   draw's seed;
 - an arm's inputs file has the format, revision, dataset, arm and tag of
-  its run, read a table for every cohort genome, and its rows add up: the
-  program names seen are those out of range, collapsed and kept, and the
-  arm's rows are the program's, plus K31's for k31-program;
+  its run, and its rows add up. A program arm read a table for every cohort
+  genome, the program names seen are those out of range, collapsed and
+  kept, and the arm's rows are the program's, plus K31's for k31-program. A
+  matrix arm (k31-counts, k31-aa, unitigs) names its build, holds no
+  program field, its added rows are at most its build's species patterns,
+  and its rows are the added block's, plus K31's for a joined arm, each K31
+  row left out as an added row's pattern counted; the unitig arm counts the
+  cohort's genome and unitig pairs held whole and held in part;
+- a joined arm's result (k31-program, k31-counts, k31-aa) that has folds has
+  its screen count, <arm>/<dataset>.<scheme>-s<seed>.screen.json, of its
+  dataset, scheme, seed, arm and first block, with one row per outer fold of
+  the result: the fold's training genomes, and for the forest, boosted trees
+  and lasso in that order, the forest's fitting genomes the fold's training
+  genomes and the other two's fewer, the screened count the 4,000 or all
+  candidates when fewer, and each block's passed count inside its
+  candidates, the two summing to the screened count;
 - an arm's result that grm learn refused for no candidate (a --fold-file
   fit stops when an outer fold's training genomes give no candidate; the
   run script writes <arm>/<dataset>.<scheme>-s<seed>.refused.json in place
@@ -106,6 +119,14 @@ DEFAULT = "k31"
 TWIN = "twin"
 FAMILY = ["unitigs", "k31-counts", "k31-aa", "program", "k31-program", TWIN]
 JOINED = {"k31-program", "k31-counts", "k31-aa"}
+PROGRAM_ARMS = {"program", "k31-program"}
+BUILD_OF = {"k31-counts": "counts", "k31-aa": "aa", "unitigs": "unitigs"}
+FIRST_BLOCK = {"k31-program": "program", "k31-counts": "counts", "k31-aa": "aa"}
+PROGRAM_FIELDS = ("tables_read", "program_names_seen", "program_names_out_of_range", "program_names_collapsed",
+                  "program_rows", "k31_rows_as_program")
+SCREEN_FORMAT = "grm-c3-screen-1"
+SCREENED = ("rf", "gbt", "lasso")
+SCREENED_FEATURES = 4000
 TOUCHED_AT_LEAST = 3
 REFUSED_FORMAT = "grm-c3-refused-1"
 NO_CANDIDATE = "no candidate"
@@ -159,8 +180,57 @@ def check_refused(exp, refusal, base):
     return out
 
 
+def screen_name(file):
+    """The screen count grm learn writes beside a joined arm's result file."""
+    return file[: -len(".pick.json")] + ".screen.json"
+
+
+def check_screen(exp, doc, screen):
+    """[(check name, passed, detail)] for a joined arm's screen count beside its result doc."""
+    out = []
+
+    def ok(name, cond):
+        out.append((name, bool(cond), ""))
+
+    if screen is None:
+        ok("screen: the joined arm's screen count exists", False)
+        return out
+    ok("screen: format, revision, dataset, scheme, seed, arm and first block of its run",
+       (screen.get("format"), screen.get("evaluation_revision"), screen.get("dataset"), screen.get("scheme"),
+        screen.get("seed"), screen.get("arm"), screen.get("first_block"), screen.get("screened_features"))
+       == (SCREEN_FORMAT, REVISION, exp["dataset"], exp["scheme"], int(exp["seed"]), exp["arm"],
+           FIRST_BLOCK[exp["arm"]], SCREENED_FEATURES))
+    folds = screen.get("folds") or []
+    ok("screen: one row per outer fold of the result, its training genomes the fold's",
+       [f.get("fold") for f in folds] == list(range(len(doc["folds"])))
+       and all(f.get("train") == g["train"] for f, g in zip(folds, doc["folds"])))
+
+    def inside(f):
+        ls = f.get("learners") or []
+        if [x.get("learner") for x in ls] != list(SCREENED):
+            return False
+        cf, ck = f["candidates_first"], f["candidates_k31"]
+        for x in ls:
+            fit = x["fitting"]
+            if not (0 < fit <= f["train"]) or (x["learner"] == "rf") != (fit == f["train"]):
+                return False
+            if x["screened"] != min(SCREENED_FEATURES, cf + ck):
+                return False
+            if not (0 <= x["passed_first"] <= cf and 0 <= x["passed_k31"] <= ck
+                    and x["passed_first"] + x["passed_k31"] == x["screened"]):
+                return False
+        return cf >= 0 and ck >= 0
+
+    ok("screen: each learner's fitting genomes are its own, inside the fold's training genomes",
+       all(all(0 < x["fitting"] <= f["train"] and (x["learner"] == "rf") == (x["fitting"] == f["train"])
+               for x in f.get("learners") or []) for f in folds))
+    ok("screen: the forest, boosted trees and lasso in order, each block's passed count inside its candidates",
+       bool(folds) and all(inside(f) for f in folds))
+    return out
+
+
 def check(exp, doc, base, inputs, stray_inputs, release=None, served_learner=None, draw_seeds=(), twin_seeds=(),
-          refused=False):
+          refused=False, screen=None):
     """[(check name, passed, detail)] for one result.
 
     base is the default's result at the same dataset, split and seed (None
@@ -198,17 +268,35 @@ def check(exp, doc, base, inputs, stray_inputs, release=None, served_learner=Non
             ok("inputs: format, revision, dataset, arm and tag",
                (inputs.get("format"), inputs.get("evaluation_revision"), inputs.get("dataset"), inputs.get("arm"),
                 inputs.get("tag")) == (INPUT_FORMAT, REVISION, exp["dataset"], arm, tag))
-            ok("inputs: a table read for every cohort genome", inputs["tables_read"] == inputs["samples"] > 0)
-            ok("inputs: the program names seen are those out of range, collapsed and kept",
-               inputs["program_names_seen"] == inputs["program_names_out_of_range"]
-               + inputs["program_names_collapsed"] + inputs["program_rows"])
             joined = arm in JOINED
-            dropped = inputs["k31_rows_as_program"]
-            ok("inputs: the arm's rows are its blocks', each once",
-               inputs["arm_rows"] == inputs["program_rows"] + (inputs["k31_rows"] - dropped if joined else 0)
-               and 0 <= dropped <= (min(inputs["program_rows"], inputs["k31_rows"]) if joined else 0))
+            if arm in PROGRAM_ARMS:
+                ok("inputs: a table read for every cohort genome", inputs["tables_read"] == inputs["samples"] > 0)
+                ok("inputs: the program names seen are those out of range, collapsed and kept",
+                   inputs["program_names_seen"] == inputs["program_names_out_of_range"]
+                   + inputs["program_names_collapsed"] + inputs["program_rows"])
+                dropped = inputs["k31_rows_as_program"]
+                ok("inputs: the arm's rows are its blocks', each once",
+                   inputs["arm_rows"] == inputs["program_rows"] + (inputs["k31_rows"] - dropped if joined else 0)
+                   and 0 <= dropped <= (min(inputs["program_rows"], inputs["k31_rows"]) if joined else 0))
+            else:
+                ok("inputs: a matrix arm names its build and holds no program field",
+                   inputs.get("added_build") == BUILD_OF[arm] and not any(k in inputs for k in PROGRAM_FIELDS)
+                   and inputs["samples"] > 0)
+                added = inputs.get("added_rows", -1)
+                ok("inputs: the added rows are at most the build's species patterns",
+                   0 <= added <= inputs.get("added_species_patterns", -1))
+                dropped = inputs.get("k31_rows_as_added")
+                ok("inputs: the arm's rows are its blocks', each once",
+                   (dropped is not None) == joined
+                   and inputs["arm_rows"] == added + (inputs["k31_rows"] - dropped if joined else 0)
+                   and (not joined or 0 <= dropped <= min(added, inputs["k31_rows"])))
+                pairs = (inputs.get("unitig_pairs_held"), inputs.get("unitig_pairs_in_part"))
+                ok("inputs: the unitig arm, and only it, counts the pairs held whole and in part",
+                   all(isinstance(x, int) and x >= 0 for x in pairs) if arm == "unitigs" else pairs == (None, None))
         else:
             ok("inputs: the arm's file exists", False)
+    if arm in JOINED and not refused and doc.get("unavailable_reason") is None:
+        out.extend(check_screen(exp, doc, screen))
     return out
 
 
@@ -498,8 +586,10 @@ def main(argv):
         if e["arm"] in (DEFAULT, TWIN):
             stray = sum(1 for _ in (picks / e["arm"]).glob(f"{e['dataset']}.*.inputs.json"))
         doc = refusals[e["file"]] if is_refused else docs[e["file"]]
+        screen_path = picks / screen_name(e["file"])
+        screen = load(screen_path) if e["arm"] in JOINED and screen_path.is_file() else None
         for name, passed, detail in check(e, doc, base, inputs, stray, rel, served_by.get(e["dataset"]),
-                                          draw_seeds, twin_seeds, refused=is_refused):
+                                          draw_seeds, twin_seeds, refused=is_refused, screen=screen):
             checks.append((e["file"], name, passed, detail))
         if is_refused:
             constant[e["file"]] = base
