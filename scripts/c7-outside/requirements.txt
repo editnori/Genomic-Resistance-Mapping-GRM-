@@ -1,0 +1,7 @@
+# The outside learners of plan block C7 (docs/outside-learners.md). Python 3.12 on Linux x86-64.
+# The learner cross-check's pins, and LightGBM 4.6.0, the py3-none-manylinux_2_28_x86_64 wheel,
+# which needs numpy and scipy only. Every file is named by its sha256 on pypi.org; install with
+#   python3 -m venv ENV && ENV/bin/pip install --no-deps --require-hashes -r requirements.txt
+-r ../learner-crosscheck/requirements.txt
+lightgbm==4.6.0 \
+    --hash=sha256:cb19b5afea55b5b61cbb2131095f50538bd608a00655f23ad5d25ae3e3bf1c8d
