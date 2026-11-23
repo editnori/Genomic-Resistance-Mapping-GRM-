@@ -1,0 +1,148 @@
+species	years	genomes
+Acinetobacter baumannii	no year	230
+Acinetobacter baumannii	before 2000	9
+Acinetobacter baumannii	2000 to 2009	901
+Acinetobacter baumannii	2010 to 2014	360
+Acinetobacter baumannii	2015 to 2019	187
+Acinetobacter baumannii	2020 on	15
+Acinetobacter baumannii	no table	0
+Campylobacter coli	no year	0
+Campylobacter coli	before 2000	0
+Campylobacter coli	2000 to 2009	31
+Campylobacter coli	2010 to 2014	50
+Campylobacter coli	2015 to 2019	309
+Campylobacter coli	2020 on	1
+Campylobacter coli	no table	0
+Campylobacter jejuni	no year	0
+Campylobacter jejuni	before 2000	0
+Campylobacter jejuni	2000 to 2009	19
+Campylobacter jejuni	2010 to 2014	12
+Campylobacter jejuni	2015 to 2019	477
+Campylobacter jejuni	2020 on	0
+Campylobacter jejuni	no table	0
+Clostridioides difficile	no year	203
+Clostridioides difficile	before 2000	0
+Clostridioides difficile	2000 to 2009	0
+Clostridioides difficile	2010 to 2014	1
+Clostridioides difficile	2015 to 2019	0
+Clostridioides difficile	2020 on	0
+Clostridioides difficile	no table	0
+Corynebacterium diphtheriae	no year	2
+Corynebacterium diphtheriae	before 2000	78
+Corynebacterium diphtheriae	2000 to 2009	18
+Corynebacterium diphtheriae	2010 to 2014	49
+Corynebacterium diphtheriae	2015 to 2019	96
+Corynebacterium diphtheriae	2020 on	0
+Corynebacterium diphtheriae	no table	0
+Enterobacter cloacae	no year	50
+Enterobacter cloacae	before 2000	0
+Enterobacter cloacae	2000 to 2009	51
+Enterobacter cloacae	2010 to 2014	148
+Enterobacter cloacae	2015 to 2019	20
+Enterobacter cloacae	2020 on	1
+Enterobacter cloacae	no table	0
+Enterococcus faecium	no year	1177
+Enterococcus faecium	before 2000	0
+Enterococcus faecium	2000 to 2009	24
+Enterococcus faecium	2010 to 2014	247
+Enterococcus faecium	2015 to 2019	552
+Enterococcus faecium	2020 on	0
+Enterococcus faecium	no table	0
+Escherichia coli	no year	314
+Escherichia coli	before 2000	2
+Escherichia coli	2000 to 2009	449
+Escherichia coli	2010 to 2014	579
+Escherichia coli	2015 to 2019	521
+Escherichia coli	2020 on	135
+Escherichia coli	no table	0
+Klebsiella aerogenes	no year	8
+Klebsiella aerogenes	before 2000	0
+Klebsiella aerogenes	2000 to 2009	0
+Klebsiella aerogenes	2010 to 2014	55
+Klebsiella aerogenes	2015 to 2019	28
+Klebsiella aerogenes	2020 on	2
+Klebsiella aerogenes	no table	0
+Klebsiella oxytoca	no year	90
+Klebsiella oxytoca	before 2000	0
+Klebsiella oxytoca	2000 to 2009	0
+Klebsiella oxytoca	2010 to 2014	0
+Klebsiella oxytoca	2015 to 2019	15
+Klebsiella oxytoca	2020 on	7
+Klebsiella oxytoca	no table	0
+Klebsiella pneumoniae	no year	1063
+Klebsiella pneumoniae	before 2000	7
+Klebsiella pneumoniae	2000 to 2009	72
+Klebsiella pneumoniae	2010 to 2014	659
+Klebsiella pneumoniae	2015 to 2019	174
+Klebsiella pneumoniae	2020 on	25
+Klebsiella pneumoniae	no table	0
+Klebsiella quasipneumoniae	no year	7
+Klebsiella quasipneumoniae	before 2000	0
+Klebsiella quasipneumoniae	2000 to 2009	30
+Klebsiella quasipneumoniae	2010 to 2014	59
+Klebsiella quasipneumoniae	2015 to 2019	13
+Klebsiella quasipneumoniae	2020 on	0
+Klebsiella quasipneumoniae	no table	0
+Neisseria gonorrhoeae	no year	463
+Neisseria gonorrhoeae	before 2000	35
+Neisseria gonorrhoeae	2000 to 2009	123
+Neisseria gonorrhoeae	2010 to 2014	282
+Neisseria gonorrhoeae	2015 to 2019	1097
+Neisseria gonorrhoeae	2020 on	0
+Neisseria gonorrhoeae	no table	0
+Pseudomonas aeruginosa	no year	759
+Pseudomonas aeruginosa	before 2000	0
+Pseudomonas aeruginosa	2000 to 2009	238
+Pseudomonas aeruginosa	2010 to 2014	326
+Pseudomonas aeruginosa	2015 to 2019	65
+Pseudomonas aeruginosa	2020 on	33
+Pseudomonas aeruginosa	no table	0
+Salmonella enterica	no year	195
+Salmonella enterica	before 2000	98
+Salmonella enterica	2000 to 2009	175
+Salmonella enterica	2010 to 2014	924
+Salmonella enterica	2015 to 2019	569
+Salmonella enterica	2020 on	39
+Salmonella enterica	no table	0
+Shigella flexneri	no year	0
+Shigella flexneri	before 2000	0
+Shigella flexneri	2000 to 2009	0
+Shigella flexneri	2010 to 2014	0
+Shigella flexneri	2015 to 2019	362
+Shigella flexneri	2020 on	0
+Shigella flexneri	no table	0
+Shigella sonnei	no year	708
+Shigella sonnei	before 2000	44
+Shigella sonnei	2000 to 2009	188
+Shigella sonnei	2010 to 2014	34
+Shigella sonnei	2015 to 2019	1010
+Shigella sonnei	2020 on	0
+Shigella sonnei	no table	0
+Staphylococcus aureus	no year	345
+Staphylococcus aureus	before 2000	35
+Staphylococcus aureus	2000 to 2009	121
+Staphylococcus aureus	2010 to 2014	438
+Staphylococcus aureus	2015 to 2019	1055
+Staphylococcus aureus	2020 on	0
+Staphylococcus aureus	no table	6
+Streptococcus agalactiae	no year	0
+Streptococcus agalactiae	before 2000	0
+Streptococcus agalactiae	2000 to 2009	21
+Streptococcus agalactiae	2010 to 2014	119
+Streptococcus agalactiae	2015 to 2019	1
+Streptococcus agalactiae	2020 on	0
+Streptococcus agalactiae	no table	0
+Streptococcus pneumoniae	no year	1675
+Streptococcus pneumoniae	before 2000	29
+Streptococcus pneumoniae	2000 to 2009	148
+Streptococcus pneumoniae	2010 to 2014	136
+Streptococcus pneumoniae	2015 to 2019	12
+Streptococcus pneumoniae	2020 on	0
+Streptococcus pneumoniae	no table	0
+Vibrio cholerae	no year	2
+Vibrio cholerae	before 2000	22
+Vibrio cholerae	2000 to 2009	17
+Vibrio cholerae	2010 to 2014	50
+Vibrio cholerae	2015 to 2019	0
+Vibrio cholerae	2020 on	0
+Vibrio cholerae	no table	0

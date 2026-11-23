@@ -1,0 +1,6 @@
+1 layout: the reading holds reading.txt, checks.txt, combine.py's five tables under combined/ and runs/
+2 species: runs/ holds exactly the species of A in lists.tsv, none dropped and none more
+3 runs: each run's DONE names its species, the reading's commit, 10 results and the sha256 of its SHA256SUMS; SHA256SUMS lists the ten tables and each file equals its line; no run is a first-run copy
+4 datasets: each run's datasets.tsv holds exactly its species' datasets of A, species and antibiotic as lists.tsv names them, set M exactly where lists.tsv has in_M 1; strata.tsv and pooled.tsv hold only entered datasets, each with the set datasets.tsv gives it
+5 floors: every run table passes scan.py's table checks: a recall only over 10 or more resistant genomes, an M2 share or mix only in a cell whose BioProject vote passes, a family named only over 5 or more genomes
+6 combined: combined/ is byte for byte what combine.py writes from runs/, species in sorted order, and the time split's contrasts
