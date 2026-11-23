@@ -1,6 +1,6 @@
 # Input arms: other inputs beside 31-mer presence
 
-An experiment, off by default, for plan block C3 (`docs/assumption-plan.md`). The release fits its five learners on the presence of 31-mers in each genome (K31). C3 asks whether other inputs separate the classes better: unitigs, K31 plus k-mer counts, K31 plus amino-acid k-mers of called genes, the AMRFinderPlus program's calls alone, and K31 plus the program's calls. This branch builds the two program-call arms and designs the other three; they wait for the lead's ruling on their tools.
+An experiment, off by default, for plan block C3 (`docs/assumption-plan.md`). The release fits its five learners on the presence of 31-mers in each genome (K31). C3 asks whether other inputs separate the classes better: unitigs, K31 plus k-mer counts, K31 plus amino-acid k-mers of called genes, the AMRFinderPlus program's calls alone, and K31 plus the program's calls. This branch builds the two program-call arms and designs the other three. The lead ruled their tools at 00:47Z on 23 Nov 2026 (below); they wait to be built and reviewed, and by the lead's ruling 17 no C3 fit starts before they are.
 
 `grm learn --exp-inputs ARM` fits one arm in place of K31. Without the flag nothing new is called and `grm learn` is unchanged, byte for byte. `EVALUATION_REVISION` stays 14 and the report schema stays 2. An arm writes no report and removes none.
 
@@ -14,10 +14,12 @@ Any split here is a retrospective split inside one public database. A split by l
 | `program` | one per element symbol of the program's Type AMR rows | built |
 | `k31-program` | the program's columns, then the dataset's K31 rows less those whose cohort pattern a program column has | built |
 | `k31-counts` | K31 rows, then [count ≥ 2] of each 31-mer in a genome | designed, waits |
-| `unitigs` | one per distinct unitig pattern, in place of K31 | designed, waits |
+| `unitigs` | one per distinct unitig pattern of the graph over every 31-mer of the species' genomes, in place of K31 | designed, waits |
 | `k31-aa` | K31 rows, then amino-acid 10-mers of called genes | designed, waits |
 
 The program is AMRFinderPlus 4.2.7 with database 2026-08-07.1 and `--plus`, run from the AMRFinderPlus kit as `scripts/refit/run_species.sh` runs it. Each table must equal the sha256 the release recorded for it before any fit reads one. A genome has a column when its table has a row of Type AMR with that element symbol, either scope and any method. The program arms run on A, 237 datasets in 21 species: database 2026-08-07.1 has no organism option for *Mycobacterium tuberculosis* or *Staphylococcus haemolyticus*.
+
+The three waiting arms follow the lead's rulings of 00:47Z on 23 Nov 2026 on questions 1 to 6. The unitig graph is built over every 31-mer of the species' genomes, those held by one genome included, as the plan's words have it ("a compacted graph of the cohort's 31-mers"), and not over the matrix's 31-mers alone. GRM's own compaction may build it only if, on the pilot species, its unitigs equal bcalm2's or Bifrost's on the same genomes as a set, with that program's version recorded and counts printed only; otherwise that program builds it. A genome holds a unitig when its kset holds every 31-mer of it, and the inputs file also counts the genome and unitig pairs held in part. There is one graph per species, built with no label. Genes are called by Prodigal 2.6.3 in single mode at table 11, with amino-acid k of 10. The counts come from GRM's own counter with one bin, a count of 2 or more, checked on SYNTHETIC sequence against a recount written apart.
 
 ## Inside the folds
 
@@ -64,6 +66,8 @@ On the datasets not in M, three of the four label rules give the same labels. Of
 ## Running
 
 `scripts/c3-inputs/run_species.sh KIT SPECIES DATASETS OUT [JOBS] [SEEDS] [TWIN] [ARMS]` runs one species on a box of its own, with no prompt. It checks its kit by sha256 (the release, the data root's list, the curated table, the study plans, the label count's table, the AMRFinderPlus kit and the recorded tables' sha256 list). It refuses a dataset in M, and refuses at the kit step a box without numpy, `cargo`, `objcopy`, `unshare`, `flock`, `/usr/bin/time`, `curl`, `tar`, `xz` or `zstd`. It builds `grm` and the species' data root as `scripts/c9-pick/run_species.sh` does, installs the program and proves it on the kit's fixture, runs it on every genome of the species with a recorded table, and holds each table to its recorded sha256.
+
+By the lead's ruling 17, no C3 fit starts on the two built arms alone: one run with one binary covers the default, the twin and all five arms, after the three waiting arms are built and reviewed, since the default is refitted in the same run with the same binary. Until then `ARMS` takes the built arms only, and the script serves pilots.
 
 It fits the default at each seed and checks its seed-42 reports against the release's with `scripts/refit/refit_check.py` before any arm runs. It then fits each arm at each seed, the twin, and the study plans, scores, writes `logs/timing.tsv` of each step's wall time and peak memory, and writes `OUT/DONE` with the sha256 of its list of output files. Each log is copied with every genome id written as `[genome id]`, and the end fails if a file under `results/`, `check/`, `score/` or `logs/` names one. Run again, it skips finished steps and finished results. When `grm learn` refuses an arm's study fit for no candidate and the default's study result exists, `scripts/c3-inputs/refused.py` writes `results/picks/<arm>/<dataset>.study-whole-s42.refused.json` in place of the result, with the reason and the fold's counts, and the run goes on. Any other failure, that refusal of the default among them, writes `OUT/FAILED` and exits 1.
 
