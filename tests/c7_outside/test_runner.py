@@ -223,7 +223,7 @@ class Arms(Temp):
         self.assertTrue(np.array_equal(a, b))
         self.assertEqual(ra["null_fit_folds"], 0)
 
-    def test_no_outer_test_label_moves_an_elastic_net_score_when_the_screen_chooses(self):
+    def test_a_screen_cut_to_3_rows_lets_no_outer_test_label_move_an_elastic_net_score(self):
         # The test above keeps every candidate row (fewer than SCREEN), so a screen read on the outer test genomes'
         # labels keeps the same rows and goes unseen. Cut to 3 rows, the screen chooses among the candidates.
         with mock.patch.object(O.screen_fold, "__defaults__", (3,)):
