@@ -304,6 +304,12 @@ jobs:
           # plants in.
           - suite: tests/c5_settings
             top: .
+          # SYNTHETIC exports, unitig builds, reports and expect lists built in the test; it runs the scripts under scripts/c7-outside
+          # and fits XGBoost 3.0.5, LightGBM 4.6.0 and scikit-learn 1.7.2 on them, from the wheels scripts/c7-outside/requirements.txt pins.
+          # test_lists.py also reads the committed lists scripts/c3-inputs/lists.tsv and scripts/c7-outside/lists.tsv.
+          - suite: tests/c7_outside
+            top: .
+            venv: scripts/c7-outside/requirements.txt
     env:
       SUITE: ${{ matrix.suite }}
       TOP: ${{ matrix.top }}
@@ -320,6 +326,15 @@ jobs:
           sudo apt-get update -qq
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends python3-numpy
           python3 -I -c 'import sys, numpy; print(sys.executable, sys.version, "numpy", numpy.__version__); assert sys.version_info[:2] == (3, 12) and numpy.__version__ == "1.26.4"'
+      # A suite that fits with outside libraries runs in a venv of the wheels its file pins by sha256, installed as the learner
+      # cross-check installs its own (scripts/learner-crosscheck/README.md); PY is then that venv's python for the steps below.
+      - name: Install the pinned libraries
+        if: matrix.venv
+        run: |
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install --quiet --no-deps --require-hashes -r "${{ matrix.venv }}"
+          "$RUNNER_TEMP/venv/bin/python" -I -c 'import sys, numpy; print(sys.executable, sys.version, "numpy", numpy.__version__); assert sys.version_info[:2] == (3, 12) and numpy.__version__ == "1.26.4"'
+          echo "PY=$RUNNER_TEMP/venv/bin/python" >> "$GITHUB_ENV"
       # env -i and -s keep out the runner's environment and user site-packages.
       - name: PYTHONHASHSEED 0, 1 and 4242
         run: |
@@ -327,14 +342,14 @@ jobs:
             echo "::group::PYTHONHASHSEED=$seed"
             env -i PATH=/usr/bin:/bin HOME="$HOME" PYTHONHASHSEED="$seed" GRM_TASK_J_STATS="$PWD/scripts/ablation/stats.py" \
               ${PUBLIC_WORDS_EXTRA:+PUBLIC_WORDS_EXTRA="$PUBLIC_WORDS_EXTRA"} \
-              python3 -s -P -B -W error -m unittest discover -s "$SUITE" ${TOP:+-t "$TOP"} -v 2>&1 | tee "$RUNNER_TEMP/unittest.log"
+              "${PY:-python3}" -s -P -B -W error -m unittest discover -s "$SUITE" ${TOP:+-t "$TOP"} -v 2>&1 | tee "$RUNNER_TEMP/unittest.log"
             echo "::endgroup::"
             test "$(tail -n 1 "$RUNNER_TEMP/unittest.log")" = "$OK_LINE" || { echo "::error::tests skipped at PYTHONHASHSEED=$seed"; exit 1; }
           done
       - name: Isolated mode
         run: |
           GRM_TASK_J_STATS="$PWD/scripts/ablation/stats.py" \
-            python3 -I -B -W error -m unittest discover -s "$SUITE" ${TOP:+-t "$TOP"} -v 2>&1 | tee "$RUNNER_TEMP/unittest.log"
+            "${PY:-python3}" -I -B -W error -m unittest discover -s "$SUITE" ${TOP:+-t "$TOP"} -v 2>&1 | tee "$RUNNER_TEMP/unittest.log"
           test "$(tail -n 1 "$RUNNER_TEMP/unittest.log")" = "$OK_LINE" || { echo "::error::tests skipped under -I"; exit 1; }
       - name: Without GRM_TASK_J_STATS
         if: matrix.suite == 'tests/ablation'
