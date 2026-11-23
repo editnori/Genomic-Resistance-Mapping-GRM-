@@ -18,6 +18,7 @@ pub mod export;
 pub mod fasta;
 mod fnv;
 pub mod input_arms;
+pub mod input_build;
 pub mod intervals;
 pub mod kset;
 pub mod layout;

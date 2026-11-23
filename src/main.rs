@@ -312,7 +312,13 @@ enum Command {
         /// fit the arm's matrix in place of the 31-mer projection, from the
         /// AMRFinderPlus program's per-genome tables in
         /// --exp-program-tables: its columns alone (program), or its
-        /// columns then the 31-mer rows (k31-program). Writes no report;
+        /// columns then the 31-mer rows (k31-program); or from the matrix
+        /// `grm exp-input-build` made in --exp-input-matrix: the 31-mers
+        /// seen twice in a genome then the 31-mer rows (k31-counts), the
+        /// amino-acid 10-mers then the 31-mer rows (k31-aa), or the unitigs
+        /// alone (unitigs). A joined arm also writes each split's screen
+        /// count, <exp-pick dir>/<dataset>.<split>-s<seed>.screen.json.
+        /// Writes no report;
         /// the results are --exp-pick's files, which needs
         /// --exp-pick-inner 0, and <exp-pick dir>/<dataset>.<tag>.inputs.json
         /// of column counts. Needs --force and one species. Refused beside
@@ -321,7 +327,7 @@ enum Command {
         #[arg(
             long,
             value_enum,
-            requires_all = ["exp_pick", "exp_program_tables", "force"],
+            requires_all = ["exp_pick", "force"],
             conflicts_with_all = [
                 "learner_seed",
                 "exp_tie_rule",
@@ -333,10 +339,27 @@ enum Command {
             ]
         )]
         exp_inputs: Option<InputArmArg>,
-        /// The species' program tables for --exp-inputs: <genome id>.tsv,
-        /// each as the program wrote it.
-        #[arg(long, requires = "exp_inputs")]
+        /// The species' program tables for --exp-inputs program and
+        /// k31-program: <genome id>.tsv, each as the program wrote it.
+        #[arg(
+            long,
+            requires = "exp_inputs",
+            required_if_eq_any = [("exp_inputs", "program"), ("exp_inputs", "k31-program")]
+        )]
         exp_program_tables: Option<PathBuf>,
+        /// The folder `grm exp-input-build` wrote, for --exp-inputs
+        /// k31-counts, k31-aa and unitigs.
+        #[arg(
+            long,
+            requires = "exp_inputs",
+            conflicts_with = "exp_program_tables",
+            required_if_eq_any = [
+                ("exp_inputs", "k31-counts"),
+                ("exp_inputs", "k31-aa"),
+                ("exp_inputs", "unitigs"),
+            ]
+        )]
+        exp_input_matrix: Option<PathBuf>,
         /// What one program column is for --exp-inputs: the table's
         /// element symbol, subclass or class.
         #[arg(long, value_enum, default_value_t = ProgramColumnArg::Symbol, requires = "exp_inputs")]
@@ -429,6 +452,35 @@ enum Command {
         groups: Option<PathBuf>,
         #[arg(long)]
         out: PathBuf,
+    },
+    /// Experiment, off by default (docs/input-arms.md, plan block C3): one
+    /// species' label-free build for a matrix arm of `grm learn
+    /// --exp-inputs`, over every genome of its species matrix and in its
+    /// column order. `counts`: the 31-mers a genome's assembly holds 2 or
+    /// more times. `aa`: the amino-acid 10-mers of Prodigal's proteins in
+    /// --proteins, each held to GRM's own table 11 translation. `unitigs`:
+    /// the graph over every 31-mer of the species' ksets, GRM's own
+    /// (--graph grm, compared with --outside-unitigs when given) or an
+    /// outside build's FASTA (--graph outside), and each genome's unitigs
+    /// held whole. Writes <out>/matrix, <out>/build.json (counts only) and
+    /// <out>/genomes.tsv. Reads no label.
+    ExpInputBuild {
+        #[arg(value_enum)]
+        kind: BuildKindArg,
+        #[arg(long)]
+        species: String,
+        #[arg(long)]
+        out: PathBuf,
+        /// Prodigal's `<genome id>.faa` files, for `aa`.
+        #[arg(long)]
+        proteins: Option<PathBuf>,
+        /// Whose graph the unitig matrix reads, for `unitigs`.
+        #[arg(long, value_enum)]
+        graph: Option<GraphArg>,
+        /// An outside build's unitigs FASTA: the graph with --graph
+        /// outside, compared with GRM's with --graph grm.
+        #[arg(long)]
+        outside_unitigs: Option<PathBuf>,
     },
     /// Apply one dataset report's final models, frozen, to genomes, as
     /// docs/prediction-contract.md defines: one JSON line per genome and
@@ -663,6 +715,7 @@ fn run(cli: Cli) -> Result<()> {
             exp_pick_tie,
             exp_inputs,
             exp_program_tables,
+            exp_input_matrix,
             exp_program_column,
             exp_program_rows,
             ..
@@ -675,6 +728,7 @@ fn run(cli: Cli) -> Result<()> {
                     &species,
                     arm,
                     exp_program_tables.as_deref(),
+                    exp_input_matrix.as_deref(),
                     exp_program_column,
                     exp_program_rows,
                     exp_pick.as_deref(),
@@ -706,6 +760,7 @@ fn run(cli: Cli) -> Result<()> {
             exp_pick_tie,
             exp_inputs,
             exp_program_tables,
+            exp_input_matrix,
             exp_program_column,
             exp_program_rows,
             ..
@@ -730,6 +785,7 @@ fn run(cli: Cli) -> Result<()> {
                     &species,
                     arm,
                     exp_program_tables.as_deref(),
+                    exp_input_matrix.as_deref(),
                     exp_program_column,
                     exp_program_rows,
                     exp_pick.as_deref(),
@@ -806,6 +862,22 @@ fn run(cli: Cli) -> Result<()> {
             }
             Ok(())
         }
+        Command::ExpInputBuild {
+            kind,
+            species,
+            out,
+            proteins,
+            graph,
+            outside_unitigs,
+        } => exp_input_build(
+            &layout,
+            kind,
+            &species,
+            &out,
+            proteins.as_deref(),
+            graph,
+            outside_unitigs.as_deref(),
+        ),
         Command::Arm {
             species,
             dataset,
@@ -1631,6 +1703,78 @@ impl From<PickTieArg> for grm::report::PickTie {
 enum InputArmArg {
     Program,
     K31Program,
+    K31Counts,
+    K31Aa,
+    Unitigs,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, clap::ValueEnum)]
+enum BuildKindArg {
+    Counts,
+    Aa,
+    Unitigs,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, clap::ValueEnum)]
+enum GraphArg {
+    Grm,
+    Outside,
+}
+
+/// `grm exp-input-build`: checks what clap cannot, then builds.
+fn exp_input_build(
+    layout: &Layout,
+    kind: BuildKindArg,
+    species: &str,
+    out: &std::path::Path,
+    proteins: Option<&std::path::Path>,
+    graph: Option<GraphArg>,
+    outside: Option<&std::path::Path>,
+) -> Result<()> {
+    use grm::input_build::{Graph, Kind, Request};
+    let kind = match kind {
+        BuildKindArg::Counts => Kind::Counts,
+        BuildKindArg::Aa => Kind::Aa,
+        BuildKindArg::Unitigs => Kind::Unitigs,
+    };
+    anyhow::ensure!(
+        (kind == Kind::Aa) == proteins.is_some(),
+        "--proteins goes with aa and only with it"
+    );
+    anyhow::ensure!(
+        (kind == Kind::Unitigs) == graph.is_some(),
+        "--graph goes with unitigs and only with it"
+    );
+    let graph = match graph {
+        Some(GraphArg::Outside) => Graph::Outside,
+        _ => Graph::Grm,
+    };
+    anyhow::ensure!(
+        kind == Kind::Unitigs || outside.is_none(),
+        "--outside-unitigs goes with unitigs only"
+    );
+    anyhow::ensure!(
+        graph == Graph::Grm || outside.is_some(),
+        "--graph outside needs --outside-unitigs"
+    );
+    let genomes = grm::input_build::species_genomes(&layout.matrix_dir(species))?;
+    std::fs::create_dir_all(out).with_context(|| format!("create {}", out.display()))?;
+    let b = grm::input_build::build(&Request {
+        kind,
+        species,
+        genomes: &genomes,
+        fasta_dir: &layout.fasta_dir(),
+        kset_dir: &layout.kset_dir(species),
+        proteins,
+        graph,
+        outside,
+        out,
+    })?;
+    eprintln!(
+        "{species}: {} build: {} genomes, {} values summed, {} patterns at support {}",
+        b.kind, b.genomes, b.values_summed, b.matrix_patterns, b.matrix_support
+    );
+    Ok(())
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, clap::ValueEnum)]
@@ -1648,10 +1792,12 @@ enum ProgramRowsArg {
 
 /// Turns the C3 input arm on (`input_arms::enable`), after checking what
 /// clap cannot: one species, and the C9 writer with no inner fit.
+#[allow(clippy::too_many_arguments)]
 fn enable_input_arm(
     species: &[String],
     arm: InputArmArg,
     tables: Option<&std::path::Path>,
+    matrix: Option<&std::path::Path>,
     column: ProgramColumnArg,
     rows: ProgramRowsArg,
     pick_dir: Option<&std::path::Path>,
@@ -1660,21 +1806,43 @@ fn enable_input_arm(
     use grm::input_arms::{Arm, Column, Rows, Settings};
     anyhow::ensure!(
         species.len() == 1,
-        "--exp-inputs reads one species' program tables, so it takes one species, not {}",
+        "--exp-inputs reads one species' program tables or build, so it takes one species, not {}",
         species.len()
     );
     anyhow::ensure!(
         pick_inner == 0,
         "--exp-inputs scores the arm's own outer fits only: give --exp-pick-inner 0"
     );
+    let arm = match arm {
+        InputArmArg::Program => Arm::Program,
+        InputArmArg::K31Program => Arm::K31Program,
+        InputArmArg::K31Counts => Arm::K31Counts,
+        InputArmArg::K31Aa => Arm::K31Aa,
+        InputArmArg::Unitigs => Arm::Unitigs,
+    };
+    let (tables, matrix) = if arm.is_program() {
+        (
+            Some(
+                tables
+                    .context("--exp-inputs needs --exp-program-tables")?
+                    .to_path_buf(),
+            ),
+            None,
+        )
+    } else {
+        (
+            None,
+            Some(
+                matrix
+                    .context("--exp-inputs needs --exp-input-matrix")?
+                    .to_path_buf(),
+            ),
+        )
+    };
     grm::input_arms::enable(Settings {
-        arm: match arm {
-            InputArmArg::Program => Arm::Program,
-            InputArmArg::K31Program => Arm::K31Program,
-        },
-        tables: tables
-            .context("--exp-inputs needs --exp-program-tables")?
-            .to_path_buf(),
+        arm,
+        tables,
+        matrix,
         column: match column {
             ProgramColumnArg::Symbol => Column::Symbol,
             ProgramColumnArg::Subclass => Column::Subclass,
@@ -2553,6 +2721,78 @@ mod tests {
             args.extend_from_slice(other);
             assert_eq!(kind(&args), Some(ArgumentConflict), "{other:?}");
         }
+    }
+
+    /// The three matrix arms take `--exp-input-matrix` and not the program's
+    /// tables, and the program arms the reverse.
+    #[test]
+    fn learn_takes_a_c3_matrix_arm_with_its_build_only() {
+        use clap::error::ErrorKind::{ArgumentConflict, MissingRequiredArgument};
+        let parse = |args: &[&str]| Cli::try_parse_from(args.iter().copied());
+        let base = [
+            "grm",
+            "learn",
+            "--species",
+            "s",
+            "--force",
+            "--exp-pick",
+            "p",
+            "--exp-pick-inner",
+            "0",
+            "--exp-inputs",
+        ];
+        for (arm, want) in [
+            ("k31-counts", InputArmArg::K31Counts),
+            ("k31-aa", InputArmArg::K31Aa),
+            ("unitigs", InputArmArg::Unitigs),
+        ] {
+            let mut args = base.to_vec();
+            args.extend_from_slice(&[arm, "--exp-input-matrix", "m"]);
+            let Command::Learn {
+                exp_inputs,
+                exp_input_matrix,
+                exp_program_tables,
+                ..
+            } = parse(&args).unwrap().command
+            else {
+                panic!("parsed another command");
+            };
+            assert_eq!(
+                (exp_inputs, exp_input_matrix, exp_program_tables),
+                (Some(want), Some(PathBuf::from("m")), None)
+            );
+            let mut bare = base.to_vec();
+            bare.push(arm);
+            let kind = |a: &[&str]| parse(a).err().map(|e| e.kind());
+            assert_eq!(kind(&bare), Some(MissingRequiredArgument), "{arm}");
+            let mut tables = bare.clone();
+            tables.extend_from_slice(&["--exp-program-tables", "t"]);
+            assert!(parse(&tables).is_err(), "{arm} with the program's tables");
+            let mut both = args.clone();
+            both.extend_from_slice(&["--exp-program-tables", "t"]);
+            assert_eq!(kind(&both), Some(ArgumentConflict), "{arm}");
+        }
+        let mut program = base.to_vec();
+        program.extend_from_slice(&["program", "--exp-input-matrix", "m"]);
+        assert!(parse(&program).is_err());
+        assert!(
+            parse(&["grm", "learn", "--species", "s", "--exp-input-matrix", "m"]).is_err(),
+            "--exp-input-matrix needs --exp-inputs"
+        );
+        assert!(
+            parse(&[
+                "grm",
+                "exp-input-build",
+                "unitigs",
+                "--species",
+                "s",
+                "--out",
+                "o",
+                "--graph",
+                "grm"
+            ])
+            .is_ok()
+        );
     }
 
     /// refuses `--column-blocks` and `--drop-ksets`.

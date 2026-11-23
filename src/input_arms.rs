@@ -24,6 +24,17 @@
 //!   and a program column identical on a fit's training genomes to a K31
 //!   pattern is kept as the program's.
 //!
+//! The three matrix arms read a pattern matrix that `grm exp-input-build`
+//! made once per species with no label (`input_build`), and project it
+//! onto the cohort at the dataset's floor, with every label set to S:
+//! - `k31-counts`: the 31-mers a genome holds 2 or more times, then K31;
+//! - `k31-aa`: the amino-acid 10-mers of Prodigal's proteins, then K31;
+//! - `unitigs`: the unitigs of the species' graph, in K31's place.
+//!
+//! A joined arm (`k31-program`, `k31-counts`, `k31-aa`) also writes, per
+//! split and seed, how many of each block's candidates pass the 4,000
+//! screen of each screened learner (`<dataset>.<scheme>-s<seed>.screen.json`).
+//!
 //! What this module builds reads no label: `program_block` sees each
 //! genome's calls and the support floor only, and `arm_matrix` takes the
 //! dataset's matrix, never its labels. The one cohort-wide filter is the
@@ -34,12 +45,13 @@
 //! column name, genome id or row per genome.
 
 use crate::bits::{BitMatrix, Bits};
-use crate::matrix::Dataset;
+use crate::input_build::{self, Build, Kind};
+use crate::matrix::{Dataset, FeatureMatrix};
 use anyhow::{Context, Result, bail, ensure};
 use serde::Serialize;
-use std::collections::{BTreeSet, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::path::{Path, PathBuf};
-use std::sync::OnceLock;
+use std::sync::{Mutex, OnceLock};
 
 /// The result format. A change to what a result holds changes it.
 pub const FORMAT: &str = "grm-c3-inputs-1";
@@ -51,6 +63,12 @@ pub enum Arm {
     Program,
     /// The program's columns, then the dataset's K31 rows.
     K31Program,
+    /// The 31-mers seen 2 or more times in a genome, then K31.
+    K31Counts,
+    /// The amino-acid 10-mers of called proteins, then K31.
+    K31Aa,
+    /// The unitigs of the species' graph, in K31's place.
+    Unitigs,
 }
 
 impl Arm {
@@ -58,6 +76,29 @@ impl Arm {
         match self {
             Arm::Program => "program",
             Arm::K31Program => "k31-program",
+            Arm::K31Counts => "k31-counts",
+            Arm::K31Aa => "k31-aa",
+            Arm::Unitigs => "unitigs",
+        }
+    }
+
+    /// Whether the arm reads the program's tables.
+    pub fn is_program(self) -> bool {
+        matches!(self, Arm::Program | Arm::K31Program)
+    }
+
+    /// Whether the arm joins a block before K31's rows.
+    pub fn joined(self) -> bool {
+        matches!(self, Arm::K31Program | Arm::K31Counts | Arm::K31Aa)
+    }
+
+    /// The label-free build a matrix arm reads.
+    pub fn build_kind(self) -> Option<Kind> {
+        match self {
+            Arm::K31Counts => Some(Kind::Counts),
+            Arm::K31Aa => Some(Kind::Aa),
+            Arm::Unitigs => Some(Kind::Unitigs),
+            Arm::Program | Arm::K31Program => None,
         }
     }
 }
@@ -113,8 +154,10 @@ impl Rows {
 #[derive(Clone, Debug)]
 pub struct Settings {
     pub arm: Arm,
-    /// The species' program tables, `<genome id>.tsv`.
-    pub tables: PathBuf,
+    /// The species' program tables, `<genome id>.tsv`, for a program arm.
+    pub tables: Option<PathBuf>,
+    /// `grm exp-input-build`'s folder, for a matrix arm.
+    pub matrix: Option<PathBuf>,
     pub column: Column,
     pub rows: Rows,
     /// Where `<dataset>.<tag>.inputs.json` goes: the `--exp-pick` folder.
@@ -123,17 +166,68 @@ pub struct Settings {
 
 static SINK: OnceLock<Settings> = OnceLock::new();
 
+/// A matrix arm's build: its matrix, its counts, and for the unitig arm each
+/// genome's unitigs held whole and in part.
+struct Added {
+    matrix: FeatureMatrix,
+    build: Build,
+    pairs: Option<HashMap<String, (u64, u64)>>,
+}
+
+static ADDED: OnceLock<Added> = OnceLock::new();
+
+/// Per dataset, the rows of a joined arm's first block, for the screen count.
+static JOINED: Mutex<BTreeMap<String, usize>> = Mutex::new(BTreeMap::new());
+
 /// Turns the experiment on for this process. A second call fails.
 pub fn enable(settings: Settings) -> Result<()> {
-    ensure!(
-        settings.tables.is_dir(),
-        "--exp-program-tables {} is not a folder",
-        settings.tables.display()
-    );
+    if settings.arm.is_program() {
+        let tables = settings
+            .tables
+            .as_deref()
+            .context("a program arm needs --exp-program-tables")?;
+        ensure!(
+            tables.is_dir(),
+            "--exp-program-tables {} is not a folder",
+            tables.display()
+        );
+    } else {
+        let dir = settings
+            .matrix
+            .as_deref()
+            .context("a matrix arm needs --exp-input-matrix")?;
+        let (matrix, build) = input_build::load(dir)?;
+        let want = settings.arm.build_kind().expect("a matrix arm").name();
+        ensure!(
+            build.kind == want,
+            "--exp-inputs {} reads a {want} build, and {} holds a {} build",
+            settings.arm.name(),
+            dir.display(),
+            build.kind
+        );
+        let pairs = if settings.arm == Arm::Unitigs {
+            Some(input_build::unitig_pairs(dir)?)
+        } else {
+            None
+        };
+        ADDED
+            .set(Added {
+                matrix,
+                build,
+                pairs,
+            })
+            .map_err(|_| anyhow::anyhow!("the C3 input matrix is already loaded"))?;
+    }
     std::fs::create_dir_all(&settings.out)
         .with_context(|| format!("create {}", settings.out.display()))?;
     SINK.set(settings)
         .map_err(|_| anyhow::anyhow!("the C3 input arm is already set"))
+}
+
+/// A joined arm's first-block rows in `dataset`'s matrix, once `apply` made
+/// it; None for any other arm or none at all.
+pub fn joined_rows(dataset: &str) -> Option<usize> {
+    JOINED.lock().ok()?.get(dataset).copied()
 }
 
 /// The arm this process runs, if any.
@@ -262,19 +356,44 @@ pub struct InputsResult {
     pub dataset: String,
     pub tag: String,
     pub arm: &'static str,
-    pub column: &'static str,
-    pub rows: &'static str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub column: Option<&'static str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rows: Option<&'static str>,
     pub samples: usize,
     pub min_support: u32,
-    pub tables_read: usize,
-    pub program_names_seen: usize,
-    pub program_names_out_of_range: usize,
-    pub program_names_collapsed: usize,
-    pub program_rows: usize,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tables_read: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub program_names_seen: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub program_names_out_of_range: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub program_names_collapsed: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub program_rows: Option<usize>,
     pub k31_rows: usize,
     /// K31 rows left out of a joined arm as a program row's cohort pattern.
-    pub k31_rows_as_program: usize,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub k31_rows_as_program: Option<usize>,
     pub arm_rows: usize,
+    /// A matrix arm: its build's kind and species patterns, the added rows
+    /// at the dataset's floor, and the K31 rows left out of a joined arm as
+    /// an added row's cohort pattern.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub added_build: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub added_species_patterns: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub added_rows: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub k31_rows_as_added: Option<usize>,
+    /// The unitig arm: the cohort's genome and unitig pairs held whole and
+    /// held in part (some but not every 31-mer of the unitig).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub unitig_pairs_held: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub unitig_pairs_in_part: Option<u64>,
 }
 
 /// Reads each cohort genome's table, `<dir>/<genome id>.tsv`. A genome with
@@ -325,7 +444,11 @@ pub fn arm_dataset(
         genome_ids.len(),
         ds.x.cols
     );
-    let calls = cohort_calls(&settings.tables, genome_ids, settings.column, settings.rows)?;
+    let tables = settings
+        .tables
+        .as_deref()
+        .context("a program arm needs --exp-program-tables")?;
+    let calls = cohort_calls(tables, genome_ids, settings.column, settings.rows)?;
     let block = program_block(&calls, min_support);
     let (x, as_program) = arm_matrix(settings.arm, &ds, &block);
     let result = InputsResult {
@@ -334,18 +457,135 @@ pub fn arm_dataset(
         dataset: dataset.to_string(),
         tag: tag.to_string(),
         arm: settings.arm.name(),
-        column: settings.column.name(),
-        rows: settings.rows.name(),
+        column: Some(settings.column.name()),
+        rows: Some(settings.rows.name()),
         samples: ds.x.cols,
         min_support,
-        tables_read: calls.len(),
-        program_names_seen: block.seen,
-        program_names_out_of_range: block.out_of_range,
-        program_names_collapsed: block.collapsed,
-        program_rows: block.x.rows,
+        tables_read: Some(calls.len()),
+        program_names_seen: Some(block.seen),
+        program_names_out_of_range: Some(block.out_of_range),
+        program_names_collapsed: Some(block.collapsed),
+        program_rows: Some(block.x.rows),
         k31_rows: ds.x.rows,
-        k31_rows_as_program: as_program,
+        k31_rows_as_program: Some(as_program),
         arm_rows: x.rows,
+        added_build: None,
+        added_species_patterns: None,
+        added_rows: None,
+        k31_rows_as_added: None,
+        unitig_pairs_held: None,
+        unitig_pairs_in_part: None,
+    };
+    let rows = x.rows;
+    Ok((
+        Dataset {
+            x,
+            y: ds.y,
+            columns: ds.columns,
+            feature_offsets: vec![0; rows + 1],
+            feature_patterns: Vec::new(),
+        },
+        result,
+    ))
+}
+
+/// A matrix arm's block over the cohort: the build's matrix projected onto
+/// the cohort's species-matrix columns at the dataset's floor, as
+/// `Dataset::project` projects K31, with every label set to S so that no
+/// label can reach it. Identical cohort patterns collapse to the first.
+pub fn added_block(matrix: &FeatureMatrix, columns: &[usize], min_support: u32) -> BitMatrix {
+    let susceptible = vec![false; columns.len()];
+    Dataset::project(matrix, columns.to_vec(), &susceptible, min_support).x
+}
+
+/// A matrix arm's matrix over the dataset's samples, and how many K31 rows
+/// it left out as an added row's pattern: the added rows, then, for a joined
+/// arm, each K31 row of `ds` whose cohort pattern no added row has. It reads
+/// `ds.x` only.
+pub fn matrix_arm(joined: bool, ds: &Dataset, added: &BitMatrix) -> (BitMatrix, usize) {
+    assert_eq!(added.cols, ds.x.cols);
+    let mut x = BitMatrix::with_cols(ds.x.cols);
+    let mut first: HashSet<&[u64]> = HashSet::new();
+    for r in 0..added.rows {
+        x.push_row(added.row(r));
+        first.insert(added.row(r));
+    }
+    let mut as_added = 0;
+    if joined {
+        for r in 0..ds.x.rows {
+            if first.contains(ds.x.row(r)) {
+                as_added += 1;
+                continue;
+            }
+            x.push_row(ds.x.row(r));
+        }
+    }
+    (x, as_added)
+}
+
+/// `arm_dataset` for a matrix arm: the build's block over the cohort, joined
+/// before K31's rows or in their place.
+#[allow(clippy::too_many_arguments)]
+fn matrix_dataset(
+    settings: &Settings,
+    added: &Added,
+    ds: Dataset,
+    dataset: &str,
+    tag: &str,
+    genome_ids: &[String],
+    species_genomes: &[String],
+    min_support: u32,
+) -> Result<(Dataset, InputsResult)> {
+    ensure!(
+        genome_ids.len() == ds.x.cols && ds.columns.len() == ds.x.cols,
+        "{} genome ids for {} samples",
+        genome_ids.len(),
+        ds.x.cols
+    );
+    ensure!(
+        added.matrix.summary.genomes == species_genomes,
+        "the {} build's genomes are not the species matrix's, in order",
+        added.build.kind
+    );
+    let block = added_block(&added.matrix, &ds.columns, min_support);
+    let (x, as_added) = matrix_arm(settings.arm.joined(), &ds, &block);
+    let (held, in_part) = match &added.pairs {
+        Some(pairs) => {
+            let mut sum = (0u64, 0u64);
+            for id in genome_ids {
+                let (h, p) = pairs.get(id).with_context(|| {
+                    format!("the unitig build has no row for a cohort genome of {dataset}")
+                })?;
+                sum = (sum.0 + h, sum.1 + p);
+            }
+            (Some(sum.0), Some(sum.1))
+        }
+        None => (None, None),
+    };
+    let result = InputsResult {
+        format: FORMAT,
+        evaluation_revision: crate::analysis::EVALUATION_REVISION,
+        dataset: dataset.to_string(),
+        tag: tag.to_string(),
+        arm: settings.arm.name(),
+        column: None,
+        rows: None,
+        samples: ds.x.cols,
+        min_support,
+        tables_read: None,
+        program_names_seen: None,
+        program_names_out_of_range: None,
+        program_names_collapsed: None,
+        program_rows: None,
+        k31_rows: ds.x.rows,
+        k31_rows_as_program: None,
+        arm_rows: x.rows,
+        added_build: Some(added.build.kind.clone()),
+        added_species_patterns: Some(added.matrix.summary.n_patterns),
+        added_rows: Some(block.rows),
+        k31_rows_as_added: settings.arm.joined().then_some(as_added),
+        unitig_pairs_held: held,
+        unitig_pairs_in_part: in_part,
     };
     let rows = x.rows;
     Ok((
@@ -362,37 +602,153 @@ pub fn arm_dataset(
 
 /// `analysis::project_cohort`'s hook: the arm's dataset when an arm is
 /// active, with its counts written to `<out>/<dataset>.<tag>.inputs.json`;
-/// `ds` itself otherwise.
+/// `ds` itself otherwise. `species_genomes` are the species matrix's, in
+/// column order.
 pub fn apply(
     ds: Dataset,
     dataset: &str,
     tag: &str,
     genome_ids: &[String],
+    species_genomes: &[String],
     min_support: u32,
 ) -> Result<Dataset> {
     let Some(settings) = active() else {
         return Ok(ds);
     };
-    let (ds, result) = arm_dataset(settings, ds, dataset, tag, genome_ids, min_support)?;
+    let (ds, result) = if settings.arm.is_program() {
+        arm_dataset(settings, ds, dataset, tag, genome_ids, min_support)?
+    } else {
+        let added = ADDED.get().context("the C3 input matrix is not loaded")?;
+        matrix_dataset(
+            settings,
+            added,
+            ds,
+            dataset,
+            tag,
+            genome_ids,
+            species_genomes,
+            min_support,
+        )?
+    };
+    if settings.arm.joined() {
+        let first = result
+            .program_rows
+            .or(result.added_rows)
+            .context("a joined arm with no first block")?;
+        JOINED
+            .lock()
+            .map_err(|_| anyhow::anyhow!("the joined-rows lock is poisoned"))?
+            .insert(dataset.to_string(), first);
+    }
     let path = settings.out.join(format!("{dataset}.{tag}.inputs.json"));
     let bytes = serde_json::to_vec_pretty(&result)?;
     let part = path.with_extension("json.part");
     std::fs::write(&part, &bytes).with_context(|| format!("write {}", part.display()))?;
     std::fs::rename(&part, &path).with_context(|| format!("rename to {}", path.display()))?;
-    eprintln!(
-        "    {dataset}: input arm {}: {} program rows and {} K31 rows of {}, {} as a program row, {} rows",
-        settings.arm.name(),
-        result.program_rows,
-        result.k31_rows,
-        if settings.arm == Arm::K31Program {
-            "both"
-        } else {
-            "which none enter"
-        },
-        result.k31_rows_as_program,
-        result.arm_rows
-    );
+    if settings.arm.is_program() {
+        eprintln!(
+            "    {dataset}: input arm {}: {} program rows and {} K31 rows of {}, {} as a program row, {} rows",
+            settings.arm.name(),
+            result.program_rows.unwrap_or(0),
+            result.k31_rows,
+            if settings.arm == Arm::K31Program {
+                "both"
+            } else {
+                "which none enter"
+            },
+            result.k31_rows_as_program.unwrap_or(0),
+            result.arm_rows
+        );
+    } else {
+        eprintln!(
+            "    {dataset}: input arm {}: {} added rows and {} K31 rows of {}, {} as an added row, {} rows",
+            settings.arm.name(),
+            result.added_rows.unwrap_or(0),
+            result.k31_rows,
+            if settings.arm.joined() {
+                "both"
+            } else {
+                "which none enter"
+            },
+            result.k31_rows_as_added.unwrap_or(0),
+            result.arm_rows
+        );
+    }
     Ok(ds)
+}
+
+/// The screen file's format.
+pub const SCREEN_FORMAT: &str = "grm-c3-screen-1";
+
+/// One screened learner's outer fit on one fold: its fitting genomes, the
+/// features its screen kept, and how many of them each block gave.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct ScreenLearner {
+    pub learner: &'static str,
+    pub fitting: usize,
+    pub screened: usize,
+    pub passed_first: usize,
+    pub passed_k31: usize,
+}
+
+/// One outer fold of a joined arm: its training genomes, each block's
+/// candidates (`training_candidates`), and the screened learners.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct ScreenFold {
+    pub fold: usize,
+    pub train: usize,
+    pub candidates_first: usize,
+    pub candidates_k31: usize,
+    pub learners: Vec<ScreenLearner>,
+}
+
+#[derive(Serialize)]
+struct ScreenResult<'a> {
+    format: &'static str,
+    evaluation_revision: u32,
+    dataset: &'a str,
+    scheme: &'a str,
+    seed: u64,
+    arm: &'static str,
+    first_block: &'static str,
+    screened_features: usize,
+    folds: &'a [ScreenFold],
+}
+
+/// Writes a joined arm's screen count for one split and seed beside its
+/// pick file: `<out>/<dataset>.<scheme>-s<seed>.screen.json`. Counts only.
+pub fn write_screen(
+    dataset: &str,
+    scheme: &str,
+    seed: u64,
+    screened_features: usize,
+    folds: &[ScreenFold],
+) -> Result<()> {
+    let settings = active().context("no C3 input arm is set")?;
+    let doc = ScreenResult {
+        format: SCREEN_FORMAT,
+        evaluation_revision: crate::analysis::EVALUATION_REVISION,
+        dataset,
+        scheme,
+        seed,
+        arm: settings.arm.name(),
+        first_block: match settings.arm {
+            Arm::K31Program => "program",
+            Arm::K31Counts => "counts",
+            Arm::K31Aa => "aa",
+            Arm::Program | Arm::Unitigs => bail!("{} joins no block", settings.arm.name()),
+        },
+        screened_features,
+        folds,
+    };
+    let path = settings
+        .out
+        .join(format!("{dataset}.{scheme}-s{seed}.screen.json"));
+    let part = path.with_extension("json.part");
+    std::fs::write(&part, serde_json::to_vec_pretty(&doc)?)
+        .with_context(|| format!("write {}", part.display()))?;
+    std::fs::rename(&part, &path).with_context(|| format!("rename to {}", path.display()))?;
+    Ok(())
 }
 
 #[cfg(test)]
@@ -732,6 +1088,215 @@ mod tests {
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
+    /// SYNTHETIC: a species matrix of `rows` patterns over `n` genomes, as
+    /// `grm exp-input-build` saves one.
+    fn species_matrix(n: usize, rows: usize, seed: u64) -> FeatureMatrix {
+        let mut g = Lcg(seed);
+        let mut patterns = BitMatrix::with_cols(n);
+        for _ in 0..rows {
+            patterns.push_row(Bits::from_indices(n, (0..n).filter(|_| g.below(30))).words());
+        }
+        FeatureMatrix {
+            summary: crate::matrix::MatrixSummary {
+                k: 31,
+                genomes: (0..n).map(|i| format!("syn{i}")).collect(),
+                min_support: 2,
+                n_patterns: rows,
+                kmers_distinct: rows as u64,
+                kmers_kept: rows as u64,
+                kmers_rare: 0,
+                kmers_core: 0,
+                kset_digests: Vec::new(),
+            },
+            patterns,
+            support: vec![0; rows],
+            kmer_offsets: (0..=rows as u64).collect(),
+            kmers: (0..rows as u64).collect(),
+        }
+    }
+
+    const MATRIX_ARMS: [Arm; 3] = [Arm::K31Counts, Arm::K31Aa, Arm::Unitigs];
+
+    #[test]
+    fn a_matrix_arm_holds_each_block_once_the_added_first() {
+        // SYNTHETIC: a cohort's K31 rows and an added species matrix over 80
+        // genomes, the cohort its first 60. Two K31 rows copy added rows
+        // over the cohort; a joined arm keeps the added copy alone.
+        let (_, mut ds) = cohort(60, 4, 40, 17);
+        let m = species_matrix(80, 50, 19);
+        let block = added_block(&m, &ds.columns, 3);
+        assert!(block.rows >= 10, "the fixture gives added rows");
+        let k = ds.x.rows;
+        let mut x = BitMatrix::with_cols(ds.x.cols);
+        for r in 0..k {
+            x.push_row(ds.x.row(r));
+            if r == 7 {
+                x.push_row(block.row(2));
+            }
+        }
+        x.push_row(block.row(5));
+        ds.x = x;
+        for arm in MATRIX_ARMS {
+            let (got, as_added) = matrix_arm(arm.joined(), &ds, &block);
+            let rows = rows_of(&got);
+            assert_eq!(&rows[..block.rows], &rows_of(&block)[..], "{}", arm.name());
+            if arm.joined() {
+                assert_eq!(as_added, 2);
+                assert_eq!(got.rows, block.rows + k, "{}", arm.name());
+                let distinct: HashSet<&Vec<u64>> = rows.iter().collect();
+                assert_eq!(distinct.len(), rows.len());
+                let all = Bits::ones(ds.x.cols);
+                assert_eq!(training_candidates(&got, &all, 3).1.len(), got.rows);
+            } else {
+                assert_eq!((got.rows, as_added), (block.rows, 0), "{}", arm.name());
+            }
+        }
+    }
+
+    #[test]
+    fn a_matrix_arm_does_not_change_with_the_labels() {
+        let (_, ds) = cohort(60, 4, 40, 23);
+        let m = species_matrix(70, 60, 29);
+        let flipped = Dataset {
+            x: ds.x.clone(),
+            y: ds.y.not(),
+            columns: ds.columns.clone(),
+            feature_offsets: ds.feature_offsets.clone(),
+            feature_patterns: Vec::new(),
+        };
+        for arm in MATRIX_ARMS {
+            let a = matrix_arm(arm.joined(), &ds, &added_block(&m, &ds.columns, 3)).0;
+            let b = matrix_arm(
+                arm.joined(),
+                &flipped,
+                &added_block(&m, &flipped.columns, 3),
+            )
+            .0;
+            assert_eq!(rows_of(&a), rows_of(&b), "{}", arm.name());
+        }
+    }
+
+    #[test]
+    fn no_outer_test_genome_changes_a_matrix_arms_candidates() {
+        // SYNTHETIC: 60 cohort genomes of 72 in 5 outer folds of 12. For each
+        // fold, the outer test genomes' presence in the species' added
+        // matrix is cleared, then filled; no fit's candidates may move.
+        let floor = 3;
+        for seed in [3, 5, 9] {
+            let (_, ds) = cohort(60, 4, 30, seed);
+            let m = species_matrix(72, 80, seed + 100);
+            for arm in MATRIX_ARMS {
+                for f in 0..5 {
+                    let test: Vec<usize> = (f * 12..f * 12 + 12).collect();
+                    let train = Bits::from_indices(60, (0..60).filter(|i| !test.contains(i)));
+                    let base =
+                        matrix_arm(arm.joined(), &ds, &added_block(&m, &ds.columns, floor)).0;
+                    let want = candidates(&base, &train, floor);
+                    for fill in [false, true] {
+                        let mut moved = species_matrix(72, 80, seed + 100);
+                        for r in 0..moved.patterns.rows {
+                            let mut row = Bits::from_indices(
+                                72,
+                                (0..72).filter(|&c| crate::bits::get(m.patterns.row(r), c)),
+                            );
+                            for &i in &test {
+                                let c = ds.columns[i];
+                                row = if fill {
+                                    row.or(&Bits::from_indices(72, [c]))
+                                } else {
+                                    row.and_not(&Bits::from_indices(72, [c]))
+                                };
+                            }
+                            let w = moved.patterns.words;
+                            moved.patterns.data[r * w..(r + 1) * w].copy_from_slice(row.words());
+                        }
+                        let x =
+                            matrix_arm(arm.joined(), &ds, &added_block(&moved, &ds.columns, floor))
+                                .0;
+                        assert_eq!(
+                            candidates(&x, &train, floor),
+                            want,
+                            "{}, seed {seed}, fold {f}",
+                            arm.name()
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn the_folds_at_a_seed_are_the_same_genomes_with_a_matrix_arm() {
+        // SYNTHETIC: as the program arms' test, for the three matrix arms.
+        use crate::learn::eval::{EvalConfig, evaluate};
+        use crate::learn::gbt::GbtParams;
+        use crate::learn::tree::ForestParams;
+        let n = 120;
+        let (_, ds) = cohort(n, 4, 40, 31);
+        let m = species_matrix(n, 60, 37);
+        let block = added_block(&m, &ds.columns, 3);
+        let groups: Vec<u32> = (0..n).map(|i| (i / 6) as u32).collect();
+        let duplicates = vec![vec![4, 5]];
+        let mut available = 0;
+        for seed in [42, 43, 44] {
+            let cfg = EvalConfig {
+                folds: 5,
+                inner_folds: 2,
+                scm_max_rules: 1,
+                cart_max_depth: 1,
+                forest: ForestParams {
+                    n_trees: 2,
+                    max_depth: 2,
+                    ..Default::default()
+                },
+                gbt: GbtParams {
+                    rounds: 2,
+                    max_depth: 1,
+                    ..Default::default()
+                },
+                screened_features: 4,
+                lasso_lambdas: 2,
+                seed,
+                ..Default::default()
+            };
+            let run = |x: &BitMatrix| {
+                evaluate(
+                    "synthetic__drug",
+                    x,
+                    &ds.y,
+                    &groups,
+                    &duplicates,
+                    3,
+                    None,
+                    &cfg,
+                )
+                .unwrap()
+            };
+            let k31 = run(&ds.x);
+            for arm in MATRIX_ARMS {
+                let (x, _) = matrix_arm(arm.joined(), &ds, &block);
+                assert_ne!(x.rows, ds.x.rows);
+                let got = run(&x);
+                assert_eq!(got.splits.len(), k31.splits.len());
+                for (a, b) in k31.splits.iter().zip(&got.splits) {
+                    assert_eq!(a.unavailable_reason, b.unavailable_reason, "{}", a.scheme);
+                    assert_eq!(
+                        a.test_fold,
+                        b.test_fold,
+                        "{} {} at seed {seed}",
+                        arm.name(),
+                        a.scheme
+                    );
+                    available += (a.unavailable_reason.is_none() && a.scheme == "lineage") as usize;
+                }
+            }
+        }
+        assert!(
+            available > 0,
+            "the fixture's lineage split runs at some seed"
+        );
+    }
+
     #[test]
     fn the_arm_dataset_keeps_labels_and_columns_and_counts_its_rows() {
         let (calls, ds) = cohort(40, 10, 20, 13);
@@ -745,7 +1310,8 @@ mod tests {
         for arm in [Arm::Program, Arm::K31Program] {
             let settings = Settings {
                 arm,
-                tables: dir.clone(),
+                tables: Some(dir.clone()),
+                matrix: None,
                 column: Column::Symbol,
                 rows: Rows::Amr,
                 out: dir.clone(),
@@ -765,12 +1331,12 @@ mod tests {
             assert_eq!(got.columns, ds.columns);
             assert_eq!(got.feature_offsets.len(), got.x.rows + 1);
             let p = program_block(&calls, 3).x.rows;
-            assert_eq!(result.program_rows, p);
+            assert_eq!(result.program_rows, Some(p));
             assert_eq!(result.k31_rows, k);
-            assert_eq!(result.k31_rows_as_program, 0);
+            assert_eq!(result.k31_rows_as_program, Some(0));
             let want = if arm == Arm::K31Program { p + k } else { p };
             assert_eq!((result.arm_rows, got.x.rows), (want, want));
-            assert_eq!(result.tables_read, 40);
+            assert_eq!(result.tables_read, Some(40));
         }
         std::fs::remove_dir_all(&dir).unwrap();
     }
