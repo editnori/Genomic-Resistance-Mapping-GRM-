@@ -223,6 +223,15 @@ class Arms(Temp):
         self.assertTrue(np.array_equal(a, b))
         self.assertEqual(ra["null_fit_folds"], 0)
 
+    def test_no_outer_test_label_moves_an_elastic_net_score_when_the_screen_chooses(self):
+        # The test above keeps every candidate row (fewer than SCREEN), so a screen read on the outer test genomes'
+        # labels keeps the same rows and goes unseen. Cut to 3 rows, the screen chooses among the candidates.
+        with mock.patch.object(O.screen_fold, "__defaults__", (3,)):
+            a, b, ra, _ = flipped_scores(self, "elasticnet", scheme="random", unitigs=self.unitigs())
+        self.assertTrue(np.array_equal(a, b))
+        self.assertEqual(ra["null_fit_folds"], 0)
+        self.assertTrue(all(f["screened"] == 3 < f["candidates"] for f in ra["folds"]))
+
     def test_two_runs_write_the_same_bytes(self):
         d = self.export()
         u = self.unitigs()
