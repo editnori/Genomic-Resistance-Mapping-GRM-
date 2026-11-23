@@ -180,6 +180,13 @@ class Gates(Case):
         self.refused(r"gate 12 choices: score/synthia_gamma: synthia_gamma__synthetic_drug_4 lineage seed 44 has "
                      r"choices files for folds \[0, 1, 3, 4\]")
 
+    def test_a_scored_draw_short_of_its_defaults_folds_is_refused(self):
+        self.build()
+        (self.reading / "score" / "synthia_gamma" / "choices"
+         / "synthia_gamma__synthetic_drug_4.lineage-s44.f4.choices.json").unlink()
+        self.refused(r"gate 12 choices: score/synthia_gamma: synthia_gamma__synthetic_drug_4 lineage seed 44 has "
+                     r"choices files for 4 folds, its default's result 5")
+
     def test_a_scored_draw_with_no_choices_file_is_refused(self):
         def change(key, doc):
             return None if key[:3] == ("synthia_beta__synthetic_drug_3", "study-whole", 42) else doc

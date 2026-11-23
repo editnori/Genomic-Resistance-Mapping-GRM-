@@ -107,7 +107,7 @@ python3 -I scripts/c5-settings/page_tables.py print reference/settings-arms
 | Gate | What must hold |
 |---|---|
 | 1. files | the reading holds reading.txt, count/ with score.py --count's four tables, and score/; no score.log is in it; the run's checks.txt says every check passed |
-| 2. species | score/ holds each species of lists.tsv's first run once and no other, each with its four files and choices/, and their datasets sum to the first run's |
+| 2. species | score/ holds each species of lists.tsv's first run once and no other, each with its five files and choices/, and their datasets sum to the first run's |
 | 3. datasets | each datasets.tsv holds exactly its species' first-run datasets, none in M, with each arm on each split for the five learners; species and antibiotic equal lists.tsv's |
 | 4. study | every study row is a study run at seed 42, and no study row stands on the lineage split |
 | 5. twin | the twin stands on the lineage split at seeds 45, 46 and 47 alone, no choices file is at a twin seed, and the twin is never read as an arm |
@@ -117,7 +117,7 @@ python3 -I scripts/c5-settings/page_tables.py print reference/settings-arms
 | 9. draws | each draws.tsv holds exactly the draws of the run, and datasets.tsv is their mean |
 | 10. checks | every check of each checks.tsv passed |
 | 11. cutoff | the cutoff arm's log loss is the default's on every dataset, split and learner; scm's cutoff arm is the default on every fold |
-| 12. choices | each draw and study run of the default whose arms are scored has one choices file per outer fold, each pick by the default-anchored rule and each cutoff a grid point; a draw with no choices file is a missing draw |
+| 12. choices | each draw and study run of the default whose arms are scored has one choices file per outer fold, as many as the default's result has (folds.tsv, which `gather` writes), each pick by the default-anchored rule and each cutoff a grid point; a draw with no choices file is a missing draw |
 | 13. settings | the counts of what the search chose hold trial ids, grid points and fold counts alone: no trial's settings and no row per genome |
 | 14. binary | each binary.txt names a commit, a binary and a code sha256; the page names each binary with its species unless every species ran one |
 | 15. conditions | conditions 1 and 2, 3 and 4, as read here off count.tsv, equal conditions.tsv's |

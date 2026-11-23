@@ -13,8 +13,9 @@ run's copies, made before any score was read. The reading directory holds:
                          conditions.tsv and count-plain-best.tsv
   score/<species slug>/  one species' run as run_checks.py gather copies it:
                          score.py's checks.tsv, draws.tsv and datasets.tsv, the
-                         run's binary.txt, and choices/, the driver's choices
-                         files; never score.log
+                         run's binary.txt, folds.tsv (each default draw's and
+                         study run's outer fold count), and choices/, the
+                         driver's choices files; never score.log
 
 `write` passes every gate of GATES before it writes a file, and stops at
 the first that fails, naming it. It then writes <out dir> (absent or
@@ -75,7 +76,7 @@ GRID = list(score.GRID)
 TRIALS = score.TRIALS
 HALF = score.HALF
 COUNT_FILES = ("count.tsv", "count-no-constant.tsv", "conditions.tsv", "count-plain-best.tsv")
-SPECIES_FILES = ("checks.tsv", "draws.tsv", "datasets.tsv", "binary.txt")
+SPECIES_FILES = ("checks.tsv", "draws.tsv", "datasets.tsv", "binary.txt", "folds.tsv")
 REFUSED_WHY = "constant model: refused for no candidate"
 MISSING_WHY = "missing draw"
 CHOICE_NAME = re.compile(r"(?P<dataset>[a-z0-9_]+__[a-z0-9_]+)\.(?P<scheme>lineage|study-whole)-s(?P<seed>\d+)"
@@ -86,7 +87,7 @@ TWIN_NOTE = "the twin: read for condition 3 alone, never as an arm"
 GATES = [
     (1, "files", "the reading holds reading.txt, count/ with score.py --count's four tables, and score/; no score.log "
                  "is in it; the run's checks.txt says every check passed"),
-    (2, "species", "score/ holds each species of lists.tsv's first run once and no other, each with its four files and "
+    (2, "species", "score/ holds each species of lists.tsv's first run once and no other, each with its five files and "
                    "choices/, and their datasets sum to the first run's"),
     (3, "datasets", "each datasets.tsv holds exactly its species' first-run datasets, none in M: the default, the "
                     "search, the cutoff arm, the plain best and the twin on the lineage split, and the default, the "
@@ -108,7 +109,7 @@ GATES = [
                    "rows count the same everywhere; scm's cutoff arm is the default on every fold: its cutoff 0.5 and "
                    "its calls the default's in each choices file, and its figures the default's in datasets.tsv"),
     (12, "choices", "each draw and study run of the default whose arms are scored has one choices file per outer fold, "
-                    "folds 0 on, of its dataset, split, seed and fold, with the sampler seed, gamma, grid, 30 random "
+                    "folds 0 on, as many as folds.tsv gives its default's result, of its dataset, split, seed and fold, with the sampler seed, gamma, grid, 30 random "
                     "trials and the five learners; each pick a trial id from 0 to 30 by the default-anchored rule, "
                     "each cutoff a grid point; and a draw with no choices file is a missing draw"),
     (13, "settings", "the counts of what the search chose hold trial ids, grid points and fold counts alone: no "
@@ -395,7 +396,7 @@ def check_reading(reading, lrows, checks_path):
 
     # 12 choices
     for slug in species:
-        check_choices(slug, expect[slug], files[slug]["draws.tsv"], choices[slug])
+        check_choices(slug, expect[slug], files[slug]["draws.tsv"], choices[slug], files[slug]["folds.tsv"])
 
     # 13 settings
     tables = {"page-choices.tsv": (page_choices(choices), CHOICE_COLUMNS),
@@ -490,8 +491,15 @@ def cutoff_checks(files, choices):
             ("scm's cutoff is 0.5 and its calls the default's in each choices file", f_pass, f_made)]
 
 
-def check_choices(slug, expect, draws, choices):
-    """Gate 12 for one species."""
+def check_choices(slug, expect, draws, choices, folds_rows):
+    """Gate 12 for one species. folds_rows is folds.tsv: each default draw's and study run's outer fold count, as
+    run_checks.py gather read it from the default's result."""
+    want = {}
+    for r in folds_rows:
+        key = (r["dataset"], r["scheme"], int(r["seed"]))
+        if key in want or not r["folds"].isdigit():
+            stop(12, f"score/{slug}/folds.tsv: {key[0]} {key[1]} seed {key[2]}: no single outer fold count")
+        want[key] = int(r["folds"])
     runs = sorted({(e["dataset"], e["scheme"], int(e["seed"])) for e in expect
                    if e["arm"] == DEFAULT and e["role"] in ("draw", "study")})
     scored = {}
@@ -519,6 +527,11 @@ def check_choices(slug, expect, draws, choices):
         if any(s != "1" for s, _ in marks):
             # A draw with a fold missing is not scored; its files may stand short of the default's folds.
             continue
+        if key not in want:
+            stop(12, f"score/{slug}/folds.tsv gives {key[0]} {key[1]} seed {key[2]} no outer fold count")
+        if len(folds) != want[key]:
+            stop(12, f"score/{slug}: {key[0]} {key[1]} seed {key[2]} has choices files for {len(folds)} folds, its "
+                     f"default's result {want[key]}")
         for fold in folds:
             doc = choices[key + (fold,)]
             check_choice_doc(slug, key, fold, doc)

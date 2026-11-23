@@ -196,6 +196,10 @@ def build(top, missing=False, constant=False, change_draws=None, change_choice=N
                                           {"file": "default/x.pick.json", "check": "fold 1 scm: SYNTHETIC",
                                            "passed": True, "detail": ""}], ["file", "check", "passed", "detail"])
         (folder / "binary.txt").write_text(f"commit {COMMIT}\ngrm {GRM}\ncode {CODE}\n", encoding="utf-8")
+        write_tsv(folder / "folds.tsv", [{"dataset": e["dataset"], "scheme": e["scheme"], "seed": e["seed"],
+                                          "folds": FOLDS} for e in expect_rows(slug, datasets)
+                                         if e["arm"] == "default" and e["role"] in ("draw", "study")],
+                  ["dataset", "scheme", "seed", "folds"])
         every += C3.read_tsv(folder / "datasets.tsv")
     count_files(reading, every)
     return reading, top / "lists.tsv", top / "checks.txt"

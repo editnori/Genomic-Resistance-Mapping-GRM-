@@ -199,8 +199,11 @@ class Gather(Case):
         path = self.top / "checks.txt"
         path.write_text("\n".join(checks.report(lines, aside)) + "\n", encoding="utf-8")
         n = checks.gather(copies, lists, path, self.top / "reading")
-        # 4 datasets: 3 lineage draws and 1 study run each, 5 folds.
-        self.assertEqual(n, 3 * 4 + 4 * 4 * 5)
+        # 4 datasets: 3 lineage draws and 1 study run each, 5 folds; five files a species with folds.tsv.
+        self.assertEqual(n, 3 * 5 + 4 * 4 * 5)
+        folds = [r for p in sorted((self.top / "reading" / "score").glob("*/folds.tsv")) for r in fx.C3.read_tsv(p)]
+        self.assertEqual(len(folds), 4 * 4)
+        self.assertEqual({r["folds"] for r in folds}, {str(fx.FOLDS)})
         got = sorted(p.relative_to(self.top / "reading").as_posix() for p in (self.top / "reading").rglob("*")
                      if p.is_file())
         self.assertFalse([g for g in got if g.endswith("score.log")])

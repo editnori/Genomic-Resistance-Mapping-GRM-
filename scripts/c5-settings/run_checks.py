@@ -25,8 +25,10 @@ record.
 `gather` copies, for each species, score.py's checks.tsv, draws.tsv and
 datasets.tsv, the run's binary.txt and every choices file into
 <reading dir>/score/<slug>/, the layout page_tables.py reads, once
-<checks.txt> says that every check passed. It copies nothing else: no
-score.log, no other result, no log.
+<checks.txt> says that every check passed, and writes folds.tsv there: each
+default draw's and study run's outer fold count, the one figure of a default
+result it reads, so that gate 12 holds each scored draw's choices files to
+it. It copies nothing else: no score.log, no other result, no log.
 """
 
 import csv
@@ -64,6 +66,9 @@ DONE_KEYS = ["DONE", "species", "time", "binary", "grm", "code", "code_sha256", 
 GATHER = (("score/checks.tsv", "checks.tsv"), ("score/draws.tsv", "draws.tsv"), ("score/datasets.tsv", "datasets.tsv"),
           ("binary.txt", "binary.txt"))
 CHOICES = "results/picks/choices"
+# The outer fold count of each default draw and study run, which gather writes for gate 12 of page_tables.py.
+FOLDS_FILE = "folds.tsv"
+FOLDS_COLUMNS = ["dataset", "scheme", "seed", "folds"]
 
 
 def load(path):
@@ -326,13 +331,22 @@ def gather(copies, lists_path, checks_path, reading):
     target = reading / "score"
     if target.exists() and any(target.iterdir()):
         raise SystemExit(f"{target} is not empty")
-    species = sorted({r["species_slug"] for r in first_run(load(lists_path))})
+    lrows = load(lists_path)
+    species = sorted({r["species_slug"] for r in first_run(lrows)})
     n = 0
     for slug in species:
         (target / slug / "choices").mkdir(parents=True, exist_ok=True)
         for src, dst in GATHER:
             (target / slug / dst).write_bytes((copies / slug / src).read_bytes())
             n += 1
+        picks = copies / slug / "results" / "picks"
+        rows = [dict(zip(expect.COLUMNS, r)) for r in expect_rows(lrows, slug)]
+        folds = sorted((e["dataset"], e["scheme"], int(e["seed"]), fold_count(picks / e["file"])) for e in rows
+                       if e["arm"] == "default" and e["role"] in ("draw", "study"))
+        with open(target / slug / FOLDS_FILE, "w", encoding="utf-8") as handle:
+            handle.write("\t".join(FOLDS_COLUMNS) + "\n")
+            handle.writelines("\t".join(map(str, f)) + "\n" for f in folds)
+        n += 1
         for p in sorted((copies / slug / CHOICES).glob("*.choices.json")):
             (target / slug / "choices" / p.name).write_bytes(p.read_bytes())
             n += 1
