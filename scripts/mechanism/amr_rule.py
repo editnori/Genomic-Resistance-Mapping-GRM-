@@ -165,7 +165,7 @@ class Database:
         cat = os.path.join(directory, "ReferenceGeneCatalog.txt")
         hier = os.path.join(directory, "ReferenceGeneHierarchy.txt")
         self.allele_family, self.families = {}, set()
-        self.subclass_classes = {}
+        self.subclass_classes, self.disrupt_families = {}, set()
         with open(cat, encoding="utf-8", newline="") as f:
             for row in csv.DictReader(f, delimiter="\t", quoting=csv.QUOTE_NONE):
                 fam = (row.get("gene_family") or "").strip()
@@ -175,6 +175,8 @@ class Database:
                 allele = (row.get("allele") or "").strip()
                 if allele:
                     self.allele_family[allele] = fam
+                if (row.get("subtype") or "").strip() == "POINT_DISRUPT":
+                    self.disrupt_families.add(fam)
                 classes = [t.strip() for t in (row.get("class") or "").split("/") if t.strip()]
                 for s in (row.get("subclass") or "").split("/"):
                     s = s.strip()
@@ -189,8 +191,13 @@ class Database:
         if not self.families:
             refuse("the database's catalogue names no gene_family")
 
-    def family(self, symbol):
-        """The family of an element symbol, as the database names it."""
+    def family(self, symbol, subtype="AMR"):
+        """The family of an element symbol, as the database names it: the
+        allele's gene_family; else the symbol where it is a gene_family; else
+        its first ancestor in the hierarchy that is a gene_family. A row of
+        Subtype POINT_DISRUPT names a disrupted core gene as
+        <gene_family>_<change>; its family is that gene_family when the
+        catalogue lists it with Subtype POINT_DISRUPT (lane question 10)."""
         if symbol in self.allele_family:
             return self.allele_family[symbol]
         if symbol in self.families:
@@ -201,7 +208,12 @@ class Database:
                 return node
             seen.add(node)
             node = self.parent.get(node)
-        refuse(f"element symbol {symbol!r}: neither the catalogue nor the hierarchy gives it a family")
+        if subtype == "POINT_DISRUPT" and "_" in symbol:
+            head = symbol.split("_", 1)[0]
+            if head in self.disrupt_families:
+                return head
+        # The message names no symbol: a mutation's name holds a position.
+        refuse(f"an element symbol of Subtype {subtype}: neither the catalogue nor the hierarchy gives it a family")
 
     def rule_names_class(self, rule, cls):
         """Whether a published rule names a drug class: a C: token equal to it,

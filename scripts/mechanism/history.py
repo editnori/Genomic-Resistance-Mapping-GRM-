@@ -216,7 +216,7 @@ def genome_cells(rows, db, variant="tool_default", rule=None):
                 p = True
             else:
                 g = True
-                fams = fams | {db.family(r["symbol"])}
+                fams = fams | {db.family(r["symbol"], r["subtype"])}
             out[c] = (p, g, fams)
     return out
 
@@ -493,7 +493,7 @@ def timesplit_rows(species, species_name, reports, rules, tables, db, folds_dir)
                     if ar.is_point(r):
                         out_.add("point" if reading == "point_as_one" else "point:" + r["symbol"])
                     else:
-                        out_.add(db.family(r["symbol"]))
+                        out_.add(db.family(r["symbol"], r["subtype"]))
                 return out_
 
             seen = set()

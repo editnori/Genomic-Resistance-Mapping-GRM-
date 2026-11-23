@@ -105,6 +105,15 @@ class Families(unittest.TestCase):
         with self.assertRaises(amr.Refusal):
             self.db.family("madeUp-1")
 
+    def test_a_disrupted_core_gene_takes_its_catalogue_family(self):
+        self.assertEqual(self.db.family("synR_Q11Ter42", "POINT_DISRUPT"), "synR")
+        # only a family the catalogue lists with Subtype POINT_DISRUPT, and only for that subtype
+        with self.assertRaises(amr.Refusal) as cm:
+            self.db.family("synQ_Q11Ter42", "POINT_DISRUPT")
+        self.assertNotIn("Q11", str(cm.exception))
+        with self.assertRaises(amr.Refusal):
+            self.db.family("synR_Q11Ter42", "AMR")
+
     def test_a_rule_names_a_class_by_c_or_by_a_subclass_of_it(self):
         self.assertTrue(self.db.rule_names_class([["C:QUINOLONE"]], "QUINOLONE"))
         self.assertTrue(self.db.rule_names_class([["S:CARBAPENEM"]], "BETA-LACTAM"))

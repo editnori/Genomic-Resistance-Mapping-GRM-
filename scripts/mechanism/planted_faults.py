@@ -81,7 +81,7 @@ FAULTS = [
      lambda: mock.patch.object(history, "permutation_p", genome_permutation)),
     (10, "a family named other than as the database names it",
      "tests.mechanism.test_history.Vote.test_family_mix_names_the_databases_families",
-     lambda: mock.patch.object(ar.Database, "family", lambda self, symbol: symbol)),
+     lambda: mock.patch.object(ar.Database, "family", lambda self, symbol, subtype="AMR": symbol)),
 ]
 
 

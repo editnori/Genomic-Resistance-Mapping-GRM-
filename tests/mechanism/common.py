@@ -49,18 +49,19 @@ ROWS = {
              ("qnrS1", "core", "AMR", "AMR", "QUINOLONE", "QUINOLONE", "EXACTX")],
     "neither": [("tetS", "core", "AMR", "AMR", "TETRACYCLINE", "TETRACYCLINE", "EXACTX")],
     "partial": [("qnrB4", "core", "AMR", "AMR", "QUINOLONE", "QUINOLONE", "PARTIALX")],
-    "disrupt": [("synR", "core", "AMR", "POINT_DISRUPT", "QUINOLONE", "QUINOLONE", "BLASTX")],
+    "disrupt": [("synR_Q11Ter42", "core", "AMR", "POINT_DISRUPT", "QUINOLONE", "QUINOLONE", "BLASTX")],
     "plus_only": [("qnrS1", "plus", "AMR", "AMR", "QUINOLONE", "QUINOLONE", "EXACTX")],
     "empty": [],
 }
 DB_CATALOG = [
-    # allele, gene_family, class, subclass
-    ("qnrS1", "qnrS", "QUINOLONE", "QUINOLONE"),
-    ("qnrB4", "qnrB", "QUINOLONE", "QUINOLONE"),
-    ("", "tetS", "TETRACYCLINE", "TETRACYCLINE"),
-    ("", "synR", "QUINOLONE", "QUINOLONE"),
-    ("blaKPC-2", "blaKPC", "BETA-LACTAM", "CARBAPENEM"),
-    ("blaX-1", "blaX", "BETA-LACTAM", "CEPHALOSPORIN"),
+    # allele, gene_family, class, subclass, subtype
+    ("qnrS1", "qnrS", "QUINOLONE", "QUINOLONE", "AMR"),
+    ("qnrB4", "qnrB", "QUINOLONE", "QUINOLONE", "AMR"),
+    ("", "tetS", "TETRACYCLINE", "TETRACYCLINE", "AMR"),
+    ("", "synR", "QUINOLONE", "QUINOLONE", "POINT_DISRUPT"),
+    ("", "synQ", "QUINOLONE", "QUINOLONE", "AMR"),
+    ("blaKPC-2", "blaKPC", "BETA-LACTAM", "CARBAPENEM", "AMR"),
+    ("blaX-1", "blaX", "BETA-LACTAM", "CEPHALOSPORIN", "AMR"),
 ]
 DB_HIERARCHY = [("blaX-9", "blaX"), ("blaX", "BETA-LACTAM"), ("BETA-LACTAM", "AMR")]
 
@@ -82,8 +83,8 @@ def write_db(directory):
     d.mkdir(parents=True, exist_ok=True)
     with open(d / "ReferenceGeneCatalog.txt", "w", encoding="utf-8") as f:
         f.write("allele\tgene_family\twhitelisted_taxa\tproduct_name\tscope\ttype\tsubtype\tclass\tsubclass\n")
-        for allele, fam, cls, sub in DB_CATALOG:
-            f.write(f"{allele}\t{fam}\t\tmade up\tcore\tAMR\tAMR\t{cls}\t{sub}\n")
+        for allele, fam, cls, sub, subtype in DB_CATALOG:
+            f.write(f"{allele}\t{fam}\t\tmade up\tcore\tAMR\t{subtype}\t{cls}\t{sub}\n")
     with open(d / "ReferenceGeneHierarchy.txt", "w", encoding="utf-8") as f:
         f.write("node_id\tparent_node_id\tsymbol\n")
         for node, parent in DB_HIERARCHY:
