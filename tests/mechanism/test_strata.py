@@ -142,6 +142,49 @@ class Strata(unittest.TestCase):
         self.assertIn("counts from scores differ from metrics", d["why"])
         self.assertEqual(c.read_tsv(out / "strata.tsv"), [])
 
+    def test_hard_check_fails_when_tn_and_fp_differ(self):
+        c.write_species(self.top, {c.DATASET: (mixed(), {})})
+        path = self.top / "reports" / f"{c.DATASET}.json"
+        rep = json.loads(path.read_text())
+        m = rep["splits"][1]["learners"][2]["metrics"]
+        m["tn"], m["fp"] = m["tn"] - 1, m["fp"] + 1
+        path.write_text(json.dumps(rep))
+        rc, err, out = run(self.top)
+        self.assertEqual(rc, 0, err)
+        d = c.read_tsv(out / "datasets.tsv")[0]
+        self.assertEqual((d["hard_check"], d["entered"], d["learner_rows_equal"]), ("0", "0", "11"))
+
+    def test_a_score_of_exactly_one_half_is_a_call(self):
+        def scores(split, learner, i, g):
+            return 0.5 if g["resistant"] else 0.1
+        rc, err, out = self.go({c.DATASET: (mixed(), {"scores": scores})})
+        self.assertEqual(rc, 0, err)
+        d = c.read_tsv(out / "datasets.tsv")[0]
+        self.assertEqual((d["hard_check"], d["entered"]), ("1", "1"), d["why"])
+        got = cells(out)
+        self.assertEqual(got[(c.DATASET, "lineage", "scm", "gene_only")]["resistant_called"], "18")
+
+    def test_no_call_is_copied_by_class(self):
+        c.write_species(self.top, {c.DATASET: (mixed(), {})})
+        path = self.top / "reports" / f"{c.DATASET}.json"
+        rep = json.loads(path.read_text())
+        rep["splits"][1]["learners"][0]["no_call"] = {"resistant": 7, "susceptible": 0}
+        path.write_text(json.dumps(rep))
+        rc, err, out = run(self.top)
+        self.assertEqual(rc, 0, err)
+        nc = {(r["split"], r["learner"]): r for r in c.read_tsv(out / "nocall.tsv")}
+        self.assertEqual((nc[("lineage", "scm")]["no_call_resistant"], nc[("lineage", "scm")]["no_call_susceptible"]),
+                         ("7", "0"))
+
+    def test_only_strata_under_10_resistant_are_pooled(self):
+        rc, err, out = self.go()
+        self.assertEqual(rc, 0, err)
+        pooled = {(r["split"], r["row"], r["stratum"]) for r in c.read_tsv(out / "pooled.tsv")}
+        # gene only holds 18 and point only 15 resistant genomes: never pooled; both (6) and neither (9) are
+        self.assertNotIn(("lineage", "scm", "gene_only"), pooled)
+        self.assertNotIn(("lineage", "scm", "point_only"), pooled)
+        self.assertIn(("lineage", "scm", "both"), pooled)
+
     def test_catalog_calls_must_equal_catalog_resistant(self):
         c.write_species(self.top, {c.DATASET: (mixed(), {})})
         path = self.top / "reports" / f"{c.DATASET}.json"
