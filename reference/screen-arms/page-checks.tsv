@@ -1,0 +1,50 @@
+source	check	passed	made
+score.py checks.tsv	a lineage result names the default's pick	3490	3490
+score.py checks.tsv	a study result names no default of its own	220	220
+score.py checks.tsv	a twin seed is the twin's and no draw's	699	699
+score.py checks.tsv	an unavailable split has no fold	5	5
+score.py checks.tsv	below 800 genomes the floor arm's result is the default's, timing apart	454	454
+score.py checks.tsv	cart: the outer calls give the split's balanced accuracy	3710	3710
+score.py checks.tsv	dataset, scheme, seed and inner folds	3715	3715
+score.py checks.tsv	each fold's outer calls are its test genomes'	3710	3710
+score.py checks.tsv	exists	3715	3715
+score.py checks.tsv	fold 0: no inner fit	3710	3710
+score.py checks.tsv	fold 1: no inner fit	3710	3710
+score.py checks.tsv	fold 2: no inner fit	3710	3710
+score.py checks.tsv	fold 3: no inner fit	3710	3710
+score.py checks.tsv	fold 4: no inner fit	3710	3710
+score.py checks.tsv	fold tests sum to the tested genomes	3710	3710
+score.py checks.tsv	folds in order	3710	3710
+score.py checks.tsv	format and revision	3715	3715
+score.py checks.tsv	gbt: the outer calls give the split's balanced accuracy	3710	3710
+score.py checks.tsv	inputs: a fit time for each learner of each outer fold	2262	2262
+score.py checks.tsv	inputs: a fold file's run fits no final model	165	165
+score.py checks.tsv	inputs: each adjusted screen names its strata, no fewer than the informative ones	1508	1508
+score.py checks.tsv	inputs: each outer screen reads its fold's candidates, rf its training genomes, gbt and lasso no more	2262	2262
+score.py checks.tsv	inputs: each screen keeps the budget, or every candidate if fewer	2262	2262
+score.py checks.tsv	inputs: every fit is of the run's splits	2262	2262
+score.py checks.tsv	inputs: every screen by the arm's rule	2262	2262
+score.py checks.tsv	inputs: format, revision, dataset, tag, seed and arm	2262	2262
+score.py checks.tsv	inputs: rf, gbt and lasso screen once in each outer fold	2262	2262
+score.py checks.tsv	inputs: the arm's floor, and the result's	2262	2262
+score.py checks.tsv	inputs: the arm's rule and budget	2262	2262
+score.py checks.tsv	inputs: the chi-square screens name no strata	754	754
+score.py checks.tsv	inputs: the final models screen once each on the dataset's rows, rf on every genome	2097	2097
+score.py checks.tsv	inputs: the result's outer folds, with its training genomes	2262	2262
+score.py checks.tsv	lasso: the outer calls give the split's balanced accuracy	3710	3710
+score.py checks.tsv	release report	3715	3715
+score.py checks.tsv	rf: the outer calls give the split's balanced accuracy	3710	3710
+score.py checks.tsv	scm and cart, which read no screen, make the default's calls in every fold	1508	1508
+score.py checks.tsv	scm: the outer calls give the split's balanced accuracy	3710	3710
+score.py checks.tsv	seed 42: each learner's lineage figure is the release report's	233	233
+score.py checks.tsv	seed 42: the default is held to the release report	233	233
+score.py checks.tsv	seed 42: the default's learner is the one the release serves	233	233
+score.py checks.tsv	seed 42: the default's random-split figure is the release report's	233	233
+score.py checks.tsv	the default and the twin write no inputs file	1453	1453
+score.py checks.tsv	the default's learner is the later of its tied set, as the release breaks a tie	3490	3490
+score.py checks.tsv	the five learners in order	3715	3715
+score.py checks.tsv	the folds are the default's at the same dataset, split and seed, by class	2262	2262
+score.py checks.tsv	the result's scheme is its split's	3715	3715
+score.py checks.tsv	tie rule	3710	3710
+datasets.tsv	a screen arm's scm and cart figures equal the default's	1152	1152
+datasets.tsv	below 800 genomes the floor arm's figures equal the default's	860	860

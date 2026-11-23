@@ -1,0 +1,193 @@
+decides	set	split	pair	learner	measure	orientation	withdrawn	datasets	entered	not_scored	constant	better	worse	same	median_difference	species	interval_lo	interval_hi	sign_p	holm_p	family	meets_1	meets_2
+1	all	lineage	cmh-4000-k31	rf	balanced_accuracy	higher	0	233	232	1	0	57	50	125	0.000906907062	23	0.0	0.003930362654	0.281046342527	1.0	1	0	0
+1	all	lineage	cmh-4000-k31	rf	recall	higher	0	233	232	1	0	63	58	111	0.0	23	0.0	0.004721107975	0.358147057288		0		
+1	all	lineage	cmh-4000-k31	rf	specificity	higher	0	233	232	1	0	46	46	140	0.0	23	0.0	0.001738431568	0.541479740174		0		
+1	all	lineage	cmh-4000-k31	rf	vme	lower	0	233	232	1	0	63	58	111	0.0	23	-0.004901960784	0.0	0.358147057288		0		
+1	all	lineage	cmh-4000-k31	rf	me	lower	0	233	232	1	0	46	46	140	0.0	23	-0.002070393375	0.0	0.541479740174		0		
+1	all	lineage	cmh-4000-k31	rf	log_loss	lower	0	233	232	1	0	69	43	120	-0.008848283022	23	-0.011835502434	-0.002825791563	0.00888289064		0		
+1	all	lineage	cmh-4000-k31	gbt	balanced_accuracy	higher	0	233	232	1	0	62	45	125	0.00242929476	23	0.0	0.00535218622	0.060756210938	1.0	1	0	0
+1	all	lineage	cmh-4000-k31	gbt	recall	higher	0	233	232	1	0	66	62	104	0.0	23	0.0	0.004273504274	0.395503724701		0		
+1	all	lineage	cmh-4000-k31	gbt	specificity	higher	0	233	232	1	0	58	49	125	0.0	23	0.0	0.003703703704	0.21972005089		0		
+1	all	lineage	cmh-4000-k31	gbt	vme	lower	0	233	232	1	0	66	62	104	0.0	23	-0.004273504273	0.0	0.395503724701		0		
+1	all	lineage	cmh-4000-k31	gbt	me	lower	0	233	232	1	0	58	49	125	0.0	23	-0.003703703704	0.0	0.21972005089		0		
+1	all	lineage	cmh-4000-k31	gbt	log_loss	lower	0	233	232	1	0	75	54	103	-0.004460527569	23	-0.010295698235	-0.000216243281	0.038924703377		0		
+1	all	lineage	cmh-4000-k31	lasso	balanced_accuracy	higher	0	233	232	1	0	58	42	132	0.001530979904	23	0.0	0.006747390737	0.066605309604	1.0	1	0	0
+1	all	lineage	cmh-4000-k31	lasso	recall	higher	0	233	232	1	0	71	55	106	0.0	23	0.0	0.008438818565	0.090612030441		0		
+1	all	lineage	cmh-4000-k31	lasso	specificity	higher	0	233	232	1	0	47	55	130	0.0	23	-0.003144654088	0.0	0.813528165958		0		
+1	all	lineage	cmh-4000-k31	lasso	vme	lower	0	233	232	1	0	71	55	106	0.0	23	-0.008438818565	0.0	0.090612030441		0		
+1	all	lineage	cmh-4000-k31	lasso	me	lower	0	233	232	1	0	47	55	130	0.0	23	0.0	0.003144654088	0.813528165958		0		
+1	all	lineage	cmh-4000-k31	lasso	log_loss	lower	0	233	232	1	0	86	56	90	-0.003896627477	23	-0.018021416013	0.001500067618	0.007328271524		0		
+1	all	lineage	cmh-16000-k31	rf	balanced_accuracy	higher	0	233	232	1	0	36	71	125	-0.002790802063	23	-0.008495352403	0.0	0.999777348776	1.0	1	0	0
+1	all	lineage	cmh-16000-k31	rf	recall	higher	0	233	232	1	0	44	73	115	0.0	23	-0.008333333333	0.0	0.997340360326		0		
+1	all	lineage	cmh-16000-k31	rf	specificity	higher	0	233	232	1	0	48	48	136	0.0	23	0.0	0.00072859745	0.540610982318		0		
+1	all	lineage	cmh-16000-k31	rf	vme	lower	0	233	232	1	0	44	73	115	0.0	23	0.0	0.008333333333	0.997340360326		0		
+1	all	lineage	cmh-16000-k31	rf	me	lower	0	233	232	1	0	48	48	136	0.0	23	-0.000658761528	0.0	0.540610982318		0		
+1	all	lineage	cmh-16000-k31	rf	log_loss	lower	0	233	232	1	0	49	68	115	0.003095002896	23	-0.00425740145	0.009293864736	0.968002044677		0		
+1	all	lineage	cmh-16000-k31	gbt	balanced_accuracy	higher	0	233	232	1	0	59	29	144	0.003251297181	23	0.000473484848	0.00831887671	0.000912014323	0.018240286456	1	1	1
+1	all	lineage	cmh-16000-k31	gbt	recall	higher	0	233	232	1	0	70	38	124	0.00280064717	23	0.0	0.007184441966	0.001342349021		0		
+1	all	lineage	cmh-16000-k31	gbt	specificity	higher	0	233	232	1	0	59	42	131	0.003694149673	23	0.0	0.007262860836	0.05545917483		0		
+1	all	lineage	cmh-16000-k31	gbt	vme	lower	0	233	232	1	0	70	38	124	-0.00280064717	23	-0.007246376811	0.0	0.001342349021		0		
+1	all	lineage	cmh-16000-k31	gbt	me	lower	0	233	232	1	0	59	42	131	-0.003694149673	23	-0.007246376812	0.0	0.05545917483		0		
+1	all	lineage	cmh-16000-k31	gbt	log_loss	lower	0	233	232	1	0	84	35	113	-0.011854238568	23	-0.016890266017	-0.004078085301	4.091091e-06		0		
+1	all	lineage	cmh-16000-k31	lasso	balanced_accuracy	higher	0	233	232	1	0	59	28	145	0.00390722346	23	0.001449275363	0.007374781866	0.000584318749	0.012270693723	1	1	1
+1	all	lineage	cmh-16000-k31	lasso	recall	higher	0	233	232	1	0	72	39	121	0.004129519226	23	0.0	0.009523809524	0.001119172859		0		
+1	all	lineage	cmh-16000-k31	lasso	specificity	higher	0	233	232	1	0	59	42	131	0.0	23	0.0	0.002748331371	0.05545917483		0		
+1	all	lineage	cmh-16000-k31	lasso	vme	lower	0	233	232	1	0	72	39	121	-0.004129519226	23	-0.009523809524	0.0	0.001119172859		0		
+1	all	lineage	cmh-16000-k31	lasso	me	lower	0	233	232	1	0	59	42	131	0.0	23	-0.002748331371	0.0	0.05545917483		0		
+1	all	lineage	cmh-16000-k31	lasso	log_loss	lower	0	233	232	1	0	84	45	103	-0.006208926546	23	-0.016403237206	0.0	0.000377945136		0		
+1	all	lineage	twin-k31	scm	balanced_accuracy	higher	0	233	232	1	0	29	27	176	0.0	23	-9.6450617e-05	0.000525535642	0.446926547418	1.0	1	0	0
+1	all	lineage	twin-k31	scm	recall	higher	0	233	232	1	0	44	43	145	0.0	23	0.0	0.0	0.5		0		
+1	all	lineage	twin-k31	scm	specificity	higher	0	233	232	1	0	45	36	151	0.0	23	0.0	0.00104493208	0.187087208802		0		
+1	all	lineage	twin-k31	scm	vme	lower	0	233	232	1	0	44	43	145	0.0	23	0.0	0.0	0.5		0		
+1	all	lineage	twin-k31	scm	me	lower	0	233	232	1	0	45	36	151	0.0	23	-0.000896057348	0.0	0.187087208802		0		
+1	all	lineage	twin-k31	scm	log_loss	lower	0	233	232	1	0	85	79	68	0.0	23	-0.002541457055	0.001772563581	0.348170484645		0		
+1	all	lineage	twin-k31	cart	balanced_accuracy	higher	0	233	232	1	0	27	30	175	0.0	23	-9.5443431e-05	0.0	0.701679119813	1.0	1	0	0
+1	all	lineage	twin-k31	cart	recall	higher	0	233	232	1	0	40	44	148	0.0	23	0.0	0.0	0.707176602639		0		
+1	all	lineage	twin-k31	cart	specificity	higher	0	233	232	1	0	37	38	157	0.0	23	0.0	0.0	0.591223074725		0		
+1	all	lineage	twin-k31	cart	vme	lower	0	233	232	1	0	40	44	148	0.0	23	0.0	0.0	0.707176602639		0		
+1	all	lineage	twin-k31	cart	me	lower	0	233	232	1	0	37	38	157	0.0	23	0.0	0.0	0.591223074725		0		
+1	all	lineage	twin-k31	cart	log_loss	lower	0	233	232	1	0	81	56	95	-0.000235034842	23	-0.003338236155	0.000291069136	0.019964089834		0		
+1	all	lineage	twin-k31	rf	balanced_accuracy	higher	0	233	232	1	0	18	22	192	-0.000526913739	23	-0.002808519934	0.0	0.785204746078	1.0	1	0	0
+1	all	lineage	twin-k31	rf	recall	higher	0	233	232	1	0	25	39	168	0.0	23	-0.001291989664	0.0	0.970029405217		0		
+1	all	lineage	twin-k31	rf	specificity	higher	0	233	232	1	0	21	28	183	0.0	23	-0.000665335995	0.0	0.873565134916		0		
+1	all	lineage	twin-k31	rf	vme	lower	0	233	232	1	0	25	39	168	0.0	23	0.0	0.001291989664	0.970029405217		0		
+1	all	lineage	twin-k31	rf	me	lower	0	233	232	1	0	21	28	183	0.0	23	0.0	0.000665335995	0.873565134916		0		
+1	all	lineage	twin-k31	rf	log_loss	lower	0	233	232	1	0	10	18	204	0.00109019354	23	-0.00020228794	0.002447625378	0.956420723349		0		
+1	all	lineage	twin-k31	gbt	balanced_accuracy	higher	0	233	232	1	0	40	33	159	0.0	23	-0.000251538427	0.001154401154	0.241394278422	1.0	1	0	0
+1	all	lineage	twin-k31	gbt	recall	higher	0	233	232	1	0	53	47	132	0.0	23	-0.00036231884	0.0	0.308649706795		0		
+1	all	lineage	twin-k31	gbt	specificity	higher	0	233	232	1	0	37	38	157	0.0	23	0.0	0.001019099368	0.591223074725		0		
+1	all	lineage	twin-k31	gbt	vme	lower	0	233	232	1	0	53	47	132	0.0	23	0.0	0.00045475216	0.308649706795		0		
+1	all	lineage	twin-k31	gbt	me	lower	0	233	232	1	0	37	38	157	0.0	23	-0.001064962726	0.0	0.591223074725		0		
+1	all	lineage	twin-k31	gbt	log_loss	lower	0	233	232	1	0	36	48	148	0.001102288878	23	-0.000818944319	0.00346686334	0.922171768143		0		
+1	all	lineage	twin-k31	lasso	balanced_accuracy	higher	0	233	232	1	0	28	19	185	0.0	23	-0.000995807128	0.000188964475	0.121480108642	1.0	1	0	0
+1	all	lineage	twin-k31	lasso	recall	higher	0	233	232	1	0	41	32	159	0.0	23	0.0	0.000957414215	0.174590919085		0		
+1	all	lineage	twin-k31	lasso	specificity	higher	0	233	232	1	0	33	31	168	0.0	23	-0.002592525473	0.0	0.450326623126		0		
+1	all	lineage	twin-k31	lasso	vme	lower	0	233	232	1	0	41	32	159	0.0	23	-0.000577375259	0.0	0.174590919085		0		
+1	all	lineage	twin-k31	lasso	me	lower	0	233	232	1	0	33	31	168	0.0	23	0.0	0.002592525473	0.450326623126		0		
+1	all	lineage	twin-k31	lasso	log_loss	lower	0	233	232	1	0	52	54	126	0.000126354141	23	-0.001901850203	0.005517119533	0.614540504531		0		
+1	all	study	cmh-4000-k31	rf	balanced_accuracy	higher	0	55	55	0	0	11	8	36	0.000685430002	8	-0.00925925926	0.006912442396	0.323802947998		0		
+1	all	study	cmh-4000-k31	rf	recall	higher	0	55	55	0	0	13	14	28	0.0	8	-0.003105590062	0.014534734684	0.649445980787		0		
+1	all	study	cmh-4000-k31	rf	specificity	higher	0	55	55	0	0	14	12	29	0.005882352941	8	-0.024096385542	0.011157796452	0.422509491444		0		
+1	all	study	cmh-4000-k31	rf	vme	lower	0	55	55	0	0	13	14	28	0.0	8	-0.014925373135	0.003105590062	0.649445980787		0		
+1	all	study	cmh-4000-k31	rf	me	lower	0	55	55	0	0	14	12	29	-0.005882352941	8	-0.010893246188	0.024096385542	0.422509491444		0		
+1	all	study	cmh-4000-k31	rf	log_loss	lower	0	55	55	0	0	19	11	25	-0.007648991258	8	-0.018363040963	0.002150680329	0.100244211033		0		
+1	all	study	cmh-4000-k31	gbt	balanced_accuracy	higher	0	55	55	0	0	15	9	31	0.005458124553	8	0.0	0.009153366008	0.15372812748		0		
+1	all	study	cmh-4000-k31	gbt	recall	higher	0	55	55	0	0	18	9	28	0.0	8	-0.001552795031	0.004739336493	0.061039060354		0		
+1	all	study	cmh-4000-k31	gbt	specificity	higher	0	55	55	0	0	17	10	28	0.007092198581	8	0.0	0.012987012987	0.123894281685		0		
+1	all	study	cmh-4000-k31	gbt	vme	lower	0	55	55	0	0	18	9	28	0.0	8	-0.003956969834	0.001439539348	0.061039060354		0		
+1	all	study	cmh-4000-k31	gbt	me	lower	0	55	55	0	0	17	10	28	-0.007092198581	8	-0.012987012987	0.0	0.123894281685		0		
+1	all	study	cmh-4000-k31	gbt	log_loss	lower	0	55	55	0	0	22	13	20	-0.008846804614	8	-0.021241244376	-0.000814899203	0.087732624495		0		
+1	all	study	cmh-4000-k31	lasso	balanced_accuracy	higher	0	55	55	0	0	19	11	25	0.006745457269	8	0.000255053394	0.0124872579	0.100244211033		0		
+1	all	study	cmh-4000-k31	lasso	recall	higher	0	55	55	0	0	14	12	29	0.0	8	-0.004651162791	0.01724137931	0.422509491444		0		
+1	all	study	cmh-4000-k31	lasso	specificity	higher	0	55	55	0	0	22	12	21	0.007936507937	8	-0.004643904463	0.018416206262	0.060724742478		0		
+1	all	study	cmh-4000-k31	lasso	vme	lower	0	55	55	0	0	14	12	29	0.0	8	-0.01724137931	0.004651162791	0.422509491444		0		
+1	all	study	cmh-4000-k31	lasso	me	lower	0	55	55	0	0	22	12	21	-0.007936507937	8	-0.018416206262	0.004643904463	0.060724742478		0		
+1	all	study	cmh-4000-k31	lasso	log_loss	lower	0	55	55	0	0	22	15	18	-0.004694328954	8	-0.01915501575	0.006173051601	0.162004300044		0		
+1	all	study	cmh-16000-k31	rf	balanced_accuracy	higher	0	55	55	0	0	8	13	34	-0.001275876511	8	-0.014925373134	0.006723707665	0.905376434326		0		
+1	all	study	cmh-16000-k31	rf	recall	higher	0	55	55	0	0	11	21	23	0.0	8	-0.027397260274	0.009900990099	0.974948770134		0		
+1	all	study	cmh-16000-k31	rf	specificity	higher	0	55	55	0	0	12	8	35	0.0	8	-0.003924566769	0.0078125	0.251722335815		0		
+1	all	study	cmh-16000-k31	rf	vme	lower	0	55	55	0	0	11	21	23	0.0	8	-0.010974591435	0.027304072314	0.974948770134		0		
+1	all	study	cmh-16000-k31	rf	me	lower	0	55	55	0	0	12	8	35	0.0	8	-0.0078125	0.003924566769	0.251722335815		0		
+1	all	study	cmh-16000-k31	rf	log_loss	lower	0	55	55	0	0	19	11	25	-0.009907983831	8	-0.022405419062	0.002540308773	0.100244211033		0		
+1	all	study	cmh-16000-k31	gbt	balanced_accuracy	higher	0	55	55	0	0	15	10	30	0.00130952381	8	-0.012962962963	0.00918644726	0.212178111076		0		
+1	all	study	cmh-16000-k31	gbt	recall	higher	0	55	55	0	0	16	15	24	0.0	8	-0.022988505748	0.014285714286	0.5		0		
+1	all	study	cmh-16000-k31	gbt	specificity	higher	0	55	55	0	0	18	10	27	0.006339144216	8	0.0	0.012063058879	0.09246667102		0		
+1	all	study	cmh-16000-k31	gbt	vme	lower	0	55	55	0	0	16	15	24	0.0	8	-0.014285714286	0.022988505748	0.5		0		
+1	all	study	cmh-16000-k31	gbt	me	lower	0	55	55	0	0	18	10	27	-0.006339144216	8	-0.012063058879	0.0	0.09246667102		0		
+1	all	study	cmh-16000-k31	gbt	log_loss	lower	0	55	55	0	0	24	11	20	-0.012040110514	8	-0.034229691317	0.008446368277	0.020479795756		0		
+1	all	study	cmh-16000-k31	lasso	balanced_accuracy	higher	0	55	55	0	0	18	7	30	0.012392835922	8	0.004950495049	0.014561150022	0.021642625332		0		
+1	all	study	cmh-16000-k31	lasso	recall	higher	0	55	55	0	0	19	5	31	0.009708737864	8	0.002109704642	0.015602221452	0.003305375576		0		
+1	all	study	cmh-16000-k31	lasso	specificity	higher	0	55	55	0	0	25	10	20	0.010582010582	8	0.0	0.016757246377	0.0083369239		0		
+1	all	study	cmh-16000-k31	lasso	vme	lower	0	55	55	0	0	19	5	31	-0.009708737864	8	-0.016279069768	-0.002109704642	0.003305375576		0		
+1	all	study	cmh-16000-k31	lasso	me	lower	0	55	55	0	0	25	10	20	-0.010582010582	8	-0.020989505248	0.0	0.0083369239		0		
+1	all	study	cmh-16000-k31	lasso	log_loss	lower	0	55	55	0	0	25	13	17	-0.013706891468	8	-0.037998514798	0.013698840636	0.036475694258		0		
+1	800-or-more	lineage	floor-3-k31	scm	balanced_accuracy	higher	0	92	92	0	0	2	3	87	0.0	11	0.0	0.0	0.8125	1.0	1	0	0
+1	800-or-more	lineage	floor-3-k31	scm	recall	higher	0	92	92	0	0	1	5	86	0.0	11	0.0	0.0	0.984375		0		
+1	800-or-more	lineage	floor-3-k31	scm	specificity	higher	0	92	92	0	0	2	1	89	0.0	11	0.0	0.0	0.5		0		
+1	800-or-more	lineage	floor-3-k31	scm	vme	lower	0	92	92	0	0	1	5	86	0.0	11	0.0	0.0	0.984375		0		
+1	800-or-more	lineage	floor-3-k31	scm	me	lower	0	92	92	0	0	2	1	89	0.0	11	0.0	0.0	0.5		0		
+1	800-or-more	lineage	floor-3-k31	scm	log_loss	lower	0	92	92	0	0	7	11	74	0.0	11	0.0	0.0	0.881057739258		0		
+1	800-or-more	lineage	floor-3-k31	cart	balanced_accuracy	higher	0	92	92	0	0	0	1	91	0.0	11	0.0	0.0	1.0	1.0	1	0	0
+1	800-or-more	lineage	floor-3-k31	cart	recall	higher	0	92	92	0	0	1	6	85	0.0	11	0.0	0.0	0.9921875		0		
+1	800-or-more	lineage	floor-3-k31	cart	specificity	higher	0	92	92	0	0	3	2	87	0.0	11	0.0	0.0	0.5		0		
+1	800-or-more	lineage	floor-3-k31	cart	vme	lower	0	92	92	0	0	1	6	85	0.0	11	0.0	0.0	0.9921875		0		
+1	800-or-more	lineage	floor-3-k31	cart	me	lower	0	92	92	0	0	3	2	87	0.0	11	0.0	0.0	0.5		0		
+1	800-or-more	lineage	floor-3-k31	cart	log_loss	lower	0	92	92	0	0	10	14	68	0.0	11	0.0	0.0	0.84627187252		0		
+1	800-or-more	lineage	floor-3-k31	rf	balanced_accuracy	higher	0	92	92	0	0	1	0	91	0.0	11	0.0	0.0	0.5	1.0	1	0	0
+1	800-or-more	lineage	floor-3-k31	rf	recall	higher	0	92	92	0	0	2	1	89	0.0	11	0.0	0.0	0.5		0		
+1	800-or-more	lineage	floor-3-k31	rf	specificity	higher	0	92	92	0	0	0	0	92	0.0	11	0.0	0.0	1.0		0		
+1	800-or-more	lineage	floor-3-k31	rf	vme	lower	0	92	92	0	0	2	1	89	0.0	11	0.0	0.0	0.5		0		
+1	800-or-more	lineage	floor-3-k31	rf	me	lower	0	92	92	0	0	0	0	92	0.0	11	0.0	0.0	1.0		0		
+1	800-or-more	lineage	floor-3-k31	rf	log_loss	lower	0	92	92	0	0	0	0	92	0.0	11	0.0	0.0	1.0		0		
+1	800-or-more	lineage	floor-3-k31	gbt	balanced_accuracy	higher	0	92	92	0	0	2	1	89	0.0	11	0.0	0.0	0.5	1.0	1	0	0
+1	800-or-more	lineage	floor-3-k31	gbt	recall	higher	0	92	92	0	0	3	2	87	0.0	11	0.0	0.0	0.5		0		
+1	800-or-more	lineage	floor-3-k31	gbt	specificity	higher	0	92	92	0	0	1	1	90	0.0	11	0.0	0.0	0.75		0		
+1	800-or-more	lineage	floor-3-k31	gbt	vme	lower	0	92	92	0	0	3	2	87	0.0	11	0.0	0.0	0.5		0		
+1	800-or-more	lineage	floor-3-k31	gbt	me	lower	0	92	92	0	0	1	1	90	0.0	11	0.0	0.0	0.75		0		
+1	800-or-more	lineage	floor-3-k31	gbt	log_loss	lower	0	92	92	0	0	0	1	91	0.0	11	0.0	0.0	1.0		0		
+1	800-or-more	lineage	floor-3-k31	lasso	balanced_accuracy	higher	0	92	92	0	0	0	1	91	0.0	11	0.0	0.0	1.0	1.0	1	0	0
+1	800-or-more	lineage	floor-3-k31	lasso	recall	higher	0	92	92	0	0	0	1	91	0.0	11	0.0	0.0	1.0		0		
+1	800-or-more	lineage	floor-3-k31	lasso	specificity	higher	0	92	92	0	0	0	0	92	0.0	11	0.0	0.0	1.0		0		
+1	800-or-more	lineage	floor-3-k31	lasso	vme	lower	0	92	92	0	0	0	1	91	0.0	11	0.0	0.0	1.0		0		
+1	800-or-more	lineage	floor-3-k31	lasso	me	lower	0	92	92	0	0	0	0	92	0.0	11	0.0	0.0	1.0		0		
+1	800-or-more	lineage	floor-3-k31	lasso	log_loss	lower	0	92	92	0	0	0	0	92	0.0	11	0.0	0.0	1.0		0		
+1	800-or-more	lineage	twin-k31	scm	balanced_accuracy	higher	0	92	92	0	0	9	8	75	0.0	11	-0.001237186284	0.001799839169	0.5	1.0	1	0	0
+1	800-or-more	lineage	twin-k31	scm	recall	higher	0	92	92	0	0	12	14	66	0.0	11	-0.000971817298	0.0027100271	0.721401453018		0		
+1	800-or-more	lineage	twin-k31	scm	specificity	higher	0	92	92	0	0	9	9	74	0.0	11	-0.000740740741	0.000673400674	0.592735290527		0		
+1	800-or-more	lineage	twin-k31	scm	vme	lower	0	92	92	0	0	12	14	66	0.0	11	-0.0027100271	0.000971817298	0.721401453018		0		
+1	800-or-more	lineage	twin-k31	scm	me	lower	0	92	92	0	0	9	9	74	0.0	11	-0.000751718677	0.000740740741	0.592735290527		0		
+1	800-or-more	lineage	twin-k31	scm	log_loss	lower	0	92	92	0	0	30	27	35	0.0	11	-0.007953575446	0.004682379444	0.39568321389		0		
+1	800-or-more	lineage	twin-k31	cart	balanced_accuracy	higher	0	92	92	0	0	9	9	74	0.0	11	-4.874957e-06	0.000333667	0.592735290527	1.0	1	0	0
+1	800-or-more	lineage	twin-k31	cart	recall	higher	0	92	92	0	0	10	15	67	0.0	11	-0.000450562169	0.001061571125	0.885238528252		0		
+1	800-or-more	lineage	twin-k31	cart	specificity	higher	0	92	92	0	0	17	6	69	0.0	11	0.0	0.000330687831	0.01734483242		0		
+1	800-or-more	lineage	twin-k31	cart	vme	lower	0	92	92	0	0	10	15	67	0.0	11	-0.000984918169	0.000372023809	0.885238528252		0		
+1	800-or-more	lineage	twin-k31	cart	me	lower	0	92	92	0	0	17	6	69	0.0	11	-0.000475615367	0.0	0.01734483242		0		
+1	800-or-more	lineage	twin-k31	cart	log_loss	lower	0	92	92	0	0	28	13	51	-0.001825941019	11	-0.011150892157	0.00033792745	0.013766577915		0		
+1	800-or-more	lineage	twin-k31	rf	balanced_accuracy	higher	0	92	92	0	0	3	4	85	-0.000307147152	11	-0.002361684122	0.000477044859	0.7734375	1.0	1	0	0
+1	800-or-more	lineage	twin-k31	rf	recall	higher	0	92	92	0	0	8	11	73	0.0	11	-0.001422995609	0.001518602885	0.820358276367		0		
+1	800-or-more	lineage	twin-k31	rf	specificity	higher	0	92	92	0	0	4	7	81	-0.000262839645	11	-0.002248176987	0.0	0.88671875		0		
+1	800-or-more	lineage	twin-k31	rf	vme	lower	0	92	92	0	0	8	11	73	0.0	11	-0.001518602885	0.001554001554	0.820358276367		0		
+1	800-or-more	lineage	twin-k31	rf	me	lower	0	92	92	0	0	4	7	81	0.000262839645	11	0.0	0.002099120286	0.88671875		0		
+1	800-or-more	lineage	twin-k31	rf	log_loss	lower	0	92	92	0	0	0	3	89	0.001118740285	11	-0.00016010335	0.00304692654	1.0		0		
+1	800-or-more	lineage	twin-k31	gbt	balanced_accuracy	higher	0	92	92	0	0	10	9	73	0.000494989647	11	-0.000267857143	0.001398266886	0.5	1.0	1	0	0
+1	800-or-more	lineage	twin-k31	gbt	recall	higher	0	92	92	0	0	15	15	62	0.0	11	-0.001290988897	0.000321750322	0.572232224047		0		
+1	800-or-more	lineage	twin-k31	gbt	specificity	higher	0	92	92	0	0	12	9	71	0.001040327861	11	-0.000546448087	0.002169197397	0.331811904907		0		
+1	800-or-more	lineage	twin-k31	gbt	vme	lower	0	92	92	0	0	15	15	62	0.0	11	-0.000321750322	0.001290988897	0.572232224047		0		
+1	800-or-more	lineage	twin-k31	gbt	me	lower	0	92	92	0	0	12	9	71	-0.001040327861	11	-0.002119795386	0.000546448087	0.331811904907		0		
+1	800-or-more	lineage	twin-k31	gbt	log_loss	lower	0	92	92	0	0	10	13	69	-0.000127493503	11	-0.003026424792	0.00275947855	0.797563552856		0		
+1	800-or-more	lineage	twin-k31	lasso	balanced_accuracy	higher	0	92	92	0	0	6	4	82	-1.3218728e-05	11	-0.002159959572	0.000383250564	0.376953125	1.0	1	0	0
+1	800-or-more	lineage	twin-k31	lasso	recall	higher	0	92	92	0	0	11	9	72	0.0	11	-0.002361550506	0.000457014615	0.411901473999		0		
+1	800-or-more	lineage	twin-k31	lasso	specificity	higher	0	92	92	0	0	2	9	81	-0.000667125967	11	-0.00278129626	0.00037792895	0.994140625		0		
+1	800-or-more	lineage	twin-k31	lasso	vme	lower	0	92	92	0	0	11	9	72	0.0	11	-0.00037202381	0.002503241191	0.411901473999		0		
+1	800-or-more	lineage	twin-k31	lasso	me	lower	0	92	92	0	0	2	9	81	0.000667125967	11	-0.00037792895	0.003142620151	0.994140625		0		
+1	800-or-more	lineage	twin-k31	lasso	log_loss	lower	0	92	92	0	0	15	16	61	-0.000846396189	11	-0.005009096367	0.001687755003	0.639949934091		0		
+1	800-or-more	study	floor-3-k31	scm	balanced_accuracy	higher	0	24	24	0	0	1	1	22	0.0	3	0.0	0.0	0.75		0		
+1	800-or-more	study	floor-3-k31	scm	recall	higher	0	24	24	0	0	1	3	20	0.0	3	0.0	0.0	0.9375		0		
+1	800-or-more	study	floor-3-k31	scm	specificity	higher	0	24	24	0	0	0	0	24	0.0	3	0.0	0.0	1.0		0		
+1	800-or-more	study	floor-3-k31	scm	vme	lower	0	24	24	0	0	1	3	20	0.0	3	0.0	0.0	0.9375		0		
+1	800-or-more	study	floor-3-k31	scm	me	lower	0	24	24	0	0	0	0	24	0.0	3	0.0	0.0	1.0		0		
+1	800-or-more	study	floor-3-k31	scm	log_loss	lower	0	24	24	0	0	2	2	20	0.0	3	0.0	0.0	0.6875		0		
+1	800-or-more	study	floor-3-k31	cart	balanced_accuracy	higher	0	24	24	0	0	1	0	23	0.0	3	0.0	0.005574142965	0.5		0		
+1	800-or-more	study	floor-3-k31	cart	recall	higher	0	24	24	0	0	1	0	23	0.0	3	0.0	0.006789137381	0.5		0		
+1	800-or-more	study	floor-3-k31	cart	specificity	higher	0	24	24	0	0	0	1	23	0.0	3	-0.000538181727	0.0	1.0		0		
+1	800-or-more	study	floor-3-k31	cart	vme	lower	0	24	24	0	0	1	0	23	0.0	3	-0.006789137381	0.0	0.5		0		
+1	800-or-more	study	floor-3-k31	cart	me	lower	0	24	24	0	0	0	1	23	0.0	3	0.0	0.000538181727	1.0		0		
+1	800-or-more	study	floor-3-k31	cart	log_loss	lower	0	24	24	0	0	3	1	20	0.0	3	-0.006089630452	0.004201811587	0.3125		0		
+1	800-or-more	study	floor-3-k31	rf	balanced_accuracy	higher	0	24	24	0	0	0	0	24	0.0	3	0.0	0.0	1.0		0		
+1	800-or-more	study	floor-3-k31	rf	recall	higher	0	24	24	0	0	0	0	24	0.0	3	0.0	0.0	1.0		0		
+1	800-or-more	study	floor-3-k31	rf	specificity	higher	0	24	24	0	0	0	0	24	0.0	3	0.0	0.0	1.0		0		
+1	800-or-more	study	floor-3-k31	rf	vme	lower	0	24	24	0	0	0	0	24	0.0	3	0.0	0.0	1.0		0		
+1	800-or-more	study	floor-3-k31	rf	me	lower	0	24	24	0	0	0	0	24	0.0	3	0.0	0.0	1.0		0		
+1	800-or-more	study	floor-3-k31	rf	log_loss	lower	0	24	24	0	0	0	0	24	0.0	3	0.0	0.0	1.0		0		
+1	800-or-more	study	floor-3-k31	gbt	balanced_accuracy	higher	0	24	24	0	0	0	0	24	0.0	3	0.0	0.0	1.0		0		
+1	800-or-more	study	floor-3-k31	gbt	recall	higher	0	24	24	0	0	0	1	23	0.0	3	0.0	0.0	1.0		0		
+1	800-or-more	study	floor-3-k31	gbt	specificity	higher	0	24	24	0	0	0	0	24	0.0	3	0.0	0.0	1.0		0		
+1	800-or-more	study	floor-3-k31	gbt	vme	lower	0	24	24	0	0	0	1	23	0.0	3	0.0	0.0	1.0		0		
+1	800-or-more	study	floor-3-k31	gbt	me	lower	0	24	24	0	0	0	0	24	0.0	3	0.0	0.0	1.0		0		
+1	800-or-more	study	floor-3-k31	gbt	log_loss	lower	0	24	24	0	0	1	0	23	0.0	3	0.0	0.0	0.5		0		
+1	800-or-more	study	floor-3-k31	lasso	balanced_accuracy	higher	0	24	24	0	0	0	1	23	0.0	3	0.0	0.0	1.0		0		
+1	800-or-more	study	floor-3-k31	lasso	recall	higher	0	24	24	0	0	0	1	23	0.0	3	0.0	0.0	1.0		0		
+1	800-or-more	study	floor-3-k31	lasso	specificity	higher	0	24	24	0	0	0	0	24	0.0	3	0.0	0.0	1.0		0		
+1	800-or-more	study	floor-3-k31	lasso	vme	lower	0	24	24	0	0	0	1	23	0.0	3	0.0	0.0	1.0		0		
+1	800-or-more	study	floor-3-k31	lasso	me	lower	0	24	24	0	0	0	0	24	0.0	3	0.0	0.0	1.0		0		
+1	800-or-more	study	floor-3-k31	lasso	log_loss	lower	0	24	24	0	0	0	0	24	0.0	3	0.0	0.0	1.0		0		

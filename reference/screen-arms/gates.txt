@@ -1,0 +1,16 @@
+1 files: the reading holds reading.txt, count/ with score.py --count's four tables and withdrawn.txt, and score/; no score.log is in it; the run's checks.txt ends CHECKS 11 of 11 with no FAIL line
+2 species: score/ holds each species of lists.tsv's first run once and no other, each with its five files
+3 datasets: each datasets.tsv holds exactly its species' first-run datasets, none in M: the default, each arm not withdrawn and the twin on the lineage split, and the default and each arm not withdrawn on the study split for those in S, each for the five learners; species, antibiotic and genome count equal lists.tsv's, and the floor arm moves the datasets of 800 genomes or more
+4 study: every study row is a study run at seed 42, and no study row stands on the lineage split
+5 twin: the twin stands on the lineage split at seeds 45, 46 and 47 alone, counted as the pair twin-k31 over every dataset and over those of 800 genomes or more, and conditions.tsv reads it as no arm
+6 missing: a draw not scored has no figure, and a dataset with a draw not scored is not scored and has no figure: a missing draw is never read as zero
+7 constant: each constant-model draw is an arm's study run refused for no candidate, scored and marked, and count-no-constant.tsv counts none
+8 draws: each draws.tsv holds each dataset's draws at seeds 42, 43 and 44, the twin's at 45, 46 and 47 and the study run at seed 42, each for the five learners, and nothing else; datasets.tsv is their mean
+9 checks: every check of each checks.tsv passed, and the figures agree: a screen arm's scm and cart, and the floor arm below 800 genomes, equal the default's in datasets.tsv
+10 screen: count.tsv and count-no-constant.tsv count a screen arm on rf, gbt and lasso only
+11 floor: count.tsv counts the floor arm over the datasets of 800 genomes or more only, the ones lists.tsv says it moves; count-floor-all.tsv holds the floor arm over every dataset with no Holm p, and decides nothing
+12 withdrawn: withdrawn.txt names arms of the block only, and the Holm family is the 21 lineage pairs score.py holds, a withdrawn arm's at p = 1 before Holm
+13 binary: each binary.txt names a commit, a binary and a code sha256; the page names each binary with its species unless every species ran one code sha256
+14 conditions: conditions 1, 2, 3 and 4 of each screen arm, and 1 and 2, 3 and 4 of the floor arm's ruling 15, as read here off count.tsv, equal conditions.tsv's
+15 count: count.tsv, count-no-constant.tsv, conditions.tsv and count-floor-all.tsv are what score.py --count writes from the datasets.tsv files with withdrawn.txt's arms
+16 fits: each fits.tsv is fit_times.py's table of the arms not withdrawn and names neither the default nor the twin
