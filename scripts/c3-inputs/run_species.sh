@@ -20,11 +20,13 @@
 # when it is given the program is neither installed nor run, and each table
 # of the cohort is copied from it and held to its recorded sha256. Every fit
 # runs with --exp-pick-inner 0: each outer fold's calls per learner, no
-# inner pick. GRAPH (default bcalm2) is who builds the unitig graph: bcalm2,
-# the outside program, whose unitigs GRM reads; grm, GRM's own compaction,
-# which the lead's ruling allows only once its unitigs equal an outside
-# build's as a set on a pilot species; or check, both, with GRM's graph used
-# and the two compared, the equality counts written in the build's record.
+# inner pick. GRAPH (default grm) is who builds the unitig graph: grm, GRM's
+# own compaction, which the lead's ruling allows only once its unitigs equal
+# an outside build's as a set on a pilot species (they did on Klebsiella
+# aerogenes, 93 genomes, and on Escherichia coli, 2,000: docs/input-arms.md);
+# bcalm2, the outside program, whose unitigs GRM reads; or check, both, with
+# GRM's graph used and the two compared, the equality counts written in the
+# build's record.
 # SEEDS must hold 42, the release's seed: the default's seed-42 reports are
 # checked against the release's before any arm runs. KIT holds these files,
 # checked against the sha256 pinned here before anything else runs:
@@ -118,7 +120,7 @@
 set -Eeuo pipefail
 KIT=$(cd "${1:?kit folder}" && pwd); SP=${2:?species slug}; DATASETS=${3:?datasets}
 OUT=${4:?out folder}; JOBS=${5:-$(nproc)}; SEEDS=${6:-42,43,44}; TWIN=${7:-45,46,47}; ARMS=${8:-program,k31-program,k31-counts,k31-aa,unitigs}
-TABLES_FROM=${9:-}; GRAPH=${10:-bcalm2}
+TABLES_FROM=${9:-}; GRAPH=${10:-grm}
 mkdir -p "$OUT"/flags "$OUT"/logs "$OUT"/work "$OUT"/results "$OUT"/check "$OUT"/score; OUT=$(cd "$OUT" && pwd)
 exec >> "$OUT/logs/run.log" 2>&1
 REPO=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
