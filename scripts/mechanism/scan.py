@@ -1,11 +1,15 @@
 """scan.py: fail when a file names a genome of the species or a BioProject
-accession, or when a table could stand for 1 to 4 genomes.
+accession, holds a sequence or a position, or when a table could stand for
+1 to 4 genomes.
 
     python3 -I scan.py --ids SPECIES.json PATH [PATH ...]
 
 SPECIES.json is the release's species file (its `genomes[].id`). Every file
 under each PATH is read. A token of digits, a dot and digits that is a genome
-id of the list, or any text of the form PRJ<letters><digits>, is a hit.
+id of the list, or any text of the form PRJ<letters><digits>, is a hit, and so
+is a word of 20 or more bases or 30 or more amino acids, a point symbol of the
+program (gene_S83L) or a change as TBProfiler writes it (c.-15C>T, p.Ser450Leu).
+A bare number is not read as a position.
 
 Each table the mechanism scripts write is checked by its name (TABLES): a
 genome count is 0, "under 5", 5 and more or blank; a recall stands only over 10 or
@@ -27,6 +31,12 @@ import sys
 
 TOKEN = re.compile(rb"(?<![\w.])\d+\.\d+(?![\w])")
 BIOPROJECT = re.compile(rb"PRJ[A-Z]{1,3}\d+")
+# 20 or more bases, or 30 or more amino acids, as one word
+SEQUENCE = re.compile(rb"(?<![A-Za-z])(?:[ACGTN]{20,}|[acgtn]{20,}|[ACDEFGHIKLMNPQRSTVWY]{30,})(?![A-Za-z])")
+# a position: the program's point symbol (gene_S83L, 23S_A2058G, gene_C-42T, gene_Q11Ter) or a change as
+# TBProfiler writes it (c.-15C>T, p.Ser450Leu, n.1401A>G); a bare number is not caught
+POSITION = re.compile(rb"(?<![A-Za-z0-9])(?:[A-Za-z0-9][A-Za-z0-9()']{1,15}_[A-Z]-?\d{1,6}(?:[A-Z*]|Ter|del|ins|dup|fs)"
+                      rb"|[cnpgmr]\.\(?[-*]?(?:[A-Z][a-z]{2})?\d+)")
 UNDER = "under 5"
 FOLDED = {"m2-families.tsv": ("family", "families seen in under 5 genomes"),
           "m4-genes.tsv": ("gene", "genes seen in under 5 genomes")}
@@ -71,6 +81,13 @@ def scan_file(path, ids):
     genomes = sum(1 for m in TOKEN.finditer(data) if m.group(0) in ids)
     projects = len(BIOPROJECT.findall(data))
     return genomes, projects
+
+
+def scan_text(path):
+    """Sequences and positions in one file, counted, never printed."""
+    with open(path, "rb") as f:
+        data = f.read()
+    return len(SEQUENCE.findall(data)), len(POSITION.findall(data))
 
 
 def is_count(text):
@@ -156,11 +173,12 @@ def main(argv=None):
     for path in files_under(args.paths):
         files += 1
         g, b = scan_file(path, ids)
+        seq, pos = scan_text(path)
         small = check_table(path)
         tables += os.path.basename(path) in TABLES
-        if g or b or small:
+        if g or b or seq or pos or small:
             hits += 1
-            print(f"scan: {path}: {g} genome ids, {b} BioProject accessions")
+            print(f"scan: {path}: {g} genome ids, {b} BioProject accessions, {seq} sequences, {pos} positions")
             for rule in sorted(small):
                 print(f"scan: {path}: {small[rule]} rows: {rule}")
     print(f"scan: {files} files, {tables} tables, {hits} with a hit, against {len(ids)} genome ids")

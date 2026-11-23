@@ -45,7 +45,8 @@
 # the database, the tables, the adapter's calls: these name genomes and stay
 # on the box), and results/m1, results/m2 (aggregate tables, no genome id).
 # The scan step fails when any file under results/ or logs/ names a genome
-# of the species or a BioProject accession. The end writes
+# of the species or a BioProject accession, holds a sequence or a position,
+# or holds a table that could stand for 1 to 4 genomes. The end writes
 # results/SHA256SUMS and OUT/DONE:
 #   DONE <species> <time> commit <sha> results <n> SHA256SUMS <sha256>
 # Any failure writes OUT/FAILED naming the step and exits 1.
@@ -259,7 +260,7 @@ step history m2_history
 STEP=scan
 rm -f "$OUT/flags/scan.done"
 python3 -I "$HERE/scan.py" --ids "$R/species/$SP.json" "$OUT/results" "$OUT/logs" \
-  || { say "a file under results/ or logs/ names a genome of $SP or a BioProject accession"; false; }
+  || { say "a file under results/ or logs/ names a genome of $SP, a BioProject accession, a sequence or a position, or could stand for 1 to 4 genomes"; false; }
 touch "$OUT/flags/scan.done"
 
 STEP=end

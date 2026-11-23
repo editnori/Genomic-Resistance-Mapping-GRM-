@@ -57,6 +57,26 @@ class Scan(unittest.TestCase):
             self.assertEqual(rc, 1, acc)
             self.assertNotIn(acc, out)
 
+    def test_a_sequence_fails_and_is_not_printed(self):
+        for text in ("ACGTACGTTTGACCATGCAAGT", "acgtacgtttgaccatgcaagtc", "MKTAYIAKQRQISFVKSHFSRQLEERLGLIE"):
+            rc, out = self.scan(f"a\t{text}\n")
+            self.assertEqual(rc, 1, text)
+            self.assertNotIn(text, out)
+            self.assertIn("1 sequences", out)
+
+    def test_a_position_fails_and_is_not_printed(self):
+        for text in ("gyrS_S83L", "23S_A2058G", "ampS_C-42T", "synR_Q11Ter42", "c.-15C>T", "p.Ser450Leu", "n.1401A>G"):
+            rc, out = self.scan(f"a\t{text}\n")
+            self.assertEqual(rc, 1, text)
+            self.assertNotIn(text, out)
+            self.assertIn("1 positions", out)
+
+    def test_names_versions_and_columns_pass(self):
+        rc, out = self.scan("earlier_point\tpoint_disrupt_alone:both\tBETA-LACTAM\tAMINOGLYCOSIDE/QUINOLONE\t"
+                            "S:CARBAPENEM\t4.2.7\t2026-08-07.1\t6.6.3\tlineage4.2.1\tRv0678\tqnrS\taac(6')-Ib\t"
+                            "families seen in under 5 genomes\tklebsiella_aerogenes__meropenem\t2026-11-23T04:51:24Z\n")
+        self.assertEqual(rc, 0, out)
+
     def test_figures_and_other_ids_pass(self):
         rc, out = self.scan("0.500000000000\t9999.1\t19999.11\t9999.110\tunder 5\n")
         self.assertEqual(rc, 0, out)
