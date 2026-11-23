@@ -293,8 +293,9 @@ class Runner(unittest.TestCase):
             self.assertIn(sha, self.text)
 
     def test_steps_in_order_and_the_scan_before_done(self):
-        steps = re.findall(r"^step (\w+) ", self.text, re.M)
-        self.assertEqual(steps, ["release", "amrkit", "db", "tables", "adapter", "rules", "strata", "history"])
+        steps = re.findall(r"^ *step (\w+) ", self.text, re.M)
+        self.assertEqual(steps, ["release", "amrkit", "install", "db", "tables", "adapter", "rules", "strata",
+                                 "history"])
         self.assertLess(self.text.index("scan.py"), self.text.index('> "$OUT/DONE"'))
         self.assertIn("trap 'fail at' ERR", self.text)
         self.assertIn("flock -n 9", self.text)
@@ -333,6 +334,124 @@ class Runner(unittest.TestCase):
         self.assertIn("amr_rule.GRM_EVAL_SHA256", self.text)
         self.assertEqual(len(amr.ADAPTER_SHA256), 64)
         self.assertEqual(hashlib.sha256(b"").hexdigest() != amr.ADAPTER_SHA256, True)
+
+
+# SYNTHETIC stand-ins for the run's install and database steps.
+STUB_CURL = """#!/usr/bin/env bash
+# SYNTHETIC curl: whatever the URL, -o gets the stand-in micromamba
+while [ $# -gt 0 ]; do case $1 in -o) out=$2; shift 2;; *) shift;; esac; done
+cp "$STUBS/micromamba" "$out"
+"""
+STUB_MICROMAMBA = """#!/usr/bin/env bash
+# SYNTHETIC micromamba create -y -p ENV --file SPEC: an environment with amrfinder and amrfinder_index
+while [ $# -gt 0 ]; do case $1 in -p) env=$2; shift 2;; *) shift;; esac; done
+echo "micromamba create" >> "$ORDER"
+mkdir -p "$env/bin"
+printf '#!/usr/bin/env bash\\necho 4.2.7\\n' > "$env/bin/amrfinder"
+printf '#!/usr/bin/env bash\\nexit 0\\n' > "$env/bin/amrfinder_index"
+chmod +x "$env/bin/amrfinder" "$env/bin/amrfinder_index"
+"""
+STUB_FETCH = """# SYNTHETIC fetch_database.sh VERSION LIST DEST: needs amrfinder_index, as the kit's does
+command -v amrfinder_index > /dev/null || { echo "fetch_database.sh: amrfinder_index is not on PATH"; exit 1; }
+echo "fetch start" >> "$ORDER"
+mkdir -p "$3"; cp "$DB_SOURCE"/* "$3"/
+"""
+STUB_STEP = """set -Eeuo pipefail
+say() { echo "$*"; }
+pinned() { :; }
+step() {  # the run's step(): once, in a shell of its own that gets only the exported names
+  STEP=$1
+  if [ -e "$OUT/flags/$1.done" ]; then echo "$1 skipped" >> "$ORDER"; return 0; fi
+  echo "$1 start" >> "$ORDER"
+  bash -euo pipefail -c "$(declare -f say pinned "$2"); $2" < /dev/null >> "$OUT/logs/$1.log" 2>&1
+  echo "$1 end" >> "$ORDER"
+  touch "$OUT/flags/$1.done"
+}
+"""
+
+
+class InstallOrder(unittest.TestCase):
+    """Defect A of the first run (23 Nov 2026): with DB -, the kit's
+    fetch_database.sh needs the program's amrfinder_index, so the program's
+    environment is installed by a step of its own before db. The script's
+    own text from the install step to the db step runs here with stand-in
+    tools and a stand-in kit, all SYNTHETIC."""
+
+    text = RUNNER.read_text()
+
+    def setUp(self):
+        self.top = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.top)
+        stubs = self.top / "stubs"
+        (stubs / "bin").mkdir(parents=True)
+        (stubs / "bin" / "curl").write_text(STUB_CURL)
+        (stubs / "micromamba").write_text(STUB_MICROMAMBA)
+        (stubs / "bin" / "curl").chmod(0o755)
+        kit = self.top / "amr" / "kit"
+        (kit / "scripts").mkdir(parents=True)
+        (kit / "spec").mkdir()
+        (kit / "scripts" / "fetch_database.sh").write_text(STUB_FETCH)
+        (kit / "spec" / "env-amrfinder.explicit.txt").write_text("# SYNTHETIC\n")
+        source = self.top / "db-source"
+        source.mkdir()
+        (source / "ReferenceGeneCatalog.txt").write_bytes(b"SYNTHETIC database file\n")
+        digest = hashlib.sha256(b"SYNTHETIC database file\n").hexdigest()
+        (kit / "spec" / "db-2026-08-07.1.sha256").write_text(f"{digest}  ReferenceGeneCatalog.txt\n")
+        self.out = self.top / "out"
+        (self.out / "flags").mkdir(parents=True)
+        (self.out / "logs").mkdir()
+
+    def steps(self, tables_from, db_from):
+        """Run the script's text from after the amrkit step to the tables
+        step; return its exit code and the order of what ran."""
+        start = self.text.index("step amrkit amrkit\n") + len("step amrkit amrkit\n")
+        block = self.text[start:self.text.index("tables() {\n")]
+        amr = self.top / "amr"
+        env = (f"export ORDER={self.top / 'order'} OUT={self.out} AMR={amr} DB={amr / 'db' / '2026-08-07.1'} "
+               f"STUBS={self.top / 'stubs'} DB_SOURCE={self.top / 'db-source'} TABLES_FROM={tables_from} "
+               f"DB_FROM={db_from} PATH={self.top / 'stubs' / 'bin'}:$PATH\n")
+        r = subprocess.run(["bash", "-c", STUB_STEP + env + block], capture_output=True, text=True, timeout=60)
+        order = (self.top / "order").read_text().split("\n")[:-1] if (self.top / "order").exists() else []
+        return r.returncode, order
+
+    def test_with_db_dash_the_install_ends_before_the_fetch(self):
+        for tables_from in (str(self.top / "tables"), "-"):
+            with self.subTest(tables=tables_from):
+                for p in (self.out / "flags").iterdir():
+                    p.unlink()
+                (self.top / "order").unlink(missing_ok=True)
+                rc, order = self.steps(tables_from, "-")
+                self.assertEqual(rc, 0, order)
+                self.assertEqual(order, ["install start", "micromamba create", "install end", "db start",
+                                         "fetch start", "db end"])
+
+    def test_with_tables_dash_and_db_given_the_install_runs_before_db(self):
+        rc, order = self.steps("-", str(self.top / "db-source"))
+        self.assertEqual(rc, 0, order)
+        self.assertEqual(order, ["install start", "micromamba create", "install end", "db start", "db end"])
+
+    def test_with_tables_and_db_given_nothing_is_installed(self):
+        rc, order = self.steps(str(self.top / "tables"), str(self.top / "db-source"))
+        self.assertEqual(rc, 0, order)
+        self.assertEqual(order, ["db start", "db end"])
+        self.assertFalse((self.top / "amr" / "env").exists())
+
+    def test_the_install_runs_once_and_a_restart_skips_it(self):
+        self.assertEqual(self.steps("-", "-")[0], 0)
+        rc, order = self.steps("-", "-")
+        self.assertEqual(rc, 0, order)
+        self.assertEqual(order[-2:], ["install skipped", "db skipped"])
+        self.assertEqual(order.count("micromamba create"), 1)
+
+    def test_the_tables_step_installs_nothing_and_keeps_every_pin(self):
+        tables = self.text[self.text.index("tables() {\n"):self.text.index("step tables tables\n")]
+        self.assertNotIn("micromamba", tables)
+        self.assertIn('export PATH="$AMR/env/bin:$PATH"', tables)
+        self.assertIn("amrfinder --version | grep -qx '4.2.7'", tables)
+        self.assertIn("2c330ed5f979e18ba915ed3aea36c3a0779829e8421d1e1c57c6df842aa2b394", tables)
+        self.assertEqual(self.text.count("micromamba create"), 1)
+        self.assertEqual(self.text.count("701f39c06f8e6a670a0e186c8479b9e5c0502a2f0cda6cef65d83bdd2875e8bd"), 1)
+        self.assertLess(self.text.index("micromamba create"), self.text.index("step db db\n"))
 
 
 if __name__ == "__main__":
