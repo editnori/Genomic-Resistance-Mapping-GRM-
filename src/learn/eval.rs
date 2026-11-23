@@ -6375,4 +6375,156 @@ mod tests {
         .unwrap();
         assert_eq!(again, got);
     }
+
+    /// A SYNTHETIC cohort for the C4 arms: 96 samples in 12 lineages whose
+    /// resistance rates differ, 30 rows, some lineage markers and some
+    /// that track resistance inside lineages.
+    fn c4_cohort() -> (BitMatrix, Bits, Vec<u32>) {
+        let n = 96;
+        let mut s = 0x9e37_79b9_7f4a_7c15u64;
+        let mut next = move || {
+            s ^= s << 13;
+            s ^= s >> 7;
+            s ^= s << 17;
+            (s >> 11) as f64 / (1u64 << 53) as f64
+        };
+        let groups: Vec<u32> = (0..n).map(|i| (i / 8) as u32).collect();
+        let y = Bits::from_indices(n, (0..n).filter(|&i| next() < 0.2 + 0.6 * (groups[i] % 4) as f64 / 3.0));
+        let mut x = BitMatrix::with_cols(n);
+        for r in 0..30 {
+            let row = Bits::from_indices(
+                n,
+                (0..n).filter(|&i| {
+                    let p = match r % 3 {
+                        0 => 0.15 + 0.7 * (groups[i] % 4) as f64 / 3.0,
+                        1 => if y.contains(i) { 0.7 } else { 0.3 },
+                        _ => 0.5,
+                    };
+                    next() < p
+                }),
+            );
+            x.push_row(row.words());
+        }
+        (x, y, groups)
+    }
+
+    fn c4_inputs(dir: &std::path::Path, tag: &str) -> serde_json::Value {
+        let path = dir.join(screen_arm::file_name("fixture__fixturemycin", tag, 42));
+        serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap()
+    }
+
+    /// With no arm, `screen_fit` is the release's screen and no inputs file
+    /// is written; the floor arm at a floor the dataset already has gives
+    /// the same bytes; the adjusted screen ranks every forest, boosting and
+    /// lasso fit, outer and final, on that fit's own fitting samples, with
+    /// strata from the lineages and not from the labels.
+    #[test]
+    fn the_c4_arms_leave_unflagged_fits_alone_and_screen_every_fit_by_their_rule() {
+        use screen_arm::{Rule, Settings};
+        let (x, y, groups) = c4_cohort();
+        let mut cfg = small_config();
+        cfg.screened_features = 6;
+        let plain = evaluate("fixture__fixturemycin", &x, &y, &groups, &[], 3, None, &cfg).unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        let settings = |rule, floor| Settings {
+            rule,
+            floor,
+            out: dir.path().to_path_buf(),
+        };
+        let floor = screen_arm::with_settings(settings(Rule::ChiSquare, Some(3)), || {
+            evaluate("fixture__fixturemycin", &x, &y, &groups, &[], 3, None, &cfg).unwrap()
+        });
+        for (a, b) in plain.splits.iter().zip(&floor.splits) {
+            assert_eq!(timeless(a), timeless(b));
+        }
+        assert_eq!(
+            serde_json::to_vec(&plain.finals).unwrap(),
+            serde_json::to_vec(&floor.finals).unwrap()
+        );
+        let floor_file = c4_inputs(dir.path(), "drawn");
+        assert_eq!(
+            (&floor_file["arm"], &floor_file["rule"], &floor_file["budget"]),
+            (&serde_json::json!("floor"), &serde_json::json!("chi-square"), &serde_json::json!(6))
+        );
+        std::fs::remove_file(dir.path().join(screen_arm::file_name("fixture__fixturemycin", "drawn", 42))).unwrap();
+
+        screen_arm::with_settings(settings(Rule::Cmh, None), || {
+            evaluate("fixture__fixturemycin", &x, &y, &groups, &[], 3, None, &cfg).unwrap()
+        });
+        let file = c4_inputs(dir.path(), "drawn");
+        assert_eq!((&file["arm"], &file["rule"]), (&serde_json::json!("cmh"), &serde_json::json!("cmh")));
+        assert_eq!(file["dataset_rows"], 30);
+        let folds = file["folds"].as_array().unwrap();
+        let screens = file["screens"].as_array().unwrap();
+        let schemes: Vec<&str> = plain
+            .splits
+            .iter()
+            .filter(|s| s.unavailable_reason.is_none())
+            .map(|s| s.scheme.as_str())
+            .collect();
+        assert_eq!(schemes, ["random", "lineage"]);
+        assert_eq!(folds.len(), schemes.len() * cfg.folds);
+        // Each outer fit of rf, gbt and lasso is screened once, and the final
+        // models four times: lasso, the forest's importance fit, boosting and
+        // the kept forest.
+        assert_eq!(screens.len(), folds.len() * 3 + 4);
+        assert_eq!(file["fit_times"].as_array().unwrap().len(), folds.len() * LEARNERS.len());
+        for note in screens {
+            assert_eq!(note["rule"], "cmh", "{note}");
+            assert!(note["kept"].as_u64().unwrap() <= 6);
+            if note["split"] == "final" {
+                assert_eq!(note["fitting"], 96);
+                continue;
+            }
+            let fold = folds
+                .iter()
+                .find(|f| f["split"] == note["split"] && f["fold"] == note["fold"])
+                .unwrap();
+            assert_eq!(note["candidates"], fold["candidates"]);
+            let (fitting, train) = (note["fitting"].as_u64().unwrap(), fold["train"].as_u64().unwrap());
+            // The forest screens the outer training samples; boosting and the
+            // lasso those less their tuning holdout. No test sample is read.
+            if note["learner"] == "rf" {
+                assert_eq!(fitting, train);
+            } else {
+                assert!(fitting < train, "{note}");
+            }
+            // The strata are lineages: twelve of them, each of 8 samples,
+            // so a fit of `fitting` samples meets at least fitting / 8.
+            let strata = note["strata"].as_u64().unwrap();
+            assert!(strata >= fitting.div_ceil(8) && strata <= 12, "{note}");
+            assert!(note["informative_strata"].as_u64().unwrap() <= strata);
+        }
+        for learner in ["rf", "gbt", "lasso"] {
+            for split in &schemes {
+                for fold in 0..cfg.folds {
+                    let n = screens
+                        .iter()
+                        .filter(|s| s["learner"] == learner && s["split"] == *split && s["fold"] == fold)
+                        .count();
+                    assert_eq!(n, 1, "{learner} {split} fold {fold}");
+                }
+            }
+        }
+    }
+
+    /// The floor arm moves the floor of a supplied partition, and the
+    /// projection's, to its own; without it the floor is max(3, n/200).
+    #[test]
+    fn the_floor_arm_fixes_the_support_floor() {
+        use screen_arm::{Rule, Settings};
+        assert_eq!(support_floor(1600), 8);
+        let dir = tempfile::tempdir().unwrap();
+        let settings = Settings {
+            rule: Rule::ChiSquare,
+            floor: Some(3),
+            out: dir.path().to_path_buf(),
+        };
+        let (fixed, supplied) = screen_arm::with_settings(settings, || {
+            (support_floor(1600), supplied_support_floor(&[Role::Train; 1600]))
+        });
+        assert_eq!((fixed, supplied), (3, 3));
+        assert_eq!(support_floor(1600), 8);
+        assert_eq!(support_floor(400), 3);
+    }
 }

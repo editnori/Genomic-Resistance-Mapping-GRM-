@@ -288,7 +288,7 @@ pub struct FitTime {
     pub peak_kb: u64,
 }
 
-struct Context {
+struct ArmContext {
     rule: Rule,
     lineage: Vec<u32>,
     label: (String, Option<usize>, String),
@@ -298,7 +298,7 @@ struct Context {
 }
 
 thread_local! {
-    static CONTEXT: RefCell<Option<Context>> = const { RefCell::new(None) };
+    static CONTEXT: RefCell<Option<ArmContext>> = const { RefCell::new(None) };
 }
 
 /// Removes this thread's context when dropped.
@@ -316,7 +316,7 @@ impl Drop for Installed {
 pub fn install(lineage: &[u32]) -> Option<Installed> {
     let settings = active()?;
     CONTEXT.with(|c| {
-        *c.borrow_mut() = Some(Context {
+        *c.borrow_mut() = Some(ArmContext {
             rule: settings.rule,
             lineage: lineage.to_vec(),
             label: (String::new(), None, String::new()),
