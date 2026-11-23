@@ -1,5 +1,7 @@
-"""planted_faults.py: the ten faults of docs/mechanism-split.md, each planted
-in the scripts in turn, and the SYNTHETIC test that must catch it.
+"""planted_faults.py: the faults of docs/mechanism-split.md, each planted in
+the scripts in turn, and the SYNTHETIC test that must catch it: the ten of
+the design, and the first run's (23 Nov 2026), from the database fetched
+before the program is installed to an unknown symbol let through.
 
     python3 -I scripts/mechanism/planted_faults.py [--out faults.tsv]
 
@@ -26,6 +28,7 @@ for p in (HERE, ROOT):
         sys.path.insert(0, p)
 
 from tests.mechanism import common as fixtures  # noqa: E402
+from tests.mechanism import test_tools  # noqa: E402
 
 ar = fixtures.load("amr_rule")
 strata = fixtures.load("strata")
@@ -55,6 +58,34 @@ def genome_permutation(units, observed, seed_name, statistic, _orig=history.perm
     return _orig([(u[0], (u[1], i), [v]) for u in units for i, v in enumerate(u[2])], observed, seed_name, statistic)
 
 
+def install_after_db(text):
+    # fault 11: the program's environment installed after the database fetch,
+    # the order of the first run (defect A)
+    start, end = text.index("# The program's environment, once,"), text.index("db() {\n")
+    block, text = text[start:end], text[:start] + text[end:]
+    at = text.index("step db db\n") + len("step db db\n")
+    return text[:at] + "\n" + block + text[at:]
+
+
+def first_child_family(self, symbol, subtype="AMR", _orig=ar.Database.family):
+    # fault 12: a node above the gene families given its first child's family
+    fam = _orig(self, symbol, subtype)
+    if fam == symbol and symbol not in self.families:
+        children = [n for n, p in self.parent.items() if p == symbol and n in self.families]
+        return children[0] if children else fam
+    return fam
+
+
+def let_through(self, symbol, subtype="AMR", _orig=ar.Database.family):
+    # fault 13: a symbol in neither file let through under its own name
+    try:
+        return _orig(self, symbol, subtype)
+    except ar.Refusal:
+        if subtype != "AMR":
+            raise
+        return symbol
+
+
 FAULTS = [
     (1, "a stratum read from the label", "tests.mechanism.test_strata.Strata.test_stratum_comes_from_the_table_not_the_label",
      lambda: mock.patch.object(strata, "genome_strata", label_strata)),
@@ -82,6 +113,15 @@ FAULTS = [
     (10, "a family named other than as the database names it",
      "tests.mechanism.test_history.Vote.test_family_mix_names_the_databases_families",
      lambda: mock.patch.object(ar.Database, "family", lambda self, symbol, subtype="AMR": symbol)),
+    (11, "the database fetched before the program is installed",
+     "tests.mechanism.test_tools.InstallOrder.test_with_db_dash_the_install_ends_before_the_fetch",
+     lambda: mock.patch.object(test_tools.InstallOrder, "text", install_after_db(test_tools.InstallOrder.text))),
+    (12, "a node above the gene families given its first child's family",
+     "tests.mechanism.test_history.NodeFamilies.test_a_node_above_the_families_is_its_own_family",
+     lambda: mock.patch.object(ar.Database, "family", first_child_family)),
+    (13, "a symbol in neither database file let through",
+     "tests.mechanism.test_history.NodeFamilies.test_a_symbol_in_neither_file_still_refuses",
+     lambda: mock.patch.object(ar.Database, "family", let_through)),
 ]
 
 

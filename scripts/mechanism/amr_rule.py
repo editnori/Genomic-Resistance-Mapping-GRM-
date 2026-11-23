@@ -199,10 +199,15 @@ class Database:
     def family(self, symbol, subtype="AMR"):
         """The family of an element symbol, as the database names it: the
         allele's gene_family; else the symbol where it is a gene_family; else
-        its first ancestor in the hierarchy that is a gene_family. Only a row
-        of Subtype AMR enters a family mix: a POINT or POINT_DISRUPT row is
-        read with point and has no family here (the lead's rulings on
-        questions 1 and 10, 23 Nov 2026)."""
+        its first ancestor in the hierarchy that is a gene_family; else, and
+        only then, the symbol itself where it is a node_id of the hierarchy.
+        The AMRFinderPlus program names some hits at a node above the gene
+        families (msr and lsa, whose chains run through abc-f to AMR); such a
+        row is counted under that node's own name, as the database names it
+        (the lead's ruling on question 14, 06:56Z on 23 Nov 2026). A symbol in
+        neither file stops the run. Only a row of Subtype AMR enters a family
+        mix: a POINT or POINT_DISRUPT row is read with point and has no family
+        here (the lead's rulings on questions 1 and 10, 23 Nov 2026)."""
         if subtype != "AMR":
             refuse(f"a row of Subtype {subtype} is read with point and enters no family mix")
         if symbol in self.allele_family:
@@ -215,8 +220,20 @@ class Database:
                 return node
             seen.add(node)
             node = self.parent.get(node)
+        if symbol in self.parent:
+            return symbol
         # The message names no symbol: a mutation's name holds a position.
         refuse(f"an element symbol of Subtype {subtype}: neither the catalogue nor the hierarchy gives it a family")
+
+    def named_at_node(self, symbol):
+        """Whether family() names a Subtype AMR symbol at a hierarchy node
+        above the gene families: its own name, which is no gene_family. A
+        symbol family() refuses is not one; its refusal stays where the
+        family is read."""
+        try:
+            return self.family(symbol) == symbol and symbol not in self.families
+        except Refusal:
+            return False
 
     def rule_names_class(self, rule, cls):
         """Whether a published rule names a drug class: a C: token equal to it,

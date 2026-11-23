@@ -20,23 +20,27 @@
 # TABLES (or -) is a folder of the program's tables made before, as
 # TABLES/SPECIES/<genome id>.tsv: each table of the species recorded in
 # tool-tables.sha256 is copied from it and held to its recorded sha256, and
-# the program is neither installed nor run. With TABLES -, the program's
-# environment is installed from the kit, proved on the tool's own test file,
-# and run on every genome of the species with a recorded table, read from
-# FASTA (a folder as the kit's run_amrfinder.sh reads it); every table made
-# must equal its recorded sha256.
+# the program is not run. With TABLES -, the program is proved on the
+# tool's own test file and run on every genome of the species with a
+# recorded table, read from FASTA (a folder as the kit's run_amrfinder.sh
+# reads it); every table made must equal its recorded sha256.
 # DB (or -) is a copy of the database 2026-08-07.1, held to the kit's
 # spec/db-2026-08-07.1.sha256; with -, the kit's fetch_database.sh fetches
 # it from NCBI and holds it to the same list.
+# The program's environment (micromamba and the kit's
+# spec/env-amrfinder.explicit.txt, AMRFinderPlus 4.2.7) is installed by a
+# step of its own before db, whenever DB or TABLES is -: the fetch needs the
+# program's amrfinder_index, and the program run needs the program. With
+# TABLES and DB both given, nothing is installed.
 # FOLDS (or -) is the time split's results folder (design.sha256 and
 # fold-files/); with it, history.py writes the time-split link for the
 # species' datasets that have a past arm.
 #
 # Steps, each once: kit (pins and tools), release (the species' reports),
-# amrkit, db, tables (copied, or the program run), adapter (the kit's
-# amrfinder_adapter.py, unchanged, on the species' reports of A), rules
-# (each report's catalog.rule equal to scripts/mechanism/drug_rules.tsv),
-# strata, history, scan, end. strata.py stops unless its own program call
+# amrkit, install (only when DB or TABLES is -), db, tables (copied, or the
+# program run), adapter (the kit's amrfinder_adapter.py, unchanged, on the
+# species' reports of A), rules (each report's catalog.rule equal to
+# scripts/mechanism/drug_rules.tsv), strata, history, scan, end. strata.py stops unless its own program call
 # equals the adapter's on every genome.
 #
 # OUT gets logs/run.log, logs/<step>.log and .time (genome ids written as
@@ -171,11 +175,31 @@ print("the kit holds the adapter and grm_eval amr_rule.py ports")
 }
 step amrkit amrkit
 
+# The program's environment, once, before the database fetch needs
+# amrfinder_index and before the program runs. Each step runs in a shell of
+# its own, so db and tables put the environment on PATH again.
+install() {
+  export PATH="$AMR/env/bin:$PATH"; cd "$AMR"
+  curl -fsSL --retry 3 -A curl -o micromamba \
+    "https://github.com/mamba-org/micromamba-releases/releases/download/2.10.0-0/micromamba-linux-64"
+  pinned micromamba 701f39c06f8e6a670a0e186c8479b9e5c0502a2f0cda6cef65d83bdd2875e8bd
+  chmod +x micromamba; rm -rf "$AMR/env"
+  MAMBA_ROOT_PREFIX=$AMR/mamba ./micromamba create -y -p "$AMR/env" --file kit/spec/env-amrfinder.explicit.txt
+  amrfinder --version | grep -qx '4.2.7'
+  echo "installed: AMRFinderPlus $(amrfinder --version) from the kit's spec/env-amrfinder.explicit.txt"
+}
+if [ "$DB_FROM" = - ] || [ "$TABLES_FROM" = - ]; then
+  step install install
+else
+  say "install: TABLES and DB are given; nothing is installed"
+fi
+
 db() {
   rm -rf "$DB"; mkdir -p "$(dirname "$DB")"
   if [ "$DB_FROM" != - ]; then
     cp -r "$DB_FROM" "$DB"
   else
+    export PATH="$AMR/env/bin:$PATH"
     ( cd "$AMR/kit" && bash scripts/fetch_database.sh 2026-08-07.1 spec/db-2026-08-07.1.sha256 "$DB" )
   fi
   ( cd "$DB" && sha256sum --check --quiet "$AMR/kit/spec/db-2026-08-07.1.sha256" )
@@ -196,11 +220,6 @@ tables() {
     echo "tables copied from TABLES: $(wc -l < "$AMR/tables.recorded")"
   else
     export PATH="$AMR/env/bin:$PATH"; cd "$AMR"
-    curl -fsSL --retry 3 -A curl -o micromamba \
-      "https://github.com/mamba-org/micromamba-releases/releases/download/2.10.0-0/micromamba-linux-64"
-    pinned micromamba 701f39c06f8e6a670a0e186c8479b9e5c0502a2f0cda6cef65d83bdd2875e8bd
-    chmod +x micromamba; rm -rf "$AMR/env"
-    MAMBA_ROOT_PREFIX=$AMR/mamba ./micromamba create -y -p "$AMR/env" --file kit/spec/env-amrfinder.explicit.txt
     amrfinder --version | grep -qx '4.2.7'
     cd kit
     python3 -I -B tests/test_contract.py
