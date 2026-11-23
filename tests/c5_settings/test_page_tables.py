@@ -439,6 +439,35 @@ class Tables(Case):
         self.assertIn("no, equal by construction", "\n".join(printed["count"]))
         self.assertIn("no, beside", "\n".join(printed["conditions"]))
 
+    def test_a_species_with_a_missing_draw_counts_its_datasets_beside_those_entered(self):
+        rows = self.written(missing=True)["page-species.tsv"]
+        alpha = [r for r in rows if (r["species"], r["split"], r["pair"], r["learner"])
+                 == ("Synthia alpha", "lineage", "search-default", "rf")]
+        self.assertEqual([(r["datasets"], r["entered"], r["not_scored"]) for r in alpha], [("2", "1", "1")])
+
+    def test_a_species_difference_of_minus_0_02_is_counted_the_same(self):
+        def change(slug, draws):
+            for r in draws:
+                if (slug, r["split"], r["arm"]) == ("synthia_gamma", "lineage", "search"):
+                    r["balanced_accuracy"] = 0.73
+        rows = self.written(change_draws=change)["page-species.tsv"]
+        gamma = [r for r in rows if (r["species"], r["split"], r["pair"], r["learner"])
+                 == ("Synthia gamma", "lineage", "search-default", "rf")]
+        self.assertEqual([(r["entered"], r["better"], r["worse"], r["same"]) for r in gamma], [("1", "0", "0", "1")])
+
+    def test_the_cutoff_arms_log_loss_rows_beside_are_marked_equal_by_construction(self):
+        rows = self.written()["page-beside.tsv"]
+        marked = [r for r in rows if (r["beside"], r["pair"], r["measure"]) == ("no-constant", "cutoff-default",
+                                                                                "log_loss")]
+        self.assertEqual(len(marked), 10)
+        self.assertTrue(all(r["note"] == page.EQUAL_BY_CONSTRUCTION for r in marked))
+        self.assertTrue(all(r["note"] == "" for r in rows if r not in marked))
+
+    def test_a_plain_best_at_trial_0_kept_is_counted_as_the_pick(self):
+        rows = {(r["split"], r["learner"]): r for r in self.written()["page-choices.tsv"]}
+        self.assertEqual({l: rows[("lineage", l)]["plain_best_is_pick"] for l in fx.LEARNERS},
+                         {"scm": "60", "cart": "0", "rf": "60", "gbt": "0", "lasso": "0"})
+
     def test_an_out_dir_that_is_not_empty_is_refused(self):
         self.build()
         self.out.mkdir()
