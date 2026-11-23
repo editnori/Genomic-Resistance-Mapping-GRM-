@@ -57,9 +57,8 @@ CELLS_HEADER = ["species_slug", "species", "cell", "class", "dataset", "antibiot
 FAMILIES_HEADER = ["species_slug", "species", "class", "periods", "family", "earlier_genomes", "later_genomes",
                    "earlier_mix", "later_mix"]
 # A family seen in 1 to 4 genomes of a period's voting BioProjects is not
-# named: it joins one row under this label, whose mix is written only where
-# its own genome count is 0 or 5 or more.
-FOLDED_FAMILIES = "families seen in under 5 genomes"
+# named: it joins one row under this label, with its genome counts as they are.
+FOLDED_FAMILIES = "other families"
 YEARS_HEADER = ["species_slug", "species", "years", "genomes"]
 LINEAGE_HEADER = ["species_slug", "species", "reports", "report_pairs", "differing_genome_pairs", "given"]
 TIMESPLIT_HEADER = ["dataset", "species_slug", "species", "antibiotic", "reading", "resistant_later_test",
@@ -327,11 +326,18 @@ def fmt(x):
     return "" if x is None else f"{r12(x):.12f}"
 
 
+def entry_passes(units):
+    """The plan's entry rule: 3 or more voting units in each period."""
+    ne = sum(1 for u in units if u[0] == "earlier")
+    nl = sum(1 for u in units if u[0] == "later")
+    return ne >= MIN_UNITS and nl >= MIN_UNITS
+
+
 def vote_row(base, guard, units, seed_stub, note=""):
     """One output row of a voted guard from its units."""
     ne = sum(1 for u in units if u[0] == "earlier")
     nl = sum(1 for u in units if u[0] == "later")
-    passes = ne >= MIN_UNITS and nl >= MIN_UNITS
+    passes = entry_passes(units)
     row = dict(base, guard=guard, earlier_units=shown(ne), later_units=shown(nl), passes=int(passes),
                earlier_genomes=shown(sum(len(u[2]) for u in units if u[0] == "earlier")),
                later_genomes=shown(sum(len(u[2]) for u in units if u[0] == "later")),
@@ -374,13 +380,15 @@ def family_rows(base, em, lm, counts, holders):
         for period, mix, held in (("earlier", em, holders[0]), ("later", lm, holders[1])):
             k = sum(1 for v in held if v[2] & folded)
             row[f"{period}_genomes"] = shown(k)
-            row[f"{period}_mix"] = fmt(sum(mix.get(f, 0.0) for f in folded)) if k == 0 or k >= MIN_UNIT_GENOMES else ""
+            row[f"{period}_mix"] = fmt(sum(mix.get(f, 0.0) for f in folded))
         out.append(row)
     return out
 
 
-def pooled_row(base, gids, genomes, periods, cell_of):
-    """Guard 1: the pooled share per genome, no vote and no p."""
+def pooled_row(base, gids, genomes, periods, cell_of, vote_passes):
+    """Guard 1: the pooled share per genome, no vote and no p. Its shares are
+    written only where the cell's BioProject vote passes the plan's entry
+    rule (the lead's ruling on question 12)."""
     per = {"earlier": [], "later": []}
     for gid in gids:
         p = period_of(genomes[gid]["year"], periods)
@@ -390,8 +398,8 @@ def pooled_row(base, gids, genomes, periods, cell_of):
                later_genomes=shown(len(per["later"])), passes="", note="per genome; no vote, no p",
                earlier_point_disrupt=shown(sum(v[3] for v in per["earlier"])),
                later_point_disrupt=shown(sum(v[3] for v in per["later"])))
-    if len(per["earlier"]) < MIN_UNIT_GENOMES or len(per["later"]) < MIN_UNIT_GENOMES:
-        row["note"] += "; a period under 5 genomes, no share written"
+    if not vote_passes:
+        row["note"] += "; the cell's BioProject vote does not pass, no share written"
         return row
     st = statistics_of([unit_summary(per["earlier"]), unit_summary(per["later"])], ["earlier", "later"])
     ep, lp, dp, eg, lg, dg, tv, _, _ = st
@@ -452,12 +460,12 @@ def cell_rows(base, gids, genomes, cells_main, cells_intact, cls, periods, linea
 
     cell_of = cell_of_from(cells_main)
     out, mixes = [], None
+    units = units_of(gids, genomes, periods, bioproject_unit, cell_of)
     if "bioproject" in guards:
-        units = units_of(gids, genomes, periods, bioproject_unit, cell_of)
         row, mixes = vote_row(base, "bioproject", units, seed_stub)
         out.append(row)
     if "pooled" in guards:
-        out.append(pooled_row(base, gids, genomes, periods, cell_of))
+        out.append(pooled_row(base, gids, genomes, periods, cell_of, entry_passes(units)))
     if "largest_out" in guards:
         count = collections.Counter(genomes[g]["bioproject"] for g in gids
                                     if genomes[g]["bioproject"] and period_of(genomes[g]["year"], periods))

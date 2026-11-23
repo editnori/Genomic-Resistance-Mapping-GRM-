@@ -163,8 +163,8 @@ class Shared(unittest.TestCase):
         self.assertIsNone(C.spearman([1, 1, 1], [1, 2, 3]))
         self.assertAlmostEqual(C.spearman([1, 2, 3, 4], [1, 3, 2, 4]), 0.8)
 
-    def test_counts_under_five_are_hidden_and_recall_needs_ten(self):
-        self.assertEqual([C.shown(n) for n in (0, 1, 4, 5)], ["0", "under 5", "under 5", "5"])
+    def test_counts_are_written_as_they_are_and_recall_needs_ten(self):
+        self.assertEqual([C.shown(n) for n in (0, 1, 4, 5)], ["0", "1", "4", "5"])
         self.assertEqual(C.recall_cell(9, 9), "")
         self.assertEqual(C.recall_cell(5, 10), "0.500000000000")
         with self.assertRaises(TypeError):

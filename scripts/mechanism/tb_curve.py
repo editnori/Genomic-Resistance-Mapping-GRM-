@@ -32,8 +32,10 @@ is its own group, as the tool writes it.
 
 What leaves the box: counts and shares with species, antibiotic and gene
 names only. A variant's own name goes into no output (lane question 9). A
-cell under 5 genomes is written "under 5". No genome id, no row per genome,
-no sequence, no position.
+count is written as it is; a share is written over 5 or more resistant
+genomes, no curve over under 5, and a gene is named only where 5 or more
+resistant genomes carry it. No genome id, no row per genome, no sequence,
+no position.
 
 Python 3.12, standard library only; run with `python3 -I`.
 """
@@ -64,7 +66,7 @@ ORDERS = 1000
 GROUPINGS = ("main_lineage", "sub_lineage", "cluster")
 CONVERGENCE_GROUPINGS = ("main_lineage", "sub_lineage")
 BUCKETS = ("1", "2", "3", "4+")
-FOLDED_GENES = "genes seen in under 5 genomes"
+FOLDED_GENES = "other genes"
 
 
 class Refusal(Exception):
@@ -164,7 +166,7 @@ def curve_rows(species, antibiotic, in_m, grouping, groups):
         largest.append(len(seen))
     resistant = sum(g["genomes"] for g in groups.values())
     if resistant < FLOOR:
-        # a curve over 1 to 4 genomes would stand for those genomes: none is written
+        # M4 keeps its own floor: no curve over under 5 resistant genomes
         return []
     rows = []
     for step in range(n):

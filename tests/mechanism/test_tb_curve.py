@@ -153,19 +153,20 @@ class Curve(unittest.TestCase):
         rows = {r["lineages_seen"]: r for r in tb.convergence_rows("S", "rifampin", False, "main_lineage", per)}
         self.assertEqual({k: rows[k]["determinants"] for k in tb.BUCKETS}, {"1": 1, "2": 1, "3": 0, "4+": 1})
         self.assertEqual(rows["4+"]["resistant_covered"], "10")
-        self.assertEqual(rows["2"]["resistant_covered"], "under 5")
+        self.assertEqual(rows["2"]["resistant_covered"], "4")
         self.assertEqual(rows["4+"]["share_covered"], f"{10 / 11:.12f}")
 
 
 class Genes(unittest.TestCase):
-    def test_a_gene_seen_in_under_5_genomes_is_not_named(self):
+    def test_a_gene_seen_in_under_5_genomes_is_not_named_and_its_count_is_written(self):
         dets = {"synR": {("synR", "a"), ("synR", "b")}, "synK": {("synK", "c")}, "synG": {("synG", "d")}}
         sets = [{"synR"}] * 6 + [{"synR", "synK"}] * 2 + [{"synG"}]
         rows = {r["gene"]: r for r in tb.gene_rows("Synthia s0", "rifampin", False, dets, sets)}
         self.assertEqual(set(rows), {"synR", tb.FOLDED_GENES})
         self.assertEqual((rows["synR"]["catalogue_variants"], rows["synR"]["resistant_with_gene"]), (2, "8"))
         folded = rows[tb.FOLDED_GENES]
-        self.assertEqual((folded["catalogue_variants"], folded["resistant_with_gene"]), (2, "under 5"))
+        self.assertEqual((folded["catalogue_variants"], folded["resistant_with_gene"]), (2, "3"))
+        self.assertEqual(tb.FOLDED_GENES, "other genes")
 
     def test_a_gene_in_5_genomes_is_named(self):
         rows = tb.gene_rows("Synthia s0", "rifampin", False, {"synK": {("synK", "c")}}, [{"synK"}] * 5)
@@ -256,7 +257,7 @@ class EndToEnd(unittest.TestCase):
         self.assertEqual(overall[0]["share_without"], f"{9 / 24:.12f}")
         main = {r["group"]: r for r in cov if r["grouping"] == "main_lineage"}
         self.assertEqual(set(main), {"lineage1", "lineage2", "lineage4"})
-        self.assertEqual(main["lineage1"]["without_determinant"], "under 5")
+        self.assertEqual((main["lineage1"]["without_determinant"], main["lineage1"]["share_without"]), ("3", f"{3 / 8:.12f}"))
         cipro = [r for r in c.read_tsv(out / "m4-coverage.tsv")
                  if r["antibiotic"] == "ciprofloxacin" and r["grouping"] == "all"]
         self.assertEqual(cipro[0]["without_determinant"], "24")
@@ -278,9 +279,9 @@ class EndToEnd(unittest.TestCase):
         rc, out, err = run_tb(self.top, run, bed, rdir, lp)
         self.assertEqual(rc, 0, err)
         summary = json.loads((out / "m4-summary.json").read_text())
-        self.assertEqual(summary["genomes_failed"], "under 5")
+        self.assertEqual(summary["genomes_failed"], "2")
         rif = [e for e in summary["endpoints"] if e["antibiotic"] == "rifampin"][0]
-        self.assertEqual((rif["resistant_with_result"], rif["resistant_no_result"]), ("24", "under 5"))
+        self.assertEqual((rif["resistant_with_result"], rif["resistant_no_result"]), ("24", "2"))
 
     def test_a_genome_neither_run_nor_failed_refuses(self):
         *_, run, bed, rdir, lp = self.build()

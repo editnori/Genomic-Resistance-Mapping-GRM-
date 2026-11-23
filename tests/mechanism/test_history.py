@@ -159,8 +159,8 @@ class Vote(unittest.TestCase):
         rc, err, out = self.go()
         years = {r["years"]: r["genomes"] for r in c.read_tsv(out / "m2-years.tsv")}
         self.assertEqual(years["no year"], "11")
-        self.assertEqual(years["2020 on"], "under 5")
-        self.assertEqual(years["before 2000"], "under 5")
+        self.assertEqual(years["2020 on"], "3")
+        self.assertEqual(years["before 2000"], "2")
         self.assertEqual(years["2010 to 2014"], "17")
         self.assertEqual(row(out, "bioproject")["with_year_share"], f"{37 / 48:.12f}")
 
@@ -209,13 +209,14 @@ class Vote(unittest.TestCase):
     def test_family_mix_names_the_databases_families(self):
         rc, err, out = self.go()
         fams = {r["family"]: r for r in c.read_tsv(out / "m2-families.tsv") if r["periods"] == "primary"}
-        # qnrB is in 2 earlier genomes: folded, and the fold's earlier mix is not written
+        # qnrB is in 2 earlier genomes: folded into "other families", its count and mix written
+        self.assertEqual(history.FOLDED_FAMILIES, "other families")
         self.assertEqual(set(fams), {"qnrS", history.FOLDED_FAMILIES})
         self.assertEqual(fams["qnrS"]["earlier_mix"], f"{(1 + 0.6 + 1) / 3:.12f}")
         self.assertEqual(fams["qnrS"]["later_mix"], "1.000000000000")
         self.assertEqual((fams["qnrS"]["earlier_genomes"], fams["qnrS"]["later_genomes"]), ("15", "15"))
         fold = fams[history.FOLDED_FAMILIES]
-        self.assertEqual((fold["earlier_genomes"], fold["earlier_mix"]), ("under 5", ""))
+        self.assertEqual((fold["earlier_genomes"], fold["earlier_mix"]), ("2", f"{0.4 / 3:.12f}"))
         self.assertEqual((fold["later_genomes"], fold["later_mix"]), ("0", "0.000000000000"))
 
     def test_a_family_in_5_or_more_genomes_of_each_period_is_named(self):
@@ -297,6 +298,21 @@ class Vote(unittest.TestCase):
         # in one report it shares a cluster with 8 genomes, in the other with 5
         self.assertEqual((lin["given"], lin["differing_genome_pairs"]), ("0", str(8 + 5)))
         self.assertIn("not given", row(out, "lineage")["note"])
+
+    def test_a_pooled_share_is_written_only_where_the_vote_passes(self):
+        shares = ("earlier_point", "later_point", "d_point", "earlier_gene", "later_gene", "d_gene", "tvd")
+        rc, err, out = self.go()
+        self.assertEqual(row(out, "bioproject")["passes"], "1")
+        self.assertEqual(row(out, "pooled")["earlier_point"], "0.000000000000")
+        g = [x for x in scenario() if x["id"] != "8103.5"]
+        rc, err, out = self.go(genomes=g)
+        self.assertEqual(rc, 0, err)
+        r = row(out, "pooled")
+        # two earlier BioProjects vote, so the cell does not pass, though each period holds 5 or more genomes
+        self.assertEqual(row(out, "bioproject")["passes"], "0")
+        self.assertEqual((r["earlier_genomes"], r["later_genomes"]), ("16", "15"))
+        self.assertEqual([r[k] for k in shares], [""] * len(shares))
+        self.assertIn("vote does not pass", r["note"])
 
     def test_a_year_that_differs_between_reports_stops_the_species(self):
         g = scenario()

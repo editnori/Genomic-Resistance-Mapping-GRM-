@@ -74,22 +74,24 @@ class Scan(unittest.TestCase):
     def test_names_versions_and_columns_pass(self):
         rc, out = self.scan("earlier_point\tpoint_disrupt_alone:both\tBETA-LACTAM\tAMINOGLYCOSIDE/QUINOLONE\t"
                             "S:CARBAPENEM\t4.2.7\t2026-08-07.1\t6.6.3\tlineage4.2.1\tRv0678\tqnrS\taac(6')-Ib\t"
-                            "families seen in under 5 genomes\tklebsiella_aerogenes__meropenem\t2026-11-23T04:51:24Z\n")
+                            "other families\tother genes\tklebsiella_aerogenes__meropenem\t2026-11-23T04:51:24Z\n")
         self.assertEqual(rc, 0, out)
 
     def test_figures_and_other_ids_pass(self):
-        rc, out = self.scan("0.500000000000\t9999.1\t19999.11\t9999.110\tunder 5\n")
+        rc, out = self.scan("0.500000000000\t9999.1\t19999.11\t9999.110\t3\n")
         self.assertEqual(rc, 0, out)
 
 
 strata = c.load("strata")
 history = c.load("history")
 M4_GENES = ["species", "antibiotic", "in_M", "gene", "catalogue_variants", "resistant_with_gene"]
+M4_COVERAGE = ["species", "antibiotic", "in_M", "grouping", "group", "resistant", "without_determinant",
+               "share_without"]
 
 
 class ScanTables(unittest.TestCase):
-    """Rows planted in each table the scan reads, each of which could stand
-    for 1 to 4 genomes or for one BioProject."""
+    """Rows planted in each table the scan reads, each a rate under its floor,
+    a name carried by under 5 genomes, or a cell that is not a count."""
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -97,25 +99,26 @@ class ScanTables(unittest.TestCase):
         self.top = Path(self.tmp.name)
         (self.top / "ids.json").write_text(json.dumps({"genomes": [{"id": "9999.11"}]}))
 
-    def scan(self, name, header, rows):
+    def scan(self, name, header, rows, beside=None):
         res = self.top / "res"
         shutil.rmtree(res, ignore_errors=True)
         res.mkdir()
-        lines = ["\t".join(header)] + ["\t".join(r.get(h, "") for h in header) for r in rows]
-        (res / name).write_text("\n".join(lines) + "\n")
+        for n, (h, rs) in dict(beside or {}, **{name: (header, rows)}).items():
+            lines = ["\t".join(h)] + ["\t".join(r.get(x, "") for x in h) for r in rs]
+            (res / n).write_text("\n".join(lines) + "\n")
         return quiet(scan.main, ["--ids", str(self.top / "ids.json"), str(res)])
 
-    def assertHit(self, name, header, row, rule):
-        rc, out = self.scan(name, header, [row])
+    def assertHit(self, name, header, row, rule, beside=None):
+        rc, out = self.scan(name, header, row if isinstance(row, list) else [row], beside)
         self.assertEqual(rc, 1, out)
         self.assertIn(rule, out)
 
-    def test_a_count_of_1_to_4_shown_fails(self):
-        ok = {"resistant": "0", "resistant_called": "under 5", "susceptible": "12", "susceptible_called": "5"}
+    def test_a_count_is_written_as_it_is(self):
+        ok = {"resistant": "0", "resistant_called": "1", "susceptible": "12", "susceptible_called": "4"}
         self.assertEqual(self.scan("strata.tsv", strata.STRATA_HEADER, [ok])[0], 0)
-        for bad in ("1", "4", "-1", "05", "4.0", "x"):
+        for bad in ("under 5", "-1", "05", "4.0", "x"):
             self.assertHit("strata.tsv", strata.STRATA_HEADER, dict(ok, susceptible_called=bad),
-                           "susceptible_called: not 0, under 5 or 5 and more")
+                           "susceptible_called: not a count")
 
     def test_a_recall_over_under_10_fails(self):
         row = {"resistant": "9", "resistant_called": "9", "susceptible": "0", "susceptible_called": "0",
@@ -123,51 +126,80 @@ class ScanTables(unittest.TestCase):
         self.assertHit("strata.tsv", strata.STRATA_HEADER, row, "recall: written over under 10")
         self.assertEqual(self.scan("strata.tsv", strata.STRATA_HEADER, [dict(row, resistant="10")])[0], 0)
 
-    def test_a_pooled_row_over_one_dataset_with_one_genome_fails_unless_masked(self):
+    def test_a_pooled_row_over_one_dataset_with_one_genome_writes_no_recall(self):
         row = {"datasets": "1", "resistant_pairs": "1", "resistant_called": "1", "susceptible_pairs": "0",
                "susceptible_called": "0", "recall": ""}
-        self.assertHit("pooled.tsv", strata.POOLED_HEADER, row, "resistant_pairs: not 0, under 5 or 5 and more")
-        masked = dict(row, resistant_pairs="under 5", resistant_called="under 5")
-        self.assertHit("pooled.tsv", strata.POOLED_HEADER, dict(masked, recall="1.000000000000"),
+        self.assertEqual(self.scan("pooled.tsv", strata.POOLED_HEADER, [row])[0], 0)
+        self.assertHit("pooled.tsv", strata.POOLED_HEADER, dict(row, recall="1.000000000000"),
                        "recall: written over under 10")
-        self.assertEqual(self.scan("pooled.tsv", strata.POOLED_HEADER, [masked])[0], 0)
 
     def m2_row(self, **kw):
         row = {k: "0" for k in ("genomes", "earlier_genomes", "later_genomes", "earlier_units", "later_units",
                                 "earlier_point_disrupt", "later_point_disrupt")}
-        row.update(genomes="40", earlier_genomes="20", later_genomes="20", guard="pooled", passes="")
+        row.update(species_slug="synthia_s1", cell="species_class", **{"class": "QUINOLONE"}, periods="primary",
+                   genomes="40", earlier_genomes="20", later_genomes="20", guard="pooled", passes="")
         row.update(kw)
         return row
 
-    def test_a_share_beside_under_5_genomes_fails(self):
-        self.assertEqual(self.scan("m2-cells.tsv", history.CELLS_HEADER,
-                                   [self.m2_row(earlier_point="0.5", d_point="0.1")])[0], 0)
-        self.assertHit("m2-cells.tsv", history.CELLS_HEADER,
-                       self.m2_row(earlier_genomes="under 5", earlier_point="1.000000000000"),
-                       "earlier_point: written beside a count under 5")
+    def test_a_pooled_share_in_a_cell_whose_vote_does_not_pass_fails(self):
+        vote = self.m2_row(guard="bioproject", passes="1", earlier_units="3", later_units="3",
+                           earlier_point="0.5")
+        pooled = self.m2_row(earlier_point="0.5", d_point="0.1")
+        self.assertEqual(self.scan("m2-cells.tsv", history.CELLS_HEADER, [vote, pooled])[0], 0)
+        for rows in ([dict(vote, passes="0", earlier_units="2", earlier_point=""), pooled], [pooled],
+                     [vote, dict(pooled, periods="secondary")]):
+            self.assertHit("m2-cells.tsv", history.CELLS_HEADER, rows,
+                           "a pooled share in a cell whose BioProject vote does not pass")
 
     def test_a_voted_row_that_does_not_pass_with_a_share_fails(self):
-        voted = self.m2_row(guard="bioproject", passes="0", earlier_units="under 5", later_units="under 5")
+        voted = self.m2_row(guard="bioproject", passes="0", earlier_units="2", later_units="1")
         self.assertEqual(self.scan("m2-cells.tsv", history.CELLS_HEADER, [voted])[0], 0)
         self.assertHit("m2-cells.tsv", history.CELLS_HEADER, dict(voted, later_gene="0.250000000000"),
                        "a voted row that does not pass writes a share")
         self.assertEqual(self.scan("m2-cells.tsv", history.CELLS_HEADER,
                                    [dict(voted, passes="1", later_gene="0.25")])[0], 0)
 
-    def test_a_family_seen_in_under_5_genomes_named_fails(self):
-        row = {"family": "qnrB", "earlier_genomes": "under 5", "later_genomes": "0", "earlier_mix": "",
-               "later_mix": "0.000000000000"}
-        self.assertHit("m2-families.tsv", history.FAMILIES_HEADER, row, "a family under 5 genomes is named")
-        fold = dict(row, family=history.FOLDED_FAMILIES)
-        self.assertEqual(self.scan("m2-families.tsv", history.FAMILIES_HEADER, [fold])[0], 0)
-        self.assertHit("m2-families.tsv", history.FAMILIES_HEADER, dict(fold, earlier_mix="0.1"),
-                       "earlier_mix: written beside a count under 5")
+    def test_a_share_over_under_5_genomes_fails(self):
+        row = {"resistant_later_test": "9", "with_determinant": "4", "with_unseen_determinant": "1",
+               "no_determinant": "5", "share_unseen": "0.250000000000"}
+        self.assertHit("timesplit.tsv", history.TIMESPLIT_HEADER, row, "share_unseen: written over under 5 genomes")
+        self.assertEqual(self.scan("timesplit.tsv", history.TIMESPLIT_HEADER,
+                                   [dict(row, with_determinant="5", share_unseen="0.2")])[0], 0)
+        self.assertEqual(self.scan("timesplit.tsv", history.TIMESPLIT_HEADER, [dict(row, share_unseen="")])[0], 0)
+        cov = {"resistant": "4", "without_determinant": "1", "share_without": "0.250000000000"}
+        self.assertHit("m4-coverage.tsv", M4_COVERAGE, cov, "share_without: written over under 5 genomes")
 
-    def test_a_gene_seen_in_under_5_genomes_named_fails(self):
-        row = {"gene": "synR", "catalogue_variants": "1", "resistant_with_gene": "under 5"}
-        self.assertHit("m4-genes.tsv", M4_GENES, row, "a gene under 5 genomes is named")
-        fold = dict(row, gene="genes seen in under 5 genomes")
-        self.assertEqual(self.scan("m4-genes.tsv", M4_GENES, [fold])[0], 0)
+    def families(self, rows, passes="1"):
+        vote = self.m2_row(guard="bioproject", passes=passes, earlier_units="3", later_units="3")
+        base = {"species_slug": "synthia_s1", "class": "QUINOLONE", "periods": "primary"}
+        return [dict(base, **r) for r in rows], {"m2-cells.tsv": (history.CELLS_HEADER, [vote])}
+
+    def test_a_family_carried_by_under_5_genomes_named_fails(self):
+        for e, l_ in (("2", "0"), ("7", "4"), ("0", "0")):
+            rows, beside = self.families([{"family": "qnrB", "earlier_genomes": e, "later_genomes": l_,
+                                           "earlier_mix": "0.1", "later_mix": "0.0"}])
+            self.assertHit("m2-families.tsv", history.FAMILIES_HEADER, rows,
+                           "a family carried by under 5 genomes is named", beside)
+        rows, beside = self.families([{"family": "qnrS", "earlier_genomes": "15", "later_genomes": "0",
+                                       "earlier_mix": "0.9", "later_mix": "0.0"},
+                                      {"family": history.FOLDED_FAMILIES, "earlier_genomes": "2",
+                                       "later_genomes": "0", "earlier_mix": "0.1", "later_mix": "0.0"}])
+        self.assertEqual(self.scan("m2-families.tsv", history.FAMILIES_HEADER, rows, beside)[0], 0)
+
+    def test_a_family_mix_in_a_cell_whose_vote_does_not_pass_fails(self):
+        mix = [{"family": "qnrS", "earlier_genomes": "15", "later_genomes": "15", "earlier_mix": "0.9",
+                "later_mix": "1.0"}]
+        rows, beside = self.families(mix, passes="0")
+        self.assertHit("m2-families.tsv", history.FAMILIES_HEADER, rows,
+                       "a family mix in a cell whose BioProject vote does not pass", beside)
+        self.assertHit("m2-families.tsv", history.FAMILIES_HEADER, rows,
+                       "a family mix with no cells table beside it")
+
+    def test_a_gene_carried_by_under_5_genomes_named_fails(self):
+        row = {"gene": "synR", "catalogue_variants": "1", "resistant_with_gene": "4"}
+        self.assertHit("m4-genes.tsv", M4_GENES, row, "a gene carried by under 5 genomes is named")
+        self.assertEqual(self.scan("m4-genes.tsv", M4_GENES, [dict(row, gene="other genes")])[0], 0)
+        self.assertEqual(self.scan("m4-genes.tsv", M4_GENES, [dict(row, resistant_with_gene="5")])[0], 0)
 
     def test_a_table_of_another_name_or_without_a_column_fails(self):
         self.assertHit("per-bioproject.tsv", ["a"], {"a": "1"}, "a table the scan does not know")
@@ -176,10 +208,11 @@ class ScanTables(unittest.TestCase):
         self.assertEqual(self.scan("timing.tsv", ["step", "wall_seconds", "peak_kb"], [{"step": "1"}])[0], 0)
 
     def test_the_output_names_the_rule_not_the_value(self):
-        rc, out = self.scan("strata.tsv", strata.STRATA_HEADER, [{"resistant": "3"}])
+        rc, out = self.scan("strata.tsv", strata.STRATA_HEADER, [{"resistant": "7", "recall": "0.285714285714"}])
         self.assertEqual(rc, 1)
-        self.assertNotIn("\t3", out)
-        self.assertNotRegex(out, r"\b3\b")
+        self.assertNotIn("\t7", out)
+        self.assertNotRegex(out, r"\b7\b")
+        self.assertNotIn("0.285714285714", out)
 
 
 class Rules(unittest.TestCase):

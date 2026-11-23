@@ -11,9 +11,8 @@ import os
 import random
 import statistics
 
-FLOOR = 5            # a count of 1 to 4 is written "under 5"; 0 is written 0 (lead's ruling 2, 23 Nov)
+FLOOR = 5            # a catalogue name needs 5 or more genomes in its row's cell; M4's share floor
 RECALL_FLOOR = 10    # a recall is written only over 10 or more resistant genomes
-UNDER = "under 5"
 MARGIN = 0.02
 RESAMPLES = 4000
 LO_INDEX, HI_INDEX = 100, 3899   # the 101st and 3,900th sorted values
@@ -25,14 +24,13 @@ def r12(x):
 
 
 def shown(n):
-    """A genome count as a table writes it: 0 as 0, 1 to 4 as "under 5"."""
+    """A genome count as a table writes it: as it is, 0 to 4 included (the
+    lead's ruling on question 12, 23 Nov). A rate keeps its floor."""
     if not isinstance(n, int) or isinstance(n, bool):
         raise TypeError(f"a count must be an int, not {n!r}")
     if n < 0:
         raise ValueError("a count is never negative")
-    if n == 0:
-        return "0"
-    return UNDER if n < FLOOR else str(n)
+    return str(n)
 
 
 def recall_cell(called, resistant):
