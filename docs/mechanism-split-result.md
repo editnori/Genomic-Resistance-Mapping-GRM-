@@ -257,9 +257,9 @@ Only the BioProject vote on the primary periods over species and class cells dec
 
 ## Guards
 
-The guards stand beside the BioProject vote and decide nothing: the share per genome with no vote, the largest BioProject left out, flagged BioProjects left out (0.95 or more resistant labels for the class, or one family in 0.95 or more of their gene genomes, read over every year), one vote per lineage cluster where the species' reports agree on the clusters, the clusters voting in both periods, countries present in both periods only, and rows of no partial method only. Resistant genomes per dataset are a secondary reading. The time-split link is exploratory.
+The guards stand beside the BioProject vote and decide nothing: the share per genome with no vote, the largest BioProject left out, flagged BioProjects left out (0.95 or more resistant labels for the class, or one family in 0.95 or more of their gene genomes, read over every year), one vote per lineage cluster where the species' reports agree on the clusters, the clusters voting in both periods, countries present in both periods only, and rows of no partial method only. The method page listed six of these seven before the reading and left out the clusters voting in both periods; the run's script at main `11c2996` held that guard before the run. Resistant genomes per dataset are a secondary reading. The time-split link is exploratory.
 
-**Species and class cells.** Under every guard, on both pairs of periods and both statistics, 0 cells move. The guards change how many cells pass. On the primary periods, among the guards with a vote, that runs from 34 cells with a mix, with flagged BioProjects left out, to 145 cells on the point share, with one vote per lineage cluster. The share per genome has no vote and no p, so by its own rule it passes and moves no cell. Its shares are written only where the cell's BioProject vote passes.
+**Species and class cells.** Under every guard, on both pairs of periods and both statistics, 0 cells move. The guards change how many cells pass. On the primary periods, among the guards with a vote, that runs from 34 cells with a mix, with flagged BioProjects left out, to 145 cells on the point share, with one vote per lineage cluster. The share per genome has no vote and no p, so it passes in no cell and moves none. Its shares are written only where the cell's BioProject vote passes.
 
 | Periods | Guard | Statistic | Cells | Pass | Move | Decides |
 |---|---|---|---|---|---|---|
@@ -309,7 +309,7 @@ The guards stand beside the BioProject vote and decide nothing: the share per ge
 | 2000 to 2009 against 2010 to 2019 | share per genome, no vote | point | 204 | 0 | 0 |
 | 2000 to 2009 against 2010 to 2019 | share per genome, no vote | tvd | 204 | 0 | 0 |
 
-**Time-split link, exploratory.** Over the 24 datasets of `docs/time-split.md`, Spearman's rank correlation of the share of resistant later test genomes with a catalogue call no resistant training genome carries (a point row is one call, "point"), against each learner's past-less-random difference. On recall it runs from -0.257 (`scm`) to 0.268 (`rf`), and on log loss it runs from -0.186 (`gbt`) to 0.371 (`cart`). It is a retrospective split inside one database and decides nothing.
+**Time-split link, exploratory.** Over the 24 datasets of `docs/time-split.md`, Spearman's rank correlation of a share against each learner's past-less-random difference. The share is taken over the resistant later test genomes with a catalogue call, and counts those with a call no resistant training genome carries (a point row is one call, "point"). The method page's words before the reading put every resistant later test genome under it; 13 of the 24 datasets hold such genomes with no call, and on 2 of the 13 the two shares differ. On recall it runs from -0.257 (`scm`) to 0.268 (`rf`), and on log loss it runs from -0.186 (`gbt`) to 0.371 (`cart`). It is a retrospective split inside one database and decides nothing.
 
 | Learner | Datasets | Recall difference, Spearman | Log loss difference, Spearman |
 |---|---|---|---|
@@ -356,7 +356,7 @@ These points were seen in the tables after the reading. The rules did not ask fo
 
 **No difference shown.** On M1, "no difference shown" is the rule's reading on 19 datasets in 5 species and is no statement that recall is equal.
 
-**A rule in two parts.** On sulfamethoxazole/trimethoprim a stratum counts a row that meets one part of the rule (section Seen after). The maintainer has not ruled on it.
+**A rule in two parts.** On sulfamethoxazole/trimethoprim a stratum counts a row that meets one part of the rule (section Seen after), and so do M2's resistant genomes per dataset and the time-split link's share. The maintainer has not ruled on it.
 
 **Labels.** The datasets in M wait for the maintainer's label rule. They are marked and never join the primary reading.
 
