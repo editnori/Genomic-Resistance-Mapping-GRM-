@@ -78,11 +78,11 @@ FAULTS = [
      '(exp["split"], exp["scheme"]) in (("lineage", "lineage"), ("study", STUDY_SCHEME))\n       and ',
      "",
      "py", f"{T}.Checks.test_a_study_result_read_as_a_lineage_result_fails"),
-    ("9", "Holm over each arm's own learners, not the 16 pairs", SCORE,
+    ("9", "Holm over each arm's own learners, not the 21 pairs", SCORE,
      '    for r, p in zip(fam, C9.holm([r["sign_p"] for r in fam])):\n        r["holm_p"] = p',
      '    for a in FAMILY:\n        part = [r for r in fam if arm_of(r["pair"]) == a]\n'
      '        for r, p in zip(part, C9.holm([r["sign_p"] for r in part])):\n            r["holm_p"] = p',
-     "py", f"{T}.Count.test_holm_over_sixteen_is_held_to_the_plain_step_down"),
+     "py", f"{T}.Count.test_holm_over_twenty_one_is_held_to_the_plain_step_down"),
     ("10", "a screen arm's scm and cart counted", SCORE,
      "    return SCREENED if arm in SCREEN_ARMS else LEARNERS",
      "    return LEARNERS",

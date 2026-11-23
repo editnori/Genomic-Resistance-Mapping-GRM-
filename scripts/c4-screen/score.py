@@ -37,21 +37,29 @@ counts and, when a check fails, the names of the failed checks with their
 files (never a score), and exits 1, scoring nothing.
 
 The second form writes count.tsv, count-no-constant.tsv, conditions.tsv and
-count-floor-moves.tsv over several species' datasets.tsv, and prints the
-row count only. The family is fixed at 16 pairs on the lineage primary
-measure: cmh-4000 and cmh-16000 with rf, gbt and lasso, the learners a
-screen touches, floor-3 and the twin with all five. C3's count runs over
-them, with its median differences, species-resample intervals, sign tests
-and refusal of part of the family, and Holm runs over the 16. A screen
-arm's scm and cart are checked equal to the default's and not counted.
+count-floor-all.tsv over several species' datasets.tsv, and prints the
+row count only. The lead's rulings of 23 Nov 2026 (questions 10 and 12) fix
+the family at 21 pairs on the lineage primary measure: cmh-4000 and
+cmh-16000 with rf, gbt and lasso, the learners a screen touches, over every
+dataset; floor-3 with all five over the datasets of 800 genomes or more,
+the ones its floor can move (92 of the first run's 233, fixed by cohort
+size before any score); the twin with all five over every dataset, and
+again over those of 800 genomes or more. C3's count runs over each set,
+with its median differences, species-resample intervals, sign tests and
+refusal of part of the family, and Holm runs over the 21. count.tsv's
+column `set` names the datasets a row reads: `all` or `800-or-more`. A
+screen arm's scm and cart are checked equal to the default's and not
+counted.
 
-conditions.tsv reads the plan's conditions per arm. A screen arm: 1, 2
-and 5 for each of rf, gbt and lasso, 4 for the three, 3 the twin meeting 1
-in fewer than 3 of 5 learners and 2 in fewer than 3 of 5, each read apart.
-The floor arm: C3's two readings, imported (ruling 15 decides, the
-stricter beside it), at Holm over 16. 6 is the maintainer's.
-count-floor-moves.tsv is the floor arm's count over the datasets of 800
-genomes or more alone, the ones its floor moves, and decides nothing.
+conditions.tsv reads the plan's conditions per arm. A screen arm, over
+every dataset: 1, 2 and 5 for each of rf, gbt and lasso, 4 for the three,
+3 the twin over every dataset meeting 1 in fewer than 3 of 5 learners and 2
+in fewer than 3 of 5, each read apart. The floor arm, over the datasets of
+800 genomes or more: C3's two readings, imported (ruling 15 decides, the
+stricter beside it), at Holm over 21, with the twin read over the same
+datasets for 3. 6 is the maintainer's. count-floor-all.tsv is the floor
+arm's count over every dataset, where those under 800 genomes enter as a
+difference of 0; it stands beside and decides nothing.
 """
 
 import contextlib
@@ -255,9 +263,28 @@ def arm_of(pair):
     return pair[: -len(DEFAULT) - 1]
 
 
-def holm16(rows):
-    fam = [r for r in rows if r["split"] == "lineage" and r["measure"] == PRIMARY]
-    assert len(fam) == sum(len(touched(a)) for a in FAMILY)
+ALL, MOVES = "all", "800-or-more"
+COUNT_COLUMNS = ["set"] + C3.COUNT_COLUMNS
+# The lineage primary measure's family (the lead's rulings 10 and 12): (arm, set) and its learners.
+FAMILY_PARTS = [("cmh-4000", ALL), ("cmh-16000", ALL), (FLOOR_ARM, MOVES), (TWIN, ALL), (TWIN, MOVES)]
+FAMILY_SIZE = 21
+
+
+def moved_rows(rows):
+    """The datasets.tsv rows of datasets of 800 genomes or more, the ones the floor arm can move."""
+    out = []
+    for r in rows:
+        if r.get("genomes") in (None, ""):
+            raise SystemExit(f"{r['dataset']}: no genome count, so its place in the floor arm's set is not known")
+        if floor_moves(r["genomes"]):
+            out.append(r)
+    return out
+
+
+def holm21(rows):
+    fam = [r for part in FAMILY_PARTS for r in rows
+           if (arm_of(r["pair"]), r["set"]) == part and r["split"] == "lineage" and r["measure"] == PRIMARY]
+    assert len(fam) == FAMILY_SIZE == sum(len(touched(a)) for a, _ in FAMILY_PARTS), len(fam)
     for r in rows:
         r["holm_p"] = None
     for r, p in zip(fam, C9.holm([r["sign_p"] for r in fam])):
@@ -266,23 +293,29 @@ def holm16(rows):
 
 
 def count(rows, withdrawn=(), keep_constant=True):
-    """count.tsv's rows from several species' datasets.tsv rows: C3's count over C4's family, the learners
-    each arm touches, Holm over the 16 lineage pairs of the primary measure."""
+    """count.tsv's rows from several species' datasets.tsv rows: C3's count over every dataset for the screen
+    arms and the twin, the learners each arm touches, and over the datasets of 800 genomes or more for the
+    floor arm and the twin; Holm over the 21 lineage pairs of the primary measure."""
     with family(FAMILY):
-        out = C3.count(rows, withdrawn, keep_constant)
-    return holm16([r for r in out if r["learner"] in touched(arm_of(r["pair"]))])
+        whole = C3.count(rows, withdrawn, keep_constant)
+    whole = [dict(r, set=ALL) for r in whole
+             if arm_of(r["pair"]) != FLOOR_ARM and r["learner"] in touched(arm_of(r["pair"]))]
+    moved = moved_rows(rows)
+    if not any(r["split"] == "lineage" and r["arm"] == TWIN for r in moved):
+        raise SystemExit("no dataset of 800 genomes or more: the floor arm's part of the family cannot be read")
+    with family([FLOOR_ARM, TWIN]):
+        part = C3.count(moved, [a for a in withdrawn if a == FLOOR_ARM], keep_constant)
+    return holm21(whole + [dict(r, set=MOVES) for r in part])
 
 
-def floor_moves_count(rows, withdrawn=()):
-    """count-floor-moves.tsv: the floor arm's rows over the datasets its floor moves; decides nothing."""
+def floor_all_count(rows, withdrawn=()):
+    """count-floor-all.tsv: the floor arm's rows over every dataset, those under 800 genomes at a difference
+    of 0; decides nothing (the lead's ruling 10)."""
     if FLOOR_ARM in withdrawn:
         return []
-    moved = [r for r in rows if r.get("genomes") not in (None, "") and floor_moves(r["genomes"])]
-    if not any(r["arm"] == FLOOR_ARM and r["split"] == "lineage" for r in moved):
-        return []
     with family([FLOOR_ARM, TWIN]):
-        out = C3.count(moved)
-    out = [r for r in out if arm_of(r["pair"]) == FLOOR_ARM]
+        out = C3.count(rows)
+    out = [dict(r, set=ALL) for r in out if arm_of(r["pair"]) == FLOOR_ARM]
     for r in out:
         r["holm_p"] = None
     return out
@@ -306,7 +339,7 @@ def sign(x):
 
 def conditions(count_rows):
     """conditions.tsv's rows: per arm, the plan's change conditions as the count reads them."""
-    at = {(r["split"], r["pair"], r["learner"], r["measure"]): r for r in count_rows}
+    at = {(r["split"], r["pair"], r["learner"], r["measure"]): r for r in count_rows if r["set"] == ALL}
     twin_most = max(sum(meets_1(lineage_row(at, TWIN, l)) for l in LEARNERS),
                     sum(meets_2(lineage_row(at, TWIN, l)) for l in LEARNERS))
     out = []
@@ -324,21 +357,24 @@ def conditions(count_rows):
         rows = [
             ("1", "the lineage median difference's interval lies wholly above 0, for each of rf, gbt and lasso",
              len(one) == len(SCREENED), len(one)),
-            ("2", "better beats worse by the one-sided sign test at p < 0.05 after Holm over 16, for each of the three",
+            ("2", "better beats worse by the one-sided sign test at p < 0.05 after Holm over 21, for each of the three",
              len(two) == len(SCREENED), len(two)),
-            ("3", "the twin meets 1 in fewer than 3 of 5 learners and 2 in fewer than 3 of 5, each read apart "
-             "(learners: the larger of the twin's two counts)", twin_most < TOUCHED_AT_LEAST, twin_most),
+            ("3", "the twin, over every dataset, meets 1 in fewer than 3 of 5 learners and 2 in fewer than 3 of 5, "
+             "each read apart (learners: the larger of the twin's two counts)", twin_most < TOUCHED_AT_LEAST,
+             twin_most),
             ("4", "no recall interval of the three lies wholly below -0.02", not low, len(SCREENED) - len(low)),
             ("5", "each of the three has a study median of its lineage median's sign", len(five) == len(SCREENED),
              len(five)),
             ("6", "the maintainer rules the change", "", ""),
         ]
-        out += [{"arm": arm, "reading": "the learners it touches", "condition": n, "reads": text,
+        out += [{"arm": arm, "reading": "the learners it touches, every dataset", "condition": n, "reads": text,
                  "met": "" if m == "" else int(bool(m)), "learners": k} for n, text, m, k in rows]
+    # The floor arm and its twin over the datasets of 800 genomes or more (the lead's ruling 10).
     with family([FLOOR_ARM, TWIN]):
-        floor = C3.conditions(count_rows)
+        floor = C3.conditions([r for r in count_rows if r["set"] == MOVES])
     for r in floor:
-        r["reads"] = r["reads"].replace("Holm over 30", "Holm over 16")
+        r["reading"] = f"{r['reading']}, 800 genomes or more"
+        r["reads"] = r["reads"].replace("Holm over 30", "Holm over 21")
     return out + floor
 
 
@@ -365,10 +401,10 @@ def main(argv):
             raise SystemExit("a dataset, split, arm and learner is listed twice")
         counted = count(rows, withdrawn)
         out.mkdir(parents=True, exist_ok=True)
-        write_tsv(out / "count.tsv", counted, C3.COUNT_COLUMNS)
-        write_tsv(out / "count-no-constant.tsv", count(rows, withdrawn, keep_constant=False), C3.COUNT_COLUMNS)
+        write_tsv(out / "count.tsv", counted, COUNT_COLUMNS)
+        write_tsv(out / "count-no-constant.tsv", count(rows, withdrawn, keep_constant=False), COUNT_COLUMNS)
         write_tsv(out / "conditions.tsv", conditions(counted), C3.CONDITION_COLUMNS)
-        write_tsv(out / "count-floor-moves.tsv", floor_moves_count(rows, withdrawn), C3.COUNT_COLUMNS)
+        write_tsv(out / "count-floor-all.tsv", floor_all_count(rows, withdrawn), COUNT_COLUMNS)
         print(f"count: {len(rows)} dataset rows from {len(rest)} files")
         return 0
     if len(argv) != 4:

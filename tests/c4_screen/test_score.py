@@ -1,4 +1,4 @@
-"""scripts/c4-screen/score.py: the checks, the scores, the count over the 16 pairs and the conditions
+"""scripts/c4-screen/score.py: the checks, the scores, the count over the 21 pairs and the conditions
 (docs/screen-arms.md).
 
 Every result, inputs file, report and dataset name is SYNTHETIC.
@@ -212,8 +212,14 @@ class Scores(unittest.TestCase):
         self.assertEqual([{k: v for k, v in r.items() if k != "genomes"} for r in mine], theirs)
 
 
-def count_rows(arms=("cmh-4000", "cmh-16000", "floor-3", "twin"), better=None, genomes=150, datasets=12):
-    """SYNTHETIC datasets.tsv rows over three species: better(arm, learner, i) gives the arm's lift on dataset i."""
+def big(i):
+    """SYNTHETIC genome counts: every fourth dataset has 900 genomes, the rest 150."""
+    return 900 if i % 4 == 0 else 150
+
+
+def count_rows(arms=("cmh-4000", "cmh-16000", "floor-3", "twin"), better=None, genomes=big, datasets=12):
+    """SYNTHETIC datasets.tsv rows over three species: better(arm, learner, i) gives the arm's lift on dataset i;
+    genomes(i) its genome count."""
     rows = []
     for i in range(datasets):
         sp = f"synthia_{'abc'[i % 3]}"
@@ -226,7 +232,7 @@ def count_rows(arms=("cmh-4000", "cmh-16000", "floor-3", "twin"), better=None, g
                     lift = better(arm, learner, i) if better and arm != "k31" else 0.0
                     base = 0.7 + 0.001 * i
                     row = {"dataset": d, "species_slug": sp, "species": "Synthia", "antibiotic": f"drug {i}",
-                           "genomes": genomes, "split": split, "arm": arm, "learner": learner, "draws": 3,
+                           "genomes": genomes(i) if callable(genomes) else genomes, "split": split, "arm": arm, "learner": learner, "draws": 3,
                            "scored_draws": 3, "constant_draws": 0, "scored": 1}
                     for m in score.MEASURES:
                         row[m] = base + (lift if m in ("balanced_accuracy", "recall", "specificity") else -lift)
@@ -235,27 +241,60 @@ def count_rows(arms=("cmh-4000", "cmh-16000", "floor-3", "twin"), better=None, g
 
 
 class Count(unittest.TestCase):
-    def test_the_family_is_sixteen_pairs_and_holm_runs_over_them(self):
+    def test_the_family_is_twenty_one_pairs_and_holm_runs_over_them(self):
         rows = score.count(count_rows())
-        fam = [r for r in rows if r["split"] == "lineage" and r["measure"] == score.PRIMARY]
-        self.assertEqual(len(fam), 16)
+        fam = [r for r in rows if r["split"] == "lineage" and r["measure"] == score.PRIMARY and r["holm_p"] is not None]
+        self.assertEqual(len(fam), 21)
+        self.assertEqual(sorted({(r["pair"], r["set"]) for r in fam}),
+                         sorted([("cmh-4000-k31", "all"), ("cmh-16000-k31", "all"), ("floor-3-k31", "800-or-more"),
+                                 ("twin-k31", "all"), ("twin-k31", "800-or-more")]))
         self.assertEqual(sorted({(r["pair"], r["learner"]) for r in fam if r["pair"].startswith("cmh")}),
                          sorted((f"{a}-k31", l) for a in ("cmh-4000", "cmh-16000") for l in ("rf", "gbt", "lasso")))
-        self.assertTrue(all(r["holm_p"] is not None for r in fam))
         self.assertTrue(all(r["holm_p"] is None for r in rows if r not in fam))
 
-    def test_holm_over_sixteen_is_held_to_the_plain_step_down(self):
-        lift = lambda arm, learner, i: 0.05 if arm == "floor-3" and i % 4 else 0.0
-        rows = score.count(count_rows(better=lift))
-        fam = [r for r in rows if r["split"] == "lineage" and r["measure"] == score.PRIMARY]
+    def test_holm_over_twenty_one_is_held_to_the_plain_step_down(self):
+        lift = lambda arm, learner, i: 0.05 if arm == "floor-3" and i % 2 == 0 else 0.0
+        rows = score.count(count_rows(better=lift, datasets=24))
+        fam = [r for part in score.FAMILY_PARTS for r in rows if (score.arm_of(r["pair"]), r["set"]) == part
+               and r["split"] == "lineage" and r["measure"] == score.PRIMARY]
         ps = [r["sign_p"] for r in fam]
-        order = sorted(range(16), key=lambda k: ps[k])
-        want, run_max = [None] * 16, 0.0
+        order = sorted(range(21), key=lambda k: ps[k])
+        want, run_max = [None] * 21, 0.0
         for rank, k in enumerate(order):
-            run_max = max(run_max, min(1.0, (16 - rank) * ps[k]))
+            run_max = max(run_max, min(1.0, (21 - rank) * ps[k]))
             want[k] = run_max
         self.assertEqual([round(r["holm_p"], 12) for r in fam], [round(x, 12) for x in want])
         self.assertLess(min(r["sign_p"] for r in fam), 0.05)
+
+    def test_the_floor_arm_is_counted_over_the_datasets_of_800_genomes_or_more(self):
+        # SYNTHETIC: the floor arm lifts every dataset of 900 genomes and none of 150, as a floor that moves only
+        # at 800 or more would; over the 6 of 24 it can move it is better in all 6, over all 24 its median is 0.
+        lift = lambda arm, learner, i: 0.05 if arm == "floor-3" and big(i) >= 800 else 0.0
+        rows = count_rows(better=lift, datasets=24)
+        counted = score.count(rows)
+        floor = [r for r in counted if r["pair"] == "floor-3-k31" and r["split"] == "lineage"
+                 and r["measure"] == score.PRIMARY]
+        self.assertEqual({(r["set"], r["datasets"], r["better"], r["median_difference"]) for r in floor},
+                         {("800-or-more", 6, 6, 0.05)})
+        beside = [r for r in score.floor_all_count(rows) if r["split"] == "lineage" and r["measure"] == score.PRIMARY]
+        self.assertEqual({(r["set"], r["datasets"], r["better"], r["median_difference"], r["holm_p"]) for r in beside},
+                         {("all", 24, 6, 0.0, None)})
+        got = {(r["arm"], r["reading"], r["condition"]): r for r in score.conditions(counted)}
+        self.assertEqual(got[("floor-3", "stricter, 800 genomes or more", "1")]["learners"], 5)
+
+    def test_the_twin_is_read_on_each_arms_set(self):
+        # SYNTHETIC: the twin moves on the datasets of 800 genomes or more alone. It voids condition 3 for the
+        # floor arm, read over those datasets, and not for the screen arms, read over every dataset.
+        lift = lambda arm, learner, i: 0.05 if arm == "twin" and big(i) >= 800 else 0.0
+        got = {(r["arm"], r["reading"], r["condition"]): r
+               for r in score.conditions(score.count(count_rows(better=lift, datasets=24)))}
+        self.assertEqual(got[("floor-3", "ruling 15, 800 genomes or more", "3")]["met"], 0)
+        self.assertEqual(got[("cmh-4000", "the learners it touches, every dataset", "3")]["met"], 1)
+        self.assertEqual(got[("cmh-16000", "the learners it touches, every dataset", "3")]["met"], 1)
+
+    def test_the_count_refuses_a_run_with_no_dataset_of_800_genomes(self):
+        with self.assertRaises(SystemExit):
+            score.count(count_rows(genomes=150))
 
     def test_a_screen_arms_scm_and_cart_are_not_counted(self):
         rows = score.count(count_rows())
@@ -272,14 +311,6 @@ class Count(unittest.TestCase):
         with self.assertRaises(SystemExit):
             score.count(count_rows(arms=("cmh-4000", "cmh-16000", "floor-3")), withdrawn=["twin"])
 
-    def test_the_floor_moves_count_reads_the_datasets_of_800_genomes_or_more_alone(self):
-        self.assertEqual(score.floor_moves_count(count_rows()), [])
-        rows = count_rows() + [dict(r, dataset=r["dataset"] + "_big", genomes=900) for r in count_rows()]
-        moved = score.floor_moves_count(rows)
-        self.assertEqual({r["pair"] for r in moved}, {"floor-3-k31"})
-        self.assertEqual({r["datasets"] for r in moved}, {12})
-        self.assertEqual({r["holm_p"] for r in moved}, {None})
-
     def test_the_main_form_writes_the_four_tables(self):
         rows = count_rows()
         with tempfile.TemporaryDirectory() as tmp:
@@ -288,7 +319,7 @@ class Count(unittest.TestCase):
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf):
                 self.assertEqual(score.main(["--count", str(Path(tmp) / "out"), str(path)]), 0)
-            for name in ("count", "count-no-constant", "conditions", "count-floor-moves"):
+            for name in ("count", "count-no-constant", "conditions", "count-floor-all"):
                 self.assertTrue((Path(tmp) / "out" / f"{name}.tsv").exists(), name)
         self.assertEqual(buf.getvalue().strip(), f"count: {len(rows)} dataset rows from 1 files")
 
@@ -300,32 +331,33 @@ class Conditions(unittest.TestCase):
     def test_a_screen_arm_is_read_on_the_three_learners_it_touches(self):
         lift = lambda arm, learner, i: 0.05 if arm == "cmh-4000" and learner in ("rf", "gbt", "lasso") else 0.0
         got = self.read(lift)
-        reading = "the learners it touches"
+        reading = "the learners it touches, every dataset"
         self.assertEqual(sorted(k[2] for k in got if k[:2] == ("cmh-4000", reading)), ["1", "2", "3", "4", "5", "6"])
         self.assertEqual((got[("cmh-4000", reading, "1")]["met"], got[("cmh-4000", reading, "1")]["learners"]), (1, 3))
         self.assertEqual(got[("cmh-4000", reading, "5")]["met"], 1)
         self.assertEqual(got[("cmh-4000", reading, "3")]["met"], 1)
         self.assertEqual(got[("cmh-16000", reading, "1")]["met"], 0)
-        self.assertIn("Holm over 16", got[("cmh-4000", reading, "2")]["reads"])
+        self.assertIn("Holm over 21", got[("cmh-4000", reading, "2")]["reads"])
 
     def test_one_screened_learner_short_fails_condition_1(self):
         lift = lambda arm, learner, i: 0.05 if arm == "cmh-4000" and learner in ("rf", "gbt") else 0.0
         got = self.read(lift)
-        self.assertEqual(got[("cmh-4000", "the learners it touches", "1")]["learners"], 2)
-        self.assertEqual(got[("cmh-4000", "the learners it touches", "1")]["met"], 0)
+        self.assertEqual(got[("cmh-4000", "the learners it touches, every dataset", "1")]["learners"], 2)
+        self.assertEqual(got[("cmh-4000", "the learners it touches, every dataset", "1")]["met"], 0)
 
-    def test_the_floor_arm_takes_c3s_two_readings_at_holm_over_sixteen(self):
+    def test_the_floor_arm_takes_c3s_two_readings_at_holm_over_twenty_one(self):
         got = self.read(None)
-        self.assertEqual(sorted({k[1] for k in got if k[0] == "floor-3"}), ["ruling 15", "stricter"])
-        self.assertFalse(any("over 30" in r["reads"] for r in got.values()))
-        self.assertIn("Holm over 16", got[("floor-3", "ruling 15", "1 and 2")]["reads"])
+        self.assertEqual(sorted({k[1] for k in got if k[0] == "floor-3"}),
+                         ["ruling 15, 800 genomes or more", "stricter, 800 genomes or more"])
+        self.assertFalse(any("over 30" in r["reads"] or "over 16" in r["reads"] for r in got.values()))
+        self.assertIn("Holm over 21", got[("floor-3", "ruling 15, 800 genomes or more", "1 and 2")]["reads"])
         self.assertNotIn("twin", {k[0] for k in got})
 
     def test_a_twin_that_moves_voids_condition_3_for_every_arm(self):
         lift = lambda arm, learner, i: 0.05 if arm in ("twin", "cmh-4000") and learner in ("scm", "cart", "rf") else 0.0
         got = self.read(lift)
-        self.assertEqual(got[("cmh-4000", "the learners it touches", "3")]["met"], 0)
-        self.assertEqual(got[("floor-3", "ruling 15", "3")]["met"], 0)
+        self.assertEqual(got[("cmh-4000", "the learners it touches, every dataset", "3")]["met"], 0)
+        self.assertEqual(got[("floor-3", "ruling 15, 800 genomes or more", "3")]["met"], 0)
 
 
 if __name__ == "__main__":

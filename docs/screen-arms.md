@@ -57,13 +57,13 @@ It holds no genome id, feature, k-mer, sequence or position. The default and the
 
 It scores as C3 does: per learner, the outer calls summed over the folds give balanced accuracy, recall, specificity, the very major and the major error rate, each with its count, denominator and Wilson 95% interval, and log loss. A dataset's value is the mean of its draws, and a dataset with a draw missing is not scored.
 
-`score.py --count OUT [--withdrawn ARM] DATASETS.tsv ...` takes every species' table once every arm has results or is withdrawn. Per arm and learner it counts the datasets better, worse and the same by 0.02 against the default, the arm's value less the default's at 12 decimals, with the median difference, its interval from 4,000 species resamples and the one-sided sign test. A screen arm is counted on the learners it touches, `rf`, `gbt` and `lasso`; the floor arm and the twin on all five. Holm runs over those 16 lineage pairs. `conditions.tsv` reads the plan's conditions per arm:
+`score.py --count OUT [--withdrawn ARM] DATASETS.tsv ...` takes every species' table once every arm has results or is withdrawn. Per arm and learner it counts the datasets better, worse and the same by 0.02 against the default, the arm's value less the default's at 12 decimals, with the median difference, its interval from 4,000 species resamples and the one-sided sign test. A screen arm is counted on the learners it touches, `rf`, `gbt` and `lasso`, over every dataset; the floor arm on all five over the datasets of 800 genomes or more, the ones its floor can move; the twin on all five over every dataset and again over those of 800 genomes or more. Holm runs over those 21 lineage pairs (the lead's rulings 10 and 12 of 23 Nov 2026). `count.tsv`'s column `set` names each row's datasets, `all` or `800-or-more`. `conditions.tsv` reads the plan's conditions per arm:
 
 - a screen arm: 1, 2 and 5 for each of `rf`, `gbt` and `lasso`, and 4 for the three;
-- the floor arm: C3's ruling 15, a learner carrying the change when it meets 1 and 2, at least 3 of 5 carrying, 4 for all five and 5 for each that carries;
-- condition 3 for every arm as corrected for C3 on 23 Nov 2026: the twin meets 1 in fewer than 3 of 5 learners and 2 in fewer than 3 of 5, each read apart.
+- the floor arm, over the datasets of 800 genomes or more: C3's ruling 15, a learner carrying the change when it meets 1 and 2, at least 3 of 5 carrying, 4 for all five and 5 for each that carries;
+- condition 3 for every arm as corrected for C3 on 23 Nov 2026, with the twin read on the arm's datasets: the twin meets 1 in fewer than 3 of 5 learners and 2 in fewer than 3 of 5, each read apart.
 
-`count-no-constant.tsv` leaves out the constant-model results of C3's ruling 16, which the screen arms cannot have. `count-floor-moves.tsv` counts the floor arm on the datasets of 800 genomes or more alone, with no Holm, and decides nothing.
+`count-no-constant.tsv` leaves out the constant-model results of C3's ruling 16, which the screen arms cannot have. `count-floor-all.tsv` counts the floor arm on every dataset, those under 800 genomes entering as a difference of 0, with no Holm, and decides nothing.
 
 ## Datasets
 
@@ -73,7 +73,7 @@ It scores as C3 does: per learner, the outer calls summed over the folds give ba
 |---|---:|---:|---:|---:|---:|
 | L | 268 | 23 | 233 | 55 | 92 in 11 species, 24 in S |
 
-The floor arm moves no dataset under 800 genomes. On the other 141 of the first run its difference is 0 by construction, which the count keeps, as the plan's words have it.
+The floor arm moves no dataset under 800 genomes. On the other 141 of the first run its difference is 0 by construction, so over all 233 its median would be 0 whatever the floor did. The lead ruled at 05:52Z on 23 Nov 2026, before any score, that the floor arm is read over the 92 it can move, with the count over all 233 beside it.
 
 ## Running
 
@@ -105,7 +105,7 @@ The adjusted screen rejects in 7 of 200; the chi-square, beside it and deciding 
 | 6. The twin scored as an arm (6a) or listed with an inputs file (6b) | `Checks.test_the_twin_passes_as_the_default_at_its_own_seeds_and_fails_with_an_inputs_file`; `Expect.test_only_an_arm_names_an_inputs_file` |
 | 7. A missing draw read as a zero | `Scores.test_a_dataset_with_a_missing_draw_is_not_scored` |
 | 8. A study fold read as a lineage fold, in the list (8a) or the scorer (8b) | `Expect.test_each_result_is_on_its_own_split`; `Checks.test_a_study_result_read_as_a_lineage_result_fails` |
-| 9. Holm over one arm's learners | `Count.test_holm_over_sixteen_is_held_to_the_plain_step_down` |
+| 9. Holm over one arm's learners | `Count.test_holm_over_twenty_one_is_held_to_the_plain_step_down` |
 | 10. A screen arm's `scm` and `cart` counted | `Count.test_a_screen_arms_scm_and_cart_are_not_counted` |
 | 11. A floor arm unlike the default below 800 genomes passed | `Checks.test_a_floor_arm_below_800_genomes_unlike_the_default_fails_and_at_800_may_differ` |
 | 12. A screen arm whose `scm` or `cart` differs from the default's passed | `Checks.test_a_screen_arm_whose_scm_or_cart_differs_from_the_default_fails` |

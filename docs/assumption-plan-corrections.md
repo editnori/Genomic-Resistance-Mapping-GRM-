@@ -498,7 +498,7 @@ An eleventh came while the text was written. The project's wording rules put rec
 
 **Folds.** The strata read no label and each screen takes them on the genomes it fits, so no outer test genome can change a screen. The candidates are the default's. Folds come from the labels, the lineages and the seed, so each arm meets the default on the same folds, which the scorer checks. A screen arm's SCM and CART read no screen and must make the default's calls in every fold. Below 800 genomes the floor arm is the default and its results must equal the default's, timing apart.
 
-**Count.** As C3's, the arm's value less the default's on the lineage primary measure, with Holm over 16 pairs: `cmh-4000` and `cmh-16000` each on the forest, boosted trees and lasso, `floor-3` and the twin each on all five learners. A screen arm's conditions are read on the three learners it touches (1, 2 and 5 for each, 4 for the three). The floor arm's follow the lead's C3 ruling 15. Condition 3 follows the plan's words as corrected for C3 at 02:08Z on 23 Nov 2026: the twin meets 1 in fewer than 3 of 5 learners and 2 in fewer than 3 of 5, each read apart. The floor arm's count runs over the whole first run, the 141 datasets it cannot move entering at 0; its count over the 92 it moves is written beside it and decides nothing.
+**Count.** As C3's, the arm's value less the default's on the lineage primary measure, with Holm over 21 pairs (the lead's rulings 10 and 12): `cmh-4000` and `cmh-16000` each on the forest, boosted trees and lasso over every dataset, `floor-3` on all five learners over the datasets of 800 genomes or more, the ones its floor can move, and the twin on all five over every dataset and again over those of 800 genomes or more. A screen arm's conditions are read on the three learners it touches (1, 2 and 5 for each, 4 for the three). The floor arm's follow the lead's C3 ruling 15, over the datasets of 800 genomes or more. Condition 3 follows the plan's words as corrected for C3 at 02:08Z on 23 Nov 2026, with the twin read on each arm's datasets: the twin meets 1 in fewer than 3 of 5 learners and 2 in fewer than 3 of 5, each read apart. The floor arm's count over the whole first run, the 141 datasets it cannot move entering at 0, is written beside it and decides nothing.
 
 **Study.** The first run's 55 datasets in S get one study run per arm on their reviewed `study-whole` plans, at the release's seeds, with no twin, as C9's ruling 6 and C3's question 11 did.
 
@@ -506,7 +506,7 @@ An eleventh came while the text was written. The project's wording rules put rec
 |---|---:|---:|---:|---:|---:|
 | L | 268 | 23 | 233 | 55 | 92 in 11 species, 24 in S |
 
-**Questions.** The design leaves seventeen questions to the lead, each with the answer taken and the other one. Each is one argument of the code or the run script. None has been ruled.
+**Questions.** The design leaves seventeen questions to the lead, each with the answer taken and the other one. Each is one argument of the code or the run script. The lead ruled them at 05:52Z on 23 Nov 2026, with no C4 score read: all as taken, except questions 10 and 12, changed as the table shows.
 
 | Question | Taken | Other |
 |---|---|---|
@@ -519,9 +519,9 @@ An eleventh came while the text was written. The project's wording rules put rec
 | 7. Candidates | the default's | uncollapsed rows |
 | 8. Budget 16,000 | measured in the pilot | |
 | 9. The floor arm's other changes | the projection's cohort range only | |
-| 10. Floor arm's datasets | the whole first run, 141 at 0; the 92 beside, deciding nothing | the 92 alone |
+| 10. Floor arm's datasets | ruled: the 92 of 800 genomes or more, in 11 species, fixed by cohort size before any score; the whole first run, 141 at 0, beside and deciding nothing. With 141 of 233 differences fixed at 0 the median is 0 by construction, so condition 1 could never be met. The twin is read over the same 92 for the floor arm's condition 3 | taken at first: the whole first run, the 92 beside |
 | 11. SCM and CART under a screen arm | refitted and checked, not counted | counted as pairs |
-| 12. Holm | 16 pairs, the twin's included | 20, with SCM and CART of the screen arms at p = 1 |
+| 12. Holm | ruled: 21 pairs, `cmh-4000` and `cmh-16000` by 3 learners, `floor-3` by 5 over the 92, the twin by 5 over the 233 and by 5 over the 92 | taken at first: 16 pairs; or 20, with SCM and CART of the screen arms at p = 1 |
 | 13. Conditions | the learners an arm touches; ruling 15 for the floor arm; condition 3 as corrected | the twin read on three learners |
 | 14. Study draws | one run at the release's seeds, no twin | a seed under this flag only |
 | 15. First run | L less M | all of L |
