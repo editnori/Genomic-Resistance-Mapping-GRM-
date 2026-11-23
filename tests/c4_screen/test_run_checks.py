@@ -3,12 +3,14 @@
 Every species, dataset, result file, genome id and binary here is made up in the test (tests/c4_screen/page_fixture.py).
 """
 
+import builtins
 import contextlib
 import io
 import shutil
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from tests.c4_screen import common
 from tests.c4_screen import page_fixture as fx
@@ -176,6 +178,31 @@ class Check(Copies):
         (root / "copies" / "synthia_alpha" / "score" / "score.log").write_text(f"{fx.GENOME_IDS[0]}\n",
                                                                                 encoding="utf-8")
         self.assertEqual(self.failed(root), [])
+
+
+class Unopened(Copies):
+    """score/score.log is never opened, even when a SHA256SUMS names it (SYNTHETIC copies)."""
+
+    def test_score_log_named_in_sha256sums_is_refused_and_never_opened(self):
+        root = self.fresh()
+        out = root / "copies" / "synthia_alpha"
+        with open(out / "SHA256SUMS", "a", encoding="utf-8") as f:
+            f.write(f"{'0' * 64}  score/score.log\n")
+        fx.done(out, "synthia_alpha", len(list((out / "results" / "picks").rglob("*.pick.json"))))
+        opened = []
+        real_open, real_io_open = builtins.open, io.open
+
+        def guard(real):
+            def wrapped(file, *args, **kwargs):
+                if str(file).endswith("score/score.log"):
+                    opened.append(str(file))
+                return real(file, *args, **kwargs)
+            return wrapped
+
+        with mock.patch("builtins.open", guard(real_open)), mock.patch("io.open", guard(real_io_open)):
+            failed = self.failed(root)
+        self.assertIn(NAMES[3], failed)
+        self.assertEqual(opened, [])
 
 
 class TwoBinaries(Copies):
