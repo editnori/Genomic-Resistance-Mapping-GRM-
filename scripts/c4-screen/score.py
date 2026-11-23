@@ -65,6 +65,7 @@ difference of 0; it stands beside and decides nothing.
 import contextlib
 import importlib.util
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -374,7 +375,8 @@ def conditions(count_rows):
         floor = C3.conditions([r for r in count_rows if r["set"] == MOVES])
     for r in floor:
         r["reading"] = f"{r['reading']}, 800 genomes or more"
-        r["reads"] = r["reads"].replace("Holm over 30", "Holm over 21")
+        # C3 writes its own family's size (30, or 10 inside family([FLOOR_ARM, TWIN])); C4's Holm runs over 21.
+        r["reads"] = re.sub(r"Holm over \d+", "Holm over 21", r["reads"])
     return out + floor
 
 

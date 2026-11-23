@@ -6,6 +6,7 @@ Every result, inputs file, report and dataset name is SYNTHETIC.
 
 import contextlib
 import io
+import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -361,7 +362,8 @@ class Conditions(unittest.TestCase):
         got = self.read(None)
         self.assertEqual(sorted({k[1] for k in got if k[0] == "floor-3"}),
                          ["ruling 15, 800 genomes or more", "stricter, 800 genomes or more"])
-        self.assertFalse(any("over 30" in r["reads"] or "over 16" in r["reads"] for r in got.values()))
+        # Every Holm figure of every row is 21, whatever family size C3's own text writes.
+        self.assertEqual({m for r in got.values() for m in re.findall(r"Holm over (\d+)", r["reads"])}, {"21"})
         self.assertIn("Holm over 21", got[("floor-3", "ruling 15, 800 genomes or more", "1 and 2")]["reads"])
         self.assertNotIn("twin", {k[0] for k in got})
 
