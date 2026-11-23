@@ -49,9 +49,11 @@ DEFAULT, TWIN_ARM = "k31", "twin"
 REFUSED_FORMAT, NO_CANDIDATE, STUDY_SCHEME, STUDY_SEED = "grm-c3-refused-1", "no candidate", "study-whole", 42
 CONSTANT_WHY = "constant model: refused for no candidate"
 LEARNERS = 5
-DONE_LINE = re.compile(r"DONE (?P<species>\S+) (?P<time>\S+) binary (?P<binary>[0-9a-f]{64}) "
+# Times as run_species.sh writes them (date -u +%FT%TZ): a FAILED or DONE with no such time is never set aside.
+STAMP = r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ"
+DONE_LINE = re.compile(rf"DONE (?P<species>\S+) (?P<time>{STAMP}) binary (?P<binary>[0-9a-f]{{64}}) "
                        r"code (?P<code>[0-9a-f]{64}) results (?P<results>\d+) SHA256SUMS (?P<sums>[0-9a-f]{64})")
-FAILED_LINE = re.compile(r"FAILED (?P<species>\S+) (?P<how>at|stopped at) (?P<step>\S+) (?P<time>\S+)")
+FAILED_LINE = re.compile(rf"FAILED (?P<species>\S+) (?P<how>at|stopped at) (?P<step>\S+) (?P<time>{STAMP})")
 ID_TOKEN = re.compile(r"(?<![\w.])\d+\.\d+(?!\d)")
 READ = ("results", "check", "logs")
 READ_FILES = ("expect.tsv", "lists.txt", "binary.txt", "DONE", "SHA256SUMS")

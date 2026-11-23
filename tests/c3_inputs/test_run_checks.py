@@ -234,6 +234,13 @@ class RunChecks(unittest.TestCase):
         got = lines(self.run_checks(ids_also=(str(extra),)))
         self.assertIn("1 genome ids in", got["FAIL genome ids"])
 
+    def test_a_failed_with_no_time_of_run_species_form_is_not_set_aside(self):
+        for text in ("FAILED mockella_minor at build 08:00\n", "FAILED mockella_minor at build 1\n"):
+            (self.back / "mockella_minor" / "FAILED").write_text(text)
+            rep = self.run_checks(set_aside=("mockella_minor",))
+            self.assertIn("FAIL DONE and binary.txt", lines(rep), text)
+            self.assertFalse([line for line in rep.lines if "named and set aside" in line], text)
+
     def repack_after_unpack(self, slug):
         self.unpack(slug)
         self.repack(slug)
