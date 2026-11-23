@@ -230,6 +230,64 @@ class Gates(Case):
                    for r in tsv(path)])
         self.refused(r"gate 16 count: count/count.tsv is not what score.py --count writes")
 
+    def test_an_antibiotic_named_otherwise_than_in_lists_tsv_is_refused(self):
+        self.build()
+        path = self.reading / "score" / "synthia_beta" / "datasets.tsv"
+        put(path, [dict(r, antibiotic="synthetic drug 33") for r in tsv(path)])
+        self.refused(r"gate 3 datasets: synthia_beta__synthetic_drug_3 is named otherwise than in lists.tsv")
+
+    def test_a_study_run_at_a_draws_seed_is_refused(self):
+        def change(slug, draws):
+            for r in draws:
+                if slug == "synthia_beta" and r["role"] == "study":
+                    r["seed"] = 43
+        self.build(change_draws=change)
+        self.refused(r"gate 4 study: score/synthia_beta/draws.tsv: synthia_beta__synthetic_drug_3 \S+: a study run at "
+                     r"seed 43")
+
+    def test_a_constant_model_marked_on_the_default_is_refused(self):
+        def change(slug, draws):
+            for r in draws:
+                if (slug, r["split"], r["arm"]) == ("synthia_beta", "study", "default"):
+                    r["constant"], r["why"] = 1, "constant model: refused for no candidate"
+        self.build(constant=True, change_draws=change)
+        self.refused(r"gate 8 constant: score/synthia_beta/draws.tsv: synthia_beta__synthetic_drug_3 study default "
+                     r"\w+: a constant model marked 1")
+
+    def test_the_cutoff_arms_log_loss_counted_worse_is_refused(self):
+        self.build()
+        path = self.reading / "count" / "count.tsv"
+        put(path, [dict(r, worse="1") if (r["split"], r["pair"], r["measure"]) == ("lineage", "cutoff-default",
+                                                                                  "log_loss") else r
+                   for r in tsv(path)])
+        self.refused(r"gate 11 cutoff: count.tsv counts the cutoff arm's log loss on the lineage split for \w+ as 0 "
+                     r"better and 1 worse")
+
+    def test_a_choices_file_of_another_number_of_random_trials_is_refused(self):
+        def change(key, doc):
+            if key == ("synthia_gamma__synthetic_drug_4", "lineage", 44, 2):
+                doc["random_trials"] = 20
+            return doc
+        self.build(change_choice=change)
+        self.refused(r"gate 12 choices: score/synthia_gamma: synthia_gamma__synthetic_drug_4 lineage seed 44 fold 2: "
+                     r"the sampler seed, gamma, grid or random trials are not the design's")
+
+    def test_condition_3_is_not_met_when_the_twin_meets_condition_1_in_three_learners(self):
+        def rows(twin_meets):
+            out = []
+            for arm in ("search", "cutoff", "twin"):
+                for i, learner in enumerate(fx.LEARNERS):
+                    lo = "0.01" if arm == "twin" and i < twin_meets else "-0.01"
+                    for measure in ("balanced_accuracy", "recall"):
+                        out.append({"split": "lineage", "pair": f"{arm}-default", "learner": learner,
+                                    "measure": measure, "interval_lo": lo, "interval_hi": "0.03", "holm_p": "",
+                                    "better": "0", "worse": "0"})
+            return out
+        for twin_meets, met in ((2, True), (3, False)):
+            read = page.read_conditions(rows(twin_meets))
+            self.assertEqual((read[("search", "ruling 15", "3")], read[("cutoff", "ruling 15", "3")]), (met, met),
+                             twin_meets)
+
 
 class Tables(Case):
     def setUp(self):
