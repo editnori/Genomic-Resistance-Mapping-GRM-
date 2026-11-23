@@ -100,6 +100,20 @@ class RunChecks(unittest.TestCase):
         (back / "fictus_aureus" / "FAILED").write_text("FAILED fictus_aureus stopped at fits 2026-11-23T11:00:00Z\n")
         self.assertIn("FAIL DONE", self.lines(self.run_on(back)))
 
+    def test_a_failed_whose_time_is_no_utc_second_fails(self):
+        back = self.back()
+        (back / "fictus_aureus" / "FAILED").write_text("FAILED fictus_aureus at fits 08:00\n")
+        self.assertIn("FAIL DONE", self.lines(self.run_on(back)))
+
+    def test_a_done_whose_time_is_no_utc_second_fails(self):
+        back = self.back()
+        shutil.copytree(back / "synthia_coli", back / "synthia_coli.20261123T080000Z")
+        done = back / "synthia_coli" / "DONE"
+        done.write_text(done.read_text().replace(F.DONE_AT, "9999", 1))
+        text = self.lines(self.run_on(back))
+        self.assertIn("FAIL species", text)
+        self.assertIn("FAIL DONE", text)
+
     def test_a_changed_result_fails_its_sha256sums(self):
         back = self.back()
         path = back / "synthia_coli" / "results" / "outside" / "xgboost" / "synthia_coli__drug_b.lineage-s43.outside.json"

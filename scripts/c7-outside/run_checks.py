@@ -80,10 +80,12 @@ HERE = Path(__file__).resolve().parent
 SEEDS, TWIN, ARM_SEEDS = "42,43,44", "45,46,47", "42,43,44"
 ARMS = ("xgboost", "lightgbm", "elasticnet")
 ARMS_BY_PASS = {"run": "xgboost,lightgbm,elasticnet", "leave-out": "xgboost,lightgbm"}
-DONE_LINE = re.compile(r"DONE (?P<species>\S+) (?P<time>\S+) grm (?P<grm>[0-9a-f]{64}) code (?P<code>[0-9a-f]{64}) "
+# DONE and FAILED give their time as date -u +%FT%TZ writes it; any other form is no DONE or FAILED line.
+DONE_LINE = re.compile(r"DONE (?P<species>\S+) (?P<time>\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ) grm (?P<grm>[0-9a-f]{64}) code (?P<code>[0-9a-f]{64}) "
                        r"export-grm (?P<export>[0-9a-f]{64}) elasticnet (?P<elasticnet>run|leave-out) "
                        r"results (?P<results>\d+) SHA256SUMS (?P<sums>[0-9a-f]{64})")
-FAILED_LINE = re.compile(r"FAILED (?P<species>\S+) (?P<how>at|stopped at) (?P<step>\S+) (?P<time>\S+)")
+FAILED_LINE = re.compile(r"FAILED (?P<species>\S+) (?P<how>at|stopped at) (?P<step>\S+) "
+                         r"(?P<time>\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ)")
 ASIDE = re.compile(r"(?P<slug>[a-z0-9_]+)\.(?P<time>(?P<d>\d{8})T(?P<t>\d{6})Z)")
 TIME = re.compile(r"\d{4}-\d\d-\d\dT\d\d:\d\d(:\d\d)?Z")
 ID_TOKEN = re.compile(r"(?<![\w.])\d+\.\d+(?!\d)")
