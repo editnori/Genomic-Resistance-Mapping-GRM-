@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# run_species.sh KIT SPECIES DATASETS OUT [JOBS] [SEEDS] [TWIN] [ARMS]
+# run_species.sh KIT SPECIES DATASETS OUT [JOBS] [SEEDS] [TWIN] [ARMS] [TABLES]
 #
 # The input-arm run of one species (plan block C3, docs/input-arms.md) on a
 # fresh box with no agent attached: no prompt, nothing read from another
@@ -14,8 +14,12 @@
 # in_A). SEEDS (default 42,43,44) are the draws of the default (k31) and of
 # each arm; TWIN (default 45,46,47, or - for none) the twin's seeds, the
 # default fitted again. ARMS (default program,k31-program, the arms built so
-# far) are the arms fitted beside the default. Every fit runs with
-# --exp-pick-inner 0: each outer fold's calls per learner, no inner pick.
+# far) are the arms fitted beside the default. TABLES (default none) is a
+# folder of the program's tables made before, as TABLES/SPECIES/<genome>.tsv:
+# when it is given the program is neither installed nor run, and each table
+# of the cohort is copied from it and held to its recorded sha256. Every fit
+# runs with --exp-pick-inner 0: each outer fold's calls per learner, no
+# inner pick.
 # SEEDS must hold 42, the release's seed: the default's seed-42 reports are
 # checked against the release's before any arm runs. KIT holds these files,
 # checked against the sha256 pinned here before anything else runs:
@@ -41,8 +45,10 @@
 # datasets that have one; then, when a program arm runs, the program's
 # environment (micromamba, the pinned environment, the database, the kit's
 # own tests and its fixture tables) and the program on every genome of the
-# species with a recorded table, each table equal to its recorded sha256;
-# expect.tsv (expect.py). Every start, a restart too, holds the tables to
+# species with a recorded table, each table equal to its recorded sha256,
+# or with TABLES, those tables copied in and held to the same sha256 (a
+# table missing or unequal stops the run with the counts); expect.tsv
+# (expect.py). Every start, a restart too, holds the tables to
 # their recorded sha256 again before any fit.
 #
 # Fits, per seed of SEEDS: the default, grm learn --seed s --exp-pick
@@ -84,6 +90,7 @@
 set -Eeuo pipefail
 KIT=$(cd "${1:?kit folder}" && pwd); SP=${2:?species slug}; DATASETS=${3:?datasets}
 OUT=${4:?out folder}; JOBS=${5:-$(nproc)}; SEEDS=${6:-42,43,44}; TWIN=${7:-45,46,47}; ARMS=${8:-program,k31-program}
+TABLES_FROM=${9:-}
 mkdir -p "$OUT"/flags "$OUT"/logs "$OUT"/work "$OUT"/results "$OUT"/check "$OUT"/score; OUT=$(cd "$OUT" && pwd)
 exec >> "$OUT/logs/run.log" 2>&1
 REPO=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
@@ -147,7 +154,7 @@ step() {  # step <name> <function>: once, timed, in a shell that stops at the fi
   disk "$1"
   say "$1: end, $(cat "$OUT/logs/$1.time")"
 }
-export KIT SP DATASETS OUT JOBS SEEDS TWIN ARMS REPO HERE W ROOT R M GRM PLANS PICKS STUDY AMR TABLES REPORTS
+export KIT SP DATASETS OUT JOBS SEEDS TWIN ARMS TABLES_FROM REPO HERE W ROOT R M GRM PLANS PICKS STUDY AMR TABLES REPORTS
 
 STEP=kit
 ulimit -n "$(ulimit -Hn)" 2>/dev/null || true
@@ -191,6 +198,10 @@ echo "$SEEDS" | grep -Eq '^[0-9]+(,[0-9]+)*$' || { say "SEEDS is a comma list of
 echo ",$SEEDS," | grep -q ',42,' || { say "SEEDS must hold 42, the release's seed"; false; }
 echo "$ARMS" | grep -Eq '^(program|k31-program)(,(program|k31-program))*$' \
   || { say "ARMS is a comma list of the built arms, program and k31-program; the others have no fit code yet"; false; }
+if [ -n "$TABLES_FROM" ]; then
+  [ -d "$TABLES_FROM/$SP" ] || { say "TABLES has no folder $SP"; false; }
+  TABLES_FROM=$(cd "$TABLES_FROM" && pwd)
+fi
 # The program arms run on the listed datasets in A.
 A_LIST=$(python3 -I -c '
 import csv, sys
@@ -374,11 +385,37 @@ program_run() {
   diff "$AMR/tables.recorded" "$AMR/tables.now"
   echo "every tool table equals its recorded sha256"
 }
-if [ -n "$A_LIST" ]; then
+# With TABLES: the same cohort's tables, made before, copied in and held to
+# the same recorded sha256; no program is installed or run.
+program_tables() {
+  mkdir -p "$AMR"
+  grep "  $SP/" "$KIT/tool-tables.sha256" | sort -k2 > "$AMR/tables.recorded"
+  sed -E "s#^[0-9a-f]{64}  $SP/(.+)\.tsv\$#\1#" "$AMR/tables.recorded" | LC_ALL=C sort > "$AMR/cohort.ids"
+  outside=$(LC_ALL=C comm -23 "$AMR/cohort.ids" <(LC_ALL=C sort "$ROOT/species/$SP/genomes.txt") | wc -l)
+  [ "$outside" -eq 0 ] || { echo "recorded tables: $outside are not of a genome in the species list"; exit 1; }
+  echo "cohort: $(wc -l < "$AMR/cohort.ids") genomes with a recorded table, of $(wc -l < "$ROOT/species/$SP/genomes.txt") in the species list"
+  rm -rf "$AMR/tool"; mkdir -p "$TABLES"
+  missing=0
+  while read -r id; do
+    if [ -f "$TABLES_FROM/$SP/$id.tsv" ]; then cp "$TABLES_FROM/$SP/$id.tsv" "$TABLES/$id.tsv"; else missing=$((missing + 1)); fi
+  done < "$AMR/cohort.ids"
+  ( cd "$AMR/tool" && find "$SP" -name '*.tsv' | sort | xargs -r sha256sum ) | sort -k2 > "$AMR/tables.now"
+  unequal=$(LC_ALL=C join -1 2 -2 2 <(LC_ALL=C sort -k2,2 "$AMR/tables.recorded") <(LC_ALL=C sort -k2,2 "$AMR/tables.now") \
+    | awk '$2 != $3' | wc -l)
+  echo "tool tables: $(wc -l < "$AMR/tables.recorded") recorded, $(wc -l < "$AMR/tables.now") copied from TABLES, $missing missing there, $unequal unequal to their recorded sha256; $(find "$TABLES_FROM/$SP" -name '*.tsv' | wc -l) in TABLES"
+  if [ "$missing" -ne 0 ] || [ "$unequal" -ne 0 ] || ! cmp -s "$AMR/tables.recorded" "$AMR/tables.now"; then
+    echo "the tables in TABLES are not the recorded ones"; exit 1
+  fi
+  echo "every tool table equals its recorded sha256; the program was not run"
+}
+if [ -z "$A_LIST" ]; then
+  say "program: no listed dataset is in A, so no program arm runs"
+elif [ -e "$OUT/flags/program_run.done" ] || { [ -z "$TABLES_FROM" ] && [ ! -e "$OUT/flags/program_tables.done" ]; }; then
   step program_env program_env
   step program_run program_run
 else
-  say "program: no listed dataset is in A, so no program arm runs"
+  [ -z "$TABLES_FROM" ] || say "program: the tables come from TABLES; the program is neither installed nor run"
+  step program_tables program_tables
 fi
 # Every start holds the tables to their recorded sha256 again before any
 # fit: a restart skips the step that made them, and the fits read them.
