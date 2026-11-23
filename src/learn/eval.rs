@@ -6516,7 +6516,10 @@ mod tests {
             assert_eq!(note["rule"], "cmh", "{note}");
             assert!(note["kept"].as_u64().unwrap() <= 6);
             if note["split"] == "final" {
-                assert_eq!(note["fitting"], 96);
+                // The final forest fits every sample; boosting and the lasso
+                // hold out their tuning samples.
+                let fitting = note["fitting"].as_u64().unwrap();
+                assert!(if note["learner"] == "rf" { fitting == 96 } else { fitting < 96 }, "{note}");
                 continue;
             }
             let fold = folds
