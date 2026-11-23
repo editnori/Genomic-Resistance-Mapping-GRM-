@@ -131,7 +131,12 @@ def check_sums(folder, scores=None):
     bad, log = 0, 0
     for line in lines:
         want, name = line.split("  ", 1)
-        log += name == SCORE_LOG
+        name = posixpath.normpath(name)
+        if name == SCORE_LOG or name.startswith(("/", "../")) or name == "..":
+            # Named, never opened or hashed: score.log stays out of the record, and nothing outside the copy is read.
+            log += name == SCORE_LOG
+            bad += 1
+            continue
         if name.startswith("score/"):
             data = scores.get(name)
             bad += data is None or hashlib.sha256(data).hexdigest() != want

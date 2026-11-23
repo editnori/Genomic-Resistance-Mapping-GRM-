@@ -83,5 +83,33 @@ class ScoreTarInPlace(Copies):
         self.assertIn("1 genome ids and 0 BioProject accessions", got["genome ids and BioProjects"])
 
 
+class ScoreLogNeverHashed(Copies):
+    def listed(self, name):
+        f = self.folder(self.r.slugs[0])
+        with open(f / "SHA256SUMS", "a", encoding="utf-8") as out:
+            out.write(f"{checks.sha256(f / 'score' / 'score.log')}  {name}\n")
+        opened = []
+        real = checks.sha256
+
+        def watch(path):
+            opened.append(str(path))
+            return real(path)
+
+        with mock.patch.object(checks, "sha256", watch):
+            got, ok = self.run_checks()
+        self.assertFalse(ok)
+        self.assertTrue(got["SHA256SUMS"].startswith("FAIL "), got["SHA256SUMS"])
+        self.assertFalse(any(p.endswith("score.log") for p in opened), opened)
+        return got
+
+    def test_score_log_named_in_sha256sums_is_counted_and_never_hashed(self):
+        got = self.listed("score/score.log")
+        self.assertIn("score/score.log listed 1 times", got["SHA256SUMS"])
+
+    def test_score_log_named_another_way_in_sha256sums_is_counted_and_never_hashed(self):
+        got = self.listed("score/./score.log")
+        self.assertIn("score/score.log listed 1 times", got["SHA256SUMS"])
+
+
 if __name__ == "__main__":
     unittest.main()
