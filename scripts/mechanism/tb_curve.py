@@ -145,7 +145,7 @@ def curve_rows(species, antibiotic, in_m, grouping, groups):
     """`groups` maps a group key to the set of determinants its resistant
     genomes carry. The accumulation curve over 1,000 random orders and the
     largest-first order."""
-    keys = sorted(groups, key=lambda k: (-len(groups[k]["genomes"]), k))
+    keys = sorted(groups, key=lambda k: (-groups[k]["genomes"], k))
     n = len(keys)
     rng = random.Random(seed_of(f"{antibiotic}|{grouping}"))
     steps = [[] for _ in range(n)]
