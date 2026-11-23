@@ -171,12 +171,26 @@ for line in sys.stdin.buffer:
     sys.stdout.buffer.write(token.sub(lambda m: b"[genome id]" if m.group(0) in ids else m.group(0), line))
 ' "$R/species/$SP.json" < "$raw" > "$1"
 }
+# keep_build <kind>: the sha256 of the built matrix, held again at every
+# start, and the build's counts-only record among the results. A step that
+# builds one runs it in its own shell, so step() hands it over.
+keep_build() {
+  ( cd "$INPUTS" && find "$1" -type f | LC_ALL=C sort | xargs sha256sum ) > "$OUT/logs/inputs-$1.sha256"
+  mkdir -p "$OUT/results/builds"; cp "$INPUTS/$1/build.json" "$OUT/results/builds/$1.build.json"
+  python3 -I -c '
+import json, sys
+b = json.load(open(sys.argv[1]))
+print(" ".join(f"{k} {v}" for k, v in b.items() if isinstance(v, int) and not isinstance(v, bool)))
+for k, v in (b.get("equality") or {}).items():
+    print(f"equality {k} {v}")
+' "$INPUTS/$1/build.json"
+}
 step() {  # step <name> <function>: once, timed, in a shell that stops at the first failure
   STEP=$1
   if [ -e "$OUT/flags/$1.done" ]; then say "$1: done before, skipped"; return 0; fi
   say "$1: start"
   /usr/bin/time -f "$1 %e s wall, %M KB peak, %U s user, %S s sys" -o "$OUT/logs/$1.time" \
-    bash -euo pipefail -c "$(declare -f say pinned master "$2"); $2" < /dev/null > "$OUT/logs/$1.log" 2>&1 \
+    bash -euo pipefail -c "$(declare -f say pinned master keep_build "$2"); $2" < /dev/null > "$OUT/logs/$1.log" 2>&1 \
     || { scrub "$OUT/logs/$1.log"; tail -n 30 "$OUT/logs/$1.log"
          ! grep -q 'signal 9' "$OUT/logs/$1.time" \
            || say "$1: killed by signal 9, as the kernel kills a program when memory runs out; restart on a machine with more memory"
@@ -379,19 +393,6 @@ tools() {
     echo "bcalm 2.2.3 $(sha256sum "$BCALM" | cut -c1-64)" >> "$OUT/binary.txt" ;;
   esac
   grep -E '^(prodigal|bcalm) ' "$OUT/binary.txt" || echo "no outside program needed"
-}
-# keep_build <kind>: the sha256 of the built matrix, held again at every
-# start, and the build's counts-only record among the results.
-keep_build() {
-  ( cd "$INPUTS" && find "$1" -type f | LC_ALL=C sort | xargs sha256sum ) > "$OUT/logs/inputs-$1.sha256"
-  mkdir -p "$OUT/results/builds"; cp "$INPUTS/$1/build.json" "$OUT/results/builds/$1.build.json"
-  python3 -I -c '
-import json, sys
-b = json.load(open(sys.argv[1]))
-print(" ".join(f"{k} {v}" for k, v in b.items() if isinstance(v, int) and not isinstance(v, bool)))
-for k, v in (b.get("equality") or {}).items():
-    print(f"equality {k} {v}")
-' "$INPUTS/$1/build.json"
 }
 inputs_counts() {
   rm -rf "$INPUTS/counts"
