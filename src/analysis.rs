@@ -3959,6 +3959,30 @@ mod tests {
         }
     }
 
+    /// The C4 floor arm (`learn::screen_arm`) fixes the drawn run's
+    /// projection floor as it fixes the fits'; without it the floor is
+    /// max(3, n/200). SYNTHETIC cohorts of 799, 800 and 1600 genomes.
+    #[test]
+    fn the_c4_floor_arm_fixes_the_drawn_projections_floor_on_both_sides_of_800() {
+        use crate::learn::screen_arm::{self, Rule, Settings};
+        let dir = tempfile::tempdir().unwrap();
+        for (n, default) in [(799, 3), (800, 4), (1600, 8)] {
+            let input = scan_inputs_of(n, &[]);
+            let spec = &input.datasets[0];
+            let plain = eval_inputs(&input, spec).unwrap().unwrap();
+            assert_eq!((plain.cohort.rows.len(), plain.min_support), (n, default));
+            let settings = Settings {
+                rule: Rule::ChiSquare,
+                floor: Some(3),
+                out: dir.path().to_path_buf(),
+            };
+            let fixed = screen_arm::with_settings(settings, || {
+                eval_inputs(&input, spec).unwrap().unwrap().min_support
+            });
+            assert_eq!(fixed, 3, "{n} genomes");
+        }
+    }
+
     /// Every file under `dir` with its size and modification time.
     fn tree(dir: &std::path::Path) -> Vec<(std::path::PathBuf, u64, std::time::SystemTime)> {
         let mut out = Vec::new();
