@@ -491,6 +491,7 @@ src/lib.rs learn::screen_arm::tests::with_one_stratum_the_statistic_is_the_chi_s
 src/lib.rs learn::settings::tests::a_failed_partition_is_recorded_per_learner
 src/lib.rs learn::settings::tests::a_sampled_setting_is_fitted_as_given
 src/lib.rs learn::settings::tests::a_settings_file_outside_its_spaces_is_refused
+src/lib.rs learn::settings::tests::each_sampled_value_reaches_its_learners_fit
 src/lib.rs learn::settings::tests::inner_folds_keep_lineages_whole_inside_the_outer_training_genomes
 src/lib.rs learn::settings::tests::no_test_genomes_label_reaches_its_folds_fit
 src/lib.rs learn::settings::tests::the_release_setting_is_the_fold_files_fit_and_a_cutoff_moves_only_the_calls
@@ -758,6 +759,7 @@ src/main.rs tests::learn_refuses_a_fold_file_beside_either_seed_flag
 src/main.rs tests::learn_refuses_a_structure_and_matrix_built_from_other_ksets
 src/main.rs tests::learn_refuses_the_null_fold_refit_beside_a_fold_file
 src/main.rs tests::learn_refuses_the_null_fold_refit_beside_the_tie_rule_experiment
+src/main.rs tests::learn_refuses_the_settings_flags_beside_the_c4_arms
 src/main.rs tests::learn_takes_a_c3_matrix_arm_with_its_build_only
 src/main.rs tests::learn_takes_a_fold_file_only_with_its_output_directory_and_one_species
 src/main.rs tests::learn_takes_a_seed_and_a_learner_seed_and_the_pipeline_takes_neither
