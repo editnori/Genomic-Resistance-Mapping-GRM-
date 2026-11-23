@@ -2,10 +2,14 @@
 and a FAILED older than DONE are named and set aside by time, and gather writes the reading only when every check
 passes. Every species, dataset, genome id and file here is made up (page_fixture.py)."""
 
+import builtins
+import io
 import shutil
+import tarfile
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from tests.c7_outside import page_fixture as F
 
@@ -151,6 +155,56 @@ class RunChecks(unittest.TestCase):
                 checks.parse(argv)
         self.assertEqual(checks.parse(["--withdrawn", "elasticnet", "cost", "2026-11-23T09:00Z"])[1],
                          {"elasticnet": ("cost", "2026-11-23T09:00Z")})
+
+    def second_passes(self, back):
+        """The elastic net withdrawn after two species began a second pass: synthia_coli's second pass came back with
+        its own DONE, and madeup_pneumoniae's is still running, so it has no folder. Each second-pass copy holds a
+        genome id and a matrix column name, so that reading one would fail a check."""
+        for slug in ("synthia_coli", "madeup_pneumoniae"):
+            (back / slug).rename(back / f"{slug}.20261123T120000Z")
+        shutil.copytree(back / "synthia_coli.20261123T120000Z", back / "synthia_coli")
+        done = back / "synthia_coli" / "DONE"
+        done.write_text(done.read_text().replace(F.DONE_AT, "2026-11-23T15:00:00Z")
+                        .replace("elasticnet leave-out", "elasticnet run"))
+        (back / "synthia_coli" / "logs" / "run.log").write_text(
+            f"SYNTHETIC: {F.genome_ids('synthia_coli')[2]} Column_7\n")
+        return back / "synthia_coli"
+
+    def test_late_withdrawal_reads_each_first_copy_and_never_opens_a_second_pass(self):
+        back = self.back("withdrawn")
+        second = self.second_passes(back)
+        opened, _open, _io_open, _tar_open = [], builtins.open, io.open, tarfile.open
+
+        def watch(real):
+            def opener(name, *a, **k):
+                opened.append(str(name))
+                return real(name, *a, **k)
+            return opener
+
+        with mock.patch.object(builtins, "open", watch(_open)), mock.patch.object(io, "open", watch(_io_open)), \
+                mock.patch.object(tarfile, "open", watch(_tar_open)):
+            rep = self.run_on(back, "withdrawn", F.WITHDRAWN)
+        text = self.lines(rep)
+        self.assertEqual(rep.failed, 0, text)
+        self.assertIn("the elastic net withdrawn: 2 species ran a second pass, 1 second-pass copies set aside", text)
+        self.assertIn("synthia_coli: the second pass of synthia_coli, after the elastic net was withdrawn", text)
+        self.assertIn("madeup_pneumoniae.20261123T120000Z: the copy of madeup_pneumoniae", text)
+        self.assertEqual([x for x in opened if x == str(second) or x.startswith(f"{second}/")], [])
+        self.assertTrue([x for x in opened if "synthia_coli.20261123T120000Z" in x])
+        reading = back.parent / "reading"
+        rep = checks.gather(back, self.root / "withdrawn" / "lists.tsv", self.root / "withdrawn" / "release", reading,
+                            F.WITHDRAWN)
+        self.assertEqual(rep.failed, 0, self.lines(rep))
+        self.assertIn("elasticnet leave-out", (reading / "run" / "synthia_coli" / "DONE").read_text())
+        self.assertEqual(sorted(p.name for p in (reading / "run").iterdir()), sorted(s for s, _, _ in F.SPECIES))
+
+    def test_late_withdrawal_takes_no_copy_whose_done_says_the_net_ran(self):
+        back = self.back()
+        (back / "synthia_coli").rename(back / "synthia_coli.20261123T080000Z")
+        shutil.copytree(back / "synthia_coli.20261123T080000Z", back / "synthia_coli")
+        text = self.lines(self.run_on(back, "run", F.WITHDRAWN))
+        self.assertIn("FAIL DONE", text)
+        self.assertIn("the elastic net withdrawn: 0 species ran a second pass", text)
 
 
 class ScoreLog(unittest.TestCase):

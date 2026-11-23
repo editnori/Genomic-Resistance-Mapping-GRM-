@@ -86,6 +86,9 @@ ASIDE = re.compile(r"(?P<slug>[a-z0-9_]+)\.(?P<time>\d{8}T\d{6}Z)")
 PLANS_LINE = re.compile(r"plans: (?P<passed>\d+) of (?P<made>\d+) checks pass, (?P<seeds>\d+) dataset seeds")
 CHECKS_LINE = re.compile(r"CHECKS (?P<passed>\d+) of (?P<made>\d+)")
 TIME = re.compile(r"\d{4}-\d\d-\d\dT\d\d:\d\d(:\d\d)?Z")
+# run_checks.py's species line when the elastic net is withdrawn: how many species ran a second pass, set aside.
+SECOND_PASSES = re.compile(r"; the elastic net withdrawn: (?P<n>\d+) species ran a second pass, \d+ second-pass copies "
+                           r"set aside")
 # plans.py's checks when every one passes: three at each lineage dataset seed of the arms, and one more at seed 42.
 PLANS_EXPORT = "the export at seed {seed} is read"
 PLANS_CHECKS = ("the plan's folds by class are the default's", "the plan's folds by genome are the default's")
@@ -197,6 +200,7 @@ class Reading:
         self.count, self.score, self.done, self.libraries, self.timing, self.plans = {}, {}, {}, {}, {}, {}
         self.reports = {}
         self.withdrawn = {}
+        self.second_passes = 0
         self.checks_txt = ""
 
 
@@ -313,6 +317,11 @@ def check_reading(folder, lrows):
     if marked != set(data.withdrawn):
         raise Stop(f"gate 1 reading: count.tsv marks withdrawn {sorted(marked)}, withdrawn.tsv names "
                    f"{sorted(data.withdrawn)}")
+    found = [m for x in lines if x.startswith("PASS species:") for m in SECOND_PASSES.finditer(x)]
+    if len(found) != int("elasticnet" in data.withdrawn):
+        raise Stop("gate 1 reading: checks.txt's species line does not give, once, how many species ran a second "
+                   "pass when the elastic net is withdrawn, and only then")
+    data.second_passes = int(found[0]["n"]) if found else 0
 
     # 2 species
     species = data.species
@@ -667,11 +676,12 @@ COUNT_TABLE_COLUMNS = ["file", "decides", "split", "pair", "against", "learner",
 
 
 def page_withdrawn(data):
-    return [{"arm": arm, "pair": pair_name(arm, LEARNER_OF[arm]), "reason": reason, "time": time}
+    return [{"arm": arm, "pair": pair_name(arm, LEARNER_OF[arm]), "reason": reason, "time": time,
+             "second_passes": data.second_passes if arm == "elasticnet" else 0}
             for arm, (reason, time) in sorted(data.withdrawn.items())]
 
 
-WITHDRAWN_COLUMNS = ["arm", "pair", "reason", "time"]
+WITHDRAWN_COLUMNS = ["arm", "pair", "reason", "time", "second_passes"]
 
 
 def family_order(arm, learner):
@@ -893,7 +903,7 @@ This directory holds the tables behind [docs/outside-learners-result.md](../../d
 | `count/conditions.tsv` | the plan's conditions per arm; the arm against its own learner's twin pair alone stands beside with `decides` 0 |
 | `page-conditions.tsv` | `conditions.tsv` per arm, with its pair and whether the arm was withdrawn |
 | `page-count.tsv` | every row of the three counts, with `decides` 1 for `count.tsv` alone, the pair as the page names it, the row it is read against, and conditions 1 and 2 on the deciding lineage rows of the primary measure |
-| `page-withdrawn.tsv` | each arm withdrawn before it ran, with the reason and the time the lead gave |
+| `page-withdrawn.tsv` | each arm withdrawn, with the reason and the time the lead gave, and how many species had run a second pass with it |
 | `page-species.tsv` | per species, named in full, split and pair: datasets better, worse and the same of those entered, which decides nothing |
 | `page-datasets.tsv` | per dataset, split and pair, species and antibiotic in full: the arm's balanced accuracy and recall, the default learner's at the arm's seeds, the differences, the draws scored and the dataset's genomes |
 | `page-folds.tsv` | per arm and split: the folds of its reports, and of them the boosters' one-tree folds and the elastic net's unconverged refits, null fits and constant folds |
@@ -913,8 +923,13 @@ def withdrawn_sentence(data):
         return "No arm was withdrawn: all three arms ran."
     parts = "; ".join(f"`{arm}` ({ARM_WORDS[arm]}), at {time}: {reason}" for arm, (reason, time) in
                       sorted(data.withdrawn.items()))
-    return (f"Withdrawn before it ran, with no score read: {parts}. Its pair stays in the family of five at p = 1, "
-            "and it holds no result.")
+    if not data.second_passes:
+        return (f"Withdrawn before it ran, with no score read: {parts}. No species ran a second pass with it. Its pair "
+                "stays in the family of five at p = 1, and it holds no result.")
+    return (f"Withdrawn with no score read, after {data.second_passes} species had run a second pass with it: "
+            f"{parts}. Each of those species is read from its first copy, whose `DONE` says the elastic net was "
+            "left out; its second-pass copy is named in `checks.txt`, set aside and never opened. Its pair stays in "
+            "the family of five at p = 1, and it holds no result.")
 
 
 def binaries_sentence(data):
@@ -1059,8 +1074,8 @@ def print_measures(rows):
 def print_withdrawn(rows):
     if not rows:
         return ["No arm was withdrawn."]
-    return table(["Arm", "Pair", "Withdrawn at", "Reason"],
-                 [[ARM_WORDS[r["arm"]], f"`{r['pair']}`", r["time"], r["reason"]] for r in rows])
+    return table(["Arm", "Pair", "Withdrawn at", "Reason", "Species that ran a second pass"],
+                 [[ARM_WORDS[r["arm"]], f"`{r['pair']}`", r["time"], r["reason"], r["second_passes"]] for r in rows])
 
 
 def print_species(rows):

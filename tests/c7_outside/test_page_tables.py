@@ -90,6 +90,32 @@ class Gates(Base):
         (reading / "withdrawn.tsv").write_text("arm\treason\ttime\n")
         self.refused(reading, "1 reading", "withdrawn")
 
+    def test_a_second_pass_count_with_no_arm_withdrawn_is_refused(self):
+        reading = self.reading()
+        text = (reading / "checks.txt").read_text().replace(
+            "beside no newer DONE", "beside no newer DONE; the elastic net withdrawn: 1 species ran a second pass, 1 "
+            "second-pass copies set aside", 1)
+        (reading / "checks.txt").write_text(text)
+        self.refused(reading, "1 reading")
+
+    def test_a_withdrawn_net_with_no_second_pass_count_is_refused(self):
+        reading = self.reading("withdrawn")
+        lines = (reading / "checks.txt").read_text().splitlines(keepends=True)
+        lines = [x.split("; the elastic net withdrawn:")[0] + "\n" if x.startswith("PASS species:") else x
+                 for x in lines]
+        (reading / "checks.txt").write_text("".join(lines))
+        self.refused(reading, "1 reading", "withdrawn")
+
+    def test_the_second_pass_count_goes_to_the_page(self):
+        reading = self.reading("withdrawn")
+        text = (reading / "checks.txt").read_text().replace("0 species ran a second pass, 0 second-pass",
+                                                            "2 species ran a second pass, 1 second-pass", 1)
+        (reading / "checks.txt").write_text(text)
+        out = self.write(reading, "withdrawn")
+        self.assertEqual([r["second_passes"] for r in rows_of(out / "page-withdrawn.tsv")], ["2"])
+        self.assertIn("after 2 species had run a second pass with it", (out / "README.md").read_text())
+        self.assertEqual([r["second_passes"] for r in rows_of(self.out("withdrawn") / "page-withdrawn.tsv")], ["0"])
+
     def test_a_first_copy_set_aside_is_never_read_as_a_species(self):
         reading = self.reading()
         shutil.copytree(reading / "score" / "synthia_coli", reading / "score" / "synthia_coli.20261123T080000Z")

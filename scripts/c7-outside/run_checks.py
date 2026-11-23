@@ -9,7 +9,12 @@
 expect.tsv, export-binary.txt, SHA256SUMS and DONE, and score.tar, which
 holds score/ and is never unpacked. A folder <species>.<UTC time> beside
 them is a species' first copy, moved aside when the species restarted for
-its second pass. <lists.tsv> is scripts/c7-outside/lists.tsv. <release
+its second pass. When the elastic net is withdrawn after some second passes
+ran, a species' copy is the one whose DONE says the elastic net was left
+out: <species>/ where no second pass ran, and where one did, its first copy
+<species>.<UTC time>/; its second-pass copy, <species>/ and any copy moved
+aside after the first, is named, counted and set aside, and never opened.
+<lists.tsv> is scripts/c7-outside/lists.tsv. <release
 dir> is the public release unpacked, whose species/<species>.json lists
 each species' genome ids. --withdrawn names a library arm the lead
 withdrew before it ran, with the reason and the UTC time the lead gave.
@@ -19,7 +24,11 @@ exits 1 when one fails:
 
   species      the copies are exactly the species of lists.tsv's first run;
                each folder <species>.<UTC time> is a first copy of a species
-               of the run, older than its species' DONE: named and set aside
+               of the run, older than its species' DONE: named and set aside;
+               with the elastic net withdrawn, a species' first copy whose
+               DONE says it was left out is its copy, and each second-pass
+               copy beside it is named with its species and counted, never
+               opened
   SHA256SUMS   every line of each species' SHA256SUMS holds, score/'s lines
                read from score.tar in place, and DONE names its sha256; the
                files under results/ and score/ are its lines
@@ -149,6 +158,7 @@ def done_of(copy):
 class Report:
     def __init__(self):
         self.lines, self.failed, self.checks = [], 0, 0
+        self.copy_of = {}
 
     def check(self, name, good, detail, more=()):
         self.checks += 1
@@ -169,28 +179,52 @@ def run(back, l_path, release, withdrawn=None, ids_also=()):
     # species
     folders = sorted(p.name for p in back.iterdir() if p.is_dir())
     got = [f for f in folders if ASIDE.fullmatch(f) is None]
-    asides = [ASIDE.fullmatch(f) for f in folders if ASIDE.fullmatch(f) is not None]
-    have = [s for s in species if (back / s).is_dir()]
-    dones = {s: done_of(back / s) for s in have}
-    named, bad_aside = [], []
+    asides = sorted((ASIDE.fullmatch(f) for f in folders if ASIDE.fullmatch(f) is not None), key=lambda m: m["time"])
+    copy_of, second = {s: back / s for s in species if (back / s).is_dir()}, {}
+    late = "elasticnet" in withdrawn
+    if late:
+        # Withdrawn after some second passes ran: a species' copy is its first copy whose DONE says the elastic net
+        # was left out; <species>/ and every copy moved aside after it are its second pass, set aside unopened.
+        for s in species:
+            mine = [m for m in asides if m["slug"] == s]
+            for i, m in enumerate(mine):
+                d = done_of(back / m.group(0))
+                if d is not None and d["species"] == s and d["elasticnet"] == "leave-out":
+                    copy_of[s] = back / m.group(0)
+                    second[s] = [x.group(0) for x in mine[i + 1:]] + ([s] if s in got else [])
+                    break
+    have = sorted(copy_of)
+    dones = {s: done_of(copy_of[s]) for s in have}
+    named, bad_aside, set_aside = [], [], {x for v in second.values() for x in v}
     for m in asides:
         done = dones.get(m["slug"])
+        if copy_of.get(m["slug"]) == back / m.group(0) or m.group(0) in set_aside:
+            continue
         if m["slug"] in species and done is not None and iso(m["time"]) < done["time"]:
             named.append(f"{m.group(0)}: a first copy of {m['slug']}, older than its DONE at {done['time']}: named and "
                          "set aside, never read")
         else:
             bad_aside.append(m.group(0))
-    rep.check("species", got == species and not bad_aside,
-              f"{len(got)} copies, {len(species)} species in lists.tsv's first run; {len(named)} first copies set "
-              f"aside by time, {len(bad_aside)} beside no newer DONE",
-              ([f"missing {len(set(species) - set(got))}, more {len(set(got) - set(species))}"] if got != species
+    by_time = len(named)
+    named += [f"{copy_of[s].name}: the copy of {s}, its DONE saying the elastic net was left out"
+              for s in sorted(second)]
+    named += [f"{x}: the second pass of {s}, after the elastic net was withdrawn: named, counted and set aside, never "
+              "opened" for s in sorted(second) for x in second[s]]
+    outside = sorted(set(got) - set(species))
+    rep.check("species", have == species and not outside and not bad_aside,
+              f"{len(got)} copies, {len(species)} species in lists.tsv's first run; {by_time} first copies set aside "
+              f"by time, {len(bad_aside)} beside no newer DONE"
+              + (f"; the elastic net withdrawn: {len(second)} species ran a second pass, {len(set_aside)} second-pass "
+                 "copies set aside" if late else ""),
+              ([f"missing {len(set(species) - set(have))}, more {len(outside)}"] if have != species or outside
                else []) + named + [f"{x}: no newer DONE of a species of the run" for x in bad_aside])
-    scores = {s: score_files(back / s) for s in have}
+    rep.copy_of = copy_of
+    scores = {s: score_files(copy_of[s]) for s in have}
 
     # SHA256SUMS
     good, lines, bad_lines, listed_ok = 0, 0, 0, 0
     for s in have:
-        copy = back / s
+        copy = copy_of[s]
         sums = copy / "SHA256SUMS"
         if not sums.is_file():
             continue
@@ -221,7 +255,7 @@ def run(back, l_path, release, withdrawn=None, ids_also=()):
     named_ok, by = 0, {"commit": {}, "grm": {}, "code": {}, "export": {}, "elasticnet": {}}
     aside, failed = [], []
     for s in have:
-        copy = back / s
+        copy = copy_of[s]
         m = dones[s]
         export = {}
         if (copy / "export-binary.txt").is_file():
@@ -266,7 +300,7 @@ def run(back, l_path, release, withdrawn=None, ids_also=()):
     # expect.py
     ok_species, found, expected, more, datasets, study = 0, 0, 0, 0, 0, 0
     for s in have:
-        copy = back / s
+        copy = copy_of[s]
         mine = [r for r in first if r["species_slug"] == s]
         ds = [r["dataset"] for r in mine]
         st = [r["dataset"] for r in mine if r["in_S"] == "1"]
@@ -311,7 +345,7 @@ def run(back, l_path, release, withdrawn=None, ids_also=()):
                 ids |= {g["id"] for g in json.load(handle)["genomes"]}
     texts = []
     for s in have:
-        copy = back / s
+        copy = copy_of[s]
         paths = [p for top in READ if (copy / top).is_dir() for p in sorted((copy / top).rglob("*")) if p.is_file()]
         paths += [copy / n for n in TOP_FILES if (copy / n).is_file()]
         texts += [p.read_bytes().decode("utf-8", errors="replace") for p in paths]
@@ -348,7 +382,7 @@ def gather(back, l_path, release, reading, withdrawn=None, ids_also=()):
         for arm, (reason, time) in sorted((withdrawn or {}).items()):
             handle.write(f"{arm}\t{reason}\t{time}\n")
     for s in species:
-        copy = back / s
+        copy = rep.copy_of[s]
         score = reading / "score" / s
         score.mkdir(parents=True)
         tables = score_files(copy)

@@ -34,7 +34,7 @@ The release keeps its five learners and their settings whatever the count says, 
 
 **Study split.** The 55 first-run datasets in S get one study run per arm at seed 42 on the reviewed `study-whole` fold file, with no twin.
 
-**Passes.** A species whose run started with the elastic net left out restarted with it on the same run folder, keeping its finished steps and booster fits. Its first copy, moved aside when it restarted, is named and set aside by its time and never read.
+**Passes.** A species whose run started with the elastic net left out restarted with it on the same run folder, keeping its finished steps and booster fits. Its first copy, moved aside when it restarted, is named and set aside by its time and never read. If the elastic net is withdrawn after some second passes ran, every species is read from the copy whose `DONE` says the elastic net was left out: the species' own folder where no second pass ran, its first copy where one did. Each second-pass copy is named with its species, counted and set aside, never opened, and `page-withdrawn.tsv` gives how many species ran a second pass.
 
 <!-- part 2: species, results and datasets not scored, with their counts, from checks.txt and page_tables.py print [checks]. -->
 
