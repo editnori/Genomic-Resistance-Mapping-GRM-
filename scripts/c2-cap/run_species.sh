@@ -85,7 +85,7 @@ REPO=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 HERE=$REPO/scripts/c2-cap
 W=$OUT/work; R=$W/release/rev14-274-20261112; M=$KIT/MASTER-MANIFEST.sha256
 GRM=$W/target/release/grm; COH=$W/cohorts; ROOTS=$W/roots; FITS=$W/fits; UNREAD=$W/unread
-PLANS=$W/plans; STUDY=$W/study; PICKS=$W/picks; GROUPS=$W/roots/cap-all/species/$SP/structure.json
+PLANS=$W/plans; STUDY=$W/study; PICKS=$W/picks; GROUPING=$W/roots/cap-all/species/$SP/structure.json
 export RUSTUP_TOOLCHAIN=1.98.1 CARGO_BUILD_JOBS=$JOBS RAYON_NUM_THREADS=$JOBS
 export PATH=$HOME/.cargo/bin:/usr/local/cargo/bin:$PATH
 exec 9> "$OUT/run.lock"
@@ -147,7 +147,7 @@ make_root() {
   [ -e "$r/bvbrc/genomes.jsonl" ] || : > "$r/bvbrc/genomes.jsonl"
   cp "$COH/$1.txt" "$r/species/$SP/genomes.txt"
 }
-export KIT SP DATASETS OUT JOBS DRAWS TWIN ARMS SPLITS SCORE REPO HERE W R M GRM COH ROOTS FITS UNREAD PLANS STUDY PICKS GROUPS
+export KIT SP DATASETS OUT JOBS DRAWS TWIN ARMS SPLITS SCORE REPO HERE W R M GRM COH ROOTS FITS UNREAD PLANS STUDY PICKS GROUPING
 
 STEP=kit
 ulimit -n "$(ulimit -Hn)" 2>/dev/null || true
@@ -307,7 +307,7 @@ plans() {
   echo "study plans: ${#names[@]}, each equal to its sha256"
   for arm in $FIT_ARMS; do
     python3 -I -B "$HERE/study.py" "$PLANS/reviewed/folds" "$PLANS/study.txt" "$COH" "$arm" "$W/curated" \
-      "$KIT/master-genome-meta.jsonl.gz" "$GROUPS" "$PLANS/$arm" "$OUT/results/study-files-$arm.tsv"
+      "$KIT/master-genome-meta.jsonl.gz" "$GROUPING" "$PLANS/$arm" "$OUT/results/study-files-$arm.tsv"
   done
 }
 step plans plans
@@ -350,16 +350,16 @@ if has "$SPLITS" lineage; then
     name=fit-cap-2000-$d
     [ -e "$OUT/flags/$name.done" ] || rm -rf "$FITS/cap-2000/$d"
     fit "$name" --data "$ROOTS/cap-2000" arm --species "$SP" --dataset "$d" --arm cap-2000 --blocks K \
-      --repeats $((DRAWS + TWIN)) --groups "$GROUPS" --trace-training --out "$FITS/cap-2000/$d"
+      --repeats $((DRAWS + TWIN)) --groups "$GROUPING" --trace-training --out "$FITS/cap-2000/$d"
     for arm in $FIT_ARMS; do
       name=fit-$arm-$d
       [ -e "$OUT/flags/$name.done" ] || rm -rf "$FITS/$arm/$d"
       fit "$name" --data "$ROOTS/$(root_of "$arm")" arm --species "$SP" --dataset "$d" --arm "$arm" --blocks K \
         --repeats "$DRAWS" --pairing common_outer_test_set_balanced --reference "$FITS/cap-2000/$d" \
-        --groups "$GROUPS" --trace-training --out "$FITS/$arm/$d"
+        --groups "$GROUPING" --trace-training --out "$FITS/$arm/$d"
     done
     STEP=folds-$d
-    python3 -I -B "$HERE/check_folds.py" lineage "$FITS" "$d" "$COH" "$GROUPS" "$OUT/results/roots.json" \
+    python3 -I -B "$HERE/check_folds.py" lineage "$FITS" "$d" "$COH" "$GROUPING" "$OUT/results/roots.json" \
       "$DRAWS" "$TWIN" "$OUT/results/folds-lineage-$d.tsv" > "$OUT/logs/folds-$d.log" 2>&1 \
       || { scrub "$OUT/logs/folds-$d.log"; cat "$OUT/logs/folds-$d.log"; false; }
     scrub "$OUT/logs/folds-$d.log"; cat "$OUT/logs/folds-$d.log"
@@ -369,7 +369,7 @@ fi
 
 if has "$SPLITS" study; then
   STEP=folds-study
-  python3 -I -B "$HERE/check_folds.py" study "$PLANS" "$COH" "$KIT/master-genome-meta.jsonl.gz" "$GROUPS" "$FIT_ARMS" \
+  python3 -I -B "$HERE/check_folds.py" study "$PLANS" "$COH" "$KIT/master-genome-meta.jsonl.gz" "$GROUPING" "$FIT_ARMS" \
     "$OUT/results/folds-study.tsv" > "$OUT/logs/folds-study.log" 2>&1 \
     || { scrub "$OUT/logs/folds-study.log"; cat "$OUT/logs/folds-study.log"; false; }
   scrub "$OUT/logs/folds-study.log"; cat "$OUT/logs/folds-study.log"
