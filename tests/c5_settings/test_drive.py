@@ -200,6 +200,20 @@ class Drive(unittest.TestCase):
 
 
 class Rule(unittest.TestCase):
+    def test_an_inner_fold_with_no_figure_drops_the_trial_and_is_never_read_as_zero(self):
+        # SYNTHETIC: an inner test fold that lacks a class has no balanced accuracy. Its trial has no mean, as a
+        # failed fit has none; read as 0, trial 1 would keep a mean of 0.633..., and a trial 0 with such a fold
+        # would anchor the rule at 0.6 in place of the release failed inside.
+        def doc(bas, status="ok"):
+            return {"learners": [{"learner": "rf", "status": status, "fold_balanced_accuracy": bas}]}
+
+        docs = {0: doc([0.7, 0.7, 0.7]), 1: doc([0.95, 0.95, None]), 2: doc([0.8, 0.8, 0.8], "failed")}
+        self.assertEqual(D.history(docs, "rf"), {0: 0.7, 1: None, 2: None})
+        release = D.history({0: doc([0.9, 0.9, None]), 1: doc([0.75, 0.75, 0.75])}, "rf")
+        self.assertEqual(release, {0: None, 1: 0.75})
+        got = D.pick(release)
+        self.assertEqual((got["picked"], got["plain_best"], got["status"]), (0, 1, "release failed inside"))
+
     def test_the_plain_best_is_the_best_inner_mean_ties_lowest_also_when_the_release_failed(self):
         self.assertEqual(D.pick({0: 0.70, 3: 0.73, 5: 0.73})["plain_best"], 3)
         self.assertEqual(D.pick({0: 0.70, 3: 0.73, 5: 0.73})["picked"], 0)
