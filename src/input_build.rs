@@ -1334,15 +1334,25 @@ mod tests {
 
     #[test]
     fn a_unitig_is_held_only_when_every_kmer_of_it_is() {
-        // SYNTHETIC: genome b holds the first 300 bases of a's 500, so it
-        // holds a's single unitig in part only.
+        // SYNTHETIC: genome b holds the first 300 bases of a's 500, and c
+        // all but a's last base, so its 31-mers but one; each holds a's
+        // single unitig in part only.
         let a = seq(500, 31);
         let dir = tmp("held");
-        let readers = ksets(&dir, &[("a", a.clone()), ("b", a[..300].to_string())]);
+        let readers = ksets(
+            &dir,
+            &[
+                ("a", a.clone()),
+                ("b", a[..300].to_string()),
+                ("c", a[..499].to_string()),
+            ],
+        );
         let space = KmerSpace::new(K);
         let mut t = Table::new(union_values(&readers).unwrap(), space.bits());
         assert_eq!(compact(&mut t, &space).unwrap(), 1);
         let (held, part, _) = presence(&t, &readers[1].read_all().unwrap());
+        assert_eq!((held.len(), part), (0, 1));
+        let (held, part, _) = presence(&t, &readers[2].read_all().unwrap());
         assert_eq!((held.len(), part), (0, 1));
         let (held, part, _) = presence(&t, &readers[0].read_all().unwrap());
         assert_eq!((held.len(), part), (1, 0));
