@@ -153,6 +153,52 @@ class Check(Case):
                     f.write(f"1{gid}\t0.{gid.replace('.', '')}\n")
         self.assertTrue(self.line(self.run_checks(change), "no genome id").startswith("PASS"))
 
+    def test_a_genome_id_in_failed_is_refused(self):
+        def after(copies):
+            (copies / "synthia_beta" / "FAILED").write_text(
+                f"FAILED synthia_beta 1 fit 2026-11-23T11:00:00Z {fx.genome('synthia_beta', 1)}\n", encoding="utf-8")
+        line = self.line(self.run_checks(after=after), "no genome id")
+        self.assertTrue(line.startswith("FAIL"), line)
+        self.assertIn(": 1 genome ids", line)
+
+    def test_a_default_of_four_outer_folds_owes_four_choices_files(self):
+        def change(slug, out):
+            if slug != "synthia_beta":
+                return
+            rows = fx.expect_rows(slug, ["synthia_beta__synthetic_drug_3"])
+            picks = out / "results" / "picks"
+            for e in rows:
+                if (e["split"], int(e["seed"])) != ("lineage", 43):
+                    continue
+                if e["arm"] == "default":
+                    (picks / e["file"]).write_text(json.dumps({"format": "grm-c9-pick-1",
+                                                               "folds": [{"fold": k} for k in range(4)]}),
+                                                   encoding="utf-8")
+                elif e["arm"] != "twin" and (picks / e["file"].replace("<k>", "4")).exists():
+                    (picks / e["file"].replace("<k>", "4")).unlink()
+        report = self.run_checks(change)
+        self.assertTrue(self.line(report, "each species holds every default").startswith("PASS"))
+        self.assertEqual(report[-1], "CHECKS 11 of 11")
+
+    def test_a_done_naming_another_choices_count_is_refused(self):
+        def after(copies):
+            p = copies / "synthia_gamma" / "DONE"
+            text = p.read_text(encoding="utf-8")
+            n = int(text.split(" choices ", 1)[1].split(" ", 1)[0])
+            p.write_text(text.replace(f" choices {n} ", f" choices {n + 1} "), encoding="utf-8")
+        line = self.line(self.run_checks(after=after), "each DONE names")
+        self.assertTrue(line.startswith("FAIL"), line)
+        self.assertIn("synthia_gamma: DONE does not agree", line)
+
+    def test_a_lists_txt_naming_other_twin_seeds_is_refused(self):
+        def change(slug, out):
+            if slug == "synthia_alpha":
+                p = out / "lists.txt"
+                p.write_text(p.read_text(encoding="utf-8").replace("twin\t45,46,47", "twin\t45,46"), encoding="utf-8")
+        line = self.line(self.run_checks(change), "each lists.txt names")
+        self.assertTrue(line.startswith("FAIL"), line)
+        self.assertTrue(line.endswith(": synthia_alpha"), line)
+
     def test_a_refusal_record_with_no_constant_model_rows_is_refused(self):
         def change(slug, out):
             if slug == "synthia_gamma":
