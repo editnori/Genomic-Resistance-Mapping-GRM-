@@ -22,7 +22,8 @@ Checks, each printed with its counts and none with a genome id:
   copy without it takes run_species.sh's printf of the species' first run
   (lists.tsv's order) and c2-drive.sh's arguments (3 draws, 3 twin slots,
   cap-all, lineage,study, yes), and only when SHA256SUMS' lists.txt line
-  holds it;
+  holds it; and every table run_species.sh lists (a .json, .tsv or .txt
+  file under results/ or score/) is listed;
 - DONE: each species has DONE naming its species, binary.txt's grm and
   code sha256 and the sha256 of its SHA256SUMS; a FAILED beside a newer
   DONE is named and set aside by time, and a FAILED with no newer DONE
@@ -135,6 +136,21 @@ def score_files(folder):
         if p.is_file() and name != SCORE_LOG:
             out[name] = p.read_bytes()
     return out
+
+
+TABLE_SUFFIXES = (".json", ".tsv", ".txt")
+
+
+def unlisted(folder, scores):
+    """The tables run_species.sh would list (a .json, .tsv or .txt file under results/ or score/) that the copy's
+    SHA256SUMS does not."""
+    folder = Path(folder)
+    listed = {posixpath.normpath(l.split("  ", 1)[-1])
+              for l in (folder / "SHA256SUMS").read_text(encoding="utf-8").splitlines() if l.strip()}
+    have = {p.relative_to(folder).as_posix() for p in (folder / "results").rglob("*")
+            if p.is_file() and p.suffix in TABLE_SUFFIXES} if (folder / "results").is_dir() else set()
+    have |= {n for n in scores if n.endswith(TABLE_SUFFIXES)}
+    return sorted(have - listed)
 
 
 def lists_text(folder, slug, lrows):
@@ -306,8 +322,10 @@ def run(runs, release, lrows, selection=None, lists=()):
         n, b, l = check_sums(runs / slug, scores[slug], texts[slug])
         total, bad, logs = total + n, bad + b, logs + l
     rebuilt = [slug for slug in slugs if texts[slug][1]]
-    say("SHA256SUMS", bad == 0 and logs == 0, f"{total - bad} of {total} lines hold in {len(slugs)} species; "
-        f"score/score.log listed {logs} times"
+    extra = [f"{slug}/{n}" for slug in slugs for n in unlisted(runs / slug, scores[slug])]
+    say("SHA256SUMS", bad == 0 and logs == 0 and not extra, f"{total - bad} of {total} lines hold in {len(slugs)} "
+        f"species; score/score.log listed {logs} times; {len(extra)} tables not listed"
+        + "".join(f"; not listed: {x}" for x in extra[:5])
         + (f"; lists.txt not in {len(rebuilt)} copies, rebuilt from lists.tsv and c2-drive.sh's arguments and held "
            f"to SHA256SUMS ({', '.join(rebuilt)})" if rebuilt else ""))
 

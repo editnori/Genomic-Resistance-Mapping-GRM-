@@ -176,5 +176,21 @@ class ListsTxt(Copies):
         self.fails("SHA256SUMS")
 
 
+class Unlisted(Copies):
+    def test_a_table_sha256sums_does_not_list_fails(self):
+        slug = self.r.slugs[6]
+        (self.folder(slug) / "results" / "folds-lineage-extra.tsv").write_text("dataset\n", encoding="utf-8")
+        got = self.fails("SHA256SUMS")
+        self.assertIn("1 tables not listed", got["SHA256SUMS"])
+        self.assertIn(f"not listed: {slug}/results/folds-lineage-extra.tsv", got["SHA256SUMS"])
+
+    def test_a_table_in_score_tar_sha256sums_does_not_list_fails(self):
+        slug = self.r.slugs[1]
+        (self.folder(slug) / "score" / "extra.tsv").write_text("x\n", encoding="utf-8")
+        self.as_driver()
+        got = self.fails("SHA256SUMS")
+        self.assertIn(f"not listed: {slug}/score/extra.tsv", got["SHA256SUMS"])
+
+
 if __name__ == "__main__":
     unittest.main()
