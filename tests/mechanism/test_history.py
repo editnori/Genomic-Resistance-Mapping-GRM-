@@ -147,7 +147,7 @@ class Vote(unittest.TestCase):
         # 2014 is earlier and 2015 later; 2020 and 1998 enter no period
         self.assertEqual((r["earlier_genomes"], r["later_genomes"]), ("17", "15"))
         s = row(out, "bioproject", periods="secondary")
-        self.assertEqual((s["earlier_genomes"], s["later_genomes"], s["passes"]), ("under 5", "32", "0"))
+        self.assertEqual((s["earlier_genomes"], s["later_genomes"], s["passes"]), ("0", "32", "0"))
 
     def test_no_year_is_imputed(self):
         rc, err, out = self.go()
@@ -305,7 +305,7 @@ class TimeSplit(unittest.TestCase):
         rc, err, out = self.go(train_kind="both")
         self.assertEqual(rc, 0, err)
         r = {r["reading"]: r for r in c.read_tsv(out / "timesplit.tsv")}["point_as_one"]
-        self.assertEqual((r["with_unseen_determinant"], r["share_unseen"]), ("under 5", "0.000000000000"))
+        self.assertEqual((r["with_unseen_determinant"], r["share_unseen"]), ("0", "0.000000000000"))
 
     def test_a_fold_file_not_in_the_design_stops(self):
         g = scenario()

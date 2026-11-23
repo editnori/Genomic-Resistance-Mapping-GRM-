@@ -82,7 +82,7 @@ class Strata(unittest.TestCase):
         self.assertEqual(got[(c.DATASET, "lineage", "scm", "point_only")]["recall"], "1.000000000000")
         self.assertEqual(got[(c.DATASET, "lineage", "scm", "neither")]["recall"], "")  # 9 resistant
         self.assertEqual(got[(c.DATASET, "lineage", "scm", "both")]["recall"], "")
-        self.assertEqual(got[(c.DATASET, "lineage", "scm", "point_only")]["susceptible"], "under 5")
+        self.assertEqual(got[(c.DATASET, "lineage", "scm", "point_only")]["susceptible"], "0")
         pooled = {(r["split"], r["row"], r["stratum"]): r for r in c.read_tsv(out / "pooled.tsv")}
         self.assertEqual(pooled[("lineage", "scm", "neither")]["resistant_pairs"], "9")
         self.assertEqual(pooled[("lineage", "scm", "neither")]["recall"], "")
@@ -95,8 +95,8 @@ class Strata(unittest.TestCase):
         self.assertEqual(rc, 0, err)
         got = cells(out)
         self.assertEqual(got[(c.DATASET, "lineage", "cart", "point_only")]["resistant_called"], "10")
-        self.assertEqual(got[(c.DATASET, "lineage", "scm", "point_only")]["resistant_called"], "under 5")
-        self.assertEqual(got[(c.DATASET, "random", "cart", "point_only")]["resistant_called"], "under 5")
+        self.assertEqual(got[(c.DATASET, "lineage", "scm", "point_only")]["resistant_called"], "0")
+        self.assertEqual(got[(c.DATASET, "random", "cart", "point_only")]["resistant_called"], "0")
         self.assertEqual(got[(c.DATASET, "lineage", "cart", "point_only")]["recall"], "1.000000000000")
         self.assertEqual(got[(c.DATASET, "random", "cart", "point_only")]["recall"], "0.000000000000")
 
@@ -104,7 +104,7 @@ class Strata(unittest.TestCase):
         rc, err, out = self.go()
         self.assertEqual(rc, 0, err)
         got = cells(out)
-        self.assertEqual(got[(c.DATASET, "lineage", "program", "neither")]["resistant_called"], "under 5")
+        self.assertEqual(got[(c.DATASET, "lineage", "program", "neither")]["resistant_called"], "0")
         self.assertEqual(got[(c.DATASET, "lineage", "program", "gene_only")]["susceptible_called"], "6")
         self.assertEqual(got[(c.DATASET, "lineage", "catalog", "point_only")]["resistant_called"], "10")
 

@@ -11,7 +11,7 @@ import os
 import random
 import statistics
 
-FLOOR = 5            # a count under this is written "under 5"
+FLOOR = 5            # a count of 1 to 4 is written "under 5"; 0 is written 0 (lead's ruling 2, 23 Nov)
 RECALL_FLOOR = 10    # a recall is written only over 10 or more resistant genomes
 UNDER = "under 5"
 MARGIN = 0.02
@@ -25,9 +25,13 @@ def r12(x):
 
 
 def shown(n):
-    """A genome count as a table writes it."""
-    if not isinstance(n, int):
+    """A genome count as a table writes it: 0 as 0, 1 to 4 as "under 5"."""
+    if not isinstance(n, int) or isinstance(n, bool):
         raise TypeError(f"a count must be an int, not {n!r}")
+    if n < 0:
+        raise ValueError("a count is never negative")
+    if n == 0:
+        return "0"
     return UNDER if n < FLOOR else str(n)
 
 
