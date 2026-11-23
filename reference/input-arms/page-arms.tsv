@@ -1,0 +1,8 @@
+arm	words	set	withdrawn	datasets	species	study_datasets	study_species	build	study_refused
+k31	K31, the default	L	0	233	23	55	8		0
+unitigs	unitigs	L	0	233	23	55	8	unitigs	0
+k31-counts	K31 plus k-mer counts	L	0	233	23	55	8	counts	0
+k31-aa	K31 plus amino-acid k-mers	L	0	233	23	55	8	aa	0
+program	the AMRFinderPlus program's calls alone	A	0	204	21	54	7		0
+k31-program	K31 plus the AMRFinderPlus program's calls	A	0	204	21	54	7		0
+twin	the twin, the default at seeds 45, 46 and 47	L	0	233	23	0	0		0

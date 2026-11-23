@@ -1,0 +1,13 @@
+1 reading: the run's checks printout ends CHECKS n of n, n being run_checks.py's own count of checks, with a PASS line for each and no line starting FAIL; the reading holds reading.txt, count/ with count.tsv, count-no-constant.tsv and conditions.tsv, score/ and run/, and nothing else; an arm count.tsv marks withdrawn is one of the five
+2 species: score/ and run/ each hold exactly the species of the first run of lists.tsv, each once, with its files, and each species' rows name it alone
+3 twin: the twin's rows are lineage draws at seeds 45, 46 and 47 only, no arm's row is at a twin seed, and conditions.tsv reads the five arms and never the twin
+4 study: a study row is a study run at seed 42 on the study split, and every lineage row is a draw at 42, 43 or 44 or the twin's
+5 M: no dataset of M, or outside the first run, stands in any table; species and antibiotic are lists.tsv's
+6 own datasets: each arm's rows are on its own set's datasets only: the default, the twin and the three matrix arms on L's first run, the two program arms on A's, the study split on those in S, and a withdrawn arm on none
+7 draws: datasets.tsv is the mean of draws.tsv's draws, and a dataset with a draw not scored is not scored, never read as zero
+8 constant: a constant-model draw is an arm's study run refused for no candidate, marked in draws.tsv and counted in datasets.tsv, and its dataset is kept
+9 checks: each species' checks.tsv holds checks and every one passed
+10 builds: each species' builds are grm-c3-build-1 records of its species, one per kind of the matrix arms run, holding counts only
+11 binary: each species' binary.txt and DONE name the same binary and code; one code sha256 in every species, or the page names each binary with its species
+12 conditions: ruling 15's rows decide and the stricter reading's decide nothing, and conditions 1 and 2 as read here off count.tsv equal conditions.tsv's
+13 count: count.tsv, count-no-constant.tsv and conditions.tsv are what score.py --count writes from the datasets.tsv files, with the arms count.tsv marks withdrawn
