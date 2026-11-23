@@ -3,10 +3,13 @@
 Every copy, genome id and file here is made up (page_fixture.py).
 """
 
+import builtins
+import io
 import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from tests.c5_settings import common
 from tests.c5_settings import page_fixture as fx
@@ -126,6 +129,34 @@ class Check(Case):
         line = self.line(report, "the refusal records")
         self.assertTrue(line.startswith("FAIL"))
         self.assertIn("1 refusal records, 0 constant-model rows", line)
+
+
+class Unopened(Case):
+    """score/score.log is never opened, even when a SHA256SUMS names it (SYNTHETIC copies)."""
+
+    def test_score_log_named_in_sha256sums_is_refused_and_never_opened(self):
+        def after(copies):
+            path = copies / "synthia_alpha" / "SHA256SUMS"
+            path.write_text(path.read_text(encoding="utf-8") + f"{'0' * 64}  score/score.log\n", encoding="utf-8")
+
+        opened = []
+        real_open, real_io_open = builtins.open, io.open
+
+        def guard(real):
+            def wrapped(file, *args, **kwargs):
+                if str(file).endswith("score/score.log"):
+                    opened.append(str(file))
+                return real(file, *args, **kwargs)
+            return wrapped
+
+        copies, lists, release = fx.copies(self.top)
+        after(copies)
+        with mock.patch("builtins.open", guard(real_open)), mock.patch("io.open", guard(real_io_open)):
+            lines, aside = checks.check(copies, lists, release)
+        report = checks.report(lines, aside)
+        self.assertTrue(self.line(report, "each species' SHA256SUMS").startswith("FAIL"))
+        self.assertTrue(self.line(report, "score/score.log stays out").startswith("FAIL"))
+        self.assertEqual(opened, [])
 
 
 class Gather(Case):

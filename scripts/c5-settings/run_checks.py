@@ -187,7 +187,9 @@ def check(copies, lists_path, release):
         listed_n += len(listed)
         if sorted(listed) != covered(out):
             bad_sums.append(f"{slug}: SHA256SUMS lists {len(listed)} files, the run's rule {len(covered(out))}")
-        wrong = [n for n, sha in listed.items() if not (out / n).is_file() or sha256(out / n) != sha]
+        # score/score.log is never opened, not even to hash it when a SHA256SUMS names it (the line above fails then).
+        wrong = [n for n, sha in listed.items()
+                 if n != SCORE_LOG and (not (out / n).is_file() or sha256(out / n) != sha)]
         if wrong:
             bad_sums.append(f"{slug}: {len(wrong)} files differ from SHA256SUMS")
     ok("each species' SHA256SUMS holds every file of the run's rule, each at its sha256", not bad_sums,
