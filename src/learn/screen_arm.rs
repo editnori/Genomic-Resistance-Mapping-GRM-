@@ -635,8 +635,8 @@ mod tests {
         assert!(strata >= informative + 2);
         // The strata left lose those samples, so compare with them left out of the fit.
         let mut keep = fit.clone();
-        for i in 0..120 {
-            if moved[i] == 1_000 || moved[i] == 2_000 {
+        for (i, &m) in moved.iter().enumerate() {
+            if m == 1_000 || m == 2_000 {
                 keep.remove(i);
             }
         }
@@ -799,7 +799,7 @@ mod tests {
     pub(crate) fn negative_control(perms: u64) -> (usize, usize) {
         let (strata, per, rows, top) = (20usize, 20usize, 2000usize, 100usize);
         let n = strata * per;
-        let mut rng = ChaCha8Rng::seed_from_u64(2026_11_23);
+        let mut rng = ChaCha8Rng::seed_from_u64(20_261_123);
         let lineage: Vec<u32> = (0..n).map(|i| (i / per) as u32).collect();
         // Stratum k holds round(per * share) resistant samples, shares 0.1 to 0.9.
         let resistant: Vec<usize> = (0..strata)

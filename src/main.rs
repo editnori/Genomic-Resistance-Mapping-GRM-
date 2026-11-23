@@ -2931,7 +2931,7 @@ mod tests {
             "--exp-pick-inner",
             "0",
         ];
-        let with = |extra: &[&str]| {
+        let with = |extra: &[&'static str]| -> Vec<&'static str> {
             let mut args = base.to_vec();
             args.extend_from_slice(extra);
             args
