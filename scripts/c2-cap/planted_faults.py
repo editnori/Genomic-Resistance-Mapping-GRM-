@@ -22,6 +22,8 @@ STUDY = "scripts/c2-cap/study.py"
 COHORTS = "scripts/c2-cap/cohorts.py"
 SCORE = "scripts/c2-cap/score.py"
 LISTS = "scripts/c2-cap/lists_check.py"
+EXPECT = "scripts/c2-cap/expect.py"
+FETCH = "scripts/c2-cap/bioprojects.py"
 T = "tests.c2_cap"
 
 FAULTS = [
@@ -78,6 +80,26 @@ FAULTS = [
      'if r["first_run"] == "1" and r["in_M"] == "0"}',
      'if r["first_run"] == "1" or r["in_M"] == "1"}',
      "py", f"{T}.test_score.Checks.test_a_dataset_of_m_or_outside_the_first_run_is_refused"),
+    ("11a", "the BioProject fetch asks another field of the genome table", FETCH,
+     "body = f\"in(genome_id,({','.join(ids)}))&select(genome_id,bioproject_accession)&limit({len(ids)})\"",
+     "body = f\"in(genome_id,({','.join(ids)}))&select(genome_id,bioproject_accession,collection_year)&limit({len(ids)})\"",
+     "py", f"{T}.test_bioprojects.Fetch.test_the_fetch_asks_the_genome_table_for_genome_id_and_bioproject_accession_only"),
+    ("11b", "the BioProject fetch asks another table", FETCH,
+     'return f"{API}/genome/", body',
+     'return f"{API}/genome_amr/", body',
+     "py", f"{T}.test_bioprojects.Fetch.test_the_fetch_asks_the_genome_table_for_genome_id_and_bioproject_accession_only"),
+    ("12", "a wider arm with no added genome labelled fitted and counted on the lineage split", EXPECT,
+     'role = "none-added" if (a, d) in empty else "same-cohort" if a in same else "draw"',
+     'role = "same-cohort" if a in same else "draw"',
+     "py", f"{T}.test_lists.Expect.test_an_arm_with_no_added_genome_labelled_is_none_added_on_both_splits"),
+    ("13", "a withdrawn arm's conditions read as a fitted arm's", SCORE,
+     'gone = r["arm"] in withdrawn',
+     "gone = False",
+     "py", f"{T}.test_score.Count.test_a_withdrawn_arm_keeps_its_five_pairs_at_p_one_and_the_tables_name_it_withdrawn"),
+    ("14", "Enterococcus faecium's one wider cohort scored under both wider arms", SCORE,
+     'if e["role"] in ("none-added", "same-cohort"):',
+     'if e["role"] == "none-added":',
+     "py", f"{T}.test_score.Checks.test_a_none_added_or_same_cohort_lineage_row_is_not_scored"),
 ]
 
 

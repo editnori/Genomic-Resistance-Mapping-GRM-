@@ -1,7 +1,7 @@
 """The scorer of plan block C2 (docs/cap-arms.md, Draws, the twin and the count).
 
   python3 -I score.py <expect.tsv> <fits dir> <picks dir> <out dir>
-  python3 -I score.py --count <out dir> <datasets.tsv> [<datasets.tsv> ...]
+  python3 -I score.py --count <out dir> [--withdrawn <arm> ...] <datasets.tsv> [<datasets.tsv> ...]
 
 Runs on the box. The first form checks every row expect.py lists, then
 scores it, and writes everything under <out dir> (score/ in run_species.sh,
@@ -27,14 +27,23 @@ over the folds (n, tp, fp, tn, fn and the log loss of the score clipped to
 with their Wilson intervals. Writes checks.tsv, draws.tsv and datasets.tsv
 (per dataset, split, arm and learner the mean over the draws,
 scripts/c3-inputs/score.py's dataset_rows) and prints the check counts
-only. An arm fitted by another (expect.tsv's fit, Enterococcus faecium's
-cap-4000 by cap-all) takes that fit's rows, named in draws.tsv's fit.
+only. An arm fitted by another (expect.tsv's fit) takes that fit's rows,
+named in draws.tsv's fit. A none-added row (no added genome labelled or,
+on the study split, none that trains) and a same-cohort row (an arm whose
+cohort is another arm's, Enterococcus faecium's cap-4000) are not scored,
+so the dataset is out of that arm's count.
 
 The second form takes the count and the conditions from an instance of
 scripts/c3-inputs/score.py of its own, with the family cap-4000, cap-all
 and the twin, the default cap-2000: Holm over the 15 lineage rows of the
-primary measure, 3 arms by 5 learners. Writes count.tsv and conditions.tsv
-and prints the row count only.
+primary measure, 3 arms by 5 learners. --withdrawn names an arm withdrawn
+before any fit, as C3's scorer takes it: the arm may hold no row, its five
+lineage pairs stay in the family at p = 1, count.tsv's withdrawn column is
+1 on its rows, and conditions.tsv names it withdrawn and reads none of its
+conditions (met and learners empty). cap-4000 is withdrawn for the run
+(docs/cap-arms.md). Rows of a none-added arm never reach datasets.tsv, so
+such a dataset is out of the arm's denominator. Writes count.tsv and
+conditions.tsv and prints the row count only.
 """
 
 import csv
@@ -215,7 +224,7 @@ def score(expect, fits, picks):
         if e["dataset"] not in names:
             checks.append((e["dataset"], "the dataset is in the first run (CAP, not M)", False, ""))
             continue
-        if e["role"] == "none-added":
+        if e["role"] in ("none-added", "same-cohort"):
             continue
         if e["split"] == "lineage":
             folds = lineage_checks(e, lin, draw_slots, checks)
@@ -260,21 +269,41 @@ def score(expect, fits, picks):
     return checks, draws
 
 
+CONDITION_COLUMNS = C3.CONDITION_COLUMNS[:1] + ["withdrawn"] + C3.CONDITION_COLUMNS[1:]
+
+
+def conditions(counted, withdrawn):
+    """C3's conditions, a withdrawn arm's rows named withdrawn and not read."""
+    out = []
+    for r in C3.conditions(counted):
+        gone = r["arm"] in withdrawn
+        out.append(dict(r, withdrawn=int(gone), **({"met": "", "learners": ""} if gone else {})))
+    return out
+
+
 def main(argv):
     if argv and argv[0] == "--count":
         if len(argv) < 3:
             raise SystemExit(__doc__)
         out = Path(argv[1])
-        rows = [r for p in argv[2:] for r in read_tsv(p)]
+        rest, withdrawn = argv[2:], []
+        while rest and rest[0] == "--withdrawn":
+            if len(rest) < 2:
+                raise SystemExit("--withdrawn takes an arm")
+            withdrawn.append(rest[1])
+            rest = rest[2:]
+        if not rest:
+            raise SystemExit(__doc__)
+        rows = [r for p in rest for r in read_tsv(p)]
         keys = [(r["dataset"], r["split"], r["arm"], r["learner"]) for r in rows]
         if len(set(keys)) != len(keys):
             raise SystemExit("a dataset, split, arm and learner is listed twice")
-        counted = C3.count(rows)
+        counted = C3.count(rows, withdrawn)
         out.mkdir(parents=True, exist_ok=True)
         write_tsv(out / "count.tsv", counted, C3.COUNT_COLUMNS)
         # C3's conditions write its family's size, 15 here: 3 arms by 5 learners.
-        write_tsv(out / "conditions.tsv", C3.conditions(counted), C3.CONDITION_COLUMNS)
-        print(f"count: {len(rows)} dataset rows from {len(argv) - 2} files")
+        write_tsv(out / "conditions.tsv", conditions(counted, withdrawn), CONDITION_COLUMNS)
+        print(f"count: {len(rows)} dataset rows from {len(rest)} files")
         return 0
     if len(argv) != 4:
         raise SystemExit(__doc__)

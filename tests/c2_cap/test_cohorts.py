@@ -90,6 +90,50 @@ class Gate(unittest.TestCase):
         self.assertEqual(len(arms["cap-all"]), 2900)
 
 
+class AddedLabelled(unittest.TestCase):
+    def setUp(self):
+        self.ph = calls(5000)
+        order = cohorts.rank(self.ph, DATASETS, common.SPECIES)
+        self.arms = cohorts.cohorts(order, order[:2000], [4000, 4096])
+        self.ds = [{"id": f"{common.SPECIES}__drug_a", "species": common.SPECIES, "antibiotic": "drug a"},
+                   {"id": f"{common.SPECIES}__drug_b", "species": common.SPECIES, "antibiotic": "drug b"},
+                   {"id": "other__drug_a", "species": "other", "antibiotic": "drug a"}]
+
+    def test_each_dataset_and_wider_arm_counts_its_added_genomes_with_a_call_by_class(self):
+        rows = cohorts.added_labelled(self.arms, self.ph, self.ds, common.SPECIES)
+        self.assertEqual([(r["dataset"], r["arm"]) for r in rows],
+                         [(f"{common.SPECIES}__drug_{x}", a) for x in "ab" for a in ("cap-4000", "cap-all")])
+        base = set(self.arms["cap-2000"])
+        for r in rows:
+            drug = r["antibiotic"]
+            added = set(self.arms[r["arm"]]) - base
+            want_r = {p["genome_id"] for p in self.ph if p["antibiotic"] == drug and p["reported"] == "R"} & added
+            want_s = {p["genome_id"] for p in self.ph if p["antibiotic"] == drug and p["reported"] == "S"} & added
+            self.assertEqual((r["added_resistant"], r["added_susceptible"]), (len(want_r), len(want_s)))
+            self.assertEqual(r["added_labelled"], r["added_resistant"] + r["added_susceptible"])
+            self.assertEqual((r["species"], r["none_added"]), (common.SPECIES, int(r["added_labelled"] == 0)))
+        # The rule ranks every genome with a drug b call into the 2,000, so only drug a adds labelled genomes.
+        self.assertEqual({(r["antibiotic"], r["none_added"]) for r in rows}, {("drug a", 0), ("drug b", 1)})
+
+    def test_an_arm_whose_added_genomes_hold_no_call_on_the_drug_is_none_added(self):
+        ph = [p for p in self.ph if not (p["antibiotic"] == "drug a"
+                                         and p["genome_id"] not in set(self.arms["cap-2000"]))]
+        rows = cohorts.added_labelled(self.arms, ph, self.ds, common.SPECIES)
+        drug_a = [r for r in rows if r["antibiotic"] == "drug a"]
+        self.assertEqual({(r["added"], r["added_labelled"], r["none_added"]) for r in drug_a},
+                         {(2000, 0, 1), (2096, 0, 1)})
+        self.assertTrue(all(r["labelled"] == 2000 for r in drug_a))
+
+    def test_each_list_gives_its_line_count_and_sha256_and_no_id(self):
+        import hashlib
+        doc = cohorts.counts(self.arms, cohorts.rank(self.ph, DATASETS, common.SPECIES))
+        for arm, ids in self.arms.items():
+            text = "".join(g + "\n" for g in ids)
+            self.assertEqual(doc["arms"][arm]["lines"], len(ids))
+            self.assertEqual(doc["arms"][arm]["sha256"], hashlib.sha256(text.encode()).hexdigest())
+        self.assertFalse([g for g in self.arms["cap-all"] if g in __import__("json").dumps(doc)])
+
+
 class Roots(unittest.TestCase):
     def plan(self, n_mid, n_all, arms):
         with tempfile.TemporaryDirectory() as tmp:

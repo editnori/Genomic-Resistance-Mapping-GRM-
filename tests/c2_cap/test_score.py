@@ -215,6 +215,16 @@ class Checks(unittest.TestCase):
         self.assertEqual(rc, 0, text)
         self.assertEqual({r["arm"] for r in draws if r["split"] == "study"}, {"cap-2000"})
 
+    def test_a_none_added_or_same_cohort_lineage_row_is_not_scored(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            r = Run(tmp, study=False)
+            shutil.rmtree(r.t / "fits" / "cap-all")
+            r.expect = [e[:5] + (["none-added" if e[2] == "cap-all" else "same-cohort"] if e[2] in ("cap-all", "cap-4000")
+                                 else [e[5]]) + e[6:] for e in r.expect]
+            rc, text, checks, draws, _ = r.run()
+        self.assertEqual(rc, 0, text)
+        self.assertEqual({x["arm"] for x in draws}, {"cap-2000", "twin"})
+
     def test_the_log_loss_is_clipped(self):
         self.assertAlmostEqual(score.loss(1, 0.0), -__import__("math").log(1e-4))
         self.assertAlmostEqual(score.loss(0, 1.0), -__import__("math").log(1e-4))
@@ -239,7 +249,7 @@ class Count(unittest.TestCase):
                         rows.append(row)
         return rows
 
-    def run_count(self, rows):
+    def run_count(self, rows, withdrawn=()):
         with tempfile.TemporaryDirectory() as tmp:
             t = Path(tmp)
             cols = list(rows[0])
@@ -247,7 +257,8 @@ class Count(unittest.TestCase):
                 w = csv.DictWriter(f, cols, delimiter="\t")
                 w.writeheader()
                 w.writerows(rows)
-            rc, text = common.quiet(score.main, ["--count", str(t / "out"), str(t / "datasets.tsv")])
+            flags = [x for a in withdrawn for x in ("--withdrawn", a)]
+            rc, text = common.quiet(score.main, ["--count", str(t / "out")] + flags + [str(t / "datasets.tsv")])
             return rc, text, table(t / "out" / "count.tsv"), table(t / "out" / "conditions.tsv")
 
     def test_holm_runs_over_the_fifteen_lineage_rows_of_the_primary_measure(self):
@@ -266,6 +277,36 @@ class Count(unittest.TestCase):
         _, _, count, _ = self.run_count(self.dataset_rows())
         wide = [r for r in count if r["pair"] == "cap-all-cap-2000" and r["measure"] == "balanced_accuracy"]
         self.assertTrue(all(abs(float(r["median_difference"]) - 0.05) < 1e-9 for r in wide))
+
+    def test_a_withdrawn_arm_keeps_its_five_pairs_at_p_one_and_the_tables_name_it_withdrawn(self):
+        rc, text, count, conditions = self.run_count(self.dataset_rows(arms=("cap-2000", "cap-all", "twin")),
+                                                     withdrawn=["cap-4000"])
+        self.assertEqual(rc, 0, text)
+        primary = [r for r in count if r["split"] == "lineage" and r["measure"] == score.C9.PRIMARY]
+        self.assertEqual(len(primary), 15)
+        gone = [r for r in primary if r["pair"] == "cap-4000-cap-2000"]
+        self.assertEqual([(r["withdrawn"], float(r["sign_p"]), r["datasets"]) for r in gone], [("1", 1.0, "0")] * 5)
+        self.assertEqual({r["withdrawn"] for r in primary if r["pair"] != "cap-4000-cap-2000"}, {"0"})
+        mid = [r for r in conditions if r["arm"] == "cap-4000"]
+        self.assertTrue(mid)
+        self.assertEqual({(r["withdrawn"], r["met"], r["learners"]) for r in mid}, {("1", "", "")})
+        self.assertEqual({r["withdrawn"] for r in conditions if r["arm"] == "cap-all"}, {"0"})
+        self.assertTrue(any(r["met"] != "" for r in conditions if r["arm"] == "cap-all"))
+
+    def test_a_withdrawn_arm_with_rows_or_the_twin_withdrawn_is_refused(self):
+        with self.assertRaises(SystemExit):
+            self.run_count(self.dataset_rows(), withdrawn=["cap-4000"])
+        with self.assertRaises(SystemExit):
+            self.run_count(self.dataset_rows(arms=("cap-2000", "cap-4000", "cap-all")), withdrawn=["twin"])
+
+    def test_a_none_added_dataset_is_out_of_the_arms_denominator(self):
+        rows = [r for r in self.dataset_rows(arms=("cap-2000", "cap-all", "twin"))
+                if not (r["arm"] == "cap-all" and r["dataset"] == D2)]
+        rc, text, count, _ = self.run_count(rows, withdrawn=["cap-4000"])
+        self.assertEqual(rc, 0, text)
+        lin = {r["pair"]: r for r in count if r["split"] == "lineage" and r["measure"] == score.C9.PRIMARY
+               and r["learner"] == common.LEARNERS[0]}
+        self.assertEqual((lin["cap-all-cap-2000"]["datasets"], lin["twin-cap-2000"]["datasets"]), ("3", "4"))
 
     def test_the_count_refuses_part_of_the_family_or_a_row_twice(self):
         with self.assertRaises(SystemExit):

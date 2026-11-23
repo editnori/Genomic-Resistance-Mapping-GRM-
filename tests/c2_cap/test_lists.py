@@ -75,12 +75,39 @@ class Expect(unittest.TestCase):
                                                                ("twin", "5", "cap-2000")])
         self.assertEqual({r[6] for r in lineage if r[2] == "cap-4000"}, {"cap-all"})
         study = [r for r in got if r[3] == "study"]
-        self.assertEqual([(r[0], r[2], r[5]) for r in study], [("d2", "cap-2000", "study"), ("d2", "cap-4000", "study"),
+        self.assertEqual([(r[0], r[2], r[5]) for r in study], [("d2", "cap-2000", "study"),
+                                                                ("d2", "cap-4000", "same-cohort"),
                                                                 ("d2", "cap-all", "study")])
+
+    def test_an_arm_sharing_another_arms_cohort_is_counted_under_that_arm_only(self):
+        got = self.rows()
+        self.assertEqual({r[5] for r in got if r[2] == "cap-4000"}, {"same-cohort"})
+        self.assertEqual({r[5] for r in got if r[2] == "cap-all"}, {"draw", "study"})
+        apart = self.rows(roots={"fits": {"cap-4000": "cap-4000", "cap-all": "cap-all"}, "same_as": {}})
+        self.assertEqual({r[5] for r in apart if r[2] == "cap-4000"}, {"draw", "study"})
 
     def test_an_arm_with_no_fold_file_adds_no_genome_and_is_not_fitted(self):
         got = self.rows(have_file=lambda a, d: False)
         self.assertEqual([r[5] for r in got if r[3] == "study"], ["study", "none-added", "none-added"])
+
+    def test_an_arm_with_no_added_genome_labelled_is_none_added_on_both_splits(self):
+        got = self.rows(arms=["cap-all"], roots={"fits": {"cap-all": "cap-all"}, "same_as": {}},
+                        empty={("cap-all", "d2")})
+        self.assertEqual({(r[3], r[5]) for r in got if r[0] == "d2" and r[2] == "cap-all"},
+                         {("lineage", "none-added"), ("study", "none-added")})
+        self.assertEqual({r[5] for r in got if r[0] == "d1" and r[2] == "cap-all"}, {"draw"})
+        self.assertEqual({r[5] for r in got if r[2] == "cap-2000"}, {"draw", "study"})
+
+    def test_the_none_added_pairs_are_read_from_the_cohort_count(self):
+        import tempfile
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as tmp:
+            p = Path(tmp) / "added-labelled.tsv"
+            p.write_text("dataset\tspecies\tantibiotic\tarm\tlabelled\tadded\tadded_labelled\tadded_resistant\t"
+                         "added_susceptible\tnone_added\n"
+                         "d1\tSynthia coli\tdrug a\tcap-all\t50\t30\t0\t0\t0\t1\n"
+                         "d2\tSynthia coli\tdrug b\tcap-all\t60\t30\t2\t1\t1\t0\n", encoding="utf-8")
+            self.assertEqual(expect.none_added(p), {("cap-all", "d1")})
 
     def test_bad_counts_and_arms_are_refused(self):
         for kw in ({"draws": 0}, {"twin": -1}, {"arms": ["cap-8000"]}, {"arms": ["cap-all", "cap-all"]},

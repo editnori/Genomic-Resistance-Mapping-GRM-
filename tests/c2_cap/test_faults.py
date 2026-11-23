@@ -11,7 +11,7 @@ from tests.c2_cap import common
 class Faults(unittest.TestCase):
     def test_each_planted_faults_text_occurs_once_in_its_file(self):
         faults = common.load("planted_faults").FAULTS
-        self.assertEqual(len(faults), 13)
+        self.assertEqual(len(faults), 18)
         for fault in faults:
             n, path, old = fault[0], fault[2], fault[3]
             with self.subTest(fault=n):

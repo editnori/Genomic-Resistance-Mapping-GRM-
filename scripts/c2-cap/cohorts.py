@@ -22,11 +22,19 @@ with a genome listed twice.
 
 Writes <out dir>/<arm>.txt per arm, one genome id per line sorted by id
 (the canonical order of scripts/input-comparison/run.py), which stays on
-the box, and <out dir>/cohorts.json, counts only: per arm its genomes, the
-genomes it adds to the default and, for each wider arm, how many of the
-release's 2,000 it holds. Prints cohorts.json.
+the box; <out dir>/cohorts.json, counts only: per arm its genomes, the
+genomes it adds to the default, how many of the release's 2,000 it holds,
+and its list's line count and sha256; and <out dir>/added-labelled.tsv,
+counts only, per dataset of the species in the rebuilt table and wider
+arm: the species and antibiotic in full, the arm's genomes with a call on
+the dataset's drug (labelled, as the rule reads a call), and its added
+genomes with one, resistant and susceptible. An arm with no added
+labelled genome on a dataset is none-added there (none_added 1): it is not
+fitted and stays out of the count, on both splits. A dataset with few is
+fitted and counted; no threshold is set. Prints cohorts.json.
 """
 
+import hashlib
 import json
 import sys
 from collections import defaultdict
@@ -114,11 +122,43 @@ def check(arms, release, order):
                 raise ValueError(f"{arm} drops {len(dropped)} genomes of the default's 2,000")
 
 
+def list_text(ids):
+    return "".join(g + "\n" for g in ids)
+
+
 def counts(arms, order):
     base = set(arms[DEFAULT])
     return {"ranked": len(order),
-            "arms": {arm: {"genomes": len(ids), "added": len(set(ids) - base),
-                           "holds_default": len(base & set(ids))} for arm, ids in arms.items()}}
+            "arms": {arm: {"genomes": len(ids), "added": len(set(ids) - base), "holds_default": len(base & set(ids)),
+                           "lines": len(ids), "sha256": hashlib.sha256(list_text(ids).encode("utf-8")).hexdigest()}
+                     for arm, ids in arms.items()}}
+
+
+LABELLED_COLUMNS = ["dataset", "species", "antibiotic", "arm", "labelled", "added", "added_labelled", "added_resistant",
+                    "added_susceptible", "none_added"]
+
+
+def added_labelled(arms, phenotypes, datasets, species):
+    """added-labelled.tsv's rows: per dataset of `species` and wider arm, the arm's labelled genomes and its added
+    genomes with a call on the dataset's drug, by class."""
+    calls = defaultdict(lambda: defaultdict(set))
+    for p in phenotypes:
+        call = reported(p) if p["species"] == species else None
+        if call is not None:
+            calls[p["antibiotic"]][call].add(p["genome_id"])
+    base = set(arms[DEFAULT])
+    out = []
+    for d in sorted((d for d in datasets if d["species"] == species), key=lambda d: d["id"]):
+        r, s = calls[d["antibiotic"]]["R"], calls[d["antibiotic"]]["S"]
+        for arm in sorted(a for a in arms if a != DEFAULT):
+            ids = set(arms[arm])
+            added = ids - base
+            n = len(added & (r | s))
+            out.append({"dataset": d["id"], "species": species, "antibiotic": d["antibiotic"], "arm": arm,
+                        "labelled": len(ids & (r | s)), "added": len(added), "added_labelled": n,
+                        "added_resistant": len(added & r), "added_susceptible": len(added & s),
+                        "none_added": int(n == 0)})
+    return out
 
 
 def main(argv):
@@ -135,7 +175,8 @@ def main(argv):
         raise SystemExit(f"the rebuilt table has no species {slug}")
     with open(curated / "datasets.json", encoding="utf-8") as f:
         datasets = json.load(f)
-    order = rank(read_jsonl(curated / "phenotypes.jsonl"), datasets, names[slug])
+    phenotypes = read_jsonl(curated / "phenotypes.jsonl")
+    order = rank(phenotypes, datasets, names[slug])
     try:
         arms = cohorts(order, release, caps)
         check(arms, release, order)
@@ -143,9 +184,14 @@ def main(argv):
         raise SystemExit(f"{slug}: {e}") from None
     out.mkdir(parents=True, exist_ok=True)
     for arm, ids in arms.items():
-        (out / f"{arm}.txt").write_text("".join(g + "\n" for g in ids), encoding="utf-8")
+        (out / f"{arm}.txt").write_text(list_text(ids), encoding="utf-8")
     doc = {"species": names[slug], "slug": slug, **counts(arms, order)}
     (out / "cohorts.json").write_text(json.dumps(doc, indent=1, sort_keys=True) + "\n", encoding="utf-8")
+    rows = added_labelled(arms, phenotypes, datasets, names[slug])
+    with open(out / "added-labelled.tsv", "w", encoding="utf-8") as f:
+        f.write("\t".join(LABELLED_COLUMNS) + "\n")
+        for r in rows:
+            f.write("\t".join(str(r[c]) for c in LABELLED_COLUMNS) + "\n")
     print(json.dumps(doc, sort_keys=True))
 
 

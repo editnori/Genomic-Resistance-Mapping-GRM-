@@ -1,7 +1,7 @@
 """A wider arm's study fold files (docs/cap-arms.md, The held-out genomes, study split).
 
   python3 -I study.py <reviewed folds dir> <study.txt> <cohorts dir> <arm> <curated dir>
-                      <master genome meta .jsonl.gz> <structure.json> <out dir> <out tsv>
+                      <genome meta .jsonl.gz[,...]> <structure.json> <out dir> <out tsv>
 
 For each dataset of <study.txt>, the reviewed plan
 <reviewed folds dir>/<dataset>.study-whole.json is the default's fold file
@@ -9,8 +9,10 @@ For each dataset of <study.txt>, the reviewed plan
 lists and adds the arm's added genomes of the dataset's cohort (in the
 arm's cohort list and not the default's, with a reported R or S call on the
 dataset's drug, not a conflict and not from a MIC, as cohorts.py reads
-them). Each added genome goes to train when its BioProject (from the master
-genome rows) is known and no tested genome has it, and no tested genome has
+them). Each added genome goes to train when its BioProject (from the genome
+row files, a comma list: the master genome rows and bioprojects.py's
+answers for the added genomes, a genome two files disagree on unknown) is
+known and no tested genome has it, and no tested genome has
 its k-mer digest (from the species grouping); else to unused. An added
 genome is never tested: a fold file cannot hold a genome out of one fold
 without testing it there, so it trains in every fold or in none. When no

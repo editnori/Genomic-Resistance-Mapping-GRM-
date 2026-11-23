@@ -20,7 +20,7 @@ DRAWS, TWIN = 2, 2
 
 
 class Lineage(unittest.TestCase):
-    def run_check(self, breach=None, edit=None):
+    def run_check(self, breach=None, edit=None, none_added=0):
         """(exit code, printed text, rows written) of check_folds.py lineage on a SYNTHETIC run."""
         sp = common.Species()
         with tempfile.TemporaryDirectory() as tmp:
@@ -32,9 +32,13 @@ class Lineage(unittest.TestCase):
             common.lineage_fits(sp, t / "fits", D, DRAWS + TWIN, DRAWS, breach=breach)
             if edit:
                 edit(t / "fits")
+            (t / "added-labelled.tsv").write_text(
+                "dataset\tspecies\tantibiotic\tarm\tlabelled\tadded\tadded_labelled\tadded_resistant\t"
+                f"added_susceptible\tnone_added\n{D}\tSynthia coli\tdrug a\tcap-all\t90\t30\t"
+                f"{0 if none_added else 30}\t0\t{0 if none_added else 30}\t{int(bool(none_added))}\n", encoding="utf-8")
             rc, text = common.quiet(folds.main, ["check_folds.py", "lineage", str(t / "fits"), D, str(t / "cohorts"),
                                                  str(t / "structure.json"), str(t / "roots.json"), str(DRAWS),
-                                                 str(TWIN), str(t / "out.tsv")])
+                                                 str(TWIN), str(t / "out.tsv"), str(t / "added-labelled.tsv")])
             rows = (t / "out.tsv").read_text(encoding="utf-8").splitlines()
         return rc, text, rows
 
@@ -99,6 +103,15 @@ class Lineage(unittest.TestCase):
         self.assertIn("breach: a balance drop: 1", text)
 
 
+    def test_a_none_added_arm_is_not_checked_and_a_fit_of_it_breaches(self):
+        rc, text, _ = self.run_check(none_added=1)
+        self.assertEqual(rc, 1)
+        self.assertIn("breach: cap-all: a none-added arm fitted: 1", text)
+        rc, text, rows = self.run_check(none_added=1, edit=lambda fits: __import__("shutil").rmtree(fits / "cap-all"))
+        self.assertEqual(rc, 0, text)
+        self.assertEqual({r.split("\t")[1] for r in rows[1:]}, {"cap-2000"})
+
+
 class Study(unittest.TestCase):
     def setUp(self):
         self.sp = common.Species()
@@ -114,6 +127,14 @@ class Study(unittest.TestCase):
         train, unused = study.place(self.f0, set(self.sp.added), self.bp, self.sp.digest)
         self.assertFalse({g for g in train if self.bp[g] == "PRJ0"})
         self.assertEqual(sorted(unused["bioproject"]), sorted(self.sp.added[:8]))
+
+    def test_bioprojects_join_several_files_and_a_genome_they_disagree_on_is_unknown(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            t = Path(tmp)
+            common.meta(t / "a.jsonl.gz", {"1.1": "PRJA", "2.1": "PRJB"})
+            common.meta(t / "b.jsonl.gz", {"2.1": "PRJB", "3.1": "PRJC", "1.1": "PRJZ"})
+            got = folds.bioprojects(f"{t / 'a.jsonl.gz'},{t / 'b.jsonl.gz'}")
+        self.assertEqual(got, {"2.1": "PRJB", "3.1": "PRJC"})
 
     def test_an_added_genome_of_no_known_bioproject_stays_out_of_training(self):
         train, unused = study.place(self.f0, set(self.sp.added), self.bp, self.sp.digest)

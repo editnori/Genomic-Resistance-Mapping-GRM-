@@ -1,7 +1,8 @@
 """Holds every C2 fit's folds to the design (docs/cap-arms.md, The held-out genomes).
 
   python3 -I check_folds.py lineage <fits dir> <dataset> <cohorts dir> <structure.json> <roots.json> <draws> <twin> <out tsv>
-  python3 -I check_folds.py study <plans dir> <cohorts dir> <master genome meta .jsonl.gz> <structure.json> <arms> <out tsv>
+                                   <added-labelled.tsv>
+  python3 -I check_folds.py study <plans dir> <cohorts dir> <genome meta .jsonl.gz[,...]> <structure.json> <arms> <out tsv>
 
 Reads fold plans, cohort plans, `grm arm --trace-training` files and fold
 files only: no prediction, no score and no label beyond what a plan holds.
@@ -12,7 +13,9 @@ lineage: the default, <fits dir>/cap-2000/<dataset>, has a plan
 (plans/lineage-<slot>.json) and a training trace for every slot 0 to
 draws+twin-1; each wider arm of roots.json's `fits` has a cohort plan
 (plans/lineage-<slot>.cohort.json) for slots 0 to draws-1, made from the
-default's plan of that slot. Per slot and outer fold f:
+default's plan of that slot, unless cohorts.py's added-labelled.tsv marks
+the arm none-added on the dataset: then the arm has no fit folder there (a
+fit of a none-added arm breaches). Per slot and outer fold f:
 
 - the default tests every one of its genomes once and trains on the rest;
 - a wider arm's scored genomes are the default's test genomes of fold f,
@@ -28,7 +31,10 @@ default's plan of that slot. Per slot and outer fold f:
 Writes one row per dataset, arm, split, slot and fold: scored, trained,
 trained_added, kept_out_lineage, kept_out_duplicate, balance_dropped.
 
-study: per dataset of <plans dir>/study.txt and wider arm with a fold file
+study: the BioProjects come from one or more genome row files, a comma
+list (the master genome rows and bioprojects.py's answers for the added
+genomes); a genome two files give different BioProjects is unknown. Per
+dataset of <plans dir>/study.txt and wider arm with a fold file
 <plans dir>/<arm>/<dataset>.study-whole.json, against the reviewed plan
 <plans dir>/reviewed/folds/<dataset>.study-whole.json:
 
@@ -94,7 +100,7 @@ class Breaches:
         return 1 if self.counts else 0
 
 
-def lineage(fits, dataset, cohorts, structure, roots, draws, twin, bad):
+def lineage(fits, dataset, cohorts, structure, roots, draws, twin, bad, empty=frozenset()):
     lin, digest = grouping(structure)
     base_dir = Path(fits) / DEFAULT / dataset
     base_ids, base_train = trace(base_dir / "training.jsonl")
@@ -127,6 +133,9 @@ def lineage(fits, dataset, cohorts, structure, roots, draws, twin, bad):
             rows.append([dataset, DEFAULT, "lineage", slot, f, len(test), len(train), 0, 0, 0, 0])
     for arm, _root in roots["fits"].items():
         arm_dir = Path(fits) / arm / dataset
+        if (arm, dataset) in empty:
+            bad.add(f"{arm}: a none-added arm fitted", int(arm_dir.exists()))
+            continue
         ids, arm_train = trace(arm_dir / "training.jsonl")
         if not set(ids) <= set(read_ids(Path(cohorts) / f"{arm}.txt")) and arm in roots["genomes"]:
             bad.add(f"{arm}: a genome outside its cohort")
@@ -172,14 +181,30 @@ def lineage(fits, dataset, cohorts, structure, roots, draws, twin, bad):
 
 
 def bioprojects(meta):
-    out = {}
-    with gzip.open(meta, "rt", encoding="utf-8") as f:
-        for line in f:
-            if line.strip():
-                r = json.loads(line)
-                if r.get("bioproject_accession"):
-                    out[r["genome_id"]] = r["bioproject_accession"]
+    """{genome: BioProject} from a comma list of genome row files; a genome two files disagree on is left out."""
+    out, differ = {}, set()
+    for path in [p for p in str(meta).split(",") if p]:
+        with gzip.open(path, "rt", encoding="utf-8") as f:
+            for line in f:
+                if line.strip():
+                    r = json.loads(line)
+                    g, p = r["genome_id"], r.get("bioproject_accession")
+                    if not p:
+                        continue
+                    if out.get(g, p) != p:
+                        differ.add(g)
+                    out[g] = p
+    for g in differ:
+        del out[g]
     return out
+
+
+def none_added(path):
+    """{(arm, dataset)} with no added genome labelled (cohorts.py's added-labelled.tsv)."""
+    with open(path, encoding="utf-8") as f:
+        head = f.readline().rstrip("\n").split("\t")
+        rows = [dict(zip(head, line.rstrip("\n").split("\t"))) for line in f if line.strip()]
+    return {(r["arm"], r["dataset"]) for r in rows if r["none_added"] == "1"}
 
 
 def study(plans, cohorts, meta, structure, arms, bad):
@@ -224,9 +249,10 @@ def write(path, columns, rows):
 
 def main(argv):
     bad = Breaches()
-    if len(argv) == 10 and argv[1] == "lineage":
-        fits, dataset, cohorts, structure, roots_json, draws, twin, out = argv[2:]
-        rows = lineage(fits, dataset, cohorts, structure, load_json(roots_json), int(draws), int(twin), bad)
+    if len(argv) == 11 and argv[1] == "lineage":
+        fits, dataset, cohorts, structure, roots_json, draws, twin, out, labelled = argv[2:]
+        rows = lineage(fits, dataset, cohorts, structure, load_json(roots_json), int(draws), int(twin), bad,
+                       none_added(labelled))
         write(out, COLUMNS, rows)
         print(f"{dataset}: lineage folds checked {len(rows)}")
     elif len(argv) == 8 and argv[1] == "study":

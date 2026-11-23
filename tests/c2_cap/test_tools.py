@@ -172,6 +172,36 @@ class Runner(unittest.TestCase):
         self.assertLess(self.text.index('check_folds.py" study'), self.text.index('"$HERE/score.py"'))
         self.assertIn("--pairing common_outer_test_set_balanced --reference \"$FITS/cap-2000/$d\"", self.text)
 
+    def test_cap_4000_is_withdrawn_from_the_runs_default_arms(self):
+        self.assertIn("ARMS=${8:-cap-all}", self.text)
+        self.assertIn("grep -Eq '^(cap-4000|cap-all)(,(cap-4000|cap-all))?$'", self.text)
+
+    def test_lineage_chains_run_at_once_under_the_memory_guard_and_at_half_after_a_memory_kill(self):
+        t = self.text
+        self.assertIn('chain "$1"; shift', t)
+        self.assertLess(t.index('chain "$1"; shift'), t.index('chain "$d" &'))
+        self.assertIn('while [ "$(jobs -rp | wc -l)" -ge "$(at_once)" ]; do wait -n || failed=1; done', t)
+        self.assertIn("n=$(( (total - 4194304) / peak ))", t)
+        self.assertIn('[ "$n" -le "$LIMIT" ] || n=$LIMIT', t)
+        self.assertIn('touch "$OUT/flags/memory-killed"', t)
+        self.assertIn("LIMIT=$(( LIMIT / 2 )); [ \"$LIMIT\" -ge 1 ] || LIMIT=1", t)
+        self.assertIn("echo \"$AT_ONCE\" | grep -Eq '^[1-4]$'", t)
+        study = t[t.index('fit "study-cap-2000-$d"'):t.index("STEP=timing")]
+        self.assertNotRegex(study, r"&\s*$|& *\n")
+
+    def test_a_none_added_arm_is_not_fitted_and_its_check_reads_the_cohort_count(self):
+        t = self.text
+        self.assertLess(t.index('if none_added "$arm" "$d"; then'), t.index('--arm "$arm" --blocks K'))
+        self.assertIn('"$OUT/results/folds-lineage-$d.tsv" "$OUT/results/added-labelled.tsv"', t)
+        self.assertIn('"$OUT/results/roots.json" \\\n  "$OUT/results/added-labelled.tsv" > "$OUT/expect.tsv.part"', t)
+
+    def test_the_bioproject_answers_stay_in_work_and_only_counts_reach_results(self):
+        t = self.text
+        self.assertIn('"$HERE/bioprojects.py" "$COH" "$KIT/master-genome-meta.jsonl.gz" "$W/bioprojects.part.jsonl.gz"', t)
+        self.assertIn('"$OUT/results/bioprojects.json"', t)
+        self.assertIn("META=$META,$W/bioprojects.jsonl.gz", t)
+        self.assertLess(t.index("step bioprojects bioprojects"), t.index("step plans plans"))
+
 
 if __name__ == "__main__":
     unittest.main()

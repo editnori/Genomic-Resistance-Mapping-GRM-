@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# run_species.sh KIT SPECIES DATASETS OUT [JOBS] [DRAWS] [TWIN] [ARMS] [SPLITS] [SCORE]
+# run_species.sh KIT SPECIES DATASETS OUT [JOBS] [DRAWS] [TWIN] [ARMS] [SPLITS] [SCORE] [AT_ONCE]
 #
 # The cap-arm run of one species (plan block C2, docs/cap-arms.md) on a
 # fresh box with no agent attached: no prompt, nothing read from another
@@ -12,14 +12,16 @@
 # DATASETS is a comma list of the species' first-run datasets
 # (scripts/c2-cap/lists.tsv: CAP, not M). DRAWS (default 3) are the lineage
 # draws, grm arm's keyed slots 0 to DRAWS-1; TWIN (default 3, or 0 for none)
-# the twin's slots, the default's next TWIN slots. ARMS (default
-# cap-4000,cap-all) are the wider arms. SPLITS (default lineage,study) are
+# the twin's slots, the default's next TWIN slots. ARMS (default cap-all)
+# are the wider arms; cap-4000 is withdrawn for the run (docs/cap-arms.md)
+# and builds no root unless named here. SPLITS (default lineage,study) are
 # the splits fitted; the study split runs on the listed datasets with a
 # reviewed study-whole plan. SCORE (default yes) runs score.py at the end;
 # with no, nothing reads a score: after each dataset's fits their
 # predictions.jsonl, runs.json and repeats.json move to work/unread, which
-# nothing opens (the pilot). KIT holds these files, checked against the
-# sha256 pinned here before anything else runs:
+# nothing opens (the pilot). AT_ONCE (default 1, at most 4) is how many
+# datasets' lineage fits run at once; see Fits below. KIT holds these
+# files, checked against the sha256 pinned here before anything else runs:
 #   rev14-274-20261112.tar.zst  the public release data-rev14-274-20261112
 #   MASTER-MANIFEST.sha256      the data root's list of files and sha256
 #   curated.tar, curated.sha256 the rebuilt revision 14 table's curated files
@@ -36,7 +38,10 @@
 # datasets' breakpoints set to the release's and the catalog's three files
 # from NCBI, each equal to the master list (shared by the roots); the
 # cohorts (cohorts.py: the release's 2,000, and the top 4,000 and 4,096 by
-# the release's rule on the rebuilt table); the fetch of every cap-all
+# the release's rule on the rebuilt table, and per dataset and wider arm
+# the added genomes with a call, by class); the BioProject of each added
+# genome from BV-BRC's genome table by id, two fields (bioprojects.py,
+# only when a listed dataset has a study plan); the fetch of every cap-all
 # genome from BV-BRC (grm fetch fasta), each release genome held to the
 # master list and the release's length, contig count and N50
 # (fetch_check.py, which also times each genome and drops a genome BV-BRC no
@@ -60,15 +65,27 @@
 # writes the counts. Then on each study dataset grm learn --fold-file at
 # seed 42, the default on the reviewed plan, each wider arm on its own file,
 # with --exp-pick at no inner fold. A wider arm that adds no training genome
-# to a study dataset is not fitted there, as expect.tsv records.
+# to a study dataset is not fitted there, as expect.tsv records, and a
+# wider arm with no added genome labelled on a dataset (added-labelled.tsv,
+# none_added 1) is fitted on neither split there.
+#
+# Lineage fits at once: each dataset's chain (the default's fit, each wider
+# arm's, the fold check) is one job. The datasets run largest first, by the
+# cap-all cohort's labelled genomes; the first runs alone, and its peak
+# memory sets N, the chains at once after it: the smaller of AT_ONCE and
+# (the box's memory less 4 GiB) / (the largest fit peak so far), at least 1,
+# read again before each chain starts. N is written to results/at-once.txt.
+# A fit killed for memory fails the run once the running chains end; the
+# next start runs at half the N in force then. Study fits run one at a time.
 #
 # OUT gets logs/run.log, logs/<step>.time and .log (each with genome ids
 # written as [genome id]; the raw logs stay in work/raw-logs), logs/disk.tsv,
 # logs/timing.tsv (per step and fit: wall seconds, CPU seconds and peak
 # memory), flags/, work/ (release, cohorts, fasta, roots, fits, plans,
 # study, picks: these hold genome ids or scores and stay on the box),
-# results/ (counts only: cohorts.json, fetch.json, roots.json, folds.tsv,
-# study-files.tsv), score/ (score.py's tables and its output, score.log,
+# results/ (counts only: cohorts.json with each cohort list's line count and
+# sha256, added-labelled.tsv, bioprojects.json, fetch.json, roots.json,
+# folds tables, study-files tables, at-once.txt), score/ (score.py's tables and its output, score.log,
 # kept out of logs/ and run.log), binary.txt, lists.txt and expect.tsv. The
 # end checks that no file under results/, score/ or logs/ names a genome of
 # the species' cohorts, then writes SHA256SUMS and OUT/DONE:
@@ -77,8 +94,8 @@
 # nothing but itself.
 set -Eeuo pipefail
 KIT=$(cd "${1:?kit folder}" && pwd); SP=${2:?species slug}; DATASETS=${3:?datasets}
-OUT=${4:?out folder}; JOBS=${5:-$(nproc)}; DRAWS=${6:-3}; TWIN=${7:-3}; ARMS=${8:-cap-4000,cap-all}
-SPLITS=${9:-lineage,study}; SCORE=${10:-yes}
+OUT=${4:?out folder}; JOBS=${5:-$(nproc)}; DRAWS=${6:-3}; TWIN=${7:-3}; ARMS=${8:-cap-all}
+SPLITS=${9:-lineage,study}; SCORE=${10:-yes}; AT_ONCE=${11:-1}
 mkdir -p "$OUT"/flags "$OUT"/logs "$OUT"/work "$OUT"/results "$OUT"/score; OUT=$(cd "$OUT" && pwd)
 exec >> "$OUT/logs/run.log" 2>&1
 REPO=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
@@ -127,7 +144,7 @@ step() {  # step <name> <function>: once, timed, in a shell that stops at the fi
   if [ -e "$OUT/flags/$1.done" ]; then say "$1: done before, skipped"; return 0; fi
   say "$1: start"
   /usr/bin/time -f "$1 $TIME_FORMAT" -o "$OUT/logs/$1.time" \
-    bash -euo pipefail -c "$(declare -f say pinned master make_root "$2"); $2" < /dev/null > "$OUT/logs/$1.log" 2>&1 \
+    bash -euo pipefail -c "$(declare -f say pinned master make_root has study_listed "$2"); $2" < /dev/null > "$OUT/logs/$1.log" 2>&1 \
     || { scrub "$OUT/logs/$1.log"; tail -n 30 "$OUT/logs/$1.log"
          ! killed_for_memory "$OUT/logs/$1.time" \
            || say "$1: killed by signal 9, as the kernel kills a program when memory runs out; restart with a smaller JOBS"
@@ -138,6 +155,12 @@ step() {  # step <name> <function>: once, timed, in a shell that stops at the fi
   say "$1: end, $(cat "$OUT/logs/$1.time")"
 }
 has() { echo ",$1," | grep -q ",$2,"; }
+study_listed() {  # the listed datasets with a reviewed study plan
+  local d
+  for d in $(echo "$DATASETS" | tr ',' '\n'); do
+    if grep -q "/folds/$d.study-whole.json\$\|  folds/$d.study-whole.json\$" "$KIT/study-plans.sha256"; then echo "$d"; fi
+  done
+}
 # make_root <arm>: a data root holding the arm's cohort, the shared curated
 # table, catalog and genomes linked in.
 make_root() {
@@ -147,7 +170,7 @@ make_root() {
   [ -e "$r/bvbrc/genomes.jsonl" ] || : > "$r/bvbrc/genomes.jsonl"
   cp "$COH/$1.txt" "$r/species/$SP/genomes.txt"
 }
-export KIT SP DATASETS OUT JOBS DRAWS TWIN ARMS SPLITS SCORE REPO HERE W R M GRM COH ROOTS FITS UNREAD PLANS STUDY PICKS GROUPING
+export KIT SP DATASETS OUT JOBS DRAWS TWIN ARMS SPLITS SCORE AT_ONCE REPO HERE W R M GRM COH ROOTS FITS UNREAD PLANS STUDY PICKS GROUPING
 
 STEP=kit
 ulimit -n "$(ulimit -Hn)" 2>/dev/null || true
@@ -171,6 +194,7 @@ echo "$TWIN" | grep -Eq '^[0-9]+$' || { say "TWIN is a count of twin slots, 0 or
 echo "$ARMS" | grep -Eq '^(cap-4000|cap-all)(,(cap-4000|cap-all))?$' || { say "ARMS is cap-4000, cap-all or both"; false; }
 echo "$SPLITS" | grep -Eq '^(lineage|study)(,(lineage|study))?$' || { say "SPLITS is lineage, study or both"; false; }
 case $SCORE in yes|no) ;; *) say "SCORE is yes or no"; false ;; esac
+echo "$AT_ONCE" | grep -Eq '^[1-4]$' || { say "AT_ONCE is 1 to 4 datasets at once"; false; }
 # The listed datasets: the species' own, each once, each in the first run
 # (CAP, not M, by lists.tsv and by the label count's marks.tsv).
 python3 -I -B "$HERE/lists_check.py" "$HERE/lists.tsv" "$KIT/marks.tsv" "$SP" "$DATASETS" \
@@ -243,8 +267,25 @@ cohorts() {
   rm -rf "$COH"
   python3 -I -B "$HERE/cohorts.py" "$W/curated" "$R/species/$SP.json" "$SP" "$COH" 4000 4096
   cp "$COH/cohorts.json" "$OUT/results/cohorts.json"
+  cp "$COH/added-labelled.tsv" "$OUT/results/added-labelled.tsv"
 }
 step cohorts cohorts
+
+# The added genomes' BioProjects, by id, from BV-BRC's genome table: two
+# fields, genome_id and bioproject_accession. The answers stay in work/;
+# results/bioprojects.json holds the endpoint, the date and the counts.
+bioprojects() {
+  if ! has "$SPLITS" study || [ -z "$(study_listed)" ]; then
+    echo "bioprojects: no listed dataset has a study plan; nothing asked"; return 0
+  fi
+  python3 -I -B "$HERE/bioprojects.py" "$COH" "$KIT/master-genome-meta.jsonl.gz" "$W/bioprojects.part.jsonl.gz" \
+    "$OUT/results/bioprojects.json"
+  mv "$W/bioprojects.part.jsonl.gz" "$W/bioprojects.jsonl.gz"
+}
+step bioprojects bioprojects
+META=$KIT/master-genome-meta.jsonl.gz
+[ ! -e "$W/bioprojects.jsonl.gz" ] || META=$META,$W/bioprojects.jsonl.gz
+export META
 
 # Every cap-all genome from BV-BRC, into the shared fasta folder.
 fetch() {
@@ -291,11 +332,7 @@ plans() {
   : > "$PLANS/study.txt"
   has "$SPLITS" study || { echo "study plans: the study split is not run"; return 0; }
   names=()
-  for d in $(echo "$DATASETS" | tr ',' '\n'); do
-    if grep -q "/folds/$d.study-whole.json\$\|  folds/$d.study-whole.json\$" "$KIT/study-plans.sha256"; then
-      names+=("folds/$d.study-whole.json")
-    fi
-  done
+  for d in $(study_listed); do names+=("folds/$d.study-whole.json"); done
   if [ "${#names[@]}" = 0 ]; then echo "study plans: none of the datasets has one"; return 0; fi
   tar -xJf "$KIT/fold-plans.tar.xz" -C "$PLANS/reviewed" "${names[@]}"
   for f in "${names[@]}"; do
@@ -307,14 +344,14 @@ plans() {
   echo "study plans: ${#names[@]}, each equal to its sha256"
   for arm in $FIT_ARMS; do
     python3 -I -B "$HERE/study.py" "$PLANS/reviewed/folds" "$PLANS/study.txt" "$COH" "$arm" "$W/curated" \
-      "$KIT/master-genome-meta.jsonl.gz" "$GROUPING" "$PLANS/$arm" "$OUT/results/study-files-$arm.tsv"
+      "$META" "$GROUPING" "$PLANS/$arm" "$OUT/results/study-files-$arm.tsv"
   done
 }
 step plans plans
 
 STEP=expect
 python3 -I -B "$HERE/expect.py" "$SP" "$DATASETS" "$PLANS" "$DRAWS" "$TWIN" "$ARMS" "$SPLITS" "$OUT/results/roots.json" \
-  > "$OUT/expect.tsv.part"
+  "$OUT/results/added-labelled.tsv" > "$OUT/expect.tsv.part"
 if [ -s "$OUT/expect.tsv" ] && ! cmp -s "$OUT/expect.tsv" "$OUT/expect.tsv.part"; then
   say "the expected results differ from the first start's; use a fresh OUT"; false
 fi
@@ -330,7 +367,8 @@ fit() {
   /usr/bin/time -f "$name $TIME_FORMAT" -o "$OUT/logs/$name.time" "$GRM" "$@" \
     < /dev/null > "$OUT/logs/$name.log" 2>&1 || { scrub "$OUT/logs/$name.log"; tail -n 30 "$OUT/logs/$name.log"
       ! killed_for_memory "$OUT/logs/$name.time" \
-        || say "$name: killed by signal 9, as the kernel kills a program when memory runs out; restart with a smaller JOBS"
+        || { touch "$OUT/flags/memory-killed"
+             say "$name: killed by signal 9, as the kernel kills a program when memory runs out; the next start runs half as many fits at once"; }
       false; }
   scrub "$OUT/logs/$name.log"
   touch "$OUT/flags/$name.done"
@@ -345,31 +383,78 @@ unread() {  # unread <arm> <dataset>
     [ ! -e "$FITS/$1/$2/$f" ] || mv -f "$FITS/$1/$2/$f" "$UNREAD/$1/$2/$f"
   done
 }
-if has "$SPLITS" lineage; then
-  for d in $(echo "$DATASETS" | tr ',' '\n'); do
-    name=fit-cap-2000-$d
-    [ -e "$OUT/flags/$name.done" ] || rm -rf "$FITS/cap-2000/$d"
-    fit "$name" --data "$ROOTS/cap-2000" arm --species "$SP" --dataset "$d" --arm cap-2000 --blocks K \
-      --repeats $((DRAWS + TWIN)) --groups "$GROUPING" --trace-training --out "$FITS/cap-2000/$d"
-    for arm in $FIT_ARMS; do
-      name=fit-$arm-$d
-      [ -e "$OUT/flags/$name.done" ] || rm -rf "$FITS/$arm/$d"
-      fit "$name" --data "$ROOTS/$(root_of "$arm")" arm --species "$SP" --dataset "$d" --arm "$arm" --blocks K \
-        --repeats "$DRAWS" --pairing common_outer_test_set_balanced --reference "$FITS/cap-2000/$d" \
-        --groups "$GROUPING" --trace-training --out "$FITS/$arm/$d"
-    done
-    STEP=folds-$d
-    python3 -I -B "$HERE/check_folds.py" lineage "$FITS" "$d" "$COH" "$GROUPING" "$OUT/results/roots.json" \
-      "$DRAWS" "$TWIN" "$OUT/results/folds-lineage-$d.tsv" > "$OUT/logs/folds-$d.log" 2>&1 \
-      || { scrub "$OUT/logs/folds-$d.log"; cat "$OUT/logs/folds-$d.log"; false; }
-    scrub "$OUT/logs/folds-$d.log"; cat "$OUT/logs/folds-$d.log"
-    for arm in cap-2000 $FIT_ARMS; do unread "$arm" "$d"; done
+# none_added <arm> <dataset>: the arm adds no genome labelled on the dataset (added-labelled.tsv).
+none_added() {
+  awk -F'\t' -v a="$1" -v d="$2" 'NR > 1 && $1 == d && $4 == a && $10 == 1 { f = 1 } END { exit !f }' \
+    "$OUT/results/added-labelled.tsv"
+}
+# chain <dataset>: the dataset's lineage fits, one after another, then its fold check.
+chain() {
+  local d=$1 arm name
+  name=fit-cap-2000-$d
+  [ -e "$OUT/flags/$name.done" ] || rm -rf "${FITS:?}/cap-2000/${d:?}"
+  fit "$name" --data "$ROOTS/cap-2000" arm --species "$SP" --dataset "$d" --arm cap-2000 --blocks K \
+    --repeats $((DRAWS + TWIN)) --groups "$GROUPING" --trace-training --out "$FITS/cap-2000/$d"
+  for arm in $FIT_ARMS; do
+    name=fit-$arm-$d
+    if none_added "$arm" "$d"; then say "$name: no added genome labelled; none-added, not fitted"; continue; fi
+    [ -e "$OUT/flags/$name.done" ] || rm -rf "${FITS:?}/${arm:?}/${d:?}"
+    fit "$name" --data "$ROOTS/$(root_of "$arm")" arm --species "$SP" --dataset "$d" --arm "$arm" --blocks K \
+      --repeats "$DRAWS" --pairing common_outer_test_set_balanced --reference "$FITS/cap-2000/$d" \
+      --groups "$GROUPING" --trace-training --out "$FITS/$arm/$d"
   done
+  STEP=folds-$d
+  python3 -I -B "$HERE/check_folds.py" lineage "$FITS" "$d" "$COH" "$GROUPING" "$OUT/results/roots.json" \
+    "$DRAWS" "$TWIN" "$OUT/results/folds-lineage-$d.tsv" "$OUT/results/added-labelled.tsv" > "$OUT/logs/folds-$d.log" 2>&1 \
+    || { scrub "$OUT/logs/folds-$d.log"; cat "$OUT/logs/folds-$d.log"; false; }
+  scrub "$OUT/logs/folds-$d.log"; cat "$OUT/logs/folds-$d.log"
+  for arm in cap-2000 $FIT_ARMS; do unread "$arm" "$d"; done
+}
+# at_once: the chains to run at once now, from the largest fit peak so far.
+at_once() {
+  local total peak n
+  total=$(awk '/^MemTotal:/ { print $2 }' /proc/meminfo)
+  peak=$(cat "$OUT"/logs/fit-*.time 2> /dev/null | sed -n 's/.* s wall, \([0-9]*\) KB peak.*/\1/p' | sort -n | tail -n 1)
+  [ -n "$peak" ] && [ "$peak" -gt 0 ] || { echo 1; return 0; }
+  n=$(( (total - 4194304) / peak ))
+  [ "$n" -ge 1 ] || n=1
+  [ "$n" -le "$LIMIT" ] || n=$LIMIT
+  echo "$n"
+}
+if has "$SPLITS" lineage; then
+  STEP=at-once
+  LIMIT=$AT_ONCE
+  [ ! -s "$OUT/results/at-once.txt" ] || [ "$(cat "$OUT/results/at-once.txt")" -ge "$LIMIT" ] \
+    || LIMIT=$(cat "$OUT/results/at-once.txt")
+  if [ -e "$OUT/flags/memory-killed" ]; then
+    LIMIT=$(( LIMIT / 2 )); [ "$LIMIT" -ge 1 ] || LIMIT=1
+    rm -f "$OUT/flags/memory-killed"
+    say "a fit was killed for memory at the last start; this start runs at most $LIMIT at once"
+  fi
+  echo "$LIMIT" > "$OUT/results/at-once.txt"
+  # Largest first, by the cap-all cohort's labelled genomes on the dataset.
+  ORDER=$(for d in $(echo "$DATASETS" | tr ',' '\n'); do
+    echo "$(awk -F'\t' -v d="$d" 'NR > 1 && $1 == d && $5 > m { m = $5 } END { print m + 0 }' \
+      "$OUT/results/added-labelled.tsv") $d"
+  done | sort -k1,1nr -k2,2 | cut -d' ' -f2)
+  set -- $ORDER
+  chain "$1"; shift
+  failed=0
+  for d in "$@"; do
+    while [ "$(jobs -rp | wc -l)" -ge "$(at_once)" ]; do wait -n || failed=1; done
+    [ "$failed" = 0 ] || break
+    n=$(at_once)
+    [ "$(cat "$OUT/results/at-once.txt")" = "$n" ] || { echo "$n" > "$OUT/results/at-once.txt"; say "lineage fits: $n at once"; }
+    chain "$d" &
+  done
+  while [ "$(jobs -rp | wc -l)" -gt 0 ]; do wait -n || failed=1; done
+  STEP=lineage-fits
+  [ "$failed" = 0 ] || { say "a dataset's lineage fits failed; the chains running then were let finish"; false; }
 fi
 
 if has "$SPLITS" study; then
   STEP=folds-study
-  python3 -I -B "$HERE/check_folds.py" study "$PLANS" "$COH" "$KIT/master-genome-meta.jsonl.gz" "$GROUPING" "$FIT_ARMS" \
+  python3 -I -B "$HERE/check_folds.py" study "$PLANS" "$COH" "$META" "$GROUPING" "$FIT_ARMS" \
     "$OUT/results/folds-study.tsv" > "$OUT/logs/folds-study.log" 2>&1 \
     || { scrub "$OUT/logs/folds-study.log"; cat "$OUT/logs/folds-study.log"; false; }
   scrub "$OUT/logs/folds-study.log"; cat "$OUT/logs/folds-study.log"
@@ -379,6 +464,7 @@ if has "$SPLITS" study; then
     fit "study-cap-2000-$d" --data "$ROOTS/cap-2000" learn --species "$SP" \
       --fold-file "$PLANS/reviewed/folds/$d.study-whole.json" --fold-out "$STUDY/cap-2000" \
       --exp-pick "$PICKS/cap-2000" --exp-pick-inner 0 --force
+    # One at a time: the proof that fits at once write the same files ran on grm arm only.
     for arm in $FIT_ARMS; do
       [ -e "$PLANS/$arm/$d.study-whole.json" ] || { say "study-$arm-$d: the arm adds no training genome, not fitted"; continue; }
       root=$(root_of "$arm")
