@@ -644,6 +644,14 @@ enum Command {
         /// Retained-feature budget (see `grm learn`).
         #[arg(long, default_value_t = DEFAULT_SCREENED_FEATURES, value_parser = RangedU64ValueParser::<usize>::new().range(1..))]
         screened_features: usize,
+        /// Seed of the fold plans and holdouts written, as `grm learn
+        /// --seed` takes it: the plans are the ones `grm learn --seed`
+        /// scores. The matrix, the cohort and the screening rule do not
+        /// depend on it. At the default every byte written is the same as
+        /// with no flag; dataset.json's `seed` and input fingerprint hold
+        /// the value either way, and no key is added.
+        #[arg(long, default_value_t = RELEASE_SEED)]
+        seed: u64,
         #[arg(long)]
         out: PathBuf,
         /// Replace matrix.bin and dataset.json in dataset directories that
@@ -1076,11 +1084,13 @@ fn run(cli: Cli) -> Result<()> {
             species,
             only,
             screened_features,
+            seed,
             out,
             force,
         } => {
             let cfg = grm::learn::eval::EvalConfig {
                 screened_features,
+                seed,
                 ..Default::default()
             };
             let done = grm::export::export_species(&layout, &species, &only, &out, &cfg, force)?;
@@ -5752,6 +5762,201 @@ mod tests {
         }
         assert_eq!(folds, 2 * cfg.folds);
         assert!(below_floor && on_test_samples);
+    }
+
+    /// The sha256 of each file `grm export` with no flag wrote on the
+    /// export fixture, every dataset, at main `0d987ba`, before `--seed`
+    /// (a test printed them there, run twice with equal output).
+    const EXPORT_BYTES_BEFORE_SEED: [(&str, &str, &str); 4] = [
+        (
+            CIPROFLOXACIN,
+            "dataset.json",
+            "9de25c67a56c32a6052a81c3fee0584b139f7b9b3bc4027c494b58a135a5b47f",
+        ),
+        (
+            CIPROFLOXACIN,
+            "matrix.bin",
+            "a200a9fce314efc05f41201bfed498d401a58213c8d7eb84115c59d0d57ef0e0",
+        ),
+        (
+            MEROPENEM,
+            "dataset.json",
+            "84fd1f48250c9fd26cdb32ff5606455712963ea10356a53605b630ac4a6ff1c5",
+        ),
+        (
+            MEROPENEM,
+            "matrix.bin",
+            "a200a9fce314efc05f41201bfed498d401a58213c8d7eb84115c59d0d57ef0e0",
+        ),
+    ];
+
+    fn sha256_hex(bytes: &[u8]) -> String {
+        let digest = ring::digest::digest(&ring::digest::SHA256, bytes);
+        digest.as_ref().iter().map(|b| format!("{b:02x}")).collect()
+    }
+
+    /// Every file under an export directory, as dataset id and file name.
+    fn export_listing(out: &Path) -> Vec<(String, String)> {
+        let names = |d: &Path| -> Vec<String> {
+            let mut v: Vec<String> = std::fs::read_dir(d)
+                .unwrap()
+                .map(|e| e.unwrap().file_name().into_string().unwrap())
+                .collect();
+            v.sort();
+            v
+        };
+        let mut all = Vec::new();
+        for id in names(out) {
+            for f in names(&out.join(&id)) {
+                all.push((id.clone(), f));
+            }
+        }
+        all
+    }
+
+    /// `grm export` with no `--seed` writes, file by file, the bytes it
+    /// wrote before the flag, and nothing else; `--seed 42` writes the
+    /// same bytes.
+    #[test]
+    fn export_without_a_seed_writes_the_bytes_it_wrote_before_the_flag() {
+        let dir = tempfile::tempdir().unwrap();
+        export_fixture(dir.path());
+        let (plain, at42) = (dir.path().join("plain"), dir.path().join("at42"));
+        run_export(dir.path(), &plain, &[]).unwrap();
+        run_export(dir.path(), &at42, &["--seed", "42"]).unwrap();
+        let want: Vec<(String, String)> = EXPORT_BYTES_BEFORE_SEED
+            .iter()
+            .map(|(id, f, _)| (id.to_string(), f.to_string()))
+            .collect();
+        assert_eq!(export_listing(&plain), want);
+        assert_eq!(export_listing(&at42), want);
+        for (id, f, sha) in EXPORT_BYTES_BEFORE_SEED {
+            let bytes = std::fs::read(plain.join(id).join(f)).unwrap();
+            assert_eq!(sha256_hex(&bytes), sha, "{id}/{f}");
+            assert_eq!(
+                std::fs::read(at42.join(id).join(f)).unwrap(),
+                bytes,
+                "{id}/{f}"
+            );
+        }
+    }
+
+    /// Every object key path of a JSON value, arrays read through.
+    fn json_keys(v: &serde_json::Value, at: &str, keys: &mut BTreeSet<String>) {
+        match v {
+            serde_json::Value::Object(m) => {
+                for (k, x) in m {
+                    let path = format!("{at}/{k}");
+                    keys.insert(path.clone());
+                    json_keys(x, &path, keys);
+                }
+            }
+            serde_json::Value::Array(a) => a
+                .iter()
+                .for_each(|x| json_keys(x, &format!("{at}[]"), keys)),
+            _ => {}
+        }
+    }
+
+    /// `grm export --seed 43` writes the fold plans `grm learn --seed 43`
+    /// scores, fold by fold: the outer folds `evaluate` scores at that
+    /// seed, and each outer fold's training count, candidates and screened
+    /// rows on them. The matrix is seed 42's, the plans are not, the
+    /// fingerprint is `grm learn --seed 43`'s, and no key is added.
+    #[test]
+    fn export_at_a_seed_writes_the_plans_learn_scores_at_that_seed() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = export_fixture(dir.path());
+        let (at42, at43) = (dir.path().join("at42"), dir.path().join("at43"));
+        run_export(dir.path(), &at42, &["--only", "meropenem"]).unwrap();
+        run_export(dir.path(), &at43, &["--only", "meropenem", "--seed", "43"]).unwrap();
+        let [bytes42, json42] = export_files(&at42.join(MEROPENEM));
+        let [bytes, json] = export_files(&at43.join(MEROPENEM));
+        assert_eq!(bytes, bytes42);
+        let d: serde_json::Value = serde_json::from_slice(&json).unwrap();
+        let d42: serde_json::Value = serde_json::from_slice(&json42).unwrap();
+        let (mut keys, mut keys42) = (BTreeSet::new(), BTreeSet::new());
+        json_keys(&d, "", &mut keys);
+        json_keys(&d42, "", &mut keys42);
+        assert_eq!(keys, keys42);
+        assert_eq!(
+            (d["seed"].as_u64(), d42["seed"].as_u64()),
+            (Some(43), Some(42))
+        );
+
+        // The configuration `grm learn --seed 43` evaluates with.
+        let Command::Learn {
+            screened_features,
+            seed,
+            learner_seed,
+            exp_tie_rule,
+            ..
+        } = Cli::try_parse_from(["grm", "learn", "--species", EXPORT_SLUG, "--seed", "43"])
+            .unwrap()
+            .command
+        else {
+            panic!("parsed another command");
+        };
+        let cfg = learn_config(screened_features, seed, learner_seed, exp_tie_rule.into());
+        assert_eq!(cfg.seed, 43);
+        let (input, catalog) = grm::analysis::load_inputs(&layout, EXPORT_SLUG).unwrap();
+        let spec = input.datasets.iter().find(|s| s.id == MEROPENEM).unwrap();
+        let e = grm::analysis::arm_inputs(&input, spec).unwrap().unwrap();
+        let digest = grm::analysis::species_digest(&input);
+        let fingerprint = |cfg: &grm::learn::eval::EvalConfig| {
+            grm::analysis::dataset_fingerprint(&input, spec, catalog.as_ref(), cfg, digest)
+        };
+        assert_eq!(d["input_fingerprint"], fingerprint(&cfg));
+        assert_eq!(d42["input_fingerprint"], fingerprint(&Default::default()));
+        let scored = grm::learn::eval::evaluate(
+            MEROPENEM,
+            &e.x,
+            &e.y,
+            &e.lineage,
+            &e.duplicates,
+            e.min_support,
+            None,
+            &cfg,
+        )
+        .unwrap();
+        let n = e.sample_ids.len();
+        let (splits, splits42) = (
+            d["splits"].as_array().unwrap(),
+            d42["splits"].as_array().unwrap(),
+        );
+        assert_eq!(splits.len(), scored.splits.len());
+        let (mut folds, mut moved) = (0, 0);
+        for ((split, split42), s) in splits.iter().zip(splits42).zip(&scored.splits) {
+            let plan = &split["plan"];
+            assert_eq!(plan["scheme"], s.scheme.as_str());
+            assert!(plan["unavailable_reason"].is_null(), "{}", s.scheme);
+            let outer: Vec<usize> = serde_json::from_value(plan["outer"].clone()).unwrap();
+            assert_eq!(outer, s.test_fold, "{} outer folds at seed 43", s.scheme);
+            if split42["plan"] != *plan {
+                moved += 1;
+            }
+            for (f, screen) in split["screens"].as_array().unwrap().iter().enumerate() {
+                assert_eq!(screen["fold"], f);
+                let mask = grm::bits::Bits::from_indices(n, (0..n).filter(|&i| outer[i] != f));
+                assert_eq!(screen["n_train"], mask.count());
+                let (cx, rows) = grm::learn::training_candidates(&e.x, &mask, e.min_support);
+                assert_eq!(screen["n_candidates"], cx.rows, "{} fold {f}", s.scheme);
+                let want: Vec<u32> = grm::learn::screen(&cx, &e.y, &mask, cfg.screened_features)
+                    .into_iter()
+                    .map(|r| rows[r as usize])
+                    .collect();
+                assert_eq!(
+                    screen["screened_rows"],
+                    serde_json::json!(want),
+                    "{} fold {f}",
+                    s.scheme
+                );
+                folds += 1;
+            }
+        }
+        assert_eq!(folds, 2 * cfg.folds);
+        // Both schemes draw other plans at seed 43 on this fixture.
+        assert_eq!(moved, 2);
     }
 
     /// An export stops at a dataset directory that exists, names it and
