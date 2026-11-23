@@ -252,6 +252,13 @@ class Vote(unittest.TestCase):
         r = row(out, "countries_both")
         self.assertEqual((r["passes"], r["later_genomes"]), ("0", "10"))
 
+    def test_flagged_bioprojects_are_left_out(self):
+        rc, err, out = self.go()
+        r = row(out, "flagged_out")
+        # every BioProject but PRJNA900002 carries qnrS in each genome with a gene row; that one votes alone
+        self.assertIn("BioProjects flagged: 6", r["note"])
+        self.assertEqual((r["passes"], r["earlier_genomes"], r["later_genomes"]), ("0", "5", "0"))
+
     def test_lineage_clusters_vote_when_reports_agree(self):
         rc, err, out = self.go()
         self.assertEqual(row(out, "lineage")["passes"], "1")
