@@ -40,6 +40,14 @@ class Rank(unittest.TestCase):
         # 1.1: 1/1; 2.1: 1/2; 3.1: 1/2 + 1/1; the conflict, the MIC call and the other species rank nowhere.
         self.assertEqual(cohorts.rank(ph, DATASETS, common.SPECIES), ["3.1", "1.1", "2.1"])
 
+    def test_genomes_of_one_score_sort_by_id_as_text(self):
+        # Three genomes of one score: the release's sort (Rust's total_cmp, then the id as a string) puts
+        # "10.1" before "100.1" before "9.1"; numeric order or the id read backwards puts them otherwise.
+        ph = [{"genome_id": g, "species": common.SPECIES, "antibiotic": "drug a", "reported": "S"}
+              for g in ("9.1", "100.1", "10.1")]
+        ph.append({"genome_id": "8.1", "species": common.SPECIES, "antibiotic": "drug a", "reported": "R"})
+        self.assertEqual(cohorts.rank(ph, DATASETS, common.SPECIES), ["8.1", "10.1", "100.1", "9.1"])
+
     def test_the_cohorts_nest_the_default_inside_each_wider_arm(self):
         order = cohorts.rank(calls(5000), DATASETS, common.SPECIES)
         release = order[:2000]
