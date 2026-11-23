@@ -683,7 +683,7 @@ An eleventh came while the text was written. The project's wording rules put rec
 
 **Refused draws.** `grm arm` writes a lineage trace line's and prediction row's `repeat` as the slot, while the slot's plan holds the keyed repeat, which differs once a refused draw is replaced. `check_folds.py` and `score.py` read by the keyed repeat, so one replaced draw would have stopped the species. Both now read by slot. When the replacements are refused too, the scripts stopped the species, where H-1's ruling leaves the dataset's lineage runs not produced and lets the run go on. They now follow that ruling (`docs/cap-arms.md`, Refused draws), a rule the lead confirms before the run.
 
-**Limits.** The page now gives the study split's counts per dataset behind the 1,978 added genomes that may train on 27 of the 39 datasets in S, and the 2,138 tested genomes with no BioProject known.
+**Limits.** The page now gives the study split's counts per dataset behind the 1,978 added genomes that may train on 27 of the 39 datasets in S, the 2,138 tested genomes with no BioProject known, and the 19 fitted datasets that add 1 to 19 labelled genomes, 105 in all.
 
 **Tests.** Seven of the review's 13 planted faults passed every test: genomes of one score sorted otherwise than by id as text; three breaches of the lineage fold check that no test reached (a scored genome in training, a default genome that trains otherwise than in the default, a cohort plan whose lineage count differs); a draw's counts not held to its prediction rows; and the runner's memory rule, held to its text only. Each now has a SYNTHETIC test, and with the refused-draw tests `tests/c2_cap` holds 95.
 

@@ -45,6 +45,30 @@ Under `cap-all`, 27 of the 143 first-run datasets are none-added, and the 143 ho
 | *Staphylococcus aureus* | 0 of 13 | none |
 | *Streptococcus pneumoniae* | 2 of 8 | azithromycin, cefuroxime |
 
+Another 19 of the 116 fitted datasets add 1 to 19 labelled genomes each, 105 in all. No threshold drops them, so each enters `cap-all`'s count and denominator with the weight of any other dataset, though at most 19 labelled genomes join its cohort:
+
+| Species | Antibiotic | Added labelled | Resistant | Susceptible |
+|---|---|---|---|---|
+| *Enterococcus faecium* | tetracycline | 6 | 6 | 0 |
+| *Escherichia coli* | ampicillin/sulbactam | 1 | 1 | 0 |
+| *Escherichia coli* | cefazolin | 2 | 2 | 0 |
+| *Escherichia coli* | ceftriaxone | 3 | 2 | 1 |
+| *Escherichia coli* | chloramphenicol | 7 | 5 | 2 |
+| *Escherichia coli* | doxycycline | 2 | 2 | 0 |
+| *Escherichia coli* | levofloxacin | 2 | 1 | 1 |
+| *Klebsiella pneumoniae* | cefpodoxime | 6 | 1 | 5 |
+| *Klebsiella pneumoniae* | cefpodoxime/ceftriaxone | 3 | 2 | 1 |
+| *Klebsiella pneumoniae* | cefpodoxime/clavulanate | 5 | 0 | 5 |
+| *Klebsiella pneumoniae* | chloramphenicol | 11 | 8 | 3 |
+| *Klebsiella pneumoniae* | doripenem | 2 | 1 | 1 |
+| *Klebsiella pneumoniae* | doxycycline | 5 | 0 | 5 |
+| *Klebsiella pneumoniae* | fosfomycin | 2 | 0 | 2 |
+| *Klebsiella pneumoniae* | ticarcillin/clavulanate | 5 | 0 | 5 |
+| *Klebsiella pneumoniae* | trimethoprim | 15 | 10 | 5 |
+| *Salmonella enterica* | sulfamethoxazole | 1 | 0 | 1 |
+| *Staphylococcus aureus* | daptomycin | 14 | 0 | 14 |
+| *Streptococcus pneumoniae* | meropenem | 13 | 0 | 13 |
+
 ## Datasets
 
 The CAP datasets: every dataset of L in the 8 species whose release cohort is 2,000, 166 in all (`scripts/c2-cap/lists.tsv`, `species.tsv`). 23 are in M; the other 143 are the first run, 39 of them in S. Of the 143, 115 depend on none of the four label rules and 28 on the most-resistant call against the other three. Training labels come from the rebuilt revision 14 table, with each dataset's breakpoints set to its release report's (`scripts/c6-mic/release_specs.py`). `lists_check.py` refuses a run's dataset that is not first run, is another species', is listed twice, or is marked M by the label count's `marks.tsv`.
