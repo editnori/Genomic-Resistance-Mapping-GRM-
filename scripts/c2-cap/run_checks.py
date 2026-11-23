@@ -18,7 +18,11 @@ Checks, each printed with its counts and none with a genome id:
 - species: the runs directory holds the species of lists.tsv's first run,
   each once;
 - SHA256SUMS: every line of each species' SHA256SUMS holds, and none
-  names score/score.log;
+  names score/score.log; c2-drive.sh's back.tar leaves lists.txt out, so a
+  copy without it takes run_species.sh's printf of the species' first run
+  (lists.tsv's order) and c2-drive.sh's arguments (3 draws, 3 twin slots,
+  cap-all, lineage,study, yes), and only when SHA256SUMS' lists.txt line
+  holds it;
 - DONE: each species has DONE naming its species, binary.txt's grm and
   code sha256 and the sha256 of its SHA256SUMS; a FAILED beside a newer
   DONE is named and set aside by time, and a FAILED with no newer DONE
@@ -70,6 +74,8 @@ SELECTION = {
     "streptococcus_pneumoniae": (15530, 2000, 2096),
 }
 DEFAULT_GENOMES, GATE = 2000, 4096
+# c2-drive.sh's call of run_species.sh: draws, twin slots, arms, splits, score.
+LISTS_ARGS = ("3", "3", "cap-all", "lineage,study", "yes")
 BIOPROJECT = re.compile(rb"PRJ[A-Z]{2}[0-9]+")
 # A genome id as a token: scrub.py's pattern lets no word character stand before an id, so it misses
 # genome_1280.1234 and id1280.1234; here only a digit or a dot may not stand before it.
@@ -131,11 +137,27 @@ def score_files(folder):
     return out
 
 
-def check_sums(folder, scores=None):
-    """(lines, bad lines, names score.log). A score/ line is held to score_files' bytes."""
+def lists_text(folder, slug, lrows):
+    """(lists.txt's text, rebuilt): the copy's own, or where the copy has none, run_species.sh's printf of the
+    species' first run in lists.tsv's order with c2-drive.sh's arguments."""
+    p = Path(folder) / "lists.txt"
+    if p.is_file():
+        return p.read_text(encoding="utf-8"), False
+    datasets = [r["dataset"] for r in first_run(lrows) if r["species_slug"] == slug]
+    draws, twin, arms, splits, score = LISTS_ARGS
+    return (f"species\t{slug}\ndatasets\t{','.join(datasets)}\ndraws\t{draws}\ntwin\t{twin}\narms\t{arms}\n"
+            f"splits\t{splits}\nscore\t{score}\n"), True
+
+
+def check_sums(folder, scores=None, lists=None):
+    """(lines, bad lines, names score.log). A score/ line is held to score_files' bytes, and a rebuilt lists.txt
+    (lists_text) to its line, which must be there."""
     scores = score_files(folder) if scores is None else scores
     lines = [l for l in (folder / "SHA256SUMS").read_text(encoding="utf-8").splitlines() if l.strip()]
     bad, log = 0, 0
+    rebuilt = lists is not None and lists[1]
+    if rebuilt and not any(l.split("  ", 1)[-1] == "lists.txt" for l in lines):
+        bad += 1
     for line in lines:
         want, name = line.split("  ", 1)
         name = posixpath.normpath(name)
@@ -143,6 +165,9 @@ def check_sums(folder, scores=None):
             # Named, never opened or hashed: score.log stays out of the record, and nothing outside the copy is read.
             log += name == SCORE_LOG
             bad += 1
+            continue
+        if name == "lists.txt" and rebuilt:
+            bad += hashlib.sha256(lists[0].encode()).hexdigest() != want
             continue
         if name.startswith("score/"):
             data = scores.get(name)
@@ -181,18 +206,18 @@ def binary_of(folder):
     return out
 
 
-def lists_txt(folder):
+def lists_txt(text):
     out = {}
-    for line in (folder / "lists.txt").read_text(encoding="utf-8").splitlines():
+    for line in text.splitlines():
         if "\t" in line:
             k, v = line.split("\t", 1)
             out[k] = v
     return out
 
 
-def expected(folder, slug):
-    """expect.py's rows from the run's own counts-only files."""
-    lt = lists_txt(folder)
+def expected(folder, slug, text):
+    """expect.py's rows from the run's own counts-only files and lists.txt's text."""
+    lt = lists_txt(text)
     res = folder / "results"
     roots = json.loads((res / "roots.json").read_text(encoding="utf-8"))
     study, written = [], set()
@@ -275,12 +300,16 @@ def run(runs, release, lrows, selection=None, lists=()):
     slugs = [s for s in species if s in found]
 
     scores = {slug: score_files(runs / slug) for slug in slugs}
+    texts = {slug: lists_text(runs / slug, slug, lrows) for slug in slugs}
     total = bad = logs = 0
     for slug in slugs:
-        n, b, l = check_sums(runs / slug, scores[slug])
+        n, b, l = check_sums(runs / slug, scores[slug], texts[slug])
         total, bad, logs = total + n, bad + b, logs + l
+    rebuilt = [slug for slug in slugs if texts[slug][1]]
     say("SHA256SUMS", bad == 0 and logs == 0, f"{total - bad} of {total} lines hold in {len(slugs)} species; "
-        f"score/score.log listed {logs} times")
+        f"score/score.log listed {logs} times"
+        + (f"; lists.txt not in {len(rebuilt)} copies, rebuilt from lists.tsv and c2-drive.sh's arguments and held "
+           f"to SHA256SUMS ({', '.join(rebuilt)})" if rebuilt else ""))
 
     done_ok, set_aside, notes = 0, [], []
     for slug in slugs:
@@ -312,7 +341,7 @@ def run(runs, release, lrows, selection=None, lists=()):
         got = read_tsv(runs / slug / "expect.tsv")
         rows_n += len(got)
         try:
-            same += got == expected(runs / slug, slug)
+            same += got == expected(runs / slug, slug, texts[slug][0])
         except (OSError, KeyError, ValueError):
             pass
     say("expect.py", same == len(slugs), f"{same} of {len(slugs)} expect.tsv files are expect.py's; {rows_n} rows")

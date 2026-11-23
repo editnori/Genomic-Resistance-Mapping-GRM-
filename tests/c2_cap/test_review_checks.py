@@ -149,5 +149,32 @@ class GenomeIds(Copies):
         self.assertTrue(ok, got["genome ids and BioProjects"])
 
 
+class ListsTxt(Copies):
+    def test_copies_without_lists_txt_take_it_rebuilt_and_held_to_sha256sums(self):
+        for slug in self.r.slugs:
+            (self.folder(slug) / "lists.txt").unlink()
+        got, ok = self.run_checks()
+        self.assertTrue(ok, "\n".join(got.values()))
+        self.assertIn("lists.txt not in 8 copies, rebuilt", got["SHA256SUMS"])
+        self.assertTrue(got["expect.py"].startswith("pass "), got["expect.py"])
+
+    def test_a_rebuilt_lists_txt_that_is_not_the_runs_fails(self):
+        slug = self.r.slugs[2]
+        p = self.folder(slug) / "lists.txt"
+        p.write_text(p.read_text(encoding="utf-8").replace("twin\t3", "twin\t2"), encoding="utf-8")
+        self.seal(slug)
+        p.unlink()
+        self.fails("SHA256SUMS")
+
+    def test_a_rebuilt_lists_txt_with_no_line_in_sha256sums_fails(self):
+        slug = self.r.slugs[4]
+        f = self.folder(slug)
+        lines = (f / "SHA256SUMS").read_text(encoding="utf-8").splitlines(keepends=True)
+        (f / "SHA256SUMS").write_text("".join(l for l in lines if not l.rstrip().endswith("  lists.txt")),
+                                      encoding="utf-8")
+        (f / "lists.txt").unlink()
+        self.fails("SHA256SUMS")
+
+
 if __name__ == "__main__":
     unittest.main()
