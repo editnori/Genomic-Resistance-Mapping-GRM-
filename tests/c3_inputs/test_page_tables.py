@@ -36,7 +36,7 @@ class Built(unittest.TestCase):
         try:
             cls.reading, cls.lists = R.build(cls.top / "clean")
             cls.out = cls.top / "out"
-            cls.files = page.write(cls.reading, cls.lists, cls.out)
+            cls.files = page.write(cls.reading, cls.lists, R.checks_path(cls.reading), cls.out)
         except BaseException:
             cls.tmp.cleanup()
             raise
@@ -63,7 +63,7 @@ class Built(unittest.TestCase):
 
 class Tables(Built):
     def test_a_clean_reading_passes_every_gate_and_writes_its_files(self):
-        want = sorted(["README.md", "gates.txt", "reading.txt", "count/count.tsv", "count/count-no-constant.tsv",
+        want = sorted(["README.md", "checks.txt", "gates.txt", "reading.txt", "count/count.tsv", "count/count-no-constant.tsv",
                        "count/conditions.tsv"] + list(page.TABLE_COLUMNS))
         self.assertEqual(self.files, want)
         self.assertEqual(len((self.out / "gates.txt").read_text().splitlines()), len(page.GATES))
@@ -203,7 +203,7 @@ class Tables(Built):
 
     def test_write_refuses_an_out_folder_that_holds_files(self):
         with self.assertRaisesRegex(page.Stop, "is not empty"):
-            page.write(self.reading, self.lists, self.out)
+            page.write(self.reading, self.lists, R.checks_path(self.reading), self.out)
 
     def test_no_file_holds_a_sequence(self):
         for name in self.files:
@@ -211,6 +211,39 @@ class Tables(Built):
 
 
 class Gates(Built):
+    def refused_printout(self, lines, words="gate 1 reading: the run's checks printout does not say that each of "
+                                              "run_checks.py's 6 checks passed"):
+        """write stops at gate 1 on a checks printout of these lines, and writes nothing."""
+        folder = Path(tempfile.mkdtemp(dir=self.top))
+        (folder / "checks.txt").write_text("\n".join(lines) + "\n")
+        out = folder / "out"
+        self.stops(None, words, lambda: page.write(self.reading, self.lists, folder / "checks.txt", out))
+        self.assertFalse(out.exists())
+
+    def test_the_clean_printout_holds_each_of_run_checks_own_checks(self):
+        self.assertEqual(len(page.RUN_CHECKS), 6)
+        self.assertEqual((self.out / "checks.txt").read_text().splitlines(), R.checks_lines())
+
+    def test_a_checks_printout_with_a_failed_check_is_refused(self):
+        lines = R.checks_lines()
+        lines[3] = lines[3].replace("PASS", "FAIL", 1)
+        lines[-1] = "CHECKS 5 of 6"
+        self.refused_printout(lines)
+
+    def test_a_checks_printout_with_a_fail_line_under_an_all_passed_count_is_refused(self):
+        lines = R.checks_lines()
+        lines.insert(2, "FAIL genome ids: made up")
+        self.refused_printout(lines)
+
+    def test_a_checks_printout_of_fewer_checks_than_run_checks_makes_is_refused(self):
+        lines = [line for line in R.checks_lines() if not line.startswith("PASS genome ids")]
+        lines[-1] = "CHECKS 5 of 5"
+        self.refused_printout(lines)
+
+    def test_a_checks_printout_with_no_count_line_is_refused(self):
+        self.refused_printout(R.checks_lines()[:-1])
+        self.refused_printout([])
+
     def test_a_reading_without_its_commands_is_refused(self):
         reading = self.copy()
         (reading / "reading.txt").unlink()
@@ -527,7 +560,7 @@ class Withdrawn(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             reading, lists = R.build(Path(tmp) / "w", withdrawn=("k31-aa",))
             out = Path(tmp) / "out"
-            page.write(reading, lists, out)
+            page.write(reading, lists, R.checks_path(reading), out)
             arms = {r["arm"]: r for r in rows_of(out, "page-arms.tsv")}
             self.assertEqual((arms["k31-aa"]["withdrawn"], arms["k31-aa"]["datasets"]), ("1", "0"))
             self.assertFalse([r for r in rows_of(out, "page-datasets.tsv") if r["pair"] == "k31-aa-k31"])

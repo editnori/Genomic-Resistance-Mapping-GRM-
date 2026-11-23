@@ -149,10 +149,23 @@ def write_count(top, withdrawn=()):
     score.write_tsv(top / "count" / "conditions.tsv", score.conditions(counted), score.CONDITION_COLUMNS)
 
 
+def checks_lines():
+    """run_checks.py's printout when every one of its checks passed, as SYNTHETIC lines."""
+    return [f"PASS {name}: made up" for name in page.RUN_CHECKS] + [
+        f"CHECKS {len(page.RUN_CHECKS)} of {len(page.RUN_CHECKS)}"]
+
+
+def checks_path(reading):
+    """The SYNTHETIC checks printout beside a reading that build() made."""
+    return Path(reading).parent / "checks.txt"
+
+
 def build(top, withdrawn=(), codes=None):
-    """A SYNTHETIC reading: top/reading and top/lists.tsv. codes maps a species to its binary's code sha256."""
+    """A SYNTHETIC reading: top/reading, top/lists.tsv and top/checks.txt, the run's checks all passed. codes maps a
+    species to its binary's code sha256."""
     top = Path(top)
     top.mkdir(parents=True, exist_ok=True)
+    (top / "checks.txt").write_text("\n".join(checks_lines()) + "\n")
     write_l(top / "lists.tsv")
     reading = top / "reading"
     shutil.rmtree(reading, ignore_errors=True)

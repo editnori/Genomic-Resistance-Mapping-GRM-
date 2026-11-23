@@ -135,7 +135,7 @@ These points are seen in the tables after the reading. They change no rule and n
 ```
 python3 -I scripts/c3-inputs/run_checks.py <back dir> scripts/c3-inputs/lists.tsv <release dir>
 python3 -I scripts/c3-inputs/score.py --count read/count read/score/<species>/datasets.tsv   # each species once
-python3 -I scripts/c3-inputs/page_tables.py write read scripts/c3-inputs/lists.tsv reference/input-arms
+python3 -I scripts/c3-inputs/page_tables.py write read scripts/c3-inputs/lists.tsv checks.txt reference/input-arms
 python3 -I scripts/c3-inputs/page_tables.py print reference/input-arms
 ```
 
@@ -143,11 +143,11 @@ python3 -I scripts/c3-inputs/page_tables.py print reference/input-arms
 
 <!-- part 2: what the count printed. -->
 
-**Tables.** `scripts/c3-inputs/page_tables.py write` checks the reading against thirteen gates and stops at the first that fails, naming it. The count files are the scorer's own tables: the program counts them again from the species' `datasets.tsv` files (gate 13), copies them as they are, and sums them with every other file in `SHA256SUMS`.
+**Tables.** `scripts/c3-inputs/page_tables.py write` checks the reading against thirteen gates and stops at the first that fails, naming it. Gate 1 refuses to write unless the run's checks printout says that every check passed. The count files are the scorer's own tables: the program counts them again from the species' `datasets.tsv` files (gate 13), copies them as they are, and sums them with every other file in `SHA256SUMS`.
 
 | Gate | Passes when |
 |---|---|
-| 1. reading | the reading holds `reading.txt`, `count/` with `count.tsv`, `count-no-constant.tsv` and `conditions.tsv`, `score/` and `run/`, and nothing else; an arm `count.tsv` marks withdrawn is one of the five |
+| 1. reading | the run's checks printout ends `CHECKS n of n`, n being `run_checks.py`'s own count of checks, with a PASS line for each and no line starting FAIL; the reading holds `reading.txt`, `count/` with `count.tsv`, `count-no-constant.tsv` and `conditions.tsv`, `score/` and `run/`, and nothing else; an arm `count.tsv` marks withdrawn is one of the five |
 | 2. species | `score/` and `run/` each hold exactly the species of the first run, each once, with its files, and each species' rows name it alone |
 | 3. twin | the twin's rows are lineage draws at seeds 45, 46 and 47 only, no arm's row is at a twin seed, and `conditions.tsv` reads the five arms and never the twin |
 | 4. study | a study row is a study run at seed 42 on the study split, and every lineage row is a draw at 42, 43 or 44 or the twin's |
@@ -165,7 +165,7 @@ python3 -I scripts/c3-inputs/page_tables.py print reference/input-arms
 
 | Fault | Caught by |
 |---|---|
-| 1. A folder outside the reading passed | `Gates.test_a_folder_outside_the_reading_is_refused` |
+| 1. A folder outside the reading passed (1), or a reading written though the run's checks did not all pass (1b) | `Gates.test_a_folder_outside_the_reading_is_refused`; `Gates.test_a_checks_printout_with_a_failed_check_is_refused` |
 | 2. A species read twice | `Gates.test_a_species_twice_is_refused` |
 | 3. The twin read as an arm in `conditions.tsv` | `Gates.test_conditions_that_read_the_twin_as_an_arm_are_refused` |
 | 4. A study row counted on the lineage split, by the gate (4a) or in the species table (4b), or conditions 1 and 2 read on the study rows (4c) | `Gates.test_a_study_run_on_the_lineage_split_is_refused`; `Tables.test_a_study_row_stays_on_the_study_split`; `Tables.test_the_count_rows_carry_conditions_one_and_two_on_the_lineage_primary_rows` |

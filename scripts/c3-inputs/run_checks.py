@@ -61,6 +61,8 @@ ID_TOKEN = re.compile(r"(?<![\d.])\d+\.\d+(?!\d)")
 READ = ("results", "check", "logs")
 READ_FILES = ("expect.tsv", "lists.txt", "binary.txt", "DONE", "SHA256SUMS")
 SCORE_LOG = "score/score.log"
+# The checks run() makes, in its order; page_tables.py holds the printout to this count.
+CHECKS = ("species", "SHA256SUMS", "DONE and binary.txt", "expect.py", "refusals", "genome ids")
 
 
 def _expect():

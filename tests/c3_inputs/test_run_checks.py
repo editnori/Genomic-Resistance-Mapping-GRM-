@@ -130,6 +130,8 @@ class RunChecks(unittest.TestCase):
         self.assertEqual(rep.failed, 0, "\n".join(rep.lines))
         self.assertEqual(rep.lines[-1], "CHECKS 6 of 6")
         got = lines(rep)
+        # The checks' own list, which page_tables.py holds the printout to, names them in run()'s order.
+        self.assertEqual([k[len("PASS "):] for k in got], list(checks.CHECKS))
         self.assertIn("1 of 1 refusal records", got["PASS refusals"])
         self.assertIn("5 constant-model rows in draws.tsv", got["PASS refusals"])
         self.assertIn("0 genome ids in", got["PASS genome ids"])

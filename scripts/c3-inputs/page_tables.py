@@ -1,6 +1,6 @@
 """The tables of docs/input-arms-result.md: plan block C3's one reading, as files and as the page prints them.
 
-  python3 -I page_tables.py write <reading dir> <lists.tsv> <out dir>
+  python3 -I page_tables.py write <reading dir> <lists.tsv> <checks.txt> <out dir>
   python3 -I page_tables.py print <out dir>
 
 The reading directory holds:
@@ -16,14 +16,16 @@ The reading directory holds:
 <lists.tsv> is scripts/c3-inputs/lists.tsv: the first run is its rows with
 first_run 1, which are L's rows not in M; the two program arms run on those
 with first_run_A 1, the rows of A not in M; the study split runs on the
-first run's rows in S.
+first run's rows in S. <checks.txt> is run_checks.py's printout over the
+run's copies, made before any score was read: `write` refuses unless it says
+that every one of run_checks.py's own checks passed (gate 1), and copies it.
 
 `write` passes every gate of GATES before it writes a file, and stops at the
 first that fails, naming it. The count files are score.py's own tables:
 `write` checks them by counting again from the datasets.tsv files (gate 13),
 copies them under count/ as they are, and sums them in SHA256SUMS with every
 other file. It then writes the page's tables as page-*.tsv, reading.txt,
-gates.txt, README.md and SHA256SUMS into <out dir> (absent or empty). Every
+checks.txt, gates.txt, README.md and SHA256SUMS into <out dir> (absent or empty). Every
 row is an aggregate over a dataset, a species, a split, an arm or a learner:
 no file holds a genome, a k-mer, a unitig, a sequence, a position or a
 column name of a matrix.
@@ -44,15 +46,17 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 
 
-def _score():
-    spec = importlib.util.spec_from_file_location("c3_inputs_score_for_page", HERE / "score.py")
+def _load(name):
+    spec = importlib.util.spec_from_file_location(f"c3_inputs_{name}_for_page", HERE / f"{name}.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
 
 
-score = _score()
+score = _load("score")
 C9 = score.C9
+# The checks run_checks.py makes over the run's copies, in its order: the printout must hold each, passed.
+RUN_CHECKS = tuple(_load("run_checks").CHECKS)
 
 LEARNERS = score.LEARNERS
 MEASURES = score.MEASURES
@@ -83,8 +87,10 @@ GRAPHS = ("grm", "outside")
 DONE_LINE = re.compile(r"DONE (?P<species>\S+) (?P<time>\S+) binary (?P<binary>[0-9a-f]{64}) "
                        r"code (?P<code>[0-9a-f]{64}) results (?P<results>\d+) SHA256SUMS (?P<sums>[0-9a-f]{64})")
 GATES = [
-    (1, "reading", "the reading holds reading.txt, count/ with count.tsv, count-no-constant.tsv and conditions.tsv, "
-                   "score/ and run/, and nothing else; an arm count.tsv marks withdrawn is one of the five"),
+    (1, "reading", "the run's checks printout ends CHECKS n of n, n being run_checks.py's own count of checks, with "
+                   "a PASS line for each and no line starting FAIL; the reading holds reading.txt, count/ with "
+                   "count.tsv, count-no-constant.tsv and conditions.tsv, score/ and run/, and nothing else; an arm "
+                   "count.tsv marks withdrawn is one of the five"),
     (2, "species", "score/ and run/ each hold exactly the species of the first run of lists.tsv, each once, with its "
                    "files, and each species' rows name it alone"),
     (3, "twin", "the twin's rows are lineage draws at seeds 45, 46 and 47 only, no arm's row is at a twin seed, and "
@@ -263,6 +269,17 @@ def counts_only(rec):
         if any(isinstance(v, bool) or not isinstance(v, int) or v < 0 for v in e.values()):
             return False
     return True
+
+
+def check_run_checks(checks_path):
+    """Gate 1's first part: the run's checks printout says every check of run_checks.py passed. Raises Stop."""
+    lines = Path(checks_path).read_text(encoding="utf-8").splitlines()
+    tail = re.fullmatch(r"CHECKS (\d+) of (\d+)", lines[-1]) if lines else None
+    passed = [line.split(":")[0][len("PASS "):] for line in lines if line.startswith("PASS ")]
+    if (not tail or tail.group(1) != tail.group(2) or int(tail.group(2)) != len(RUN_CHECKS)
+            or passed != list(RUN_CHECKS) or any(line.startswith("FAIL") for line in lines)):
+        raise Stop(f"gate 1 reading: the run's checks printout does not say that each of run_checks.py's "
+                   f"{len(RUN_CHECKS)} checks passed")
 
 
 def check_reading(folder, lrows):
@@ -703,7 +720,7 @@ README = """# The input-arm reading of plan block C3: the record
 
 This directory holds the tables behind [docs/input-arms-result.md](../../docs/input-arms-result.md): plan block C3, five other inputs beside the presence of 31-mers (K31), each against K31 refitted in the same run, read once on the first run's {datasets} datasets in {species} species, {study} of them with a study split. The two program arms run on A's first run, {a_datasets} datasets in {a_species} species; the three matrix arms, the default and the twin on L's. Every row is an aggregate over a dataset, a species, a split, an arm or a learner. No file holds a genome, a k-mer, a unitig, a sequence, a position or a column name of a matrix.
 
-`scripts/c3-inputs/score.py --count` wrote the three files under `count/`. They are score.py's own tables: `scripts/c3-inputs/page_tables.py write` counted them again from the species' `datasets.tsv` files (gate 13), copied them here as they are, and sums them in `SHA256SUMS`. It wrote every other file here from the run's own `score/` tables and each species' run files, after the {gates} gates of `gates.txt` passed. `reading.txt` lists the reading's commands, each with the sha256 of what it wrote. The rules of the reading were fixed before any C3 score was read (`docs/assumption-plan-corrections.md`, entries "C3 design" and "C3 arms").
+`scripts/c3-inputs/score.py --count` wrote the three files under `count/`. They are score.py's own tables: `scripts/c3-inputs/page_tables.py write` counted them again from the species' `datasets.tsv` files (gate 13), copied them here as they are, and sums them in `SHA256SUMS`. `checks.txt` is the printout of `scripts/c3-inputs/run_checks.py` over the run's copies, made before any score was read; gate 1 holds that it says every check passed. It wrote every other file here from the run's own `score/` tables and each species' run files, after the {gates} gates of `gates.txt` passed. `reading.txt` lists the reading's commands, each with the sha256 of what it wrote. The rules of the reading were fixed before any C3 score was read (`docs/assumption-plan-corrections.md`, entries "C3 design" and "C3 arms").
 
 {binaries}
 
@@ -711,6 +728,7 @@ This directory holds the tables behind [docs/input-arms-result.md](../../docs/in
 |---|---|
 | `gates.txt` | the gates the program passed before it wrote a table |
 | `reading.txt` | the reading's commands and the sha256 of each one's output |
+| `checks.txt` | the printout of `scripts/c3-inputs/run_checks.py`, the checks of the run's copies made before any score was read, counts only |
 | `count/count.tsv` | the count that decides, per split, arm row, learner and measure |
 | `count/count-no-constant.tsv` | the count with the constant-model datasets left out, which decides nothing |
 | `count/conditions.tsv` | the plan's conditions per arm, read by ruling 15, which decides, and by the stricter reading, which decides nothing |
@@ -745,11 +763,12 @@ def write_tsv(path, rows, columns):
             handle.write("\t".join(C9.fmt(r.get(c)) for c in columns) + "\n")
 
 
-def write(reading, l_path, out):
+def write(reading, l_path, checks_path, out):
     reading, out = Path(reading), Path(out)
     lrows = load(l_path)
     if out.exists() and any(out.iterdir()):
         raise Stop(f"{out} is not empty")
+    check_run_checks(checks_path)
     data = check_reading(reading, lrows)
     tables = tables_of(data)
     check_tables(data, tables)
@@ -759,6 +778,7 @@ def write(reading, l_path, out):
     for name in COUNT_FILES:
         (out / "count" / name).write_bytes((reading / "count" / name).read_bytes())
     (out / "reading.txt").write_bytes((reading / "reading.txt").read_bytes())
+    (out / "checks.txt").write_bytes(Path(checks_path).read_bytes())
     for name, rows in tables.items():
         write_tsv(out / name, rows, TABLE_COLUMNS[name])
     with open(out / "gates.txt", "w", encoding="utf-8") as handle:
@@ -912,9 +932,9 @@ def tables(folder):
 
 
 def main(argv):
-    if len(argv) == 4 and argv[0] == "write":
+    if len(argv) == 5 and argv[0] == "write":
         try:
-            files = write(argv[1], argv[2], argv[3])
+            files = write(argv[1], argv[2], argv[3], argv[4])
         except Stop as e:
             print(f"stopped: {e}", file=sys.stderr)
             return 1

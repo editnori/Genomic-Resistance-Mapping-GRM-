@@ -31,6 +31,11 @@ FAULTS = [
      '    extra = sorted(p.name for p in top.iterdir() if p.is_dir() and p.name not in ("count", "score", "run"))',
      "    extra = []",
      f"{T}.Gates.test_a_folder_outside_the_reading_is_refused"),
+    ("1b", "reading", "a reading written though the run's checks did not all pass", PAGE,
+     "    if (not tail or tail.group(1) != tail.group(2) or int(tail.group(2)) != len(RUN_CHECKS)\n"
+     "            or passed != list(RUN_CHECKS) or any(line.startswith(\"FAIL\") for line in lines)):",
+     "    if not tail:",
+     f"{T}.Gates.test_a_checks_printout_with_a_failed_check_is_refused"),
     ("2", "species", "a species read twice", PAGE,
      "        if got != species:",
      "        if not set(species) <= set(got):",
