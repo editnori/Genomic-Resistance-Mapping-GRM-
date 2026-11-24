@@ -327,6 +327,8 @@ def stop_at_score(copies, slug=STOPPED, drives=20, ended=None, lead_extra=""):
     for q in sorted(copies.iterdir()):
         (tables / q.name).mkdir(parents=True)
         (tables / q.name / "draws.tsv").write_bytes(draws if q.name == slug else (q / "score" / "draws.tsv").read_bytes())
+    held = 3 * (len(list(copies.iterdir())) - 1)
+    (tables / "rescore.txt").write_text(f"PASS SYNTHETIC\nSAME {held} of {held}\n", encoding="utf-8")
     return fx.sha256(out / "SHA256SUMS.lead"), tables
 
 
@@ -421,6 +423,33 @@ class Allowance(Case):
                                                                                    "--tables", str(tables)]
                 with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
                     self.assertEqual(checks.main(argv), 2)
+
+    def test_no_rescored_table_is_read_before_rescore_txt_says_every_held_table_is_the_same(self):
+        for text in ("FAIL SYNTHETIC: score.py ended 1\nSAME 3 of 3\n", "PASS SYNTHETIC\nSAME 5 of 6\n", None):
+            with self.subTest(rescore=text):
+                top = self.top / str(len(list(self.top.iterdir())))
+                top.mkdir()
+                copies, lists, release = fx.copies(top)
+                lead, tables = stop_at_score(copies)
+                if text is None:
+                    (tables / "rescore.txt").unlink()
+                else:
+                    (tables / "rescore.txt").write_text(text, encoding="utf-8")
+                opened = []
+                real_open, real_io_open = builtins.open, io.open
+
+                def guard(real):
+                    def wrapped(file, *args, **kwargs):
+                        if isinstance(file, (str, os.PathLike)) and os.fspath(file).startswith(str(tables) + os.sep) \
+                                and os.path.basename(os.fspath(file)) == "draws.tsv":
+                            opened.append(os.fspath(file))
+                        return real(file, *args, **kwargs)
+                    return wrapped
+                with mock.patch("builtins.open", guard(real_open)), mock.patch("io.open", guard(real_io_open)):
+                    report = checks.report(*checks.check(copies, lists, release, STOPPED, lead, tables))
+                self.assertTrue(self.line(report, "rescore.txt says every species").startswith("FAIL"))
+                self.assertTrue(self.line(report, "the refusal records and the constant-model rows").startswith("FAIL"))
+                self.assertEqual(opened, [])
 
     def test_the_allowance_refuses_a_failed_line_at_another_step(self):
         def after(copies):

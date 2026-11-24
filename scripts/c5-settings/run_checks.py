@@ -318,6 +318,12 @@ def check(copies, lists_path, release, failed_at=None, lead_sha=None, tables=Non
        not bad_lists, ", ".join(bad_lists))
 
     bad_expect, bad_results, rows_n, files_n, refusals_n, constant_n, bad_constant = [], [], 0, 0, 0, 0, []
+    # A rescored table is read only once rescore.py has held every finished species' three tables to its
+    # SHA256SUMS lines and says so: rescore.txt ends SAME <n> of <n>, with no FAIL line.
+    held = tables is None or rescored(tables)
+    if not held:
+        ok("rescore.txt says every species was scored and every held table is the same, before a rescored table is "
+           "read", False, f"{Path(tables) / 'rescore.txt'}; no rescored draws.tsv read")
     for slug in present:
         out = copies / slug
         want = expect_rows(lrows, slug)
@@ -337,7 +343,7 @@ def check(copies, lists_path, release, failed_at=None, lead_sha=None, tables=Non
             bad_results.append(f"{slug}: {len(needed - have)} missing, {len(have - refused - needed)} more")
         refusals_n += len(refused)
         draws = Path(tables) / slug / "draws.tsv" if tables is not None else out / "score" / "draws.tsv"
-        if draws.is_file():
+        if held and draws.is_file():
             n_constant = sum(1 for r in load(draws)
                              if r["constant"] == "1" or r["why"] == REFUSED_WHY)
             constant_n += n_constant
