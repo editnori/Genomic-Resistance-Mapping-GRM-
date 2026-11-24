@@ -409,6 +409,19 @@ class Allowance(Case):
                 self.assertTrue(line.startswith("FAIL"), line)
                 self.assertEqual(opened, [])
 
+    def test_the_allowance_named_twice_on_the_command_line_is_refused(self):
+        copies, lists, release = fx.copies(self.top)
+        lead, tables = stop_at_score(copies)
+        finished = sorted(p.name for p in copies.iterdir() if p.name != STOPPED)[0]
+        for flags in (["--failed-at-score", finished, "--failed-at-score", STOPPED],
+                      ["--failed-at-score", STOPPED, "--failed-at-score", STOPPED],
+                      ["--failed-at-score", STOPPED, "--lead-sums", lead]):
+            with self.subTest(flags=flags):
+                argv = ["check", str(copies), str(lists), str(release)] + flags + ["--lead-sums", lead,
+                                                                                   "--tables", str(tables)]
+                with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                    self.assertEqual(checks.main(argv), 2)
+
     def test_the_allowance_refuses_a_failed_line_at_another_step(self):
         def after(copies):
             (copies / STOPPED / "FAILED").write_text(f"FAILED {STOPPED} at drives {STOPPED_AT}\n", encoding="utf-8")

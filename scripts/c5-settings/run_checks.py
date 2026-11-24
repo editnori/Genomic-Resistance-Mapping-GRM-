@@ -520,12 +520,14 @@ def gather(copies, lists_path, checks_path, reading, tables=None):
 
 
 def options(argv, names):
-    """argv without the named options, and their values."""
+    """argv without the named options, and their values. An option given twice has the value None, which main
+    refuses: --failed-at-score names one species, and a second never stands in for the first."""
     rest, got = [], {}
     it = iter(argv)
     for a in it:
         if a in names:
-            got[a] = next(it, None)
+            value = next(it, None)
+            got[a] = None if a in got else value
         else:
             rest.append(a)
     return rest, got
