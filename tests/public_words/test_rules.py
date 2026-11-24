@@ -62,10 +62,12 @@ class LinksAndMachines(unittest.TestCase):
 
     def test_a_public_address(self):
         self.assertEqual(kinds("at " + PUBLIC + " now"), ["K5"])
+        self.assertEqual(kinds("lineage " + PUBLIC), ["K5"])
 
     def test_other_addresses_pass(self):
         for text in ("127.0.0.1", "0.0.0.0", "10.1.2.3", "192.168.1.9", "172.20.0.1", "169.254.1.1", "192.0.2.7",
-                     "198.51.100.7", "203.0.113.7", "999.1.1.1", "(EC 2.3.1.82)", "1.2.3", "1.2.3.4.5"):
+                     "198.51.100.7", "203.0.113.7", "999.1.1.1", "(EC 2.3.1.82)", "1.2.3", "1.2.3.4.5",
+                     "lineage4.1.2.1", "lineage2;lineage4.3.4.2"):
             self.assertEqual(kinds("x " + text + " y"), [], text)
 
     def test_a_lock_file_may_hold_a_version_of_four_parts(self):

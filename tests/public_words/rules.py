@@ -67,9 +67,11 @@ def sha(word):
 
 
 def public_address(match, text):
-    """True for an address outside the loopback, private and documentation ranges. An enzyme number is not one."""
+    """True for an address outside the loopback, private and documentation ranges. An enzyme number is not one,
+    nor a lineage name as TBProfiler writes it (lineage4.1.2.1)."""
     parts = tuple(int(g) for g in match.groups())
-    if max(parts) > 255 or text[max(0, match.start() - 3):match.start()] == "EC ":
+    if (max(parts) > 255 or text[max(0, match.start() - 3):match.start()] == "EC "
+            or text[max(0, match.start() - 7):match.start()] == "lineage"):
         return False
     a, b, c, _ = parts
     if a in (0, 10, 127, 255) or (a, b) in ((192, 168), (169, 254)) or (a == 172 and 16 <= b <= 31):
