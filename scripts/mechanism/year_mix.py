@@ -487,7 +487,7 @@ def guard_lines(reading, years):
         f"guard 2: {reading['catalogue_rows_checked']} reports with a catalogue row, their cells equal catalog.metrics;"
         f" {reading['no_catalogue_row']} with no catalogue row and no call",
         f"guard 3: {reading['used']} datasets, {reading['learner_rows']} learner rows on the lineage split,"
-        f" each with scores of the samples' length, each a number from 0 to 1",
+        f" each with one score per genome, each a number from 0 to 1",
         f"guard 4: {len(reading['strata'])} strata, each summed over {len(years)} year rows"
         f" ({thin} thin, {UNKNOWN} included where present) equals its total",
         f"guard 5: {reading['used']} used + " + " + ".join(f"{nu[k]} {k}" for k in NOT_USED)
