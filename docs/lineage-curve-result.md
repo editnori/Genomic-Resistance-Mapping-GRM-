@@ -382,7 +382,7 @@ REPORTS is the folder of the release's reports, RUN_DIR the tool run's folder, T
 | 6. names | no file names a variant, a position or a sequence: the gene column holds only gene names of tbdb.bed or `other genes` |
 | 7. genes | a gene is named only where 5 or more resistant genomes of the antibiotic carry it |
 
-**Tests.** `tests/mechanism/test_curve_tables.py` holds 16 SYNTHETIC tests of the table script. `tests/mechanism/test_curve_faults.py` runs `scripts/mechanism/curve_faults.py`, which plants each fault below in the table script in turn and runs the test meant to catch it. `tests/mechanism/test_lineage_page.py` holds 12 tests of this page against `reference/lineage-curve/`.
+**Tests.** `tests/mechanism/test_curve_tables.py` holds 20 SYNTHETIC tests of the table script. `tests/mechanism/test_curve_faults.py` runs `scripts/mechanism/curve_faults.py`, which plants each fault below in the table script in turn and runs the test meant to catch it. `tests/mechanism/test_lineage_page.py` holds 12 tests of this page against `reference/lineage-curve/`.
 
 | Fault planted | Test that caught it |
 |---|---|
@@ -395,8 +395,11 @@ REPORTS is the folder of the release's reports, RUN_DIR the tool run's folder, T
 | C7. A curve written over under 5 resistant genomes | `Gates.test_a_curve_over_under_5_is_refused` |
 | C8. The run check reads a result file of another tool version as the pinned one | `Check.test_a_result_of_another_tool_version_fails_the_check` |
 | C9. The run check passes a planned genome with neither a result nor a failed line | `Check.test_a_planned_genome_with_neither_fails_the_check` |
+| C10. The run check reads a result file of another database commit as the pinned one | `Check.test_a_result_of_another_database_commit_fails_the_check` |
+| C11. A summary of another database commit read | `Gates.test_a_summary_of_another_database_commit_is_refused` |
+| C12. A convergence share written where under 5 resistant genomes have a group | `Gates.test_a_convergence_share_under_5_resistant_genomes_with_a_group_is_refused` |
 
-All 9 were caught.
+All 12 were caught.
 
 **Files.** The reading's tables are in `reference/lineage-curve/`. `scripts/mechanism/curve_tables.py print` prints this page's tables from those files, rounded to 3 decimals.
 

@@ -22,6 +22,7 @@ SLUG = "synthia_tuberculosis"
 NAME = "Synthia tuberculosis"
 DRUGS = ("rifampicin", "isoniazid", "levofloxacin", "moxifloxacin")
 GENES = ("synR", "synK", "synG")
+OTHER_DB = "0badc0de"
 
 
 def variant(gene, change, drug, grade="Assoc w R"):
@@ -52,7 +53,7 @@ def genomes():
 class Reading:
     """A SYNTHETIC reading folder: the tool run, the reports, lists.tsv, tb_curve.py's output and checks.txt."""
 
-    def __init__(self, top, in_m_run=False, in_m_lists=None, bad_version=False, extra_planned=False):
+    def __init__(self, top, in_m_run=False, in_m_lists=None, bad_version=False, bad_db=False, extra_planned=False):
         self.top = Path(top)
         run = self.top / "run"
         (run / "results").mkdir(parents=True)
@@ -83,6 +84,10 @@ class Reading:
             gid = gs[0][0]
             (run / "results" / f"{gid}.results.json").write_text(json.dumps(result(gid, "lineage1", "lineage1.1", [],
                                                                                      tool="6.6.2")))
+        if bad_db:
+            gid = gs[1][0]
+            (run / "results" / f"{gid}.results.json").write_text(json.dumps(result(gid, "lineage1", "lineage1.2", [],
+                                                                                     db=OTHER_DB)))
         if extra_planned:
             (run / "plan.txt").write_text((run / "plan.txt").read_text() + "7002.1\n")
         self.run = run
@@ -156,6 +161,12 @@ class Check(Base):
 
     def test_a_result_of_another_tool_version_fails_the_check(self):
         r = self.reading(bad_version=True)
+        self.assertFalse(r.checks_ok)
+        counts = ct.run_counts(r.run)
+        self.assertEqual((counts["versions_named"], counts["versions_other"]), (25, 1))
+
+    def test_a_result_of_another_database_commit_fails_the_check(self):
+        r = self.reading(bad_db=True)
         self.assertFalse(r.checks_ok)
         counts = ct.run_counts(r.run)
         self.assertEqual((counts["versions_named"], counts["versions_other"]), (25, 1))
@@ -236,6 +247,20 @@ class Gates(Base):
         r.edit("m4-curve.tsv", small)
         stopped(self, r, 5)
 
+    def test_a_convergence_share_under_5_resistant_genomes_with_a_group_is_refused(self):
+        r = self.reading()
+        path = r.reading / "m4" / "m4-summary.json"
+        d = json.loads(path.read_text())
+        for e in d["endpoints"]:
+            if e["antibiotic"] == "rifampin":
+                e["resistant_with_no_group"]["main_lineage"] = "20"
+        path.write_text(json.dumps(d))
+        convergence = c.read_tsv(r.reading / "m4" / "m4-convergence.tsv")
+        shares = [x for x in convergence
+                  if x["antibiotic"] == "rifampin" and x["grouping"] == "main_lineage" and x["share_covered"]]
+        self.assertEqual(len(shares), 4)
+        self.assertIn(": 4 rows write", stopped(self, r, 5))
+
     def test_a_variants_own_name_in_an_output_is_refused(self):
         for case in ("gene", "summary"):
             with self.subTest(case=case):
@@ -269,6 +294,19 @@ class Gates(Base):
     def test_a_result_of_another_tool_version_is_refused(self):
         r = self.reading(bad_version=True)
         stopped(self, r, 2)
+
+    def test_a_result_of_another_database_commit_is_refused(self):
+        r = self.reading(bad_db=True)
+        stopped(self, r, 2)
+
+    def test_a_summary_of_another_database_commit_is_refused(self):
+        r = self.reading()
+        path = r.reading / "m4" / "m4-summary.json"
+        d = json.loads(path.read_text())
+        self.assertEqual((d["tool"], d["database_commit"]), ("6.6.3", "3ed1cb99"))
+        d["database_commit"] = OTHER_DB
+        path.write_text(json.dumps(d))
+        self.assertIn("m4-summary.json", stopped(self, r, 2))
 
     def test_a_planned_genome_with_neither_a_result_nor_a_failed_line_is_refused(self):
         r = self.reading(extra_planned=True)

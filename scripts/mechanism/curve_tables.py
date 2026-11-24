@@ -275,15 +275,21 @@ def gate_datasets(tables, summary, lrows):
                            f"{lr['in_M']}")
 
 
-def share_hits(tables, summary):
-    """Rows that write a share over under 5 resistant genomes, or a curve over under 5."""
+def coverage_hits(tables):
+    """Coverage rows that write a share over under 5 resistant genomes."""
+    return sum(1 for r in tables["m4-coverage.tsv"]
+               if r["share_without"] != "" and not (is_int(r["resistant"]) and int(r["resistant"]) >= FLOOR))
+
+
+def curve_hits(tables):
+    """Curve rows over under 5 resistant genomes."""
+    return sum(1 for r in tables["m4-curve.tsv"] if not (is_int(r["resistant"]) and int(r["resistant"]) >= FLOOR))
+
+
+def convergence_hits(tables, summary):
+    """Convergence rows that write a share where the antibiotic has under 5 resistant genomes with a group of that
+    grouping, or where the summary has no such antibiotic."""
     hits = 0
-    for r in tables["m4-coverage.tsv"]:
-        if r["share_without"] != "" and not (is_int(r["resistant"]) and int(r["resistant"]) >= FLOOR):
-            hits += 1
-    for r in tables["m4-curve.tsv"]:
-        if not (is_int(r["resistant"]) and int(r["resistant"]) >= FLOOR):
-            hits += 1
     ends = {e["antibiotic"]: e for e in summary["endpoints"]}
     for r in tables["m4-convergence.tsv"]:
         e = ends.get(r["antibiotic"])
@@ -296,6 +302,11 @@ def share_hits(tables, summary):
         if total < FLOOR:
             hits += 1
     return hits
+
+
+def share_hits(tables, summary):
+    """Rows that write a share over under 5 resistant genomes, or a curve over under 5."""
+    return coverage_hits(tables) + curve_hits(tables) + convergence_hits(tables, summary)
 
 
 def gate_floors(tables, summary):

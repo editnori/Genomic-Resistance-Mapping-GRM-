@@ -38,10 +38,23 @@ def versions_only(c):
              and n["versions_named"] == n["results"])]
 
 
+def pinned_without_database(d, gid):
+    # fault C10: the run check reads the tool's version and not the database commit
+    return d.get("id") == gid and d.get("pipeline", {}).get("software_version") == ct.WANT_TOOL
+
+
+def versions_without_database(checks, summary):
+    # fault C11: gate 2 reads m4-summary.json's tool and not its database commit
+    if int(checks["versions_other"]) != 0 or checks["versions_named"] != checks["results"]:
+        raise ct.Stop(f"gate 2 versions: {checks['versions_other']} result files name another tool or database")
+    if summary.get("tool") != ct.WANT_TOOL:
+        raise ct.Stop("gate 2 versions: m4-summary.json names another tool")
+
+
 FAULTS = [
     ("C1", "a share written over under 5 resistant genomes",
      T + "Gates.test_a_share_under_5_resistant_genomes_is_refused",
-     lambda: mock.patch.object(ct, "share_hits", lambda tables, summary: 0)),
+     lambda: mock.patch.object(ct, "coverage_hits", lambda tables: 0)),
     ("C2", "a variant's own name in an output", T + "Gates.test_a_variants_own_name_in_an_output_is_refused",
      lambda: mock.patch.object(ct, "name_hits", lambda reading, genes: 0)),
     ("C3", "a gene seen in 1 to 4 resistant genomes named",
@@ -56,13 +69,22 @@ FAULTS = [
      T + "Gates.test_a_planned_genome_with_neither_a_result_nor_a_failed_line_is_refused",
      lambda: mock.patch.object(ct, "gate_accounting", lambda checks, summary: None)),
     ("C7", "a curve written over under 5 resistant genomes", T + "Gates.test_a_curve_over_under_5_is_refused",
-     lambda: mock.patch.object(ct, "share_hits", lambda tables, summary: 0)),
+     lambda: mock.patch.object(ct, "curve_hits", lambda tables: 0)),
     ("C8", "the run check reads a result file of another tool version as the pinned one",
      T + "Check.test_a_result_of_another_tool_version_fails_the_check",
      lambda: mock.patch.object(ct, "names_pinned", lambda d, gid: True)),
     ("C9", "the run check passes a planned genome with neither a result nor a failed line",
      T + "Check.test_a_planned_genome_with_neither_fails_the_check",
      lambda: mock.patch.object(ct, "checks_pass", versions_only)),
+    ("C10", "the run check reads a result file of another database commit as the pinned one",
+     T + "Check.test_a_result_of_another_database_commit_fails_the_check",
+     lambda: mock.patch.object(ct, "names_pinned", pinned_without_database)),
+    ("C11", "a summary of another database commit read",
+     T + "Gates.test_a_summary_of_another_database_commit_is_refused",
+     lambda: mock.patch.object(ct, "gate_versions", versions_without_database)),
+    ("C12", "a convergence share written where under 5 resistant genomes have a group",
+     T + "Gates.test_a_convergence_share_under_5_resistant_genomes_with_a_group_is_refused",
+     lambda: mock.patch.object(ct, "convergence_hits", lambda tables, summary: 0)),
 ]
 
 
