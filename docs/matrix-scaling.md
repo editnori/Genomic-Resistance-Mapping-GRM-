@@ -17,9 +17,9 @@ Independent review closed the re-save space check (M1), expected-k binding
 below includes the review's durable-block-directory precondition (R2). The
 M. tuberculosis 4,000-genome run of 6 Nov 2026 (release
 `data-mtb4k-r12-20261106`, evaluation revision 12) built its matrices on the
-disk-sparse path, with `--block-width 128` (`ops/boat-kit/kit/mtb-box.sh`);
-`scripts/mtb-4k/README.md` says what that run was. This page holds none of
-its figures.
+disk-sparse path, with `--block-width 128` (`ops/boat-kit/kit/mtb-box.sh`
+and `scripts/mtb-4k/README.md`, last present in commit `039f071`, before
+those retired run kits were removed). This page holds none of its figures.
 
 Two opt-in commands call the out-of-core path. `grm matrix --column-blocks N`
 (since 15 Nov 2026; below, "The column-block switch") keeps every kset, so it
@@ -711,9 +711,9 @@ At minimum:
 - **Biological runs.** The small frozen biological pilot of the MTB plan
   passed on 2026-10-29 under the plan's revision 5, and the 6 Nov 2026 run
   built four MTB matrices of 2,000 and 4,000 genomes
-  (`scripts/mtb-4k/4k-execution-plan.md`, sections 4 and 5;
-  `scripts/mtb-4k/README.md`). That plan permits no 8k stage, and no 8k
-  resource claim is established.
+  (`scripts/mtb-4k/4k-execution-plan.md`, sections 4 and 5, and
+  `scripts/mtb-4k/README.md`, last present in commit `039f071`). That plan
+  permits no 8k stage, and no 8k resource claim is established.
 - **Other probe panels.** Count caches and structure are handled: a sparse
   count stores the bottom-sketch with each kset digest, and structure rereads a
   real kset when present but uses that bound sketch after sparse deletion.
