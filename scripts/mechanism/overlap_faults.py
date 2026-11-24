@@ -84,6 +84,9 @@ FAULTS = [
      lambda: mock.patch.object(lo, "catalog_agrees", lambda lr, catalog: True)),
     ("O16", "every fold of a learner with a null fit read as null", T + "Counts.test_misses_in_a_null_fit_fold",
      lambda: mock.patch.object(lo, "null_folds", every_fold_null)),
+    ("O17", "a null catalogue call read as a call",
+     T + "Counts.test_a_report_with_no_catalogue_rule_is_counted_and_marked",
+     lambda: mock.patch.object(lo, "uncalled", lambda catalog_call: catalog_call is False)),
 ]
 
 

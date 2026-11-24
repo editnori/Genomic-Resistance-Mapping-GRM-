@@ -49,7 +49,8 @@ ID_SHAPE = re.compile(r"(?<![\w.])\d{2,7}\.\d{1,9}(?![\w.])")
 BARRED_KEY = re.compile(r'"(?:id|samples)"\s*:')
 READING = "reading.json"
 RECORD_FILES = ("datasets.tsv", "pooled.tsv", "gates.txt")
-DATASET_COLUMNS = (["species", "antibiotic", "genomes", "resistant", "susceptible", "learners", "learner_count"]
+DATASET_COLUMNS = (["species", "antibiotic", "genomes", "resistant", "susceptible", "learners", "learner_count",
+                    "catalog_rule"]
                    + [f"miss_{k}" for k in KS] + [f"wrong_{k}" for k in KS] + [f"miss_{n}" for n in FIVE]
                    + ["miss_all5", "miss_all5_no_catalog_call", "miss_all5_in_null_fold", "null_fold_pairs",
                       "expected_all5", "ratio_all5"])
@@ -57,8 +58,9 @@ SUMMED = (["genomes", "resistant", "susceptible"] + [f"miss_{k}" for k in KS] + 
           + [f"miss_{n}" for n in FIVE] + ["miss_all5", "miss_all5_no_catalog_call", "miss_all5_in_null_fold",
                                            "null_fold_pairs"])
 POOLED_COLUMNS = (["scope", "species", "datasets"] + SUMMED
-                  + ["expected_all5", "datasets_with_ratio", "datasets_expected_zero", "ratio_median", "ratio_q1",
-                     "ratio_q3", "datasets_ratio_over_1", "share_all5_median", "share_some_median"])
+                  + ["datasets_no_catalog_rule", "miss_all5_no_catalog_rule", "expected_all5", "datasets_with_ratio",
+                     "datasets_expected_zero", "ratio_median", "ratio_q1", "ratio_q3", "datasets_ratio_over_1",
+                     "share_all5_median", "share_some_median"])
 
 
 class Stop(Exception):
@@ -115,8 +117,18 @@ def catalog_agrees(lr, catalog):
 
 
 def uncalled(catalog_call):
-    """The catalogue reader leaves the genome without a resistant call."""
+    """The catalogue reader leaves the genome without a resistant call: false, or null where the report holds no
+    catalogue rule for its antibiotic."""
     return not catalog_call
+
+
+def catalog_shape(catalog):
+    """'rule' when every call is true or false, 'no rule' when every call is null, None for a mix."""
+    if all(isinstance(v, bool) for v in catalog):
+        return "rule"
+    if all(v is None for v in catalog):
+        return "no rule"
+    return None
 
 
 def recount(labels, scores):
@@ -181,7 +193,7 @@ def read_reports(directory, expect=EXPECT_FILES):
     files = report_files(directory)
     fails = collections.defaultdict(list)       # stop check -> what failed (report names, never genomes)
     skipped = {"no_lineage": [], "under_two_learners": []}
-    datasets, seen, sets, mismatch_rows = [], set(), collections.Counter(), []
+    datasets, seen, sets, mismatch_rows, no_rule = [], set(), collections.Counter(), [], []
     parsed = 0
     for name in files:
         try:
@@ -214,8 +226,9 @@ def read_reports(directory, expect=EXPECT_FILES):
         labels = [s.get("resistant") for s in samples]
         catalog = [s.get("catalog_resistant") for s in samples]
         folds = split.get("test_fold")
-        if not all(isinstance(v, bool) for v in labels + catalog):
-            fails[3].append(f"{who}: a label or catalogue call is not true or false")
+        shape = catalog_shape(catalog)
+        if not all(isinstance(v, bool) for v in labels) or shape is None:
+            fails[3].append(f"{who}: a label is not true or false, or catalogue calls mix null with true or false")
             continue
         bad = [lr.get("learner") for lr in split.get("learners") or [] if not scores_fit(lr.get("scores"), n)]
         if bad or not (isinstance(folds, list) and len(folds) == n):
@@ -238,8 +251,10 @@ def read_reports(directory, expect=EXPECT_FILES):
             if sname == "catalog" and not catalog_agrees(lr, catalog):
                 fails[9].append(who)
         sets[tuple(sorted(learners))] += 1
+        if shape == "no rule":
+            no_rule.append(who)
         row = {"species": report.get("species"), "antibiotic": report.get("antibiotic"), "genomes": n,
-               "resistant": sum(labels), "susceptible": n - sum(labels)}
+               "resistant": sum(labels), "susceptible": n - sum(labels), "catalog_rule": shape == "rule"}
         row.update(tally(labels, catalog, folds, learners))
         datasets.append(row)
     release = max(sets, key=lambda s: (sets[s], s)) if sets else ()
@@ -251,7 +266,8 @@ def read_reports(directory, expect=EXPECT_FILES):
         + ("pass" if parsed == len(files) == expect and not fails[1] else "STOP"),
         f"check 2 lengths: {len(fails[2])} reports with a score list or test_fold of another length or a bad score: "
         + ("pass" if not fails[2] else "STOP"),
-        f"check 3 counts: {len(fails[3])} reports whose counts differ from their samples: "
+        f"check 3 counts: {len(fails[3])} reports whose counts or labels differ from their samples; "
+        f"{len(no_rule)} used reports with no catalogue rule (catalog_resistant null on every genome): "
         + ("pass" if not fails[3] else "STOP"),
         f"check 4 learner sets: {len(sets)} sets; the release's is {','.join(release)} on {sets.get(release, 0)} "
         f"reports; {len(differ)} reports differ",
@@ -270,6 +286,7 @@ def read_reports(directory, expect=EXPECT_FILES):
     lines += [f"  skipped, no lineage split: {d}" for d in sorted(skipped["no_lineage"])]
     lines += [f"  skipped, fewer than 2 learners: {d}" for d in sorted(skipped["under_two_learners"])]
     lines += [f"  null folds differ: {d}" for d in sorted(mismatch_rows)]
+    lines += [f"  no catalogue rule: {d}" for d in sorted(no_rule)]
     for check in sorted(fails):
         lines += [f"  check {check} failed: {d}" for d in sorted(fails[check])]
     stop = any("STOP" in line for line in lines[:9])
@@ -281,7 +298,7 @@ def read_reports(directory, expect=EXPECT_FILES):
     return {"cutoff": CUTOFF, "scheme": SCHEME, "five": list(FIVE), "found": len(files), "read": parsed,
             "used": len(datasets), "skipped": {k: len(v) for k, v in skipped.items()},
             "learner_sets": {",".join(s): c for s, c in sorted(sets.items())}, "differ": differ,
-            "null_fold_mismatch": len(mismatch_rows), "checks": lines,
+            "null_fold_mismatch": len(mismatch_rows), "no_catalog_rule": len(no_rule), "checks": lines,
             "datasets": sorted(datasets, key=lambda d: (d["species"], d["antibiotic"]))}
 
 
@@ -337,6 +354,7 @@ def dataset_row(d):
     row = {k: d[k] for k in ("species", "antibiotic", "genomes", "resistant", "susceptible")}
     row["learners"] = ",".join(d["learners"])
     row["learner_count"] = n_learners
+    row["catalog_rule"] = "yes" if d["catalog_rule"] else "no"
     if n_learners <= 5:
         for k in KS:
             row[f"miss_{k}"] = d["miss_k"][k] if k <= n_learners else ""
@@ -374,6 +392,8 @@ def pool(rows, scope, species=""):
     out = {"scope": scope, "species": species, "datasets": len(rows)}
     for c in SUMMED:
         out[c] = sum(int(r[c]) for r in rows)
+    out["datasets_no_catalog_rule"] = sum(1 for r in rows if r["catalog_rule"] == "no")
+    out["miss_all5_no_catalog_rule"] = sum(int(r["miss_all5"]) for r in rows if r["catalog_rule"] == "no")
     out["expected_all5"] = d12(sum(float(r["expected_all5"]) for r in rows))
     ratios = ratio_values(rows)
     out["datasets_with_ratio"] = len(ratios)
@@ -506,6 +526,8 @@ def tables(record):
                         f"| yardstick of 0, reported apart | {count(a['datasets_expected_zero'])} |",
                         f"| missed by all five, summed | {count(a['miss_all5'])} |",
                         f"| of those, no catalogue call | {count(a['miss_all5_no_catalog_call'])} |",
+                        f"| of those, on a report with no catalogue rule | {count(a['miss_all5_no_catalog_rule'])} |",
+                        f"| reports with no catalogue rule | {count(a['datasets_no_catalog_rule'])} |",
                         f"| of those, in a fold with a null fit | {count(a['miss_all5_in_null_fold'])} |",
                         f"| yardstick, summed | {dec(a['expected_all5'], 2)} |",
                         f"| median ratio | {dec(a['ratio_median'], 1)} |",
@@ -523,7 +545,8 @@ def tables(record):
     out["datasets"] = (["| Species | Antibiotic | Genomes | Resistant | Missed by all five | No catalogue call "
                         "| In a null-fit fold | Yardstick | Ratio |", "|---|---|---:|---:|---:|---:|---:|---:|---:|"]
                        + [f"| *{r['species']}* | {r['antibiotic']} | {count(r['genomes'])} | {count(r['resistant'])} "
-                          + (f"| {count(r['miss_all5'])} | {count(r['miss_all5_no_catalog_call'])} "
+                          + (f"| {count(r['miss_all5'])} "
+                             f"| {count(r['miss_all5_no_catalog_call']) if r['catalog_rule'] == 'yes' else 'no rule'} "
                              f"| {count(r['miss_all5_in_null_fold'])} | {dec(r['expected_all5'], 2)} "
                              f"| {dec(r['ratio_all5'], 1)} |"
                              if r["miss_all5"] != "" else "| | | | | |")

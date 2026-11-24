@@ -71,3 +71,14 @@ The statistic is the median over the pooled reports of `ratio_all5`. The reading
 - a median of 1 or less: no stacking above the yardstick is shown.
 
 Beside it, `share_some_median` against `share_all5_median` says whether more of a typical report's resistant genomes sit where some of the five call them, where a combination has room, or where all five miss. No p-value is computed and nothing here is a test of a null hypothesis. The page will not say that any model would fail, and it names no gene, variant or position.
+
+### Change after the first read stopped
+
+The first read, on 24 November 2026 at the script's first commit, stopped at check 3 and wrote nothing. Of the 274 reports, 21 hold no catalogue rule for their antibiotic: `catalog_resistant` is null on every genome and the lineage split has no `catalog` entry. Check 3 had required a true or false call, so 19 of them stopped it; the other 2 hold no learner and were already skipped. The plan read GRM's reader of the AMRFinderPlus catalogue as making a call on every genome, and on these reports it makes none. The table script was changed before the second read, which is the one this page reads:
+
+- a null `catalog_resistant` is no resistant call, so `miss_all5_no_catalog_call` counts it;
+- `datasets.tsv` gains `catalog_rule` after `learner_count`: `yes` where every call is true or false, `no` where every call is null;
+- `pooled.tsv` gains `datasets_no_catalog_rule` and `miss_all5_no_catalog_rule`, the all-five misses on reports with no rule, before `expected_all5`;
+- a label that is not true or false still stops the read, and so does a report that mixes null calls with true or false ones.
+
+No other rule, column, check or reading rule changed.

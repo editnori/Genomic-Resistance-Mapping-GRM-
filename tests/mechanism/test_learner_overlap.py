@@ -35,10 +35,14 @@ class Report:
     """A SYNTHETIC revision 14 report, built field by field so a test can break one."""
 
     def __init__(self, species, antibiotic, resistant, susceptible, misses=None, wrongs=None, no_catalog=(),
-                 learners=FIVE, null=None, tag=1):
+                 learners=FIVE, null=None, tag=1, no_rule=False):
         self.labels = [True] * resistant + [False] * susceptible
         n = len(self.labels)
         self.catalog = [t and i not in no_catalog for i, t in enumerate(self.labels)]
+        if no_rule:
+            # no catalogue rule for the antibiotic: every call null and no catalog entry in the split
+            self.catalog = [None] * n
+        self.no_rule = no_rule
         self.folds = [i % 5 for i in range(n)]
         misses, wrongs, null = misses or {}, wrongs or {}, null or {}
         self.scores = {name: scores_for(self.labels, misses.get(name, ()), wrongs.get(name, ())) for name in learners}
@@ -65,8 +69,10 @@ class Report:
             m.update(self.metric_change.get(name, {}))
             out.append({"learner": name, "scores": sc, "metrics": m, "no_call": self.no_call[name],
                         "fold_complexity": self.complexity[name]})
-        cat = self.catalog_scores or [1.0 if x else 0.0 for x in self.catalog]
-        out.append({"learner": "catalog", "scores": cat, "metrics": confusion(self.labels, cat), "fold_complexity": []})
+        if not self.no_rule:
+            cat = self.catalog_scores or [1.0 if x else 0.0 for x in self.catalog]
+            out.append({"learner": "catalog", "scores": cat, "metrics": confusion(self.labels, cat),
+                        "fold_complexity": []})
         return out
 
     def doc(self):
@@ -197,6 +203,21 @@ class Counts(Case):
         self.assertEqual(rows["drug a"]["miss_all5_no_catalog_call"], "1")
         self.assertEqual(rows["drug h"]["miss_all5_no_catalog_call"], "0")
 
+    def test_a_report_with_no_catalogue_rule_is_counted_and_marked(self):
+        # drug n holds no catalogue rule: its two all-five misses have no catalogue call, and the row says why
+        a = standard()[0]
+        n = Report(COLI, "drug n", 10, 5, tag=9, no_rule=True, misses={x: (0, 1) for x in FIVE})
+        out, rows, pooled = self.read_write([a, n])
+        self.assertIn("1 used reports with no catalogue rule (catalog_resistant null on every genome): pass", out)
+        self.assertIn("no catalogue rule: Synthia coli with drug n", out)
+        self.assertEqual((rows["drug n"]["catalog_rule"], rows["drug n"]["miss_all5"],
+                          rows["drug n"]["miss_all5_no_catalog_call"]), ("no", "2", "2"))
+        self.assertEqual((rows["drug a"]["catalog_rule"], rows["drug a"]["miss_all5_no_catalog_call"]), ("yes", "1"))
+        self.assertEqual((pooled[0]["datasets_no_catalog_rule"], pooled[0]["miss_all5_no_catalog_rule"],
+                          pooled[0]["miss_all5"], pooled[0]["miss_all5_no_catalog_call"]), ("1", "2", "5", "3"))
+        t = lo.tables(os.path.join(self.top, "record"))
+        self.assertIn("| *Synthia coli* | drug n | 15 | 10 | 2 | no rule | 0 |", "\n".join(t["datasets"]))
+
     def test_misses_in_a_null_fit_fold(self):
         # drug a: gbt's fold 1 is null; of the all-five misses 0, 1 and 2 only genome 1 is in fold 1
         out, rows, _ = self.read_write()
@@ -254,6 +275,12 @@ class Stops(Case):
         r = Report(COLI, "drug a", 10, 5)
         r.catalog_scores = [0.0] + [1.0 if x else 0.0 for x in r.catalog[1:]]
         self.stops([r], "check 9 catalogue: 1 reports")
+
+    def test_catalogue_calls_that_mix_null_with_true_or_false_stop_the_read(self):
+        r = Report(COLI, "drug a", 10, 5)
+        r.catalog[3] = None
+        r.catalog_scores = [1.0 if x else 0.0 for x in r.catalog]
+        self.stops([r], "check 3 counts: 1 reports")
 
     def test_a_file_that_does_not_parse_stops_the_read(self):
         d = lay_out(self.top, [Report(COLI, "drug a", 10, 5)])
