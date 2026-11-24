@@ -45,7 +45,8 @@ Without the flag, a FAILED with no newer DONE fails as before.
 
 --tables <rescored dir> reads each species' draws.tsv from <rescored
 dir>/<slug>/, the tables rescore.py made, in place of the copy's
-score/draws.tsv.
+score/draws.tsv, once <rescored dir>/rescore.txt ends SAME <n> of <n> with
+no FAIL line and n is 3 tables for each species that ended DONE.
 
 `gather` copies, for each species, score.py's checks.tsv, draws.tsv and
 datasets.tsv, the run's binary.txt and every choices file into
@@ -56,7 +57,8 @@ result it reads, so that gate 12 holds each scored draw's choices files to
 it. It copies nothing else: no score.log, no other result, no log. With
 --tables it copies the three tables from <rescored dir>/<slug>/, once
 <rescored dir>/rescore.txt says that every species was scored and every held
-table came out the same as its SHA256SUMS line.
+table came out the same as its SHA256SUMS line, 3 tables for each species
+that ended DONE.
 """
 
 import csv
@@ -324,10 +326,11 @@ def check(copies, lists_path, release, failed_at=None, lead_sha=None, tables=Non
     bad_expect, bad_results, rows_n, files_n, refusals_n, constant_n, bad_constant = [], [], 0, 0, 0, 0, []
     # A rescored table is read only once rescore.py has held every finished species' three tables to its
     # SHA256SUMS lines and says so: rescore.txt ends SAME <n> of <n>, with no FAIL line.
-    held = tables is None or rescored(tables)
+    held = tables is None or rescored(tables, finished(copies, present))
     if not held:
         ok("rescore.txt says every species was scored and every held table is the same, before a rescored table is "
-           "read", False, f"{Path(tables) / 'rescore.txt'}; no rescored draws.tsv read")
+           "read", False, f"{Path(tables) / 'rescore.txt'}, owing {len(TABLES) * finished(copies, present)} tables "
+           f"held for {finished(copies, present)} species that ended DONE; no rescored draws.tsv read")
     for slug in present:
         out = copies / slug
         want = expect_rows(lrows, slug)
@@ -521,21 +524,29 @@ def all_passed(checks_path):
     return bool(tail) and tail.group(1) == tail.group(2) and not any(x.startswith("FAIL") for x in lines)
 
 
-def rescored(tables):
+def rescored(tables, done=None):
     """True when rescore.py's rescore.txt says that every species was scored and every held table came out the same
-    as its SHA256SUMS line."""
+    as its SHA256SUMS line. With done, the number of species that ended DONE, the held count must be 3 tables for
+    each of them (ruling 10): SAME 21 of 21 for 7."""
     path = Path(tables) / "rescore.txt"
     lines = path.read_text(encoding="utf-8").splitlines() if path.is_file() else []
     tail = re.fullmatch(r"SAME (\d+) of (\d+)", lines[-1]) if lines else None
     return bool(tail) and tail.group(1) == tail.group(2) and int(tail.group(2)) > 0 \
+        and (done is None or int(tail.group(2)) == len(TABLES) * done) \
         and not any(x.startswith("FAIL") for x in lines)
+
+
+def finished(copies, species):
+    """The species whose copy holds a DONE: those rescore.py holds to their SHA256SUMS."""
+    return sum(1 for s in species if (Path(copies) / s / "DONE").is_file())
 
 
 def gather(copies, lists_path, checks_path, reading, tables=None):
     copies, reading = Path(copies), Path(reading)
     if not all_passed(checks_path):
         raise SystemExit(f"{checks_path} does not say that every check passed")
-    if tables is not None and not rescored(tables):
+    if tables is not None and not rescored(tables, finished(copies, sorted({r["species_slug"]
+                                                                          for r in first_run(load(lists_path))}))):
         raise SystemExit(f"{Path(tables) / 'rescore.txt'} does not say that every table was rescored the same")
     target = reading / "score"
     if target.exists() and any(target.iterdir()):

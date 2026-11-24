@@ -596,7 +596,7 @@ class Tables(Case):
             (tables / slug).mkdir(parents=True)
             for t in checks.TABLES:
                 (tables / slug / t).write_text(f"SYNTHETIC {slug} {t}\n", encoding="utf-8")
-        (tables / "rescore.txt").write_text("PASS SYNTHETIC\nSAME 6 of 6\n", encoding="utf-8")
+        (tables / "rescore.txt").write_text("PASS SYNTHETIC\nSAME 9 of 9\n", encoding="utf-8")
         checks.gather(copies, lists, path, self.top / "reading", tables)
         for slug, _, _ in fx.SPECIES:
             for t in checks.TABLES:
@@ -605,6 +605,38 @@ class Tables(Case):
         (tables / "rescore.txt").write_text("PASS SYNTHETIC\nSAME 5 of 6\n", encoding="utf-8")
         with self.assertRaises(SystemExit):
             checks.gather(copies, lists, path, self.top / "again", tables)
+
+    def test_check_and_gather_refuse_a_held_count_other_than_3_tables_for_each_species_done(self):
+        # check: two of the three SYNTHETIC species ended DONE, so rescore.txt owes SAME 6 of 6.
+        stopped = self.top / "stopped"
+        stopped.mkdir()
+        copies, lists, release = fx.copies(stopped)
+        lead, tables = stop_at_score(copies)
+        for held in (3, 9, 6):
+            with self.subTest(check=held):
+                (tables / "rescore.txt").write_text(f"PASS SYNTHETIC\nSAME {held} of {held}\n", encoding="utf-8")
+                report = checks.report(*checks.check(copies, lists, release, STOPPED, lead, tables))
+                if held == 6:
+                    self.assertEqual(report[-1], "CHECKS 17 of 17", "\n".join(report))
+                else:
+                    line = self.line(report, "rescore.txt says every species")
+                    self.assertTrue(line.startswith("FAIL"), line)
+                    self.assertIn("owing 6 tables held for 2 species that ended DONE", line)
+        # gather: all three SYNTHETIC species ended DONE, so rescore.txt owes SAME 9 of 9.
+        copies, lists, release = fx.copies(self.top)
+        path = self.top / "checks.txt"
+        path.write_text("\n".join(checks.report(*checks.check(copies, lists, release))) + "\n", encoding="utf-8")
+        tables = self.top / "rescored"
+        for slug, _, _ in fx.SPECIES:
+            (tables / slug).mkdir(parents=True)
+            for t in checks.TABLES:
+                (tables / slug / t).write_text(f"SYNTHETIC {slug} {t}\n", encoding="utf-8")
+        for held in (6, 12):
+            with self.subTest(gather=held):
+                (tables / "rescore.txt").write_text(f"PASS SYNTHETIC\nSAME {held} of {held}\n", encoding="utf-8")
+                with self.assertRaises(SystemExit):
+                    checks.gather(copies, lists, path, self.top / "reading", tables)
+                self.assertFalse((self.top / "reading" / "score").exists())
 
     def rescore_copies(self, change_sums=None):
         """Two SYNTHETIC copies of a made-up species from test_score.write_run: one finished, its three tables as

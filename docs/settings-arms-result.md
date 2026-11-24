@@ -104,7 +104,7 @@ These points are seen in the tables after the reading. They change no rule and n
 
 <!-- part 2: the checks' printout, from reference/settings-arms/checks.txt. -->
 
-**Reading.** The answers read are each species' three tables as the changed scorer writes them from its copy, the 7 finished species' tables held first to their own `SHA256SUMS` lines, and each species' choices files as its run wrote them. The count runs once over them:
+**Reading.** The answers read are each species' three tables as the changed scorer writes them from its copy, the 7 finished species' tables held first to their own `SHA256SUMS` lines, and each species' choices files as its run wrote them. `check --tables` and `gather --tables` read no rescored table unless `rescore.txt` ends `SAME <n> of <n>` with no `FAIL` line and n is 3 tables for each species that ended `DONE`. The count runs once over them:
 
 ```
 python3 -I scripts/c5-settings/rescore.py <copies> scripts/c5-settings/lists.tsv <release> rescored

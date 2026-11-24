@@ -213,6 +213,9 @@ FAULTS = [
     ("R19", "a file of the stopped species' copy its SHA256SUMS.lead does not name passes", CHECKS,
      "    lines.append((lead.is_file() and not not_named,", "    lines.append((lead.is_file(),", "check",
      R + "Allowance.test_the_allowance_refuses_a_results_file_the_lead_sums_do_not_name"),
+    ("R20", "a held count other than 3 tables for each species that ended DONE passes", CHECKS,
+     "int(tail.group(2)) == len(TABLES) * done)", "int(tail.group(2)) > 0)", "check",
+     R + "Tables.test_check_and_gather_refuse_a_held_count_other_than_3_tables_for_each_species_done"),
 ]
 
 
