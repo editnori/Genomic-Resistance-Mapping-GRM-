@@ -360,7 +360,7 @@ These points were seen in the tables after the reading. The rules did not ask fo
 
 **Labels.** The datasets in M wait for the maintainer's label rule. They are marked and never join the primary reading.
 
-**M4.** The lineage curve for Mycobacterium tuberculosis has not run. TBProfiler 6.6.3 must run again first on the 2,000 genomes.
+**M4.** The lineage curve for Mycobacterium tuberculosis was read on 24 Nov 2026, after TBProfiler 6.6.3 ran again on the 2,000 genomes, in `docs/lineage-curve-result.md`.
 
 **Markers.** No marker is found, named or ranked. The page holds aggregates over datasets, species, cells and learners only: no genome id, no BioProject accession, no sequence and no position.
 

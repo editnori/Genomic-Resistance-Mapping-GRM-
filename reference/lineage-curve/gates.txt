@@ -1,0 +1,7 @@
+1 layout: the reading holds reading.txt, checks.txt and tb_curve.py's five files under m4/, and nothing more under m4/
+2 versions: checks.txt counts every result file naming TBProfiler 6.6.3 and tbdb 3ed1cb99 and none naming another, and m4-summary.json names the same two
+3 accounting: result files plus failed lines equal the genomes planned, with no planned genome left with neither, none with both and no result outside the plan; m4-summary.json gives the same counts
+4 datasets: the summary's endpoints and reports not scored are exactly the species' reports in lists.tsv, named as lists.tsv names them, and every row of every table carries in_M as lists.tsv gives it
+5 floors: a share stands only over 5 or more resistant genomes, and no curve over under 5
+6 names: no file names a variant, a position or a sequence: the gene column holds only gene names of tbdb.bed or `other genes`
+7 genes: a gene is named only where 5 or more resistant genomes of the antibiotic carry it

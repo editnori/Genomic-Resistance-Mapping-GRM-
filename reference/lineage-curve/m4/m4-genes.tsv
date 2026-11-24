@@ -1,0 +1,32 @@
+species	antibiotic	in_M	gene	catalogue_variants	resistant_with_gene
+Mycobacterium tuberculosis	amikacin	0	eis	1	17
+Mycobacterium tuberculosis	amikacin	0	rrs	3	415
+Mycobacterium tuberculosis	capreomycin	0	rrs	3	325
+Mycobacterium tuberculosis	capreomycin	0	tlyA	7	22
+Mycobacterium tuberculosis	ciprofloxacin	0	gyrA	7	64
+Mycobacterium tuberculosis	ciprofloxacin	0	other genes	1	1
+Mycobacterium tuberculosis	clofazimine	1	mmpR5	5	5
+Mycobacterium tuberculosis	delamanid	0	other genes	3	4
+Mycobacterium tuberculosis	ethambutol	0	embB	12	991
+Mycobacterium tuberculosis	ethionamide	0	ethA	129	271
+Mycobacterium tuberculosis	ethionamide	0	inhA	7	439
+Mycobacterium tuberculosis	isoniazid	1	inhA	7	528
+Mycobacterium tuberculosis	isoniazid	1	katG	10	1192
+Mycobacterium tuberculosis	kanamycin	0	eis	4	107
+Mycobacterium tuberculosis	kanamycin	0	rrs	2	388
+Mycobacterium tuberculosis	levofloxacin	0	gyrA	10	432
+Mycobacterium tuberculosis	levofloxacin	0	gyrB	6	19
+Mycobacterium tuberculosis	linezolid	0	rplC	1	18
+Mycobacterium tuberculosis	linezolid	0	rrl	2	6
+Mycobacterium tuberculosis	moxifloxacin	0	gyrA	10	585
+Mycobacterium tuberculosis	moxifloxacin	0	gyrB	5	21
+Mycobacterium tuberculosis	ofloxacin	0	gyrA	8	314
+Mycobacterium tuberculosis	ofloxacin	0	gyrB	4	8
+Mycobacterium tuberculosis	prothionamide	0	ethA	10	41
+Mycobacterium tuberculosis	prothionamide	0	inhA	4	25
+Mycobacterium tuberculosis	pyrazinamide	0	pncA	94	321
+Mycobacterium tuberculosis	rifabutin	0	rpoB	27	645
+Mycobacterium tuberculosis	rifampin	0	rpoB	40	1293
+Mycobacterium tuberculosis	streptomycin	0	gid	10	84
+Mycobacterium tuberculosis	streptomycin	0	rpsL	2	291
+Mycobacterium tuberculosis	streptomycin	0	rrs	3	127

@@ -1,0 +1,8 @@
+python3 -I scripts/mechanism/tb_curve.py --species mycobacterium_tuberculosis --reports REPORTS --lists scripts/c3-inputs/lists.tsv --tool-dir RUN_DIR --bed TBDB.bed --out m4
+da155ade393df77962e86aa70727e7b5420d4c89f15545fb502010ce2d7e9280  m4-convergence.tsv
+8e814f5d160d0a2b27db387c197ae70f5fd26c6699880b3972d7808f2272a9b1  m4-coverage.tsv
+5efac026705b55e4a7cf1cf294fc642f2aac7af81ed44fa032f93e298f1ca0e1  m4-curve.tsv
+b658afd8ccbe975f7c88933e7a78d05a62d7f84525207424a86df4fab290d8a9  m4-genes.tsv
+d4c19a87f0bb22ec1b2943e37fd26e642cd2cb85999660b3501cf82e71576a8f  m4-summary.json
+python3 -I scripts/mechanism/scan.py --ids SPECIES.json m4
+python3 -I scripts/mechanism/scan.py --ids ALL_SPECIES.json m4
