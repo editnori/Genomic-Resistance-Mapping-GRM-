@@ -151,6 +151,8 @@ class Rules(unittest.TestCase):
         self.assertTrue(ym.mean_called([1.0, 1.0, 0.5, 0.0, 0.0]))
         self.assertTrue(ym.mean_called([0.0, 0.6, 0.6, 0.6, 0.7]))
         self.assertTrue(ym.mean_called([0.7, 0.6, 0.6, 0.6, 0.0]))
+        # 0, 0.12, 0.99, 0.99 and 0.4 add to 2.5; added one by one in this order they fall under it.
+        self.assertTrue(ym.mean_called([0.0, 0.12, 0.99, 0.99, 0.4]))
         self.assertFalse(ym.mean_called([0.5, 0.5, 0.5, 0.5, 0.4999]))
 
     def test_the_call_is_the_mean_of_the_five(self):

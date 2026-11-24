@@ -81,7 +81,8 @@ def year_key(text):
 def mean_called(scores):
     """The five learners' mean vote: resistant at a mean of 0.5 or more. The
     sum is rounded once (math.fsum), so scores whose decimals add to 2.5,
-    such as 0, 0.6, 0.6, 0.6 and 0.7, are called whatever their order."""
+    such as 0, 0.12, 0.99, 0.99 and 0.4, are called whatever their order;
+    added one by one in that order they fall under 2.5."""
     return math.fsum(scores) >= CUTOFF * len(LEARNERS)
 
 
