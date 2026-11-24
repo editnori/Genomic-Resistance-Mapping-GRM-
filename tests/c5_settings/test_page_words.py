@@ -46,10 +46,11 @@ class Page(unittest.TestCase):
                 self.assertIn(sentence, page)
 
     def test_the_refusal_columns_are_not_said_to_read_0_by_construction(self):
+        # A sentence names the cutoff arm; a row of the printed count names its pair, cutoff less default.
         page = text()
         for m in re.finditer(r"by construction", page):
             line = page[page.rfind("\n", 0, m.start()) + 1:page.find("\n", m.end())]
-            self.assertIn("cutoff arm", line)
+            self.assertTrue("cutoff arm" in line or "| cutoff less default |" in line, line)
 
     def test_no_em_dash_and_no_external_validation_claim(self):
         page = text()
@@ -66,7 +67,8 @@ class Page(unittest.TestCase):
         for r in run:
             with self.subTest(dataset=r["dataset"]):
                 self.assertIn(f"*{r['species']}*", page)
-                row = [x for x in page.splitlines() if x.startswith(f"| *{r['species']}* |")]
+                # The Datasets list: one row per species, its second cell the species' dataset count.
+                row = [x for x in page.splitlines() if re.match(re.escape(f"| *{r['species']}* | ") + r"\d+ \|", x)]
                 self.assertEqual(len(row), 1)
                 self.assertIn(f"{r['antibiotic']} ({int(r['samples']):,})", row[0])
 

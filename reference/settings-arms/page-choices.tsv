@@ -1,0 +1,11 @@
+split	learner	folds	kept_trial_0	picked_other	plain_best_trial_0	plain_best_is_pick	plain_best_differs	plain_best_refitted	trial_0_failed	every_trial_failed	failed_trials	search_served_default	plain_served_default	cutoff_half	cutoff_moved
+lineage	scm	820	499	321	208	529	236	236	55	55	1705	0	55	820	0
+lineage	cart	820	470	350	134	484	281	281	55	55	1705	0	55	449	371
+lineage	rf	820	515	305	47	352	413	413	55	55	1705	0	55	152	668
+lineage	gbt	820	436	384	23	407	358	358	55	55	1705	0	55	187	633
+lineage	lasso	820	771	49	240	289	476	476	55	55	1705	0	55	186	634
+study	scm	275	160	115	73	188	87	87	0	0	0	0	0	275	0
+study	cart	275	155	120	42	162	113	113	0	0	0	0	0	132	143
+study	rf	275	162	113	12	125	150	150	0	0	0	0	0	38	237
+study	gbt	275	154	121	11	132	143	143	0	0	0	0	0	40	235
+study	lasso	275	260	15	67	82	193	193	0	0	0	0	0	34	241

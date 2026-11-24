@@ -1,0 +1,18 @@
+PASS the first run's species, each once: 8 folders for 8 species; missing [], more []
+PASS each species ended DONE, any FAILED older than its DONE: 7 of 8; klebsiella_pneumoniae stopped at its score step, under the allowance
+PASS each species' SHA256SUMS holds every file of the run's rule, each at its sha256: 1069 files
+PASS score/score.log stays out of SHA256SUMS
+PASS each DONE names its species, its binary.txt's binary and code, its results, its choices files and its SHA256SUMS
+PASS every species ran one commit and one code sha256: 1 commits, 1 code sha256, 1 binaries
+PASS klebsiella_pneumoniae: FAILED is its at score line in the run's time form, with no DONE and no SHA256SUMS: FAILED at score 2026-11-23T22:15:43Z; DONE 0, SHA256SUMS 0
+PASS klebsiella_pneumoniae: logs/run.log names as many drives ended ok as it had to run, and none ended otherwise: 355 to run over 1 drives lines, 355 ended ok (355 named once), 0 ended otherwise
+PASS klebsiella_pneumoniae: every line of SHA256SUMS.lead holds, its own sha256 is the one given, and it names no score/score.log: 1269 lines, 0 differ or absent, score/score.log named 0; its sha256 is the one given
+PASS klebsiella_pneumoniae: every file of its copy is named in SHA256SUMS.lead, other than score/score.log, back.tar and the list itself: 1269 files, 0 not named
+PASS klebsiella_pneumoniae: every name in SHA256SUMS.lead is a file of its copy: 1269 names other than score/score.log, 0 with no file
+PASS klebsiella_pneumoniae: binary.txt names the run's commit and code sha256: commit 0d987ba8572430588e738aa873b6690a24058d97, code 343172462952f291381d765a54530c7f913bf101b04b4f9ac5a6ad27a16f9ee8; the other species name 1 commits and 1 code sha256
+PASS each lists.txt names its species' first-run datasets, seeds 42, 43 and 44 and twin 45, 46 and 47
+PASS each expect.tsv is expect.py's list from lists.tsv: 1045 results
+PASS each species holds every default and twin result and one choices file per outer fold of each draw and study run of the default, and no other: 1480 files
+PASS the refusal records and the constant-model rows, counted: five constant-model rows per refusal record: 0 refusal records, 0 constant-model rows
+PASS no genome id in any file that will be read or published: 0 genome ids in 4138 files, against 13393 ids; times equal to an id as text, counted apart: time User time (seconds) 1
+CHECKS 17 of 17

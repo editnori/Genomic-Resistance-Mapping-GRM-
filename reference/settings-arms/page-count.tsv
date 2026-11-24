@@ -1,0 +1,151 @@
+decides	split	pair	learner	measure	orientation	withdrawn	datasets	entered	not_scored	constant	better	worse	same	median_difference	species	interval_lo	interval_hi	sign_p	holm_p	family	meets_1	meets_2	note
+1	lineage	search-default	scm	balanced_accuracy	higher	0	55	54	1	0	4	9	41	0.0	8	-0.001256600054	0.0	0.953857421875	1.0	1	0	0	
+1	lineage	search-default	scm	recall	higher	0	55	54	1	0	10	4	40	0.0	8	-0.000395413206	0.004444444444	0.089782714844		0			
+1	lineage	search-default	scm	specificity	higher	0	55	54	1	0	6	12	36	-0.001289100115	8	-0.00487804878	0.0	0.951873779297		0			
+1	lineage	search-default	scm	vme	lower	0	55	54	1	0	10	4	40	0.0	8	-0.004444444444	0.000197706603	0.089782714844		0			
+1	lineage	search-default	scm	me	lower	0	55	54	1	0	6	12	36	0.001289100115	8	0.0	0.004290876242	0.951873779297		0			
+1	lineage	search-default	scm	log_loss	lower	0	55	54	1	0	12	22	20	0.0	8	0.0	0.026044983427	0.971193663543		0			
+1	lineage	search-default	cart	balanced_accuracy	higher	0	55	54	1	0	7	4	43	0.0	8	-0.000926056882	0.0	0.2744140625	1.0	1	0	0	
+1	lineage	search-default	cart	recall	higher	0	55	54	1	0	15	7	32	0.0	8	0.0	0.016459601825	0.066900253296		0			
+1	lineage	search-default	cart	specificity	higher	0	55	54	1	0	5	13	36	-0.00131217112	8	-0.010048808498	0.0	0.984558105469		0			
+1	lineage	search-default	cart	vme	lower	0	55	54	1	0	15	7	32	0.0	8	-0.026315789474	0.0	0.066900253296		0			
+1	lineage	search-default	cart	me	lower	0	55	54	1	0	5	13	36	0.00131217112	8	0.0	0.012345679012	0.984558105469		0			
+1	lineage	search-default	cart	log_loss	lower	0	55	54	1	0	5	31	18	0.048841841828	8	0.020859169285	0.073896946211	0.999999029213		0			
+1	lineage	search-default	rf	balanced_accuracy	higher	0	55	54	1	0	8	5	41	0.0	8	-0.001803751804	0.002008032128	0.29052734375	1.0	1	0	0	
+1	lineage	search-default	rf	recall	higher	0	55	54	1	0	10	9	35	0.0	8	-0.005656217045	0.0	0.5		0			
+1	lineage	search-default	rf	specificity	higher	0	55	54	1	0	7	8	39	0.0	8	-0.004273504273	0.0	0.696380615234		0			
+1	lineage	search-default	rf	vme	lower	0	55	54	1	0	10	9	35	0.0	8	0.0	0.005464480874	0.5		0			
+1	lineage	search-default	rf	me	lower	0	55	54	1	0	7	8	39	0.0	8	0.0	0.004273504273	0.696380615234		0			
+1	lineage	search-default	rf	log_loss	lower	0	55	54	1	0	5	10	39	0.0	8	0.0	0.003439007729	0.940765380859		0			
+1	lineage	search-default	gbt	balanced_accuracy	higher	0	55	54	1	0	5	7	42	0.0	8	-0.000680272109	0.002429711905	0.80615234375	1.0	1	0	0	
+1	lineage	search-default	gbt	recall	higher	0	55	54	1	0	10	12	32	0.0	8	-0.00354609929	0.009523809524	0.738266468048		0			
+1	lineage	search-default	gbt	specificity	higher	0	55	54	1	0	10	10	34	0.0	8	-0.006172839507	0.0	0.588098526001		0			
+1	lineage	search-default	gbt	vme	lower	0	55	54	1	0	10	12	32	0.0	8	-0.009523809524	0.00354609929	0.738266468048		0			
+1	lineage	search-default	gbt	me	lower	0	55	54	1	0	10	10	34	0.0	8	0.0	0.006172839507	0.588098526001		0			
+1	lineage	search-default	gbt	log_loss	lower	0	55	54	1	0	2	11	41	0.003729065008	8	0.002805565307	0.007785317836	0.998291015625		0			
+1	lineage	search-default	lasso	balanced_accuracy	higher	0	55	54	1	0	0	0	54	0.0	8	0.0	0.0	1.0	1.0	1	0	0	
+1	lineage	search-default	lasso	recall	higher	0	55	54	1	0	0	0	54	0.0	8	0.0	0.0	1.0		0			
+1	lineage	search-default	lasso	specificity	higher	0	55	54	1	0	0	1	53	0.0	8	0.0	0.0	1.0		0			
+1	lineage	search-default	lasso	vme	lower	0	55	54	1	0	0	0	54	0.0	8	0.0	0.0	1.0		0			
+1	lineage	search-default	lasso	me	lower	0	55	54	1	0	0	1	53	0.0	8	0.0	0.0	1.0		0			
+1	lineage	search-default	lasso	log_loss	lower	0	55	54	1	0	0	0	54	0.0	8	0.0	0.0	1.0		0			
+1	lineage	cutoff-default	scm	balanced_accuracy	higher	0	55	54	1	0	0	0	54	0.0	8	0.0	0.0	1.0	1.0	1	0	0	
+1	lineage	cutoff-default	scm	recall	higher	0	55	54	1	0	0	0	54	0.0	8	0.0	0.0	1.0		0			
+1	lineage	cutoff-default	scm	specificity	higher	0	55	54	1	0	0	0	54	0.0	8	0.0	0.0	1.0		0			
+1	lineage	cutoff-default	scm	vme	lower	0	55	54	1	0	0	0	54	0.0	8	0.0	0.0	1.0		0			
+1	lineage	cutoff-default	scm	me	lower	0	55	54	1	0	0	0	54	0.0	8	0.0	0.0	1.0		0			
+0	lineage	cutoff-default	scm	log_loss	lower	0	55	54	1	0	0	0	54	0.0	8	0.0	0.0	1.0		0			equal by construction: the cutoff arm moves no score
+1	lineage	cutoff-default	cart	balanced_accuracy	higher	0	55	54	1	0	4	12	38	0.0	8	-0.005649717514	0.0	0.989364624023	1.0	1	0	0	
+1	lineage	cutoff-default	cart	recall	higher	0	55	54	1	0	12	5	37	0.0	8	0.0	0.0	0.071731567383		0			
+1	lineage	cutoff-default	cart	specificity	higher	0	55	54	1	0	4	16	34	0.0	8	-0.011299435028	0.0	0.998711585999		0			
+1	lineage	cutoff-default	cart	vme	lower	0	55	54	1	0	12	5	37	0.0	8	0.0	0.0	0.071731567383		0			
+1	lineage	cutoff-default	cart	me	lower	0	55	54	1	0	4	16	34	0.0	8	0.0	0.011299435028	0.998711585999		0			
+0	lineage	cutoff-default	cart	log_loss	lower	0	55	54	1	0	0	0	54	0.0	8	0.0	0.0	1.0		0			equal by construction: the cutoff arm moves no score
+1	lineage	cutoff-default	rf	balanced_accuracy	higher	0	55	54	1	0	15	9	30	0.000451136306	8	-0.017520133279	0.012571194394	0.15372812748	1.0	1	0	0	
+1	lineage	cutoff-default	rf	recall	higher	0	55	54	1	0	28	14	12	0.024288282487	8	0.005778588808	0.103725299644	0.021779260962		0			
+1	lineage	cutoff-default	rf	specificity	higher	0	55	54	1	0	10	30	14	-0.028497521533	8	-0.137983091787	-0.017777777778	0.999660225873		0			
+1	lineage	cutoff-default	rf	vme	lower	0	55	54	1	0	28	14	12	-0.024288282487	8	-0.088888888889	-0.005778588808	0.021779260962		0			
+1	lineage	cutoff-default	rf	me	lower	0	55	54	1	0	10	30	14	0.028497521533	8	0.017885107251	0.137983091787	0.999660225873		0			
+0	lineage	cutoff-default	rf	log_loss	lower	0	55	54	1	0	0	0	54	0.0	8	0.0	0.0	1.0		0			equal by construction: the cutoff arm moves no score
+1	lineage	cutoff-default	gbt	balanced_accuracy	higher	0	55	54	1	0	8	12	34	-0.006055016435	8	-0.012481962482	-0.000247557875	0.868412017822	1.0	1	0	0	
+1	lineage	cutoff-default	gbt	recall	higher	0	55	54	1	0	27	8	19	0.018327600514	8	0.011111111111	0.109195402299	0.000939112739		0			
+1	lineage	cutoff-default	gbt	specificity	higher	0	55	54	1	0	5	33	16	-0.036574544804	8	-0.104938271605	-0.016964695094	0.999999698073		0			
+1	lineage	cutoff-default	gbt	vme	lower	0	55	54	1	0	27	8	19	-0.018327600514	8	-0.109195402299	-0.011111111111	0.000939112739		0			
+1	lineage	cutoff-default	gbt	me	lower	0	55	54	1	0	5	33	16	0.036574544804	8	0.016964695094	0.104938271605	0.999999698073		0			
+0	lineage	cutoff-default	gbt	log_loss	lower	0	55	54	1	0	0	0	54	0.0	8	0.0	0.0	1.0		0			equal by construction: the cutoff arm moves no score
+1	lineage	cutoff-default	lasso	balanced_accuracy	higher	0	55	54	1	0	7	11	36	-0.003945088632	8	-0.013201320132	-0.001350890109	0.881057739258	1.0	1	0	0	
+1	lineage	cutoff-default	lasso	recall	higher	0	55	54	1	0	23	9	22	0.009259259259	8	0.0	0.067954336417	0.010030803503		0			
+1	lineage	cutoff-default	lasso	specificity	higher	0	55	54	1	0	5	29	20	-0.025433736034	8	-0.07266744096	-0.003003003003	0.999996917555		0			
+1	lineage	cutoff-default	lasso	vme	lower	0	55	54	1	0	23	9	22	-0.009259259259	8	-0.067954336417	0.0	0.010030803503		0			
+1	lineage	cutoff-default	lasso	me	lower	0	55	54	1	0	5	29	20	0.025433736034	8	0.003003003003	0.07266744096	0.999996917555		0			
+0	lineage	cutoff-default	lasso	log_loss	lower	0	55	54	1	0	0	0	54	0.0	8	0.0	0.0	1.0		0			equal by construction: the cutoff arm moves no score
+1	lineage	twin-default	scm	balanced_accuracy	higher	0	55	54	1	0	7	8	39	0.00225762394	8	-0.000133120341	0.004644012945	0.696380615234	1.0	1	0	0	the twin: read for condition 3 alone, never as an arm
+1	lineage	twin-default	scm	recall	higher	0	55	54	1	0	14	8	32	0.003387950162	8	0.0	0.004566210046	0.143139362335		0			the twin: read for condition 3 alone, never as an arm
+1	lineage	twin-default	scm	specificity	higher	0	55	54	1	0	10	12	32	0.0	8	-0.035294117647	0.0	0.738266468048		0			the twin: read for condition 3 alone, never as an arm
+1	lineage	twin-default	scm	vme	lower	0	55	54	1	0	14	8	32	-0.003387950162	8	-0.004832881661	0.0	0.143139362335		0			the twin: read for condition 3 alone, never as an arm
+1	lineage	twin-default	scm	me	lower	0	55	54	1	0	10	12	32	0.0	8	-0.000304414003	0.034632034632	0.738266468048		0			the twin: read for condition 3 alone, never as an arm
+1	lineage	twin-default	scm	log_loss	lower	0	55	54	1	0	22	19	13	-0.005341267778	8	-0.02073217572	0.028101419884	0.377614328752		0			the twin: read for condition 3 alone, never as an arm
+1	lineage	twin-default	cart	balanced_accuracy	higher	0	55	54	1	0	6	9	39	-0.002285662072	8	-0.005818977893	-5.9819566e-05	0.84912109375	1.0	1	0	0	the twin: read for condition 3 alone, never as an arm
+1	lineage	twin-default	cart	recall	higher	0	55	54	1	0	10	13	31	-0.000264550264	8	-0.004263565891	0.0	0.797563552856		0			the twin: read for condition 3 alone, never as an arm
+1	lineage	twin-default	cart	specificity	higher	0	55	54	1	0	9	12	33	-0.002735114664	8	-0.018018018018	-0.001302083333	0.808344841003		0			the twin: read for condition 3 alone, never as an arm
+1	lineage	twin-default	cart	vme	lower	0	55	54	1	0	10	13	31	0.000264550264	8	-0.000159948816	0.004263565891	0.797563552856		0			the twin: read for condition 3 alone, never as an arm
+1	lineage	twin-default	cart	me	lower	0	55	54	1	0	9	12	33	0.002735114664	8	0.001302083333	0.015181848515	0.808344841003		0			the twin: read for condition 3 alone, never as an arm
+1	lineage	twin-default	cart	log_loss	lower	0	55	54	1	0	20	16	18	-0.002241859351	8	-0.018840285745	0.005495197751	0.308859658515		0			the twin: read for condition 3 alone, never as an arm
+1	lineage	twin-default	rf	balanced_accuracy	higher	0	55	54	1	0	4	4	46	-0.000476902395	8	-0.002482325151	0.000404530744	0.63671875	1.0	1	0	0	the twin: read for condition 3 alone, never as an arm
+1	lineage	twin-default	rf	recall	higher	0	55	54	1	0	6	9	39	-0.001738431568	8	-0.008333333333	-0.000802070956	0.84912109375		0			the twin: read for condition 3 alone, never as an arm
+1	lineage	twin-default	rf	specificity	higher	0	55	54	1	0	6	4	44	0.0	8	0.0	0.00442680776	0.376953125		0			the twin: read for condition 3 alone, never as an arm
+1	lineage	twin-default	rf	vme	lower	0	55	54	1	0	6	9	39	0.001738431568	8	0.000802070956	0.008333333333	0.84912109375		0			the twin: read for condition 3 alone, never as an arm
+1	lineage	twin-default	rf	me	lower	0	55	54	1	0	6	4	44	0.0	8	-0.00442680776	0.0	0.376953125		0			the twin: read for condition 3 alone, never as an arm
+1	lineage	twin-default	rf	log_loss	lower	0	55	54	1	0	2	3	49	-0.000674152283	8	-0.004333273197	0.001229582452	0.8125		0			the twin: read for condition 3 alone, never as an arm
+1	lineage	twin-default	gbt	balanced_accuracy	higher	0	55	54	1	0	8	7	39	0.000134062634	8	-0.007021295687	0.009495252374	0.5	1.0	1	0	0	the twin: read for condition 3 alone, never as an arm
+1	lineage	twin-default	gbt	recall	higher	0	55	54	1	0	12	14	28	-0.001767714293	8	-0.008090614887	0.013959854014	0.721401453018		0			the twin: read for condition 3 alone, never as an arm
+1	lineage	twin-default	gbt	specificity	higher	0	55	54	1	0	10	12	32	-0.000729845048	8	-0.004601840737	0.001960784313	0.738266468048		0			the twin: read for condition 3 alone, never as an arm
+1	lineage	twin-default	gbt	vme	lower	0	55	54	1	0	12	14	28	0.001767714293	8	-0.011253041362	0.008090614887	0.721401453018		0			the twin: read for condition 3 alone, never as an arm
+1	lineage	twin-default	gbt	me	lower	0	55	54	1	0	10	12	32	0.000729845048	8	-0.001960784313	0.004497751124	0.738266468048		0			the twin: read for condition 3 alone, never as an arm
+1	lineage	twin-default	gbt	log_loss	lower	0	55	54	1	0	12	8	34	-0.002875150606	8	-0.010588368369	0.001878844671	0.251722335815		0			the twin: read for condition 3 alone, never as an arm
+1	lineage	twin-default	lasso	balanced_accuracy	higher	0	55	54	1	0	6	2	46	0.000102582396	8	-0.002007305005	0.00987654321	0.14453125	1.0	1	0	0	the twin: read for condition 3 alone, never as an arm
+1	lineage	twin-default	lasso	recall	higher	0	55	54	1	0	14	5	35	0.0	8	-0.004220335675	0.01560283688	0.031784057617		0			the twin: read for condition 3 alone, never as an arm
+1	lineage	twin-default	lasso	specificity	higher	0	55	54	1	0	11	9	34	0.000152207002	8	-0.002332395687	0.004409171076	0.411901473999		0			the twin: read for condition 3 alone, never as an arm
+1	lineage	twin-default	lasso	vme	lower	0	55	54	1	0	14	5	35	0.0	8	-0.01560283688	0.003102334985	0.031784057617		0			the twin: read for condition 3 alone, never as an arm
+1	lineage	twin-default	lasso	me	lower	0	55	54	1	0	11	9	34	-0.000152207002	8	-0.004409171076	0.002332395687	0.411901473999		0			the twin: read for condition 3 alone, never as an arm
+1	lineage	twin-default	lasso	log_loss	lower	0	55	54	1	0	15	13	26	0.001006774428	8	-0.021005954411	0.007139220996	0.425277009606		0			the twin: read for condition 3 alone, never as an arm
+1	study	search-default	scm	balanced_accuracy	higher	0	55	55	0	0	8	10	37	0.0	8	0.0	0.0	0.759658813477		0			
+1	study	search-default	scm	recall	higher	0	55	55	0	0	10	10	35	0.0	8	0.0	0.004514672686	0.588098526001		0			
+1	study	search-default	scm	specificity	higher	0	55	55	0	0	10	16	29	0.0	8	-0.012048192771	0.0	0.915681228042		0			
+1	study	search-default	scm	vme	lower	0	55	55	0	0	10	10	35	0.0	8	-0.004514672686	0.0	0.588098526001		0			
+1	study	search-default	scm	me	lower	0	55	55	0	0	10	16	29	0.0	8	0.0	0.012048192771	0.915681228042		0			
+1	study	search-default	scm	log_loss	lower	0	55	55	0	0	14	18	23	0.0	8	0.0	0.0	0.811457206262		0			
+1	study	search-default	cart	balanced_accuracy	higher	0	55	55	0	0	5	12	38	-0.001945525292	8	-0.003946922416	0.0	0.975479125977		0			
+1	study	search-default	cart	recall	higher	0	55	55	0	0	9	8	38	0.0	8	0.0	0.0	0.5		0			
+1	study	search-default	cart	specificity	higher	0	55	55	0	0	7	14	34	0.0	8	-0.001030927835	0.0	0.960823059082		0			
+1	study	search-default	cart	vme	lower	0	55	55	0	0	9	8	38	0.0	8	0.0	0.0	0.5		0			
+1	study	search-default	cart	me	lower	0	55	55	0	0	7	14	34	0.0	8	0.0	0.00206185567	0.960823059082		0			
+1	study	search-default	cart	log_loss	lower	0	55	55	0	0	17	24	14	0.0	8	0.0	0.187252090549	0.894488201196		0			
+1	study	search-default	rf	balanced_accuracy	higher	0	55	55	0	0	12	4	39	0.0	8	-0.003855970356	0.013888888889	0.03840637207		0			
+1	study	search-default	rf	recall	higher	0	55	55	0	0	10	10	35	0.0	8	0.0	0.0	0.588098526001		0			
+1	study	search-default	rf	specificity	higher	0	55	55	0	0	13	12	30	0.0	8	-0.012494684621	0.0	0.5		0			
+1	study	search-default	rf	vme	lower	0	55	55	0	0	10	10	35	0.0	8	0.0	0.0	0.588098526001		0			
+1	study	search-default	rf	me	lower	0	55	55	0	0	13	12	30	0.0	8	0.0	0.012494684621	0.5		0			
+1	study	search-default	rf	log_loss	lower	0	55	55	0	0	12	11	32	0.0	8	-0.001241190858	0.006991416144	0.5		0			
+1	study	search-default	gbt	balanced_accuracy	higher	0	55	55	0	0	6	10	39	0.0	8	-0.017556517557	0.0	0.894943237305		0			
+1	study	search-default	gbt	recall	higher	0	55	55	0	0	9	10	36	0.0	8	-0.012130105161	0.0	0.676197052002		0			
+1	study	search-default	gbt	specificity	higher	0	55	55	0	0	5	14	36	0.0	8	-0.013008130082	0.0	0.990394592285		0			
+1	study	search-default	gbt	vme	lower	0	55	55	0	0	9	10	36	0.0	8	0.0	0.011494252874	0.676197052002		0			
+1	study	search-default	gbt	me	lower	0	55	55	0	0	5	14	36	0.0	8	0.0	0.013008130082	0.990394592285		0			
+1	study	search-default	gbt	log_loss	lower	0	55	55	0	0	4	11	40	0.0	8	0.0	0.008225394832	0.982421875		0			
+1	study	search-default	lasso	balanced_accuracy	higher	0	55	55	0	0	0	0	55	0.0	8	0.0	0.0	1.0		0			
+1	study	search-default	lasso	recall	higher	0	55	55	0	0	0	0	55	0.0	8	0.0	0.0	1.0		0			
+1	study	search-default	lasso	specificity	higher	0	55	55	0	0	1	0	54	0.0	8	0.0	0.0	0.5		0			
+1	study	search-default	lasso	vme	lower	0	55	55	0	0	0	0	55	0.0	8	0.0	0.0	1.0		0			
+1	study	search-default	lasso	me	lower	0	55	55	0	0	1	0	54	0.0	8	0.0	0.0	0.5		0			
+1	study	search-default	lasso	log_loss	lower	0	55	55	0	0	0	0	55	0.0	8	0.0	0.0	1.0		0			
+1	study	cutoff-default	scm	balanced_accuracy	higher	0	55	55	0	0	0	0	55	0.0	8	0.0	0.0	1.0		0			
+1	study	cutoff-default	scm	recall	higher	0	55	55	0	0	0	0	55	0.0	8	0.0	0.0	1.0		0			
+1	study	cutoff-default	scm	specificity	higher	0	55	55	0	0	0	0	55	0.0	8	0.0	0.0	1.0		0			
+1	study	cutoff-default	scm	vme	lower	0	55	55	0	0	0	0	55	0.0	8	0.0	0.0	1.0		0			
+1	study	cutoff-default	scm	me	lower	0	55	55	0	0	0	0	55	0.0	8	0.0	0.0	1.0		0			
+0	study	cutoff-default	scm	log_loss	lower	0	55	55	0	0	0	0	55	0.0	8	0.0	0.0	1.0		0			equal by construction: the cutoff arm moves no score
+1	study	cutoff-default	cart	balanced_accuracy	higher	0	55	55	0	0	1	11	43	0.0	8	0.0	0.0	0.999755859375		0			
+1	study	cutoff-default	cart	recall	higher	0	55	55	0	0	7	6	42	0.0	8	0.0	0.001186239621	0.5		0			
+1	study	cutoff-default	cart	specificity	higher	0	55	55	0	0	7	11	37	0.0	8	0.0	0.0	0.881057739258		0			
+1	study	cutoff-default	cart	vme	lower	0	55	55	0	0	7	6	42	0.0	8	-0.001186239621	0.0	0.5		0			
+1	study	cutoff-default	cart	me	lower	0	55	55	0	0	7	11	37	0.0	8	0.0	0.0	0.881057739258		0			
+0	study	cutoff-default	cart	log_loss	lower	0	55	55	0	0	0	0	55	0.0	8	0.0	0.0	1.0		0			equal by construction: the cutoff arm moves no score
+1	study	cutoff-default	rf	balanced_accuracy	higher	0	55	55	0	0	20	6	29	0.006784049013	8	-0.003127355121	0.010769852495	0.004677653313		0			
+1	study	cutoff-default	rf	recall	higher	0	55	55	0	0	29	9	17	0.022617124394	8	0.004761904762	0.051724137931	0.000829026263		0			
+1	study	cutoff-default	rf	specificity	higher	0	55	55	0	0	16	22	17	-0.008163265306	8	-0.049518569463	0.006869502511	0.872062460228		0			
+1	study	cutoff-default	rf	vme	lower	0	55	55	0	0	29	9	17	-0.022617124394	8	-0.051724137931	-0.004761904762	0.000829026263		0			
+1	study	cutoff-default	rf	me	lower	0	55	55	0	0	16	22	17	0.008163265306	8	-0.006869502511	0.049518569463	0.872062460228		0			
+0	study	cutoff-default	rf	log_loss	lower	0	55	55	0	0	0	0	55	0.0	8	0.0	0.0	1.0		0			equal by construction: the cutoff arm moves no score
+1	study	cutoff-default	gbt	balanced_accuracy	higher	0	55	55	0	0	5	14	36	-0.00698757764	8	-0.012625279977	-0.004477907796	0.990394592285		0			
+1	study	cutoff-default	gbt	recall	higher	0	55	55	0	0	25	9	21	0.017241379311	8	0.0	0.020408163266	0.004520592745		0			
+1	study	cutoff-default	gbt	specificity	higher	0	55	55	0	0	11	29	15	-0.024096385542	8	-0.039603960396	-0.016666666666	0.998889283113		0			
+1	study	cutoff-default	gbt	vme	lower	0	55	55	0	0	25	9	21	-0.017241379311	8	-0.020408163266	0.0	0.004520592745		0			
+1	study	cutoff-default	gbt	me	lower	0	55	55	0	0	11	29	15	0.024096385542	8	0.016666666666	0.039603960396	0.998889283113		0			
+0	study	cutoff-default	gbt	log_loss	lower	0	55	55	0	0	0	0	55	0.0	8	0.0	0.0	1.0		0			equal by construction: the cutoff arm moves no score
+1	study	cutoff-default	lasso	balanced_accuracy	higher	0	55	55	0	0	8	12	35	-0.001783227777	8	-0.004091731149	0.001329123403	0.868412017822		0			
+1	study	cutoff-default	lasso	recall	higher	0	55	55	0	0	25	12	18	0.013008130082	8	0.0	0.02875399361	0.02351551372		0			
+1	study	cutoff-default	lasso	specificity	higher	0	55	55	0	0	10	32	13	-0.031055900621	8	-0.03863115693	0.0	0.999864230383		0			
+1	study	cutoff-default	lasso	vme	lower	0	55	55	0	0	25	12	18	-0.013008130082	8	-0.027088036118	0.0	0.02351551372		0			
+1	study	cutoff-default	lasso	me	lower	0	55	55	0	0	10	32	13	0.031055900621	8	0.0	0.03863115693	0.999864230383		0			
+0	study	cutoff-default	lasso	log_loss	lower	0	55	55	0	0	0	0	55	0.0	8	0.0	0.0	1.0		0			equal by construction: the cutoff arm moves no score
