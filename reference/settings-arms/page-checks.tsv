@@ -1,0 +1,60 @@
+source	check	passed	made
+score.py checks.tsv	a lineage result names the default's pick	328	328
+score.py checks.tsv	a study result names no default of its own	55	55
+score.py checks.tsv	a twin seed is the twin's and no draw's	165	165
+score.py checks.tsv	an unavailable split has no fold	2	2
+score.py checks.tsv	cart: the outer calls give the split's balanced accuracy	383	383
+score.py checks.tsv	dataset, scheme, seed and inner folds	385	385
+score.py checks.tsv	each fold's outer calls are its test genomes'	383	383
+score.py checks.tsv	fold <k> cart: each arm's calls are the fold's test genomes'	1095	1095
+score.py checks.tsv	fold <k> cart: the cutoff is a grid point or 0.5	1095	1095
+score.py checks.tsv	fold <k> cart: the default's calls are the default's own fit	1095	1095
+score.py checks.tsv	fold <k> cart: the pick follows the default-anchored rule	1095	1095
+score.py checks.tsv	fold <k> cart: the plain best is the pick's result where it is the pick, the default's where it is trial 0 or none	1095	1095
+score.py checks.tsv	fold <k> gbt: each arm's calls are the fold's test genomes'	1095	1095
+score.py checks.tsv	fold <k> gbt: the cutoff is a grid point or 0.5	1095	1095
+score.py checks.tsv	fold <k> gbt: the default's calls are the default's own fit	1095	1095
+score.py checks.tsv	fold <k> gbt: the pick follows the default-anchored rule	1095	1095
+score.py checks.tsv	fold <k> gbt: the plain best is the pick's result where it is the pick, the default's where it is trial 0 or none	1095	1095
+score.py checks.tsv	fold <k> lasso: each arm's calls are the fold's test genomes'	1095	1095
+score.py checks.tsv	fold <k> lasso: the cutoff is a grid point or 0.5	1095	1095
+score.py checks.tsv	fold <k> lasso: the default's calls are the default's own fit	1095	1095
+score.py checks.tsv	fold <k> lasso: the pick follows the default-anchored rule	1095	1095
+score.py checks.tsv	fold <k> lasso: the plain best is the pick's result where it is the pick, the default's where it is trial 0 or none	1095	1095
+score.py checks.tsv	fold <k> rf: each arm's calls are the fold's test genomes'	1095	1095
+score.py checks.tsv	fold <k> rf: the cutoff is a grid point or 0.5	1095	1095
+score.py checks.tsv	fold <k> rf: the default's calls are the default's own fit	1095	1095
+score.py checks.tsv	fold <k> rf: the pick follows the default-anchored rule	1095	1095
+score.py checks.tsv	fold <k> rf: the plain best is the pick's result where it is the pick, the default's where it is trial 0 or none	1095	1095
+score.py checks.tsv	fold <k> scm: each arm's calls are the fold's test genomes'	1095	1095
+score.py checks.tsv	fold <k> scm: the cutoff arm's calls are the default's	1095	1095
+score.py checks.tsv	fold <k> scm: the cutoff is a grid point or 0.5	1095	1095
+score.py checks.tsv	fold <k> scm: the default's calls are the default's own fit	1095	1095
+score.py checks.tsv	fold <k> scm: the pick follows the default-anchored rule	1095	1095
+score.py checks.tsv	fold <k> scm: the plain best is the pick's result where it is the pick, the default's where it is trial 0 or none	1095	1095
+score.py checks.tsv	fold <k>: format, revision, dataset, split, seed and fold	1095	1095
+score.py checks.tsv	fold <k>: no inner fit	1915	1915
+score.py checks.tsv	fold <k>: sampler seed, gamma, grid and 30 random trials	1095	1095
+score.py checks.tsv	fold <k>: the five learners in order	1095	1095
+score.py checks.tsv	fold <k>: the training and test genomes by class are the default's fold	1095	1095
+score.py checks.tsv	fold tests sum to the tested genomes	383	383
+score.py checks.tsv	folds in order	383	383
+score.py checks.tsv	format and revision	385	385
+score.py checks.tsv	gbt: the outer calls give the split's balanced accuracy	383	383
+score.py checks.tsv	lasso: the outer calls give the split's balanced accuracy	383	383
+score.py checks.tsv	release report	1045	1045
+score.py checks.tsv	rf: the outer calls give the split's balanced accuracy	383	383
+score.py checks.tsv	scm: the outer calls give the split's balanced accuracy	383	383
+score.py checks.tsv	seed 42: each learner's lineage figure is the release report's	55	55
+score.py checks.tsv	seed 42: the default is held to the release report	55	55
+score.py checks.tsv	seed 42: the default's learner is the one the release serves	55	55
+score.py checks.tsv	seed 42: the default's random-split figure is the release report's	55	55
+score.py checks.tsv	the default and the twin write no inputs file	385	385
+score.py checks.tsv	the default's learner is the later of its tied set, as the release breaks a tie	328	328
+score.py checks.tsv	the default's result at the same dataset, split and seed is there and available	219	219
+score.py checks.tsv	the default's result is unavailable and no choices file stands beside it	1	1
+score.py checks.tsv	the five learners in order	385	385
+score.py checks.tsv	tie rule	383	383
+page_tables.py	the cutoff arm's log loss equals the default's, dataset by dataset	545	545
+page_tables.py	scm's cutoff arm equals the default in datasets.tsv	109	109
+page_tables.py	scm's cutoff is 0.5 and its calls the default's in each choices file	1095	1095

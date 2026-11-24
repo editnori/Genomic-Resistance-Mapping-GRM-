@@ -236,6 +236,20 @@ def main(argv):
             checks.append((e["file"], "an arm runs at a draw's seed or the study's, never the twin's", False, ""))
             continue
         base = docs.get(base_of.get((e["dataset"], e["split"], e["seed"])))
+        if base is not None and base.get("unavailable_reason") is not None:
+            # The default's result is there and unavailable: each arm's row is not scored, for the default's
+            # reason, as C3's scorer scores the default's own row. It is no failed check and no missing draw; no
+            # choices file is owed, and a choices file found beside it fails.
+            if (e["file"], e["split"]) not in checked:
+                checked.add((e["file"], e["split"]))
+                pre, post = Path(e["file"]).name.split("<k>")
+                held = (picks / e["file"]).parent
+                found = sorted(p.name for p in held.iterdir() if p.name.startswith(pre) and p.name.endswith(post)) \
+                    if held.is_dir() else []
+                checks.append((e["file"], "the default's result is unavailable and no choices file stands beside it",
+                               not found, base["unavailable_reason"]))
+            arm_docs[e["file"] + "|" + e["arm"]] = {"unavailable_reason": base["unavailable_reason"], "folds": []}
+            continue
         # One choices file per outer fold of the default's result.
         n = len(base["folds"]) if base is not None and base.get("folds") else FOLDS
         files = [load(picks / fold_file(e, k)) if (picks / fold_file(e, k)).is_file() else None for k in range(n)]

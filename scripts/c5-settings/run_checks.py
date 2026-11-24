@@ -1,0 +1,616 @@
+"""The checks of plan block C5's run copies, made before any score is read (docs/settings-arms.md).
+
+  python3 -I run_checks.py check <copies dir> <lists.tsv> <release dir> [<checks.txt>]
+      [--failed-at-score <slug> --lead-sums <sha256>] [--tables <rescored dir>]
+  python3 -I run_checks.py gather <copies dir> <lists.tsv> <checks.txt> <reading dir> [--tables <rescored dir>]
+
+<copies dir> holds one folder per species, named by its slug, as
+run_species.sh left its OUT: results/, check/, score/, logs/, binary.txt,
+lists.txt, expect.tsv, SHA256SUMS and DONE (or FAILED). Any other file
+beside the folders, such as an archive of them, is not read. <lists.tsv>
+is scripts/c5-settings/lists.tsv: the first run is its rows with first_run
+1, none in M, and each has a study run. <release dir> is the rebuilt
+release the run read; its species/<slug>.json lists the genome ids the
+count looks for.
+
+`check` prints one line per check, PASS or FAIL with its counts, a SET
+ASIDE line for each FAILED file older than its species' DONE, and last
+`CHECKS <passed> of <made>`; with <checks.txt> it writes the same lines
+there. It exits 1 unless every check passes. It reads no score: of a
+default result it reads the number of its outer folds alone, to know the
+choices files the run owes, and of score/draws.tsv the names and the
+constant column alone, to count the constant-model rows against the
+refusal records. It never opens score/score.log, which stays out of the
+record.
+
+The genome id check reads every file SHA256SUMS covers, DONE, FAILED,
+SHA256SUMS, SHA256SUMS.lead and every file under logs/. A token of the id
+pattern that is a time is counted apart, by file kind and key or label, and
+does not fail it: the whole value of seconds_inner or seconds_outer in a
+results/picks/choices/*.choices.json file, or the value on a line of a
+logs/drive/*.time file labelled User time (seconds), System time (seconds) or
+Elapsed (wall clock) time. Every other hit fails.
+
+--failed-at-score <slug> is the named allowance for one species whose run
+stopped at its score step. It passes only when all four hold, each printed
+with its counts: FAILED is that species' "at score" line in the run's time
+form, with no DONE and no SHA256SUMS; logs/run.log names as many drives ended
+ok as it had to run, and none ended otherwise; every line of SHA256SUMS.lead
+holds, its own sha256 is the one --lead-sums gives, and it names no
+score/score.log, every file of the copy wherever it lies is named in it
+(other than score/score.log, back.tar and the list itself), and every name in
+it is a file of the copy; binary.txt names the run's commit and code sha256,
+those of the other species. SHA256SUMS.lead then stands for that species' SHA256SUMS.
+Without the flag, a FAILED with no newer DONE fails as before.
+
+--tables <rescored dir> reads each species' draws.tsv from <rescored
+dir>/<slug>/, the tables rescore.py made, in place of the copy's
+score/draws.tsv, once <rescored dir>/rescore.txt ends SAME <n> of <n> with
+no FAIL line and n is 3 tables for each species that ended DONE.
+
+`gather` copies, for each species, score.py's checks.tsv, draws.tsv and
+datasets.tsv, the run's binary.txt and every choices file into
+<reading dir>/score/<slug>/, the layout page_tables.py reads, once
+<checks.txt> says that every check passed, and writes folds.tsv there: each
+default draw's and study run's outer fold count, the one figure of a default
+result it reads, so that gate 12 holds each scored draw's choices files to
+it. It copies nothing else: no score.log, no other result, no log. With
+--tables it copies the three tables from <rescored dir>/<slug>/, once
+<rescored dir>/rescore.txt says that every species was scored and every held
+table came out the same as its SHA256SUMS line, 3 tables for each species
+that ended DONE.
+"""
+
+import csv
+import hashlib
+import importlib.util
+import json
+import os
+import re
+import sys
+from pathlib import Path, PurePosixPath
+
+HERE = Path(__file__).resolve().parent
+
+
+def _load(name, path):
+    spec = importlib.util.spec_from_file_location(name, path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+expect = _load("c5_settings_expect_for_checks", HERE / "expect.py")
+
+CHOICE_ARMS = tuple(expect.ARMS)
+SEEDS, TWIN_SEEDS = (42, 43, 44), (45, 46, 47)
+LEARNERS = 5
+# A genome id as BV-BRC writes it, after any character but a digit or a dot: genome_<id> and id<id> count too.
+TOKEN = re.compile(r"(?<![\d.])\d+\.\d+(?!\d)")
+NAMED = ("binary.txt", "expect.tsv", "lists.txt", "logs/timing.tsv", "logs/drive-timing.tsv")
+SCORE_LOG = "score/score.log"
+STAMP = re.compile(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ")
+REFUSED_WHY = "constant model: refused for no candidate"
+DONE_KEYS = ["DONE", "species", "time", "binary", "grm", "code", "code_sha256", "results", "n", "choices", "nc",
+             "SHA256SUMS", "sums"]
+# What gather copies from a species' copy into the reading, and where.
+GATHER = (("score/checks.tsv", "checks.tsv"), ("score/draws.tsv", "draws.tsv"), ("score/datasets.tsv", "datasets.tsv"),
+          ("binary.txt", "binary.txt"))
+CHOICES = "results/picks/choices"
+# The outer fold count of each default draw and study run, which gather writes for gate 12 of page_tables.py.
+FOLDS_FILE = "folds.tsv"
+FOLDS_COLUMNS = ["dataset", "scheme", "seed", "folds"]
+TABLES = ("checks.tsv", "draws.tsv", "datasets.tsv")
+# The allowance for a species whose run stopped at its score step.
+LEAD_SUMS = "SHA256SUMS.lead"
+BACK_TAR = "back.tar"
+AT_SCORE = re.compile(r"FAILED (\S+) at score (\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ)")
+DRIVES_LINE = re.compile(r"\S+ drives: \d+ outer folds, (\d+) to run, ")
+DRIVE_OK = re.compile(r"\S+ drive (\S+) ok")
+DRIVE_NOT_OK = re.compile(r"\S+ drive \S+ FAILED, rc ")
+# Times that equal an id as text: the keys of a choices file and the labels of a drive's .time file.
+TIME_KEYS = ("seconds_inner", "seconds_outer")
+TIME_LABELS = ("User time (seconds)", "System time (seconds)", "Elapsed (wall clock) time")
+
+
+def load(path):
+    with open(path, newline="", encoding="utf-8") as handle:
+        return list(csv.DictReader(handle, delimiter="\t"))
+
+
+def sha256(path):
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+def plain_name(name):
+    """A list's file name as the plain path inside the copy it names (score/./score.log and score//score.log are
+    score/score.log), or None when it is absolute or climbs out of the copy: such a name is never opened."""
+    path = PurePosixPath(name)
+    if not name or path.is_absolute() or ".." in path.parts:
+        return None
+    return path.as_posix()
+
+
+def first_run(lrows):
+    return [r for r in lrows if r["first_run"] == "1" and r["in_M"] == "0"]
+
+
+def covered(out):
+    """The files run_species.sh's SHA256SUMS covers: every .json, .tsv and .txt under results/, check/ and score/,
+    and the five it names."""
+    names = [p.relative_to(out).as_posix() for top in ("results", "check", "score") if (out / top).is_dir()
+             for p in (out / top).rglob("*") if p.is_file() and p.suffix in (".json", ".tsv", ".txt")]
+    return sorted(set(names) | set(NAMED))
+
+
+def fields(path):
+    """binary.txt's commit, grm and code lines."""
+    out = {}
+    for line in Path(path).read_text(encoding="utf-8").splitlines():
+        key, _, value = line.partition(" ")
+        if key in ("commit", "grm", "code"):
+            out.setdefault(key, []).append(value.strip())
+    return out
+
+
+def ended(slug, out):
+    """(DONE's fields or None, FAILED's time or None, a FAILED set aside or None, why not ended or None)."""
+    done = failed = None
+    if (out / "DONE").is_file():
+        words = (out / "DONE").read_text(encoding="utf-8").split()
+        done = dict(zip(DONE_KEYS, words)) if len(words) == len(DONE_KEYS) else {"bad": " ".join(words)}
+    if (out / "FAILED").is_file():
+        words = (out / "FAILED").read_text(encoding="utf-8").split()
+        failed = words[-1] if words else ""
+    if done is None:
+        return None, failed, None, "no DONE" + (f"; FAILED at {failed}" if failed is not None else "")
+    if "bad" in done:
+        return None, failed, None, f"DONE does not read as run_species.sh writes it: {done['bad']}"
+    if failed is not None:
+        # Both times as run_species.sh writes them (date -u +%FT%TZ); a FAILED with no such time is never set aside.
+        if not (STAMP.fullmatch(failed) and STAMP.fullmatch(done["time"])):
+            return None, failed, None, f"FAILED names no time to set beside DONE's: '{failed}'"
+        if failed < done["time"]:
+            return done, failed, f"{slug}/FAILED at {failed}, older than its DONE at {done['time']}", None
+        return None, failed, None, f"FAILED at {failed} is not older than DONE at {done['time']}"
+    return done, None, None, None
+
+
+def expect_rows(lrows, slug):
+    """expect.py's rows for one species: every first-run dataset is in S and has a study run."""
+    run = [r for r in first_run(lrows) if r["species_slug"] == slug]
+    datasets = [r["dataset"] for r in run]
+    return [[str(x) for x in row] for row in expect.rows(slug, datasets, datasets, list(SEEDS), list(TWIN_SEEDS))]
+
+
+def fold_count(path):
+    """The number of outer folds of a default result: the one figure of it this script reads."""
+    with open(path, encoding="utf-8") as handle:
+        return len(json.load(handle).get("folds") or [])
+
+
+def owed(picks, want):
+    """The result files the run owes: each default and twin result, and for each choice arm's row one choices file
+    per outer fold of the default's result at its dataset, split and seed (five where that result is missing)."""
+    cols = list(expect.COLUMNS)
+    rows = [dict(zip(cols, r)) for r in want]
+    base = {(e["dataset"], e["split"], e["seed"]): e["file"] for e in rows if e["arm"] == "default"}
+    needed = set()
+    for e in rows:
+        if e["arm"] not in CHOICE_ARMS:
+            needed.add(e["file"])
+            continue
+        b = picks / base[(e["dataset"], e["split"], e["seed"])]
+        n = fold_count(b) if b.is_file() else expect.FOLDS
+        needed |= {e["file"].replace("<k>", str(k)) for k in range(n)}
+    return needed
+
+
+def check(copies, lists_path, release, failed_at=None, lead_sha=None, tables=None):
+    """[(passed, name, detail)] and [set-aside lines] over every species' copy. failed_at names the one species
+    allowed to have stopped at its score step (with lead_sha, its SHA256SUMS.lead's sha256); tables is the
+    rescored tables' folder, read for draws.tsv in place of each copy's score/."""
+    copies, release = Path(copies), Path(release)
+    lrows = load(lists_path)
+    run = first_run(lrows)
+    species = sorted({r["species_slug"] for r in run})
+    lines, aside = [], []
+
+    def ok(name, passed, detail):
+        lines.append((bool(passed), name, detail))
+
+    found = sorted(p.name for p in copies.iterdir() if p.is_dir())
+    ok("the first run's species, each once", found == species,
+       f"{len(found)} folders for {len(species)} species; missing {sorted(set(species) - set(found))}, more "
+       f"{sorted(set(found) - set(species))}")
+    present = [s for s in species if s in found]
+    allowed = failed_at if failed_at in present else None
+    if failed_at is not None and allowed is None:
+        ok("the allowance names a species of the first run that has a folder", False, failed_at)
+
+    ends, bad_end = {}, []
+    for slug in present:
+        if slug == allowed:
+            continue
+        done, failed, set_aside, why = ended(slug, copies / slug)
+        if why:
+            bad_end.append(f"{slug}: {why}")
+        else:
+            ends[slug] = done
+        if set_aside:
+            aside.append(set_aside)
+    ok("each species ended DONE, any FAILED older than its DONE",
+       not bad_end and len(ends) == len(species) - (allowed is not None),
+       f"{len(ends)} of {len(species)}" + (f"; {allowed} stopped at its score step, under the allowance"
+                                          if allowed else "") + ("; " + "; ".join(bad_end) if bad_end else ""))
+
+    bad_sums, listed_n = [], 0
+    for slug in present:
+        if slug == allowed:
+            continue
+        out = copies / slug
+        if not (out / "SHA256SUMS").is_file():
+            bad_sums.append(f"{slug}: no SHA256SUMS")
+            continue
+        listed = {}
+        for line in (out / "SHA256SUMS").read_text(encoding="utf-8").splitlines():
+            sha, _, name = line.partition("  ")
+            listed[name] = sha
+        listed_n += len(listed)
+        if sorted(listed) != covered(out):
+            bad_sums.append(f"{slug}: SHA256SUMS lists {len(listed)} files, the run's rule {len(covered(out))}")
+        # score/score.log is never opened, not even to hash it when a SHA256SUMS names it (the line above fails then).
+        wrong = [n for n, sha in listed.items() if plain_name(n) != SCORE_LOG
+                 and (plain_name(n) is None or not (out / n).is_file() or sha256(out / n) != sha)]
+        if wrong:
+            bad_sums.append(f"{slug}: {len(wrong)} files differ from SHA256SUMS")
+    ok("each species' SHA256SUMS holds every file of the run's rule, each at its sha256", not bad_sums,
+       f"{listed_n} files" + ("; " + "; ".join(bad_sums) if bad_sums else ""))
+    ok("score/score.log stays out of SHA256SUMS", all(
+        SCORE_LOG not in (copies / s / "SHA256SUMS").read_text(encoding="utf-8") for s in present
+        if (copies / s / "SHA256SUMS").is_file()), "")
+
+    commits, codes, grms, bad_done = set(), set(), set(), []
+    for slug in present:
+        out = copies / slug
+        if not (out / "binary.txt").is_file():
+            bad_done.append(f"{slug}: no binary.txt")
+            continue
+        f = fields(out / "binary.txt")
+        if any(len(f.get(k, [])) != 1 for k in ("commit", "grm", "code")):
+            bad_done.append(f"{slug}: binary.txt does not name one commit, binary and code")
+            continue
+        commits.add(f["commit"][0])
+        grms.add(f["grm"][0])
+        codes.add(f["code"][0])
+        done = ends.get(slug)
+        if done is None:
+            continue
+        picks = out / "results" / "picks"
+        n_picks = len(list(picks.rglob("*.pick.json")))
+        n_choices = len(list((out / CHOICES).rglob("*.choices.json")))
+        if (done["species"], done["grm"], done["code_sha256"], done["n"], done["nc"]) \
+                != (slug, f["grm"][0], f["code"][0], str(n_picks), str(n_choices)) \
+                or not (out / "SHA256SUMS").is_file() or done["sums"] != sha256(out / "SHA256SUMS"):
+            bad_done.append(f"{slug}: DONE does not agree with binary.txt, the results, the choices files or "
+                            "SHA256SUMS")
+    ok("each DONE names its species, its binary.txt's binary and code, its results, its choices files and its "
+       "SHA256SUMS", not bad_done, "; ".join(bad_done))
+    ok("every species ran one commit and one code sha256", len(commits) == 1 and len(codes) == 1,
+       f"{len(commits)} commits, {len(codes)} code sha256, {len(grms)} binaries")
+    if allowed is not None:
+        others = set()
+        for slug in present:
+            f = fields(copies / slug / "binary.txt") if (copies / slug / "binary.txt").is_file() else {}
+            if slug != allowed and all(len(f.get(k, [])) == 1 for k in ("commit", "code")):
+                others.add((f["commit"][0], f["code"][0]))
+        for line in allowance(allowed, copies / allowed, lead_sha, others):
+            ok(line[1], line[0], line[2])
+
+    bad_lists = []
+    for slug in present:
+        out = copies / slug
+        want_d = sorted(r["dataset"] for r in run if r["species_slug"] == slug)
+        got = {}
+        if (out / "lists.txt").is_file():
+            for line in (out / "lists.txt").read_text(encoding="utf-8").splitlines():
+                key, _, value = line.partition("\t")
+                got[key] = value
+        if (set(got) != {"species", "datasets", "seeds", "twin"}
+                or (got["species"], sorted(x for x in got["datasets"].split(",") if x), got["seeds"], got["twin"])
+                != (slug, want_d, ",".join(map(str, SEEDS)), ",".join(map(str, TWIN_SEEDS)))):
+            bad_lists.append(slug)
+    ok("each lists.txt names its species' first-run datasets, seeds 42, 43 and 44 and twin 45, 46 and 47",
+       not bad_lists, ", ".join(bad_lists))
+
+    bad_expect, bad_results, rows_n, files_n, refusals_n, constant_n, bad_constant = [], [], 0, 0, 0, 0, []
+    # A rescored table is read only once rescore.py has held every finished species' three tables to its
+    # SHA256SUMS lines and says so: rescore.txt ends SAME <n> of <n>, with no FAIL line.
+    held = tables is None or rescored(tables, finished(copies, present))
+    if not held:
+        ok("rescore.txt says every species was scored and every held table is the same, before a rescored table is "
+           "read", False, f"{Path(tables) / 'rescore.txt'}, owing {len(TABLES) * finished(copies, present)} tables "
+           f"held for {finished(copies, present)} species that ended DONE; no rescored draws.tsv read")
+    for slug in present:
+        out = copies / slug
+        want = expect_rows(lrows, slug)
+        rows_n += len(want)
+        got = []
+        if (out / "expect.tsv").is_file():
+            with open(out / "expect.tsv", newline="", encoding="utf-8") as handle:
+                got = [r for r in csv.reader(handle, delimiter="\t")]
+        if not got or got[0] != list(expect.COLUMNS) or sorted(got[1:]) != sorted(want):
+            bad_expect.append(slug)
+        picks = out / "results" / "picks"
+        needed = owed(picks, want)
+        have = {p.relative_to(picks).as_posix() for p in picks.rglob("*") if p.is_file()} if picks.is_dir() else set()
+        refused = {n for n in have if n.endswith(".refused.json")}
+        files_n += len(needed)
+        if have - refused != needed:
+            bad_results.append(f"{slug}: {len(needed - have)} missing, {len(have - refused - needed)} more")
+        refusals_n += len(refused)
+        draws = Path(tables) / slug / "draws.tsv" if tables is not None else out / "score" / "draws.tsv"
+        if held and draws.is_file():
+            n_constant = sum(1 for r in load(draws)
+                             if r["constant"] == "1" or r["why"] == REFUSED_WHY)
+            constant_n += n_constant
+            if n_constant != LEARNERS * len(refused):
+                bad_constant.append(slug)
+        else:
+            bad_constant.append(slug)
+    ok("each expect.tsv is expect.py's list from lists.tsv", not bad_expect,
+       f"{rows_n} results" + (f"; differs in {', '.join(bad_expect)}" if bad_expect else ""))
+    ok("each species holds every default and twin result and one choices file per outer fold of each draw and "
+       "study run of the default, and no other", not bad_results,
+       f"{files_n} files" + ("; " + "; ".join(bad_results) if bad_results else ""))
+    ok("the refusal records and the constant-model rows, counted: five constant-model rows per refusal record",
+       not bad_constant, f"{refusals_n} refusal records, {constant_n} constant-model rows"
+       + (f"; differs in {', '.join(bad_constant)}" if bad_constant else ""))
+
+    ids, hits, scanned, times = set(), 0, 0, {}
+    for slug in present:
+        path = release / "species" / f"{slug}.json"
+        if path.is_file():
+            with open(path, encoding="utf-8") as handle:
+                ids |= {g["id"] for g in json.load(handle)["genomes"]}
+    missing_ids = [s for s in present if not (release / "species" / f"{s}.json").is_file()]
+    for slug in present:
+        out = copies / slug
+        names = set(covered(out)) | {"DONE", "FAILED", "SHA256SUMS", LEAD_SUMS}
+        if (out / "logs").is_dir():
+            names |= {p.relative_to(out).as_posix() for p in (out / "logs").rglob("*") if p.is_file()}
+        for name in sorted(names):
+            if name == SCORE_LOG or not (out / name).is_file():
+                continue
+            scanned += 1
+            text = (out / name).read_text(encoding="utf-8", errors="replace")
+            for m in TOKEN.finditer(text):
+                if m.group(0) not in ids:
+                    continue
+                kind = time_kind(name, text, m)
+                if kind is None:
+                    hits += 1
+                else:
+                    times[kind] = times.get(kind, 0) + 1
+    ok("no genome id in any file that will be read or published", hits == 0 and not missing_ids and ids,
+       f"{hits} genome ids in {scanned} files, against {len(ids)} ids; times equal to an id as text, counted apart: "
+       + (", ".join(f"{k} {n}" for k, n in sorted(times.items())) if times else "none")
+       + (f"; no genome list for {', '.join(missing_ids)}" if missing_ids else ""))
+    return lines, aside
+
+
+def in_folder(name, folder):
+    """True when the file stands in that folder itself, as the ruling's results/picks/choices/*.choices.json and
+    logs/drive/*.time name it, and not in a folder under it."""
+    return name.startswith(folder + "/") and "/" not in name[len(folder) + 1:]
+
+
+def time_kind(name, text, m):
+    """The file kind and key or label of a token that is a time, or None: the whole value of seconds_inner or
+    seconds_outer in a choices file, or the value on a drive .time line of one of the three labels."""
+    if in_folder(name, CHOICES) and name.endswith(".choices.json"):
+        key = re.search(r'"(' + "|".join(TIME_KEYS) + r')"\s*:\s*$', text[max(0, m.start() - 40):m.start()])
+        after = text[m.end():m.end() + 1]
+        if key and (after == "" or after in ",}] \t\r\n"):
+            return f"choices {key.group(1)}"
+        return None
+    if in_folder(name, "logs/drive") and name.endswith(".time"):
+        start = text.rfind("\n", 0, m.start()) + 1
+        end = text.find("\n", m.end())
+        line = text[start:end if end >= 0 else len(text)]
+        label = next((x for x in TIME_LABELS if line.strip().startswith(x + " ") or line.strip().startswith(x + ":")),
+                     None)
+        value = line.rfind(": ")
+        if label and value >= 0 and m.start() - start >= value + 2:
+            return f"time {label}"
+    return None
+
+
+def copy_files(out):
+    """Every file of a species' copy, wherever it lies, other than score/score.log, back.tar and SHA256SUMS.lead. The
+    score.log name is set aside as it is walked past: it is never opened, hashed or stat'ed."""
+    found = set()
+    for top, _, names in os.walk(out):
+        for n in names:
+            name = (Path(top) / n).relative_to(out).as_posix()
+            if name not in (SCORE_LOG, BACK_TAR, LEAD_SUMS):
+                found.add(name)
+    return found
+
+
+def allowance(slug, out, lead_sha, others):
+    """[(passed, name, detail)]: the four conditions under which a species that stopped at its score step stands,
+    each with its counts, the third in three lines (its list holds, names every file of the copy, and names no
+    file the copy lacks). others is the set of (commit, code) the other species' binary.txt name."""
+    lines = []
+    text = (out / "FAILED").read_text(encoding="utf-8").strip() if (out / "FAILED").is_file() else None
+    at = AT_SCORE.fullmatch(text or "")
+    lines.append((bool(at) and at.group(1) == slug and not (out / "DONE").exists()
+                  and not (out / "SHA256SUMS").exists(),
+                  f"{slug}: FAILED is its at score line in the run's time form, with no DONE and no SHA256SUMS",
+                  f"FAILED {'at score ' + at.group(2) if at and at.group(1) == slug else repr(text)}; "
+                  f"DONE {int((out / 'DONE').exists())}, SHA256SUMS {int((out / 'SHA256SUMS').exists())}"))
+    to_run, runs, done_ok, other = 0, 0, [], 0
+    log = out / "logs" / "run.log"
+    for line in (log.read_text(encoding="utf-8", errors="replace").splitlines() if log.is_file() else []):
+        if (d := DRIVES_LINE.match(line)):
+            to_run += int(d.group(1))
+            runs += 1
+        elif (d := DRIVE_OK.fullmatch(line)):
+            done_ok.append(d.group(1))
+        elif DRIVE_NOT_OK.match(line):
+            other += 1
+    lines.append((runs > 0 and to_run == len(done_ok) == len(set(done_ok)) and other == 0,
+                  f"{slug}: logs/run.log names as many drives ended ok as it had to run, and none ended otherwise",
+                  f"{to_run} to run over {runs} drives lines, {len(done_ok)} ended ok ({len(set(done_ok))} named once), "
+                  f"{other} ended otherwise"))
+    lead = out / LEAD_SUMS
+    listed, wrong, named_log, names = 0, 0, 0, set()
+    if lead.is_file():
+        for line in lead.read_text(encoding="utf-8").splitlines():
+            sha, _, name = line.partition(" ")
+            name = plain_name(name.lstrip(" *"))
+            listed += 1
+            names.add(name)
+            if name == SCORE_LOG:
+                # Never opened, not even to hash it.
+                named_log += 1
+                continue
+            if name is None or not (out / name).is_file() or sha256(out / name) != sha:
+                wrong += 1
+    own = sha256(lead) if lead.is_file() else None
+    lines.append((lead.is_file() and listed > 0 and wrong == 0 and named_log == 0 and own == lead_sha,
+                  f"{slug}: every line of {LEAD_SUMS} holds, its own sha256 is the one given, and it names no "
+                  f"{SCORE_LOG}",
+                  f"{listed} lines, {wrong} differ or absent, {SCORE_LOG} named {named_log}; its sha256 "
+                  f"{'is' if own == lead_sha else 'is not'} the one given"))
+    # The lead's list names every file of the copy, wherever it lies, and each name is a file of the copy (ruling 9).
+    # Counts alone, by the folder a file lies in: a file name is never printed.
+    files = copy_files(out)
+    not_named = sorted(files - names)
+    no_file = [n for n in names - files if n != SCORE_LOG]
+    where = {}
+    for n in not_named:
+        top = n.split("/")[0] + "/" if "/" in n else "the top"
+        where[top] = where.get(top, 0) + 1
+    lines.append((lead.is_file() and not not_named,
+                  f"{slug}: every file of its copy is named in {LEAD_SUMS}, other than {SCORE_LOG}, {BACK_TAR} and "
+                  "the list itself",
+                  f"{len(files)} files, {len(not_named)} not named"
+                  + "".join(f", {k} under {w}" for w, k in sorted(where.items()))))
+    lines.append((lead.is_file() and not no_file,
+                  f"{slug}: every name in {LEAD_SUMS} is a file of its copy",
+                  f"{len(names - {SCORE_LOG})} names other than {SCORE_LOG}, {len(no_file)} with no file"))
+    f = fields(out / "binary.txt") if (out / "binary.txt").is_file() else {}
+    mine = (f.get("commit", [None])[0], f.get("code", [None])[0]) \
+        if all(len(f.get(k, [])) == 1 for k in ("commit", "code")) else None
+    lines.append((mine is not None and others == {mine},
+                  f"{slug}: binary.txt names the run's commit and code sha256",
+                  f"commit {mine[0] if mine else '?'}, code {mine[1] if mine else '?'}; the other species name "
+                  f"{len({c for c, _ in others})} commits and {len({k for _, k in others})} code sha256"))
+    return lines
+
+
+def report(lines, aside):
+    out = [f"{'PASS' if p else 'FAIL'} {name}" + (f": {detail}" if detail else "") for p, name, detail in lines]
+    out += [f"SET ASIDE {a}" for a in aside]
+    out.append(f"CHECKS {sum(p for p, _, _ in lines)} of {len(lines)}")
+    return out
+
+
+def all_passed(checks_path):
+    lines = Path(checks_path).read_text(encoding="utf-8").splitlines()
+    tail = re.fullmatch(r"CHECKS (\d+) of (\d+)", lines[-1]) if lines else None
+    return bool(tail) and tail.group(1) == tail.group(2) and not any(x.startswith("FAIL") for x in lines)
+
+
+def rescored(tables, done=None):
+    """True when rescore.py's rescore.txt says that every species was scored and every held table came out the same
+    as its SHA256SUMS line. With done, the number of species that ended DONE, the held count must be 3 tables for
+    each of them (ruling 10): SAME 21 of 21 for 7."""
+    path = Path(tables) / "rescore.txt"
+    lines = path.read_text(encoding="utf-8").splitlines() if path.is_file() else []
+    tail = re.fullmatch(r"SAME (\d+) of (\d+)", lines[-1]) if lines else None
+    return bool(tail) and tail.group(1) == tail.group(2) and int(tail.group(2)) > 0 \
+        and (done is None or int(tail.group(2)) == len(TABLES) * done) \
+        and not any(x.startswith("FAIL") for x in lines)
+
+
+def finished(copies, species):
+    """The species whose copy holds a DONE: those rescore.py holds to their SHA256SUMS."""
+    return sum(1 for s in species if (Path(copies) / s / "DONE").is_file())
+
+
+def gather(copies, lists_path, checks_path, reading, tables=None):
+    copies, reading = Path(copies), Path(reading)
+    if not all_passed(checks_path):
+        raise SystemExit(f"{checks_path} does not say that every check passed")
+    if tables is not None and not rescored(tables, finished(copies, sorted({r["species_slug"]
+                                                                          for r in first_run(load(lists_path))}))):
+        raise SystemExit(f"{Path(tables) / 'rescore.txt'} does not say that every table was rescored the same")
+    target = reading / "score"
+    if target.exists() and any(target.iterdir()):
+        raise SystemExit(f"{target} is not empty")
+    lrows = load(lists_path)
+    species = sorted({r["species_slug"] for r in first_run(lrows)})
+    n = 0
+    for slug in species:
+        (target / slug / "choices").mkdir(parents=True, exist_ok=True)
+        for src, dst in GATHER:
+            if tables is not None and dst in TABLES:
+                src_path = Path(tables) / slug / dst
+            else:
+                src_path = copies / slug / src
+            (target / slug / dst).write_bytes(src_path.read_bytes())
+            n += 1
+        picks = copies / slug / "results" / "picks"
+        rows = [dict(zip(expect.COLUMNS, r)) for r in expect_rows(lrows, slug)]
+        folds = sorted((e["dataset"], e["scheme"], int(e["seed"]), fold_count(picks / e["file"])) for e in rows
+                       if e["arm"] == "default" and e["role"] in ("draw", "study"))
+        with open(target / slug / FOLDS_FILE, "w", encoding="utf-8") as handle:
+            handle.write("\t".join(FOLDS_COLUMNS) + "\n")
+            handle.writelines("\t".join(map(str, f)) + "\n" for f in folds)
+        n += 1
+        for p in sorted((copies / slug / CHOICES).glob("*.choices.json")):
+            (target / slug / "choices" / p.name).write_bytes(p.read_bytes())
+            n += 1
+    return n
+
+
+def options(argv, names):
+    """argv without the named options, and their values. An option given twice has the value None, which main
+    refuses: --failed-at-score names one species, and a second never stands in for the first."""
+    rest, got = [], {}
+    it = iter(argv)
+    for a in it:
+        if a in names:
+            value = next(it, None)
+            got[a] = None if a in got else value
+        else:
+            rest.append(a)
+    return rest, got
+
+
+def main(argv):
+    argv, opt = options(argv, ("--failed-at-score", "--lead-sums", "--tables"))
+    if None in opt.values() or ("--failed-at-score" in opt) != ("--lead-sums" in opt):
+        sys.stderr.write(__doc__)
+        return 2
+    if argv and argv[0] == "check" and len(argv) in (4, 5):
+        lines, aside = check(argv[1], argv[2], argv[3], opt.get("--failed-at-score"), opt.get("--lead-sums"),
+                             opt.get("--tables"))
+        text = report(lines, aside)
+        if len(argv) == 5:
+            Path(argv[4]).write_text("\n".join(text) + "\n", encoding="utf-8")
+        print("\n".join(text))
+        return 0 if all(p for p, _, _ in lines) else 1
+    if argv and argv[0] == "gather" and len(argv) == 5 and "--failed-at-score" not in opt:
+        n = gather(argv[1], argv[2], argv[3], argv[4], opt.get("--tables"))
+        print(f"gathered {n} files")
+        return 0
+    sys.stderr.write(__doc__)
+    return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

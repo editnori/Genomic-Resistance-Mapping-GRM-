@@ -27,6 +27,7 @@ SCORE = "scripts/c5-settings/score.py"
 SETTINGS = "src/learn/settings.rs"
 TD = "tests.c5_settings.test_drive.Drive"
 TS = "tests.c5_settings.test_score"
+TU = "tests.c5_settings.test_unavailable.Unavailable"
 
 
 def both(path, *changes):
@@ -113,6 +114,23 @@ FAULTS = [
      'requires_all = ["fold_file", "force"]',
      'requires_all = ["fold_file"]',
      "rust-bin", "tests::learn_takes_the_settings_flags_only_with_force_and_alone"),
+    # An unavailable default draw: each arm's row there is not scored, for the default's reason (ruling 3, part 2).
+    ("12a", "an arm's row beside an unavailable default read as a failed check", SCORE,
+     '        if base is not None and base.get("unavailable_reason") is not None:\n',
+     "        if False:\n",
+     "py", f"{TU}.test_arm_rows_beside_an_unavailable_default_are_not_scored_for_its_reason"),
+    ("12b", "an arm's row beside an unavailable default read as a missing draw", SCORE,
+     '            arm_docs[e["file"] + "|" + e["arm"]] = {"unavailable_reason": base["unavailable_reason"], "folds": []}',
+     "            missing.append(e)",
+     "py", f"{TU}.test_arm_rows_beside_an_unavailable_default_are_not_scored_for_its_reason"),
+    ("12c", "a choices file beside an unavailable default passes", SCORE,
+     '                               not found, base["unavailable_reason"]))',
+     '                               True, base["unavailable_reason"]))',
+     "py", f"{TU}.test_a_choices_file_beside_an_unavailable_default_fails"),
+    ("12d", "an absent default passes the first check of the choices files", SCORE,
+     '       base is not None and base.get("unavailable_reason") is None and len(base.get("folds", [])) >= 2)',
+     '       base is None or len(base.get("folds", [])) >= 2)',
+     "py", f"{TU}.test_an_absent_default_still_fails_the_first_choices_check"),
 ]
 
 

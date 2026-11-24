@@ -1,0 +1,23 @@
+arm	reading	decides	condition	reads	met	learners
+search	ruling 15	1	1 and 2	a learner carries when its lineage median difference's interval lies wholly above 0 and better beats worse by the one-sided sign test at p < 0.05 after Holm over 15; at least 3 of 5 carry	0	0
+search	ruling 15	1	3	the twin meets 1 in fewer than 3 of 5 learners and 2 in fewer than 3 of 5, each read apart (learners: the larger of the twin's two counts)	1	0
+search	ruling 15	1	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+search	ruling 15	1	5	each learner that carries has a study median of its lineage median's sign	0	0
+search	ruling 15	1	6	the maintainer rules the change		
+search	stricter	0	1	the lineage median difference's interval lies wholly above 0, for at least 3 of 5 learners	0	0
+search	stricter	0	2	better beats worse by the one-sided sign test at p < 0.05 after Holm over 15, for all five	0	0
+search	stricter	0	3	the twin meets neither 1 nor 2 as this reading reads them	1	
+search	stricter	0	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+search	stricter	0	5	each of the five learners has a study median of its lineage median's sign	0	0
+search	stricter	0	6	the maintainer rules the change		
+cutoff	ruling 15	1	1 and 2	a learner carries when its lineage median difference's interval lies wholly above 0 and better beats worse by the one-sided sign test at p < 0.05 after Holm over 15; at least 3 of 5 carry	0	0
+cutoff	ruling 15	1	3	the twin meets 1 in fewer than 3 of 5 learners and 2 in fewer than 3 of 5, each read apart (learners: the larger of the twin's two counts)	1	0
+cutoff	ruling 15	1	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+cutoff	ruling 15	1	5	each learner that carries has a study median of its lineage median's sign	0	0
+cutoff	ruling 15	1	6	the maintainer rules the change		
+cutoff	stricter	0	1	the lineage median difference's interval lies wholly above 0, for at least 3 of 5 learners	0	0
+cutoff	stricter	0	2	better beats worse by the one-sided sign test at p < 0.05 after Holm over 15, for all five	0	0
+cutoff	stricter	0	3	the twin meets neither 1 nor 2 as this reading reads them	1	
+cutoff	stricter	0	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+cutoff	stricter	0	5	each of the five learners has a study median of its lineage median's sign	0	3
+cutoff	stricter	0	6	the maintainer rules the change		

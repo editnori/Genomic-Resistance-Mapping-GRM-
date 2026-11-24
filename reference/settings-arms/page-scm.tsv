@@ -1,0 +1,5 @@
+split	pair	decides	datasets	entered	better	worse	same	median_difference	interval_lo	interval_hi	holm_p	synthetic_loss	synthetic_loss_lo	synthetic_loss_hi
+lineage	search-default	1	55	54	4	9	41	0.0	-0.001256600054	0.0	1.0	0.0126	0.0088	0.0163
+study	search-default	1	55	55	8	10	37	0.0	0.0	0.0				
+lineage	plain-best-default	0	55	54	8	11	35	0.0	-0.010986512965	0.000539945383		0.0126	0.0088	0.0163
+study	plain-best-default	0	55	55	9	16	30	0.0	-0.008829622604	0.007860173772				

@@ -1,0 +1,103 @@
+The reading of plan block C5's first run: each command ran once, in this order, from the top of the tree at commit 1227bef70bd5f598020ee253f72addda96a0725a.
+copies: the run's 8 species copies, each as run_species.sh left its OUT, sent without score/score.log and back.tar.
+rev14-274-20261112: the rebuilt evaluation revision 14 release the run read, read only.
+Under each command stand the sha256 and path of every file it wrote; a choices folder stands as the sha256 of its
+files' sha256sum lines, sorted by name, with its file count.
+
+python3 -I scripts/c5-settings/rescore.py copies scripts/c5-settings/lists.tsv rev14-274-20261112 rescored
+  start 2026-11-24T01:05:26Z, end 2026-11-24T01:05:30Z
+  e8e530dd8bfc024075254060de99d8c61563826e97d0dce4b995674eb2ac15b3  rescored/acinetobacter_baumannii/checks.tsv
+  9d234d6fee4497b63e5dac7ec3dee9757583da58031a1025d68fb5e7d5ce8353  rescored/acinetobacter_baumannii/datasets.tsv
+  39eab6d8f854271859d3e768aa5a6a582f7bbce10b86632e5a80752c3ef52c8e  rescored/acinetobacter_baumannii/draws.tsv
+  f81c9330a9fd82a130cef8d5196f34c95be7ccff1884ebf72118213c024f754c  rescored/acinetobacter_baumannii/score-output.txt
+  b223db69bbf4868359146ef283c37a475f62cb4f1d3a6d86e89865c8a773140e  rescored/enterobacter_cloacae/checks.tsv
+  c550f84547a9b23d1afedb3541da64bcc2982cc872c1f5e1e4aa42a4b390ccf6  rescored/enterobacter_cloacae/datasets.tsv
+  9d6177d39f1df3994a1ef2748d10b0c5b64d4ea4ad89d677deb372ef365c033f  rescored/enterobacter_cloacae/draws.tsv
+  cee2a5566d6136870e67bec26c9cd887fb7b86cd61c7ee59383438f3d141bba0  rescored/enterobacter_cloacae/score-output.txt
+  257e5f5c5905b7407258d396c964c368d34b0c21c74a71fcd01277b1f0bfc7d3  rescored/escherichia_coli/checks.tsv
+  9113843d646b4e7e52dd49b4676e7396e6edc40bb674b9a9d0fec576e87ba2dd  rescored/escherichia_coli/datasets.tsv
+  fec7adb5cbf70609d89473fb8a02509984adbb76b89044aebcf1c1c3ee64c221  rescored/escherichia_coli/draws.tsv
+  534defe59f846c1952c9689a73a09f9c5f886ea14e7655b26ee68dead9299876  rescored/escherichia_coli/score-output.txt
+  4047da4acf12dcf491b9b4eaaa79f78368182afac48c372d79b419292d12ece8  rescored/klebsiella_pneumoniae/checks.tsv
+  813c295020203f3a038476a8b8cb252fad8127afe4642112380a31ab02f4bf07  rescored/klebsiella_pneumoniae/datasets.tsv
+  e7865ef47c77876f5e28d6463f67fa422435bd0d30287b4f98caff578c37dc20  rescored/klebsiella_pneumoniae/draws.tsv
+  1910114402bfb4e8b43a1811b5ac111eb0b4d9441b6167037222dba35f43c505  rescored/klebsiella_pneumoniae/score-output.txt
+  451b40c304539b422821f60dd2fac97ff04a1039b1e11ad4dace09abf6735397  rescored/mycobacterium_tuberculosis/checks.tsv
+  fff7959e34c1b462b78d1ad20de98b63c3721bebba8c3c24367ec567633ba89f  rescored/mycobacterium_tuberculosis/datasets.tsv
+  7d530dd5974f2f32717ac3d88083f548db777a6a4e93193fdef6b333f549ca8b  rescored/mycobacterium_tuberculosis/draws.tsv
+  567e91ff4a5e556a1f7cfa94deb75db52ebe5528bad68f1ee1d99c965d5a5de0  rescored/mycobacterium_tuberculosis/score-output.txt
+  ad61dd0e5aa062f6fc265c30d68a3ccfde1459177c560f7218c0ccb302040118  rescored/pseudomonas_aeruginosa/checks.tsv
+  caee0ac13f193852b3a7773f5cee39adf4b7e48d1b346fe68f652115f9716e49  rescored/pseudomonas_aeruginosa/datasets.tsv
+  03fc3cdf00114484c55043ac3962f292e070c386add188009370b53a264d5555  rescored/pseudomonas_aeruginosa/draws.tsv
+  0b329b9587d4b6595d0e443123ff276a6c07836882ee9d762ab8bb952c371b14  rescored/pseudomonas_aeruginosa/score-output.txt
+  35a315d03789adb4a682a49d365170804be9e7fc8eade47a7186697112eedb42  rescored/rescore.txt
+  efc13fdf47372876a049850169e4cc084f833d8ef4d5328ef32deae9b2ab1b0c  rescored/salmonella_enterica/checks.tsv
+  2816df7747598118fad6f2c0babab00a409e8684665023ccf6bbfdac1067da14  rescored/salmonella_enterica/datasets.tsv
+  05ff11ee6a60423bed8da131db84c93b255e49b35e90054597281de857c462ee  rescored/salmonella_enterica/draws.tsv
+  567e91ff4a5e556a1f7cfa94deb75db52ebe5528bad68f1ee1d99c965d5a5de0  rescored/salmonella_enterica/score-output.txt
+  fa11e32c4c3d8b681fc0002055bd03bf19252d8bfbc0bc193cc3d57c5051dfb8  rescored/staphylococcus_aureus/checks.tsv
+  928d4e2b06fddeaa28eb6c85b0c47d6012db95ca3702f3555d7e8d14891ace3a  rescored/staphylococcus_aureus/datasets.tsv
+  a6c31853aef5fdf41da5662b67c7aa7d40d15cfefb603d4208fd501b5c0894ab  rescored/staphylococcus_aureus/draws.tsv
+  f812692a94ce0211c4e82fc7e1a7c988abb46830e7d20b2926edb59c6fc6ee76  rescored/staphylococcus_aureus/score-output.txt
+
+python3 -I scripts/c5-settings/run_checks.py check copies scripts/c5-settings/lists.tsv rev14-274-20261112 read/checks.txt --failed-at-score klebsiella_pneumoniae --lead-sums bd0d9b38edcc6b2cfd0a9c1e80827699d015308ddca1177dac094fadeae2cf7c --tables rescored
+  start 2026-11-24T01:05:30Z, end 2026-11-24T01:05:30Z
+  050148efa0b3968c119b70a6de0454e0cf066073decb06f983118cc9caf4e9f3  read/checks.txt
+
+python3 -I scripts/c5-settings/run_checks.py gather copies scripts/c5-settings/lists.tsv read/checks.txt read --tables rescored
+  start 2026-11-24T01:05:30Z, end 2026-11-24T01:05:30Z
+  9bd3b3c6efa59960b2ab260d803c7e8fba22f46b542aa03f209446e863d84a14  read/score/acinetobacter_baumannii/binary.txt
+  e8e530dd8bfc024075254060de99d8c61563826e97d0dce4b995674eb2ac15b3  read/score/acinetobacter_baumannii/checks.tsv
+  9d234d6fee4497b63e5dac7ec3dee9757583da58031a1025d68fb5e7d5ce8353  read/score/acinetobacter_baumannii/datasets.tsv
+  39eab6d8f854271859d3e768aa5a6a582f7bbce10b86632e5a80752c3ef52c8e  read/score/acinetobacter_baumannii/draws.tsv
+  9698b7d722d45768aa42d4e9dadc51b2a450f4a7bb1e92d679d1f93d12347b3b  read/score/acinetobacter_baumannii/folds.tsv
+  9bd3b3c6efa59960b2ab260d803c7e8fba22f46b542aa03f209446e863d84a14  read/score/enterobacter_cloacae/binary.txt
+  b223db69bbf4868359146ef283c37a475f62cb4f1d3a6d86e89865c8a773140e  read/score/enterobacter_cloacae/checks.tsv
+  c550f84547a9b23d1afedb3541da64bcc2982cc872c1f5e1e4aa42a4b390ccf6  read/score/enterobacter_cloacae/datasets.tsv
+  9d6177d39f1df3994a1ef2748d10b0c5b64d4ea4ad89d677deb372ef365c033f  read/score/enterobacter_cloacae/draws.tsv
+  9c4672288441dc4e3c3ffdb19232278af2d0214b393a43b05f5e26b3b0324087  read/score/enterobacter_cloacae/folds.tsv
+  9bd3b3c6efa59960b2ab260d803c7e8fba22f46b542aa03f209446e863d84a14  read/score/escherichia_coli/binary.txt
+  257e5f5c5905b7407258d396c964c368d34b0c21c74a71fcd01277b1f0bfc7d3  read/score/escherichia_coli/checks.tsv
+  9113843d646b4e7e52dd49b4676e7396e6edc40bb674b9a9d0fec576e87ba2dd  read/score/escherichia_coli/datasets.tsv
+  fec7adb5cbf70609d89473fb8a02509984adbb76b89044aebcf1c1c3ee64c221  read/score/escherichia_coli/draws.tsv
+  d47908c8c154f89b48f3cb933c4f2e7063e775f7784733d2b5bb568d34ce9247  read/score/escherichia_coli/folds.tsv
+  9bd3b3c6efa59960b2ab260d803c7e8fba22f46b542aa03f209446e863d84a14  read/score/klebsiella_pneumoniae/binary.txt
+  4047da4acf12dcf491b9b4eaaa79f78368182afac48c372d79b419292d12ece8  read/score/klebsiella_pneumoniae/checks.tsv
+  813c295020203f3a038476a8b8cb252fad8127afe4642112380a31ab02f4bf07  read/score/klebsiella_pneumoniae/datasets.tsv
+  e7865ef47c77876f5e28d6463f67fa422435bd0d30287b4f98caff578c37dc20  read/score/klebsiella_pneumoniae/draws.tsv
+  a1aa2c5c2f56801d85ac918ccddb60d467eede454ba0de4a9c2183bd3729cb9b  read/score/klebsiella_pneumoniae/folds.tsv
+  9bd3b3c6efa59960b2ab260d803c7e8fba22f46b542aa03f209446e863d84a14  read/score/mycobacterium_tuberculosis/binary.txt
+  451b40c304539b422821f60dd2fac97ff04a1039b1e11ad4dace09abf6735397  read/score/mycobacterium_tuberculosis/checks.tsv
+  fff7959e34c1b462b78d1ad20de98b63c3721bebba8c3c24367ec567633ba89f  read/score/mycobacterium_tuberculosis/datasets.tsv
+  7d530dd5974f2f32717ac3d88083f548db777a6a4e93193fdef6b333f549ca8b  read/score/mycobacterium_tuberculosis/draws.tsv
+  62dd5dab4e8e2e02a3408a84845dde4360fa72d4ea8728a69e84521d8bf77853  read/score/mycobacterium_tuberculosis/folds.tsv
+  9bd3b3c6efa59960b2ab260d803c7e8fba22f46b542aa03f209446e863d84a14  read/score/pseudomonas_aeruginosa/binary.txt
+  ad61dd0e5aa062f6fc265c30d68a3ccfde1459177c560f7218c0ccb302040118  read/score/pseudomonas_aeruginosa/checks.tsv
+  caee0ac13f193852b3a7773f5cee39adf4b7e48d1b346fe68f652115f9716e49  read/score/pseudomonas_aeruginosa/datasets.tsv
+  03fc3cdf00114484c55043ac3962f292e070c386add188009370b53a264d5555  read/score/pseudomonas_aeruginosa/draws.tsv
+  831691acd35cdc8b0026b5c594f368c25aae861036670926696b355805150495  read/score/pseudomonas_aeruginosa/folds.tsv
+  9bd3b3c6efa59960b2ab260d803c7e8fba22f46b542aa03f209446e863d84a14  read/score/salmonella_enterica/binary.txt
+  efc13fdf47372876a049850169e4cc084f833d8ef4d5328ef32deae9b2ab1b0c  read/score/salmonella_enterica/checks.tsv
+  2816df7747598118fad6f2c0babab00a409e8684665023ccf6bbfdac1067da14  read/score/salmonella_enterica/datasets.tsv
+  05ff11ee6a60423bed8da131db84c93b255e49b35e90054597281de857c462ee  read/score/salmonella_enterica/draws.tsv
+  c883e7551ce362434517e381965f9c47366eaf3a788a50abc49f561f8c9d9e5d  read/score/salmonella_enterica/folds.tsv
+  9bd3b3c6efa59960b2ab260d803c7e8fba22f46b542aa03f209446e863d84a14  read/score/staphylococcus_aureus/binary.txt
+  fa11e32c4c3d8b681fc0002055bd03bf19252d8bfbc0bc193cc3d57c5051dfb8  read/score/staphylococcus_aureus/checks.tsv
+  928d4e2b06fddeaa28eb6c85b0c47d6012db95ca3702f3555d7e8d14891ace3a  read/score/staphylococcus_aureus/datasets.tsv
+  a6c31853aef5fdf41da5662b67c7aa7d40d15cfefb603d4208fd501b5c0894ab  read/score/staphylococcus_aureus/draws.tsv
+  6252157348a9ec2625857347a22d2bd738af78f58b2ae925c696b9b81a615ed9  read/score/staphylococcus_aureus/folds.tsv
+  ee31f85942ab6c842d5c290e882996a2c16cf7104681820d9dfff5d424b2403f  read/score/acinetobacter_baumannii/choices/ (40 files)
+  6f5f3595137174b97eca06fd2c0ae34f04544c0358c8b2d332935af219916351  read/score/enterobacter_cloacae/choices/ (160 files)
+  1a1022faf19d5028835d78125816071c939eb817be3de84b53615c477bcdee58  read/score/escherichia_coli/choices/ (300 files)
+  0637714337c6a5b6bdc433475bd4c9f63928c2b59d87f58cf7b3843cae6e41b0  read/score/klebsiella_pneumoniae/choices/ (355 files)
+  d0dcea3f723f4072b435b2c5e9bcdcc31d6eb5d48f750ce618463795c55ca720  read/score/mycobacterium_tuberculosis/choices/ (20 files)
+  3d0f35aba87aee2d605f060d5505c33860567e640b20b43bc16c6081b8965678  read/score/pseudomonas_aeruginosa/choices/ (120 files)
+  425ee827d04238dc4550590d1a87845e7e0191e5bc98fc19548ecc451662b140  read/score/salmonella_enterica/choices/ (20 files)
+  0a87a7e7283516f343198bb3c3a6a194c2167a2e9f3d5944041285994f3d2041  read/score/staphylococcus_aureus/choices/ (80 files)
+
+python3 -I scripts/c5-settings/score.py --count read/count read/score/*/datasets.tsv
+  start 2026-11-24T01:05:30Z, end 2026-11-24T01:05:49Z
+  461f3966262fadafc7a7385dc4f1e6742cd6c7d85effd02b3f662e29306598c9  read/count/conditions.tsv
+  e1d0f9b6ea54c02637ab891c67ea89d2dd7a4304864490087ce4e583d7150965  read/count/count-no-constant.tsv
+  ac5e2d9ac55243016050dd66fbeeb080867272765c6d05819cecb0b9da4789d4  read/count/count-plain-best.tsv
+  e1d0f9b6ea54c02637ab891c67ea89d2dd7a4304864490087ce4e583d7150965  read/count/count.tsv
