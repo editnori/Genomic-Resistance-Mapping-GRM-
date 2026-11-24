@@ -37,8 +37,10 @@ with its counts: FAILED is that species' "at score" line in the run's time
 form, with no DONE and no SHA256SUMS; logs/run.log names as many drives ended
 ok as it had to run, and none ended otherwise; every line of SHA256SUMS.lead
 holds, its own sha256 is the one --lead-sums gives, and it names no
-score/score.log; binary.txt names the run's commit and code sha256, those of
-the other species. SHA256SUMS.lead then stands for that species' SHA256SUMS.
+score/score.log, every file of the copy wherever it lies is named in it
+(other than score/score.log, back.tar and the list itself), and every name in
+it is a file of the copy; binary.txt names the run's commit and code sha256,
+those of the other species. SHA256SUMS.lead then stands for that species' SHA256SUMS.
 Without the flag, a FAILED with no newer DONE fails as before.
 
 --tables <rescored dir> reads each species' draws.tsv from <rescored
@@ -61,6 +63,7 @@ import csv
 import hashlib
 import importlib.util
 import json
+import os
 import re
 import sys
 from pathlib import Path, PurePosixPath
@@ -98,6 +101,7 @@ FOLDS_COLUMNS = ["dataset", "scheme", "seed", "folds"]
 TABLES = ("checks.tsv", "draws.tsv", "datasets.tsv")
 # The allowance for a species whose run stopped at its score step.
 LEAD_SUMS = "SHA256SUMS.lead"
+BACK_TAR = "back.tar"
 AT_SCORE = re.compile(r"FAILED (\S+) at score (\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ)")
 DRIVES_LINE = re.compile(r"\S+ drives: \d+ outer folds, (\d+) to run, ")
 DRIVE_OK = re.compile(r"\S+ drive (\S+) ok")
@@ -419,9 +423,22 @@ def time_kind(name, text, m):
     return None
 
 
+def copy_files(out):
+    """Every file of a species' copy, wherever it lies, other than score/score.log, back.tar and SHA256SUMS.lead. The
+    score.log name is set aside as it is walked past: it is never opened, hashed or stat'ed."""
+    found = set()
+    for top, _, names in os.walk(out):
+        for n in names:
+            name = (Path(top) / n).relative_to(out).as_posix()
+            if name not in (SCORE_LOG, BACK_TAR, LEAD_SUMS):
+                found.add(name)
+    return found
+
+
 def allowance(slug, out, lead_sha, others):
     """[(passed, name, detail)]: the four conditions under which a species that stopped at its score step stands,
-    each with its counts. others is the set of (commit, code) the other species' binary.txt name."""
+    each with its counts, the third in three lines (its list holds, names every file of the copy, and names no
+    file the copy lacks). others is the set of (commit, code) the other species' binary.txt name."""
     lines = []
     text = (out / "FAILED").read_text(encoding="utf-8").strip() if (out / "FAILED").is_file() else None
     at = AT_SCORE.fullmatch(text or "")
@@ -445,12 +462,13 @@ def allowance(slug, out, lead_sha, others):
                   f"{to_run} to run over {runs} drives lines, {len(done_ok)} ended ok ({len(set(done_ok))} named once), "
                   f"{other} ended otherwise"))
     lead = out / LEAD_SUMS
-    listed, wrong, named_log = 0, 0, 0
+    listed, wrong, named_log, names = 0, 0, 0, set()
     if lead.is_file():
         for line in lead.read_text(encoding="utf-8").splitlines():
             sha, _, name = line.partition(" ")
             name = plain_name(name.lstrip(" *"))
             listed += 1
+            names.add(name)
             if name == SCORE_LOG:
                 # Never opened, not even to hash it.
                 named_log += 1
@@ -463,6 +481,23 @@ def allowance(slug, out, lead_sha, others):
                   f"{SCORE_LOG}",
                   f"{listed} lines, {wrong} differ or absent, {SCORE_LOG} named {named_log}; its sha256 "
                   f"{'is' if own == lead_sha else 'is not'} the one given"))
+    # The lead's list names every file of the copy, wherever it lies, and each name is a file of the copy (ruling 9).
+    # Counts alone, by the folder a file lies in: a file name is never printed.
+    files = copy_files(out)
+    not_named = sorted(files - names)
+    no_file = [n for n in names - files if n != SCORE_LOG]
+    where = {}
+    for n in not_named:
+        top = n.split("/")[0] + "/" if "/" in n else "the top"
+        where[top] = where.get(top, 0) + 1
+    lines.append((lead.is_file() and not not_named,
+                  f"{slug}: every file of its copy is named in {LEAD_SUMS}, other than {SCORE_LOG}, {BACK_TAR} and "
+                  "the list itself",
+                  f"{len(files)} files, {len(not_named)} not named"
+                  + "".join(f", {k} under {w}" for w, k in sorted(where.items()))))
+    lines.append((lead.is_file() and not no_file,
+                  f"{slug}: every name in {LEAD_SUMS} is a file of its copy",
+                  f"{len(names - {SCORE_LOG})} names other than {SCORE_LOG}, {len(no_file)} with no file"))
     f = fields(out / "binary.txt") if (out / "binary.txt").is_file() else {}
     mine = (f.get("commit", [None])[0], f.get("code", [None])[0]) \
         if all(len(f.get(k, [])) == 1 for k in ("commit", "code")) else None

@@ -210,6 +210,9 @@ FAULTS = [
      '        agree = [t for t in TABLES if listed.get(f"score/{t}") == sha256(dest / t)]',
      "        agree = list(TABLES)", "check",
      R + "Tables.test_rescore_refuses_a_table_unlike_its_sha256sums_line"),
+    ("R19", "a file of the stopped species' copy its SHA256SUMS.lead does not name passes", CHECKS,
+     "    lines.append((lead.is_file() and not not_named,", "    lines.append((lead.is_file(),", "check",
+     R + "Allowance.test_the_allowance_refuses_a_results_file_the_lead_sums_do_not_name"),
 ]
 
 

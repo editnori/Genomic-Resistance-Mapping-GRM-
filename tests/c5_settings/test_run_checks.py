@@ -306,8 +306,9 @@ class Gather(Case):
 def stop_at_score(copies, slug=STOPPED, drives=20, ended=None, lead_extra=""):
     """Make a species' copy one whose run stopped at its score step, as Klebsiella pneumoniae's did: FAILED at score,
     no DONE and no SHA256SUMS, score/ holding checks.tsv and score.log, logs/run.log with its drives, and
-    SHA256SUMS.lead over every file but score/score.log. Returns the lead's sha256 and the folder of the rescored
-    tables (each species' draws.tsv as the copies hold it, the stopped one's made again)."""
+    SHA256SUMS.lead over every file but score/score.log, and back.tar beside them, as the run's copies hold one.
+    Returns the lead's sha256 and the folder of the rescored tables (each species' draws.tsv as the copies hold it,
+    the stopped one's made again)."""
     out = copies / slug
     draws = (out / "score" / "draws.tsv").read_bytes()
     for name in ("DONE", "SHA256SUMS", "score/draws.tsv", "score/datasets.tsv"):
@@ -323,6 +324,7 @@ def stop_at_score(copies, slug=STOPPED, drives=20, ended=None, lead_extra=""):
     names = sorted(q.relative_to(out).as_posix() for q in out.rglob("*") if q.is_file())
     (out / "SHA256SUMS.lead").write_text("".join(f"{fx.sha256(out / n)}  {n}\n" for n in names
                                                  if n != "score/score.log") + lead_extra, encoding="utf-8")
+    (out / "back.tar").write_bytes(b"SYNTHETIC archive of the copy\n")
     tables = copies.parent / "rescored"
     for q in sorted(copies.iterdir()):
         (tables / q.name).mkdir(parents=True)
@@ -346,13 +348,43 @@ class Allowance(Case):
 
     def test_a_species_stopped_at_score_passes_under_the_named_allowance(self):
         report = self.allowed()
-        self.assertEqual(report[-1], "CHECKS 15 of 15", "\n".join(report))
+        self.assertEqual(report[-1], "CHECKS 17 of 17", "\n".join(report))
         self.assertIn(f"FAILED at score {STOPPED_AT}; DONE 0, SHA256SUMS 0", self.line(report, f"{STOPPED}: FAILED"))
         self.assertIn("20 to run over 1 drives lines, 20 ended ok (20 named once), 0 ended otherwise",
                       self.line(report, f"{STOPPED}: logs/run.log"))
         self.assertIn("score/score.log named 0; its sha256 is the one given", self.line(report, f"{STOPPED}: every line"))
         self.assertIn(f"commit {fx.COMMIT}, code {fx.CODE}", self.line(report, f"{STOPPED}: binary.txt"))
         self.assertIn(f"2 of 3; {STOPPED} stopped at its score step", self.line(report, "each species ended DONE"))
+        files = len(checks.copy_files(self.top / "copies" / STOPPED))
+        self.assertIn(f"{files} files, 0 not named", self.line(report, f"{STOPPED}: every file of its copy"))
+        self.assertIn(f"{files} names other than score/score.log, 0 with no file",
+                      self.line(report, f"{STOPPED}: every name in"))
+
+    def not_named(self, folder):
+        """The report when a file under folder/ was added to the stopped species' copy after its SHA256SUMS.lead."""
+        def after(copies):
+            (copies / STOPPED / folder / "SYNTHETIC-added.bin").write_bytes(b"SYNTHETIC\n")
+        report = self.allowed(after=after)
+        line = self.line(report, f"{STOPPED}: every file of its copy")
+        self.assertTrue(line.startswith("FAIL"), line)
+        self.assertTrue(line.endswith(f", 1 not named, 1 under {folder}/"), line)
+        self.assertTrue(self.line(report, f"{STOPPED}: every name in").startswith("PASS"))
+        self.assertEqual(report[-1], "CHECKS 16 of 17", "\n".join(report))
+
+    def test_the_allowance_refuses_a_results_file_the_lead_sums_do_not_name(self):
+        self.not_named("results")
+
+    def test_the_allowance_refuses_a_check_file_the_lead_sums_do_not_name(self):
+        self.not_named("check")
+
+    def test_the_allowance_refuses_a_logs_file_the_lead_sums_do_not_name(self):
+        self.not_named("logs")
+
+    def test_the_allowance_refuses_a_name_in_the_lead_sums_with_no_file(self):
+        report = self.allowed(lead_extra=f"{'0' * 64}  results/SYNTHETIC-absent.bin\n")
+        line = self.line(report, f"{STOPPED}: every name in")
+        self.assertTrue(line.startswith("FAIL") and line.endswith(", 1 with no file"), line)
+        self.assertTrue(self.line(report, f"{STOPPED}: every file of its copy").startswith("PASS"))
 
     def test_a_species_stopped_at_score_fails_without_the_allowance(self):
         report = self.allowed(flag=False)
