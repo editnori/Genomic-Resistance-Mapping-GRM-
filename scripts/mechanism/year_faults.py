@@ -13,6 +13,8 @@ Python 3.12, standard library only; run with -I.
 """
 
 import argparse
+import functools
+import operator
 import os
 import sys
 from unittest import mock
@@ -33,9 +35,9 @@ T = "tests.mechanism.test_year_mix."
 FAULTS = [
     ("Y1", "a mean of exactly 0.5 not called", T + "Rules.test_a_mean_of_exactly_half_is_called",
      lambda: mock.patch.object(ym, "mean_called", lambda s: sum(s) / 5 > 0.5)),
-    ("Y2", "the five scores added in order, so a mean of 0.5 can fall under it",
+    ("Y2", "the five scores added one by one in order, so a mean of 0.5 can fall under it",
      T + "Rules.test_a_mean_of_exactly_half_is_called",
-     lambda: mock.patch.object(ym, "mean_called", lambda s: sum(s) / 5 >= 0.5)),
+     lambda: mock.patch.object(ym, "mean_called", lambda s: functools.reduce(operator.add, s) / 5 >= 0.5)),
     ("Y3", "one learner's score read as the vote", T + "Read.test_the_call_reads_all_five_learners",
      lambda: mock.patch.object(ym, "genome_scores", lambda rows, i: [rows["scm"]["scores"][i]] * 5)),
     ("Y4", "a year read from the first four characters", T + "Rules.test_a_year_not_four_digits_is_unknown",
