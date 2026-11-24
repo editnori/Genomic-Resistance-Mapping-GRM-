@@ -35,7 +35,7 @@ One row per report used, an aggregate that keeps its genome count. Columns, in o
 - `expected_all5`: the yardstick, `resistant` times the product of the five miss rates `miss_<learner> / resistant`. It is the count the five would miss together if they missed independently. It is a yardstick. It is neither a model nor a test;
 - `ratio_all5`: `miss_all5 / expected_all5`, blank when `expected_all5` is 0.
 
-For a report with fewer than five learners, the `miss_k` and `wrong_k` columns above its learner count, `miss_all5` and the columns after it are blank. Every decimal is written with 12 places.
+For a report with fewer than five learners, the `miss_k` and `wrong_k` columns above its learner count, `miss_all5` and the columns after it are blank. A report with more than five learners keeps its counts and names, and its `miss_k` and `wrong_k` columns are blank too (added with the table script, before the read). Every decimal is written with 12 places. `expected_all5` and `ratio_all5` are worked as exact fractions and rounded once.
 
 ### Table `reference/learner-overlap/pooled.tsv`
 
