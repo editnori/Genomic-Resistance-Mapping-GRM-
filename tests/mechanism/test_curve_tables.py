@@ -179,6 +179,7 @@ class Gates(Base):
             digest, name = line.split("  ", 1)
             self.assertEqual(ct.sha256_of(out / name), digest, name)
         self.assertEqual(len((out / "gates.txt").read_text().splitlines()), len(ct.GATES))
+        self.assertTrue((out / "README.md").read_text().startswith("# The lineage curve's reading of 1 January 2026: "))
         ids = self.top / "species.json"
         ids.write_text(json.dumps({"genomes": [{"id": g[0]} for g in genomes()]}))
         with contextlib.redirect_stdout(io.StringIO()) as printed:

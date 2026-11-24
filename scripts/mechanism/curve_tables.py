@@ -426,7 +426,10 @@ def write(reading, lists, bed, out):
     with open(out / "gates.txt", "w", encoding="utf-8") as handle:
         for n, name, words in GATES:
             handle.write(f"{n} {name}: {words}\n")
-    date = checks["end"][:10] if checks["end"] else "an unknown date"
+    date = "an unknown date"
+    if checks["end"]:
+        day = datetime.strptime(checks["end"], "%Y-%m-%dT%H:%M:%SZ")
+        date = f"{day.day} {day:%B %Y}"
     (out / "README.md").write_text(README.format(date=date, tool=WANT_TOOL, db=WANT_DB,
                                                  planned=f"{int(checks['planned']):,}",
                                                  reports=len(species_rows(lrows, summary["species"]))),
