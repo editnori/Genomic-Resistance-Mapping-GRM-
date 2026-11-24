@@ -63,6 +63,9 @@ class LinksAndMachines(unittest.TestCase):
     def test_a_public_address(self):
         self.assertEqual(kinds("at " + PUBLIC + " now"), ["K5"])
         self.assertEqual(kinds("lineage " + PUBLIC), ["K5"])
+        # each put together here, so that this file holds none of them
+        for parts in (["lineage93", "184", "216", "34"], ["sublineage8", "8", "8", "8"], ["lineage4", "1", "2", "200"]):
+            self.assertEqual(kinds("x " + ".".join(parts) + " y"), ["K5"], ".".join(parts))
 
     def test_other_addresses_pass(self):
         for text in ("127.0.0.1", "0.0.0.0", "10.1.2.3", "192.168.1.9", "172.20.0.1", "169.254.1.1", "192.0.2.7",

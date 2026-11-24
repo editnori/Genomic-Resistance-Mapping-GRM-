@@ -66,12 +66,21 @@ def sha(word):
     return hashlib.sha256(word.lower().encode("utf-8")).hexdigest()
 
 
+def lineage_name(match, text):
+    """True for a lineage name as TBProfiler writes it (lineage4.1.2.1): the 7 characters before are `lineage`, no
+    letter stands right before those 7, the first number is 1 to 9 and each of the other three is under 100."""
+    start = match.start()
+    if text[max(0, start - 7):start] != "lineage" or (start >= 8 and text[start - 8].isalpha()):
+        return False
+    first, *rest = match.groups()
+    return len(first) == 1 and first != "0" and all(int(g) < 100 for g in rest)
+
+
 def public_address(match, text):
     """True for an address outside the loopback, private and documentation ranges. An enzyme number is not one,
-    nor a lineage name as TBProfiler writes it (lineage4.1.2.1)."""
+    nor a lineage name as TBProfiler writes it."""
     parts = tuple(int(g) for g in match.groups())
-    if (max(parts) > 255 or text[max(0, match.start() - 3):match.start()] == "EC "
-            or text[max(0, match.start() - 7):match.start()] == "lineage"):
+    if max(parts) > 255 or text[max(0, match.start() - 3):match.start()] == "EC " or lineage_name(match, text):
         return False
     a, b, c, _ = parts
     if a in (0, 10, 127, 255) or (a, b) in ((192, 168), (169, 254)) or (a == 172 and 16 <= b <= 31):
