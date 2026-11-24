@@ -1,0 +1,6 @@
+stratum	published_resistant	published_susceptible	rebuilt_resistant	rebuilt_susceptible	equal
+point_only	7963	6791	0	0	no
+gene_only	39814	11041	48749	20864	no
+both	9066	1479	0	0	no
+neither	6035	64480	14129	62927	no
+all_strata	62878	83791	62878	83791	yes

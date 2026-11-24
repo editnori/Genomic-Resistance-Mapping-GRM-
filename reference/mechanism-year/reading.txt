@@ -1,0 +1,11 @@
+# The mechanism year read of 24 Nov 2026, run once at commit 3db9e14371554a4002ff475e4435544f3b225d5c, clean.
+# REPORTS: the 274 revision 14 reports; READING: year_mix.py read's counts, which stay with the reports.
+# OUT was copied here as write wrote it; SHA256SUMS lists its six tables.
+dba40216cec615ff3fb2717cfa26f0722670e99d33ab65d7afba7826070199f5  scripts/mechanism/year_mix.py
+0d486965a941ff4e9c1e5c633c1165fc363a7a97f47c27d481ead8b8a14942c7  scripts/c3-inputs/lists.tsv
+ba788f436d49bee47978163e8ee0ebd785a85e3118ecf9cd264d31d315a28a1c  reference/mechanism-split/page-m1-strata.tsv
+python3 -I scripts/mechanism/year_mix.py read --reports REPORTS --lists scripts/c3-inputs/lists.tsv --published reference/mechanism-split/page-m1-strata.tsv --out READING
+python3 -I scripts/mechanism/year_mix.py write --reading READING --reports REPORTS --out OUT
+python3 -I scripts/mechanism/year_mix.py print reference/mechanism-year
+faa53399b81552eaa56e413cc26e465d37afc5e2e7641475ed8f9880bb6ff538  READING
+f916576c3236bc7f8837984b70688b9cca189046cb5b8584f5240732ea23352b  SHA256SUMS

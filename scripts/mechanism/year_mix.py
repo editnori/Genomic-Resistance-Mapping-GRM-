@@ -4,6 +4,7 @@ release's reports alone (docs/mechanism-year-result.md).
     python3 -I scripts/mechanism/year_mix.py plan
     python3 -I scripts/mechanism/year_mix.py read --reports DIR --lists LISTS --published STRATA --out READING
     python3 -I scripts/mechanism/year_mix.py write --reading READING --reports DIR --out OUT
+    python3 -I scripts/mechanism/year_mix.py print OUT
     python3 -I scripts/mechanism/year_mix.py scan --reports DIR PATH ...
 
 `read` reads every report under DIR once. It checks guards 1, 2, 3 and 5 of
@@ -15,7 +16,8 @@ and no call (`samples[].catalog_resistant`). It writes READING, counts per
 dataset, year and stratum, which stays where the reports are. `write` reads
 READING, checks guard 4 and writes the tables of OUT. Both end with guard 6:
 no genome id and no catalogue group name of the reports stands in a written
-file. Every message prints counts, species and antibiotics only; no genome id
+file. `print` prints the page's tables and figures from OUT alone. Every
+message prints counts, species and antibiotics only; no genome id
 and no group name is printed, hashed or written.
 
 It fits nothing, scores no genome and runs no program: every figure comes
@@ -534,6 +536,138 @@ def write(reading, out_dir, ids, names):
     return lines + [line6]
 
 
+# ---------------------------------------------------------------- print
+
+GROUP_WORDS = {"reader_call": "the reader calls resistant", "reader_no_call": "the reader makes no call",
+               "reader_no_rule": "the reader has no rule", "point_only": "point only", "gene_only": "gene only",
+               "both": "both", "neither": "neither", ALL: "all four"}
+
+
+def d3(x):
+    return f"{float(x):.3f}"
+
+
+def count_words(n):
+    return f"{int(n):,}"
+
+
+def record_rows(record, name):
+    return read_tsv(os.path.join(record, name))
+
+
+def extremes(rows, column):
+    """The rows with the lowest and the highest value of `column`, over rows
+    where it is written; a tie goes to the earliest year."""
+    kept = [r for r in rows if r[column] != ""]
+    if not kept:
+        return None, None
+    low = min(kept, key=lambda r: (float(r[column]), int(r["year"])))
+    high = max(kept, key=lambda r: (float(r[column]), -int(r["year"])))
+    return low, high
+
+
+def summary(record):
+    """The figures the page reads, from the record alone: per group with
+    genomes, the lowest and highest share of a year's resistant and susceptible
+    genomes and the lowest and highest recall, over the years that are not thin
+    (year_unknown is no year and stands apart)."""
+    years, shares = record_rows(record, "years.tsv"), record_rows(record, "shares.tsv")
+    totals, species = record_rows(record, "totals.tsv"), record_rows(record, "species.tsv")
+    strata = [t["stratum"] for t in totals if int(t["genomes"]) > 0]
+    year_list = sorted({r["year"] for r in shares}, key=year_order)
+    head = {y: next(r for r in shares if r["year"] == y) for y in year_list}
+    kept = [y for y in year_list if y != UNKNOWN and head[y]["thin"] == "no"]
+    thin = [y for y in year_list if y != UNKNOWN and head[y]["thin"] == "yes"]
+    out = {"strata": strata, "groups": {}, "kept_years": kept, "thin_years": thin,
+           "thin_genomes": sum(int(head[y]["year_genomes"]) for y in thin),
+           "kept_genomes": sum(int(head[y]["year_genomes"]) for y in kept),
+           "unknown_genomes": int(head[UNKNOWN]["year_genomes"]) if UNKNOWN in head else 0,
+           "genomes": sum(int(t["genomes"]) for t in totals),
+           "species_rows": {s: sum(r["stratum"] == s for r in species) for s in strata},
+           "species_pairs": len({(r["species"], r["antibiotic"]) for r in species}),
+           "species_names": len({r["species"] for r in species})}
+    for s in strata:
+        sh = [r for r in shares if r["stratum"] == s and r["year"] in kept]
+        yr = [r for r in years if r["stratum"] == s and r["year"] in kept]
+        out["groups"][s] = {"resistant_share": extremes(sh, "resistant_share"),
+                            "susceptible_share": extremes(sh, "susceptible_share"),
+                            "recall": extremes(yr, "recall_mean5"),
+                            "years_with_recall": sum(r["recall_mean5"] != "" for r in yr)}
+    return out
+
+
+def share_words(r, kind):
+    return f"{d3(r[f'{kind}_share'])} ({r['year']}, {count_words(r[kind])} of {count_words(r[f'year_{kind}'])})"
+
+
+def recall_words(r):
+    return f"{d3(r['recall_mean5'])} ({r['year']}, {count_words(r['resistant_called_mean5'])} of " \
+           f"{count_words(r['resistant'])})"
+
+
+def tables(record):
+    """The page's tables, printed from the record."""
+    out = {}
+    step1 = record_rows(record, "step1.tsv")
+    out["step1"] = ["| Stratum | Published resistant | Published susceptible | Rebuilt resistant | Rebuilt susceptible "
+                    "| Equal |", "|---|---|---|---|---|---|"] + [
+        f"| {GROUP_WORDS[r['stratum']]} | {count_words(r['published_resistant'])} | "
+        f"{count_words(r['published_susceptible'])} | {count_words(r['rebuilt_resistant'])} | "
+        f"{count_words(r['rebuilt_susceptible'])} | {r['equal']} |" for r in step1]
+    totals = record_rows(record, "totals.tsv")
+    out["totals"] = ["| Group | Genomes | Resistant | Susceptible | Resistant called | Susceptible called | Recall |",
+                     "|---|---|---|---|---|---|---|"] + [
+        f"| {GROUP_WORDS[r['stratum']]} (`{r['stratum']}`) | {count_words(r['genomes'])} | "
+        f"{count_words(r['resistant'])} | {count_words(r['susceptible'])} | {count_words(r['resistant_called_mean5'])} | "
+        f"{count_words(r['susceptible_called_mean5'])} | {d3(r['recall_mean5']) if r['recall_mean5'] else ''} |"
+        for r in totals]
+    s = summary(record)
+    strata = s["strata"]
+    shares = {(r["year"], r["stratum"]): r for r in record_rows(record, "shares.tsv")}
+    years = {(r["year"], r["stratum"]): r for r in record_rows(record, "years.tsv")}
+    head = "| Year | Genomes | Resistant | Susceptible | " + " | ".join(
+        f"`{x}` among resistant" for x in strata) + " | " + " | ".join(
+        f"`{x}` among susceptible" for x in strata) + " | " + " | ".join(f"Recall, `{x}`" for x in strata) + " |"
+    rows = [head, "|" + "---|" * (4 + 3 * len(strata))]
+    for y in s["kept_years"] + ([UNKNOWN] if s["unknown_genomes"] else []):
+        first = shares[(y, strata[0])]
+        cells = [y, count_words(first["year_genomes"]), count_words(first["year_resistant"]),
+                 count_words(first["year_susceptible"])]
+        cells += [f"{count_words(shares[(y, x)]['resistant'])} ({d3(shares[(y, x)]['resistant_share'])})"
+                  for x in strata]
+        cells += [f"{count_words(shares[(y, x)]['susceptible'])} ({d3(shares[(y, x)]['susceptible_share'])})"
+                  for x in strata]
+        cells += [d3(years[(y, x)]["recall_mean5"]) if years[(y, x)]["recall_mean5"] else "" for x in strata]
+        rows.append("| " + " | ".join(cells) + " |")
+    out["years"] = rows
+    ranges = ["| Group | Lowest share of resistant | Highest share of resistant | Lowest share of susceptible | "
+              "Highest share of susceptible | Lowest recall | Highest recall |", "|---|---|---|---|---|---|---|"]
+    for x in strata:
+        g = s["groups"][x]
+        (rl, rh), (sl, sh), (cl, ch) = g["resistant_share"], g["susceptible_share"], g["recall"]
+        ranges.append(f"| `{x}` | {share_words(rl, 'resistant')} | {share_words(rh, 'resistant')} | "
+                      f"{share_words(sl, 'susceptible')} | {share_words(sh, 'susceptible')} | "
+                      f"{recall_words(cl) if cl else ''} | {recall_words(ch) if ch else ''} |")
+    out["ranges"] = ranges
+    return out
+
+
+def print_record(record):
+    lines = []
+    for name, rows in tables(record).items():
+        lines += [f"## {name}", ""] + rows + [""]
+    s = summary(record)
+    lines += ["## figures", "", f"genomes: {s['genomes']}", f"years not thin: {len(s['kept_years'])}, "
+              f"{s['kept_years'][0]} to {s['kept_years'][-1]}, {s['kept_genomes']} genomes",
+              f"thin years: {len(s['thin_years'])}, {s['thin_genomes']} genomes",
+              f"year_unknown: {s['unknown_genomes']} genomes",
+              f"species.tsv: {s['species_pairs']} species and antibiotics in {s['species_names']} species; "
+              + ", ".join(f"{x} {n}" for x, n in s["species_rows"].items())]
+    for x in s["strata"]:
+        lines.append(f"{x}: recall written in {s['groups'][x]['years_with_recall']} of {len(s['kept_years'])} years")
+    return lines
+
+
 # ---------------------------------------------------------------- the commands
 
 def plan():
@@ -571,6 +705,8 @@ def main(argv=None):
     w.add_argument("--reading", required=True)
     w.add_argument("--reports", required=True)
     w.add_argument("--out", required=True)
+    pr = sub.add_parser("print")
+    pr.add_argument("record")
     s = sub.add_parser("scan")
     s.add_argument("--reports", required=True)
     s.add_argument("paths", nargs="+")
@@ -601,6 +737,9 @@ def main(argv=None):
             for line in write(reading, args.out, ids, names):
                 print(line)
             print(f"write: {len(TABLES)} tables and SHA256SUMS in {args.out}")
+            return 0
+        if args.cmd == "print":
+            print("\n".join(print_record(args.record)))
             return 0
         ids, names, n = names_from(args.reports)
         line6, clean = guard6(args.paths, ids, names, f"scan over {n} reports")

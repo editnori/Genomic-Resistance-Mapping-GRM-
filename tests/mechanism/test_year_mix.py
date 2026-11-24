@@ -489,6 +489,32 @@ class Read(unittest.TestCase):
                 self.assertEqual(a.read(), b.read(), name)
         self.assertEqual(sorted(os.listdir(self.out)), sorted(list(ym.TABLES) + ["SHA256SUMS"]))
 
+    def test_print_reads_the_years_that_are_not_thin_from_the_record(self):
+        self.assertEqual(self.go(*thick())[0], 0)
+        self.assertEqual(self.write()[0], 0)
+        s = ym.summary(self.out)
+        self.assertEqual(s["strata"], ["reader_call", "reader_no_call"])
+        self.assertEqual((s["kept_years"], s["thin_years"], s["kept_genomes"], s["thin_genomes"]),
+                         (["2018"], ["2019"], 100, 99))
+        tables = ym.tables(self.out)
+        self.assertEqual(tables["ranges"][2:], [
+            "| `reader_call` | 1.000 (2018, 10 of 10) | 1.000 (2018, 10 of 10) | 0.000 (2018, 0 of 90) | "
+            "0.000 (2018, 0 of 90) | 0.700 (2018, 7 of 10) | 0.700 (2018, 7 of 10) |",
+            "| `reader_no_call` | 0.000 (2018, 0 of 10) | 0.000 (2018, 0 of 10) | 1.000 (2018, 90 of 90) | "
+            "1.000 (2018, 90 of 90) |  |  |"])
+        self.assertEqual(tables["years"][2:], [
+            "| 2018 | 100 | 10 | 90 | 10 (1.000) | 0 (0.000) | 0 (0.000) | 90 (1.000) | 0.700 |  |"])
+        lines = ym.print_record(self.out)
+        self.assertIn("years not thin: 1, 2018 to 2018, 100 genomes", lines)
+        self.assertIn("species.tsv: 1 species and antibiotics in 1 species; reader_call 1, reader_no_call 0", lines)
+
+    def test_a_tie_goes_to_the_earliest_year(self):
+        rows = [{"year": "2012", "v": "0.5"}, {"year": "2010", "v": "0.5"}, {"year": "2011", "v": "0.2"},
+                {"year": "2013", "v": ""}]
+        low, high = ym.extremes(rows, "v")
+        self.assertEqual((low["year"], high["year"]), ("2011", "2010"))
+        self.assertEqual(ym.extremes([{"year": "2010", "v": ""}], "v"), (None, None))
+
     def test_write_refuses_a_folder_that_is_not_empty(self):
         self.assertEqual(self.go(*world())[0], 0)
         os.makedirs(self.out)
