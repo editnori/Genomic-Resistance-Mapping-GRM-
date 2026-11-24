@@ -494,6 +494,24 @@ class Times(Case):
         self.assertTrue(line.startswith("FAIL"), line)
         self.assertIn(": 1 genome ids", line)
 
+    def test_a_time_in_a_folder_under_logs_drive_or_the_choices_folder_still_fails(self):
+        gid = fx.genome("synthia_beta", 1)
+        for where in ("logs/drive/sub/SYNTHETIC.time", "results/picks/choices/sub/SYNTHETIC.choices.json"):
+            with self.subTest(where=where):
+                def change(slug, out):
+                    if slug == "synthia_beta":
+                        (out / where).parent.mkdir(parents=True, exist_ok=True)
+                        text = f"\tUser time (seconds): {gid}\n" if where.endswith(".time") \
+                            else f'{{"seconds_inner": {gid}}}\n'
+                        (out / where).write_text(text, encoding="utf-8")
+                top = self.top / where.split("/")[0]
+                top.mkdir()
+                copies, lists, release = fx.copies(top, change)
+                line = self.line(checks.report(*checks.check(copies, lists, release)), "no genome id")
+                self.assertTrue(line.startswith("FAIL"), line)
+                self.assertIn(": 1 genome ids", line)
+                self.assertIn("counted apart: none", line)
+
     def test_an_id_in_another_log_still_fails(self):
         gid = fx.genome("synthia_gamma", 3)
 

@@ -386,16 +386,22 @@ def check(copies, lists_path, release, failed_at=None, lead_sha=None, tables=Non
     return lines, aside
 
 
+def in_folder(name, folder):
+    """True when the file stands in that folder itself, as the ruling's results/picks/choices/*.choices.json and
+    logs/drive/*.time name it, and not in a folder under it."""
+    return name.startswith(folder + "/") and "/" not in name[len(folder) + 1:]
+
+
 def time_kind(name, text, m):
     """The file kind and key or label of a token that is a time, or None: the whole value of seconds_inner or
     seconds_outer in a choices file, or the value on a drive .time line of one of the three labels."""
-    if name.startswith(CHOICES + "/") and name.endswith(".choices.json"):
+    if in_folder(name, CHOICES) and name.endswith(".choices.json"):
         key = re.search(r'"(' + "|".join(TIME_KEYS) + r')"\s*:\s*$', text[max(0, m.start() - 40):m.start()])
         after = text[m.end():m.end() + 1]
         if key and (after == "" or after in ",}] \t\r\n"):
             return f"choices {key.group(1)}"
         return None
-    if name.startswith("logs/drive/") and name.endswith(".time"):
+    if in_folder(name, "logs/drive") and name.endswith(".time"):
         start = text.rfind("\n", 0, m.start()) + 1
         end = text.find("\n", m.end())
         line = text[start:end if end >= 0 else len(text)]
