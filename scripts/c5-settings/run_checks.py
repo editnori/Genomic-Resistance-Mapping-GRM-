@@ -63,7 +63,7 @@ import importlib.util
 import json
 import re
 import sys
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 HERE = Path(__file__).resolve().parent
 
@@ -114,6 +114,15 @@ def load(path):
 
 def sha256(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+def plain_name(name):
+    """A list's file name as the plain path inside the copy it names (score/./score.log and score//score.log are
+    score/score.log), or None when it is absolute or climbs out of the copy: such a name is never opened."""
+    path = PurePosixPath(name)
+    if not name or path.is_absolute() or ".." in path.parts:
+        return None
+    return path.as_posix()
 
 
 def first_run(lrows):
@@ -245,8 +254,8 @@ def check(copies, lists_path, release, failed_at=None, lead_sha=None, tables=Non
         if sorted(listed) != covered(out):
             bad_sums.append(f"{slug}: SHA256SUMS lists {len(listed)} files, the run's rule {len(covered(out))}")
         # score/score.log is never opened, not even to hash it when a SHA256SUMS names it (the line above fails then).
-        wrong = [n for n, sha in listed.items()
-                 if n != SCORE_LOG and (not (out / n).is_file() or sha256(out / n) != sha)]
+        wrong = [n for n, sha in listed.items() if plain_name(n) != SCORE_LOG
+                 and (plain_name(n) is None or not (out / n).is_file() or sha256(out / n) != sha)]
         if wrong:
             bad_sums.append(f"{slug}: {len(wrong)} files differ from SHA256SUMS")
     ok("each species' SHA256SUMS holds every file of the run's rule, each at its sha256", not bad_sums,
@@ -428,15 +437,13 @@ def allowance(slug, out, lead_sha, others):
     if lead.is_file():
         for line in lead.read_text(encoding="utf-8").splitlines():
             sha, _, name = line.partition(" ")
-            name = name.lstrip(" *")
-            name = name[2:] if name.startswith("./") else name
+            name = plain_name(name.lstrip(" *"))
             listed += 1
             if name == SCORE_LOG:
                 # Never opened, not even to hash it.
                 named_log += 1
                 continue
-            path = out / name
-            if ".." in Path(name).parts or not path.is_file() or sha256(path) != sha:
+            if name is None or not (out / name).is_file() or sha256(out / name) != sha:
                 wrong += 1
     own = sha256(lead) if lead.is_file() else None
     lines.append((lead.is_file() and listed > 0 and wrong == 0 and named_log == 0 and own == lead_sha,

@@ -4,8 +4,10 @@ Every copy, genome id and file here is made up (page_fixture.py).
 """
 
 import builtins
+import contextlib
 import io
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -240,6 +242,41 @@ class Unopened(Case):
         self.assertTrue(self.line(report, "score/score.log stays out").startswith("FAIL"))
         self.assertEqual(opened, [])
 
+    def test_score_log_by_another_spelling_in_sha256sums_is_never_opened(self):
+        for spelling in ("score/./score.log", "score//score.log", "./score/score.log", "<absolute>"):
+            with self.subTest(spelling=spelling):
+                top = self.top / spelling.replace("/", "_").replace("<", "").replace(">", "")
+                top.mkdir()
+                copies, lists, release = fx.copies(top)
+                path = copies / "synthia_alpha" / "SHA256SUMS"
+                name = str((copies / "synthia_alpha" / "score" / "score.log").resolve()) \
+                    if spelling == "<absolute>" else spelling
+                path.write_text(path.read_text(encoding="utf-8") + f"{'0' * 64}  {name}\n", encoding="utf-8")
+                with never_open_score_log() as opened:
+                    lines, aside = checks.check(copies, lists, release)
+                report = checks.report(lines, aside)
+                self.assertTrue(self.line(report, "each species' SHA256SUMS").startswith("FAIL"))
+                self.assertEqual(opened, [])
+
+
+@contextlib.contextmanager
+def never_open_score_log():
+    """Every open of a file named score.log, by builtins.open or by io.open (as pathlib reads), is recorded and
+    refused; yields the list of such opens."""
+    opened = []
+    real_open, real_io_open = builtins.open, io.open
+
+    def guard(real):
+        def wrapped(file, *args, **kwargs):
+            if isinstance(file, (str, os.PathLike)) and os.path.basename(os.fspath(file)) == "score.log":
+                opened.append(os.fspath(file))
+                raise PermissionError("score.log is never opened")
+            return real(file, *args, **kwargs)
+        return wrapped
+
+    with mock.patch("builtins.open", guard(real_open)), mock.patch("io.open", guard(real_io_open)):
+        yield opened
+
 
 class Gather(Case):
     def test_gather_copies_four_files_a_species_and_the_choices_and_never_score_log(self):
@@ -356,6 +393,21 @@ class Allowance(Case):
         self.assertTrue(line.startswith("FAIL"), line)
         self.assertIn("score/score.log named 1", line)
         self.assertEqual(opened, [])
+
+    def test_the_allowance_never_opens_score_log_by_another_spelling_in_the_lead_sums(self):
+        for spelling in ("score/./score.log", "score//score.log", "<absolute>"):
+            with self.subTest(spelling=spelling):
+                top = self.top / spelling.replace("/", "_").replace("<", "").replace(">", "")
+                top.mkdir()
+                copies, lists, release = fx.copies(top)
+                name = str((copies / STOPPED / "score" / "score.log").resolve()) if spelling == "<absolute>" \
+                    else spelling
+                lead, tables = stop_at_score(copies, lead_extra=f"{'0' * 64}  {name}\n")
+                with never_open_score_log() as opened:
+                    lines, aside = checks.check(copies, lists, release, STOPPED, lead, tables)
+                line = self.line(checks.report(lines, aside), f"{STOPPED}: every line")
+                self.assertTrue(line.startswith("FAIL"), line)
+                self.assertEqual(opened, [])
 
     def test_the_allowance_refuses_a_failed_line_at_another_step(self):
         def after(copies):
