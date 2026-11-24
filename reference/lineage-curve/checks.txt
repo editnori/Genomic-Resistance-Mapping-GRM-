@@ -1,0 +1,20 @@
+planned: 2000
+results: 2000
+failed_lines: 0
+failed_genomes: 0
+accounted: 2000
+neither: 0
+both: 0
+unplanned: 0
+versions_named: 2000
+versions_other: 0
+failed_by_reason: none
+start: 2026-11-24T21:41:01Z
+end: 2026-11-24T22:15:00Z
+wall_seconds: 2039
+check: pass: result files plus failed lines equal the genomes planned
+check: pass: every planned genome has a result file or a failed line
+check: pass: no genome has both a result file and a failed line
+check: pass: no result file or failed line outside the plan
+check: pass: no genome has two failed lines
+check: pass: every result file names TBProfiler 6.6.3 and tbdb 3ed1cb99

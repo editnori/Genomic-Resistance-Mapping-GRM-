@@ -1,0 +1,343 @@
+{
+  "database_commit": "3ed1cb99",
+  "endpoints": [
+    {
+      "antibiotic": "amikacin",
+      "in_M": false,
+      "kind": "primary",
+      "resistant_no_result": "0",
+      "resistant_with_no_group": {
+        "cluster": "0",
+        "main_lineage": "0",
+        "sub_lineage": "0"
+      },
+      "resistant_with_result": "548",
+      "tool_drugs": [
+        "amikacin"
+      ]
+    },
+    {
+      "antibiotic": "capreomycin",
+      "in_M": false,
+      "kind": "primary",
+      "resistant_no_result": "0",
+      "resistant_with_no_group": {
+        "cluster": "0",
+        "main_lineage": "0",
+        "sub_lineage": "0"
+      },
+      "resistant_with_result": "422",
+      "tool_drugs": [
+        "capreomycin"
+      ]
+    },
+    {
+      "antibiotic": "ciprofloxacin",
+      "in_M": false,
+      "kind": "proxy",
+      "resistant_no_result": "0",
+      "resistant_with_no_group": {
+        "cluster": "0",
+        "main_lineage": "0",
+        "sub_lineage": "0"
+      },
+      "resistant_with_result": "73",
+      "tool_drugs": [
+        "levofloxacin",
+        "moxifloxacin"
+      ]
+    },
+    {
+      "antibiotic": "clofazimine",
+      "in_M": true,
+      "kind": "primary",
+      "resistant_no_result": "0",
+      "resistant_with_no_group": {
+        "cluster": "0",
+        "main_lineage": "0",
+        "sub_lineage": "0"
+      },
+      "resistant_with_result": "193",
+      "tool_drugs": [
+        "clofazimine"
+      ]
+    },
+    {
+      "antibiotic": "cycloserine",
+      "in_M": false,
+      "kind": "primary",
+      "resistant_no_result": "0",
+      "resistant_with_no_group": {
+        "cluster": "0",
+        "main_lineage": "0",
+        "sub_lineage": "0"
+      },
+      "resistant_with_result": "119",
+      "tool_drugs": [
+        "cycloserine"
+      ]
+    },
+    {
+      "antibiotic": "delamanid",
+      "in_M": false,
+      "kind": "primary",
+      "resistant_no_result": "0",
+      "resistant_with_no_group": {
+        "cluster": "0",
+        "main_lineage": "0",
+        "sub_lineage": "0"
+      },
+      "resistant_with_result": "448",
+      "tool_drugs": [
+        "delamanid"
+      ]
+    },
+    {
+      "antibiotic": "ethambutol",
+      "in_M": false,
+      "kind": "primary",
+      "resistant_no_result": "0",
+      "resistant_with_no_group": {
+        "cluster": "0",
+        "main_lineage": "0",
+        "sub_lineage": "0"
+      },
+      "resistant_with_result": "1338",
+      "tool_drugs": [
+        "ethambutol"
+      ]
+    },
+    {
+      "antibiotic": "ethionamide",
+      "in_M": false,
+      "kind": "primary",
+      "resistant_no_result": "0",
+      "resistant_with_no_group": {
+        "cluster": "0",
+        "main_lineage": "0",
+        "sub_lineage": "0"
+      },
+      "resistant_with_result": "915",
+      "tool_drugs": [
+        "ethionamide"
+      ]
+    },
+    {
+      "antibiotic": "isoniazid",
+      "in_M": true,
+      "kind": "primary",
+      "resistant_no_result": "0",
+      "resistant_with_no_group": {
+        "cluster": "0",
+        "main_lineage": "0",
+        "sub_lineage": "0"
+      },
+      "resistant_with_result": "1388",
+      "tool_drugs": [
+        "isoniazid"
+      ]
+    },
+    {
+      "antibiotic": "kanamycin",
+      "in_M": false,
+      "kind": "primary",
+      "resistant_no_result": "0",
+      "resistant_with_no_group": {
+        "cluster": "0",
+        "main_lineage": "0",
+        "sub_lineage": "0"
+      },
+      "resistant_with_result": "617",
+      "tool_drugs": [
+        "kanamycin"
+      ]
+    },
+    {
+      "antibiotic": "levofloxacin",
+      "in_M": false,
+      "kind": "primary",
+      "resistant_no_result": "0",
+      "resistant_with_no_group": {
+        "cluster": "0",
+        "main_lineage": "0",
+        "sub_lineage": "0"
+      },
+      "resistant_with_result": "753",
+      "tool_drugs": [
+        "levofloxacin"
+      ]
+    },
+    {
+      "antibiotic": "linezolid",
+      "in_M": false,
+      "kind": "primary",
+      "resistant_no_result": "0",
+      "resistant_with_no_group": {
+        "cluster": "0",
+        "main_lineage": "0",
+        "sub_lineage": "0"
+      },
+      "resistant_with_result": "202",
+      "tool_drugs": [
+        "linezolid"
+      ]
+    },
+    {
+      "antibiotic": "moxifloxacin",
+      "in_M": false,
+      "kind": "primary",
+      "resistant_no_result": "0",
+      "resistant_with_no_group": {
+        "cluster": "0",
+        "main_lineage": "0",
+        "sub_lineage": "0"
+      },
+      "resistant_with_result": "733",
+      "tool_drugs": [
+        "moxifloxacin"
+      ]
+    },
+    {
+      "antibiotic": "ofloxacin",
+      "in_M": false,
+      "kind": "proxy",
+      "resistant_no_result": "0",
+      "resistant_with_no_group": {
+        "cluster": "0",
+        "main_lineage": "0",
+        "sub_lineage": "0"
+      },
+      "resistant_with_result": "355",
+      "tool_drugs": [
+        "levofloxacin",
+        "moxifloxacin"
+      ]
+    },
+    {
+      "antibiotic": "para-aminosalicylic acid",
+      "in_M": false,
+      "kind": "primary",
+      "resistant_no_result": "0",
+      "resistant_with_no_group": {
+        "cluster": "0",
+        "main_lineage": "0",
+        "sub_lineage": "0"
+      },
+      "resistant_with_result": "429",
+      "tool_drugs": [
+        "para-aminosalicylic_acid"
+      ]
+    },
+    {
+      "antibiotic": "prothionamide",
+      "in_M": false,
+      "kind": "proxy",
+      "resistant_no_result": "0",
+      "resistant_with_no_group": {
+        "cluster": "0",
+        "main_lineage": "0",
+        "sub_lineage": "0"
+      },
+      "resistant_with_result": "92",
+      "tool_drugs": [
+        "ethionamide"
+      ]
+    },
+    {
+      "antibiotic": "pyrazinamide",
+      "in_M": false,
+      "kind": "primary",
+      "resistant_no_result": "0",
+      "resistant_with_no_group": {
+        "cluster": "0",
+        "main_lineage": "0",
+        "sub_lineage": "0"
+      },
+      "resistant_with_result": "381",
+      "tool_drugs": [
+        "pyrazinamide"
+      ]
+    },
+    {
+      "antibiotic": "rifabutin",
+      "in_M": false,
+      "kind": "proxy",
+      "resistant_no_result": "0",
+      "resistant_with_no_group": {
+        "cluster": "0",
+        "main_lineage": "0",
+        "sub_lineage": "0"
+      },
+      "resistant_with_result": "665",
+      "tool_drugs": [
+        "rifampicin"
+      ]
+    },
+    {
+      "antibiotic": "rifampin",
+      "in_M": false,
+      "kind": "primary",
+      "resistant_no_result": "0",
+      "resistant_with_no_group": {
+        "cluster": "0",
+        "main_lineage": "0",
+        "sub_lineage": "0"
+      },
+      "resistant_with_result": "1365",
+      "tool_drugs": [
+        "rifampicin"
+      ]
+    },
+    {
+      "antibiotic": "streptomycin",
+      "in_M": false,
+      "kind": "primary",
+      "resistant_no_result": "0",
+      "resistant_with_no_group": {
+        "cluster": "0",
+        "main_lineage": "0",
+        "sub_lineage": "0"
+      },
+      "resistant_with_result": "539",
+      "tool_drugs": [
+        "streptomycin"
+      ]
+    }
+  ],
+  "genomes_failed": "0",
+  "genomes_planned": "2000",
+  "genomes_with_result": "2000",
+  "not_scored_reports": [
+    {
+      "antibiotic": "amoxicillin",
+      "reason": "the tool has no drug of this name"
+    },
+    {
+      "antibiotic": "nicotinamide",
+      "reason": "the tool has no drug of this name"
+    }
+  ],
+  "orders": 1000,
+  "species": "mycobacterium_tuberculosis",
+  "tool": "6.6.3",
+  "tool_drugs": [
+    "amikacin",
+    "bedaquiline",
+    "capreomycin",
+    "clofazimine",
+    "cycloserine",
+    "delamanid",
+    "ethambutol",
+    "ethionamide",
+    "isoniazid",
+    "kanamycin",
+    "levofloxacin",
+    "linezolid",
+    "moxifloxacin",
+    "para-aminosalicylic_acid",
+    "pretomanid",
+    "pyrazinamide",
+    "rifampicin",
+    "streptomycin"
+  ]
+}

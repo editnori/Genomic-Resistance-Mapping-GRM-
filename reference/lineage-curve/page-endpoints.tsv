@@ -1,0 +1,23 @@
+dataset	species	antibiotic	in_M	labels_depend_on	kind	tool_drugs	resistant_with_result	resistant_no_result	catalogue_variants	genes_named	without_determinant	share_without	groups_main	groups_sub	groups_cluster	no_main	no_sub	no_cluster	one_lineage_main	one_lineage_sub
+mycobacterium_tuberculosis__amikacin	Mycobacterium tuberculosis	amikacin	0	most-resistant against the other three	primary	amikacin	548	0	4	2	116	0.211678832117	6	31	249	0	0	0	0	0
+mycobacterium_tuberculosis__amoxicillin	Mycobacterium tuberculosis	amoxicillin	0	none of the four	none															
+mycobacterium_tuberculosis__capreomycin	Mycobacterium tuberculosis	capreomycin	0	most-resistant against the other three	primary	capreomycin	422	0	10	2	75	0.177725118483	5	19	152	0	0	0	8	8
+mycobacterium_tuberculosis__ciprofloxacin	Mycobacterium tuberculosis	ciprofloxacin	0	none of the four	proxy	levofloxacin,moxifloxacin	73	0	8	1	8	0.109589041096	4	17	46	0	0	0	3	3
+mycobacterium_tuberculosis__clofazimine	Mycobacterium tuberculosis	clofazimine	1	the maintainer's rule	primary	clofazimine	193	0	5	1	188	0.974093264249	4	19	129	0	0	0	5	5
+mycobacterium_tuberculosis__cycloserine	Mycobacterium tuberculosis	cycloserine	0	none of the four	primary	cycloserine	119	0	0	0	119	1.000000000000	3	10	53	0	0	0	0	0
+mycobacterium_tuberculosis__delamanid	Mycobacterium tuberculosis	delamanid	0	none of the four	primary	delamanid	448	0	3	0	444	0.991071428571	6	28	276	0	0	0	2	2
+mycobacterium_tuberculosis__ethambutol	Mycobacterium tuberculosis	ethambutol	0	most-resistant against the other three	primary	ethambutol	1338	0	12	1	347	0.259342301943	8	44	584	0	0	0	0	0
+mycobacterium_tuberculosis__ethionamide	Mycobacterium tuberculosis	ethionamide	0	most-resistant against the other three	primary	ethionamide	915	0	136	2	259	0.283060109290	7	39	380	0	0	0	121	117
+mycobacterium_tuberculosis__isoniazid	Mycobacterium tuberculosis	isoniazid	1	the maintainer's rule	primary	isoniazid	1388	0	17	2	77	0.055475504323	9	46	564	0	0	0	9	9
+mycobacterium_tuberculosis__kanamycin	Mycobacterium tuberculosis	kanamycin	0	none of the four	primary	kanamycin	617	0	6	2	128	0.207455429498	6	33	258	0	0	0	0	0
+mycobacterium_tuberculosis__levofloxacin	Mycobacterium tuberculosis	levofloxacin	0	none of the four	primary	levofloxacin	753	0	16	2	311	0.413014608234	8	33	381	0	0	0	6	5
+mycobacterium_tuberculosis__linezolid	Mycobacterium tuberculosis	linezolid	0	none of the four	primary	linezolid	202	0	3	2	178	0.881188118812	5	21	148	0	0	0	0	0
+mycobacterium_tuberculosis__moxifloxacin	Mycobacterium tuberculosis	moxifloxacin	0	most-resistant against the other three	primary	moxifloxacin	733	0	15	2	136	0.185538881310	8	36	347	0	0	0	4	3
+mycobacterium_tuberculosis__nicotinamide	Mycobacterium tuberculosis	nicotinamide	0	none of the four	none															
+mycobacterium_tuberculosis__ofloxacin	Mycobacterium tuberculosis	ofloxacin	0	most-resistant against the other three	proxy	levofloxacin,moxifloxacin	355	0	12	2	34	0.095774647887	4	17	118	0	0	0	4	4
+mycobacterium_tuberculosis__para_aminosalicylic_acid	Mycobacterium tuberculosis	para-aminosalicylic acid	0	none of the four	primary	para-aminosalicylic_acid	429	0	0	0	429	1.000000000000	6	27	209	0	0	0	0	0
+mycobacterium_tuberculosis__prothionamide	Mycobacterium tuberculosis	prothionamide	0	none of the four	proxy	ethionamide	92	0	14	2	26	0.282608695652	2	5	34	0	0	0	13	13
+mycobacterium_tuberculosis__pyrazinamide	Mycobacterium tuberculosis	pyrazinamide	0	most-resistant against the other three	primary	pyrazinamide	381	0	94	1	60	0.157480314961	5	24	184	0	0	0	78	76
+mycobacterium_tuberculosis__rifabutin	Mycobacterium tuberculosis	rifabutin	0	none of the four	proxy	rifampicin	665	0	27	1	20	0.030075187970	6	26	277	0	0	0	16	15
+mycobacterium_tuberculosis__rifampin	Mycobacterium tuberculosis	rifampin	0	most-resistant against the other three	primary	rifampicin	1365	0	40	1	72	0.052747252747	7	41	541	0	0	0	20	19
+mycobacterium_tuberculosis__streptomycin	Mycobacterium tuberculosis	streptomycin	0	most-resistant against the other three	primary	streptomycin	539	0	15	3	44	0.081632653061	5	27	196	0	0	0	9	8
