@@ -65,6 +65,8 @@ TABLES = {
     "m4-coverage.tsv": (("resistant", "without_determinant"), {}, {"share_without": ("resistant",)}),
     "m4-convergence.tsv": (("resistant_covered",), {}, {}),
     "m4-genes.tsv": (("resistant_with_gene",), {}, {}),
+    "page-endpoints.tsv": (("resistant_with_result", "resistant_no_result", "without_determinant", "no_main", "no_sub",
+                            "no_cluster"), {}, {"share_without": ("resistant_with_result",)}),
 }
 NOT_TABLES = ("timing.tsv",)
 RECALL_FLOOR = 10
