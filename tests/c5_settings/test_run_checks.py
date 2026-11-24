@@ -15,6 +15,9 @@ from tests.c5_settings import common
 from tests.c5_settings import page_fixture as fx
 
 checks = common.load("run_checks")
+rescore = common.load("rescore")
+STOPPED = "synthia_gamma"
+STOPPED_AT = "2026-11-23T12:30:00Z"
 
 
 class Case(unittest.TestCase):
@@ -261,6 +264,243 @@ class Gather(Case):
         path.write_text("FAIL x\nCHECKS 0 of 1\n", encoding="utf-8")
         with self.assertRaises(SystemExit):
             checks.gather(copies, lists, path, self.top / "reading")
+
+
+def stop_at_score(copies, slug=STOPPED, drives=20, ended=None, lead_extra=""):
+    """Make a species' copy one whose run stopped at its score step, as Klebsiella pneumoniae's did: FAILED at score,
+    no DONE and no SHA256SUMS, score/ holding checks.tsv and score.log, logs/run.log with its drives, and
+    SHA256SUMS.lead over every file but score/score.log. Returns the lead's sha256 and the folder of the rescored
+    tables (each species' draws.tsv as the copies hold it, the stopped one's made again)."""
+    out = copies / slug
+    draws = (out / "score" / "draws.tsv").read_bytes()
+    for name in ("DONE", "SHA256SUMS", "score/draws.tsv", "score/datasets.tsv"):
+        (out / name).unlink()
+    (out / "FAILED").write_text(f"FAILED {slug} at score {STOPPED_AT}\n", encoding="utf-8")
+    lines = [f"2026-11-23T10:00:00Z start {slug}, 4 jobs, 2 drives at once",
+             f"2026-11-23T10:01:00Z drives: {drives} outer folds, {drives} to run, 2 at once, 2 threads each"]
+    lines += ended if ended is not None else [f"2026-11-23T11:00:00Z drive SYNTHETIC.lineage-s42.f{k} ok"
+                                              for k in range(drives)]
+    lines += ["2026-11-23T12:29:00Z score: start", "2026-11-23T12:30:00Z score: stopped; its output is in score/score.log",
+              "2026-11-23T12:30:00Z FAILED at score"]
+    (out / "logs" / "run.log").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    names = sorted(q.relative_to(out).as_posix() for q in out.rglob("*") if q.is_file())
+    (out / "SHA256SUMS.lead").write_text("".join(f"{fx.sha256(out / n)}  {n}\n" for n in names
+                                                 if n != "score/score.log") + lead_extra, encoding="utf-8")
+    tables = copies.parent / "rescored"
+    for q in sorted(copies.iterdir()):
+        (tables / q.name).mkdir(parents=True)
+        (tables / q.name / "draws.tsv").write_bytes(draws if q.name == slug else (q / "score" / "draws.tsv").read_bytes())
+    return fx.sha256(out / "SHA256SUMS.lead"), tables
+
+
+class Allowance(Case):
+    """--failed-at-score: one species' run stopped at its score step (SYNTHETIC copies)."""
+
+    def allowed(self, after=None, flag=True, **kw):
+        copies, lists, release = fx.copies(self.top)
+        lead, tables = stop_at_score(copies, **kw)
+        if after:
+            after(copies)
+        lines, aside = checks.check(copies, lists, release, STOPPED if flag else None, lead if flag else None,
+                                    tables)
+        return checks.report(lines, aside)
+
+    def test_a_species_stopped_at_score_passes_under_the_named_allowance(self):
+        report = self.allowed()
+        self.assertEqual(report[-1], "CHECKS 15 of 15", "\n".join(report))
+        self.assertIn(f"FAILED at score {STOPPED_AT}; DONE 0, SHA256SUMS 0", self.line(report, f"{STOPPED}: FAILED"))
+        self.assertIn("20 to run over 1 drives lines, 20 ended ok (20 named once), 0 ended otherwise",
+                      self.line(report, f"{STOPPED}: logs/run.log"))
+        self.assertIn("score/score.log named 0; its sha256 is the one given", self.line(report, f"{STOPPED}: every line"))
+        self.assertIn(f"commit {fx.COMMIT}, code {fx.CODE}", self.line(report, f"{STOPPED}: binary.txt"))
+        self.assertIn(f"2 of 3; {STOPPED} stopped at its score step", self.line(report, "each species ended DONE"))
+
+    def test_a_species_stopped_at_score_fails_without_the_allowance(self):
+        report = self.allowed(flag=False)
+        self.assertTrue(self.line(report, "each species ended DONE").startswith("FAIL"))
+        self.assertFalse([x for x in report if x.split(" ", 1)[1].startswith(f"{STOPPED}: ")])
+
+    def test_the_allowance_refuses_a_lead_sums_of_another_sha256(self):
+        copies, lists, release = fx.copies(self.top)
+        _, tables = stop_at_score(copies)
+        lines, aside = checks.check(copies, lists, release, STOPPED, "0" * 64, tables)
+        line = self.line(checks.report(lines, aside), f"{STOPPED}: every line")
+        self.assertTrue(line.startswith("FAIL") and line.endswith("is not the one given"), line)
+
+    def test_the_allowance_refuses_a_drive_ended_otherwise(self):
+        ended = [f"2026-11-23T11:00:00Z drive SYNTHETIC.lineage-s42.f{k} ok" for k in range(20)]
+        ended.append("2026-11-23T11:00:00Z drive SYNTHETIC.lineage-s43.f0 FAILED, rc 1")
+        line = self.line(self.allowed(ended=ended), f"{STOPPED}: logs/run.log")
+        self.assertTrue(line.startswith("FAIL"), line)
+        self.assertIn("20 ended ok (20 named once), 1 ended otherwise", line)
+
+    def test_the_allowance_refuses_fewer_drives_ended_ok_than_to_run(self):
+        ended = [f"2026-11-23T11:00:00Z drive SYNTHETIC.lineage-s42.f{k} ok" for k in range(19)]
+        line = self.line(self.allowed(ended=ended), f"{STOPPED}: logs/run.log")
+        self.assertTrue(line.startswith("FAIL"), line)
+        self.assertIn("20 to run over 1 drives lines, 19 ended ok", line)
+
+    def test_the_allowance_refuses_score_log_in_the_lead_sums_and_never_opens_it(self):
+        opened = []
+        real_open = builtins.open
+
+        def wrapped(file, *args, **kwargs):
+            if str(file).endswith("score/score.log"):
+                opened.append(str(file))
+            return real_open(file, *args, **kwargs)
+        copies, lists, release = fx.copies(self.top)
+        lead, tables = stop_at_score(copies, lead_extra=f"{'0' * 64}  score/score.log\n")
+        with mock.patch("builtins.open", wrapped):
+            lines, aside = checks.check(copies, lists, release, STOPPED, lead, tables)
+        line = self.line(checks.report(lines, aside), f"{STOPPED}: every line")
+        self.assertTrue(line.startswith("FAIL"), line)
+        self.assertIn("score/score.log named 1", line)
+        self.assertEqual(opened, [])
+
+    def test_the_allowance_refuses_a_failed_line_at_another_step(self):
+        def after(copies):
+            (copies / STOPPED / "FAILED").write_text(f"FAILED {STOPPED} at drives {STOPPED_AT}\n", encoding="utf-8")
+        line = self.line(self.allowed(after=after), f"{STOPPED}: FAILED")
+        self.assertTrue(line.startswith("FAIL"), line)
+
+    def test_the_allowance_refuses_a_done_beside_its_failed(self):
+        def after(copies):
+            (copies / STOPPED / "DONE").write_text("DONE SYNTHETIC\n", encoding="utf-8")
+        line = self.line(self.allowed(after=after), f"{STOPPED}: FAILED")
+        self.assertTrue(line.startswith("FAIL") and line.endswith("DONE 1, SHA256SUMS 0"), line)
+
+    def test_the_allowance_refuses_another_commit(self):
+        copies, lists, release = fx.copies(self.top)
+        path = copies / STOPPED / "binary.txt"
+        path.write_text(f"commit {'d' * 40}\ngrm {fx.GRM}\ncode {fx.CODE}\n", encoding="utf-8")
+        lead, tables = stop_at_score(copies)
+        report = checks.report(*checks.check(copies, lists, release, STOPPED, lead, tables))
+        self.assertTrue(self.line(report, f"{STOPPED}: binary.txt").startswith("FAIL"))
+        self.assertTrue(self.line(report, "every species ran one commit").startswith("FAIL"))
+
+    def test_the_allowance_refuses_a_file_changed_under_the_lead_sums(self):
+        def after(copies):
+            with open(copies / STOPPED / "check" / "refit.tsv", "a", encoding="utf-8") as f:
+                f.write("SYNTHETIC\t0\n")
+        line = self.line(self.allowed(after=after), f"{STOPPED}: every line")
+        self.assertTrue(line.startswith("FAIL"), line)
+        self.assertIn("1 differ or absent", line)
+
+
+class Times(Case):
+    """A time that equals a genome id as text is counted apart (SYNTHETIC copies)."""
+
+    def test_a_seconds_inner_value_equal_to_an_id_is_counted_apart(self):
+        gid = fx.genome("synthia_alpha", 2)
+
+        def change(slug, out):
+            if slug == "synthia_alpha":
+                p = out / "results" / "picks" / "choices" / "synthia_alpha__synthetic_drug_1.lineage-s42.f0.choices.json"
+                text = p.read_text(encoding="utf-8")
+                self.assertIn('"seconds_inner": 1.0', text)
+                p.write_text(text.replace('"seconds_inner": 1.0', f'"seconds_inner": {gid}', 1), encoding="utf-8")
+        line = self.line(self.run_checks(change), "no genome id")
+        self.assertTrue(line.startswith("PASS"), line)
+        self.assertIn(": 0 genome ids", line)
+        self.assertIn("counted apart: choices seconds_inner 1", line)
+
+    def test_a_user_time_line_equal_to_an_id_is_counted_apart(self):
+        gid = fx.genome("synthia_beta", 1)
+
+        def change(slug, out):
+            if slug == "synthia_beta":
+                (out / "logs" / "drive").mkdir()
+                (out / "logs" / "drive" / "SYNTHETIC.time").write_text(
+                    f"\tCommand being timed: SYNTHETIC\n\tUser time (seconds): {gid}\n"
+                    f"\tElapsed (wall clock) time (h:mm:ss or m:ss): 1:{gid}\n", encoding="utf-8")
+        line = self.line(self.run_checks(change), "no genome id")
+        self.assertTrue(line.startswith("PASS"), line)
+        self.assertIn("time Elapsed (wall clock) time 1, time User time (seconds) 1", line)
+
+    def test_an_id_on_another_line_of_a_time_file_still_fails(self):
+        gid = fx.genome("synthia_beta", 1)
+
+        def change(slug, out):
+            if slug == "synthia_beta":
+                (out / "logs" / "drive").mkdir()
+                (out / "logs" / "drive" / "SYNTHETIC.time").write_text(
+                    f"\tMaximum resident set size (kbytes): {gid}\n", encoding="utf-8")
+        line = self.line(self.run_checks(change), "no genome id")
+        self.assertTrue(line.startswith("FAIL"), line)
+        self.assertIn(": 1 genome ids", line)
+
+    def test_an_id_in_another_log_still_fails(self):
+        gid = fx.genome("synthia_gamma", 3)
+
+        def change(slug, out):
+            if slug == "synthia_gamma":
+                (out / "logs" / "run.log").write_text(f"2026-11-23T10:00:00Z SYNTHETIC {gid}\n", encoding="utf-8")
+        line = self.line(self.run_checks(change), "no genome id")
+        self.assertTrue(line.startswith("FAIL"), line)
+
+
+class Tables(Case):
+    """gather --tables and rescore.py, for a reading taken from tables scored again (SYNTHETIC copies)."""
+
+    def test_gather_with_tables_takes_the_rescored_tables(self):
+        copies, lists, release = fx.copies(self.top)
+        lines, aside = checks.check(copies, lists, release)
+        path = self.top / "checks.txt"
+        path.write_text("\n".join(checks.report(lines, aside)) + "\n", encoding="utf-8")
+        tables = self.top / "rescored"
+        for slug, _, _ in fx.SPECIES:
+            (tables / slug).mkdir(parents=True)
+            for t in checks.TABLES:
+                (tables / slug / t).write_text(f"SYNTHETIC {slug} {t}\n", encoding="utf-8")
+        (tables / "rescore.txt").write_text("PASS SYNTHETIC\nSAME 6 of 6\n", encoding="utf-8")
+        checks.gather(copies, lists, path, self.top / "reading", tables)
+        for slug, _, _ in fx.SPECIES:
+            for t in checks.TABLES:
+                self.assertEqual((self.top / "reading" / "score" / slug / t).read_text(encoding="utf-8"),
+                                 f"SYNTHETIC {slug} {t}\n")
+        (tables / "rescore.txt").write_text("PASS SYNTHETIC\nSAME 5 of 6\n", encoding="utf-8")
+        with self.assertRaises(SystemExit):
+            checks.gather(copies, lists, path, self.top / "again", tables)
+
+    def rescore_copies(self, change_sums=None):
+        """Two SYNTHETIC copies of a made-up species from test_score.write_run: one finished, its three tables as
+        score.py writes them with their SHA256SUMS lines, and one stopped at its score step."""
+        from tests.c5_settings import test_score as ts
+        lists = self.top / "lists.tsv"
+        lists.write_text("dataset\tspecies_slug\tfirst_run\tin_M\nx\tsynthia_done\t1\t0\ny\tsynthia_stopped\t1\t0\n",
+                         encoding="utf-8")
+        for slug in ("synthia_done", "synthia_stopped"):
+            made = self.top / "made" / slug
+            made.mkdir(parents=True)
+            args = ts.write_run(made)
+            out = self.top / "copies" / slug
+            (out / "results").mkdir(parents=True)
+            (out / "expect.tsv").write_bytes((made / "expect.tsv").read_bytes())
+            (made / "picks").rename(out / "results" / "picks")
+            if slug == "synthia_done":
+                rc, _ = ts.score([str(out / "expect.tsv"), str(out / "results" / "picks"), args[2], str(out / "score")])
+                self.assertEqual(rc, 0)
+                lines = [f"{fx.sha256(out / 'score' / t)}  score/{t}" for t in checks.TABLES]
+                if change_sums:
+                    lines = change_sums(lines)
+                (out / "SHA256SUMS").write_text("\n".join(lines) + "\n", encoding="utf-8")
+        return self.top / "copies", lists, self.top / "made" / "synthia_done" / "release"
+
+    def test_rescore_holds_each_finished_species_tables_to_its_sha256sums(self):
+        copies, lists, release = self.rescore_copies()
+        lines = rescore.rescore(copies, lists, release, self.top / "rescored")
+        self.assertEqual(lines[-1], "SAME 3 of 3", "\n".join(lines))
+        self.assertIn("PASS synthia_stopped: score.py ended 0; 3 tables, not held: the copy has no SHA256SUMS", lines)
+        self.assertTrue(checks.rescored(self.top / "rescored"))
+
+    def test_rescore_refuses_a_table_unlike_its_sha256sums_line(self):
+        copies, lists, release = self.rescore_copies(lambda ls: [("0" * 64) + ls[1][64:] if i == 1 else x
+                                                                 for i, x in enumerate(ls)])
+        lines = rescore.rescore(copies, lists, release, self.top / "rescored")
+        self.assertEqual(lines[-1], "SAME 2 of 3", "\n".join(lines))
+        self.assertIn("FAIL synthia_done: score.py ended 0; 2 of 3 tables the same as its SHA256SUMS lines; differs: "
+                      "draws.tsv", lines)
+        self.assertFalse(checks.rescored(self.top / "rescored"))
 
 
 if __name__ == "__main__":
