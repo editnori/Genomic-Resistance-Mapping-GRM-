@@ -1,0 +1,5 @@
+arm	split	fits	wall_s_sum	wall_s_median	cpu_s_sum	cpu_s_median	peak_kb_median	peak_kb_max
+cap-2000	lineage	143	23163.47	87.91	65434.69	210.9	2715660	8761564
+cap-2000	study	39	940.69	21.22	5071.21	129.97	2729208	3762248
+cap-all	lineage	116	28508.18	193.05	93048.08	462.04	5722228.0	17952344
+cap-all	study	27	1048.19	34.69	5681.09	181.37	5427848	8123680

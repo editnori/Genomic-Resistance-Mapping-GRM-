@@ -1,0 +1,14 @@
+1 inputs: the run's checks printout holds one pass line for each of run_checks.py's checks, in its order, and no line starting FAIL; the count directory holds count.tsv and conditions.tsv; each species' folder holds score/checks.tsv, score/draws.tsv, score/datasets.tsv, results/added-labelled.tsv, results/cohorts.json, expect.tsv and binary.txt
+2 species: the runs directory holds every species of lists.tsv's first run once, and no other
+3 first run: each species' expect.tsv lists exactly its first-run datasets, and no table holds a dataset of M or of another species; species and antibiotic equal lists.tsv's
+4 cohorts: each cohorts.json is its species', every cohort holds at most 4,096 genomes, and each wider cohort holds the default's whole list
+5 binary: each binary.txt names a commit and a code sha256; the species that share them are named together
+6 none-added: a none-added or same-cohort dataset is in no arm's rows and no denominator, on either split
+7 withdrawn: cap-4000 holds no row; its five lineage pairs stay in the family at p = 1, named withdrawn, and none of its conditions is read
+8 twin: the twin's rows are the default's fit at slots no draw has, and no condition reads the twin as an arm
+9 study: a study row stays on the study split, with the study role and no slot; no lineage row has the study role
+10 unavailable: a dataset whose lineage split is unavailable is unscored alike on every arm's lineage rows, and its study rows are scored as usual
+11 missing draw: every row expect.tsv lists for scoring has its five learners' draws; an unscored draw or dataset holds no figure; datasets.tsv is the mean of draws.tsv
+12 scored genomes: score.py's checks all passed, and each scored cap-all row has its check that its scored genomes are the default's
+13 few added: the datasets that add fewer than 20 labelled genomes under cap-all are in count.tsv, which is not the count without them
+14 count: count.tsv's lineage denominators hold lineage rows only, and count.tsv and conditions.tsv are what score.py --count --withdrawn cap-4000 writes from the species' datasets.tsv files

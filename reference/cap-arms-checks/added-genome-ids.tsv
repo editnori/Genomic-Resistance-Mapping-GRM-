@@ -1,0 +1,10 @@
+species	species_slug	files	ids_known	ids_beyond_release	ids_found
+Enterococcus faecium	enterococcus_faecium	96	24664	907	0
+Escherichia coli	escherichia_coli	252	25853	2096	0
+Klebsiella pneumoniae	klebsiella_pneumoniae	296	25853	2096	0
+Mycobacterium tuberculosis	mycobacterium_tuberculosis	168	25853	2096	0
+Neisseria gonorrhoeae	neisseria_gonorrhoeae	80	25853	2096	0
+Salmonella enterica	salmonella_enterica	190	25853	2096	0
+Staphylococcus aureus	staphylococcus_aureus	142	25853	2096	0
+Streptococcus pneumoniae	streptococcus_pneumoniae	90	25853	2096	0
+the 8 species		1314		15579	0

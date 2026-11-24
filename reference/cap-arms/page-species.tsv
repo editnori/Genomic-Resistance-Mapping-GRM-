@@ -1,0 +1,9 @@
+species	species_slug	datasets	study_datasets	ranked	genomes_cap_2000	genomes_cap_4000_withdrawn	genomes_cap_all	added_cap_all	fetch_failed_added	short_of_4096	short_because	none_added	cap_all_pairs	cap_all_not_scored	cap_all_better	cap_all_worse	cap_all_same	twin_pairs	twin_not_scored	twin_better	twin_worse	twin_same	reading
+Enterococcus faecium	enterococcus_faecium	11	0	2907	2000	2907	2907	907	0	1189	the rule ranks fewer genomes	8	10	5	0	0	10	40	15	14	4	22	decides nothing
+Escherichia coli	escherichia_coli	29	15	8704	2000	4000	4096	2096	0	0		8	50	55	3	5	42	55	90	3	9	43	decides nothing
+Klebsiella pneumoniae	klebsiella_pneumoniae	32	18	6159	2000	4000	4096	2096	0	0		4	95	45	10	26	59	95	65	17	14	64	decides nothing
+Mycobacterium tuberculosis	mycobacterium_tuberculosis	20	1	21295	2000	4000	4096	2096	0	0		1	90	5	17	15	58	90	10	3	10	77	decides nothing
+Neisseria gonorrhoeae	neisseria_gonorrhoeae	6	0	5396	2000	4000	4096	2096	0	0		1	15	10	4	4	7	15	15	4	4	7	decides nothing
+Salmonella enterica	salmonella_enterica	24	1	8170	2000	4000	4096	2096	0	0		3	90	15	35	6	49	90	30	13	22	55	decides nothing
+Staphylococcus aureus	staphylococcus_aureus	13	4	5045	2000	4000	4096	2096	0	0		0	15	50	10	0	5	15	50	2	1	12	decides nothing
+Streptococcus pneumoniae	streptococcus_pneumoniae	8	0	15530	2000	4000	4096	2096	0	0		2	15	15	4	2	9	25	15	3	3	19	decides nothing

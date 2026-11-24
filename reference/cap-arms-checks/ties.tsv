@@ -1,0 +1,9 @@
+species	species_slug	ranked	cut	tied	kept	left
+Enterococcus faecium	enterococcus_faecium	2907	no cut			
+Escherichia coli	escherichia_coli	8704	4096	233	11	222
+Klebsiella pneumoniae	klebsiella_pneumoniae	6159	4096	121	51	70
+Mycobacterium tuberculosis	mycobacterium_tuberculosis	21295	4096	70	26	44
+Neisseria gonorrhoeae	neisseria_gonorrhoeae	5396	4096	974	133	841
+Salmonella enterica	salmonella_enterica	8170	4096	538	469	69
+Staphylococcus aureus	staphylococcus_aureus	5045	4096	946	407	539
+Streptococcus pneumoniae	streptococcus_pneumoniae	15530	4096	12	4	8
