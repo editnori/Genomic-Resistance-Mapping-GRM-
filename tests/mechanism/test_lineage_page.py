@@ -133,8 +133,9 @@ class Page(unittest.TestCase):
             self.assertEqual(r["in_M"], "1" if ends[r["antibiotic"]]["in_M"] else "0")
 
     def test_every_figure_of_the_prose_stands_in_the_record(self):
-        # The rules' own constants, the run's dates and the release's revision; every other figure must stand in a
-        # printed table or count the record's reports, groups or genomes.
+        # The rules' own constants (2.5, 97.5, 5), the Reading's two share cuts (0.1, 0.8: reading aids chosen after
+        # the tables were read, not rules), the run's dates and the release's revision; every other figure must stand
+        # in a printed table or count the record's reports, groups or genomes.
         fixed = {"2.5", "97.5", "5", "0.1", "0.8", "14", "2026", "24"}
         with open(RECORD / "m4" / "m4-summary.json", encoding="utf-8") as handle:
             summary = json.load(handle)

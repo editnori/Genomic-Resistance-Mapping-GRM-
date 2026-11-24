@@ -8,7 +8,7 @@ A curve describes the deposits of one public database. A share is no prevalence.
 
 ## Reading
 
-Over the resistant genomes of the 20 reports the tool can read, the graded variants number from 0 to 136 per antibiotic, and how fast the count fills as main lineages are added differs by antibiotic. For 7 of the 18 antibiotics with a graded variant, the median over 1,000 random orders reaches the full count by the third main lineage added: amikacin (4 variants among 548 resistant genomes), ciprofloxacin (8 among 73), ethambutol (12 among 1,338), kanamycin (6 among 617), linezolid (3 among 202), ofloxacin (12 among 355) and prothionamide (14 among 92). For 5 it reaches the full count only with the last: clofazimine (5 among 193), ethionamide (136 among 915), pyrazinamide (94 among 381), rifabutin (27 among 665) and rifampin (40 among 1,365).
+Over the resistant genomes of the 20 reports the tool can read, the graded variants number from 0 to 136 per antibiotic, and how fast the count fills as main lineages are added differs by antibiotic. For 7 of the 18 antibiotics with a graded variant, the median over 1,000 random orders reaches the full count by the third main lineage added: amikacin (4 variants among 548 resistant genomes), ciprofloxacin (8 among 73), ethambutol (12 among 1,338), kanamycin (6 among 617), linezolid (3 among 202), ofloxacin (12 among 355) and prothionamide (14 among 92). For 5 it reaches the full count only with the last: clofazimine (5 among 193), ethionamide (136 among 915), pyrazinamide (94 among 381), rifabutin (27 among 665) and rifampin (40 among 1,365). The cuts "by the third main lineage", "only with the last", "under 0.1" and "over 0.8" are reading aids chosen after the tables were read, and they decide nothing.
 
 Resistant genomes with no graded variant run from 20 of 665 for rifabutin (0.030) to 444 of 448 for delamanid (0.991), and to all of them for cycloserine (119 of 119) and para-aminosalicylic acid (429 of 429), whose curves are 0 (section Limits). The share is under 0.1 for rifabutin, rifampin (72 of 1,365, 0.053), isoniazid (77 of 1,388, 0.055), streptomycin (44 of 539, 0.082) and ofloxacin (34 of 355, 0.096). It is over 0.8 for linezolid (178 of 202, 0.881), clofazimine (188 of 193, 0.974), delamanid, cycloserine and para-aminosalicylic acid.
 
@@ -201,7 +201,7 @@ Sublineages and clusters, the first step and the last. Under the clusters, the m
 
 ## No graded variant
 
-A resistant genome with no graded variant carries no variant of the antibiotic's drug that the catalogue grades. It is a count, and nobody looked into these genomes further. A share is written over 5 or more resistant genomes. Over all the resistant genomes of each report, then per main lineage; a group of under 5 resistant genomes gets its count and no share, and `none` marks a group with no resistant genome of the antibiotic.
+A resistant genome with no graded variant is one for which the tool reports no graded variant for the antibiotic's drug. It is a count, and nobody looked into these genomes further. A share is written over 5 or more resistant genomes. Over all the resistant genomes of each report, then per main lineage; a group of under 5 resistant genomes gets its count and no share, and `none` marks a group with no resistant genome of the antibiotic.
 
 | Antibiotic | No graded variant | Share | La1;lineage4 | La3 | lineage1 | lineage2 | lineage2;lineage3 | lineage2;lineage4 | lineage3 | lineage3;lineage4 | lineage4 | lineage6 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -315,7 +315,7 @@ Per gene as the WHO catalogue names it, the count of its graded variants seen am
 
 These points were seen in the tables after the reading. The rules did not ask for them. They change nothing above and decide nothing.
 
-**The share with no graded variant differs between main lineages.** For rifampin it is 3 of 858 in lineage2 (0.003), 18 of 50 in lineage1 (0.360) and 35 of 160 in lineage3 (0.219). For levofloxacin it is 39 of 372 (0.105), 91 of 97 (0.938) and 125 of 173 (0.723). Nobody looked into it further.
+**The share with no graded variant differs between main lineages.** For rifampin it is 3 of 858 in lineage2 (0.003), 18 of 50 in lineage1 (0.360) and 35 of 160 in lineage3 (0.219). For levofloxacin it is 39 of 372 in lineage2 (0.105), 91 of 97 in lineage1 (0.938) and 125 of 173 in lineage3 (0.723). Nobody looked into it further.
 
 **Calls that join two lineages.** Four main-lineage groups join two lineages as the tool writes them, and each holds 1 to 4 resistant genomes of an antibiotic. An assembly is one consensus sequence (section Limits). These calls were not looked into.
 
@@ -336,6 +336,8 @@ These points were seen in the tables after the reading. The rules did not ask fo
 **The catalogue's version.** The grades are those of `tbdb` `3ed1cb99`. Another version of the catalogue can grade other variants. The catalogue was built from public isolates with recorded phenotypes, and some of these genomes may be among them; the overlap was not checked.
 
 **No graded variant.** A resistant genome with no graded variant is counted, and nothing more is said of it.
+
+**Group rows.** The record bars a row per genome. A row per lineage group is an aggregate and is written with its count, even where a group holds one resistant genome. These are public bacterial genomes with public accession numbers, and the record holds no field about a patient.
 
 **Labels.** The reports in set M wait for the maintainer's label rule. They are marked.
 
