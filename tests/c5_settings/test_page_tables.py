@@ -342,7 +342,7 @@ class Tables(Case):
                             == ("0.0126", "0.0088", "0.0163") for r in lin))
         self.assertTrue(all(r["decides"] == ("1" if r["pair"] == "search-default" else "0") for r in rows))
 
-    def test_the_counts_of_what_the_search_chose(self):
+    def test_what_the_search_chose_is_counted_per_learner(self):
         tables = self.written()
         rows = {(r["split"], r["learner"]): r for r in tables["page-choices.tsv"]}
         # 4 datasets, 3 lineage draws each, 5 folds; 4 study runs, 5 folds.
@@ -474,6 +474,48 @@ class Tables(Case):
         (self.out / "x").write_text("x", encoding="utf-8")
         with self.assertRaisesRegex(page.Stop, "is not empty"):
             self.write()
+
+
+class UnavailableDraw(Case):
+    """A default draw that came back unavailable, as score.py marks each row there: split unavailable."""
+
+    DATASET = fx.dataset_name("synthia_beta", "synthetic drug 3")
+
+    def test_an_unavailable_default_draw_is_not_scored_and_leaves_the_count(self):
+        self.build(unavailable=True)
+        self.write()
+        rows = [r for r in tsv(self.out / "page-datasets.tsv") if (r["dataset"], r["split"], r["pair"])
+                == (self.DATASET, "lineage", "search-default")]
+        self.assertEqual(len(rows), 5)
+        for r in rows:
+            self.assertEqual((r["value"], r["difference"], r["draws_scored"]), ("", "", "2"))
+        for pair in ("search-default", "cutoff-default", "twin-default"):
+            count = [r for r in tsv(self.out / "page-count.tsv") if (r["split"], r["pair"], r["learner"], r["measure"])
+                     == ("lineage", pair, "rf", "balanced_accuracy")][0]
+            self.assertEqual((count["datasets"], count["entered"], count["not_scored"]), ("4", "3", "1"), pair)
+
+    def test_an_unavailable_default_that_owes_choices_files_is_refused(self):
+        self.build(unavailable=True)
+        folds = self.reading / "score" / "synthia_beta" / "folds.tsv"
+        put(folds, [dict(r, folds=str(fx.FOLDS)) for r in tsv(folds)])
+        self.refused(r"gate 12 choices: score/synthia_beta: .* lineage seed 43 has no choices file")
+
+    def test_a_column_of_0_in_every_row_is_not_printed(self):
+        self.build()
+        self.write()
+        printed = page.tables(self.out)
+        self.assertNotIn("Constant model", printed["count"][0])
+        self.assertNotIn("Study run refused", printed["datasets"][0])
+        self.assertEqual(len(printed["count"][0].split(" | ")), len(printed["count"][2].split(" | ")))
+        self.tmp.cleanup()
+        self.tmp = tempfile.TemporaryDirectory()
+        self.top, self.out = Path(self.tmp.name), Path(self.tmp.name) / "out"
+        self.build(constant=True)
+        self.write()
+        printed = page.tables(self.out)
+        self.assertIn("Constant model", printed["count"][0])
+        self.assertIn("Study run refused", printed["datasets"][0])
+        self.assertIn("| yes |", "\n".join(printed["datasets"]))
 
 
 if __name__ == "__main__":

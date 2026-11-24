@@ -130,12 +130,15 @@ def write_tsv(path, rows, columns):
     C3.write_tsv(path, rows, columns)
 
 
-def build(top, missing=False, constant=False, change_draws=None, change_choice=None, species=None, m_in_run=False):
+def build(top, missing=False, constant=False, change_draws=None, change_choice=None, species=None, m_in_run=False,
+          unavailable=False):
     """top/lists.tsv, top/checks.txt and top/reading: a reading of every species that passes every gate.
 
     missing: Synthia alpha's first dataset has no choices files at lineage seed 43, and its three arms are a
     missing draw there. constant: Synthia beta's search study run is a constant model, refused for no candidate.
     m_in_run: lists.tsv marks the dataset of M as on the first run, and the reading holds it.
+    unavailable: Synthia beta's first dataset's default draw on the lineage split at seed 43 came back unavailable,
+    with no outer fold and no choices file, and the twin's at seed 46: each row there is not scored, split unavailable.
     change_draws(slug, draws) changes the draws before the tables are made from them; change_choice(key, doc)
     returns a choices file's doc, or None for no file.
     """
@@ -162,8 +165,12 @@ def build(top, missing=False, constant=False, change_draws=None, change_choice=N
             lost = missing and e["dataset"] == datasets[0] and slug == "synthia_alpha" and e["split"] == "lineage" \
                 and int(e["seed"]) == 43 and e["arm"] in score.ARMS
             refused = constant and slug == "synthia_beta" and e["split"] == "study" and e["arm"] == "search"
+            off = unavailable and slug == "synthia_beta" and e["dataset"] == datasets[0] and e["split"] == "lineage" \
+                and int(e["seed"]) in (43, 46)
             for learner in LEARNERS:
-                if lost:
+                if off:
+                    draws.append(draw_row(e, learner, name, ab, scored=0, why="split unavailable"))
+                elif lost:
                     draws.append(draw_row(e, learner, name, ab, scored=0, why="missing draw"))
                     gone.add((e["dataset"], scheme, int(e["seed"])))
                 elif refused:
@@ -172,7 +179,7 @@ def build(top, missing=False, constant=False, change_draws=None, change_choice=N
                 else:
                     draws.append(draw_row(e, learner, name, ab))
             if e["arm"] == "default" and e["role"] in ("draw", "study") \
-                    and (e["dataset"], scheme, int(e["seed"])) not in gone and not lost:
+                    and (e["dataset"], scheme, int(e["seed"])) not in gone and not lost and not off:
                 for k in range(FOLDS):
                     key = (e["dataset"], scheme, int(e["seed"]), k)
                     doc = choice_doc(*key)
@@ -197,7 +204,10 @@ def build(top, missing=False, constant=False, change_draws=None, change_choice=N
                                            "passed": True, "detail": ""}], ["file", "check", "passed", "detail"])
         (folder / "binary.txt").write_text(f"commit {COMMIT}\ngrm {GRM}\ncode {CODE}\n", encoding="utf-8")
         write_tsv(folder / "folds.tsv", [{"dataset": e["dataset"], "scheme": e["scheme"], "seed": e["seed"],
-                                          "folds": FOLDS} for e in expect_rows(slug, datasets)
+                                          "folds": 0 if unavailable and slug == "synthia_beta"
+                                          and (e["dataset"], e["scheme"], int(e["seed"]))
+                                          == (datasets[0], "lineage", 43) else FOLDS}
+                                         for e in expect_rows(slug, datasets)
                                          if e["arm"] == "default" and e["role"] in ("draw", "study")],
                   ["dataset", "scheme", "seed", "folds"])
         every += C3.read_tsv(folder / "datasets.tsv")

@@ -29,11 +29,14 @@ if ROOT not in sys.path:
 
 PAGE = "scripts/c5-settings/page_tables.py"
 CHECKS = "scripts/c5-settings/run_checks.py"
+RESCORE = "scripts/c5-settings/rescore.py"
 # The test module and the name it holds each script under.
-HOLDER = {PAGE: ("tests.c5_settings.test_page_tables", "page"), CHECKS: ("tests.c5_settings.test_run_checks", "checks")}
+HOLDER = {PAGE: ("tests.c5_settings.test_page_tables", "page"), CHECKS: ("tests.c5_settings.test_run_checks", "checks"),
+          RESCORE: ("tests.c5_settings.test_run_checks", "rescore")}
 G = "tests.c5_settings.test_page_tables.Gates."
 T = "tests.c5_settings.test_page_tables.Tables."
 R = "tests.c5_settings.test_run_checks."
+U = "tests.c5_settings.test_page_tables.UnavailableDraw."
 
 # (n, what is planted, file, text, replacement, gate or table, test that must catch it)
 FAULTS = [
@@ -172,6 +175,41 @@ FAULTS = [
      '          ("binary.txt", "binary.txt"))',
      '          ("binary.txt", "binary.txt"), ("score/score.log", "score.log"))', "check",
      R + "Gather.test_gather_copies_four_files_a_species_and_the_choices_and_never_score_log"),
+    # Part 2: an unavailable default draw, the columns of 0, the allowance, the times and the rescored tables.
+    ("P12d", "an unavailable default that owes choices files passes", PAGE,
+     '            if marks == {("0", UNAVAILABLE_WHY)} and want.get(key) == 0:',
+     '            if marks == {("0", UNAVAILABLE_WHY)}:', "12 choices",
+     U + "test_an_unavailable_default_that_owes_choices_files_is_refused"),
+    ("T9", "a column of 0 in every row printed", PAGE,
+     '    keep = [i for i in range(len(head)) if not rows or any(str(row[i]) != "0" for row in rows)]',
+     "    keep = list(range(len(head)))", "table", U + "test_a_column_of_0_in_every_row_is_not_printed"),
+    ("R12", "a species with no DONE passes as stopped at score without the allowance", CHECKS,
+     "    allowed = failed_at if failed_at in present else None\n",
+     '    allowed = failed_at if failed_at in present else next((s for s in present if not (copies / s / "DONE").exists()), None)\n',
+     "check", R + "Allowance.test_a_species_stopped_at_score_fails_without_the_allowance"),
+    ("R13", "SHA256SUMS.lead of another sha256 passes", CHECKS,
+     "    lines.append((lead.is_file() and listed > 0 and wrong == 0 and named_log == 0 and own == lead_sha,",
+     "    lines.append((lead.is_file() and listed > 0 and wrong == 0 and named_log == 0,", "check",
+     R + "Allowance.test_the_allowance_refuses_a_lead_sums_of_another_sha256"),
+    ("R14", "a drive ended otherwise passes the allowance", CHECKS,
+     "    lines.append((runs > 0 and to_run == len(done_ok) == len(set(done_ok)) and other == 0,",
+     "    lines.append((runs > 0 and to_run == len(done_ok) == len(set(done_ok)),", "check",
+     R + "Allowance.test_the_allowance_refuses_a_drive_ended_otherwise"),
+    ("R15", "an id on any line of a drive's .time file counted as a time", CHECKS,
+     "        if label and value >= 0 and m.start() - start >= value + 2:",
+     "        if value >= 0 and m.start() - start >= value + 2:", "check",
+     R + "Times.test_an_id_on_another_line_of_a_time_file_still_fails"),
+    ("R16", "a seconds_inner value equal to an id fails as an id", CHECKS,
+     'TIME_KEYS = ("seconds_inner", "seconds_outer")', 'TIME_KEYS = ("seconds_outer",)', "check",
+     R + "Times.test_a_seconds_inner_value_equal_to_an_id_is_counted_apart"),
+    ("R17", "gather with tables copies the copy's tables", CHECKS,
+     "                src_path = Path(tables) / slug / dst",
+     "                src_path = copies / slug / src", "check",
+     R + "Tables.test_gather_with_tables_takes_the_rescored_tables"),
+    ("R18", "a rescored table unlike its SHA256SUMS line passes", RESCORE,
+     '        agree = [t for t in TABLES if listed.get(f"score/{t}") == sha256(dest / t)]',
+     "        agree = list(TABLES)", "check",
+     R + "Tables.test_rescore_refuses_a_table_unlike_its_sha256sums_line"),
 ]
 
 

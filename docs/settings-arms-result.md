@@ -32,6 +32,10 @@ The release keeps its settings and its 0.5 cutoff whatever the count says, until
 
 **Plain best.** The plain best, no anchor, is the trial with the highest inner mean, a tie going to the lowest trial id, refitted on the outer training genomes and scored beside the two arms. It stands in no Holm family and no condition, and decides nothing.
 
+**Not scored.** A dataset with a draw not scored is not scored, and a missing draw is never read as zero. *Klebsiella pneumoniae* with polymyxin B leaves the lineage count, as it left block C3's (`docs/input-arms-result.md`, Not scored). Its default draw on the lineage split at seed 43 came back unavailable, with no outer fold, and the result gives the reason as `invalid lineage outer evaluation: fold <k> validation lacks one or both classes`. The twin's draw at seed 46 is unavailable for the same reason. Each arm's row at seed 43 is not scored, for the default's reason, as C3's scorer marks the default's own row, and no choices file is owed there. Its draws at seeds 42 and 44, the twin's at 45 and 47 and its study run each hold 5 outer folds.
+
+<!-- part B: the fold <k> as the result gives it, from the rescored checks.tsv detail. -->
+
 <!-- part 2: results, choices files and datasets not scored, with their counts. -->
 
 ## Count
@@ -82,21 +86,30 @@ These points are seen in the tables after the reading. They change no rule and n
 
 **The cutoff arm.** The cutoff arm moves no score, so its log loss equals the default's by construction. A same on log loss for the cutoff arm says nothing about its calls.
 
+**Times.** A time can equal a genome id as text, so the id check counts apart, by file kind and key or label, a token that is the whole value of `seconds_inner` or `seconds_outer` in a choices file or the value on a `User time (seconds)`, `System time (seconds)` or `Elapsed (wall clock) time` line of a drive's `.time` file, and every other hit fails it.
+
 **Markers.** No marker is found, named or ranked. The page holds aggregates over datasets, species, splits, arms, folds and learners only.
 
 <!-- part 2: binaries, from page_tables.py print [binaries]. -->
 
 ## Method
 
-**Checks of the run.** Before any score was read, `scripts/c5-settings/run_checks.py check` read each species' copy and printed counts only: the first run's species, each once; each species ended `DONE`, a `FAILED` older than its `DONE` named and set aside; each species' `SHA256SUMS`; `score/score.log` kept out of it; each `DONE` against its `binary.txt`, its results and its choices files; one commit and one code sha256; each `lists.txt`; each `expect.tsv` against `expect.py`; every default and twin result and one choices file per outer fold, and no other; the refusal records and the constant-model rows, counted; and the genome ids over every file that will be read or published. `score/score.log` stays out of the record.
+**Checks of the run.** Before any score was read, `scripts/c5-settings/run_checks.py check` read each species' copy and printed counts only: the first run's species, each once; each species ended `DONE`, a `FAILED` older than its `DONE` named and set aside; each species' `SHA256SUMS`; `score/score.log` kept out of it; each `DONE` against its `binary.txt`, its results and its choices files; one commit and one code sha256; each `lists.txt`; each `expect.tsv` against `expect.py`; every default and twin result and one choices file per outer fold, and no other; the refusal records and the constant-model rows, counted; and the genome ids over every file that will be read or published and every log. `score/score.log` stays out of the record.
+
+*Klebsiella pneumoniae*'s run stopped at its score step and wrote no `DONE` and no `SHA256SUMS`. `run_checks.py check --failed-at-score klebsiella_pneumoniae` holds its record to four conditions instead, each printed with its counts: its `FAILED` is the at score line in the run's time form, with no `DONE` and no `SHA256SUMS`; `logs/run.log` names as many drives ended ok as it had to run, and none ended otherwise; every line of `SHA256SUMS.lead` holds, its own sha256 is `bd0d9b38edcc6b2cfd0a9c1e80827699d015308ddca1177dac094fadeae2cf7c`, and it names no `score/score.log`; and its `binary.txt` names the run's commit and code sha256. Without the allowance, a `FAILED` with no newer `DONE` fails.
+
+**The scorer after the run.** `scripts/c5-settings/score.py` changed after the run and before any score was opened. The run's scorer, at commit `0d987ba`, stopped *Klebsiella pneumoniae* at its score step on one failed check, "the default's result at the same dataset, split and seed is there and available", for polymyxin B on the lineage split at seed 43, whose default result is unavailable: it read as a failed check a draw that C3's scorer reads as not scored. The changed scorer makes each arm's row there not scored, for the default's reason, by handing C3's scorer the same unavailable result it reads for the default, and a choices file beside such a draw fails a check. For a species with no unavailable default draw it writes `checks.tsv`, `draws.tsv` and `datasets.tsv` byte for byte as `0d987ba`'s scorer does, as a SYNTHETIC test holds on made-up species.
+
+<!-- part B: the 7 finished species' three tables, scored again by the changed scorer, against their own SHA256SUMS lines: n of 21 the same byte for byte. -->
 
 <!-- part 2: the checks' printout, from reference/settings-arms/checks.txt. -->
 
-**Reading.** The answers read are the run's own: each species' `score/` tables and choices files, copied as its run wrote them. The count runs once over them:
+**Reading.** The answers read are each species' three tables as the changed scorer writes them from its copy, the 7 finished species' tables held first to their own `SHA256SUMS` lines, and each species' choices files as its run wrote them. The count runs once over them:
 
 ```
-python3 -I scripts/c5-settings/run_checks.py check <copies> scripts/c5-settings/lists.tsv <release> read/checks.txt
-python3 -I scripts/c5-settings/run_checks.py gather <copies> scripts/c5-settings/lists.tsv read/checks.txt read
+python3 -I scripts/c5-settings/rescore.py <copies> scripts/c5-settings/lists.tsv <release> rescored
+python3 -I scripts/c5-settings/run_checks.py check <copies> scripts/c5-settings/lists.tsv <release> read/checks.txt --failed-at-score klebsiella_pneumoniae --lead-sums bd0d9b38edcc6b2cfd0a9c1e80827699d015308ddca1177dac094fadeae2cf7c --tables rescored
+python3 -I scripts/c5-settings/run_checks.py gather <copies> scripts/c5-settings/lists.tsv read/checks.txt read --tables rescored
 python3 -I scripts/c5-settings/score.py --count read/count read/score/<species>/datasets.tsv   # 8 files
 python3 -I scripts/c5-settings/page_tables.py write read scripts/c5-settings/lists.tsv read/checks.txt reference/settings-arms
 python3 -I scripts/c5-settings/page_tables.py print reference/settings-arms
@@ -123,11 +136,13 @@ python3 -I scripts/c5-settings/page_tables.py print reference/settings-arms
 | 15. conditions | conditions 1 and 2, 3 and 4, as read here off count.tsv, equal conditions.tsv's |
 | 16. count | the four count tables are what score.py --count writes from the datasets.tsv files |
 
-**Tests.** `tests/c5_settings/test_page_tables.py` and `tests/c5_settings/test_run_checks.py` hold SYNTHETIC tests of the table script and the check script, on three made-up species. `scripts/c5-settings/page_faults.py` plants each fault in memory, in turn, and runs the test that must catch it: every gate of the table script has a fault, and `tests/c5_settings/test_page_faults.py` checks that each fault's text occurs once in its file and that each fault is caught.
+**Tests.** `tests/c5_settings/test_page_tables.py` and `tests/c5_settings/test_run_checks.py` hold SYNTHETIC tests of the table script and the check script, on three made-up species. `scripts/c5-settings/page_faults.py` plants each fault in memory, in turn, and runs the test that must catch it: every gate of the table script has a fault, and `tests/c5_settings/test_page_faults.py` checks that each fault's text occurs once in its file and that each fault is caught. `tests/c5_settings/test_unavailable.py` holds the scorer at an unavailable default draw, and the changed scorer against `0d987ba`'s own (`tests/c5_settings/score_at_0d987ba.txt`) on made-up species.
 
 <!-- part 2: the faults' printout and the tests' counts. -->
 
 **Files.** The reading's tables are in `reference/settings-arms/`. `scripts/c5-settings/page_tables.py print` prints this page's tables from those files, rounded to 3 decimals.
+
+**Columns in the files only.** A column that reads 0 in every row is not printed and stays in its file only: where no draw is a constant model, the constant-model column of `page-count.tsv` and the constant-model draws and study run refused columns of `page-datasets.tsv`.
 
 ## Datasets
 

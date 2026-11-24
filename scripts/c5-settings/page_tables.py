@@ -79,6 +79,8 @@ COUNT_FILES = ("count.tsv", "count-no-constant.tsv", "conditions.tsv", "count-pl
 SPECIES_FILES = ("checks.tsv", "draws.tsv", "datasets.tsv", "binary.txt", "folds.tsv")
 REFUSED_WHY = "constant model: refused for no candidate"
 MISSING_WHY = "missing draw"
+# score.py's why for each arm's row at a default draw that came back unavailable, as C3's scorer marks the default's own.
+UNAVAILABLE_WHY = "split unavailable"
 CHOICE_NAME = re.compile(r"(?P<dataset>[a-z0-9_]+__[a-z0-9_]+)\.(?P<scheme>lineage|study-whole)-s(?P<seed>\d+)"
                          r"\.f(?P<fold>\d+)\.choices\.json")
 SYNTHETIC_LOSS = (0.0126, 0.0088, 0.0163)
@@ -518,6 +520,9 @@ def check_choices(slug, expect, draws, choices, folds_rows):
         folds = sorted(held.get(key, []))
         marks = scored.get(key, set())
         if not folds:
+            if marks == {("0", UNAVAILABLE_WHY)} and want.get(key) == 0:
+                # The default's result is unavailable, with no outer fold: no choices file is owed.
+                continue
             if marks != {("0", MISSING_WHY)}:
                 stop(12, f"score/{slug}: {key[0]} {key[1]} seed {key[2]} has no choices file and its arms are not "
                          "a missing draw")
@@ -1016,8 +1021,10 @@ def yes(x):
 
 
 def table(head, rows):
-    lines = ["| " + " | ".join(head) + " |", "|" + "|".join("---" for _ in head) + "|"]
-    lines += ["| " + " | ".join(str(c) for c in row) + " |" for row in rows]
+    """A Markdown table. A column that reads 0 in every row is not printed: it stays in its file only."""
+    keep = [i for i in range(len(head)) if not rows or any(str(row[i]) != "0" for row in rows)]
+    lines = ["| " + " | ".join(head[i] for i in keep) + " |", "|" + "|".join("---" for _ in keep) + "|"]
+    lines += ["| " + " | ".join(str(row[i]) for i in keep) + " |" for row in rows]
     return lines
 
 
@@ -1154,8 +1161,11 @@ def print_datasets(rows):
             rs = pairs.get(f"{arm}-{DEFAULT}")
             cells_.append(" / ".join(d3(r["difference"]) for r in rs) if rs else "")
         refused = any(r["study_refused"] == "1" for rs in pairs.values() for r in rs)
-        cells_.append("yes" if refused else "no")
+        # 0 where no study run is refused, so that a column of 0 in every row is not printed.
+        cells_.append("yes" if refused else "0")
         out.append(cells_)
+    if any(c[-1] == "yes" for c in out):
+        out = [c[:-1] + ["no" if c[-1] == "0" else c[-1]] for c in out]
     return table(["Species", "Antibiotic", "Genomes", "Split", "Search: five learners", "Cutoff: five learners",
                   "Twin: five learners", "Plain best: five learners", "Study run refused"], out)
 

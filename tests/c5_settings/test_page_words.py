@@ -20,6 +20,13 @@ FIXED = [
     "The release keeps its settings and its 0.5 cutoff whatever the count says, until the maintainer rules.",
     "The search covers 55 datasets in 8 species, those in both S and L and not in M.",
     "The 14 datasets of M wait for the label rule.",
+    "*Klebsiella pneumoniae* with polymyxin B leaves the lineage count, as it left block C3's",
+    "Its default draw on the lineage split at seed 43 came back unavailable, with no outer fold, and the result gives "
+    "the reason as `invalid lineage outer evaluation: fold <k> validation lacks one or both classes`.",
+    "The twin's draw at seed 46 is unavailable for the same reason.",
+    "`scripts/c5-settings/score.py` changed after the run and before any score was opened.",
+    "A column that reads 0 in every row is not printed and stays in its file only",
+    "A time can equal a genome id as text, so the id check counts apart",
 ]
 
 
@@ -37,6 +44,12 @@ class Page(unittest.TestCase):
         for sentence in FIXED:
             with self.subTest(sentence=sentence[:40]):
                 self.assertIn(sentence, page)
+
+    def test_the_refusal_columns_are_not_said_to_read_0_by_construction(self):
+        page = text()
+        for m in re.finditer(r"by construction", page):
+            line = page[page.rfind("\n", 0, m.start()) + 1:page.find("\n", m.end())]
+            self.assertIn("cutoff arm", line)
 
     def test_no_em_dash_and_no_external_validation_claim(self):
         page = text()
