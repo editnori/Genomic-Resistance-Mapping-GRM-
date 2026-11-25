@@ -309,6 +309,7 @@ jobs:
           # and fits XGBoost 3.0.5, LightGBM 4.6.0 and scikit-learn 1.7.2 on them, from the wheels scripts/c7-outside/requirements.txt pins.
           # test_lists.py also reads the committed lists scripts/c3-inputs/lists.tsv and scripts/c7-outside/lists.tsv.
           # test_result_record.py alone reads committed tables: it checks docs/outside-learners-result.md against reference/outside-learners.
+          # test_page_faults.py reads scripts/c7-outside/page_faults.py, scripts/c7-outside/planted_faults.py and the files they plant in.
           - suite: tests/c7_outside
             top: .
             venv: scripts/c7-outside/requirements.txt

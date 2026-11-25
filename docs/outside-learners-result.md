@@ -16,11 +16,11 @@ Every split here is a retrospective split inside one public database. A split by
 
 **`xgboost`.** `xgboost-gbt` is better on 58 of 232 lineage datasets, worse on 17 and the same on 157. Its median difference in balanced accuracy is 0.003, with a species interval of 0.001 to 0.005 (condition 1 met). The one-sided sign test gives p < 0.001, and < 0.001 after Holm (condition 2 met). Its recall interval is 0.000 to 0.005 (condition 4 met). Its study median is -0.002 on 55 of 55 study datasets, against the lineage median's 0.003: the signs differ (condition 5 not met).
 
-**`lightgbm`.** `lightgbm-gbt` is better on 62 of 232 lineage datasets, worse on 14 and the same on 156. Its median difference in balanced accuracy is 0.003, with a species interval of 0.001 to 0.004 (condition 1 met). The one-sided sign test gives p < 0.001, and < 0.001 after Holm (condition 2 met). Its recall interval is 0.000 to 0.005 (condition 4 met). Its study median is 0.001 on 55 of 55 study datasets, against the lineage median's 0.003: the signs agree (condition 5 met).
+**`lightgbm`.** `lightgbm-gbt` is better on 62 of 232 lineage datasets, worse on 14 and the same on 156. Its median difference in balanced accuracy is 0.003, with a species interval of 0.001 to 0.004 (condition 1 met). The one-sided sign test gives p < 0.001, and < 0.001 after Holm (condition 2 met). Its recall interval is 0.000 to 0.005 (condition 4 met). Its study median is 0.001 on 55 of 55 study datasets, against the lineage median's 0.003: the signs agree (condition 5 met). Its study interval is -0.012 to 0.007, and it is better on 7 of 55 study datasets and worse on 13: condition 5 asks for the sign alone.
 
 **`elasticnet`.** `elasticnet-lasso` is better on 71 of 232 lineage datasets, worse on 19 and the same on 142. Its median difference in balanced accuracy is 0.006, with a species interval of 0.003 to 0.009 (condition 1 met). The one-sided sign test gives p < 0.001, and < 0.001 after Holm (condition 2 met). Its recall interval is 0.000 to 0.007 (condition 4 met). Its study median is 0.004 on 55 of 55 study datasets, against the lineage median's 0.006: the signs agree (condition 5 met).
 
-**Twin.** `twin-gbt` is better on 40 of 232, worse on 33 and the same on 159, with a median of 0.000, an interval of 0.000 to 0.001 and a Holm p of 0.243. `twin-lasso` is better on 28 of 232, worse on 19 and the same on 185, with a median of 0.000, an interval of -0.001 to 0.000 and a Holm p of 0.243. The twin meets condition 1 in neither pair and 2 in neither, so condition 3 is met for every arm.
+**Twin.** `twin-gbt` is better on 40 of 232, worse on 33 and the same on 159, with a median of 0.000, an interval of 0.000 to 0.001 and a Holm p of 0.243. `twin-lasso` is better on 28 of 232, worse on 19 and the same on 185, with a median of 0.000, an interval of -0.001 to 0.000 and a Holm p of 0.243. Both twin intervals start below 0: `page-count.tsv` gives `twin-gbt`'s lower bound as -0.0003 at 4 decimal places, where it prints 0.000, and `twin-lasso`'s as -0.0010. The twin meets condition 1 in neither pair and 2 in neither, so condition 3 is met for every arm.
 
 Condition by condition, as `page-conditions.tsv` gives it:
 
@@ -132,6 +132,8 @@ The five pairs on the lineage split's balanced accuracy, as `count.tsv` gives th
 
 `score.py` names the pairs `xgboost-k31`, `lightgbm-k31`, `elasticnet-k31`, `twin-k31` on `gbt` and `twin-k31` on `lasso`; `page-count.tsv` keeps its name in the column `score_pair` beside the name this page gives.
 
+In the `twin-gbt` row the interval's lower bound prints 0.000. `page-count.tsv` gives it as -0.0003 at 4 decimal places, below 0.
+
 ## Per arm
 
 **Measures.** Each pair on each measure, over the datasets it enters: 232 of 233 on the lineage split and 55 of 55 on the study split. Recall stands beside log loss in each pair's rows.
@@ -181,6 +183,8 @@ The five pairs on the lineage split's balanced accuracy, as `count.tsv` gives th
 | study | `elasticnet-lasso` | very major error rate | lower | 55 of 55 | 10 | 14 | 31 | 0.000 | 0.000 to 0.007 |
 | study | `elasticnet-lasso` | major error rate | lower | 55 of 55 | 17 | 8 | 30 | -0.007 | -0.011 to -0.004 |
 | study | `elasticnet-lasso` | log loss | lower | 55 of 55 | 19 | 13 | 23 | -0.009 | -0.013 to 0.004 |
+
+Two lower bounds below 0 print 0.000 in this table. `page-count.tsv` gives the elastic net's study balanced accuracy bound as -0.0001 at 4 decimal places and `twin-gbt`'s lineage recall bound as -0.0004.
 
 **Folds.** Per arm and split, counts of folds over the folds of its reports: for each booster the folds that kept one tree; for the elastic net the refits that reached 2,000 epochs, the folds whose fit kept no weight, and the folds scored at their training share.
 
@@ -243,6 +247,8 @@ These counts stand beside the count. They are in no Holm family and decide nothi
 | `twin-gbt` | `k31` | 40 of 232 | 33 of 232 | 159 of 232 | 0.000 | 0.000 to 0.001 | 0.241 | 0.243 |
 | `twin-lasso` | `k31` | 28 of 232 | 19 of 232 | 185 of 232 | 0.000 | -0.001 to 0.000 | 0.121 | 0.243 |
 
+In both tables `twin-gbt`'s lower bound prints 0.000. `page-count.tsv` gives it as -0.0003 at 4 decimal places for both files.
+
 ## Seen after
 
 These points are seen in the tables after the reading. They change no rule and no reading above, and decide nothing.
@@ -275,7 +281,7 @@ These points are seen in the tables after the reading. They change no rule and n
 | *Streptococcus pneumoniae* | 2 / 1 / 5 of 8 | 2 / 0 / 6 of 8 | 2 / 0 / 6 of 8 | 2 / 1 / 5 of 8 | 1 / 0 / 7 of 8 |
 | *Vibrio cholerae* | 0 / 0 / 3 of 3 | 1 / 0 / 2 of 3 | 0 / 0 / 3 of 3 | 1 / 0 / 2 of 3 | 1 / 1 / 1 of 3 |
 
-**Time.** Over 754 fits an arm, the elastic net's median fit took 5210.252 wall seconds, against 8.009 for XGBoost and 4.878 for LightGBM.
+**Time.** Over 754 fits an arm, the elastic net's median fit took 5210.252 wall seconds, against 8.009 for XGBoost and 4.878 for LightGBM. The elastic net's 754 fits sum to 1,504.45 CPU hours (5416010.21 CPU s in `page-times.tsv`), 4.06 times the 370.92 CPU hours the design gave it (`docs/assumption-plan-corrections.md`, the ruling of 11:26Z on 23 Nov 2026). XGBoost's 754 fits sum to 2.42 CPU hours and LightGBM's to 1.39.
 
 **Log loss.** On the lineage split the elastic net's log loss is better on 121 of 232 datasets and worse on 21, with a median of -0.023 and an interval of -0.037 to -0.013, while its recall is better on 68 and worse on 48, with a median of 0.002. On the study split both boosters' log loss is worse: XGBoost's median is 0.010 (0.003 to 0.034) and LightGBM's 0.010 (0.003 to 0.029), on 55 of 55, with a recall median of 0.000 beside each.
 
@@ -286,6 +292,8 @@ These points are seen in the tables after the reading. They change no rule and n
 **One database.** Every split is a retrospective split inside one public database. A split by lineage or by study is not external validation.
 
 **Elastic net stop.** The elastic net stops at tol 1e-4 or 2,000 epochs. saga's tol of 1e-4 stops on the change in the weights and bounds no distance to the optimum, so a difference between the elastic net and `lasso` reads saga's stop as well as the learner.
+
+**Elastic net pair.** The pair of the elastic net and GRM's lasso changes four things at once: the input, the C3 unitig build; the screen, the chi-square top 4,000 on each fit's own genomes, as the `elasticnet` row of `docs/outside-learners.md` gives it; the learner; and saga's stop. One row reads the input alone: in `docs/input-arms-result.md`, unitigs on GRM's lasso are better on 12 of 232 lineage datasets and worse on 11, with a median of 0.000. No reading here separates the screen from the learner.
 
 **Screen.** The boosters fit the rows GRM's screen kept, 4,000 per outer fold, so a pair reads the library on GRM's screen and says nothing of another screen.
 
@@ -310,7 +318,7 @@ These points are seen in the tables after the reading. They change no rule and n
 
 `CHECKS 6 of 6`: all six passed. The `DONE` lines name export commit `da70f4b`, grm sha256 `d3b53997a02c`, code sha256 `d3de72fcc10f` and export grm sha256 `637b2da2b59b` in 23 of 23 species each, and the elastic net run in 23 of 23. `expect.py` found 233 datasets, 55 study datasets and 23 species.
 
-**Reading.** `scripts/c7-outside/run_checks.py gather` copied each species' `score/` tables, as its run wrote them, and its run files into the reading, and `scripts/c7-outside/score.py --count` counted them once.
+**Reading.** `scripts/c7-outside/run_checks.py gather` copied each species' `score/` tables, as its run wrote them, and its run files into the reading, and `scripts/c7-outside/score.py --count` counted them once. The reading ran the scripts of commit `f002557e`: each of the 274 files under `scripts/` in the tree it ran from is, file by file, the file `git ls-tree -r f002557e -- scripts` gives, by a check at 15:22Z on 25 Nov 2026, and none changed after 14:24:00Z, before the reading began.
 
 Each ran once, in this order, under `env -i` at hash seed 0, and each ended with 0. `<back dir>` holds the 23 current copies and `<release dir>` the release's 23 species lists.
 
@@ -355,7 +363,7 @@ Each ran once, in this order, under `env -i` at hash seed 0, and each ended with
 
 The fold counts that read 0 by construction, a booster's unconverged refits and null fits and the elastic net's one-tree folds, stay in `page-folds.tsv` and off this page.
 
-**Tests.** `tests/c7_outside/test_page_tables.py` and `tests/c7_outside/test_run_checks.py` hold SYNTHETIC tests of the table script and the run's checks, on three made-up species. `scripts/c7-outside/page_faults.py` plants each fault of its table in a copy of the tree and runs the test meant to catch it. `tests/c7_outside/test_result_record.py` holds 15 tests of this page against `reference/outside-learners/`: each table stands as `page_tables.py print` prints it from those files, and each figure in this page's sentences is rebuilt from them.
+**Tests.** `tests/c7_outside/test_page_tables.py` and `tests/c7_outside/test_run_checks.py` hold SYNTHETIC tests of the table script and the run's checks, on three made-up species. `scripts/c7-outside/page_faults.py` plants each fault of its table in a copy of the tree and runs the test meant to catch it. `tests/c7_outside/test_result_record.py` holds 19 tests of this page against `reference/outside-learners/`: each table stands as `page_tables.py print` prints it from those files, and each figure in this page's sentences is rebuilt from them or from the committed page the sentence names.
 
 | Fault | Gate | Plants | Test | Read |
 |---|---|---|---|---|

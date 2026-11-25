@@ -11,6 +11,7 @@ import csv
 import hashlib
 import re
 import unittest
+from decimal import ROUND_HALF_EVEN, Decimal
 
 from tests.c7_outside import common
 
@@ -20,6 +21,8 @@ page_faults = common.load("page_faults")
 RECORD = common.ROOT / "reference" / "outside-learners"
 PAGE = common.ROOT / "docs" / "outside-learners-result.md"
 HERE = common.ROOT / "tests" / "c7_outside" / "test_result_record.py"
+INPUT_ARMS = common.ROOT / "docs" / "input-arms-result.md"
+CORRECTIONS = common.ROOT / "docs" / "assumption-plan-corrections.md"
 # Where each printed table stands. `datasets` is printed too, and stays in page-datasets.tsv: the section Datasets
 # gives the first run's datasets per species instead.
 TABLES = {"Reading": ["conditions", "withdrawn"], "Data": ["checks"], "Count": ["count"],
@@ -48,6 +51,11 @@ def read(pair, condition):
              if (r["pair"], r["condition"], r["decides"]) == (pair, condition, "1")]
     assert len(found) == 1, (pair, condition)
     return {"1": "met", "0": "not met"}[found[0]["met"]]
+
+
+def places(x, n):
+    """x rounded half to even at n decimal places, as page_tables.py rounds at 3."""
+    return Decimal(str(x)).quantize(Decimal(1).scaleb(-n), rounding=ROUND_HALF_EVEN)
 
 
 def sections(text):
@@ -247,6 +255,58 @@ class ResultPage(unittest.TestCase):
             self.assertEqual(self.lines.count(f"| {n} | {gate} | {what} | `{test.split('tests.c7_outside.')[1]}` | "
                                               f"caught |"), 1, n)
         self.assertIn(f"All {len(page_faults.FAULTS)} were caught, before any score was opened.", method)
+
+    def test_each_bound_below_0_that_prints_0_000_keeps_its_sign(self):
+        twin_gbt, twin_lasso = count_row("lineage", "twin-gbt"), count_row("lineage", "twin-lasso")
+        study = count_row("study", "elasticnet-lasso")
+        recall = count_row("lineage", "twin-gbt", "recall")
+        for r in (twin_gbt, twin_lasso, study, recall):
+            self.assertLess(float(r["interval_lo"]), 0, r["pair"])
+        for r in (twin_gbt, study, recall):
+            self.assertEqual(d3(r["interval_lo"]), "0.000", r["pair"])
+        for name in ("count-no-constant.tsv", "count-no-unconverged.tsv"):
+            self.assertEqual(count_row("lineage", "twin-gbt", file=name)["interval_lo"], twin_gbt["interval_lo"])
+        gbt, lasso = places(twin_gbt["interval_lo"], 4), places(twin_lasso["interval_lo"], 4)
+        self.assertIn(f"Both twin intervals start below 0: `page-count.tsv` gives `twin-gbt`'s lower bound as {gbt} at "
+                      f"4 decimal places, where it prints 0.000, and `twin-lasso`'s as {lasso}.",
+                      self.sections["Reading"])
+        self.assertIn(f"In the `twin-gbt` row the interval's lower bound prints 0.000. `page-count.tsv` gives it as "
+                      f"{gbt} at 4 decimal places, below 0.", self.sections["Count"])
+        self.assertIn(f"`page-count.tsv` gives the elastic net's study balanced accuracy bound as "
+                      f"{places(study['interval_lo'], 4)} at 4 decimal places and `twin-gbt`'s lineage recall bound as "
+                      f"{places(recall['interval_lo'], 4)}.", self.sections["Per arm"])
+        self.assertIn(f"In both tables `twin-gbt`'s lower bound prints 0.000. `page-count.tsv` gives it as {gbt} at 4 "
+                      f"decimal places for both files.", self.sections["Beside it"])
+
+    def test_the_cpu_hours_stand_beside_the_designs(self):
+        times = {r["arm"]: r for r in rows("page-times.tsv")}
+        hours = {arm: Decimal(times[arm]["cpu_s_sum"]) / 3600 for arm in times}
+        design = re.findall(r"the elastic net's ([\d.]+) CPU hours", CORRECTIONS.read_text(encoding="utf-8"))
+        self.assertEqual(len(design), 1)
+        ratio = hours["elasticnet"] / Decimal(design[0])
+        self.assertIn(f"The elastic net's {words(times['elasticnet']['fits'])} fits sum to "
+                      f"{places(hours['elasticnet'], 2):,} CPU hours ({times['elasticnet']['cpu_s_sum']} CPU s in "
+                      f"`page-times.tsv`), {places(ratio, 2)} times the {design[0]} CPU hours the design gave it",
+                      self.sections["Seen after"])
+        self.assertIn(f"XGBoost's {words(times['xgboost']['fits'])} fits sum to {places(hours['xgboost'], 2)} CPU hours "
+                      f"and LightGBM's to {places(hours['lightgbm'], 2)}.", self.sections["Seen after"])
+
+    def test_lightgbms_study_split_stands_beside_its_median(self):
+        study = count_row("study", "lightgbm-gbt")
+        self.assertIn(f"(condition 5 met). Its study interval is {interval(study['interval_lo'], study['interval_hi'])}, "
+                      f"and it is better on {study['better']} of {study['entered']} study datasets and worse on "
+                      f"{study['worse']}: condition 5 asks for the sign alone.", self.sections["Reading"])
+
+    def test_the_unitig_row_is_input_arms_results(self):
+        found = [line for line in INPUT_ARMS.read_text(encoding="utf-8").splitlines()
+                 if line.startswith("| unitigs | `lasso` |")]
+        self.assertEqual(len(found), 1)
+        cells = [c.strip() for c in found[0].strip("|").split("|")]
+        better, worse, median = cells[2], cells[3], cells[5]
+        entered = better.split(" of ")[1]
+        self.assertEqual(worse.split(" of ")[1], entered)
+        self.assertIn(f"in `docs/input-arms-result.md`, unitigs on GRM's lasso are better on {better} lineage datasets "
+                      f"and worse on {worse.split(' of ')[0]}, with a median of {median}.", self.sections["Limits"])
 
     def test_recall_stands_beside_log_loss_in_every_block(self):
         given = [b for b in blocks(self.text) if "log loss" in b and re.search(r"\d\.\d{3}", b)]
