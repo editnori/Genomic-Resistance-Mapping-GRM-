@@ -1,0 +1,23 @@
+species	antibiotic	in_M	kind	genomes	resistant	susceptible	resistant_share	resistant_with_result	catalogue_variants	genes_named	without_determinant	share_without	in_correlation	left_out_because
+Mycobacterium tuberculosis	amikacin	0	primary	1813	548	1265	0.302261445119	548	4	2	116	0.211678832117	1	
+Mycobacterium tuberculosis	amoxicillin	0	none	57	25	32	0.438596491228						0	not read by the tool
+Mycobacterium tuberculosis	capreomycin	0	primary	670	422	248	0.629850746269	422	10	2	75	0.177725118483	1	
+Mycobacterium tuberculosis	ciprofloxacin	0	proxy	101	73	28	0.722772277228	73	8	1	8	0.109589041096	1	
+Mycobacterium tuberculosis	clofazimine	1	primary	1303	193	1110	0.148119723715	193	5	1	188	0.974093264249	0	set M
+Mycobacterium tuberculosis	cycloserine	0	primary	401	119	282	0.296758104738	119	0	0	119	1.000000000000	0	no graded variant
+Mycobacterium tuberculosis	delamanid	0	primary	1248	448	800	0.358974358974	448	3	0	444	0.991071428571	1	
+Mycobacterium tuberculosis	ethambutol	0	primary	1947	1338	609	0.687211093991	1338	12	1	347	0.259342301943	1	
+Mycobacterium tuberculosis	ethionamide	0	primary	1774	915	859	0.515783540023	915	136	2	259	0.283060109290	1	
+Mycobacterium tuberculosis	isoniazid	1	primary	1954	1388	566	0.710337768680	1388	17	2	77	0.055475504323	0	set M
+Mycobacterium tuberculosis	kanamycin	0	primary	1800	617	1183	0.342777777778	617	6	2	128	0.207455429498	1	
+Mycobacterium tuberculosis	levofloxacin	0	primary	1248	753	495	0.603365384615	753	16	2	311	0.413014608234	1	
+Mycobacterium tuberculosis	linezolid	0	primary	1248	202	1046	0.161858974359	202	3	2	178	0.881188118812	1	
+Mycobacterium tuberculosis	moxifloxacin	0	primary	1524	733	791	0.480971128609	733	15	2	136	0.185538881310	1	
+Mycobacterium tuberculosis	nicotinamide	0	none	166	83	83	0.500000000000						0	not read by the tool
+Mycobacterium tuberculosis	ofloxacin	0	proxy	643	355	288	0.552099533437	355	12	2	34	0.095774647887	1	
+Mycobacterium tuberculosis	para-aminosalicylic acid	0	primary	1650	429	1221	0.260000000000	429	0	0	429	1.000000000000	0	no graded variant
+Mycobacterium tuberculosis	prothionamide	0	proxy	170	92	78	0.541176470588	92	14	2	26	0.282608695652	1	
+Mycobacterium tuberculosis	pyrazinamide	0	primary	492	381	111	0.774390243902	381	94	1	60	0.157480314961	1	
+Mycobacterium tuberculosis	rifabutin	0	proxy	1317	665	652	0.504935459377	665	27	1	20	0.030075187970	1	
+Mycobacterium tuberculosis	rifampin	0	primary	1967	1365	602	0.693950177936	1365	40	1	72	0.052747252747	1	
+Mycobacterium tuberculosis	streptomycin	0	primary	698	539	159	0.772206303725	539	15	3	44	0.081632653061	1	
