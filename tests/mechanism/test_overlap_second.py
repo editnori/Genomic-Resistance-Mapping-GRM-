@@ -6,6 +6,7 @@ of 0.1 and 0.9, a genome k of the five miss has the score sum 4.5 - 0.8k, so the
 """
 
 import contextlib
+import fractions
 import hashlib
 import io
 import json
@@ -141,12 +142,12 @@ class NullCut(Case):
         self.assertEqual([a["nonull_resistant"]] + [a[f"nonull_miss_{n}"] for n in FIVE] + [a["nonull_miss_all5"]],
                          ["9", "5", "3", "3", "2", "2", "2"])
         # 9 x 5/9 x 3/9 x 3/9 x 2/9 x 2/9 = 20/729; 2 / (20/729) = 72.9
-        self.assertEqual((a["nonull_expected_all5"], a["nonull_ratio_all5"]), ("0.027434842250", "72.900000000000"))
+        self.assertEqual(a["nonull_expected_all5"], "0.027")
+        self.assertNotIn("nonull_ratio_all5", a)
+        self.assertEqual(os2.nonull_of(a), (fractions.Fraction(20, 729), fractions.Fraction(729, 10)))
         b = rows["drug b"]
-        self.assertEqual((b["nonull_resistant"], b["nonull_expected_all5"], b["nonull_ratio_all5"]),
-                         ("10", "0.000100000000", "0.000000000000"))
-        self.assertEqual((rows["drug c"]["nonull_expected_all5"], rows["drug c"]["nonull_ratio_all5"]),
-                         ("0.000000000000", ""))
+        self.assertEqual((b["nonull_resistant"], b["nonull_expected_all5"], os2.nonull_of(b)[1]), ("10", "0.000", 0))
+        self.assertEqual((rows["drug c"]["nonull_expected_all5"], os2.nonull_of(rows["drug c"])), ("0.000", (0, None)))
 
     def test_null_folds_of_two_learners_are_both_cut(self):
         r = Report(COLI, "drug n", 10, 5, null={"gbt": (1,), "lasso": (2,)}, misses={n: (0, 1, 2, 3) for n in FIVE})
@@ -156,7 +157,7 @@ class NullCut(Case):
         self.assertEqual([n["nonull_resistant"]] + [n[f"nonull_miss_{x}"] for x in FIVE] + [n["nonull_miss_all5"]],
                          ["6", "2", "2", "2", "2", "2", "2"])
         # 6 x (2/6)^5 = 2/81; 2 / (2/81) = 81
-        self.assertEqual((n["nonull_expected_all5"], n["nonull_ratio_all5"]), ("0.024691358025", "81.000000000000"))
+        self.assertEqual((n["nonull_expected_all5"], os2.nonull_of(n)), ("0.025", (fractions.Fraction(2, 81), 81)))
 
     def test_a_cut_that_does_not_add_up_stops_the_read(self):
         with mock.patch.object(os2, "null_union", lambda learners: set()):
@@ -207,19 +208,19 @@ class SecondPooled(Case):
         self.assertEqual((p["scope"], p["datasets"], p["resistant"], p["susceptible"]), ("all", "4", "42", "48"))
         self.assertEqual(mean_cols(p), ["8", "4", "4", "0", "1", "1", "0", "0"])
         self.assertEqual((p["nonull_resistant"], p["nonull_miss_all5"], p["nonull_expected_all5"]),
-                         ("39", "3", "0.027634842250"))
+                         ("39", "3", "0.028"))
         # mean shares 4/12, 0, 3/10, 1/10: the median is 0.2
-        self.assertEqual(p["mean_share_median"], "0.200000000000")
+        self.assertEqual(p["mean_share_median"], "0.200")
         # ratios outside null folds 0, 72.9 and 10000; drug c has none
         self.assertEqual((p["nonull_datasets_with_ratio"], p["nonull_ratio_q1"], p["nonull_ratio_q3"],
-                          p["nonull_datasets_ratio_over_1"]), ("3", "36.450000000000", "5036.450000000000", "2"))
+                          p["nonull_datasets_ratio_over_1"]), ("3", "36.450", "5036.450", "2"))
         self.assertEqual((p["paired_datasets"], p["paired_ratio_median"], p["paired_nonull_ratio_median"]),
-                         ("3", "72.000000000000", "72.900000000000"))
+                         ("3", "72.000", "72.900"))
         self.assertEqual([r["scope"] + ":" + r["species"] for r in pooled], ["all:", f"species:{COLI}"])
 
     def test_the_median_outside_null_folds_weights_each_report_once(self):
         _, _, pooled = self.read_write()
-        self.assertEqual(pooled[0]["nonull_ratio_median"], "72.900000000000")
+        self.assertEqual(pooled[0]["nonull_ratio_median"], "72.900")
 
     def test_a_report_under_10_resistant_stays_out_of_the_pool(self):
         _, rows, pooled = self.read_write()
@@ -232,12 +233,11 @@ class SecondPooled(Case):
         p = Report(COLI, "drug p", 10, 5, null={"gbt": (0,)},
                    misses=dict({n: (0, 1) for n in FIVE if n != "gbt"}, gbt=(0,)))
         _, rows, pooled = self.read_write(standard() + [p])
-        self.assertEqual((rows["drug p"]["nonull_expected_all5"], rows["drug p"]["nonull_ratio_all5"]),
-                         ("0.000000000000", ""))
+        self.assertEqual((rows["drug p"]["nonull_expected_all5"], os2.nonull_of(rows["drug p"])), ("0.000", (0, None)))
         first = lo.read_tsv(os.path.join(self.first, "pooled.tsv"))[0]
         self.assertEqual((first["datasets"], first["datasets_with_ratio"]), ("5", "4"))
         self.assertEqual((pooled[0]["nonull_datasets_with_ratio"], pooled[0]["paired_datasets"],
-                          pooled[0]["paired_ratio_median"]), ("3", "3", "72.000000000000"))
+                          pooled[0]["paired_ratio_median"]), ("3", "3", "72.000"))
 
 
 class SecondRecord(Case):
@@ -298,7 +298,7 @@ class SecondRecord(Case):
         plan = json.loads(out)
         self.assertEqual((plan["vote"], plan["vote_sum"], plan["cutoff"], plan["scheme"]),
                          ("math.fsum(five scores) >= 2.5", 2.5, 0.5, "lineage"))
-        self.assertEqual(plan["vote_columns"][-2:], ["nonull_expected_all5", "nonull_ratio_all5"])
+        self.assertEqual(plan["vote_columns"][-2:], ["nonull_miss_all5", "nonull_expected_all5"])
 
 
 if __name__ == "__main__":

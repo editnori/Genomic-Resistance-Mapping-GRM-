@@ -7,6 +7,7 @@ nothing and reads no genome.
 """
 
 import hashlib
+import pathlib
 import re
 import unittest
 
@@ -99,7 +100,7 @@ class Page(unittest.TestCase):
         for r in self.rows:
             with self.subTest(report=(r["species"], r["antibiotic"])):
                 n = {k: int(v) for k, v in r.items() if k not in ("species", "antibiotic", "learners", "catalog_rule",
-                                                                   "expected_all5", "ratio_all5")}
+                                                                   "expected_all5")}
                 self.assertEqual((r["learners"], n["learner_count"]), (",".join(FIVE), 5))
                 self.assertEqual(n["genomes"], n["resistant"] + n["susceptible"])
                 self.assertEqual(sum(n[f"miss_{k}"] for k in range(6)), n["resistant"])
@@ -114,11 +115,15 @@ class Page(unittest.TestCase):
                 if r["catalog_rule"] == "no":
                     self.assertEqual(n["miss_all5_no_catalog_call"], n["miss_all5"])
 
-    def test_the_yardstick_and_ratio_follow_from_the_miss_columns(self):
+    def test_the_yardstick_follows_from_the_miss_columns_and_no_ratio_is_a_column(self):
+        # a report's ratio is given as the counts it comes from, never as a cell (the re-write of 25 November 2026)
+        self.assertEqual(list(self.rows[0]), lo.DATASET_COLUMNS)
+        self.assertEqual(list(self.votes[0]), os2.VOTE_COLUMNS)
+        self.assertNotIn("ratio_all5", lo.DATASET_COLUMNS)
+        self.assertNotIn("nonull_ratio_all5", os2.VOTE_COLUMNS)
         for r in self.rows:
             exp = lo.expected_all5(int(r["resistant"]), [int(r[f"miss_{x}"]) for x in FIVE])
-            self.assertEqual(r["expected_all5"], lo.d12(exp), r["antibiotic"])
-            self.assertEqual(r["ratio_all5"], lo.d12(int(r["miss_all5"]) / exp) if exp > 0 else "", r["antibiotic"])
+            self.assertEqual(r["expected_all5"], lo.rec(exp), r["antibiotic"])
 
     def test_the_pooled_rows_are_what_the_script_pools(self):
         rows = [dict(r, learner_count=int(r["learner_count"]), resistant=int(r["resistant"])) for r in self.rows]
@@ -133,7 +138,7 @@ class Page(unittest.TestCase):
             with self.subTest(report=(v["species"], v["antibiotic"])):
                 n = {c: int(v[c]) for c in COUNTS}
                 f = {k: int(x) for k, x in r.items() if k not in ("species", "antibiotic", "learners", "catalog_rule",
-                                                                   "expected_all5", "ratio_all5")}
+                                                                   "expected_all5")}
                 for c in ("genomes", "resistant", "susceptible"):
                     self.assertEqual(n[c], f[c], c)
                 for kind, first in (("miss", "miss"), ("wrong", "wrong")):
@@ -147,8 +152,7 @@ class Page(unittest.TestCase):
                     self.assertLessEqual(n["nonull_miss_all5"], n[f"nonull_miss_{x}"])
                     self.assertLessEqual(n[f"nonull_miss_{x}"], f[f"miss_{x}"])
                 exp = lo.expected_all5(n["nonull_resistant"], [n[f"nonull_miss_{x}"] for x in FIVE])
-                self.assertEqual(v["nonull_expected_all5"], lo.d12(exp))
-                self.assertEqual(v["nonull_ratio_all5"], lo.d12(n["nonull_miss_all5"] / exp) if exp > 0 else "")
+                self.assertEqual(v["nonull_expected_all5"], lo.rec(exp))
 
     def test_the_second_pooled_rows_are_what_the_script_pools(self):
         again = [{k: str(x) for k, x in p.items()} for p in os2.pooled_rows(self.votes, str(RECORD))]
@@ -162,7 +166,9 @@ class Page(unittest.TestCase):
         for line in checks + [self.gates[-1]]:
             self.assertEqual(self.method.count(line), 1, line)
         self.assertEqual(self.gates[-1], "reading rule: stack")
-        self.assertEqual(lo.reading_rule(float(self.pooled[0]["ratio_median"])), "stack")
+        # the rule reads the exact median, worked from the count columns, and the record's 3 places agree with it
+        exact = lo.exact_pool(lo.scopes(self.rows)[0][2])["ratio_median"]
+        self.assertEqual((lo.reading_rule(exact), lo.rec(exact)), ("stack", self.pooled[0]["ratio_median"]))
 
     def test_the_second_gates_all_pass_and_stand_in_the_method(self):
         second = [line for line in self.second_gates if line.startswith("second check ")]
@@ -174,26 +180,35 @@ class Page(unittest.TestCase):
         for line in second + [self.second_gates[-1]]:
             self.assertEqual(self.method.count(line), 1, line)
         self.assertEqual(self.second_gates[-1], "reading rule outside null-fit folds: stack")
-        self.assertEqual(lo.reading_rule(float(self.vote_pooled[0]["nonull_ratio_median"])), "stack")
+        groups = os2.scopes(self.votes, str(RECORD))
+        exact = os2.exact_pool(groups[0][2], os2.first_rows(str(RECORD)))["nonull_ratio_median"]
+        self.assertEqual((lo.reading_rule(exact), lo.rec(exact)), ("stack", self.vote_pooled[0]["nonull_ratio_median"]))
+
+    def reading_and_rewrite(self, directory, files):
+        """reading.txt: the reading's commands and outputs, then the re-write's, which ran write and print again
+        on the kept reading, unchanged, and no read; the committed record is the re-write's."""
+        first, mark, rewrite = (directory / "reading.txt").read_text(encoding="utf-8").partition("\n# the re-write, ")
+        self.assertTrue(mark)
+        first, rewrite = first.splitlines(), rewrite.splitlines()
+        commands = [line for line in first if line.startswith("python3 -I ")]
+        self.assertEqual(len(commands), 4)
+        self.assertIn("```\n" + "\n".join(commands) + "\n```", self.sections["Method"])
+        self.assertEqual([line for line in rewrite if line.startswith("python3 -I ")],
+                         [c for c in commands if " write " in c or " print " in c])
+        listed = {line.split("  ", 1)[1]: line.split("  ", 1)[0] for line in first if "  " in line}
+        relisted = {line.split("  ", 1)[1]: line.split("  ", 1)[0] for line in rewrite if "  " in line}
+        self.assertEqual(relisted["rewrite/reading/reading.json"], listed["reading/reading.json"])
+        for name in files + ("SHA256SUMS",):
+            self.assertEqual(relisted[f"rewrite/record/{name}"],
+                             hashlib.sha256((directory / name).read_bytes()).hexdigest(), name)
+        return commands
 
     def test_the_reading_commands_stand_as_reading_txt_gives(self):
-        reading = (RECORD / "reading.txt").read_text(encoding="utf-8").splitlines()
-        commands = [line for line in reading if line.startswith("python3 -I ")]
-        self.assertEqual(len(commands), 4)
-        self.assertIn("```\n" + "\n".join(commands) + "\n```", self.sections["Method"])
-        listed = {line.split("  ", 1)[1]: line.split("  ", 1)[0] for line in reading if "  " in line}
-        for name in lo.RECORD_FILES + ("SHA256SUMS",):
-            self.assertEqual(listed[f"record/{name}"], hashlib.sha256((RECORD / name).read_bytes()).hexdigest(), name)
+        self.reading_and_rewrite(RECORD, lo.RECORD_FILES)
 
     def test_the_second_reading_commands_stand_as_its_reading_txt_gives(self):
-        reading = (SECOND / "reading.txt").read_text(encoding="utf-8").splitlines()
-        commands = [line for line in reading if line.startswith("python3 -I ")]
-        self.assertEqual(len(commands), 4)
+        commands = self.reading_and_rewrite(SECOND, os2.RECORD_FILES)
         self.assertTrue(all(" scripts/mechanism/overlap_second.py " in line for line in commands))
-        self.assertIn("```\n" + "\n".join(commands) + "\n```", self.sections["Method"])
-        listed = {line.split("  ", 1)[1]: line.split("  ", 1)[0] for line in reading if "  " in line}
-        for name in os2.RECORD_FILES + ("SHA256SUMS",):
-            self.assertEqual(listed[f"record/{name}"], hashlib.sha256((SECOND / name).read_bytes()).hexdigest(), name)
 
     def test_the_fault_table_names_each_planted_faults_test(self):
         method = self.sections["Method"]
@@ -258,9 +273,26 @@ class Page(unittest.TestCase):
         self.assertEqual(index.count("| [learner-overlap-result.md](learner-overlap-result.md) |"), 1)
 
     def test_no_record_file_holds_an_id_shaped_token(self):
+        # every cell of the four tables but those of the computed decimal columns, which have 3 places and so may
+        # have the shape, and the other eight files whole; the decimal columns are left to the id list on the box
         files = lo.files_under(str(RECORD))
         self.assertEqual(len(files), 12)
-        self.assertEqual(lo.id_hits(files), 0)
+        tables = {RECORD / "datasets.tsv": lo.DECIMAL_COLUMNS, RECORD / "pooled.tsv": lo.DECIMAL_COLUMNS,
+                  SECOND / "vote.tsv": os2.DECIMAL_COLUMNS, SECOND / "vote-pooled.tsv": os2.DECIMAL_COLUMNS}
+        self.assertEqual(lo.id_hits([p for p in files if pathlib.Path(p) not in tables]), 0)
+        for path, columns in tables.items():
+            hits, skipped = lo.record_hits(str(path), columns)
+            self.assertEqual(hits, 0, path.name)
+            self.assertGreater(skipped, 0, path.name)
+
+    def test_every_decimal_of_the_record_has_3_places(self):
+        for path, columns in ((RECORD / "datasets.tsv", lo.DECIMAL_COLUMNS), (RECORD / "pooled.tsv", lo.DECIMAL_COLUMNS),
+                              (SECOND / "vote.tsv", os2.DECIMAL_COLUMNS),
+                              (SECOND / "vote-pooled.tsv", os2.DECIMAL_COLUMNS)):
+            for r in lo.read_tsv(str(path)):
+                for c in columns:
+                    if c in r and r[c] != "":
+                        self.assertRegex(r[c], r"^\d+\.\d{3}$", f"{path.name} {c}")
 
 
 if __name__ == "__main__":

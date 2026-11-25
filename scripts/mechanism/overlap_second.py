@@ -15,6 +15,11 @@ first-pass columns, counted again, with FIRST_RECORD/datasets.tsv, and writes re
 only. `write` writes vote.tsv, vote-pooled.tsv, gates.txt and SHA256SUMS after the shape scan finds no genome id.
 `print` prints the page's tables from a record.
 
+Every decimal is worked from the counts as an exact fraction and rounded once, the record's to 3 places (the lead's
+ruling of 25 November 2026), the page's to the places its tables show; none is worked from a rounded cell. A
+report's ratio outside null-fit folds is not a column of the record (the same ruling): it is given as the counts it
+comes from, `nonull_miss_all5` over the yardstick worked from `nonull_resistant` and the `nonull_miss_` columns.
+
 Nothing is fitted, trained or scored again: the mean of five stored scores is arithmetic. Every key named `id` is
 dropped as a report is parsed (learner_overlap.load_report), so no genome id is held, printed or written. A failed
 stop check writes nothing and exits 1.
@@ -23,6 +28,7 @@ Python 3.12, standard library only; run with -I.
 """
 
 import argparse
+import fractions
 import json
 import math
 import os
@@ -44,11 +50,13 @@ COUNT_COLUMNS = (["mean_miss", "mean_miss_by_all5", "mean_miss_by_1to4", "mean_m
                   "mean_wrong", "mean_wrong_by_all5", "mean_wrong_by_1to4", "mean_wrong_by_none",
                   "nonull_resistant"] + [f"nonull_miss_{n}" for n in FIVE] + ["nonull_miss_all5"])
 VOTE_COLUMNS = ["species", "antibiotic", "genomes", "resistant", "susceptible"] + COUNT_COLUMNS + [
-    "nonull_expected_all5", "nonull_ratio_all5"]
+    "nonull_expected_all5"]
 POOLED_COLUMNS = (["scope", "species", "datasets", "genomes", "resistant", "susceptible"] + COUNT_COLUMNS
                   + ["nonull_expected_all5", "mean_share_median", "nonull_datasets_with_ratio", "nonull_ratio_median",
                      "nonull_ratio_q1", "nonull_ratio_q3", "nonull_datasets_ratio_over_1", "paired_datasets",
                      "paired_ratio_median", "paired_nonull_ratio_median"])
+DECIMAL_COLUMNS = ("nonull_expected_all5", "mean_share_median", "nonull_ratio_median",
+                   "nonull_ratio_q1", "nonull_ratio_q3", "paired_ratio_median", "paired_nonull_ratio_median")
 
 Stop = lo.Stop
 
@@ -192,13 +200,12 @@ def read_second(directory, first_record, expect=lo.EXPECT_FILES):
 # ---- the record ---------------------------------------------------------------------------------------------------
 
 def vote_row(r):
-    row = {c: r.get(c, "") for c in VOTE_COLUMNS[:-2]}
+    row = {c: r.get(c, "") for c in VOTE_COLUMNS[:-1]}
     if "mean_miss" in r:
         exp = lo.expected_all5(r["nonull_resistant"], [r[f"nonull_miss_{n}"] for n in FIVE])
-        row["nonull_expected_all5"] = lo.d12(exp)
-        row["nonull_ratio_all5"] = lo.d12(r["nonull_miss_all5"] / exp) if exp > 0 else ""
+        row["nonull_expected_all5"] = lo.rec(exp)
     else:
-        row["nonull_expected_all5"] = row["nonull_ratio_all5"] = ""
+        row["nonull_expected_all5"] = ""
     return row
 
 
@@ -212,43 +219,69 @@ def pooled_keys(first_record):
     return out
 
 
+def nonull_of(r):
+    """A vote row's yardstick and ratio outside null-fit folds, exact, from its count columns (None: no ratio)."""
+    exp = lo.expected_all5(int(r["nonull_resistant"]), [int(r[f"nonull_miss_{n}"]) for n in FIVE])
+    return exp, (int(r["nonull_miss_all5"]) / exp if exp > 0 else None)
+
+
 def nonull_ratios(rows):
-    return [float(r["nonull_ratio_all5"]) for r in rows if r["nonull_ratio_all5"] != ""]
+    """The reports' ratios outside null-fit folds, exact, from their count columns: never from a rounded cell."""
+    return [x for x in (nonull_of(r)[1] for r in rows) if x is not None]
+
+
+def exact_pool(rows, firsts):
+    """A scope's decimals as exact fractions, worked from the count columns of its reports and of their first-pass
+    rows."""
+    ratios = sorted(nonull_ratios(rows))
+    paired = [(a, b) for a, b in ((lo.ratio_of(firsts[(r["species"], r["antibiotic"])])[1], nonull_of(r)[1])
+                                  for r in rows) if a is not None and b is not None]
+    v = {"nonull_expected_all5": sum((nonull_of(r)[0] for r in rows), fractions.Fraction(0)), "ratios": ratios,
+         "mean_share_median": lo.median_of([fractions.Fraction(int(r["mean_miss"]), int(r["resistant"]))
+                                            for r in rows]), "paired": paired}
+    if ratios:
+        v["nonull_ratio_median"] = lo.median_of(ratios)
+        v["nonull_ratio_q1"], v["nonull_ratio_q3"] = lo.quartiles(ratios)
+    if paired:
+        v["paired_ratio_median"] = lo.median_of([a for a, _ in paired])
+        v["paired_nonull_ratio_median"] = lo.median_of([b for _, b in paired])
+    return v
 
 
 def pool(rows, firsts, scope, species=""):
     out = {"scope": scope, "species": species, "datasets": len(rows)}
     for c in ["genomes", "resistant", "susceptible"] + COUNT_COLUMNS:
         out[c] = sum(int(r[c]) for r in rows)
-    out["nonull_expected_all5"] = lo.d12(sum(float(r["nonull_expected_all5"]) for r in rows))
-    out["mean_share_median"] = lo.d12(lo.median_of([int(r["mean_miss"]) / int(r["resistant"]) for r in rows]))
-    ratios = nonull_ratios(rows)
-    out["nonull_datasets_with_ratio"] = len(ratios)
-    if ratios:
-        q1, q3 = lo.quartiles(sorted(ratios))
-        out.update({"nonull_ratio_median": lo.d12(lo.median_of(ratios)), "nonull_ratio_q1": lo.d12(q1),
-                    "nonull_ratio_q3": lo.d12(q3), "nonull_datasets_ratio_over_1": sum(1 for x in ratios if x > 1)})
+    v = exact_pool(rows, firsts)
+    out["nonull_expected_all5"] = lo.rec(v["nonull_expected_all5"])
+    out["mean_share_median"] = lo.rec(v["mean_share_median"])
+    out["nonull_datasets_with_ratio"] = len(v["ratios"])
+    if v["ratios"]:
+        out.update({"nonull_ratio_median": lo.rec(v["nonull_ratio_median"]),
+                    "nonull_ratio_q1": lo.rec(v["nonull_ratio_q1"]), "nonull_ratio_q3": lo.rec(v["nonull_ratio_q3"]),
+                    "nonull_datasets_ratio_over_1": sum(1 for x in v["ratios"] if x > 1)})
     else:
         out.update({"nonull_ratio_median": "", "nonull_ratio_q1": "", "nonull_ratio_q3": "",
                     "nonull_datasets_ratio_over_1": 0})
-    paired = [(float(firsts[(r["species"], r["antibiotic"])]["ratio_all5"]), float(r["nonull_ratio_all5"]))
-              for r in rows if r["nonull_ratio_all5"] != "" and firsts[(r["species"], r["antibiotic"])]["ratio_all5"] != ""]
-    out["paired_datasets"] = len(paired)
-    out["paired_ratio_median"] = lo.d12(lo.median_of([a for a, _ in paired])) if paired else ""
-    out["paired_nonull_ratio_median"] = lo.d12(lo.median_of([b for _, b in paired])) if paired else ""
+    out["paired_datasets"] = len(v["paired"])
+    out["paired_ratio_median"] = lo.rec(v["paired_ratio_median"]) if v["paired"] else ""
+    out["paired_nonull_ratio_median"] = lo.rec(v["paired_nonull_ratio_median"]) if v["paired"] else ""
     return out
 
 
-def pooled_rows(rows, first_record):
+def scopes(rows, first_record):
+    """The first pass's pooled reports that carry the five, all and per species: [(scope, species, rows)]."""
     keys = pooled_keys(first_record)
-    firsts = first_rows(first_record)
     kept = [r for r in rows if (r["species"], r["antibiotic"]) in keys and r["mean_miss"] != ""]
     if not kept:
         raise Stop("no report enters the pooled rows")
-    out = [pool(kept, firsts, "all")]
-    for sp in sorted({r["species"] for r in kept}):
-        out.append(pool([r for r in kept if r["species"] == sp], firsts, "species", sp))
-    return out
+    return [("all", "", kept)] + [("species", sp, [r for r in kept if r["species"] == sp])
+                                  for sp in sorted({r["species"] for r in kept})]
+
+
+def pooled_rows(rows, first_record):
+    firsts = first_rows(first_record)
+    return [pool(kept, firsts, scope, sp) for scope, sp, kept in scopes(rows, first_record)]
 
 
 def write_record(reading_dir, first_record, out):
@@ -260,16 +293,20 @@ def write_record(reading_dir, first_record, out):
     lo.fresh_out(out)
     rows = [vote_row(r) for r in reading["datasets"]]
     pooled = pooled_rows(rows, first_record)
-    rule = lo.reading_rule(float(pooled[0]["nonull_ratio_median"])) if pooled[0]["nonull_ratio_median"] else "none shown"
+    exact = exact_pool(scopes(rows, first_record)[0][2], first_rows(first_record))
+    rule = lo.reading_rule(exact["nonull_ratio_median"]) if exact["ratios"] else "none shown"
     parent = os.path.dirname(os.path.abspath(out))
     tmp = tempfile.mkdtemp(prefix=".overlap2-", dir=parent)
     try:
         lo.write_tsv(os.path.join(tmp, "vote.tsv"), VOTE_COLUMNS, rows)
         lo.write_tsv(os.path.join(tmp, "vote-pooled.tsv"), POOLED_COLUMNS, pooled)
-        scanned = lo.files_under(reading_dir) + [os.path.join(tmp, n) for n in ("vote.tsv", "vote-pooled.tsv")]
-        hits = scan(scanned)
-        line6 = (f"second check 6 ids: {len(scanned) + 2} files scanned, {hits} id-shaped tokens or barred keys: "
-                 + ("pass" if hits == 0 else "STOP"))
+        reading_files = lo.files_under(reading_dir)
+        hits, skipped = scan(reading_files), 0
+        for name in ("vote.tsv", "vote-pooled.tsv"):
+            h, s = lo.record_hits(os.path.join(tmp, name), DECIMAL_COLUMNS)
+            hits, skipped = hits + h, skipped + s
+        line6 = (f"second check 6 ids: {len(reading_files) + 4} files scanned, {hits} id-shaped tokens or barred keys "
+                 f"outside the {skipped:,} cells of the computed decimal columns: " + ("pass" if hits == 0 else "STOP"))
         with open(os.path.join(tmp, "gates.txt"), "w", encoding="utf-8") as f:
             f.write("\n".join(reading["first_checks"] + reading["checks"] + [line6]) + "\n")
             f.write(f"reading rule outside null-fit folds: {rule}\n")
@@ -306,9 +343,17 @@ def write_reading(reading, out):
 # ---- the page's tables --------------------------------------------------------------------------------------------
 
 def tables(record, first_record):
+    """The page's second-pass tables: counts from the records, decimals worked from their counts, never from a
+    rounded cell."""
     a = lo.read_tsv(os.path.join(record, "vote-pooled.tsv"))
     f = lo.read_tsv(os.path.join(first_record, "pooled.tsv"))[0]
-    p, c, d = a[0], lo.count, lo.dec
+    groups = scopes(lo.read_tsv(os.path.join(record, "vote.tsv")), first_record)
+    if [s["species"] for s in a] != [sp for _, sp, _ in groups]:
+        raise Stop("vote-pooled.tsv and vote.tsv give other scopes")
+    firsts = first_rows(first_record)
+    x = [exact_pool(kept, firsts) for _, _, kept in groups]
+    fe = lo.exact_pool(lo.scopes(lo.read_tsv(os.path.join(first_record, "datasets.tsv")))[0][2])
+    p, e, c, d = a[0], x[0], lo.count, lo.dec
     out = {}
     out["mean vote"] = ["| Five-learner mean at 0.5 | Genomes |", "|---|---:|",
                         f"| resistant genomes | {c(p['resistant'])} |",
@@ -317,7 +362,7 @@ def tables(record, first_record):
                         f"| of those, missed by 1 to 4 | {c(p['mean_miss_by_1to4'])} |",
                         f"| of those, missed by none | {c(p['mean_miss_by_none'])} |",
                         f"| median share of a report's resistant genomes the mean misses | "
-                        f"{d(p['mean_share_median'], 3)} |",
+                        f"{d(e['mean_share_median'], 3)} |",
                         f"| susceptible genomes | {c(p['susceptible'])} |",
                         f"| called resistant by the mean | {c(p['mean_wrong'])} |",
                         f"| of those, called resistant by all five | {c(p['mean_wrong_by_all5'])} |",
@@ -326,23 +371,23 @@ def tables(record, first_record):
     out["null-fit cut"] = ["| Measure | All genomes | Outside null-fit folds |", "|---|---:|---:|",
                            f"| resistant genomes | {c(f['resistant'])} | {c(p['nonull_resistant'])} |",
                            f"| missed by all five | {c(f['miss_all5'])} | {c(p['nonull_miss_all5'])} |",
-                           f"| yardstick, summed | {d(f['expected_all5'], 2)} | {d(p['nonull_expected_all5'], 2)} |",
+                           f"| yardstick, summed | {d(fe['expected_all5'], 2)} | {d(e['nonull_expected_all5'], 2)} |",
                            f"| reports with a ratio | {c(f['datasets_with_ratio'])} "
                            f"| {c(p['nonull_datasets_with_ratio'])} |",
-                           f"| median ratio | {d(f['ratio_median'], 1)} | {d(p['nonull_ratio_median'], 1)} |",
-                           f"| quartiles of the ratio | {d(f['ratio_q1'], 1)} to {d(f['ratio_q3'], 1)} "
-                           f"| {d(p['nonull_ratio_q1'], 1)} to {d(p['nonull_ratio_q3'], 1)} |",
+                           f"| median ratio | {d(fe.get('ratio_median'), 1)} | {d(e.get('nonull_ratio_median'), 1)} |",
+                           f"| quartiles of the ratio | {d(fe.get('ratio_q1'), 1)} to {d(fe.get('ratio_q3'), 1)} "
+                           f"| {d(e.get('nonull_ratio_q1'), 1)} to {d(e.get('nonull_ratio_q3'), 1)} |",
                            f"| reports with a ratio over 1 | {c(f['datasets_ratio_over_1'])} "
                            f"| {c(p['nonull_datasets_ratio_over_1'])} |",
                            f"| reports with both ratios | {c(p['paired_datasets'])} | {c(p['paired_datasets'])} |",
-                           f"| median ratio over those | {d(p['paired_ratio_median'], 1)} "
-                           f"| {d(p['paired_nonull_ratio_median'], 1)} |"]
+                           f"| median ratio over those | {d(e.get('paired_ratio_median'), 1)} "
+                           f"| {d(e.get('paired_nonull_ratio_median'), 1)} |"]
     out["mean vote by species"] = (
         ["| Species | Reports | Resistant | Missed by the mean | Of those, by all five | Of those, by 1 to 4 "
          "| Median ratio outside null-fit folds |", "|---|---:|---:|---:|---:|---:|---:|"]
         + [f"| *{s['species']}* | {c(s['datasets'])} | {c(s['resistant'])} | {c(s['mean_miss'])} "
-           f"| {c(s['mean_miss_by_all5'])} | {c(s['mean_miss_by_1to4'])} | {d(s['nonull_ratio_median'], 1)} |"
-           for s in a[1:]])
+           f"| {c(s['mean_miss_by_all5'])} | {c(s['mean_miss_by_1to4'])} | {d(xs.get('nonull_ratio_median'), 1)} |"
+           for s, xs in zip(a[1:], x[1:])])
     return out
 
 

@@ -2,13 +2,15 @@
 
 This directory holds the tables behind [docs/learner-overlap-result.md](../../docs/learner-overlap-result.md): on the lineage split of the 274 revision 14 release reports, how many of the five learners miss each resistant genome at the release's 0.5 cutoff, beside the count expected if they missed independently. Every row is an aggregate over a report, a species or the pooled reports, and keeps its genome count. No file holds a genome id. These are public bacterial genomes with public accession numbers, and the record holds no field about a patient.
 
-`scripts/mechanism/learner_overlap.py read` read the reports and `write` wrote `datasets.tsv`, `pooled.tsv` and `gates.txt`, with `SHA256SUMS` over the three. They are copied here as it wrote them. `reading.txt` lists the reading's commands with the sha256 of what each wrote; the run's directories are named REPORTS, READING and RECORD there in place of their paths. Nothing was fitted, trained or scored again.
+`scripts/mechanism/learner_overlap.py read` read the reports and `write` wrote `datasets.tsv`, `pooled.tsv` and `gates.txt`, with `SHA256SUMS` over the three. `reading.txt` lists the reading's commands with the sha256 of what each wrote; the run's directories are named REPORTS, READING and RECORD there in place of their paths. Nothing was fitted, trained or scored again.
+
+On 25 November 2026 the lead ruled, after a review and with no new read, that the record be written again from the kept reading: every computed decimal column with 3 places in place of 12, and no column `ratio_all5`. A report's ratio is given as the counts it comes from, `miss_all5` over `expected_all5`, which `resistant` and the five learners' miss columns give exactly. The files here are that re-write as `write` wrote it; the reading's own section of `reading.txt` gives the reading, the re-write's section what the re-write wrote, and the commits before it hold the 12-place files.
 
 | File | Holds |
 |---|---|
-| `datasets.tsv` | one row per report used, species and antibiotic in full: resistant genomes missed by exactly 0 to 5 of the five learners, susceptible genomes called resistant by exactly 0 to 5, each learner's misses, the all-five misses with no catalogue call or in a fold with a null fit, the yardstick and the ratio |
+| `datasets.tsv` | one row per report used, species and antibiotic in full: resistant genomes missed by exactly 0 to 5 of the five learners, susceptible genomes called resistant by exactly 0 to 5, each learner's misses, the all-five misses with no catalogue call or in a fold with a null fit, and the yardstick, with 3 places; the ratio is `miss_all5` over the yardstick, worked from the counts |
 | `pooled.tsv` | the same counts summed over the pooled reports (`scope` `all`) and per species, with the median and quartiles of the ratio, each report weighted once |
 | `gates.txt` | the ten checks the reading passed before a table was written, and the reading rule |
-| `reading.txt` | the reading's commands and the sha256 of each one's output |
+| `reading.txt` | the reading's commands and the sha256 of each one's output, then the re-write's |
 
 The yardstick is the count the five would miss together if they missed independently. It is neither a model nor a test, and no p-value is computed. A split by lineage is a retrospective split inside one database, never external validation. `scripts/mechanism/learner_overlap.py print` prints the page's tables from these files.

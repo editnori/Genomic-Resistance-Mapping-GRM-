@@ -13,6 +13,14 @@ datasets.tsv, pooled.tsv, gates.txt and SHA256SUMS, after check 6 finds no
 genome id in any file of the reading or the record. `print` prints the page's
 tables from a record.
 
+Every decimal of the record and of the page is worked from the counts as an
+exact fraction and rounded once: the record's to 3 places (the lead's ruling of
+25 November 2026, after a review, in place of the plan's 12), the page's to the
+places its tables show. No pooled figure and no page figure is worked from a
+rounded cell. A report's ratio is not a column of the record (the same ruling):
+it is given as the counts it comes from, `miss_all5` over the yardstick worked
+from `resistant` and the five learners' miss columns.
+
 Nothing is fitted, trained or scored again: every count comes from the scores
 and labels the reports store. Every key named `id` is dropped as a report is
 parsed, so no genome id is held, printed or written. A failed stop check
@@ -43,9 +51,11 @@ MIN_RESISTANT = 10           # a report enters the pooled rows with 10 or more r
 MIN_LEARNERS = 2             # a report with fewer learners is skipped and counted
 STACK = 10                   # a median ratio of 10 or more: the misses stack
 KS = range(6)
-# The shape of a BV-BRC genome id (a taxon number, a point, a genome number), standing alone. Every decimal the
-# record writes has 12 places, so none has this shape.
+# The shape of a BV-BRC genome id (a taxon number, a point, a genome number), standing alone. A computed decimal of
+# the record has 3 places and may have this shape, so check 6 scans every cell of a record table but those of its
+# computed decimal columns, which the write fills from exact fractions (ruled 25 Nov 2026).
 ID_SHAPE = re.compile(r"(?<![\w.])\d{2,7}\.\d{1,9}(?![\w.])")
+PLACES = 3                   # every decimal of the record: worked exactly, rounded once to 3 places
 BARRED_KEY = re.compile(r'"(?:id|samples)"\s*:')
 READING = "reading.json"
 RECORD_FILES = ("datasets.tsv", "pooled.tsv", "gates.txt")
@@ -53,7 +63,7 @@ DATASET_COLUMNS = (["species", "antibiotic", "genomes", "resistant", "susceptibl
                     "catalog_rule"]
                    + [f"miss_{k}" for k in KS] + [f"wrong_{k}" for k in KS] + [f"miss_{n}" for n in FIVE]
                    + ["miss_all5", "miss_all5_no_catalog_call", "miss_all5_in_null_fold", "null_fold_pairs",
-                      "expected_all5", "ratio_all5"])
+                      "expected_all5"])
 SUMMED = (["genomes", "resistant", "susceptible"] + [f"miss_{k}" for k in KS] + [f"wrong_{k}" for k in KS]
           + [f"miss_{n}" for n in FIVE] + ["miss_all5", "miss_all5_no_catalog_call", "miss_all5_in_null_fold",
                                            "null_fold_pairs"])
@@ -61,6 +71,8 @@ POOLED_COLUMNS = (["scope", "species", "datasets"] + SUMMED
                   + ["datasets_no_catalog_rule", "miss_all5_no_catalog_rule", "expected_all5", "datasets_with_ratio",
                      "datasets_expected_zero", "ratio_median", "ratio_q1", "ratio_q3", "datasets_ratio_over_1",
                      "share_all5_median", "share_some_median"])
+DECIMAL_COLUMNS = ("expected_all5", "ratio_median", "ratio_q1", "ratio_q3", "share_all5_median",
+                   "share_some_median")
 
 
 class Stop(Exception):
@@ -314,6 +326,25 @@ def id_hits(paths):
     return hits
 
 
+def record_hits(path, decimal_columns):
+    """Id-shaped tokens in every cell of a record table but those of its computed decimal columns, and `id` or
+    `samples` keys anywhere in it: (hits, cells of the decimal columns left to the id list). Counts only."""
+    with open(path, encoding="utf-8") as f:
+        text = f.read()
+    hits, skipped = len(BARRED_KEY.findall(text)), 0
+    lines = text.split("\n")
+    head = lines[0].split("\t")
+    hits += sum(len(ID_SHAPE.findall(cell)) for cell in head)
+    for line in lines[1:]:
+        for name, cell in zip(head, line.split("\t")):
+            if name in decimal_columns and cell != "":
+                skipped += 1
+            else:
+                hits += len(ID_SHAPE.findall(cell))
+        hits += sum(len(ID_SHAPE.findall(cell)) for cell in line.split("\t")[len(head):])
+    return hits, skipped
+
+
 def files_under(directory):
     return sorted(os.path.join(root, f) for root, _, names in os.walk(directory) for f in names)
 
@@ -331,8 +362,13 @@ def publish(tmp, out):
 
 # ---- the record ---------------------------------------------------------------------------------------------------
 
-def d12(x):
-    return f"{round(float(x) + 0.0, 12):.12f}"
+def rec(x):
+    """A decimal of the record: an exact value rounded once, half to even, to PLACES places."""
+    q = round(fractions.Fraction(x) * 10 ** PLACES)
+    if q < 0:
+        raise Stop("a decimal of the record is under 0")
+    whole, part = divmod(q, 10 ** PLACES)
+    return f"{whole}.{part:0{PLACES}d}"
 
 
 def expected_all5(resistant, misses):
@@ -365,8 +401,14 @@ def dataset_row(d):
         exp = expected_all5(d["resistant"], [d["miss_by_learner"][n] for n in FIVE])
         row.update({"miss_all5": d["miss_all"], "miss_all5_no_catalog_call": d["miss_all_no_catalog_call"],
                     "miss_all5_in_null_fold": d["miss_all_in_null_fold"], "null_fold_pairs": d["null_fold_pairs"],
-                    "expected_all5": d12(exp), "ratio_all5": d12(d["miss_all"] / exp) if exp > 0 else ""})
+                    "expected_all5": rec(exp)})
     return row
+
+
+def ratio_of(r):
+    """A report row's yardstick and ratio, worked again from its count columns as exact fractions (None: no ratio)."""
+    exp = expected_all5(int(r["resistant"]), [int(r[f"miss_{n}"]) for n in FIVE])
+    return exp, (int(r["miss_all5"]) / exp if exp > 0 else None)
 
 
 def pooled_in(row):
@@ -385,7 +427,25 @@ def quartiles(values):
 
 
 def ratio_values(rows):
-    return [float(r["ratio_all5"]) for r in rows if r["ratio_all5"] != ""]
+    """The reports' ratios, exact, from their count columns: never from a rounded cell."""
+    return [x for x in (ratio_of(r)[1] for r in rows) if x is not None]
+
+
+def yardstick_sum(rows):
+    return sum((ratio_of(r)[0] for r in rows), fractions.Fraction(0))
+
+
+def exact_pool(rows):
+    """A scope's decimals as exact fractions, worked from the count columns of its reports."""
+    ratios = sorted(ratio_values(rows))
+    v = {"expected_all5": yardstick_sum(rows), "ratios": ratios,
+         "share_all5_median": median_of([fractions.Fraction(int(r["miss_all5"]), int(r["resistant"])) for r in rows]),
+         "share_some_median": median_of([fractions.Fraction(sum(int(r[f"miss_{k}"]) for k in (1, 2, 3, 4)),
+                                                            int(r["resistant"])) for r in rows])}
+    if ratios:
+        v["ratio_median"] = median_of(ratios)
+        v["ratio_q1"], v["ratio_q3"] = quartiles(ratios)
+    return v
 
 
 def pool(rows, scope, species=""):
@@ -394,30 +454,32 @@ def pool(rows, scope, species=""):
         out[c] = sum(int(r[c]) for r in rows)
     out["datasets_no_catalog_rule"] = sum(1 for r in rows if r["catalog_rule"] == "no")
     out["miss_all5_no_catalog_rule"] = sum(int(r["miss_all5"]) for r in rows if r["catalog_rule"] == "no")
-    out["expected_all5"] = d12(sum(float(r["expected_all5"]) for r in rows))
-    ratios = ratio_values(rows)
-    out["datasets_with_ratio"] = len(ratios)
-    out["datasets_expected_zero"] = sum(1 for r in rows if r["ratio_all5"] == "")
-    if ratios:
-        q1, q3 = quartiles(sorted(ratios))
-        out.update({"ratio_median": d12(median_of(ratios)), "ratio_q1": d12(q1), "ratio_q3": d12(q3),
-                    "datasets_ratio_over_1": sum(1 for x in ratios if x > 1)})
+    v = exact_pool(rows)
+    out["expected_all5"] = rec(v["expected_all5"])
+    out["datasets_with_ratio"] = len(v["ratios"])
+    out["datasets_expected_zero"] = len(rows) - len(v["ratios"])
+    if v["ratios"]:
+        out.update({"ratio_median": rec(v["ratio_median"]), "ratio_q1": rec(v["ratio_q1"]),
+                    "ratio_q3": rec(v["ratio_q3"]), "datasets_ratio_over_1": sum(1 for x in v["ratios"] if x > 1)})
     else:
         out.update({"ratio_median": "", "ratio_q1": "", "ratio_q3": "", "datasets_ratio_over_1": 0})
-    out["share_all5_median"] = d12(median_of([int(r["miss_all5"]) / int(r["resistant"]) for r in rows]))
-    out["share_some_median"] = d12(median_of([sum(int(r[f"miss_{k}"]) for k in (1, 2, 3, 4)) / int(r["resistant"])
-                                              for r in rows]))
+    out["share_all5_median"] = rec(v["share_all5_median"])
+    out["share_some_median"] = rec(v["share_some_median"])
     return out
 
 
-def pooled_rows(rows):
+def scopes(rows):
+    """The pooled reports, all and per species: [(scope, species, rows)]."""
+    rows = [dict(r, learner_count=int(r["learner_count"]), resistant=int(r["resistant"])) for r in rows]
     kept = [r for r in rows if pooled_in(r)]
     if not kept:
         raise Stop("no report enters the pooled rows")
-    out = [pool(kept, "all")]
-    for sp in sorted({r["species"] for r in kept}):
-        out.append(pool([r for r in kept if r["species"] == sp], "species", sp))
-    return out
+    return [("all", "", kept)] + [("species", sp, [r for r in kept if r["species"] == sp])
+                                  for sp in sorted({r["species"] for r in kept})]
+
+
+def pooled_rows(rows):
+    return [pool(kept, scope, sp) for scope, sp, kept in scopes(rows)]
 
 
 def reading_rule(median):
@@ -463,11 +525,15 @@ def write_record(reading_dir, out):
     try:
         write_tsv(os.path.join(tmp, "datasets.tsv"), DATASET_COLUMNS, rows)
         write_tsv(os.path.join(tmp, "pooled.tsv"), POOLED_COLUMNS, pooled)
-        scanned = files_under(reading_dir) + [os.path.join(tmp, n) for n in ("datasets.tsv", "pooled.tsv")]
-        hits = id_hits(scanned)
-        line6 = (f"check 6 ids: {len(scanned) + 2} files scanned, {hits} id-shaped tokens or barred keys: "
-                 + ("pass" if hits == 0 else "STOP"))
-        rule = reading_rule(float(pooled[0]["ratio_median"])) if pooled[0]["ratio_median"] else "none shown"
+        reading_files = files_under(reading_dir)
+        hits, skipped = id_hits(reading_files), 0
+        for name in ("datasets.tsv", "pooled.tsv"):
+            h, s = record_hits(os.path.join(tmp, name), DECIMAL_COLUMNS)
+            hits, skipped = hits + h, skipped + s
+        line6 = (f"check 6 ids: {len(reading_files) + 4} files scanned, {hits} id-shaped tokens or barred keys "
+                 f"outside the {skipped:,} cells of the computed decimal columns: " + ("pass" if hits == 0 else "STOP"))
+        exact = exact_pool(scopes(rows)[0][2])
+        rule = reading_rule(exact["ratio_median"]) if exact["ratios"] else "none shown"
         with open(os.path.join(tmp, "gates.txt"), "w", encoding="utf-8") as f:
             f.write("\n".join(reading["checks"][:5] + [line6] + reading["checks"][5:]) + "\n")
             f.write(f"reading rule: {rule}\n")
@@ -508,13 +574,24 @@ def count(x):
 
 
 def dec(x, places):
-    return "none" if x == "" else f"{float(x):,.{places}f}"
+    """A page figure: an exact value rounded once, half to even, to the places the table shows."""
+    if x is None or x == "":
+        return "none"
+    q = round(fractions.Fraction(x) * 10 ** places)
+    if q < 0:
+        raise Stop("a page figure is under 0")
+    whole, part = divmod(q, 10 ** places)
+    return f"{whole:,}.{part:0{places}d}" if places else f"{whole:,}"
 
 
 def tables(record):
+    """The page's tables: counts from the record, decimals worked from its counts, never from a rounded cell."""
     pooled = read_tsv(os.path.join(record, "pooled.tsv"))
     rows = read_tsv(os.path.join(record, "datasets.tsv"))
-    a = pooled[0]
+    exact = [exact_pool(kept) for _, _, kept in scopes(rows)]
+    if [p["species"] for p in pooled] != [sp for _, sp, _ in scopes(rows)]:
+        raise Stop("pooled.tsv and datasets.tsv give other scopes")
+    a, e = pooled[0], exact[0]
     out = {}
     out["overlap"] = (["| Of the five | Resistant genomes missed | Susceptible genomes called resistant |",
                        "|---|---:|---:|"]
@@ -527,32 +604,32 @@ def tables(record):
                         f"| with a ratio | {count(a['datasets_with_ratio'])} |",
                         f"| yardstick of 0, reported apart | {count(a['datasets_expected_zero'])} |",
                         f"| missed by all five, summed | {count(a['miss_all5'])} |",
+                        f"| of those, in a fold with a null fit | {count(a['miss_all5_in_null_fold'])} |",
                         f"| of those, a catalogue call | "
                         f"{count(int(a['miss_all5']) - int(a['miss_all5_no_catalog_call']))} |",
                         f"| of those, no catalogue call | {count(a['miss_all5_no_catalog_call'])} |",
                         f"| of those, on a report with no catalogue rule | {count(a['miss_all5_no_catalog_rule'])} |",
                         f"| reports with no catalogue rule | {count(a['datasets_no_catalog_rule'])} |",
-                        f"| of those, in a fold with a null fit | {count(a['miss_all5_in_null_fold'])} |",
-                        f"| yardstick, summed | {dec(a['expected_all5'], 2)} |",
-                        f"| median ratio | {dec(a['ratio_median'], 1)} |",
-                        f"| quartiles of the ratio | {dec(a['ratio_q1'], 1)} to {dec(a['ratio_q3'], 1)} |",
+                        f"| yardstick, summed | {dec(e['expected_all5'], 2)} |",
+                        f"| median ratio | {dec(e.get('ratio_median'), 1)} |",
+                        f"| quartiles of the ratio | {dec(e.get('ratio_q1'), 1)} to {dec(e.get('ratio_q3'), 1)} |",
                         f"| reports with a ratio over 1 | {count(a['datasets_ratio_over_1'])} |",
-                        f"| median share missed by all five | {dec(a['share_all5_median'], 3)} |",
-                        f"| median share missed by 1 to 4 | {dec(a['share_some_median'], 3)} |"]
+                        f"| median share missed by all five | {dec(e['share_all5_median'], 3)} |",
+                        f"| median share missed by 1 to 4 | {dec(e['share_some_median'], 3)} |"]
     out["species"] = (["| Species | Reports | Resistant | Missed by all five | Yardstick | Median ratio "
                        "| Share by all five | Share by 1 to 4 |", "|---|---:|---:|---:|---:|---:|---:|---:|"]
                       + [f"| *{p['species']}* | {count(p['datasets'])} | {count(p['resistant'])} "
-                         f"| {count(p['miss_all5'])} | {dec(p['expected_all5'], 2)} "
-                         f"| {dec(p['ratio_median'], 1)} "
-                         f"| {dec(p['share_all5_median'], 3)} | {dec(p['share_some_median'], 3)} |"
-                         for p in pooled[1:]])
+                         f"| {count(p['miss_all5'])} | {dec(x['expected_all5'], 2)} "
+                         f"| {dec(x.get('ratio_median'), 1)} "
+                         f"| {dec(x['share_all5_median'], 3)} | {dec(x['share_some_median'], 3)} |"
+                         for p, x in zip(pooled[1:], exact[1:])])
     out["datasets"] = (["| Species | Antibiotic | Genomes | Resistant | Missed by all five | No catalogue call "
                         "| In a null-fit fold | Yardstick | Ratio |", "|---|---|---:|---:|---:|---:|---:|---:|---:|"]
                        + [f"| *{r['species']}* | {r['antibiotic']} | {count(r['genomes'])} | {count(r['resistant'])} "
                           + (f"| {count(r['miss_all5'])} "
                              f"| {count(r['miss_all5_no_catalog_call']) if r['catalog_rule'] == 'yes' else 'no rule'} "
-                             f"| {count(r['miss_all5_in_null_fold'])} | {dec(r['expected_all5'], 2)} "
-                             f"| {dec(r['ratio_all5'], 1)} |"
+                             f"| {count(r['miss_all5_in_null_fold'])} | {dec(ratio_of(r)[0], 2)} "
+                             f"| {dec(ratio_of(r)[1], 1)} |"
                              if r["miss_all5"] != "" else "| | | | | |")
                           for r in rows])
     return out

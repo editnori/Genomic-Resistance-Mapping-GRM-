@@ -4,7 +4,7 @@ Revision 14 stores, for each report's lineage split, every learner's held-out sc
 
 ## Reading
 
-The five learners share a floor of misses far above the yardstick, and a larger layer of misses lies beside it, where some of the five miss a genome and the others call it. Summed over the 268 pooled reports, all five miss 6,316 of 93,786 resistant genomes, where the yardstick gives 656.85. Over the 259 reports with a yardstick above 0, the median ratio of the two is 488.8, with quartiles 20.1 to 6,778.9, and 246 of the 259 have a ratio over 1. Another 23,859 of the 93,786 are missed by 1 to 4 of the five, and on a typical report the median share missed by 1 to 4 is 0.263, against 0.057 missed by all five. By the plan's rule, a median of 10 or more, the misses stack: for the genomes all five miss, the data limits recall on this split. The 9 reports with a yardstick of 0, where one learner misses no resistant genome, are counted apart.
+The five learners share a floor of misses far above the yardstick, and a larger layer of misses lies beside it, where some of the five miss a genome and the others call it. Summed over the 268 pooled reports, all five miss 6,316 of 93,786 resistant genomes, where the yardstick gives 656.85. Over the 259 reports with a yardstick above 0, the median ratio of the two is 488.8, with quartiles 20.1 to 6,778.9, and 246 of the 259 have a ratio over 1. Another 23,859 of the 93,786 are missed by 1 to 4 of the five, and on a typical report the median share missed by 1 to 4 is 0.263, against 0.057 missed by all five. By the plan's rule, a median of 10 or more, the misses stack: for the genomes all five miss, the data limits recall on this split. The 9 reports with a yardstick of 0, where at least one of the five misses no resistant genome, are counted apart.
 
 The partial layer is room for a combination of the five, and it has a cost on the other class: 22,372 of the 121,533 susceptible genomes are called resistant by 1 to 4 of the five. The release's mean of the five, read as a vote at 0.5, misses 14,383 of the 93,786 resistant genomes: the 6,316 all five miss and 8,067 of the 23,859 that 1 to 4 miss. It calls resistant 8,896 of the 121,533 susceptible genomes: the 3,315 all five call and 5,581 of the 22,372 that 1 to 4 call. On a typical report the mean misses a median share of 0.144 of the resistant genomes.
 
@@ -37,11 +37,11 @@ The yardstick of a report is its resistant count times the product of the five l
 | with a ratio | 259 |
 | yardstick of 0, reported apart | 9 |
 | missed by all five, summed | 6,316 |
+| of those, in a fold with a null fit | 493 |
 | of those, a catalogue call | 3,056 |
 | of those, no catalogue call | 3,260 |
 | of those, on a report with no catalogue rule | 719 |
 | reports with no catalogue rule | 19 |
-| of those, in a fold with a null fit | 493 |
 | yardstick, summed | 656.85 |
 | median ratio | 488.8 |
 | quartiles of the ratio | 20.1 to 6,778.9 |
@@ -174,7 +174,7 @@ check 2 lengths: 0 reports with a score list or test_fold of another length or a
 check 3 counts: 0 reports whose counts or labels differ from their samples; 19 used reports with no catalogue rule (catalog_resistant null on every genome): pass
 check 4 learner sets: 1 sets; the release's is cart,gbt,lasso,rf,scm on 268 reports; 0 reports differ
 check 5 skipped: 0 with no lineage split, 6 with fewer than 2 learners; 6 skipped and 268 used of 274 found: pass
-check 6 ids: 5 files scanned, 0 id-shaped tokens or barred keys: pass
+check 6 ids: 5 files scanned, 0 id-shaped tokens or barred keys outside the 412 cells of the computed decimal columns: pass
 check 7 stored metrics: 0 learner rows whose counts at the cutoff differ from metrics: pass
 check 8 pairs: 0 species and antibiotic pairs on two reports: pass
 check 9 catalogue: 0 reports whose catalog calls differ from catalog_resistant: pass
@@ -199,13 +199,15 @@ second check 2 first-pass columns: 268 reports read again, 268 rows in datasets.
 second check 3 arithmetic of the mean: 268 reports with the five, 0 where the mean misses a genome none of the five miss, calls one none call, or parts from all five: pass
 second check 4 null-fit cut: 0 reports where the all-five misses outside and inside null-fit folds do not add up: pass
 second check 5 the vote's edge: 0 genomes where a plain sum over 5 gives another call than math.fsum; 0 genomes whose sum lies within 1e-9 of 2.5
-second check 6 ids: 5 files scanned, 0 id-shaped tokens or barred keys: pass
+second check 6 ids: 5 files scanned, 0 id-shaped tokens or barred keys outside the 436 cells of the computed decimal columns: pass
 reading rule outside null-fit folds: stack
 ```
 
-Check 6 and second check 6 scan for the shape of a genome id and for a key named `id` or `samples`. Beside them, every file written for this page was compared on the box with the reports' own genome ids, held in memory and never written, and none matched. The shape scan stays as a second net only: in a control file of 1,480 genome ids, 1,417 had the shape.
+On 25 November 2026 the lead ruled, after a review and with no new read, that both records be written again from the kept readings, and this page's tables print from that re-write. Every computed decimal column now has 3 places, not the 12 the plan gives, and the two per-report ratio columns, `ratio_all5` of `datasets.tsv` and `nonull_ratio_all5` of `vote.tsv`, are dropped: a derived number is given as the counts it comes from, here the all-five misses over the yardstick, which the same file's count columns give exactly. The reason: the page quotes these figures to one decimal, so twelve places served no reader, and a search for genome ids as plain substrings met one inside a long ratio, whose digits come from one count divided by another, a cell that would cost a later reader an investigation. Every pooled median and quartile and every page figure is worked from the count columns as an exact fraction and rounded once, never from a rounded cell. The readings' sha256 did not change, every count and row is the one the reviewed records hold, every gate line but check 6 and second check 6 is as before, and every table printed the same bytes but the Yardstick table, where the null-fit row moved under the figure it counts. Each `reading.txt` gives the re-write's commands and outputs after the reading's; the commits before the re-write hold the 12-place records.
 
-`tests/mechanism/test_learner_overlap.py` holds 38 SYNTHETIC tests of the table script, with counts worked by hand. `tests/mechanism/test_overlap_second.py` holds 22 SYNTHETIC tests of the second pass's script, worked the same way. `tests/mechanism/test_learner_overlap_page.py` holds 20 tests of this page and its two records. `scripts/mechanism/overlap_faults.py` plants each fault below in one of the two scripts in turn and runs the test that must catch it:
+Check 6 and second check 6 scan every written file for a key named `id` or `samples`, and every cell for the shape of a genome id but the cells of the computed decimal columns, which have 3 places and so can have that shape; they print how many cells they leave to the id list. Beside them, every file written for this page was compared on the box with the 23,757 distinct genome ids of the 274 reports, held in memory and never written, in three ways: each id searched as a plain substring, each decimal token looked up in the id set, and the shape scan. No id was found. The shape scan stays a second net only: in one release report the shape scan matched 1,417 tokens where the id list found 1,480. Searched as substrings, the ids meet that report 1,806 times, since a substring search also counts an id inside a longer number.
+
+`tests/mechanism/test_learner_overlap.py` holds 42 SYNTHETIC tests of the table script, with counts worked by hand. `tests/mechanism/test_overlap_second.py` holds 22 SYNTHETIC tests of the second pass's script, worked the same way. `tests/mechanism/test_learner_overlap_page.py` holds 21 tests of this page and its two records. `scripts/mechanism/overlap_faults.py` plants each fault below in one of the two scripts in turn and runs the test that must catch it:
 
 | Fault | Test |
 |---|---|
@@ -237,8 +239,11 @@ Check 6 and second check 6 scan for the shape of a genome id and for a key named
 | O26. A report under 10 resistant genomes pooled in the second pass | `SecondPooled.test_a_report_under_10_resistant_stays_out_of_the_pool` |
 | O27. The second pass's shape scan blind to an id-shaped token | `SecondStops.test_an_id_shaped_token_in_the_reading_stops_the_write` |
 | O28. A genome 3 of the five miss counted with those all five miss | `Vote.test_the_mean_misses_what_three_or_more_of_the_five_miss_here` |
+| O29. The pooled yardstick summed from the rounded cells | `Places.test_the_pooled_yardstick_sums_the_counts` |
+| O30. A page figure rounded twice, through the record's 3 places | `Places.test_a_page_figure_is_rounded_once_from_the_counts` |
+| O31. Check 6 blind to an id-shaped token in a column that holds no computed decimal | `Places.test_check_6_scans_every_column_but_the_computed_decimals` |
 
-All 28 were caught.
+All 31 were caught.
 
 ## Plan
 

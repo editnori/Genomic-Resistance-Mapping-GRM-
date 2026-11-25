@@ -3,7 +3,7 @@ check 2 lengths: 0 reports with a score list or test_fold of another length or a
 check 3 counts: 0 reports whose counts or labels differ from their samples; 19 used reports with no catalogue rule (catalog_resistant null on every genome): pass
 check 4 learner sets: 1 sets; the release's is cart,gbt,lasso,rf,scm on 268 reports; 0 reports differ
 check 5 skipped: 0 with no lineage split, 6 with fewer than 2 learners; 6 skipped and 268 used of 274 found: pass
-check 6 ids: 5 files scanned, 0 id-shaped tokens or barred keys: pass
+check 6 ids: 5 files scanned, 0 id-shaped tokens or barred keys outside the 412 cells of the computed decimal columns: pass
 check 7 stored metrics: 0 learner rows whose counts at the cutoff differ from metrics: pass
 check 8 pairs: 0 species and antibiotic pairs on two reports: pass
 check 9 catalogue: 0 reports whose catalog calls differ from catalog_resistant: pass

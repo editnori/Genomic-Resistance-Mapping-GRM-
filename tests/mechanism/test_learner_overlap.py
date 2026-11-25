@@ -6,6 +6,7 @@ the fixture's design.
 """
 
 import contextlib
+import fractions
 import io
 import json
 import os
@@ -157,14 +158,16 @@ class Counts(Case):
         self.assertEqual([a[f"miss_{k}"] for k in range(6)], ["6", "2", "0", "1", "0", "3"])
         self.assertEqual([a[f"wrong_{k}"] for k in range(6)], ["6", "1", "0", "0", "0", "1"])
         self.assertEqual([a[f"miss_{n}"] for n in FIVE], ["6", "4", "4", "3", "3"])
-        self.assertEqual((a["miss_all5"], a["expected_all5"], a["ratio_all5"]),
-                         ("3", "0.041666666667", "72.000000000000"))
+        self.assertEqual((a["miss_all5"], a["expected_all5"]), ("3", "0.042"))
+        # the ratio is no column of the record: it is the counts' own, 3 over 1/24
+        self.assertNotIn("ratio_all5", a)
+        self.assertEqual(lo.ratio_of(a), (fractions.Fraction(1, 24), 72))
 
     def test_disjoint_misses_stack_on_no_genome(self):
         _, rows, _ = self.read_write()
         b = rows["drug b"]
         self.assertEqual([b[f"miss_{k}"] for k in range(6)], ["5", "5", "0", "0", "0", "0"])
-        self.assertEqual((b["miss_all5"], b["expected_all5"], b["ratio_all5"]), ("0", "0.000100000000", "0.000000000000"))
+        self.assertEqual((b["miss_all5"], b["expected_all5"], lo.ratio_of(b)), ("0", "0.000", (fractions.Fraction(1, 10000), 0)))
 
     def test_a_score_of_exactly_the_cutoff_is_a_call(self):
         r = Report(COLI, "drug a", 10, 5, misses={n: (0,) for n in FIVE})
@@ -321,24 +324,24 @@ class Pooled(Case):
                          ("3", "1", "2"))
         # ratios 72 (a), 0 (b) and 10,000 (h); c's yardstick is 0, as scm misses none
         self.assertEqual((p["ratio_median"], p["ratio_q1"], p["ratio_q3"]),
-                         ("72.000000000000", "36.000000000000", "5036.000000000000"))
-        self.assertEqual(p["expected_all5"], "0.041866666667")
+                         ("72.000", "36.000", "5036.000"))
+        self.assertEqual(p["expected_all5"], "0.042")
         # shares by all five 0.25, 0, 0, 0.1; by 1 to 4: 0.25, 0.5, 0.3, 0
-        self.assertEqual((p["share_all5_median"], p["share_some_median"]), ("0.050000000000", "0.275000000000"))
+        self.assertEqual((p["share_all5_median"], p["share_some_median"]), ("0.050", "0.275"))
 
     def test_the_median_weights_each_report_once(self):
         # drug b holds 40 genomes and a ratio of 0; weighted by genomes the median would be 0
         _, _, pooled = self.read_write()
-        self.assertEqual(pooled[0]["ratio_median"], "72.000000000000")
+        self.assertEqual(pooled[0]["ratio_median"], "72.000")
 
     def test_a_report_with_a_yardstick_of_0_is_reported_apart(self):
         _, rows, pooled = self.read_write()
-        self.assertEqual((rows["drug c"]["expected_all5"], rows["drug c"]["ratio_all5"]), ("0.000000000000", ""))
+        self.assertEqual((rows["drug c"]["expected_all5"], lo.ratio_of(rows["drug c"])), ("0.000", (0, None)))
         self.assertEqual((pooled[0]["datasets"], pooled[0]["datasets_expected_zero"]), ("4", "1"))
 
     def test_a_report_under_10_resistant_stays_out_of_the_pool(self):
         _, rows, pooled = self.read_write()
-        self.assertEqual(rows["drug d"]["ratio_all5"], "256.000000000000")
+        self.assertEqual(lo.ratio_of(rows["drug d"])[1], 256)
         self.assertEqual(pooled[0]["datasets"], "4")
         self.assertEqual(pooled[0]["resistant"], str(12 + 10 + 10 + 10))
 
@@ -371,7 +374,8 @@ class Ids(Case):
     def test_no_genome_id_stands_in_any_written_file(self):
         reports = standard()
         out, _, _ = self.read_write(reports)
-        self.assertIn("check 6 ids: 5 files scanned, 0 id-shaped tokens or barred keys: pass", out)
+        self.assertIn("check 6 ids: 5 files scanned, 0 id-shaped tokens or barred keys outside the 17 cells of the "
+                      "computed decimal columns: pass", out)
         written = lo.files_under(os.path.join(self.top, "reading")) + lo.files_under(os.path.join(self.top, "record"))
         self.assertEqual(len(written), 5)
         for path in written:
@@ -395,6 +399,44 @@ class Ids(Case):
     def test_the_id_shape(self):
         hits = lo.ID_SHAPE.findall("1280.12345 470.1 72.000000000000 0.5 0.041666666667 a1773.1 1773.10019x")
         self.assertEqual(hits, ["1280.12345", "470.1"])
+
+
+class Places(Case):
+    def test_a_record_decimal_is_rounded_once_half_to_even_to_3_places(self):
+        F = fractions.Fraction
+        self.assertEqual([lo.rec(x) for x in (F(1, 24), F(5, 10000), F(15, 10000), F(25, 10000), 0, 5036)],
+                         ["0.042", "0.000", "0.002", "0.002", "0.000", "5036.000"])
+        self.assertEqual([lo.dec(x, p) for x, p in ((F(1, 200), 2), (F(3, 200), 2), (F(12345, 10), 0),
+                                                     (F(24691, 20), 1), (None, 1), ("", 2))],
+                         ["0.00", "0.02", "1,234", "1,234.6", "none", "none"])
+
+    def test_the_pooled_yardstick_sums_the_counts(self):
+        # each report: 10 x 4/10 x (1/10)^4 = 0.0004, written 0.000; the two together hold 0.0008, written 0.001
+        reports = [Report(COLI, f"drug {x}", 10, 5, tag=t, misses=dict({n: (0,) for n in FIVE}, scm=(0, 1, 2, 3)))
+                   for t, x in ((1, "a"), (2, "b"))]
+        _, rows, pooled = self.read_write(reports)
+        self.assertEqual([rows[d]["expected_all5"] for d in ("drug a", "drug b")], ["0.000", "0.000"])
+        self.assertEqual(pooled[0]["expected_all5"], "0.001")
+        t = lo.tables(os.path.join(self.top, "record"))
+        self.assertIn("| yardstick, summed | 0.00 |", t["yardstick"])
+
+    def test_a_page_figure_is_rounded_once_from_the_counts(self):
+        # 10 x 7/10 x 7/10 x (1/10)^3 = 0.0049: the record writes 0.005 and the page 0.00, not 0.01 from the cell
+        r = Report(COLI, "drug a", 10, 5, misses=dict({n: (0,) for n in FIVE}, scm=tuple(range(7)), cart=tuple(range(7))))
+        _, rows, pooled = self.read_write([r])
+        self.assertEqual((rows["drug a"]["expected_all5"], pooled[0]["expected_all5"]), ("0.005", "0.005"))
+        t = lo.tables(os.path.join(self.top, "record"))
+        self.assertIn("| yardstick, summed | 0.00 |", t["yardstick"])
+        self.assertIn("| *Synthia coli* | drug a | 15 | 10 | 1 | 0 | 0 | 0.00 | 204.1 |", t["datasets"])
+
+    def test_check_6_scans_every_column_but_the_computed_decimals(self):
+        path = os.path.join(self.top, "t.tsv")
+        with open(path, "w", encoding="utf-8") as f:
+            f.write("species\tratio_median\texpected_all5\nSynthia 1280.12345\t1280.123\t\nSynthia coli\t72.000\t0.042\n")
+        self.assertEqual(lo.record_hits(path, lo.DECIMAL_COLUMNS), (1, 3))
+        with open(path, "w", encoding="utf-8") as f:
+            f.write('species\tratio_median\nSynthia coli\t72.000\n"samples": 1\t\n')
+        self.assertEqual(lo.record_hits(path, lo.DECIMAL_COLUMNS), (1, 1))
 
 
 class Record(Case):

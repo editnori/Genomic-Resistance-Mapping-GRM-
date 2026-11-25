@@ -1,6 +1,7 @@
 """overlap_faults.py: the faults of the learner overlap's table script
-(learner_overlap.py, O1 to O17) and of its second pass (overlap_second.py, O18
-to O28), each planted in turn, and the SYNTHETIC test that must catch it.
+(learner_overlap.py, O1 to O17 and O29 to O31) and of its second pass
+(overlap_second.py, O18 to O28), each planted in turn, and the SYNTHETIC test
+that must catch it.
 
     python3 -I scripts/mechanism/overlap_faults.py [--out faults.tsv]
 
@@ -13,6 +14,7 @@ Python 3.12, standard library only; run with -I.
 """
 
 import argparse
+import fractions
 import os
 import sys
 from unittest import mock
@@ -35,13 +37,29 @@ T2 = "tests.mechanism.test_overlap_second."
 
 def weighted_ratios(rows):
     # fault O7: each report's ratio counted once per genome
-    return [float(r["ratio_all5"]) for r in rows if r["ratio_all5"] != "" for _ in range(int(r["genomes"]))]
+    return [x for r in rows for x in [lo.ratio_of(r)[1]] if x is not None for _ in range(int(r["genomes"]))]
 
 
 def weighted_nonull_ratios(rows):
     # fault O25: each report's ratio outside null folds counted once per genome
-    return [float(r["nonull_ratio_all5"]) for r in rows if r["nonull_ratio_all5"] != ""
-            for _ in range(int(r["genomes"]))]
+    return [x for r in rows for x in [os2.nonull_of(r)[1]] if x is not None for _ in range(int(r["genomes"]))]
+
+
+def yardstick_of_cells(rows):
+    # fault O29: the pooled yardstick summed from the rounded cells in place of the counts
+    return sum(fractions.Fraction(r["expected_all5"]) for r in rows)
+
+
+def dec_of_cell(x, places):
+    # fault O30: a page figure printed from the record's 3-place rounding of it, rounded a second time
+    return "none" if x is None or x == "" else f"{float(lo.rec(x)):,.{places}f}"
+
+
+def every_cell_skipped(path, decimal_columns):
+    # fault O31: check 6 leaving every cell of a record table to the id list, not only the computed decimal columns
+    with open(path, encoding="utf-8") as f:
+        text = f.read()
+    return len(lo.BARRED_KEY.findall(text)), 0
 
 
 def majority(scores):
@@ -79,8 +97,8 @@ FAULTS = [
      lambda: mock.patch.object(lo, "ratio_values", weighted_ratios)),
     ("O8", "a report with a yardstick of 0 dropped from the pool",
      T + "Pooled.test_a_report_with_a_yardstick_of_0_is_reported_apart",
-     lambda: mock.patch.object(lo, "pooled_in", lambda row: row["learner_count"] == 5 and row["ratio_all5"] != ""
-                               and row["resistant"] >= lo.MIN_RESISTANT)),
+     lambda: mock.patch.object(lo, "pooled_in", lambda row: row["learner_count"] == 5 and row["miss_all5"] != ""
+                               and lo.ratio_of(row)[1] is not None and row["resistant"] >= lo.MIN_RESISTANT)),
     ("O9", "an all-five miss the catalogue reader calls counted as uncalled",
      T + "Counts.test_misses_with_no_catalogue_call",
      lambda: mock.patch.object(lo, "uncalled", lambda catalog_call: catalog_call)),
@@ -136,6 +154,14 @@ FAULTS = [
     ("O28", "a genome 3 of the five miss counted with those all five miss",
      T2 + "Vote.test_the_mean_misses_what_three_or_more_of_the_five_miss_here",
      lambda: mock.patch.object(os2, "bucket", lambda k: "all5" if k >= 3 else ("none" if k == 0 else "1to4"))),
+    ("O29", "the pooled yardstick summed from the rounded cells", T + "Places.test_the_pooled_yardstick_sums_the_counts",
+     lambda: mock.patch.object(lo, "yardstick_sum", yardstick_of_cells)),
+    ("O30", "a page figure rounded twice, through the record's 3 places",
+     T + "Places.test_a_page_figure_is_rounded_once_from_the_counts",
+     lambda: mock.patch.object(lo, "dec", dec_of_cell)),
+    ("O31", "check 6 blind to an id-shaped token in a column that holds no computed decimal",
+     T + "Places.test_check_6_scans_every_column_but_the_computed_decimals",
+     lambda: mock.patch.object(lo, "record_hits", every_cell_skipped)),
 ]
 
 

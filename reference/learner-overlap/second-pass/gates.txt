@@ -37,5 +37,5 @@ second check 2 first-pass columns: 268 reports read again, 268 rows in datasets.
 second check 3 arithmetic of the mean: 268 reports with the five, 0 where the mean misses a genome none of the five miss, calls one none call, or parts from all five: pass
 second check 4 null-fit cut: 0 reports where the all-five misses outside and inside null-fit folds do not add up: pass
 second check 5 the vote's edge: 0 genomes where a plain sum over 5 gives another call than math.fsum; 0 genomes whose sum lies within 1e-9 of 2.5
-second check 6 ids: 5 files scanned, 0 id-shaped tokens or barred keys: pass
+second check 6 ids: 5 files scanned, 0 id-shaped tokens or barred keys outside the 436 cells of the computed decimal columns: pass
 reading rule outside null-fit folds: stack

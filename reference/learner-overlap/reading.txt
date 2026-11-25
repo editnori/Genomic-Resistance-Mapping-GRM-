@@ -14,3 +14,14 @@ d031953e87758279117a81b99580f24c7a06c22d1e9cb4972ccd4c0a6b4bdb91  print.txt
 aba2b11b4d61e5d0aa20e64be0f00bcb7738c5e5fc91eb2018de4f4df41fa046  record/pooled.tsv
 145dc3fabba5cbb088d027be566bb691eb6b720d543c34429e0d8ce377a64ec3  record/gates.txt
 456d3590a9590afa98c062894906b3e4b6e002f6ae168fea7c0a8e84b652820c  record/SHA256SUMS
+# the re-write, 25 November 2026, ruled by the lead after a review, with no new read: the kept READING above, its reading.json unchanged, written again with every computed decimal at 3 places and without the column ratio_all5, then printed
+# scripts/mechanism/learner_overlap.py sha256 fec3d89ab81d005afd5320e06cedab77a2623ffe3735d5a9afcdde164234b2fc
+python3 -I scripts/mechanism/learner_overlap.py write READING --out RECORD
+python3 -I scripts/mechanism/learner_overlap.py print RECORD
+56fe3e67db30830d5e89fe2fb86701c5d4d8651c94faceec3daec390010ec316  rewrite/reading/reading.json
+894b7cea5cc0bfc52e359ba67faf3d7d688362d6c6f2c56bd6c0dc2a0050203a  rewrite/write.out
+d0933d2a522c5bc228b1e540c2d9cdd498ad95c53b8bd9343e7c5328fb61ff3d  rewrite/print.txt
+439941e1a28d29c5903f90a0329ff4a269ab74d6b3a51357c58594933bebeadc  rewrite/record/datasets.tsv
+b395b7149bfb9c5e067f6460fc0b19bf1a0049a05f38b1e5f2dd1acf4ad80dce  rewrite/record/pooled.tsv
+cebf4bf3df4efe7430770e7d22d094124e0abd9cfcfcf4ec97fbef0a313383a5  rewrite/record/gates.txt
+a23d748e44d53f1aae7c4d20ba3e8cd89cb6368f81bc77992da0b43333c4befc  rewrite/record/SHA256SUMS
