@@ -1,0 +1,7 @@
+1 match: 22 page rows, 22 reports of the species, 22 matched, 0 page rows with no report, 0 reports with no page row
+2 sums: 22 of 22 reports add up
+6 resistant: 20 of 20 reports the tool reads agree with the page
+3 sets: rule: resistant_share n=16, resistant n=16, genomes n=16; antibiotics: amikacin; capreomycin; ciprofloxacin; delamanid; ethambutol; ethionamide; kanamycin; levofloxacin; linezolid; moxifloxacin; ofloxacin; prothionamide; pyrazinamide; rifabutin; rifampin; streptomycin
+3 sets: primary only: resistant_share n=12, resistant n=12, genomes n=12; antibiotics: amikacin; capreomycin; delamanid; ethambutol; ethionamide; kanamycin; levofloxacin; linezolid; moxifloxacin; pyrazinamide; rifampin; streptomycin
+4 rank correlation: 3 of 3 hand-made cases give their known answers
+5 ids: 8 files; 0 hits of 23757 genome ids of 23 species files, each searched for in full; 0 tokens of a genome id's shape; 0 BioProject, sequence or position hits

@@ -1,0 +1,3 @@
+python3 -I scripts/mechanism/catalogue_size.py read REPORTS reference/lineage-curve/page-endpoints.tsv READING
+45c922b7cf33bc62f59d34421c494330cab868d4e7602eab5d6e071d5691e063  release-counts.tsv
+ba2d476871d30f0951d698e05e22eac2745505a00fe3b86424aca11daa972c6e  read.txt
