@@ -94,7 +94,7 @@ The antibiotics of each set, the same for its three pairs:
 
 ## Method
 
-**Order.** The rule above was committed first. The script `scripts/mechanism/catalogue_size.py` and its SYNTHETIC tests were committed next and passed on one machine before the read. The read then ran once, at that commit, and did not stop. This page and `reference/catalogue-size/` were written from its output. After a review, `write` ran a second time over the same reading, with no `read`, to add the role column to `correlations.tsv`. With that column taken out, the file is byte for byte the one the first run wrote, and the other tables did not change.
+**Order.** The rule above was committed first. The script `scripts/mechanism/catalogue_size.py` and its SYNTHETIC tests were committed next and passed on one machine before the read. The read then ran once, at that commit, and did not stop. This page and `reference/catalogue-size/` were written from its output. After a review, `write` ran twice more over the same reading, with no `read`: once to add the role column to `correlations.tsv`, and once after guard 5 moved onto the full list of genome ids. With the role column taken out, `correlations.tsv` is byte for byte the one the first run wrote. `antibiotics.tsv` and `reading.txt` did not change, and `guards.txt` changed only in guard 5's line.
 
 **Reading.** The commands, with the release's report folder as REPORTS, its species files as SPECIES_DIR, the reading's folder as READING and the record as OUT, copied to `reference/catalogue-size/` as written:
 
@@ -104,7 +104,7 @@ python3 -I scripts/mechanism/catalogue_size.py write READING reference/lineage-c
 python3 -I scripts/mechanism/catalogue_size.py print OUT
 ```
 
-`read` takes three counts from each release report and nothing else; a report's `samples` list, whose entries carry the genome ids, is dropped as the file is parsed. `reading.txt` gives the first command with the sha256 of what it wrote. The scan of guard 5 holds the release's genome ids in memory only and prints counts.
+`read` takes three counts from each release report and nothing else; a report's `samples` list, whose entries carry the genome ids, is dropped as the file is parsed. `reading.txt` gives the first command with the sha256 of what it wrote. Guard 5 holds the genome ids of the release's species files in memory only. It searches every written file for each id in full, wherever it stands, and counts tokens of a genome id's shape beside it as a second net. It prints counts only.
 
 **Guards.** Each printed counts only and would have stopped the run, as would a set of under 3 antibiotics or a column whose values are all tied. All six passed, in the order the script runs them:
 
@@ -116,9 +116,9 @@ python3 -I scripts/mechanism/catalogue_size.py print OUT
 | 3. sets | rule: resistant_share n=16, resistant n=16, genomes n=16; antibiotics: amikacin; capreomycin; ciprofloxacin; delamanid; ethambutol; ethionamide; kanamycin; levofloxacin; linezolid; moxifloxacin; ofloxacin; prothionamide; pyrazinamide; rifabutin; rifampin; streptomycin |
 | 3. sets | primary only: resistant_share n=12, resistant n=12, genomes n=12; antibiotics: amikacin; capreomycin; delamanid; ethambutol; ethionamide; kanamycin; levofloxacin; linezolid; moxifloxacin; pyrazinamide; rifampin; streptomycin |
 | 4. rank correlation | 3 of 3 hand-made cases give their known answers |
-| 5. ids | 8 files, 0 hits, against 23757 genome ids of 23 species files |
+| 5. ids | 8 files; 0 hits of 23757 genome ids of 23 species files, each searched for in full; 0 tokens of a genome id's shape; 0 BioProject, sequence or position hits |
 
-**Tests.** `tests/mechanism/test_catalogue_size.py` holds 35 SYNTHETIC tests of the script. `tests/mechanism/test_catalogue_faults.py` runs `scripts/mechanism/catalogue_faults.py`, which plants each fault below in the script in turn and runs the test meant to catch it. `tests/mechanism/test_catalogue_page.py` holds 12 tests of this page against `reference/catalogue-size/`.
+**Tests.** `tests/mechanism/test_catalogue_size.py` holds 36 SYNTHETIC tests of the script. `tests/mechanism/test_catalogue_faults.py` runs `scripts/mechanism/catalogue_faults.py`, which plants each fault below in the script in turn and runs the test meant to catch it. `tests/mechanism/test_catalogue_page.py` holds 12 tests of this page against `reference/catalogue-size/`.
 
 | Fault planted | Test that caught it |
 |---|---|
@@ -138,7 +138,8 @@ python3 -I scripts/mechanism/catalogue_size.py print OUT
 | K14. The leave-one-out largest taken as the smallest | `Spearman.test_leave_one_out_gives_the_smallest_and_largest_with_the_antibiotic_dropped` |
 | K15. A report's samples list kept when the report is parsed | `Read.test_the_samples_list_is_never_kept` |
 | K16. The resistant share taken over the susceptible genomes | `Write.test_the_resistant_share_is_over_all_genomes` |
+| K17. The id list searched only through tokens already shaped like an id | `Write.test_an_id_glued_to_a_letter_or_an_underscore_is_caught` |
 
-All 16 were caught.
+All 17 were caught.
 
 **Files.** The reading's tables are in `reference/catalogue-size/`. `scripts/mechanism/catalogue_size.py print` prints this page's tables from those files, rounded to 3 decimals.

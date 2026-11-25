@@ -1,4 +1,4 @@
-"""The suite's wiring: the workflow's python job runs it and its comment gives the faults the suite plants, the python row of docs/ci.md gives its count, and the scripts use the standard library alone."""
+"""The suite's wiring: the workflow's python job runs it and its comment and docs/ci.md give the faults the suite plants, the python row of docs/ci.md gives its count, and the scripts use the standard library alone."""
 
 import ast
 import re
@@ -27,6 +27,8 @@ class Wiring(unittest.TestCase):
         self.assertEqual(len(runners), 4)
         planted = sum(len(load(path.stem).FAULTS) for path in runners)
         self.assertIn(f" plants the {planted} faults of its four runners (scripts/mechanism/*_faults.py) ", comment)
+        self.assertEqual(CI_DOC.read_text(encoding="utf-8").count(
+            f"how many faults its four runners plant, {planted} in all."), 1)
 
     def test_python_row_gives_the_count(self):
         rows = [line for line in CI_DOC.read_text(encoding="utf-8").split("\n") if line.startswith("| `python`")]

@@ -350,7 +350,25 @@ class Write(Case):
         w = self.world()
         lines, _ = w.write()
         # OUT's five files before SHA256SUMS, and READING's three
-        self.assertEqual(lines[-1], f"5 ids: 8 files, 0 hits, against {len(w.ids) + 1} genome ids of 2 species files")
+        self.assertEqual(lines[-1], f"5 ids: 8 files; 0 hits of {len(w.ids) + 1} genome ids of 2 species files, each "
+                                    "searched for in full; 0 tokens of a genome id's shape; 0 BioProject, sequence or "
+                                    "position hits")
+
+    def test_an_id_glued_to_a_letter_or_an_underscore_is_caught(self):
+        # a hand-built fixture: one fabricated id-shaped string, no real id, glued to a letter in one written file and
+        # to an underscore in another; the id list finds it in both, and the shape counts it in both beside
+        fabricated = "8642.97531"
+        species, out, reading = (self.top / name for name in ("species", "out", "reading"))
+        for folder in (species, out, reading):
+            folder.mkdir()
+        (species / "fabricata_coli.json").write_text(json.dumps({"genomes": [{"id": fabricated}]}))
+        (out / "letter.txt").write_text(f"drug x{fabricated}\n")
+        (reading / "underscore.txt").write_text(f"run_{fabricated}\n")
+        ids, _ = cs.ids_of(species)
+        self.assertEqual(cs.id_hits([out / "letter.txt"], ids), (1, 1, 0))
+        self.assertEqual(cs.id_hits([reading / "underscore.txt"], ids), (1, 1, 0))
+        with self.assertRaisesRegex(cs.Stop, r"guard 5 ids: 2 hits of the id list, 2 tokens of a genome id's shape"):
+            cs.gate_ids(out, reading, species)
 
     def test_a_reading_txt_whose_sha256_differs_stops(self):
         w = self.world()

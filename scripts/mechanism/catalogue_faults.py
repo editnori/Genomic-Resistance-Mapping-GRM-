@@ -75,6 +75,16 @@ def largest_is_smallest(x, y, names):
     return low[0], low[1], low[0], low[1]
 
 
+def shaped_tokens_only(paths, ids):
+    # fault K17: the id list searched only through tokens already shaped like an id, as the kit's scan does
+    listed = shaped = other = 0
+    for path in paths:
+        tokens, projects = cs.scan.scan_file(path, ids)
+        seq, pos = cs.scan.scan_text(path)
+        listed, shaped, other = listed + tokens, shaped + tokens, other + projects + seq + pos
+    return listed, shaped, other
+
+
 FAULTS = [
     ("K1", "tied values ranked by their order, not by the average of their ranks",
      T + "Spearman.test_a_case_with_ties_gives_its_known_answer",
@@ -107,7 +117,7 @@ FAULTS = [
     ("K12", "the hand-made cases skipped", T + "Write.test_a_wrong_rank_correlation_stops_before_any_correlation",
      lambda: mock.patch.object(cs, "prove_spearman", lambda: "4 rank correlation")),
     ("K13", "the scan for genome ids skipped", T + "Write.test_a_genome_id_in_an_output_stops",
-     lambda: mock.patch.object(cs, "id_hits", lambda paths, ids: 0)),
+     lambda: mock.patch.object(cs, "id_hits", lambda paths, ids: (0, 0, 0))),
     ("K14", "the leave-one-out largest taken as the smallest",
      T + "Spearman.test_leave_one_out_gives_the_smallest_and_largest_with_the_antibiotic_dropped",
      lambda: mock.patch.object(cs, "leave_one_out", largest_is_smallest)),
@@ -116,6 +126,9 @@ FAULTS = [
     ("K16", "the resistant share taken over the susceptible genomes",
      T + "Write.test_the_resistant_share_is_over_all_genomes",
      lambda: mock.patch.object(cs, "share_of", lambda resistant, genomes: Fraction(resistant, genomes - resistant))),
+    ("K17", "the id list searched only through tokens already shaped like an id",
+     T + "Write.test_an_id_glued_to_a_letter_or_an_underscore_is_caught",
+     lambda: mock.patch.object(cs, "id_hits", shaped_tokens_only)),
 ]
 
 

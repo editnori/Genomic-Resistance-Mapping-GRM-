@@ -43,6 +43,7 @@ import hashlib
 import json
 import math
 import os
+import re
 import sys
 from decimal import ROUND_HALF_EVEN, Decimal
 from fractions import Fraction
@@ -55,6 +56,9 @@ MARGIN = 0.15
 TOL = 1e-9
 MIN_SET = 3
 Y = "catalogue_variants"
+# Guard 5's second net, a genome id's shape: digits, a dot and digits, the first part 3 to 7 digits not led by 0, with
+# no digit on either side. A letter or an underscore beside it does not hide it.
+ID_SHAPE = re.compile(rb"(?<!\d)[1-9]\d{2,6}\.\d+(?!\d)")
 PAIRS = ("resistant_share", "resistant", "genomes")
 SETS = ("rule", "primary only")
 ROLES = {"rule": "the rule's set", "primary only": "beside, decides nothing"}
@@ -96,7 +100,9 @@ GUARDS = [
                 "correlation"),
     (4, "rank correlation", "the rank correlation gives the known answers of three hand-made cases, one with ties, "
                             "before it touches a real number"),
-    (5, "ids", "no genome id of the release stands in any written file: a scan prints 0 hits"),
+    (5, "ids", "every genome id of the release's species files is searched for in full in every written file and "
+               "stands in none; no token of a genome id's shape stands there either, and the kit's BioProject, "
+               "sequence and position scans find nothing"),
     (6, "resistant", "for each report the tool reads, counts.resistant equals the page's resistant_with_result plus "
                      "resistant_no_result"),
 ]
@@ -397,22 +403,30 @@ def ids_of(species_dir):
 
 
 def id_hits(paths, ids):
-    hits = 0
+    """Guard 5's nets over the written files, counts only: every id of the list searched for as a plain substring of
+    each file, wherever it stands; tokens of a genome id's shape, the second net; and the kit's BioProject, sequence
+    and position scans."""
+    listed = shaped = other = 0
     for path in paths:
-        g, b = scan.scan_file(path, ids)
+        data = Path(path).read_bytes()
+        listed += sum(data.count(i) for i in ids)
+        shaped += len(ID_SHAPE.findall(data))
         seq, pos = scan.scan_text(path)
-        hits += g + b + seq + pos
-    return hits
+        other += len(scan.BIOPROJECT.findall(data)) + seq + pos
+    return listed, shaped, other
 
 
 def gate_ids(out, reading, species_dir):
-    """Guard 5: every written file scanned for every genome id of the release; counts only."""
+    """Guard 5: every written file searched for every genome id of the release, with the shape of an id counted
+    beside; counts only."""
     ids, species = ids_of(species_dir)
     paths = sorted(p for d in (out, reading) for p in Path(d).rglob("*") if p.is_file())
-    hits = id_hits(paths, ids)
-    if hits:
-        raise Stop(f"guard 5 ids: {hits} hits in {len(paths)} files")
-    return f"5 ids: {len(paths)} files, 0 hits, against {len(ids)} genome ids of {species} species files"
+    listed, shaped, other = id_hits(paths, ids)
+    if listed or shaped or other:
+        raise Stop(f"guard 5 ids: {listed} hits of the id list, {shaped} tokens of a genome id's shape and {other} "
+                   f"BioProject, sequence or position hits in {len(paths)} files")
+    return (f"5 ids: {len(paths)} files; 0 hits of {len(ids)} genome ids of {species} species files, each searched "
+            f"for in full; 0 tokens of a genome id's shape; 0 BioProject, sequence or position hits")
 
 
 def check_reading_sums(reading):
