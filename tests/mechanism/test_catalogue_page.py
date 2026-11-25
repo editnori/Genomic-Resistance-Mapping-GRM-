@@ -10,6 +10,7 @@ import csv
 import hashlib
 import re
 import unittest
+from decimal import Decimal
 from fractions import Fraction
 
 from tests.mechanism import common
@@ -25,6 +26,8 @@ TABLES = {"Antibiotics": ["antibiotics"], "Correlations": ["correlations", "sets
 ANSWERS = {"tracks resistant genomes": "catalogue size tracks how many resistant genomes there were to study",
            "tracks share": "the number of graded variants tracks the resistant share",
            "neither by the margin": "these numbers cannot separate the two"}
+OUTCOMES = "The rule declared three outcomes before the read."
+ORDINALS = ("first", "second", "third")
 
 
 def rows(folder, name):
@@ -45,6 +48,10 @@ class Page(unittest.TestCase):
         self.table = rows(RECORD, "antibiotics.tsv")
         self.correlations = rows(RECORD, "correlations.tsv")
         self.rule = {c["x"]: c for c in self.correlations if c["set"] == "rule"}
+
+    def gap(self):
+        """By how much the share's correlation passes the resistant genomes', in absolute value, to 3 decimals."""
+        return cs.d3(abs(Decimal(self.rule["resistant_share"]["rho"])) - abs(Decimal(self.rule["resistant"]["rho"])))
 
     def test_the_sections_stand_in_order(self):
         self.assertEqual(list(self.sections), SECTIONS)
@@ -85,6 +92,9 @@ class Page(unittest.TestCase):
             low, low_without, high, high_without = cs.leave_one_out(xs, ys, [r["antibiotic"] for r in chosen])
             self.assertEqual((c["loo_min"], c["loo_min_without"], c["loo_max"], c["loo_max_without"]),
                              (cs.f12(low), low_without, cs.f12(high), high_without), (c["set"], c["x"]))
+        self.assertEqual({(c["set"], c["role"]) for c in self.correlations},
+                         {("rule", "the rule's set"), ("primary only", "beside, decides nothing")})
+        self.assertEqual({c["role"] for c in self.correlations if c["decides"] == "yes"}, {"the rule's set"})
         for name in cs.SETS:
             mine = {c["x"]: c for c in self.correlations if c["set"] == name}
             gives = cs.branch(float(mine["resistant"]["rho"]), float(mine["resistant_share"]["rho"]))
@@ -96,9 +106,16 @@ class Page(unittest.TestCase):
         reading = self.sections["Reading"]
         self.assertIn(ANSWERS[selected], reading)
         self.assertIn(ANSWERS[selected], cs.RULE)
+        outcomes = [p for p in reading.split("\n\n") if p.strip().startswith(OUTCOMES)]
+        self.assertEqual(len(outcomes), 1)
+        places = [outcomes[0].find(ANSWERS[b]) for b in cs.BRANCHES]
+        self.assertTrue(all(i >= 0 for i in places) and places == sorted(places), places)
+        self.assertIn(f"The numbers selected the {ORDINALS[cs.BRANCHES.index(selected)]}", outcomes[0])
+        self.assertIn(f"{self.gap()} against the {cs.MARGIN}", outcomes[0])
+        rest = reading.replace(outcomes[0], "")
         for branch, words in ANSWERS.items():
             if branch != selected:
-                self.assertNotIn(words, reading, branch)
+                self.assertNotIn(words, rest, branch)
         first = reading.strip().split("\n")[0]
         self.assertIn(f"Over the {self.rule['resistant']['n']} antibiotics the rule reads", first)
         self.assertIn(f"{cs.d3(self.rule['resistant_share']['rho'])} with the resistant share", first)
@@ -109,7 +126,7 @@ class Page(unittest.TestCase):
         # the tool's version and database commit are taken out; every other figure must stand in a printed table or
         # count the record's reports or left-out rows
         fixed = {"0.15", "5", "2000"}
-        known = set(fixed) | {str(len(self.table)), str(sum(r["in_correlation"] == "1" for r in self.table))}
+        known = set(fixed) | {self.gap(), str(len(self.table)), str(sum(r["in_correlation"] == "1" for r in self.table))}
         known |= {str(sum(r["left_out_because"] == why for r in self.table)) for why in cs.REASONS}
         for lines in cs.tables(RECORD).values():
             for line in lines:

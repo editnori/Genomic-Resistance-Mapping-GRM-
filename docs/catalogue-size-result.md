@@ -19,9 +19,11 @@ This rule was written and committed before the release's counts were read, and i
 
 Over the 16 antibiotics the rule reads, the number of graded variants has a Spearman correlation of 0.522 with the resistant share and 0.470 with the resistant genomes. The share's is the larger, by less than the 0.15 the rule asked for, so the rule's answer is that these numbers cannot separate the two. On this reading, the size of the catalogue for an antibiotic may track the resistant share or how many resistant genomes there were to study, and nothing here says which.
 
+The rule declared three outcomes before the read. If the correlation with the resistant genomes was as strong as the share's or stronger, the answer would be that catalogue size tracks how many resistant genomes there were to study. If the share's was the stronger by 0.15 or more, the answer would be that the number of graded variants tracks the resistant share. If the share's was the stronger by less than 0.15, the answer would be that these numbers cannot separate the two. The numbers selected the third: the share's lead fell short, 0.052 against the 0.15 the second outcome needed.
+
 With one antibiotic dropped, the share's correlation runs from 0.424 (linezolid dropped) to 0.625 (ethionamide dropped), and the resistant genomes' from 0.394 (ethionamide dropped) to 0.607 (pyrazinamide dropped). Each range is wider than the gap between the two correlations. A rank correlation over 16 antibiotics of one species is weak evidence. The correlation with the genomes is 0.068, from -0.072 (rifampin dropped) to 0.201 (pyrazinamide dropped), and decides nothing.
 
-Beside the rule, over the 12 antibiotics the tool reads by their own drug, the correlation with the resistant share is 0.698, from 0.620 to 0.822 with one dropped, and with the resistant genomes 0.477, from 0.333 to 0.753. On that set the share's correlation is the larger by more than 0.15. The rule fixed before the read that this set decides nothing. It stands beside the rule's because the four proxies count another drug's graded variants: ciprofloxacin and ofloxacin count those of levofloxacin and moxifloxacin, rifabutin those of rifampicin and prothionamide those of ethionamide. The rule's answer stands.
+Beside the rule stands a second set, the 12 antibiotics the tool reads by their own drug. It was declared before the read, in the rule, and it decides nothing. The four proxy antibiotics are why the rule's set holds 16 and this one 12: the rule reads every antibiotic with a graded variant and not in set M, and this set leaves out the four that count another drug's graded variants, as ciprofloxacin and ofloxacin count those of levofloxacin and moxifloxacin, rifabutin those of rifampicin and prothionamide those of ethionamide. Over the 12, the correlation with the resistant share is 0.698, from 0.620 to 0.822 with one dropped, and with the resistant genomes 0.477, from 0.333 to 0.753, so on that set the share's lead passes 0.15. The table marks its rows "beside, decides nothing", and the rule's answer stands.
 
 ## Antibiotics
 
@@ -56,16 +58,16 @@ Of the 22 reports, 2 are not read by the tool (amoxicillin and nicotinamide), 2 
 
 ## Correlations
 
-One row per set and pair, from `reference/catalogue-size/correlations.tsv`. Each correlation is the Spearman rank correlation of the graded variants against the named column over the set's antibiotics; one dropped gives the smallest and largest value the correlation takes with one antibiotic left out, and which one. The comparison is the rule's, over the set's correlations with the resistant genomes and the resistant share; only the rule's set decides.
+One row per set and pair, from `reference/catalogue-size/correlations.tsv`. Each correlation is the Spearman rank correlation of the graded variants against the named column over the set's antibiotics; one dropped gives the smallest and largest value the correlation takes with one antibiotic left out, and which one. The comparison is the rule's, over the set's correlations with the resistant genomes and the resistant share. The role marks each row as the rule's set or as beside it and deciding nothing; only the rule's set decides.
 
-| Set | Graded variants against | n | Spearman | One dropped, smallest (dropped) | One dropped, largest (dropped) | Decides | The comparison gives |
-|---|---|---|---|---|---|---|---|
-| rule | resistant share | 16 | 0.522 | 0.424 (linezolid) | 0.625 (ethionamide) | yes | neither by the margin |
-| rule | resistant genomes | 16 | 0.470 | 0.394 (ethionamide) | 0.607 (pyrazinamide) | yes | neither by the margin |
-| rule | genomes | 16 | 0.068 | -0.072 (rifampin) | 0.201 (pyrazinamide) | no | neither by the margin |
-| primary only | resistant share | 12 | 0.698 | 0.620 (linezolid) | 0.822 (ethionamide) | no | tracks share |
-| primary only | resistant genomes | 12 | 0.477 | 0.333 (linezolid) | 0.753 (pyrazinamide) | no | tracks share |
-| primary only | genomes | 12 | -0.021 | -0.194 (rifampin) | 0.212 (pyrazinamide) | no | tracks share |
+| Set | Role | Graded variants against | n | Spearman | One dropped, smallest (dropped) | One dropped, largest (dropped) | Decides | The comparison gives |
+|---|---|---|---|---|---|---|---|---|
+| rule | the rule's set | resistant share | 16 | 0.522 | 0.424 (linezolid) | 0.625 (ethionamide) | yes | neither by the margin |
+| rule | the rule's set | resistant genomes | 16 | 0.470 | 0.394 (ethionamide) | 0.607 (pyrazinamide) | yes | neither by the margin |
+| rule | the rule's set | genomes | 16 | 0.068 | -0.072 (rifampin) | 0.201 (pyrazinamide) | no | neither by the margin |
+| primary only | beside, decides nothing | resistant share | 12 | 0.698 | 0.620 (linezolid) | 0.822 (ethionamide) | no | tracks share |
+| primary only | beside, decides nothing | resistant genomes | 12 | 0.477 | 0.333 (linezolid) | 0.753 (pyrazinamide) | no | tracks share |
+| primary only | beside, decides nothing | genomes | 12 | -0.021 | -0.194 (rifampin) | 0.212 (pyrazinamide) | no | tracks share |
 
 The antibiotics of each set, the same for its three pairs:
 
@@ -92,7 +94,7 @@ The antibiotics of each set, the same for its three pairs:
 
 ## Method
 
-**Order.** The rule above was committed first. The script `scripts/mechanism/catalogue_size.py` and its SYNTHETIC tests were committed next and passed on one machine before the read. The read then ran once, at that commit, and did not stop. This page and `reference/catalogue-size/` were written from its output.
+**Order.** The rule above was committed first. The script `scripts/mechanism/catalogue_size.py` and its SYNTHETIC tests were committed next and passed on one machine before the read. The read then ran once, at that commit, and did not stop. This page and `reference/catalogue-size/` were written from its output. After a review, `write` ran a second time over the same reading, with no `read`, to add the role column to `correlations.tsv`. With that column taken out, the file is byte for byte the one the first run wrote, and the other tables did not change.
 
 **Reading.** The commands, with the release's report folder as REPORTS, its species files as SPECIES_DIR, the reading's folder as READING and the record as OUT, copied to `reference/catalogue-size/` as written:
 

@@ -319,6 +319,8 @@ class Write(Case):
         self.assertEqual({(r["n"], r["antibiotics"]) for r in rule}, {("6", "; ".join(IN_RULE))})
         self.assertEqual({(r["n"], r["antibiotics"]) for r in primary}, {("5", "; ".join(IN_RULE[:5]))})
         self.assertEqual({r["decides"] for r in primary}, {"no"})
+        self.assertEqual({r["role"] for r in rule}, {"the rule's set"})
+        self.assertEqual({r["role"] for r in primary}, {"beside, decides nothing"})
         self.assertIn("3 sets: rule: resistant_share n=6, resistant n=6, genomes n=6; antibiotics: drug a; drug b; "
                       "drug c; drug d; drug e; drug f", lines)
 
@@ -386,8 +388,10 @@ class Write(Case):
                       t["antibiotics"])
         self.assertIn("| drug n | not M | none | 120 | 12 | 108 | 0.100 | none | none | none | no: not read by the tool |",
                       t["antibiotics"])
-        self.assertIn("| rule | resistant genomes | 6 | 1.000 | 1.000 (drug a) | 1.000 (drug a) | yes | "
+        self.assertIn("| rule | the rule's set | resistant genomes | 6 | 1.000 | 1.000 (drug a) | 1.000 (drug a) | yes | "
                       "tracks resistant genomes |", t["correlations"])
+        self.assertEqual({line.split(" | ")[1] for line in t["correlations"][2:] if line.startswith("| primary only |")},
+                         {"beside, decides nothing"})
         self.assertEqual(len(t["correlations"]), 2 + 6)
         self.assertEqual(t["sets"][2], "| rule | 6 | drug a, drug b, drug c, drug d, drug e, drug f |")
 

@@ -7,7 +7,7 @@ This directory holds the tables behind [docs/catalogue-size-result.md](../../doc
 | File | Holds |
 |---|---|
 | `antibiotics.tsv` | one row per report of the species, species and antibiotic in full: its genomes, resistant and susceptible genomes and resistant share from the release report, the lineage curve's columns carried unchanged, set M marked, and whether the antibiotic enters the correlations and, if not, why |
-| `correlations.tsv` | one row per set and pair: the Spearman rank correlation of `catalogue_variants` against the resistant share, the resistant genomes or the genomes, its n, the smallest and largest value with one antibiotic dropped and which one, whether the row decides, what the rule's comparison gives over the set, and the set's antibiotics |
+| `correlations.tsv` | one row per set and pair: the set and its role, the rule's set or beside it and deciding nothing; the Spearman rank correlation of `catalogue_variants` against the resistant share, the resistant genomes or the genomes, its n, the smallest and largest value with one antibiotic dropped and which one, whether the row decides, what the rule's comparison gives over the set, and the set's antibiotics |
 | `guards.txt` | the six guards the reading passed, counts only |
 | `reading.txt` | the reading's commands and the sha256 of each one's output |
 

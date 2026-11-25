@@ -57,6 +57,7 @@ MIN_SET = 3
 Y = "catalogue_variants"
 PAIRS = ("resistant_share", "resistant", "genomes")
 SETS = ("rule", "primary only")
+ROLES = {"rule": "the rule's set", "primary only": "beside, decides nothing"}
 BRANCHES = ("tracks resistant genomes", "tracks share", "neither by the margin")
 REASONS = ("not read by the tool", "no graded variant", "set M")
 COUNTS = ("samples", "resistant", "susceptible")
@@ -68,7 +69,7 @@ RELEASE_COLUMNS = ["dataset", "genomes", "resistant", "susceptible"]
 TABLE_COLUMNS = ["species", "antibiotic", "in_M", "kind", "genomes", "resistant", "susceptible", "resistant_share",
                  "resistant_with_result", "catalogue_variants", "genes_named", "without_determinant", "share_without",
                  "in_correlation", "left_out_because"]
-CORRELATION_COLUMNS = ["set", "x", "y", "n", "rho", "loo_min", "loo_min_without", "loo_max", "loo_max_without",
+CORRELATION_COLUMNS = ["set", "role", "x", "y", "n", "rho", "loo_min", "loo_min_without", "loo_max", "loo_max_without",
                        "decides", "comparison_gives", "antibiotics"]
 # The three hand-made cases of guard 4: x, y and the answer worked out by hand.
 # 1: ranks of y are 1, 3, 2, 5, 4, so the squared rank differences sum to 4 and rho = 1 - 6 * 4 / (5 * 24) = 0.8.
@@ -358,7 +359,7 @@ def correlate(rows, name, x):
     xs, ys = [value(r, x) for r in chosen], [int(r[Y]) for r in chosen]
     rho = spearman(xs, ys)
     low, low_without, high, high_without = leave_one_out(xs, ys, names)
-    return {"set": name, "x": x, "y": Y, "n": len(chosen), "_rho": rho, "rho": f12(rho), "loo_min": f12(low),
+    return {"set": name, "role": ROLES[name], "x": x, "y": Y, "n": len(chosen), "_rho": rho, "rho": f12(rho), "loo_min": f12(low),
             "loo_min_without": low_without, "loo_max": f12(high), "loo_max_without": high_without,
             "antibiotics": "; ".join(names)}
 
@@ -463,7 +464,7 @@ This directory holds the tables behind [docs/catalogue-size-result.md](../../doc
 | File | Holds |
 |---|---|
 | `antibiotics.tsv` | one row per report of the species, species and antibiotic in full: its genomes, resistant and susceptible genomes and resistant share from the release report, the lineage curve's columns carried unchanged, set M marked, and whether the antibiotic enters the correlations and, if not, why |
-| `correlations.tsv` | one row per set and pair: the Spearman rank correlation of `catalogue_variants` against the resistant share, the resistant genomes or the genomes, its n, the smallest and largest value with one antibiotic dropped and which one, whether the row decides, what the rule's comparison gives over the set, and the set's antibiotics |
+| `correlations.tsv` | one row per set and pair: the set and its role, the rule's set or beside it and deciding nothing; the Spearman rank correlation of `catalogue_variants` against the resistant share, the resistant genomes or the genomes, its n, the smallest and largest value with one antibiotic dropped and which one, whether the row decides, what the rule's comparison gives over the set, and the set's antibiotics |
 | `guards.txt` | the six guards the reading passed, counts only |
 | `reading.txt` | the reading's commands and the sha256 of each one's output |
 
@@ -506,9 +507,9 @@ def print_antibiotics(rows):
 
 
 def print_correlations(rows):
-    return table(["Set", "Graded variants against", "n", "Spearman", "One dropped, smallest (dropped)",
+    return table(["Set", "Role", "Graded variants against", "n", "Spearman", "One dropped, smallest (dropped)",
                   "One dropped, largest (dropped)", "Decides", "The comparison gives"],
-                 [[c["set"], PAIR_WORDS[c["x"]], c["n"], d3(c["rho"]), f"{d3(c['loo_min'])} ({c['loo_min_without']})",
+                 [[c["set"], c["role"], PAIR_WORDS[c["x"]], c["n"], d3(c["rho"]), f"{d3(c['loo_min'])} ({c['loo_min_without']})",
                    f"{d3(c['loo_max'])} ({c['loo_max_without']})", c["decides"], c["comparison_gives"]]
                   for c in rows])
 
