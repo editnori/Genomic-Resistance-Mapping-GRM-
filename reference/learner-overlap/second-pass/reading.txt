@@ -1,0 +1,17 @@
+# the second pass's reading, 25 November 2026, at commit eb2178c022d58d922c07b2c2365af98c8a7d4324, clean
+# scripts/mechanism/overlap_second.py sha256 2a55617358d331cf535ca9f220359bc35d27f14ea7d1b7962d01af6f4437a229
+# scripts/mechanism/learner_overlap.py sha256 0c49050e32eb8118960f4dc38e265162799407d56ebb551891ae557b275bf246
+# REPORTS: the 274 report files of the revision 14 release's datasets/ directory; FIRST: the committed reference/learner-overlap, checked against its SHA256SUMS before and after; READING, RECORD: the run's own directories
+python3 -I scripts/mechanism/overlap_second.py plan
+python3 -I scripts/mechanism/overlap_second.py read REPORTS --first FIRST --out READING
+python3 -I scripts/mechanism/overlap_second.py write READING --first FIRST --out RECORD
+python3 -I scripts/mechanism/overlap_second.py print RECORD --first FIRST
+f22f837b3f9f4112bee9623f6aec9e8ad104e06d5ddee68db155b572bd7f450e  plan.json
+ac254abbff930695cb119f016cc4104a3e80a3b617c72b32a0cfe2140fc9deaf  read.out
+b340b29d2fb9e29d833f2b62d5c1bc868978668021e03f65cc64da5571195dc1  write.out
+8fb11169f2dc0d6f41b0a39c3057adb71269ea576c74dccd9b09b57eb3506d7d  print.txt
+8e635e20d0b66ce17322b5517124da96bb9bc39e03df865a62b4714a7eadb885  reading/reading.json
+31f6ae1a1349c2dc0ea54f2b213682b5a1f8d70822db0868de7dca56f9083170  record/vote.tsv
+ca1ff86cc0333e8ee712c407eb7907f88dc75abac3fbe132698ce5b1ea8e9700  record/vote-pooled.tsv
+c26850e5b67027ca030df77ee27683788b2c85ceae612db5386da87d2e1e5187  record/gates.txt
+feb2a92433476b0b9e4df13b58688c2a261e4ed579b974b907b8aa0843f58db0  record/SHA256SUMS

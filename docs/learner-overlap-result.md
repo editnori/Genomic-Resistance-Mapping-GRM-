@@ -1,14 +1,16 @@
 # Learner overlap on the lineage split (revision 14)
 
-Revision 14 stores, for each report's lineage split, every learner's held-out score for every genome. This page counts how many of the five learners miss each resistant genome at the release's 0.5 cutoff, and sets the genomes all five miss beside a yardstick: the count expected if the five missed independently. It fits nothing, trains nothing and scores no genome again. The lineage split is a retrospective split inside one database, BV-BRC, and never external validation.
+Revision 14 stores, for each report's lineage split, every learner's held-out score for every genome. This page counts how many of the five learners miss each resistant genome at the release's 0.5 cutoff, and sets the genomes all five miss beside a yardstick: the count expected if the five missed independently. A declared second pass counts what the release's mean of the five misses at 0.5 and works the yardstick again with the genomes of null-fit folds left out. It fits nothing, trains nothing and scores no genome again. The lineage split is a retrospective split inside one database, BV-BRC, and never external validation.
 
 ## Reading
 
-The misses stack. Over the 259 pooled reports with a yardstick above 0, the median ratio of the genomes all five miss to the yardstick is 488.8, with quartiles 20.1 to 6,778.9, and 246 of the 259 have a ratio over 1. By the plan's rule, a median of 10 or more, the five learners miss largely the same resistant genomes, and for those genomes the data limits recall on this split. Summed over the 268 pooled reports, all five miss 6,316 of 93,786 resistant genomes, where the yardstick gives 656.85. The 9 reports with a yardstick of 0, where one learner misses no resistant genome, are counted apart.
+The five learners share a floor of misses far above the yardstick, and a larger layer of misses lies beside it, where some of the five miss a genome and the others call it. Summed over the 268 pooled reports, all five miss 6,316 of 93,786 resistant genomes, where the yardstick gives 656.85. Over the 259 reports with a yardstick above 0, the median ratio of the two is 488.8, with quartiles 20.1 to 6,778.9, and 246 of the 259 have a ratio over 1. Another 23,859 of the 93,786 are missed by 1 to 4 of the five, and on a typical report the median share missed by 1 to 4 is 0.263, against 0.057 missed by all five. By the plan's rule, a median of 10 or more, the misses stack: for the genomes all five miss, the data limits recall on this split. The 9 reports with a yardstick of 0, where one learner misses no resistant genome, are counted apart.
 
-The shared misses are the smaller part of what the five miss. 23,859 resistant genomes are missed by 1 to 4 of the five, so at least one learner calls each of them. On a typical report the median share of resistant genomes missed by 1 to 4 is 0.263, against 0.057 missed by all five. That is room for a combination of the five. It has a cost on the other class, since 22,372 susceptible genomes are called resistant by 1 to 4 of the five.
+The partial layer is room for a combination of the five, and it has a cost on the other class: 22,372 of the 121,533 susceptible genomes are called resistant by 1 to 4 of the five. The release's mean of the five, read as a vote at 0.5, misses 14,383 of the 93,786 resistant genomes: the 6,316 all five miss and 8,067 of the 23,859 that 1 to 4 miss. It calls resistant 8,896 of the 121,533 susceptible genomes: the 3,315 all five call and 5,581 of the 22,372 that 1 to 4 call. On a typical report the mean misses a median share of 0.144 of the resistant genomes.
 
-GRM's own reader of the AMRFinderPlus catalogue calls 3,056 of the 6,316 all-five misses resistant and leaves 3,260 without a resistant call. 719 of those 3,260 are on the 19 reports that hold no catalogue rule for their antibiotic. 493 of the 6,316 sit in an outer fold where at least one of the five had a null fit, which scores every genome of the fold at its training prevalence. *Staphylococcus aureus* with clindamycin holds 229 of them, among its 294 all-five misses, and its ratio is 1.5.
+The null fits do not make the floor. With the genomes of null-fit folds left out, all five miss 5,823 of 88,664 resistant genomes, where the yardstick gives 376.40. The median ratio moves little, from 488.8 over 259 reports to 535.0 over 253, and over the 253 reports with both ratios it goes from 517.0 to 535.0. By the plan's rule the misses still stack.
+
+GRM's own reader of the AMRFinderPlus catalogue calls 3,056 of the 6,316 all-five misses resistant and leaves 3,260 without a resistant call. 719 of those 3,260 are on the 19 reports that hold no catalogue rule for their antibiotic, so those 719 say nothing about the catalogue's coverage. 493 of the 6,316 sit in an outer fold where at least one of the five had a null fit, which scores every genome of the fold at its training prevalence. *Staphylococcus aureus* with clindamycin is the case where the shared misses come mostly from null fits: 229 of its 294 all-five misses sit in such folds, and its ratio is 1.5.
 
 ## Overlap
 
@@ -77,15 +79,79 @@ One row per species, over its pooled reports. A species' median weighs each of i
 | *Streptococcus pneumoniae* | 12 | 2,164 | 130 | 7.04 | 3,634.2 | 0.064 | 0.313 |
 | *Vibrio cholerae* | 3 | 126 | 6 | 0.00 | 1,283,202.7 | 0.025 | 0.000 |
 
+## Mean vote
+
+The release ships the mean of the five learners' scores. The second pass reads it as a vote: a genome is called resistant when its five scores, added by `math.fsum`, come to 2.5 or more. Summed over the 268 pooled reports:
+
+| Five-learner mean at 0.5 | Genomes |
+|---|---:|
+| resistant genomes | 93,786 |
+| missed by the mean | 14,383 |
+| of those, missed by all five | 6,316 |
+| of those, missed by 1 to 4 | 8,067 |
+| of those, missed by none | 0 |
+| median share of a report's resistant genomes the mean misses | 0.144 |
+| susceptible genomes | 121,533 |
+| called resistant by the mean | 8,896 |
+| of those, called resistant by all five | 3,315 |
+| of those, called resistant by 1 to 4 | 5,581 |
+| of those, called resistant by none | 0 |
+
+A mean of five scores misses every genome all five miss and none that none of the five miss, so the rows by none are 0 and the rows by all five are those of Overlap. One row per species, over its pooled reports, with the median ratio outside null-fit folds from Null-fit cut:
+
+| Species | Reports | Resistant | Missed by the mean | Of those, by all five | Of those, by 1 to 4 | Median ratio outside null-fit folds |
+|---|---:|---:|---:|---:|---:|---:|
+| *Acinetobacter baumannii* | 18 | 11,818 | 1,223 | 339 | 884 | 424.7 |
+| *Campylobacter coli* | 8 | 923 | 40 | 23 | 17 | 105,156.4 |
+| *Campylobacter jejuni* | 4 | 605 | 29 | 14 | 15 | 111,344.1 |
+| *Clostridioides difficile* | 4 | 359 | 33 | 15 | 18 | 6,016.4 |
+| *Corynebacterium diphtheriae* | 3 | 104 | 31 | 13 | 18 | 10.3 |
+| *Enterobacter cloacae* | 9 | 444 | 182 | 51 | 131 | 7.2 |
+| *Enterococcus faecium* | 13 | 6,971 | 712 | 249 | 463 | 2,381.4 |
+| *Escherichia coli* | 36 | 11,255 | 1,624 | 791 | 833 | 536.3 |
+| *Klebsiella aerogenes* | 3 | 100 | 61 | 37 | 24 | 1.3 |
+| *Klebsiella oxytoca* | 4 | 229 | 65 | 16 | 49 | 143.2 |
+| *Klebsiella pneumoniae* | 38 | 15,804 | 2,750 | 1,046 | 1,704 | 217.0 |
+| *Klebsiella quasipneumoniae* | 3 | 178 | 14 | 10 | 4 | 29,552.7 |
+| *Mycobacterium tuberculosis* | 22 | 11,683 | 2,511 | 1,239 | 1,272 | 72.9 |
+| *Neisseria gonorrhoeae* | 7 | 2,982 | 579 | 194 | 385 | 101.7 |
+| *Pseudomonas aeruginosa* | 13 | 2,832 | 799 | 410 | 389 | 40.0 |
+| *Salmonella enterica* | 24 | 9,584 | 1,711 | 738 | 973 | 555.2 |
+| *Shigella flexneri* | 4 | 817 | 41 | 10 | 31 | 16,258.5 |
+| *Shigella sonnei* | 20 | 7,890 | 426 | 215 | 211 | 14,740.6 |
+| *Staphylococcus aureus* | 14 | 6,429 | 1,237 | 748 | 489 | 1,095.6 |
+| *Staphylococcus haemolyticus* | 3 | 154 | 47 | 19 | 28 | 22.0 |
+| *Streptococcus agalactiae* | 3 | 335 | 12 | 3 | 9 | 29,470.0 |
+| *Streptococcus pneumoniae* | 12 | 2,164 | 249 | 130 | 119 | 517.0 |
+| *Vibrio cholerae* | 3 | 126 | 7 | 6 | 1 | 1,283,202.7 |
+
+## Null-fit cut
+
+A null fit leaves a learner with no model in one outer fold, and it scores every genome of that fold at its training prevalence. Where two of the five have null fits in one fold, their misses there come together whatever the genomes hold. The second pass leaves out every genome of a fold where at least one of the five had a null fit, counts each learner's misses again on the genomes left, and works the yardstick and the ratio as the first pass works them. Over the first pass's pooled reports:
+
+| Measure | All genomes | Outside null-fit folds |
+|---|---:|---:|
+| resistant genomes | 93,786 | 88,664 |
+| missed by all five | 6,316 | 5,823 |
+| yardstick, summed | 656.85 | 376.40 |
+| reports with a ratio | 259 | 253 |
+| median ratio | 488.8 | 535.0 |
+| quartiles of the ratio | 20.1 to 6,778.9 | 22.2 to 7,918.4 |
+| reports with a ratio over 1 | 246 | 240 |
+| reports with both ratios | 253 | 253 |
+| median ratio over those | 517.0 | 535.0 |
+
+The median ratio moves little, and the plan's rule gives the same reading outside the null-fit folds: the misses stack. The cut leaves out every genome of those folds, not only the shared misses, so each report's resistant count and yardstick change with it.
+
 ## Limits
 
 The yardstick assumes the five miss independently, and five learners fitted to the same genomes and the same 31-mers are not expected to. The ratio says how far the shared misses run above that yardstick. It does not say why, and a small yardstick makes a ratio large: the species medians run from 1.1 to 1,283,202.7.
 
-The counts are calls at the release's 0.5 cutoff. This page reads no log loss and no ranking measure, so it says nothing of how near the cutoff a missed genome's scores came.
+The counts are calls at the release's 0.5 cutoff, the mean vote's too. This page reads no log loss and no ranking measure, so it says nothing of how near the cutoff a missed genome's scores came. Log loss stands beside recall in the release reports, and neither is dropped for the other.
 
-The room for a combination is an upper bound. It counts the resistant genomes at least one of the five calls, which a rule could reach only if it knew which learner to trust on each genome. No combination was fitted, and the page does not say any model would fail or succeed on the genomes all five miss.
+The room for a combination is an upper bound. It counts the resistant genomes at least one of the five calls, which a rule could reach only if it knew which learner to trust on each genome. The mean vote is one fixed combination, read from stored scores. No combination was fitted, and the page does not say any model would fail or succeed on the genomes all five miss.
 
-A null fit scores all its fold's genomes alike, so where two learners have null fits in one fold, their misses there come together. The release gives null fits to the boosted trees and the lasso only (docs/equal-scoring.md), and 493 of the 6,316 all-five misses sit in such folds.
+A null fit scores all its fold's genomes alike, so where two learners have null fits in one fold, their misses there come together. The release gives null fits to the boosted trees and the lasso only (docs/equal-scoring.md), and 493 of the 6,316 all-five misses sit in such folds. Left out with every other genome of those folds, they move the median ratio from 488.8 to 535.0 (Null-fit cut).
 
 The labels are the release's laboratory labels as BV-BRC holds them. These are public bacterial genomes with public accession numbers, and the record holds no field about a patient. A row per report is an aggregate and keeps its genome count. The 6 reports with fewer than 2 learners on the lineage split were skipped and counted; they are named under Datasets.
 
@@ -100,7 +166,7 @@ python3 -I scripts/mechanism/learner_overlap.py write READING --out RECORD
 python3 -I scripts/mechanism/learner_overlap.py print RECORD
 ```
 
-The first read stopped at check 3 and wrote nothing, as the plan's section "Change after the first read stopped" sets down. The second read, at the script's fix, passed every check:
+The first read stopped at check 3 and wrote nothing, as the plan's section "Change after the first read stopped" sets down. Run again at the script's fix, the read passed every check:
 
 ```
 check 1 parse: 274 files found, 274 read, 274 expected: pass
@@ -116,7 +182,30 @@ check 10 null folds: 0 learner rows whose null-fold genomes differ from no_call
 reading rule: stack
 ```
 
-`tests/mechanism/test_learner_overlap.py` holds 38 SYNTHETIC tests of the table script, with counts worked by hand. `tests/mechanism/test_overlap_second.py` holds 22 SYNTHETIC tests of the second pass's script, worked the same way. `tests/mechanism/test_learner_overlap_page.py` holds 15 tests of this page and its record. `scripts/mechanism/overlap_faults.py` plants each fault below in one of the two scripts in turn and runs the test that must catch it:
+The plan's section "Second pass" was fixed on 25 November 2026, after a review of the first reading, because the first pass counted the learners and not the vote the release ships. Its script and tests were committed and proved on a box, and `scripts/mechanism/overlap_second.py` then read the same 274 reports once against the committed record and wrote `reference/learner-overlap/second-pass/`. The commands, as `reference/learner-overlap/second-pass/reading.txt` gives them:
+
+```
+python3 -I scripts/mechanism/overlap_second.py plan
+python3 -I scripts/mechanism/overlap_second.py read REPORTS --first FIRST --out READING
+python3 -I scripts/mechanism/overlap_second.py write READING --first FIRST --out RECORD
+python3 -I scripts/mechanism/overlap_second.py print RECORD --first FIRST
+```
+
+Every first-pass check, run again, printed the line it printed above; check 6 runs at the write and stands here as second check 6. The second pass's own checks:
+
+```
+second check 1 first pass: 274 files found, every first-pass check passed, 268 reports used: pass
+second check 2 first-pass columns: 268 reports read again, 268 rows in datasets.tsv, 0 that differ: pass
+second check 3 arithmetic of the mean: 268 reports with the five, 0 where the mean misses a genome none of the five miss, calls one none call, or parts from all five: pass
+second check 4 null-fit cut: 0 reports where the all-five misses outside and inside null-fit folds do not add up: pass
+second check 5 the vote's edge: 0 genomes where a plain sum over 5 gives another call than math.fsum; 0 genomes whose sum lies within 1e-9 of 2.5
+second check 6 ids: 5 files scanned, 0 id-shaped tokens or barred keys: pass
+reading rule outside null-fit folds: stack
+```
+
+Check 6 and second check 6 scan for the shape of a genome id and for a key named `id` or `samples`. Beside them, every file written for this page was compared on the box with the reports' own genome ids, held in memory and never written, and none matched. The shape scan stays as a second net only: in a control file of 1,480 genome ids, 1,417 had the shape.
+
+`tests/mechanism/test_learner_overlap.py` holds 38 SYNTHETIC tests of the table script, with counts worked by hand. `tests/mechanism/test_overlap_second.py` holds 22 SYNTHETIC tests of the second pass's script, worked the same way. `tests/mechanism/test_learner_overlap_page.py` holds 20 tests of this page and its two records. `scripts/mechanism/overlap_faults.py` plants each fault below in one of the two scripts in turn and runs the test that must catch it:
 
 | Fault | Test |
 |---|---|
