@@ -140,7 +140,7 @@ class Page(unittest.TestCase):
                       f"{count(self.step1['point_only']['published_resistant'])} point-only resistant genomes", reading)
         for name in SECTIONS:
             for sentence in re.split(r"(?<=[.:;])\s", self.sections[name]):
-                if re.search(r"\bmiss", sentence):
+                if re.search(r"\bmiss(es|ed)?\b", sentence):
                     self.assertRegex(sentence, r"reader|program|known-gene rule", sentence)
 
     def test_step_1_stands_as_m1_published_it(self):
