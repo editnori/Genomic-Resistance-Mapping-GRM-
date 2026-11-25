@@ -88,12 +88,10 @@ class Page(unittest.TestCase):
         self.assertEqual(self.totals["reader_no_rule"]["genomes"], "0")
         everyone = self.step1["all_strata"]
         self.assertEqual(int(nc["resistant"]) + int(call["resistant"]), int(everyone["published_resistant"]))
-        self.assertIn(f"the reader makes no call on {count(nc['resistant'])} of the "
-                      f"{count(everyone['published_resistant'])} resistant genomes", reading)
-        self.assertIn(f"calls {count(nc['resistant_called_mean5'])} of those {count(nc['resistant'])} resistant "
-                      f"(recall {d3(nc['recall_mean5'])}), and {count(call['resistant_called_mean5'])} of the "
-                      f"{count(call['resistant'])} resistant genomes the reader calls ({d3(call['recall_mean5'])})",
-                      reading)
+        self.assertIn(f"calls {count(nc['resistant_called_mean5'])} of the reader's {count(nc['resistant'])} no-call "
+                      f"resistant genomes (recall {d3(nc['recall_mean5'])}), and {count(call['resistant_called_mean5'])} "
+                      f"of the {count(call['resistant'])} resistant genomes the reader calls ({d3(call['recall_mean5'])})"
+                      ". This reading counts genomes and reports recall: it fits nothing and reports no loss.", reading)
         self.assertIn(f"Among the {len(s['kept_years'])} years that are not thin, {ym.year_runs(s['kept_years'])}, ",
                       reading)
         g = s["groups"]["reader_no_call"]
@@ -107,7 +105,43 @@ class Page(unittest.TestCase):
         self.assertEqual(g["years_with_recall"], len(s["kept_years"]))
         self.assertIn(f"it runs from {ym.recall_words(low)} to {ym.recall_words(high)}, over all "
                       f"{len(s['kept_years'])}.", reading)
-        self.assertIn(f"{count(s['unknown_genomes'])} genomes carry no four-digit year", reading)
+        self.assertIn("compares the AMRFinderPlus program's calls between genomes collected in 2010 to 2014 and in "
+                      "2015 to 2019, one vote per BioProject. This read differs at each step: every year stands on its "
+                      "own, with no vote and no BioProject grouping, and the groups are the reader's call rather than "
+                      "the four strata.", reading)
+
+    def test_the_rows_with_no_year_come_first_and_are_not_assumed_alike(self):
+        s, reading = self.summary, self.sections["Reading"]
+        everyone = self.step1["all_strata"]
+        genomes = int(everyone["published_resistant"]) + int(everyone["published_susceptible"])
+        self.assertEqual(s["genomes"], genomes)
+        self.assertEqual(sum(int(r["genomes"]) for r in self.totals.values()), genomes)
+        self.assertGreater(3 * s["unknown_genomes"], genomes)
+        used = re.search(r"guard 5: (\d+) used", guards()).group(1)
+        paragraph = (f"**Rows with no year.** Of the {count(genomes)} genome rows of the {used} primary datasets, a "
+                     f"genome once per dataset, {count(s['unknown_genomes'])} carry no four-digit year: over a third. "
+                     "Every year row below describes the genomes that carry a year, and the rows without one are not "
+                     "assumed to be like them.")
+        self.assertIn(paragraph, reading)
+        self.assertLess(reading.index(paragraph), reading.index("Among the "))
+
+    def test_the_two_no_call_counts_stand_apart_with_their_stages(self):
+        reading = self.sections["Reading"]
+        everyone = count(self.step1["all_strata"]["published_resistant"])
+        neither = count(self.step1["neither"]["published_resistant"])
+        no_call = count(self.totals["reader_no_call"]["resistant"])
+        catalog = {r["stratum"]: r for r in m1_rows() if r["row"] == "catalog"}
+        self.assertIn(f"**Two counts with no call, at two stages.** At the program's stage, the AMRFinderPlus program "
+                      f"reports no row that meets the antibiotic's rule, neither a point mutation nor an acquired gene, "
+                      f"for {neither} of the {everyone} resistant genomes: M1's `neither` row. At the reader's stage, "
+                      f"GRM's known-gene rule makes no call on {no_call} of the same {everyone}: `reader_no_call` here. "
+                      "The second is the one a user of the release meets", reading)
+        self.assertIn(f"the reader calls {count(catalog['point_only']['resistant_called'])} of M1's "
+                      f"{count(self.step1['point_only']['published_resistant'])} point-only resistant genomes", reading)
+        for name in SECTIONS:
+            for sentence in re.split(r"(?<=[.:;])\s", self.sections[name]):
+                if re.search(r"\bmiss", sentence):
+                    self.assertRegex(sentence, r"reader|program|known-gene rule", sentence)
 
     def test_step_1_stands_as_m1_published_it(self):
         m1 = m1_rows()
@@ -201,6 +235,7 @@ class Page(unittest.TestCase):
         fixed = {"0.5", "1", "3", "10", "100", "2000", "14", "23", "24", "2026", "2010", "2014", "2015", "2019"}
         s = self.summary
         known = set(fixed) | {str(len(s["kept_years"])), str(len(s["thin_years"])), str(s["unknown_genomes"]),
+                              str(s["genomes"]),
                               str(s["species_pairs"]), str(s["species_names"]), str(len(year_faults.FAULTS))}
         known |= {str(n) for n in s["species_rows"].values()}
         known |= {str(g["years_with_recall"]) for g in s["groups"].values()}
@@ -222,7 +257,7 @@ class Page(unittest.TestCase):
 
     def test_the_words_keep_the_limits(self):
         for sentence in re.split(r"(?<=[.:;])\s", self.text):
-            for word in ("external validation", "prevalence", "trend", "slope"):
+            for word in ("external validation", "prevalence", "trend", "slope", "loss"):
                 if word in sentence:
                     self.assertRegex(sentence, r"\b(no|never|not)\b", sentence)
             if re.search(r"\b(grows?|shrinks?|rising|falling|increas\w*|decreas\w*)\b", sentence):

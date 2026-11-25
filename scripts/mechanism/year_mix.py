@@ -16,7 +16,10 @@ and no call (`samples[].catalog_resistant`). It writes READING, counts per
 dataset, year and stratum, which stays where the reports are. `write` reads
 READING, checks guard 4 and writes the tables of OUT. Both end with guard 6:
 no genome id and no catalogue group name of the reports stands in a written
-file. `print` prints the page's tables and figures from OUT alone. Every
+file. `print` prints the page's tables and figures from OUT alone. `scan`
+checks other files the same way; it leaves out, by path, any file inside the
+repository's `scripts/` or `tests/`, whose code words can collide with a short
+group name, and prints how many it left out beside how many it scanned. Every
 message prints counts, species and antibiotics only; no genome id
 and no group name is printed, hashed or written.
 
@@ -373,6 +376,15 @@ def names_from(reports_dir):
 
 
 TOKEN = re.compile(r"[A-Za-z0-9_.\-]+")
+REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+CODE_DIRS = ("scripts", "tests")
+
+
+def excluded_by_path(path):
+    """A file inside the repository's scripts/ or tests/: code, left out of
+    `scan` and counted, as its words can collide with a short group name."""
+    full = os.path.realpath(path)
+    return any(full.startswith(os.path.join(REPO, d) + os.sep) for d in CODE_DIRS)
 
 
 def scan_hits(paths, ids, names):
@@ -759,8 +771,10 @@ def main(argv=None):
             print("\n".join(print_record(args.record)))
             return 0
         ids, names, n = names_from(args.reports)
-        line6, clean = guard6(args.paths, ids, names, f"scan over {n} reports")
-        print(line6)
+        kept = [p for p in args.paths if not excluded_by_path(p)]
+        line6, clean = guard6(kept, ids, names, f"scan over {n} reports")
+        print(f"{line6}; {len(args.paths) - len(kept)} more left out by path "
+              f"({', '.join(d + '/' for d in CODE_DIRS)})")
         return 0 if clean else 1
     except Stop as e:
         print(f"stop: {e}")

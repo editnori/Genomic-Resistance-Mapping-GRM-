@@ -10,6 +10,7 @@ import csv
 import io
 import json
 import os
+import shutil
 import tempfile
 import unittest
 
@@ -454,6 +455,21 @@ class Read(unittest.TestCase):
         self.assertIn("stop: guard 6 (tables): 6 files, 1 with a genome id, 0 with a catalogue group name", text)
         self.assertNotIn("9999.3001", text)
         self.assertEqual(os.listdir(self.out), [])
+
+    def test_the_scan_leaves_out_scripts_and_tests_by_path_and_counts_them(self):
+        self.assertEqual(self.go(*world())[0], 0)
+        here = os.path.abspath(__file__)
+        copy = os.path.join(self.tmp.name, "copy.txt")
+        shutil.copy(here, copy)
+        rc, text = run("scan", "--reports", self.rdir, here, copy)
+        self.assertEqual(rc, 1)
+        self.assertIn("1 files, 1 with a genome id, 1 with a catalogue group name", text)
+        self.assertIn("; 1 more left out by path (scripts/, tests/)", text)
+        rc, text = run("scan", "--reports", self.rdir, here)
+        self.assertEqual(rc, 0)
+        self.assertIn("0 files, 0 with a genome id, 0 with a catalogue group name", text)
+        self.assertIn("; 1 more left out by path (scripts/, tests/)", text)
+        self.assertNotIn(GROUPS[0], text)
 
     def test_a_group_name_in_a_written_file_stops_the_write(self):
         rc, text = self.plant(GROUPS[2])

@@ -10,13 +10,17 @@ A share over collection years describes the deposits of one public database. It 
 
 The four strata of M1 were not readable from the release reports. Rebuilt from each genome's catalogue groups by GRM's known-gene rule, GRM's own reader of the AMRFinderPlus catalogue, they put no genome in point only or both, and 48,749 resistant genomes in gene only against M1's 39,814. The rebuild was not tuned. The read runs on the reader's own call instead: `reader_call`, the genomes the rule calls resistant, and `reader_no_call`, those it makes no call on. No genome of the primary set has a null call, so `reader_no_rule` is empty.
 
-Over the 204 datasets of the primary set, the reader makes no call on 15,514 of the 62,878 resistant genomes. The five learners' mean vote on the lineage split calls 11,989 of those 15,514 resistant (recall 0.773), and 41,800 of the 47,364 resistant genomes the reader calls (0.883).
+**Rows with no year.** Of the 146,669 genome rows of the 204 primary datasets, a genome once per dataset, 50,329 carry no four-digit year: over a third. Every year row below describes the genomes that carry a year, and the rows without one are not assumed to be like them. They stand apart as `year_unknown`.
+
+**Two counts with no call, at two stages.** At the program's stage, the AMRFinderPlus program reports no row that meets the antibiotic's rule, neither a point mutation nor an acquired gene, for 6,035 of the 62,878 resistant genomes: M1's `neither` row. At the reader's stage, GRM's known-gene rule makes no call on 15,514 of the same 62,878: `reader_no_call` here. The second is the one a user of the release meets, as the release's reports carry the reader's call (`catalog_resistant`). The two differ because the reader's rule is gated: it calls on the catalogue's acquired-gene groups that count for the dataset's rule and holds no point mutation, so a genome the program hits can still get no call. For example, the reader calls 124 of M1's 7,963 point-only resistant genomes (`page-m1-strata.tsv`, `catalog` row).
+
+The five learners' mean vote on the lineage split calls 11,989 of the reader's 15,514 no-call resistant genomes (recall 0.773), and 41,800 of the 47,364 resistant genomes the reader calls (0.883). This reading counts genomes and reports recall: it fits nothing and reports no loss.
 
 Among the 29 years that are not thin, 1985 and 1994 to 2021, the share of `reader_no_call` among a year's resistant genomes runs from 0.127 (2011, 275 of 2,163) to 0.502 (2019, 126 of 251). Within `reader_no_call`, the mean vote's recall runs from 0.317 (2019, 40 of 126) to 0.955 (2004, 257 of 269), over the 27 of those years that hold 10 or more such resistant genomes. Within `reader_call` it runs from 0.514 (1994, 18 of 35) to 0.967 (2004, 319 of 330), over all 29.
 
-The ranges are read from the years table and say nothing about the order of the years: whether the share of `reader_no_call` grows or shrinks over the years is not read, no line is fitted and no slope is given. A share describes the deposits of one public database, not a trend in resistance in the world or in any population. 50,329 genomes carry no four-digit year and stand apart as `year_unknown`. Recall is given at the release's cutoff, beside counts; this read computes no log loss (section Limits).
+The ranges are read from the years table and say nothing about the order of the years: whether the share of `reader_no_call` grows or shrinks over the years is not read, no line is fitted and no slope is given. A share describes the deposits of one public database, not a trend in resistance in the world or in any population.
 
-`docs/mechanism-split-result.md` reads M1's strata once over the whole primary set, and its block M2 compares the AMRFinderPlus program's calls between genomes collected in 2010 to 2014 and in 2015 to 2019, one vote per BioProject. This page counts the reader's call year by year, a genome once per dataset, and tests nothing.
+`docs/mechanism-split-result.md` reads M1's strata once over the whole primary set, and its block M2 compares the AMRFinderPlus program's calls between genomes collected in 2010 to 2014 and in 2015 to 2019, one vote per BioProject. This read differs at each step: every year stands on its own, with no vote and no BioProject grouping, and the groups are the reader's call rather than the four strata.
 
 ## Plan
 
@@ -141,17 +145,17 @@ The lowest and highest of each column over the 29 years that are not thin, with 
 
 ## Limits
 
-**Two groups, not four.** The reader's call is not M1's strata. A resistant genome the reader makes no call on may carry a point mutation the AMRFinderPlus program reports, or nothing the catalogue holds; this read cannot tell them apart.
+**Two groups, not four.** The reader's call is not M1's strata. A resistant genome GRM's known-gene rule makes no call on may carry a point mutation or an acquired gene the AMRFinderPlus program reports, or no program row that meets the rule; this read cannot tell them apart.
 
 **Deposits.** The genomes are BV-BRC deposits chosen for having lab results, capped at 2,000 a species. A share is no prevalence, and a share over collection years describes deposits, not resistance in any population.
 
 **Mixed years.** A year's genomes come from the datasets that hold that year, and the species and antibiotics deposited differ between years. A year's share mixes them, and no year table is split by species or antibiotic.
 
-**Collection year.** The year is the one the deposit records. 50,329 genomes carry none, or none of four digits, and stand apart as `year_unknown`.
+**Collection year.** The year is the one the deposit records. The 50,329 genome rows with none, or none of four digits, are counted apart and not assumed to be like the rest (section Reading).
 
 **One database.** A split by lineage is a retrospective split inside one database, never external validation.
 
-**Recall only.** Recall is given at the release's cutoff of 0.5 and only over 10 or more resistant genomes. The plan fixed no log loss, so a recall here stands without the scores' calibration beside it. No rate among susceptible genomes is written, only their counts.
+**Recall only.** Recall is given at the release's cutoff of 0.5 and only over 10 or more resistant genomes. This reading reports no loss, so a recall here stands without the scores' calibration beside it. No rate among susceptible genomes is written, only their counts.
 
 **Counting.** A genome counts once per dataset it appears in, so a genome tested for three antibiotics counts three times.
 
@@ -181,7 +185,7 @@ step 1: 7 published rows the same; strata two: reader_call, reader_no_call, read
 guard 6 (tables): 6 files, 0 with a genome id, 0 with a catalogue group name, against 23757 ids and 409 group names
 ```
 
-**Tests.** `tests/mechanism/test_year_mix.py` holds 37 SYNTHETIC tests of the script, with tables worked by hand. `tests/mechanism/test_year_faults.py` runs `scripts/mechanism/year_faults.py`, which plants each fault below in the script in turn and runs the test meant to catch it. `tests/mechanism/test_year_page.py` holds 14 tests of this page against `reference/mechanism-year/`.
+**Tests.** `tests/mechanism/test_year_mix.py` holds 38 SYNTHETIC tests of the script, with tables worked by hand. `tests/mechanism/test_year_faults.py` runs `scripts/mechanism/year_faults.py`, which plants each fault below in the script in turn and runs the test meant to catch it. `tests/mechanism/test_year_page.py` holds 16 tests of this page against `reference/mechanism-year/`.
 
 | Fault planted | Test that caught it |
 |---|---|
