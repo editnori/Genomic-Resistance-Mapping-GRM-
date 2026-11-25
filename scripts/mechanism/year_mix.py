@@ -6,6 +6,7 @@ release's reports alone (docs/mechanism-year-result.md).
     python3 -I scripts/mechanism/year_mix.py write --reading READING --reports DIR --out OUT
     python3 -I scripts/mechanism/year_mix.py print OUT
     python3 -I scripts/mechanism/year_mix.py scan --reports DIR PATH ...
+    python3 -I scripts/mechanism/year_mix.py strata --m1 DATASETS --lists LISTS --record OUT
 
 `read` reads every report under DIR once. It checks guards 1, 2, 3 and 5 of
 the plan, rebuilds M1's four strata from GRM's known-gene rule (each genome's
@@ -22,6 +23,14 @@ repository's `scripts/` or `tests/`, whose code words can collide with a short
 group name, and prints how many it left out beside how many it scanned. Every
 message prints counts, species and antibiotics only; no genome id
 and no group name is printed, hashed or written.
+
+`strata` was added after the one reading and reads no report and no score.
+Its only input beside the record is M1's committed public table DATASETS
+(`page-m1-datasets.tsv`): it sums the `catalog` row, GRM's known-gene rule,
+on the lineage split of the primary set per M1 stratum, so the reader's no
+call can be set beside the program's strata. It checks that the row holds
+each primary dataset of LISTS once and that its sums equal the record's
+`step1.tsv` and `totals.tsv`, then writes OUT/no-call-strata.tsv.
 
 It fits nothing, scores no genome and runs no program: every figure comes
 from the scores, labels and calls the reports hold.
@@ -67,6 +76,10 @@ SHARES_HEADER = ["year", "stratum", "resistant", "year_resistant", "resistant_sh
 SPECIES_HEADER = ["species", "antibiotic", "stratum"] + COUNTS + ["recall_mean5", "year_unknown"]
 TABLES = ("step1.tsv", "years.tsv", "totals.tsv", "shares.tsv", "species.tsv", "guards.txt")
 NOT_USED = ("in_M", "not_in_A", "not_in_list", "no_lineage_split")
+# Added after the one reading: from M1's committed table, not from the reports.
+NO_CALL_TABLE = "no-call-strata.tsv"
+NO_CALL_HEADER = ["stratum", "resistant", "called", "no_call", "no_call_share"]
+WITH_ROW = "program_row"    # point only, gene only and both: a program row meets the rule
 
 
 class Stop(Exception):
@@ -548,11 +561,70 @@ def write(reading, out_dir, ids, names):
     return lines + [line6]
 
 
+# ---------------------------------------------------------------- strata (added after the reading)
+
+def m1_catalog_rows(rows):
+    """M1's rows for GRM's known-gene rule on the lineage split of the primary set."""
+    return [r for r in rows if (r["set"], r["split"], r["row"]) == ("primary", SPLIT, "catalog")]
+
+
+def m1_cell(r, name):
+    v = r.get(name)
+    if v is None or not v.isdigit():
+        raise Stop(f"strata: a catalog row of {r.get('dataset')} has no whole count in {name}")
+    return int(v)
+
+
+def no_call_rows(m1_path, lists_path, record):
+    """Per M1 stratum, summed over the primary datasets: resistant, called by
+    the rule, no call and the no-call share; then the three strata with a
+    program row and all four. Stops unless the catalog row holds each primary
+    dataset once and its sums equal step1.tsv and totals.tsv."""
+    primary = {r["dataset"] for r in read_tsv(lists_path) if set_of(r) == "primary"}
+    chosen = m1_catalog_rows(read_tsv(m1_path))
+    seen = [r["dataset"] for r in chosen]
+    if len(seen) != len(set(seen)) or set(seen) != primary:
+        raise Stop(f"strata: the M1 file gives {len(seen)} catalog rows for {len(set(seen))} datasets on the "
+                   f"lineage split; the primary set has {len(primary)}, each once")
+    sums = {s: [0, 0] for s in FOUR}
+    for r in chosen:
+        for s in FOUR:
+            resistant, called = m1_cell(r, f"{s}_resistant"), m1_cell(r, f"{s}_called")
+            if called > resistant:
+                raise Stop(f"strata: {r['dataset']} calls more {s} genomes than it holds")
+            sums[s][0] += resistant
+            sums[s][1] += called
+    step1 = {r["stratum"]: r for r in record_rows(record, "step1.tsv")}
+    for s in FOUR:
+        if str(sums[s][0]) != step1[s]["published_resistant"]:
+            raise Stop(f"strata: {s} sums to another resistant count than step1.tsv publishes")
+    totals = {r["stratum"]: r for r in record_rows(record, "totals.tsv")}
+    called = sum(v[1] for v in sums.values())
+    resistant = sum(v[0] for v in sums.values())
+    no_call = sum(int(r["resistant"]) for k, r in totals.items() if k != "reader_call")
+    if (called, resistant - called) != (int(totals["reader_call"]["resistant"]), no_call):
+        raise Stop("strata: the catalog row's called and no-call sums differ from totals.tsv")
+    groups = [(s, *sums[s]) for s in FOUR]
+    groups.append((WITH_ROW, sum(sums[s][0] for s in FOUR[:3]), sum(sums[s][1] for s in FOUR[:3])))
+    groups.append((ALL, resistant, called))
+    return [NO_CALL_HEADER] + [[s, str(n), str(c), str(n - c), share(n - c, n)] for s, n, c in groups]
+
+
+def strata(m1_path, lists_path, record):
+    path = os.path.join(record, NO_CALL_TABLE)
+    if os.path.exists(path):
+        raise Stop(f"strata: {NO_CALL_TABLE} exists")
+    rows = no_call_rows(m1_path, lists_path, record)
+    write_tsv(path, rows)
+    return rows
+
+
 # ---------------------------------------------------------------- print
 
 GROUP_WORDS = {"reader_call": "the reader calls resistant", "reader_no_call": "the reader makes no call",
                "reader_no_rule": "the reader has no rule", "point_only": "point only", "gene_only": "gene only",
-               "both": "both", "neither": "neither", ALL: "all four"}
+               "both": "both", "neither": "neither", ALL: "all four",
+               WITH_ROW: "the three with a program row"}
 
 
 def d3(x):
@@ -678,6 +750,11 @@ def page_tables(record):
         by_species.setdefault(r["species"], set()).add(r["antibiotic"])
     out["datasets"] = ["| Species | Datasets | Antibiotics |", "|---|---|---|"] + [
         f"| *{name}* | {len(drugs)} | {', '.join(sorted(drugs))} |" for name, drugs in sorted(by_species.items())]
+    if os.path.exists(os.path.join(record, NO_CALL_TABLE)):
+        out["no_call"] = ["| M1 stratum | Resistant | Called by GRM's known-gene rule | No call | Share with no call |",
+                          "|---|---|---|---|---|"] + [
+            f"| {GROUP_WORDS[r['stratum']]} | {count_words(r['resistant'])} | {count_words(r['called'])} | "
+            f"{count_words(r['no_call'])} | {d3(r['no_call_share'])} |" for r in record_rows(record, NO_CALL_TABLE)]
     return out
 
 
@@ -739,6 +816,10 @@ def main(argv=None):
     s = sub.add_parser("scan")
     s.add_argument("--reports", required=True)
     s.add_argument("paths", nargs="+")
+    st = sub.add_parser("strata")
+    st.add_argument("--m1", required=True)
+    st.add_argument("--lists", required=True)
+    st.add_argument("--record", required=True)
     args = ap.parse_args(argv)
     try:
         if args.cmd == "plan":
@@ -769,6 +850,13 @@ def main(argv=None):
             return 0
         if args.cmd == "print":
             print("\n".join(print_record(args.record)))
+            return 0
+        if args.cmd == "strata":
+            rows = strata(args.m1, args.lists, args.record)
+            for r in rows:
+                print("\t".join(r))
+            print(f"strata: {NO_CALL_TABLE} written, {len(rows) - 1} rows; the catalog row holds each primary "
+                  "dataset once and its sums equal step1.tsv and totals.tsv")
             return 0
         ids, names, n = names_from(args.reports)
         kept = [p for p in args.paths if not excluded_by_path(p)]

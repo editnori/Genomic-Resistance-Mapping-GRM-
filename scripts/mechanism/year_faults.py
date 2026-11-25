@@ -73,6 +73,14 @@ FAULTS = [
     ("Y16", "the species table's floor at 9 resistant genomes",
      T + "Read.test_the_species_table_keeps_strata_with_ten_or_more_resistant",
      lambda: mock.patch.object(ym, "SPECIES_FLOOR", 9)),
+    ("Y17", "the M1 strata summed over every row of the file, not the catalog row alone",
+     T + "Strata.test_the_strata_sum_the_catalogue_row_of_the_lineage_split",
+     lambda: mock.patch.object(ym, "m1_catalog_rows",
+                               lambda rows: [r for r in rows if (r["set"], r["split"]) == ("primary", ym.SPLIT)])),
+    ("Y18", "the M1 strata summed over both splits",
+     T + "Strata.test_the_strata_sum_the_catalogue_row_of_the_lineage_split",
+     lambda: mock.patch.object(ym, "m1_catalog_rows",
+                               lambda rows: [r for r in rows if (r["set"], r["row"]) == ("primary", "catalog")])),
 ]
 
 

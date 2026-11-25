@@ -101,6 +101,31 @@ def thick():
     return {slug("drug t"): make_report("drug t", rows)}, [(slug("drug t"), "1", "0")]
 
 
+# M1's counts for the thick world, per stratum (resistant, susceptible): 19 resistant and 180 susceptible, as thick() holds.
+THICK_M1 = {"point_only": (6, 20), "gene_only": (8, 100), "both": (2, 10), "neither": (3, 50)}
+# M1's per-dataset table, per stratum (resistant, called): the catalog row on the lineage split calls 10 of 19,
+# as many as the reader calls in thick(); the program row, a learner's row and the random split call others.
+CATALOG = {"point_only": (6, 0), "gene_only": (8, 7), "both": (2, 2), "neither": (3, 1)}
+OTHER_CALLS = {"point_only": (6, 6), "gene_only": (8, 8), "both": (2, 2), "neither": (3, 0)}
+
+
+def m1_datasets(path, rows):
+    head = ["dataset", "species", "antibiotic", "set", "split", "row"]
+    head += [f"{s}_{k}" for s in ym.FOUR for k in ("resistant", "called", "recall")]
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("\t".join(head) + "\n")
+        for dataset, set_name, split, row, cells in rows:
+            f.write("\t".join([dataset, SPECIES, dataset.split("__")[1], set_name, split, row]
+                              + [x for s in ym.FOUR for x in (str(cells[s][0]), str(cells[s][1]), "")]) + "\n")
+
+
+def thick_m1(catalog=CATALOG):
+    t = slug("drug t")
+    return [(t, "primary", "lineage", "catalog", catalog), (t, "primary", "lineage", "program", OTHER_CALLS),
+            (t, "primary", "lineage", "scm", OTHER_CALLS), (t, "primary", "random", "catalog", OTHER_CALLS),
+            (slug("drug m"), "M", "lineage", "catalog", catalog)]
+
+
 def build(tmp, reports, lists, published=MISMATCH, differ=False):
     rdir = os.path.join(tmp, "datasets")
     os.makedirs(rdir)
@@ -544,6 +569,71 @@ class Read(unittest.TestCase):
         rc, text = self.write()
         self.assertEqual(rc, 2)
         self.assertIn("is not empty", text)
+
+
+class Strata(unittest.TestCase):
+    """strata, added after the reading: M1's committed per-dataset table, summed per stratum."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        tmp = self.tmp.name
+        rdir, self.lists, ppath = build(tmp, *thick(), published=THICK_M1)
+        reading, self.out = os.path.join(tmp, "reading.json"), os.path.join(tmp, "out")
+        self.assertEqual(run("read", "--reports", rdir, "--lists", self.lists, "--published", ppath,
+                             "--out", reading)[0], 0)
+        self.assertEqual(run("write", "--reading", reading, "--reports", rdir, "--out", self.out)[0], 0)
+        self.m1 = os.path.join(tmp, "page-m1-datasets.tsv")
+
+    def strata(self, rows):
+        m1_datasets(self.m1, rows)
+        return run("strata", "--m1", self.m1, "--lists", self.lists, "--record", self.out)
+
+    def test_the_strata_sum_the_catalogue_row_of_the_lineage_split(self):
+        rc, text = self.strata(thick_m1())
+        self.assertEqual(rc, 0, text)
+        self.assertEqual(tsv(os.path.join(self.out, ym.NO_CALL_TABLE)), [
+            ["stratum", "resistant", "called", "no_call", "no_call_share"],
+            ["point_only", "6", "0", "6", "1.000000000000"],
+            ["gene_only", "8", "7", "1", "0.125000000000"],
+            ["both", "2", "2", "0", "0.000000000000"],
+            ["neither", "3", "1", "2", "0.666666666667"],
+            ["program_row", "16", "9", "7", "0.437500000000"],
+            ["all_strata", "19", "10", "9", "0.473684210526"]])
+        self.assertIn("strata: no-call-strata.tsv written, 6 rows", text)
+
+    def test_a_primary_dataset_missing_or_given_twice_stops(self):
+        twice = thick_m1() + [(slug("drug t"), "primary", "lineage", "catalog", CATALOG)]
+        for rows in (twice, thick_m1()[1:]):
+            with self.subTest(rows=len(rows)):
+                rc, text = self.strata(rows)
+                self.assertEqual(rc, 2)
+                self.assertIn("the primary set has 1, each once", text)
+                self.assertFalse(os.path.exists(os.path.join(self.out, ym.NO_CALL_TABLE)))
+
+    def test_sums_that_differ_from_the_record_stop(self):
+        more_called = dict(CATALOG, neither=(3, 2))
+        other_resistant = dict(CATALOG, point_only=(7, 0))
+        for catalog, words in ((more_called, "differ from totals.tsv"), (other_resistant, "step1.tsv")):
+            with self.subTest(words=words):
+                rc, text = self.strata(thick_m1(catalog))
+                self.assertEqual(rc, 2)
+                self.assertIn(words, text)
+                self.assertFalse(os.path.exists(os.path.join(self.out, ym.NO_CALL_TABLE)))
+
+    def test_strata_refuses_a_table_that_exists(self):
+        self.assertEqual(self.strata(thick_m1())[0], 0)
+        rc, text = self.strata(thick_m1())
+        self.assertEqual(rc, 2)
+        self.assertIn("no-call-strata.tsv exists", text)
+
+    def test_print_prints_the_no_call_table_once_the_record_holds_it(self):
+        self.assertNotIn("no_call", ym.page_tables(self.out))
+        self.assertEqual(self.strata(thick_m1())[0], 0)
+        self.assertEqual(ym.page_tables(self.out)["no_call"][2:], [
+            "| point only | 6 | 0 | 6 | 1.000 |", "| gene only | 8 | 7 | 1 | 0.125 |", "| both | 2 | 2 | 0 | 0.000 |",
+            "| neither | 3 | 1 | 2 | 0.667 |", "| the three with a program row | 16 | 9 | 7 | 0.438 |",
+            "| all four | 19 | 10 | 9 | 0.474 |"])
 
 
 if __name__ == "__main__":
