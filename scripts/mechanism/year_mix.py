@@ -605,7 +605,7 @@ def recall_words(r):
            f"{count_words(r['resistant'])})"
 
 
-def tables(record):
+def page_tables(record):
     """The page's tables, printed from the record."""
     out = {}
     step1 = record_rows(record, "step1.tsv")
@@ -654,7 +654,7 @@ def tables(record):
 
 def print_record(record):
     lines = []
-    for name, rows in tables(record).items():
+    for name, rows in page_tables(record).items():
         lines += [f"## {name}", ""] + rows + [""]
     s = summary(record)
     lines += ["## figures", "", f"genomes: {s['genomes']}", f"years not thin: {len(s['kept_years'])}, "

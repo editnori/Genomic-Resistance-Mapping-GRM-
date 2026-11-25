@@ -496,7 +496,7 @@ class Read(unittest.TestCase):
         self.assertEqual(s["strata"], ["reader_call", "reader_no_call"])
         self.assertEqual((s["kept_years"], s["thin_years"], s["kept_genomes"], s["thin_genomes"]),
                          (["2018"], ["2019"], 100, 99))
-        tables = ym.tables(self.out)
+        tables = ym.page_tables(self.out)
         self.assertEqual(tables["ranges"][2:], [
             "| `reader_call` | 1.000 (2018, 10 of 10) | 1.000 (2018, 10 of 10) | 0.000 (2018, 0 of 90) | "
             "0.000 (2018, 0 of 90) | 0.700 (2018, 7 of 10) | 0.700 (2018, 7 of 10) |",
