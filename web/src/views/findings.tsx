@@ -155,7 +155,17 @@ export const inApp =
     go();
   };
 
-/** Data & Methods at one of its sections; MethodsView scrolls to the hash
+/** Data view at one of its sections; DataView scrolls to the hash and moves
+ *  focus to the section's heading. */
+export const dataHref = (anchor: string): string => `${routeHref({ view: "data", species: null, dataset: null })}#${anchor}`;
+
+export const openDataAt = (nav: Navigator, anchor: string): void => {
+  const next = { view: "data" as const, species: null, hash: anchor };
+  nav.go(next);
+  if (window.location.hash !== `#${anchor}`) window.history.replaceState(window.history.state, "", dataHref(anchor));
+};
+
+/** Methods view at one of its sections; MethodsView scrolls to the hash
  *  and moves focus to the section's heading. */
 export const methodsHref = (anchor: string): string => `${routeHref({ view: "methods", species: null, dataset: null })}#${anchor}`;
 
@@ -431,7 +441,7 @@ const DISCLOSE = `inline-flex min-h-11 items-center gap-1.5 rounded-sm text-cont
 
 /** Each species' reports and genomes: the selected genomes it contributes
  *  beside its genomes with any label, a different and larger denominator. */
-const SpeciesCounts = ({ manifest, nav, id }: { manifest: Manifest; nav: Navigator; id: string }) => {
+export const SpeciesCounts = ({ manifest, nav, id }: { manifest: Manifest; nav?: Navigator; id: string }) => {
   const rows = manifest.species.filter((s) => s.datasets_curated > 0 || s.genomes_analyzed > 0);
   const analyzed = rows.filter((s) => s.genomes_analyzed > 0);
   const waiting = rows.filter((s) => s.genomes_analyzed === 0);
@@ -463,7 +473,7 @@ const SpeciesCounts = ({ manifest, nav, id }: { manifest: Manifest; nav: Navigat
                 <th scope="row" className="px-2 py-1 text-left font-normal">
                   <a
                     href={routeHref({ view: "species", species: s.slug, dataset: null })}
-                    onClick={inApp(() => nav.go({ view: "species", species: s.slug }))}
+                    onClick={nav === undefined ? undefined : inApp(() => nav.go({ view: "species", species: s.slug }))}
                     className={`ui-control-target inline-flex items-center italic ${LINK}`}
                   >
                     {s.species}
@@ -512,15 +522,15 @@ const CorpusTiles = ({ manifest, nav }: { manifest: Manifest; nav: Navigator }) 
   const tableId = useId();
   const f = manifest.funnel;
   const analyzed = sum(manifest.species.map((s) => s.genomes_analyzed));
-  const methods = (label: string, anchor: string) => (
-    <a href={methodsHref(anchor)} onClick={inApp(() => openMethodsAt(nav, anchor))} className={ACTION}>
+  const corpus = (label: string, anchor: string) => (
+    <a href={dataHref(anchor)} onClick={inApp(() => openDataAt(nav, anchor))} className={ACTION}>
       {label}
       <span aria-hidden="true">→</span>
     </a>
   );
   const tiles: { value: number; unit: string; action: ReactNode }[] = [
-    { value: f.pairs_reported, unit: `genome and antibiotic pairs with a reported R or S call, from ${int(f.records)} BV-BRC records`, action: methods("See pair curation", "m-funnel") },
-    { value: f.genomes_passing_qc, unit: "genomes that passed QC", action: methods("See QC outcomes", "m-funnel") },
+    { value: f.pairs_reported, unit: `genome and antibiotic pairs with a reported R or S call, from ${int(f.records)} BV-BRC records`, action: corpus("See pair curation", "m-funnel") },
+    { value: f.genomes_passing_qc, unit: "genomes that passed QC", action: corpus("See QC outcomes", "m-funnel") },
     {
       value: analyzed,
       unit: "genomes analyzed",

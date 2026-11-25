@@ -7,7 +7,7 @@ import { int } from "../data/format";
 import type { CatalogRow, Manifest } from "../data/schema";
 import type { Navigator } from "../app/router";
 import { corpusFinding, CorpusFigure } from "./findings";
-import { MethodsView } from "./MethodsView";
+import { DataView } from "./DataView";
 import { OverviewView } from "./OverviewView";
 
 const manifest = parseManifest(fixtureFile("/data/index.json"));
@@ -20,7 +20,7 @@ const revision6: Manifest = { ...manifest, datasets: manifest.datasets.map(unrec
 
 const views = (m: Manifest) => ({
   overview: renderToStaticMarkup(createElement(OverviewView, { manifest: m, nav })),
-  methods: renderToStaticMarkup(createElement(MethodsView, { manifest: m })),
+  methods: renderToStaticMarkup(createElement(DataView, { manifest: m })),
   slide: corpusFinding(m, { page: false }).caption,
 });
 
@@ -71,6 +71,5 @@ describe("MIC-inferred labels", () => {
     const { methods } = views(manifest);
     expect(methods).toContain("Kept in the curated records; no model trains or is scored on these labels.");
     expect(methods).toContain("no model trains or is scored on that label. A dataset report counts the labels it left out in its Method and coverage fold; a report written before that count was added shows it as not recorded.");
-    expect(methods).toContain("fitted on the MICs of genomes with a reported call; a genome whose label was inferred from its MIC is left out");
   });
 });

@@ -53,8 +53,8 @@ describe("methods in plain words", () => {
       "Count the errors against limits",
       "Read what the numbers support",
     ]);
-    expect(steps.map((li) => li.querySelector("a")?.getAttribute("href"))).toEqual(["#m-labels", "#m-models", "#m-models", "#m-scores", "#m-scores", "#m-limits"]);
-    for (const step of steps) expect(el.querySelector(step.querySelector("a")!.getAttribute("href")!)).not.toBeNull();
+    expect(steps.map((li) => li.querySelector("a")?.getAttribute("href"))).toEqual(["/corpus#m-funnel", "#m-models", "#m-models", "#m-scores", "#m-scores", "#m-limits"]);
+    for (const step of steps.slice(1)) expect(el.querySelector(step.querySelector("a")!.getAttribute("href")!)).not.toBeNull();
     expect(steps[4]!.textContent).toContain("a VME of at most 1.5% and an ME of at most 3%");
   });
 

@@ -18,7 +18,7 @@ import type { Navigator } from "../../app/router";
 import { CLINDAMYCIN_LABELS } from "../../data/derive/clindamycin";
 import { ClindamycinMark, ClindamycinMethods, ClindamycinNote } from "./ClindamycinNote";
 import { DatasetsView } from "../DatasetsView";
-import { MethodsView } from "../MethodsView";
+import { DataView } from "../DataView";
 
 const manifest = parseManifest(fixtureFile("/data/index.json"));
 const row = manifest.datasets[0]!;
@@ -123,14 +123,14 @@ describe("the mark in the datasets table", () => {
   });
 });
 
-describe("the Methods paragraph", () => {
+describe("the Data paragraph", () => {
   it("stands in Labels and inclusion for the release the check read, and not for another", () => {
-    const html = renderToStaticMarkup(createElement(MethodsView, { manifest: { ...manifest, evaluation_revision: 14 } }));
-    const labels = html.slice(html.indexOf('id="m-labels"'), html.indexOf('id="m-models"'));
+    const html = renderToStaticMarkup(createElement(DataView, { manifest: { ...manifest, evaluation_revision: 14 } }));
+    const labels = html.slice(html.indexOf('id="m-labels"'));
     expect(labels).toContain("data-clindamycin-methods");
     expect(text(renderToStaticMarkup(createElement(ClindamycinMethods, { manifest: { evaluation_revision: 14 } })))).toBe(
       "A check of release rev14-274-20261112 (evaluation revision 14) asked, for each of its 6 clindamycin datasets, whether one deposited study holds a large share of the samples on which GRM's known-gene rule and the reported phenotype disagree, and whether the released figures depend on that study. A disagreement is a difference between two readings, and neither is called the error. The page sorts the 6 datasets into four kinds: measured dependence (2 datasets); one study (1); class balance, dependence not measured (2); and no dependence under the rule (1). Each of their dataset reports gives its kind with the counts behind it. The check and its limits are in docs/clindamycin-labels.md in the GRM repository.",
     );
-    expect(renderToStaticMarkup(createElement(MethodsView, { manifest: { ...manifest, evaluation_revision: 13 } }))).not.toContain("data-clindamycin-methods");
+    expect(renderToStaticMarkup(createElement(DataView, { manifest: { ...manifest, evaluation_revision: 13 } }))).not.toContain("data-clindamycin-methods");
   });
 });
