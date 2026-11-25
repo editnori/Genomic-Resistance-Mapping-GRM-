@@ -84,6 +84,8 @@ The antibiotics of each set, the same for its three pairs:
 
 **One species, one catalogue, one database.** The reading covers *Mycobacterium tuberculosis* alone, the WHO catalogue as TBProfiler 6.6.3 ships it (`tbdb` commit `3ed1cb99`), and BV-BRC deposits chosen for having lab results, capped at 2,000 a species: deposits, not a sample of the world's genomes. A share is no prevalence, and no causal reading follows from a correlation across antibiotics.
 
+**What was knowable before the rule.** One of the three correlations of the rule's set could have been computed before the rule was committed: `resistant_with_result` in `reference/lineage-curve/page-endpoints.tsv`, a public table read in full before then, equals the release report's resistant count on every row the tool reads, so the correlation with the resistant genomes was knowable. The comparison the rule turns on was not, because the resistant share needed genome counts that had not been read, and the 0.15 margin and the first two outcomes were set in the brief this reading was given, before its work began; the third outcome is the gap that brief's "only if" leaves between them.
+
 **Antibiotics that share calls.** The four proxies count another drug's graded variants, and antibiotics whose graded variants sit in the same genes are not independent of each other. A rank correlation counts each antibiotic as one.
 
 **Care.** Nothing here says which antibiotic is a better or safer choice in care.
@@ -94,7 +96,7 @@ The antibiotics of each set, the same for its three pairs:
 
 ## Method
 
-**Order.** The rule above was committed first. The script `scripts/mechanism/catalogue_size.py` and its SYNTHETIC tests were committed next and passed on one machine before the read. The read then ran once, at that commit, and did not stop. This page and `reference/catalogue-size/` were written from its output. After a review, `write` ran twice more over the same reading, with no `read`: once to add the role column to `correlations.tsv`, and once after guard 5 moved onto the full list of genome ids. With the role column taken out, `correlations.tsv` is byte for byte the one the first run wrote. `antibiotics.tsv` and `reading.txt` did not change, and `guards.txt` changed only in guard 5's line.
+**Order.** The rule above was committed first. The script `scripts/mechanism/catalogue_size.py` and its SYNTHETIC tests were committed next and passed on one machine before the read. The read then ran once, at that commit, and did not stop. This page and `reference/catalogue-size/` were written from its output. `write` then ran four more times over the same reading, with no `read`: twice after a first review, at the work tree and at the commit, to add the role column to `correlations.tsv`, and twice after a second, to move guard 5 onto the full list of genome ids. A later review ran it again over the same reading and got the committed record byte for byte. With the role column taken out, `correlations.tsv` is byte for byte the one the first run wrote. `antibiotics.tsv` and `reading.txt` did not change, and `guards.txt` changed only in guard 5's line.
 
 **Reading.** The commands, with the release's report folder as REPORTS, its species files as SPECIES_DIR, the reading's folder as READING and the record as OUT, copied to `reference/catalogue-size/` as written:
 
