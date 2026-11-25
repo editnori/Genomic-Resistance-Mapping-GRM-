@@ -17,6 +17,13 @@ interaction term. Each arm is fitted per report and per stored outer fold on the
 plain mean log loss, and applied to the held-out fold. Every form is called at 0.5. Nothing else enters a fit: no
 catalogue call, lineage, species, year or country.
 
+How a fold fit ends was ruled in R19 on 25 Nov 2026. The weighted mean starts from the equal weights and ends when a
+full backtracking search finds no lower loss, which is its answer, or at its cap. The logistic combiner has no
+penalty and ends at the first of convergence by its tolerance, its cap of Newton steps, or a step with no finite
+solution, where the last finite iterate stands. A fold ended at a cap or with no finite step is counted, and its
+report is marked for that arm. The count over every report decides; a second count without the arm's marked reports
+is written beside it and decides nothing. A held-out score that is not finite stops the read.
+
 `read` runs the learner overlap's checks through learner_overlap.read_reports, which drops every key named `id`
 as a file is parsed, then gates 1 to 6, and writes reading.json: per report, counts only. `write` runs gates 7 and
 8 and writes datasets.tsv, pooled.tsv, rule.tsv, transitions.tsv, gates.txt and SHA256SUMS. `print` prints the
@@ -47,9 +54,15 @@ FORMS = ("mean", "weighted", "logistic")
 ARMS = ("weighted", "logistic")
 CLIP = 1e-4                     # log loss clips a score to [CLIP, 1 - CLIP] (src/cutoff.rs LOSS_CLIP)
 MARGIN = common.MARGIN          # 0.02
-W_CAP, W_TOL = 5000, 1e-9       # the weighted fit: at most W_CAP projected gradient steps, to a projected step of W_TOL
+W_CAP = 5000                    # the weighted fit: at most W_CAP projected gradient steps
+ALPHA_FLOOR = 1e-20             # its backtracking search halves the step down to this before it finds no lower loss
 L_CAP, L_TOL, L_STEP = 100, 1e-10, 1e-8   # the logistic fit: at most L_CAP Newton steps, to a gradient and a step under these
-PIVOT = 1e-13                   # a Newton system with a pivot under this has no solution: the fit has not converged
+PIVOT = 1e-13                   # a Newton system with a pivot under this has no finite solution
+ENDS = {"weighted": ("converged", "cap"), "logistic": ("converged", "cap", "no_finite_step")}
+COUNTS_OF_RULE = ("all", "without_marked")
+BESIDE = "decides nothing"
+VME_RULE = ("the species-clustered interval of the median change in the very major error rate does not lie wholly "
+            "above 0")
 SUM_TOL = 1e-12                 # a fold's weights sum to 1 within this
 MAX_LIST = 5                    # no list in a reading is longer than this, but the report list and the gate lines
 MEASURES = ("balanced_accuracy", "recall", "specificity", "vme", "log_loss")
@@ -63,9 +76,9 @@ DATASET_COLUMNS = (["species", "antibiotic", "genomes", "resistant", "susceptibl
                     "mean_miss_by_all5"]
                    + [f"{f}_{c}" for f in FORMS for c in COUNTS + ("log_loss",)]
                    + [f"{a}_{t}" for a in ARMS for t in TRANSITIONS]
-                   + [f"{a}_folds_converged" for a in ARMS])
+                   + [f"{a}_folds_{e}" for a in ARMS for e in ENDS[a]] + [f"{a}_marked" for a in ARMS])
 POOLED_COLUMNS = ["scope", "species", "arm", "measure", "datasets", "median", "lo", "hi", "better", "worse", "same"]
-RULE_COLUMNS = ["arm", "datasets", "species", "median_gain", "gain_lo", "gain_hi", "vme_median", "vme_lo", "vme_hi",
+RULE_COLUMNS = ["arm", "count", "decides", "datasets", "species", "median_gain", "gain_lo", "gain_hi", "vme_median", "vme_lo", "vme_hi",
                 "gain_at_least_margin", "reading"]
 TRANSITION_COLUMNS = ["scope", "species", "arm", "datasets", "resistant", "mean_miss", "mean_miss_by_1to4",
                       "mean_miss_by_all5", "susceptible", "mean_wrong"] + list(TRANSITIONS)
@@ -139,33 +152,39 @@ def weighted_loss_grad(w, groups):
     return total / n, [g / n for g in grad]
 
 
-def projected_step(w, g):
-    return max(abs(a - b) for a, b in zip(project_simplex([x - d for x, d in zip(w, g)]), w))
+def start_weights():
+    return [1.0 / len(FIVE)] * len(FIVE)
+
+
+def lower(ft, f):
+    """A trial point is taken only when its loss is lower."""
+    return ft < f
 
 
 def fit_weighted(groups):
-    """Five non-negative weights summing to one, by plain log loss: projected gradient with a Barzilai-Borwein step
-    and backtracking, from the equal weights. Returns (weights, steps, converged)."""
-    w = [1.0 / len(FIVE)] * len(FIVE)
+    """Five non-negative weights summing to one, by plain log loss, clipped: projected gradient with a
+    Barzilai-Borwein step from the equal weights. Each step searches back from its step size, halving it, for a point
+    of lower loss. The fit ends when a full search finds none, and that point is its answer ("converged"), or at
+    W_CAP steps, where it stands ("cap"). It only ever lowers the loss, so it ends no higher than the equal mean.
+    Returns (weights, steps, end)."""
+    w = start_weights()
     f, g = weighted_loss_grad(w, groups)
     alpha = 1.0
     for step in range(W_CAP):
-        if projected_step(w, g) <= W_TOL:
-            return w, step, True
         while True:
             trial = project_simplex([x - alpha * d for x, d in zip(w, g)])
+            if trial == w or alpha < ALPHA_FLOOR:
+                return w, step, "converged"
             ft, gt = weighted_loss_grad(trial, groups)
-            if ft <= f + 1e-4 * math.fsum(d * (a - b) for d, a, b in zip(g, trial, w)) or alpha < 1e-20:
+            if lower(ft, f):
                 break
             alpha /= 2
-        if trial == w:
-            return w, step, False
         s_ = [a - b for a, b in zip(trial, w)]
         y_ = [a - b for a, b in zip(gt, g)]
         sy = math.fsum(a * b for a, b in zip(s_, y_))
         alpha = min(max(math.fsum(a * a for a in s_) / sy, 1e-10), 1e10) if sy > 0 else 1.0
         w, f, g = trial, ft, gt
-    return w, W_CAP, projected_step(w, g) <= W_TOL
+    return w, W_CAP, "cap"
 
 
 def sigmoid(z):
@@ -186,6 +205,10 @@ def logistic_nll(beta, groups):
         z = beta[0] + math.fsum(b * v for b, v in zip(beta[1:], s))
         total += k * ((max(z, 0.0) + math.log1p(math.exp(-abs(z)))) - (z if t else 0.0))
     return total / n
+
+
+def finite(*values):
+    return all(math.isfinite(v) for v in values)
 
 
 def solve(H, g):
@@ -209,8 +232,9 @@ def solve(H, g):
 
 def fit_logistic(groups):
     """An intercept and five coefficients by maximum likelihood (plain log loss, no penalty): Newton's method with
-    step halving, from zero. Converged when the mean gradient is under L_TOL and the last step under L_STEP times
-    (1 + the largest coefficient). Returns (beta, steps, converged)."""
+    step halving, from zero. It ends at the first of: convergence, when the mean gradient is under L_TOL and the last
+    step under L_STEP times (1 + the largest coefficient) ("converged"); L_CAP Newton steps ("cap"); a step with no
+    finite solution, where the last finite iterate stands ("no_finite_step"). Returns (beta, steps, end)."""
     n = sum(k for _, _, k in groups)
     size = 1 + len(FIVE)
     beta = [0.0] * size
@@ -231,20 +255,22 @@ def fit_logistic(groups):
                 H[i][j] /= n
                 H[j][i] = H[i][j]
         d = solve(H, grad)
-        if d is None:
-            return beta, step, False
+        if d is None or not finite(*d):
+            return beta, step, "no_finite_step"
         t_ = 1.0
         while True:
             trial = [b - t_ * v for b, v in zip(beta, d)]
-            nt = logistic_nll(trial, groups)
-            if nt <= nll or t_ < 1e-12:
+            nt = logistic_nll(trial, groups) if finite(*trial) else math.inf
+            if (finite(nt) and nt <= nll) or t_ < 1e-12:
                 break
             t_ /= 2
+        if not finite(nt, *trial):
+            return beta, step, "no_finite_step"
         moved = max(abs(t_ * v) for v in d)
         beta, nll = trial, nt
         if max(abs(v) for v in grad) <= L_TOL and moved <= L_STEP * (1.0 + max(abs(b) for b in beta)):
-            return beta, step + 1, True
-    return beta, L_CAP, False
+            return beta, step + 1, "converged"
+    return beta, L_CAP, "cap"
 
 
 def fit_and_score(arm):
@@ -261,23 +287,29 @@ def training_genomes(folds, f):
 
 def crossfit(arm, S, y, folds):
     """Each fold's genomes scored by the arm fitted on the other folds' genomes. Returns the scores and, per fold, its
-    record: the genomes trained on and held out, how many are both, the fit's steps and convergence, and for the
-    weighted mean the smallest weight and the weights' sum."""
+    record: the genomes trained on and held out, how many are both, the fit's steps and how it ended, how many
+    held-out scores are not finite, and for the weighted mean the smallest weight and the weights' sum."""
     fit, score = fit_and_score(arm)
     out = [None] * len(y)
     records = []
     for f in sorted(set(folds)):
         train = training_genomes(folds, f)
         test = [i for i, g in enumerate(folds) if g == f]
-        model, steps, ok = fit(groups_of(S, y, train))
+        groups = groups_of(S, y, train)
+        model, steps, end = fit(groups)
         for i in test:
             out[i] = score(model, S[i])
         rec = {"fold": f, "trained": len(train), "tested": len(test), "shared": len(set(train) & set(test)),
-               "steps": steps, "converged": ok}
+               "steps": steps, "end": end, "not_finite": sum(1 for i in test if not finite(out[i]))}
         if arm == "weighted":
             rec["weight_min"], rec["weight_sum"] = min(model), math.fsum(model)
         records.append(rec)
     return out, records
+
+
+def marked(recs):
+    """A report is marked for an arm when a fold fit of that arm ended at its cap or with no finite step."""
+    return any(r["end"] != "converged" for r in recs)
 
 
 def fold_ok(rec, genomes):
@@ -327,8 +359,9 @@ def report_counts(labels, S, folds):
     mean_calls = [mean_call(s) for s in S]
     probs = {"mean": [mean_score(s) for s in S]}
     calls = {"mean": mean_calls}
-    gate = {"leaky": 0, "bound_called": 0, "bound_missed": 0, "bad_weights": 0, "uncovered": 0,
-            "not_converged": {a: 0 for a in ARMS}, "fits": {a: 0 for a in ARMS}}
+    gate = {"leaky": 0, "bound_called": 0, "bound_missed": 0, "bad_weights": 0, "uncovered": 0, "not_finite": 0,
+            "ends": {a: {e: 0 for e in ENDS[a]} for a in ARMS}, "fits": {a: 0 for a in ARMS},
+            "marked": {a: 0 for a in ARMS}}
     row = {"genomes": n, "resistant": sum(labels), "susceptible": n - sum(labels),
            "mean_miss_by_1to4": sum(1 for t, m, k in zip(labels, mean_calls, called_by) if t and not m and k > 0),
            "mean_miss_by_all5": sum(1 for t, m, k in zip(labels, mean_calls, called_by) if t and not m and k == 0)}
@@ -338,10 +371,13 @@ def report_counts(labels, S, folds):
         for r in recs:
             gate["fits"][arm] += 1
             gate["leaky"] += not fold_ok(r, n)
-            gate["not_converged"][arm] += not r["converged"]
+            gate["ends"][arm][r["end"]] += 1
+            gate["not_finite"] += r["not_finite"]
             if arm == "weighted":
                 gate["bad_weights"] += r["weight_min"] < 0 or abs(r["weight_sum"] - 1.0) > SUM_TOL
         row[f"{arm}_folds"] = recs
+        row[f"{arm}_marked"] = marked(recs)
+        gate["marked"][arm] += row[f"{arm}_marked"]
     for k, a in zip(called_by, calls["weighted"]):
         gate["bound_called"] += k == 0 and a is True
         gate["bound_missed"] += k == len(FIVE) and a is False
@@ -406,12 +442,16 @@ def pooled_row(rows, arm, name, scope, species=""):
 
 def keep(median_gain, gain_lo, vme_lo):
     """FREEZE-COMBINE's rule: kept only if the median gain in balanced accuracy is at least the margin, its interval
-    lies wholly above 0, and the very major error rate is not higher on its own interval."""
+    lies wholly above 0, and the very major error rate is not higher on that interval, which R19 reads as: VME_RULE."""
     return (median_gain >= MARGIN and gain_lo is not None and gain_lo > 0
             and not (vme_lo is not None and vme_lo > 0))
 
 
 def rule(rows, arm):
+    if not rows:
+        return {"arm": arm, "datasets": 0, "species": 0, "median_gain": None, "gain_lo": None, "gain_hi": None,
+                "vme_median": None, "vme_lo": None, "vme_hi": None, "gain_at_least_margin": 0,
+                "reading": "no difference shown"}
     ba = pooled_row(rows, arm, "balanced_accuracy", "all")
     vme = pooled_row(rows, arm, "vme", "all")
     return {"arm": arm, "datasets": len(rows), "species": len({r["species"] for r in rows}),
@@ -451,7 +491,7 @@ def read(directory, first_record, second_record, expect=lo.EXPECT_FILES):
             if lo.is_five(d) and d["resistant"] >= lo.MIN_RESISTANT}
     votes = {(r["species"], r["antibiotic"]): r for r in lo.read_tsv(os.path.join(second_record, "vote.tsv"))}
     total = collections.Counter()
-    fits, unconverged = collections.Counter(), collections.Counter()
+    fits, ends, marks = collections.Counter(), collections.Counter(), collections.Counter()
     rows, differ = [], []
     for name in lo.report_files(directory):
         report = load_report(os.path.join(directory, name))
@@ -464,10 +504,11 @@ def read(directory, first_record, second_record, expect=lo.EXPECT_FILES):
         S = [tuple(entries[n][i] for n in FIVE) for i in range(len(labels))]
         row, gate = report_counts(labels, S, split["test_fold"])
         del report, entries, S
-        for k in ("leaky", "bound_called", "bound_missed", "bad_weights", "uncovered"):
+        for k in ("leaky", "bound_called", "bound_missed", "bad_weights", "uncovered", "not_finite"):
             total[k] += gate[k]
         fits.update(gate["fits"])
-        unconverged.update(gate["not_converged"])
+        marks.update(gate["marked"])
+        ends.update({(a, e): v for a in ARMS for e, v in gate["ends"][a].items()})
         if not incumbent_agrees(row, votes.get(key)):
             differ.append(f"{key[0]} with {key[1]}")
         rows.append(dict(row, species=key[0], antibiotic=key[1]))
@@ -485,9 +526,12 @@ def read(directory, first_record, second_record, expect=lo.EXPECT_FILES):
         f"{total['bound_missed']} genomes all five call that it misses, {total['bad_weights']} folds whose weights "
         f"are negative or do not sum to 1: "
         + ("pass" if total["bound_called"] == total["bound_missed"] == total["bad_weights"] == 0 else "STOP"),
-        f"gate 5 convergence: {fits['weighted']} weighted fits, {unconverged['weighted']} not converged; "
-        f"{fits['logistic']} logistic fits, {unconverged['logistic']} not converged: "
-        + ("pass" if unconverged["weighted"] == unconverged["logistic"] == 0 else "STOP"),
+        f"gate 5 fit ends: {fits['weighted']} weighted fits, {ends['weighted', 'converged']} converged, "
+        f"{ends['weighted', 'cap']} at the cap; {fits['logistic']} logistic fits, {ends['logistic', 'converged']} "
+        f"converged, {ends['logistic', 'cap']} at the cap, {ends['logistic', 'no_finite_step']} at a step with no "
+        f"finite solution; {marks['weighted']} reports marked for the weighted arm, {marks['logistic']} for the "
+        f"logistic arm; {total['not_finite']} held-out scores not finite: "
+        + ("pass" if total["not_finite"] == 0 and sum(fits.values()) > 0 else "STOP"),
         f"gate 6 cutoff: every form called at {CUTOFF}; {total['uncovered']} form and report pairs with a genome "
         f"given no call: " + ("pass" if total["uncovered"] == 0 and CUTOFF == 0.5 else "STOP"),
     ]
@@ -568,7 +612,9 @@ def dataset_row(r):
     for a in ARMS:
         for t in TRANSITIONS:
             out[f"{a}_{t}"] = r[f"{a}_transitions"][t]
-        out[f"{a}_folds_converged"] = sum(1 for x in r[f"{a}_folds"] if x["converged"])
+        for e in ENDS[a]:
+            out[f"{a}_folds_{e}"] = sum(1 for x in r[f"{a}_folds"] if x["end"] == e)
+        out[f"{a}_marked"] = "yes" if r[f"{a}_marked"] else "no"
     return out
 
 
@@ -587,12 +633,24 @@ def pooled_rows(rows):
     return out
 
 
+def unmarked(rows, arm):
+    return [r for r in rows if r[f"{arm}_marked"] != "yes"]
+
+
+def rule_counts(rows, arm):
+    """The count over every report, which decides, and the count without the arm's marked reports, which stands
+    beside it and decides nothing."""
+    return [("all", rows, True), ("without_marked", unmarked(rows, arm), False)]
+
+
 def rule_rows(rows):
     out = []
     for arm in ARMS:
-        r = rule(rows, arm)
-        out.append(dict(r, **{k: cell(r[k]) for k in ("median_gain", "gain_lo", "gain_hi", "vme_median", "vme_lo",
-                                                      "vme_hi")}))
+        for count, kept, decides in rule_counts(rows, arm):
+            r = rule(kept, arm)
+            r.update(count=count, decides="yes" if decides else "no", reading=r["reading"] if decides else BESIDE)
+            out.append(dict(r, **{k: cell(r[k]) for k in ("median_gain", "gain_lo", "gain_hi", "vme_median",
+                                                          "vme_lo", "vme_hi")}))
     return out
 
 
@@ -680,7 +738,8 @@ def write_record(reading_dir, reports_dir, out):
             raise Stop(line8)
         with open(os.path.join(tmp, "gates.txt"), "w", encoding="utf-8") as f:
             f.write("\n".join(reading["first_checks"] + reading["checks"] + [line7, line8]) + "\n")
-            f.write("".join(f"reading {r['arm']}: {r['reading']}\n" for r in rules))
+            f.write(f"rule: the very major error rate is not higher on that interval: {VME_RULE}\n")
+            f.write("".join(f"reading {r['arm']}: {r['reading']}\n" for r in rules if r["decides"] == "yes"))
         with open(os.path.join(tmp, "SHA256SUMS"), "w", encoding="utf-8") as f:
             for name in RECORD_FILES:
                 f.write(f"{lo.sha256(os.path.join(tmp, name))}  {name}\n")
@@ -711,10 +770,11 @@ def tables(record):
     trans = lo.read_tsv(os.path.join(record, "transitions.tsv"))
     c = lo.count
     return {
-        "rule": ["| Arm | Reports | Species | Median gain in balanced accuracy | Its interval | Median change in the "
-                 "very major error rate | Its interval | Reports gaining 0.02 or more | Reading |",
-                 "|---|---:|---:|---:|---|---:|---|---:|---|"]
-        + [f"| {r['arm']} | {c(r['datasets'])} | {c(r['species'])} | {dec(r['median_gain'], 4)} "
+        "rule": ["| Arm | Count | Reports | Species | Median gain in balanced accuracy | Its interval | Median change "
+                 "in the very major error rate | Its interval | Reports gaining 0.02 or more | Reading |",
+                 "|---|---|---:|---:|---:|---|---:|---|---:|---|"]
+        + [f"| {r['arm']} | {r['count'].replace('_', ' ')} | {c(r['datasets'])} | {c(r['species'])} "
+           f"| {dec(r['median_gain'], 4)} "
            f"| {dec(r['gain_lo'], 4)} to {dec(r['gain_hi'], 4)} | {dec(r['vme_median'], 4)} "
            f"| {dec(r['vme_lo'], 4)} to {dec(r['vme_hi'], 4)} | {c(r['gain_at_least_margin'])} | {r['reading']} |"
            for r in rules],
@@ -745,8 +805,12 @@ def plan():
             "five": list(FIVE), "fit": "per report and stored outer fold, on the genomes of the other folds, by plain "
             "mean log loss", "clip": CLIP, "margin": MARGIN, "resamples": common.RESAMPLES,
             "interval_values": [common.LO_INDEX + 1, common.HI_INDEX + 1], "min_species": common.MIN_SPECIES,
-            "weighted_fit": {"cap": W_CAP, "tolerance": W_TOL, "weights_sum_within": SUM_TOL},
-            "logistic_fit": {"cap": L_CAP, "gradient": L_TOL, "step": L_STEP, "pivot": PIVOT},
+            "weighted_fit": {"cap": W_CAP, "start": "equal weights", "ends": list(ENDS["weighted"]),
+                             "step_floor": ALPHA_FLOOR, "weights_sum_within": SUM_TOL},
+            "logistic_fit": {"cap": L_CAP, "gradient": L_TOL, "step": L_STEP, "pivot": PIVOT, "penalty": None,
+                             "ends": list(ENDS["logistic"])},
+            "marked": "a report, for an arm, when a fold fit of that arm ended at its cap or with no finite step",
+            "counts": {"all": "decides", "without_marked": BESIDE}, "vme_rule": VME_RULE,
             "measures": list(MEASURES), "lower_better": list(LOWER_BETTER), "datasets_columns": DATASET_COLUMNS,
             "pooled_columns": POOLED_COLUMNS, "rule_columns": RULE_COLUMNS, "transition_columns": TRANSITION_COLUMNS}
 

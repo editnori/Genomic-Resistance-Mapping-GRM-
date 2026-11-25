@@ -14,9 +14,11 @@ This plan follows FREEZE-COMBINE and was committed with its script and tests, be
 - **The weighted mean.** Five weights, none negative, summing to one.
 - **The logistic combiner.** An intercept and one coefficient for each of the five scores, with no interaction term.
 - **Fitting.** Each combiner is fitted per report and per stored outer fold on the genomes of the other folds, by plain mean log loss with every score clipped to [0.0001, 0.9999], and applied to the held-out fold. The weighted mean is fitted by projected gradient from the equal weights; the logistic combiner by Newton's method from zero, with no penalty.
+- **How a fit ends.** This stop rule was ruled on 25 Nov 2026 (R19), after the offline figures were read. The weighted mean ends when a full backtracking search finds no lower loss, and that point is its answer, or at its cap of 5,000 steps, where it stands. It starts from the equal weights and only ever lowers the loss, so its fitting loss is never above the loss at the equal weights. The logistic combiner ends at the first of: convergence by its tolerance; 100 Newton steps; a step with no finite solution, where the last finite iterate stands. A fold ended at a cap or with no finite step is counted, and its report is marked for that arm. A held-out score that is not finite stops the read.
+- **Two counts.** The count over every report decides. Beside it, a second count without the arm's marked reports is written, and it decides nothing.
 - **Cutoff.** Every form calls a genome resistant at a score of 0.5 or more.
 - **Measures.** Per report and form: the counts at the cutoff, the balanced accuracy, recall, specificity and very major error rate worked from them, and the mean log loss. The very major error rate is the resistant genomes called susceptible over the resistant genomes, as the release's `vme`.
-- **Decision.** An arm is kept only if the median over the reports of its balanced accuracy less the incumbent's is 0.02 or more, the species-clustered interval of that median lies wholly above 0, and the species-clustered interval of the median change in its very major error rate does not lie wholly above 0. Otherwise the reading is no difference shown.
+- **Decision.** An arm is kept only if the median over the reports of its balanced accuracy less the incumbent's is 0.02 or more, the species-clustered interval of that median lies wholly above 0, and the very major error rate is not higher on that interval. That means, as R19 confirmed: the species-clustered interval of the median change in the very major error rate does not lie wholly above 0. Otherwise the reading is no difference shown.
 - **Interval.** 4,000 resamples of species, the median of each resample's reports, and the 101st and 3,900th of the sorted medians. Each row's resamples are drawn from a generator seeded by the sha256 of the row's own name. A set of under 6 species gets no interval.
 - **Predictions, counted and not judged.** The reports where each arm gains 0.02 or more, and the counts better, worse and the same at that margin. Of the resistant genomes the incumbent misses, how many each arm calls, split into those 1 to 4 of the five call and those none of the five calls. The weighted mean cannot call a genome none of the five calls, since its score lies within the five. Of the susceptible genomes the incumbent calls resistant, how many each arm does not, and how many susceptible genomes each arm newly calls resistant.
 - **Beside.** Recall, specificity and log loss stand beside the decision and change nothing. The page gives the reports pooled and by species, and a gain on one species changes nothing.
@@ -30,6 +32,8 @@ Not read yet.
 **Words.** A lineage split is a retrospective split inside one database, never external validation. "No difference shown" is never written as "equal". The error levels serve as an adapted research screen and are never an applicable FDA validation criterion. Coverage is the share of genomes answered, not accuracy.
 
 **One draw.** The read uses the release's own lineage folds, the only folds whose per-genome held-out scores are stored. The learner overlap's page counted these scores, labels and folds before this plan was written.
+
+**Caps.** A fit ended at its cap depends on the cap: 5,000 steps for the weighted mean and 100 Newton steps for the logistic combiner. Its report is marked, and the second count shows what the reading is without it.
 
 **Rows.** The record bars a row per genome; a row per report is an aggregate and keeps its genome count. These are public bacterial genomes with public accession numbers, and the record holds no field about a patient.
 
@@ -53,12 +57,12 @@ Every key named `id` is dropped as a report is parsed. Gate 8 holds the reports'
 | 2. cross-fitting | a fold's training genomes hold one of its held-out genomes, or the two do not add up to the report |
 | 3. incumbent | the incumbent's counts, worked again, differ from `reference/learner-overlap/second-pass/vote.tsv` |
 | 4. convex bound | the weighted mean calls a genome none of the five calls or misses one all five call, or a fold's weights are negative or do not sum to 1 |
-| 5. convergence | a fit does not converge within its cap |
+| 5. fit ends | a held-out score is not finite. It counts the folds ended at a cap or with no finite step and the reports they mark |
 | 6. cutoff | a form leaves a genome without a call |
 | 7. rows | the record holds a row per genome, or an arm's counts do not follow from the incumbent's and the transitions |
 | 8. ids | a written file holds a genome id, a token of an id's shape, or an `id` or `samples` key, or a decimal cell is 10 or more in size |
 
-**Tests.** `tests/mechanism/test_combiner.py` holds 40 SYNTHETIC tests of the script. `tests/mechanism/test_combiner_faults.py` runs `scripts/mechanism/combiner_faults.py`, which plants each fault below in the script in turn and runs the test meant to catch it. `tests/mechanism/test_combiner_page.py` holds 9 tests of this page against the script.
+**Tests.** `tests/mechanism/test_combiner.py` holds 46 SYNTHETIC tests of the script. `tests/mechanism/test_combiner_faults.py` runs `scripts/mechanism/combiner_faults.py`, which plants each fault below in the script in turn and runs the test meant to catch it. `tests/mechanism/test_combiner_page.py` holds 10 tests of this page against the script.
 
 | Fault planted | Test that catches it |
 |---|---|
@@ -71,7 +75,7 @@ Every key named `id` is dropped as a report is parsed. Gate 8 holds the reports'
 | C7. The weights not brought back to a sum of one | `Fits.test_the_weights_stay_on_the_simplex` |
 | C8. Gate 4 blind to weights that do not sum to one | `Gates.test_gate_4_stops_on_weights_off_the_simplex` |
 | C9. The weighted mean free to round across the bound of the five scores | `Forms.test_the_weighted_mean_stays_inside_the_five_scores` |
-| C10. A logistic fit that does not converge let through | `Gates.test_gate_5_stops_a_fit_that_does_not_converge` |
+| C10. A logistic fold ended with no finite step counted as converged | `Gates.test_gate_5_counts_a_fold_with_no_finite_step` |
 | C11. Log loss not clipped | `Forms.test_log_loss_is_clipped` |
 | C12. The very major error rate worked over the susceptible genomes | `Forms.test_measures_are_worked_from_the_counts` |
 | C13. Accuracy written in place of coverage | `Forms.test_coverage_is_the_share_given_a_call` |
@@ -93,5 +97,12 @@ Every key named `id` is dropped as a report is parsed. Gate 8 holds the reports'
 | C29. A decimal cell of 10 or more let through | `Gates.test_a_decimal_cell_stays_under_10` |
 | C30. A report set that differs from the first record's let through | `Gates.test_gate_1_stops_on_a_report_set_that_differs` |
 | C31. An incumbent that differs from vote.tsv let through | `Gates.test_gate_3_stops_on_an_incumbent_that_differs_from_vote_tsv` |
+| C32. A held-out score that is not finite let through | `Gates.test_gate_5_stops_on_a_held_out_score_that_is_not_finite` |
+| C33. A fold ended at its cap left unmarked | `Gates.test_gate_5_counts_and_marks_a_fold_at_the_cap` |
+| C34. A weighted fold ended at its cap counted as converged | `Fits.test_a_fit_at_its_cap_ends_there` |
+| C35. The marked reports kept in the second count | `Rule.test_the_second_count_leaves_out_the_marked_reports` |
+| C36. The count without the marked reports deciding in place of the count over all | `Rule.test_the_second_count_leaves_out_the_marked_reports` |
+| C37. The weighted fit started at the first learner's vertex in place of the equal weights | `Fits.test_the_weighted_fit_is_never_above_the_equal_mean` |
+| C38. The record's rule for the very major error rate in other words than R19's | `Rule.test_the_record_says_the_vme_rule_in_r19s_words` |
 
-All 31 were caught. Each test passes as the script stands and fails with its fault planted.
+All 38 were caught. Each test passes as the script stands and fails with its fault planted.

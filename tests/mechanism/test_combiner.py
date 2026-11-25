@@ -52,8 +52,17 @@ BLOCK = ([(LOW, 1, 9)] + [(one(j), 1, 3) for j in range(5)] + [(one(j, 0.2, 0.8)
 # 17 resistant of 40 per copy, a prevalence of 0.425, so the group at 7/15 lies between the prevalence and 0.5.
 SATURATED = [(LOW, 1, 9), (one(0), 3, 1), (one(1), 1, 2), (one(2), 2, 1), (one(3), 7, 8), (one(4), 3, 2)]
 
-# scm alone calls every resistant genome and no susceptible one: the logistic combiner has no finite answer.
-SEPARABLE = [(LOW, 0, 3), (one(0), 3, 0)] + [(one(j), 0, 1) for j in (1, 2, 3, 4)]
+# scm scores every resistant genome exactly 1 and every susceptible one exactly 0, and the other four learners call
+# one susceptible group each: the logistic combiner has no finite answer. Per copy 3 resistant and 7 susceptible.
+# The mean misses every resistant genome (sum 1.8) and calls no susceptible one (sums 0.8 and 1.4).
+SCM0 = (0.0, 0.2, 0.2, 0.2, 0.2)
+SEPARABLE = ([(SCM0, 0, 3), ((1.0, 0.2, 0.2, 0.2, 0.2), 3, 0)]
+             + [(tuple(0.0 if k == 0 else (0.8 if k == j else 0.2) for k in range(5)), 0, 1) for j in (1, 2, 3, 4)])
+
+# scm scores every susceptible genome exactly 1 and every resistant one exactly 0; the other four agree on each
+# genome, at 0.2 and 0.8. At the equal weights the score is 0.36 and 0.64 and the loss -log 0.64; at scm's vertex
+# every score is clipped, the loss is -log 0.0001 and its slope in every weight is 0.
+ANTI = [((1.0, 0.2, 0.2, 0.2, 0.2), 0, 2), ((0.0, 0.8, 0.8, 0.8, 0.8), 2, 0)]
 
 # rf against the other four, which agree: only rf's weight moves the loss.
 LEAN_A, LEAN_B = (0.1, 0.1, 0.9, 0.1, 0.1), (0.9, 0.9, 0.1, 0.9, 0.9)
@@ -226,8 +235,8 @@ class Fits(unittest.TestCase):
     def test_the_weighted_mean_fits_plain_log_loss(self):
         # the loss is 8 * -log(p) + 2 * -log(1 - p) with p = 0.1 + 0.8 * w_rf on group A, so p = 0.8 and w_rf = 0.875;
         # with each class weighted to one half it would be p = 19/24 and w_rf = 0.8646
-        w, steps, ok = cb.fit_weighted(cb.groups_of(*as_arrays(LEAN, copies=1)[:2], range(10)))
-        self.assertTrue(ok)
+        w, steps, end = cb.fit_weighted(cb.groups_of(*as_arrays(LEAN, copies=1)[:2], range(10)))
+        self.assertEqual(end, "converged")
         self.assertAlmostEqual(w[2], 0.875, places=6)
         for j in (0, 1, 3, 4):
             self.assertAlmostEqual(w[j], 0.125 / 4, places=6)
@@ -238,14 +247,14 @@ class Fits(unittest.TestCase):
         for a, b in zip(got, [1 / 3, 1 / 3, 1 / 3, 0.0, 0.0]):
             self.assertAlmostEqual(a, b, places=15)
         self.assertEqual(cb.project_simplex([2.0, 0.0, 0.0, 0.0, 0.0]), [1.0, 0.0, 0.0, 0.0, 0.0])
-        w, _, ok = cb.fit_weighted(cb.groups_of(*as_arrays(LED, copies=1)[:2], range(27)))
-        self.assertTrue(ok)
+        w, _, end = cb.fit_weighted(cb.groups_of(*as_arrays(LED, copies=1)[:2], range(27)))
+        self.assertEqual(end, "converged")
         self.assertEqual(w, [0.0, 0.0, 1.0, 0.0, 0.0])
 
     def test_the_logistic_fits_each_groups_share(self):
         S, y, folds = as_arrays(SATURATED)
         probs, recs = cb.crossfit("logistic", S, y, folds)
-        self.assertTrue(all(r["converged"] for r in recs))
+        self.assertEqual([r["end"] for r in recs], ["converged"] * 5)
         shares = {s: p for s, p in zip(S, probs)}
         for s, share in zip([g[0] for g in SATURATED], (0.1, 0.75, 1 / 3, 2 / 3, 7 / 15, 0.6)):
             self.assertAlmostEqual(shares[s], share, places=6)
@@ -253,9 +262,42 @@ class Fits(unittest.TestCase):
         self.assertEqual(cb.confusion(y, [cb.is_call(p) for p in probs]),
                          {"tp": 40, "fn": 45, "fp": 20, "tn": 95, "called": 200})
 
-    def test_a_separable_fit_does_not_converge(self):
-        _, _, ok = cb.fit_logistic(cb.groups_of(*as_arrays(SEPARABLE, copies=1)[:2], range(10)))
-        self.assertFalse(ok)
+    def test_a_separable_fold_ends_with_no_finite_step(self):
+        # no finite maximum: the Newton system loses its last finite solution before 100 steps, and the last finite
+        # iterate stands; it calls the 3 resistant genomes of each copy and none of the 7 susceptible
+        S, y, folds = as_arrays(SEPARABLE)
+        beta, steps, end = cb.fit_logistic(cb.groups_of(S, y, range(10)))
+        self.assertEqual(end, "no_finite_step")
+        self.assertLess(steps, cb.L_CAP)
+        self.assertTrue(cb.finite(*beta))
+        probs, recs = cb.crossfit("logistic", S, y, folds)
+        self.assertEqual([(r["end"], r["not_finite"]) for r in recs], [("no_finite_step", 0)] * 5)
+        self.assertEqual(cb.confusion(y, [cb.is_call(p) for p in probs]),
+                         {"tp": 15, "fn": 0, "fp": 0, "tn": 35, "called": 50})
+
+    def test_a_fit_at_its_cap_ends_there(self):
+        # one weighted step and two Newton steps: neither fit is done, and each stands where its cap stops it
+        groups = cb.groups_of(*as_arrays(LED, copies=1)[:2], range(27))
+        with mock.patch.object(cb, "W_CAP", 1), mock.patch.object(cb, "L_CAP", 2):
+            w, w_steps, w_end = cb.fit_weighted(groups)
+            beta, l_steps, l_end = cb.fit_logistic(groups)
+        self.assertEqual((w_steps, w_end, l_steps, l_end), (1, "cap", 2, "cap"))
+        self.assertLess(cb.weighted_loss_grad(w, groups)[0], cb.weighted_loss_grad([0.2] * 5, groups)[0])
+
+    def test_the_weighted_fit_is_never_above_the_equal_mean(self):
+        # it starts from the equal weights and takes only a lower loss; on ANTI it leaves scm, whose vertex is the
+        # worst point of the simplex at -log 0.0001
+        for design in (LED, BLOCK, SATURATED, SEPARABLE, LEAN, ANTI):
+            S, y, _ = as_arrays(design, copies=1)
+            groups = cb.groups_of(S, y, range(len(y)))
+            w, _, end = cb.fit_weighted(groups)
+            self.assertEqual(end, "converged")
+            self.assertLessEqual(cb.weighted_loss_grad(w, groups)[0], cb.weighted_loss_grad([0.2] * 5, groups)[0])
+        S, y, _ = as_arrays(ANTI, copies=1)
+        groups = cb.groups_of(S, y, range(4))
+        self.assertAlmostEqual(cb.weighted_loss_grad([0.2] * 5, groups)[0], -math.log(0.64), places=12)
+        self.assertAlmostEqual(cb.weighted_loss_grad([1.0, 0, 0, 0, 0], groups)[0], -math.log(cb.CLIP), places=12)
+        self.assertLess(cb.weighted_loss_grad(cb.fit_weighted(groups)[0], groups)[0], -math.log(0.64))
 
 
 class Crossfit(Case):
@@ -285,7 +327,8 @@ class Counts(Case):
         for arm in cb.ARMS:
             self.assertEqual([r[f"{arm}_{k}"] for k in cb.COUNTS], ["45", "25", "5", "60", "135"])
             self.assertEqual([r[f"{arm}_{t}"] for t in cb.TRANSITIONS], ["45", "0", "0", "0", "5"])
-            self.assertEqual(r[f"{arm}_folds_converged"], "5")
+            self.assertEqual([r[f"{arm}_folds_{e}"] for e in cb.ENDS[arm]], ["5"] + ["0"] * (len(cb.ENDS[arm]) - 1))
+            self.assertEqual(r[f"{arm}_marked"], "no")
         # weighted: 6 genomes at -log 0.2 and 21 at -log 0.8 per copy of 27
         self.assertAlmostEqual(float(r["weighted_log_loss"]), (6 * math.log(5) + 21 * math.log(1.25)) / 27, places=10)
 
@@ -311,8 +354,10 @@ class Counts(Case):
         rc, out = run(cb, "print", self.record)
         self.assertEqual(rc, 0, out)
         for arm in cb.ARMS:
-            self.assertIn(f"| {arm} | 6 | 6 | 0.2830 | 0.2830 to 0.2830 | -0.6429 | -0.6429 to -0.6429 | 6 | kept |",
-                          out)
+            self.assertIn(f"| {arm} | all | 6 | 6 | 0.2830 | 0.2830 to 0.2830 | -0.6429 | -0.6429 to -0.6429 | 6 "
+                          "| kept |", out)
+            self.assertIn(f"| {arm} | without marked | 6 | 6 | 0.2830 | 0.2830 to 0.2830 | -0.6429 | -0.6429 to "
+                          "-0.6429 | 6 | decides nothing |", out)
 
 
 class Rule(Case):
@@ -332,7 +377,7 @@ class Rule(Case):
     def test_kept_and_no_difference_shown(self):
         # six reports gaining 103/364 in balanced accuracy each, the very major error rate down by 9/14 each
         self.read_write()
-        rules = {r["arm"]: r for r in lo.read_tsv(os.path.join(self.record, "rule.tsv"))}
+        rules = {r["arm"]: r for r in lo.read_tsv(os.path.join(self.record, "rule.tsv")) if r["count"] == "all"}
         for arm in cb.ARMS:
             self.assertEqual({k: rules[arm][k] for k in ("datasets", "species", "median_gain", "gain_lo", "gain_hi",
                                                          "vme_median", "vme_lo", "gain_at_least_margin", "reading")},
@@ -343,11 +388,41 @@ class Rule(Case):
     def test_a_median_gain_of_0_is_no_difference_shown(self):
         # six symmetric reports at a gain of 0 and one at 103/364: the median gain is 0
         self.read_write(mixed_set())
-        rules = {r["arm"]: r for r in lo.read_tsv(os.path.join(self.record, "rule.tsv"))}
+        rules = {r["arm"]: r for r in lo.read_tsv(os.path.join(self.record, "rule.tsv")) if r["count"] == "all"}
         for arm in cb.ARMS:
             self.assertEqual((rules[arm]["median_gain"], rules[arm]["gain_at_least_margin"], rules[arm]["reading"]),
                              ("0.000000000000", "1", "no difference shown"))
         self.assertEqual(len(lo.read_tsv(os.path.join(self.record, "pooled.tsv"))), (1 + 7) * 2 * 5)
+
+    def test_the_second_count_leaves_out_the_marked_reports(self):
+        # the six rf-led reports and one SEPARABLE report, whose 5 logistic folds end with no finite step. Over all 7
+        # the median gain is 103/364 (six at 103/364, one at 1/2, the arms calling SEPARABLE without error) and it
+        # decides; the logistic arm's second count leaves the marked report out, 6 reports, and decides nothing
+        self.read_write(kept_set() + [designed(SPECIES[6], "drug c", SEPARABLE, tag=7)])
+        rules = {(r["arm"], r["count"]): r for r in lo.read_tsv(os.path.join(self.record, "rule.tsv"))}
+        self.assertEqual(list(rules), [(a, k) for a in cb.ARMS for k in cb.COUNTS_OF_RULE])
+        got = {key: (r["decides"], r["datasets"], r["species"], r["median_gain"], r["reading"])
+               for key, r in rules.items()}
+        self.assertEqual(got, {
+            ("weighted", "all"): ("yes", "7", "7", "0.282967032967", "kept"),
+            ("weighted", "without_marked"): ("no", "7", "7", "0.282967032967", "decides nothing"),
+            ("logistic", "all"): ("yes", "7", "7", "0.282967032967", "kept"),
+            ("logistic", "without_marked"): ("no", "6", "6", "0.282967032967", "decides nothing")})
+        r = self.rows()[(SPECIES[6], "drug c")]
+        self.assertEqual([r[k] for k in ("weighted_marked", "logistic_marked", "logistic_folds_no_finite_step")],
+                         ["no", "yes", "5"])
+        for arm in cb.ARMS:
+            self.assertEqual([r[f"{arm}_{k}"] for k in cb.COUNTS], ["15", "0", "0", "35", "50"])
+        with open(os.path.join(self.record, "gates.txt"), encoding="utf-8") as f:
+            self.assertEqual([x for x in f.read().split("\n") if x.startswith("reading ")],
+                             ["reading weighted: kept", "reading logistic: kept"])
+
+    def test_the_record_says_the_vme_rule_in_r19s_words(self):
+        self.read_write()
+        with open(os.path.join(self.record, "gates.txt"), encoding="utf-8") as f:
+            self.assertIn("rule: the very major error rate is not higher on that interval: the species-clustered "
+                          "interval of the median change in the very major error rate does not lie wholly above 0\n",
+                          f.read())
 
 
 class Pooled(unittest.TestCase):
@@ -422,17 +497,42 @@ class Gates(Case):
         self.assertTrue(gate_line(out, 3).endswith(": STOP"), out)
 
     def test_gate_4_stops_on_weights_off_the_simplex(self):
-        with mock.patch.object(cb, "fit_weighted", lambda groups: ([0.3] * 5, 1, True)):
+        with mock.patch.object(cb, "fit_weighted", lambda groups: ([0.3] * 5, 1, "converged")):
             _, (rc, out) = self.read()
         self.assertEqual(rc, 1, out)
         self.assertTrue(gate_line(out, 4).endswith(": STOP"), out)
 
-    def test_gate_5_stops_a_fit_that_does_not_converge(self):
+    def test_gate_5_counts_a_fold_with_no_finite_step(self):
+        # a fold with no finite step is counted and its report marked, and the read goes on
         reports = kept_set() + [designed(SPECIES[6], "drug c", SEPARABLE, tag=7)]
         _, (rc, out) = self.read(reports)
+        self.assertEqual(rc, 0, out)
+        self.assertEqual(gate_line(out, 5), "gate 5 fit ends: 35 weighted fits, 35 converged, 0 at the cap; 35 logistic "
+                                            "fits, 30 converged, 0 at the cap, 5 at a step with no finite solution; 0 "
+                                            "reports marked for the weighted arm, 1 for the logistic arm; 0 held-out "
+                                            "scores not finite: pass")
+
+    def test_gate_5_counts_and_marks_a_fold_at_the_cap(self):
+        # one weighted step and two Newton steps: all 30 folds of each arm end at the cap, all 6 reports are marked
+        # for both arms, and the second count holds no report
+        with mock.patch.object(cb, "W_CAP", 1), mock.patch.object(cb, "L_CAP", 2):
+            _, out = self.read_write()
+        self.assertEqual(gate_line(out, 5), "gate 5 fit ends: 30 weighted fits, 0 converged, 30 at the cap; 30 logistic "
+                                            "fits, 0 converged, 30 at the cap, 0 at a step with no finite solution; 6 "
+                                            "reports marked for the weighted arm, 6 for the logistic arm; 0 held-out "
+                                            "scores not finite: pass")
+        for r in self.rows().values():
+            self.assertEqual([r[k] for k in ("weighted_folds_cap", "logistic_folds_cap", "weighted_marked",
+                                             "logistic_marked")], ["5", "5", "yes", "yes"])
+        rules = lo.read_tsv(os.path.join(self.record, "rule.tsv"))
+        self.assertEqual([(r["count"], r["datasets"]) for r in rules], [("all", "6"), ("without_marked", "0")] * 2)
+
+    def test_gate_5_stops_on_a_held_out_score_that_is_not_finite(self):
+        with mock.patch.object(cb, "logistic_score", lambda beta, s: math.nan):
+            _, (rc, out) = self.read()
         self.assertEqual(rc, 1, out)
-        self.assertTrue(gate_line(out, 5).endswith(": STOP"), out)
-        self.assertIn("35 logistic fits, 5 not converged", gate_line(out, 5))
+        self.assertTrue(gate_line(out, 5).endswith("; 810 held-out scores not finite: STOP"), out)
+        self.assertFalse(os.path.exists(self.reading))
 
     def test_gate_6_stops_on_a_genome_given_no_call(self):
         orig = cb.crossfit
@@ -525,7 +625,7 @@ class Ids(Case):
             self.assertEqual(set(r) - {"species", "antibiotic", "genomes", "resistant", "susceptible",
                                        "mean_miss_by_1to4", "mean_miss_by_all5", "mean", "weighted", "logistic",
                                        "weighted_folds", "logistic_folds", "weighted_transitions",
-                                       "logistic_transitions"}, set())
+                                       "logistic_transitions", "weighted_marked", "logistic_marked"}, set())
 
 
 if __name__ == "__main__":

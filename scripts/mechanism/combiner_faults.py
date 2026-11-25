@@ -1,4 +1,4 @@
-"""combiner_faults.py: the faults of the combiner reading's script (combiner.py, C1 to C31), each planted in turn, and
+"""combiner_faults.py: the faults of the combiner reading's script (combiner.py, C1 to C38), each planted in turn, and
 the SYNTHETIC test that must catch it.
 
     python3 -I scripts/mechanism/combiner_faults.py [--out faults.tsv]
@@ -72,9 +72,20 @@ def plain_weighted(w, s):
 
 
 def always_converged(groups, _orig=cb.fit_logistic):
-    # fault C10: every logistic fit reported as converged
-    beta, steps, _ = _orig(groups)
-    return beta, steps, True
+    # fault C10: a logistic fold ended with no finite step counted as converged
+    beta, steps, end = _orig(groups)
+    return beta, steps, "converged" if end == "no_finite_step" else end
+
+
+def weighted_cap_converged(groups, _orig=cb.fit_weighted):
+    # fault C34: a weighted fold ended at its cap counted as converged
+    w, steps, end = _orig(groups)
+    return w, steps, "converged" if end == "cap" else end
+
+
+def second_count_decides(rows, arm):
+    # fault C36: the count without the marked reports decides, and the count over all stands beside it
+    return [("all", cb.unmarked(rows, arm), True), ("without_marked", rows, False)]
 
 
 def vme_of_susceptible(c, name, _orig=cb.measure):
@@ -145,8 +156,8 @@ FAULTS = [
     ("C9", "the weighted mean free to round across the bound of the five scores",
      T + "Forms.test_the_weighted_mean_stays_inside_the_five_scores",
      lambda: mock.patch.object(cb, "weighted_score", plain_weighted)),
-    ("C10", "a logistic fit that does not converge let through",
-     T + "Gates.test_gate_5_stops_a_fit_that_does_not_converge",
+    ("C10", "a logistic fold ended with no finite step counted as converged",
+     T + "Gates.test_gate_5_counts_a_fold_with_no_finite_step",
      lambda: mock.patch.object(cb, "fit_logistic", always_converged)),
     ("C11", "log loss not clipped", T + "Forms.test_log_loss_is_clipped",
      lambda: mock.patch.object(cb, "clipped", lambda p: p)),
@@ -197,6 +208,25 @@ FAULTS = [
     ("C31", "an incumbent that differs from vote.tsv let through",
      T + "Gates.test_gate_3_stops_on_an_incumbent_that_differs_from_vote_tsv",
      lambda: mock.patch.object(cb, "incumbent_agrees", lambda row, vote: True)),
+    ("C32", "a held-out score that is not finite let through",
+     T + "Gates.test_gate_5_stops_on_a_held_out_score_that_is_not_finite",
+     lambda: mock.patch.object(cb, "finite", lambda *values: True)),
+    ("C33", "a fold ended at its cap left unmarked", T + "Gates.test_gate_5_counts_and_marks_a_fold_at_the_cap",
+     lambda: mock.patch.object(cb, "marked", lambda recs: False)),
+    ("C34", "a weighted fold ended at its cap counted as converged", T + "Fits.test_a_fit_at_its_cap_ends_there",
+     lambda: mock.patch.object(cb, "fit_weighted", weighted_cap_converged)),
+    ("C35", "the marked reports kept in the second count",
+     T + "Rule.test_the_second_count_leaves_out_the_marked_reports",
+     lambda: mock.patch.object(cb, "unmarked", lambda rows, arm: rows)),
+    ("C36", "the count without the marked reports deciding in place of the count over all",
+     T + "Rule.test_the_second_count_leaves_out_the_marked_reports",
+     lambda: mock.patch.object(cb, "rule_counts", second_count_decides)),
+    ("C37", "the weighted fit started at the first learner's vertex in place of the equal weights",
+     T + "Fits.test_the_weighted_fit_is_never_above_the_equal_mean",
+     lambda: mock.patch.object(cb, "start_weights", lambda: [1.0, 0.0, 0.0, 0.0, 0.0])),
+    ("C38", "the record's rule for the very major error rate in other words than R19's",
+     T + "Rule.test_the_record_says_the_vme_rule_in_r19s_words",
+     lambda: mock.patch.object(cb, "VME_RULE", "the very major error rate is not higher")),
 ]
 
 

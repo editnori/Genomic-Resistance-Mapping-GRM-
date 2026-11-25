@@ -64,6 +64,17 @@ class Page(unittest.TestCase):
         self.assertEqual(cb.FORMS, ("mean", "weighted", "logistic"))
         self.assertEqual(lo_value, 101)
 
+    def test_the_stop_rule_is_dated_and_its_caps_are_a_limit(self):
+        plan, limits = self.sections["Plan"], self.sections["Limits"]
+        self.assertIn("This stop rule was ruled on 25 Nov 2026 (R19), after the offline figures were read.", plan)
+        for words in (f"its cap of {cb.W_CAP:,} steps", f"{cb.L_CAP} Newton steps", "a step with no finite solution, "
+                      "where the last finite iterate stands", "A held-out score that is not finite stops the read.",
+                      "a second count without the arm's marked reports is written, and it decides nothing"):
+            self.assertIn(words, plan)
+        self.assertIn(f"A fit ended at its cap depends on the cap: {cb.W_CAP:,} steps for the weighted mean and "
+                      f"{cb.L_CAP} Newton steps for the logistic combiner.", limits)
+        self.assertIn(f"That means, as R19 confirmed: {cb.VME_RULE}.", plan)
+
     def test_the_reading_waits_for_its_record(self):
         if not RECORD.exists():
             self.assertEqual(self.sections["Reading"].strip(), "Not read yet.")
