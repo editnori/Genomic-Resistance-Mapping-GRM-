@@ -25,10 +25,14 @@ export const MicHeatmap = ({ confusion, band }: { confusion: readonly [number, n
   const lo = Math.min(...steps);
   const hi = Math.max(...steps);
   const n = hi - lo + 1;
-  const pad = { l: 56, t: 8, b: 44 };
+  const values = Array.from({ length: n }, (_, i) => lo + i);
+  const tickW = (s: string) => Math.ceil(s.length * 6.8) + 4;
+  const maxTickW = Math.max(0, ...values.map((v) => tickW(mgL(v))));
+  const lastTickW = values.length === 0 ? 0 : tickW(mgL(values[values.length - 1]!));
+  const pad = { l: Math.max(46, maxTickW + 12), r: Math.max(12, Math.ceil(lastTickW / 2) + 4), t: 24, b: 44 };
   const max = Math.max(1, ...confusion.map((c) => c[2]));
-  const cell = Math.max(24, String(max).length * 7 + 6, Math.min(34, Math.floor((Math.min(avail, 560) - pad.l - 8) / n)));
-  const width = pad.l + cell * n + 8;
+  const cell = Math.max(24, String(max).length * 7 + 6, Math.min(34, Math.floor((Math.min(avail, 560) - pad.l - pad.r) / n)));
+  const width = pad.l + cell * n + pad.r;
   const height = pad.t + cell * n + pad.b;
   const cuts = [...new Set([1, 2, 3, 4].map((i) => Math.ceil(max * i / 4)))];
   const level = (count: number) => count === 0 ? 0 : (cuts.findIndex((cut) => count <= cut) + 1) / cuts.length;
@@ -47,7 +51,18 @@ export const MicHeatmap = ({ confusion, band }: { confusion: readonly [number, n
     for (let o = lo - 1; o <= hi + 1; o += 0.5) pts.push([cx(o + offset) + cell / 2, cy(o) + cell / 2]);
     return pts.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x},${y}`).join(" ");
   };
-  const values = Array.from({ length: n }, (_, i) => lo + i);
+  // Thin X-axis dilution labels greedily so multi-character values such as
+  // 0.008 or 0.125 never collide when cells are narrow, while narrower labels
+  // (1, 2, 4, 8) keep printing every step.
+  let prevXRight = -Infinity;
+  const xTickShown = values.map((v) => {
+    const s = mgL(v);
+    const hw = tickW(s) / 2;
+    const center = cx(v) + cell / 2;
+    if (center - hw < prevXRight + 5) return "";
+    prevXRight = center + hw;
+    return s;
+  });
   return (
     <div ref={frame} className="min-w-0">
       <ScrollFrame label="Measured and predicted MIC">
@@ -76,20 +91,20 @@ export const MicHeatmap = ({ confusion, band }: { confusion: readonly [number, n
           <path d={edge(1.5)} fill="none" stroke="rgb(var(--ink) / 0.5)" strokeDasharray="3 3" />
           <path d={edge(-1.5)} fill="none" stroke="rgb(var(--ink) / 0.5)" strokeDasharray="3 3" />
         </g>
-        {values.map((v) => (
+        {values.map((v, i) => (
           <g key={v}>
             <text x={pad.l - 6} y={cy(v) + cell / 2 + 4} textAnchor="end" className={TICK_CLASS}>
               {mgL(v)}
             </text>
-            <text x={cx(v) + cell / 2} y={pad.t + cell * n + 15} textAnchor="middle" className={TICK_CLASS}>
-              {cell >= 22 || (v - lo) % 2 === 0 ? mgL(v) : ""}
+            <text x={cx(v) + cell / 2} y={pad.t + cell * n + 16} textAnchor="middle" className={TICK_CLASS}>
+              {xTickShown[i]}
             </text>
           </g>
         ))}
         <text x={pad.l + (cell * n) / 2} y={height - 6} textAnchor="middle" className="fill-[rgb(var(--muted-text))] text-[12px]">
           Predicted MIC (mg/L)
         </text>
-        <text transform={`translate(12 ${pad.t + (cell * n) / 2}) rotate(-90)`} textAnchor="middle" className="fill-[rgb(var(--muted-text))] text-[12px]">
+        <text x={pad.l} y={14} className="fill-[rgb(var(--muted-text))] text-[12px]">
           Measured MIC (mg/L)
         </text>
       </svg>

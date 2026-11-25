@@ -9,7 +9,7 @@ import type { FeatureCard, TreeNode } from "../data/schema";
 import { int, pct } from "../data/format";
 import { featureLabel, featurePlace } from "../data/derive/dataset";
 import { treeLayout } from "../data/derive/layout";
-import { MarkListbox, useWidth, type ListMark } from "./kit";
+import { HALO, MarkListbox, useWidth, type ListMark } from "./kit";
 import { ScrollFrame } from "../ui/primitives";
 
 const NODE_H = 50;
@@ -184,7 +184,7 @@ export const TreeDiagram = ({ nodes, depth, features }: { nodes: readonly TreeNo
             return (
               <g key={`e${n.id}`}>
                 <path d={`M${x1},${y1} C${x1},${my} ${x2},${my} ${x2},${y2}`} fill="none" stroke="var(--chart-axis)" strokeWidth={1.5} />
-                <text x={(x1 + x2) / 2 + (n.branch === "absent" ? -6 : 6)} y={my + 4} textAnchor={n.branch === "absent" ? "end" : "start"} className="fill-[rgb(var(--muted-text))] text-[11.5px]">
+                <text x={(x1 + x2) / 2 + (n.branch === "absent" ? -6 : 6)} y={my + 4} textAnchor={n.branch === "absent" ? "end" : "start"} className="fill-[rgb(var(--muted-text))] text-[11.5px]" {...HALO}>
                   {n.branch}
                 </text>
               </g>

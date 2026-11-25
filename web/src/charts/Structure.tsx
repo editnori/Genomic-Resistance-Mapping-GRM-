@@ -141,7 +141,7 @@ const MIN_BLOCK_PX = 24;
 export const MIN_GENOME_PX = 4;
 const INSPECTOR_PX = 288;
 const SIDE_GAP = 24;
-const LABEL_FONT_PX = 6.2;
+const LABEL_FONT_PX = 7.0;
 
 interface TreeScale {
   y(h: number): number;
@@ -170,7 +170,7 @@ const treeScale = (maxHeight: number, brk: TreeBreak | null): TreeScale => {
   };
 };
 
-const rowsTop = (headH: number) => TREE_H + HEAD_GAP + headH + HEAD_H + COLHEAD_H;
+const rowsTop = (head1H: number, head2H: number) => TREE_H + HEAD_GAP + head1H + head2H + COLHEAD_H;
 
 const drawTree = (ctx: CanvasRenderingContext2D, links: readonly { xa: number; xb: number; ya: number; yb: number; y: number }[], xOf: (x: number) => number, scale: TreeScale, width: number, tokens: CanvasTokens) => {
   ctx.save();
@@ -288,13 +288,16 @@ export const StructureExplorer = ({
   const colW = B === 0 ? plotW : plotW / B;
   const start = Math.max(0, Math.min(ws, n - win));
 
-  // Block header labels: horizontal when every one fits its column.
-  const longest = Math.max(1, ...blocks.map((b) => Math.max(int(blockSize(b)).length, int(b.lineages.length).length)));
-  const flat = genomesView || longest * LABEL_FONT_PX + 4 <= colW;
-  const headH = flat ? HEAD_H : Math.ceil(longest * LABEL_FONT_PX + 8);
+  // Block header labels: horizontal when every one in the row fits its column.
+  const longest1 = Math.max(1, ...blocks.map((b) => int(blockSize(b)).length));
+  const longest2 = Math.max(1, ...blocks.map((b) => int(b.lineages.length).length));
+  const flat1 = genomesView || longest1 * LABEL_FONT_PX + 4 <= colW;
+  const flat2 = genomesView || longest2 * LABEL_FONT_PX + 4 <= colW;
+  const head1H = flat1 ? HEAD_H : Math.ceil(longest1 * LABEL_FONT_PX + 8);
+  const head2H = flat2 ? HEAD_H : Math.ceil(longest2 * LABEL_FONT_PX + 8);
   const head1 = TREE_H + HEAD_GAP;
-  const head2 = head1 + headH;
-  const top = rowsTop(headH);
+  const head2 = head1 + head1H;
+  const top = rowsTop(head1H, head2H);
   const height = top + D * ROW_H + 4;
   const scale = useMemo(() => treeScale(model.maxHeight, model.brk), [model]);
 
@@ -349,11 +352,11 @@ export const StructureExplorer = ({
       if (prev !== undefined && prev.lineage !== g.lineage) shade = 1 - shade;
       ctx.fillStyle = shade === 0 ? tokens.ink : tokens.muted;
       ctx.globalAlpha = shade === 0 ? 0.55 : 0.2;
-      ctx.fillRect((pos - start) * gColW, head1 + 3, gColW + 0.35, headH - 6);
+      ctx.fillRect((pos - start) * gColW, head1 + 3, gColW + 0.35, head1H - 6);
       const b = blockAt(blocks, pos);
       ctx.fillStyle = tokens.blue;
       ctx.globalAlpha = (b?.index ?? 0) % 2 === 0 ? 0.6 : 0.25;
-      ctx.fillRect((pos - start) * gColW, head2 + 3, gColW + 0.35, HEAD_H - 6);
+      ctx.fillRect((pos - start) * gColW, head2 + 3, gColW + 0.35, head2H - 6);
       ctx.globalAlpha = 1;
       const profile = g.profile;
       order.forEach((j, row) => {
@@ -361,7 +364,7 @@ export const StructureExplorer = ({
         ctx.fillRect((pos - start) * gColW, top + row * ROW_H + 1, gColW - gap + (gap === 0 ? 0.35 : 0), ROW_H - 2);
       });
     }
-  }, [report, model, order, view, plotW, height, colW, gColW, start, win, top, head1, head2, headH, scale, tokens]);
+  }, [report, model, order, view, plotW, height, colW, gColW, start, win, top, head1, head2, head1H, head2H, scale, tokens]);
 
   // Keep the keyboard's genome inside the window when the window moves.
   const gCursor: Cursor = { col: Math.max(start, Math.min(genomeCursor.col, start + win - 1)), row: genomeCursor.row };
@@ -521,15 +524,15 @@ export const StructureExplorer = ({
           {distance(model.brk.outliers[0]!.height)}
         </span>
       ) : null}
-      <span className="absolute right-0 whitespace-nowrap text-right leading-tight" style={{ top: TREE_H / 2 - 10 }}>
+      <span className="absolute right-0 whitespace-nowrap text-right leading-tight" style={{ top: scale.broken ? 52 : TREE_H / 2 - 10 }}>
         Mash distance,
         <br />
         square-root scale
       </span>
-      <span className="absolute right-0 whitespace-nowrap" style={{ top: head1, lineHeight: `${headH}px` }}>
+      <span className="absolute right-0 whitespace-nowrap" style={{ top: head1, lineHeight: `${head1H}px` }}>
         {genomesView ? "Lineages" : "Genomes"}
       </span>
-      <span className="absolute right-0 whitespace-nowrap" style={{ top: head2, lineHeight: `${HEAD_H}px` }}>
+      <span className="absolute right-0 whitespace-nowrap" style={{ top: head2, lineHeight: `${head2H}px` }}>
         {genomesView ? "Blocks" : "Lineages"}
       </span>
       <div className={`grid gap-x-3 ${anyI ? "grid-cols-[minmax(0,1fr)_auto_auto]" : "grid-cols-[minmax(0,1fr)_auto]"}`} style={{ paddingTop: top - COLHEAD_H }}>
@@ -610,12 +613,15 @@ export const StructureExplorer = ({
             ? blocks.map((b) => (
                 <div key={b.index} aria-hidden="true" className="pointer-events-none absolute text-[11px] tabular-nums" style={{ left: b.index * colW, width: colW, top: head1 }}>
                   <div
-                    className={`flex items-center justify-center ${flat ? "" : "[writing-mode:vertical-rl] rotate-180"} ${b.named ? "font-semibold text-ink" : "text-muted-text"}`}
-                    style={{ height: headH }}
+                    className={`flex items-center justify-center ${flat1 ? "" : "[writing-mode:vertical-rl] rotate-180"} ${b.named ? "font-semibold text-ink" : "text-muted-text"}`}
+                    style={{ height: head1H }}
                   >
                     {int(blockSize(b))}
                   </div>
-                  <div className="flex items-center justify-center text-muted-text" style={{ height: HEAD_H }}>
+                  <div
+                    className={`flex items-center justify-center text-muted-text ${flat2 ? "" : "[writing-mode:vertical-rl] rotate-180"}`}
+                    style={{ height: head2H }}
+                  >
                     {int(b.lineages.length)}
                   </div>
                 </div>

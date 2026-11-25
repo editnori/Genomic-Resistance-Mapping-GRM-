@@ -71,14 +71,21 @@ const CrossMatrix = ({
   const pos = (i: number) => i * CELL + (groupIndex.get(seq[i]!) ?? 0) * GROUP_GAP;
   const names = seq.map((j) => capitalize(report.drugs[j] ?? ""));
   const n = names.length;
-  const label = Math.max(96, ...names.map(labelWidth)) + 10;
+  const maxNameW = Math.max(0, ...names.map(labelWidth));
+  // Reserve 8% headroom for bold selected labels so neither left rows nor
+  // 55-degree rotated bottom names clip at the SVG edge.
+  const label = Math.max(96, Math.ceil(maxNameW * 1.08)) + 12;
   const span = n === 0 ? 0 : pos(n - 1) + CELL;
   // The first row of a lower triangle holds no cell and no label, so the
   // drawing starts at the second row instead of under an empty band.
   const top = 8 - (n > 1 ? pos(1) : 0);
   const bottom = top + span;
-  const width = label + span + 24;
-  const height = bottom + Math.ceil(Math.max(0, ...names.map(labelWidth)) * 0.82) + 20;
+  const maxRotRight = names.slice(0, -1).reduce(
+    (mx, name, i) => Math.max(mx, label + pos(i) + CELL / 2 + Math.ceil(labelWidth(name) * 1.08 * 0.6) + 12),
+    label + span + 24,
+  );
+  const width = Math.max(label + span + 24, maxRotRight);
+  const height = bottom + Math.ceil(maxNameW * 1.08 * 0.85) + 24;
   const pairAt = (i: number, k: number) => byCols.get(`${seq[i]}|${seq[k]}`);
 
   const sel = pairs.find((p) => p.key === selected);

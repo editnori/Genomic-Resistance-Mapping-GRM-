@@ -47,7 +47,7 @@ import { BEST_LEARNER_WORDS, splitReasonShort } from "../data/derive/dataset";
 import { manifestAudit } from "../data/derive/evaluation";
 import { routeHref, type Navigator } from "../app/router";
 import { catalogWords } from "../app/ReportStatus";
-import { AxisX, LABEL_CLASS, linear, MarkListbox, PlacedText, placeLabels, RefLine, ticks, useWidth, type ListMark } from "../charts/kit";
+import { AxisX, LABEL_CLASS, labelWidth, linear, MarkListbox, PlacedText, placeLabels, RefLine, ticks, useWidth, type ListMark } from "../charts/kit";
 import { GapSwarm, MicStrip } from "../charts/DotStrip";
 import { CatalogScatter } from "../charts/CatalogScatter";
 import { InputRows, type InputGroup } from "../charts/InputRows";
@@ -1012,7 +1012,7 @@ export const catalogFinding = (m: Manifest, opts: FindingOptions): Finding => {
 
 // ---- lead PCR panel -------------------------------------------------------------------
 
-const PANEL_TOP = 2 * 16 + 4;
+const PANEL_TOP = 2 * 16 + 8;
 const PANEL_AXIS = 22;
 /** A slide's rows never get shorter than this; labels keep their 12px. */
 const PANEL_ROW_MIN = 18;
@@ -1099,6 +1099,17 @@ export const PanelFigure = ({
       ],
     };
   });
+  const fitRowLabel = (full: string, maxPx: number): string => {
+    if (labelWidth(full) <= maxPx) return full;
+    let lo = 1;
+    let hi = full.length - 1;
+    while (lo < hi) {
+      const mid = Math.ceil((lo + hi) / 2);
+      if (labelWidth(`${full.slice(0, mid).trimEnd()}…`) <= maxPx) lo = mid;
+      else hi = mid - 1;
+    }
+    return `${full.slice(0, lo).trimEnd()}…`;
+  };
   const plot = (
     <svg aria-hidden="true" width={width} height={plotBottom + PANEL_AXIS} className="block overflow-visible">
       <PlacedText labels={refs} top={0} />
@@ -1107,11 +1118,14 @@ export const PanelFigure = ({
       {shown.map((r, i) => {
         const v = at01(r);
         const cy = plotTop + i * rowH + rowH / 2;
+        const fullTitle = datasetTitle(r);
+        const shownTitle = fitRowLabel(fullTitle, labelW - 4);
         return (
           <g key={r.dataset} data-dataset={measuring ? undefined : r.dataset}>
             <line x1={labelW + 10} x2={width - 20} y1={cy} y2={cy} stroke="var(--chart-grid)" />
             <text x={labelW} y={cy + 4} textAnchor="end" className={LABEL_CLASS}>
-              {datasetTitle(r)}
+              {shownTitle !== fullTitle ? <title>{fullTitle}</title> : null}
+              {shownTitle}
             </text>
             <line x1={x(v.panel)} x2={x(v.model)} y1={cy} y2={cy} stroke="var(--chart-axis)" strokeWidth={2} />
             <circle cx={x(v.model)} cy={cy} r={4.5} fill="rgb(var(--paper-pure))" stroke="var(--chart-mark)" strokeWidth={2} />
