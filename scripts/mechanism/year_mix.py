@@ -17,20 +17,31 @@ and no call (`samples[].catalog_resistant`). It writes READING, counts per
 dataset, year and stratum, which stays where the reports are. `write` reads
 READING, checks guard 4 and writes the tables of OUT. Both end with guard 6:
 no genome id and no catalogue group name of the reports stands in a written
-file. `print` prints the page's tables and figures from OUT alone. `scan`
-checks other files the same way; it leaves out, by path, any file inside the
-repository's `scripts/` or `tests/`, whose code words can collide with a short
-group name, and prints how many it left out beside how many it scanned. Every
-message prints counts, species and antibiotics only; no genome id
-and no group name is printed, hashed or written.
+file. Guard 6 searches for every genome id of the reports as a plain substring
+of each written file, wherever it stands, and for each group name with no
+letter or digit beside it. `print` prints the page's tables and figures from
+OUT alone. `scan` checks other files the same way and prints two more counts
+beside it: files holding an id as a whole token, and tokens of a genome id's
+shape (SHAPE). It leaves out, by path, any file inside the repository's
+`scripts/` or `tests/`, whose code words can collide with a short group name,
+and prints how many it left out beside how many it scanned. Every message
+prints counts, species and antibiotics only; no genome id and no group name
+is printed, hashed or written.
 
 `strata` was added after the one reading and reads no report and no score.
 Its only input beside the record is M1's committed public table DATASETS
-(`page-m1-datasets.tsv`): it sums the `catalog` row, GRM's known-gene rule,
-on the lineage split of the primary set per M1 stratum, so the reader's no
-call can be set beside the program's strata. It checks that the row holds
-each primary dataset of LISTS once and that its sums equal the record's
-`step1.tsv` and `totals.tsv`, then writes OUT/no-call-strata.tsv.
+(`page-m1-datasets.tsv`). On the lineage split of the primary set it sums,
+per M1 stratum, the `catalog` row (GRM's known-gene rule) and the `program`
+row (the AMRFinderPlus program's own call), so the reader's no call can be
+set beside the program's strata and the program's call. Per dataset and
+stratum the two rows fix how many genomes each leaves uncalled, not how the
+two sets meet, so it also sums the fewest and the most genomes the rule makes
+no call on that the program calls. It checks that each row holds each primary
+dataset of LISTS once with the same resistant counts and that the catalog
+row's sums equal the record's `step1.tsv` and `totals.tsv`, then writes
+OUT/no-call-strata.tsv (the rule), OUT/program-call-strata.tsv (the program
+beside the rule) and OUT/program-uncalled.tsv, the datasets and strata where
+the program calls fewer genomes than hold a row meeting the rule.
 
 It fits nothing, scores no genome and runs no program: every figure comes
 from the scores, labels and calls the reports hold.
@@ -79,6 +90,12 @@ NOT_USED = ("in_M", "not_in_A", "not_in_list", "no_lineage_split")
 # Added after the one reading: from M1's committed table, not from the reports.
 NO_CALL_TABLE = "no-call-strata.tsv"
 NO_CALL_HEADER = ["stratum", "resistant", "called", "no_call", "no_call_share"]
+PROGRAM_TABLE = "program-call-strata.tsv"
+PROGRAM_HEADER = ["stratum", "resistant", "program_called", "program_not_called", "no_call",
+                  "no_call_program_called_low", "no_call_program_called_high"]
+UNCALLED_TABLE = "program-uncalled.tsv"
+UNCALLED_HEADER = ["species", "antibiotic", "stratum", "resistant", "program_called", "program_not_called",
+                   "called", "no_call", "no_call_program_called_low", "no_call_program_called_high"]
 WITH_ROW = "program_row"    # point only, gene only and both: a program row meets the rule
 
 
@@ -400,29 +417,48 @@ def excluded_by_path(path):
     return any(full.startswith(os.path.join(REPO, d) + os.sep) for d in CODE_DIRS)
 
 
+SHAPE = re.compile(r"(?<!\d)[1-9]\d{2,6}\.\d+(?!\d)")
+
+
+def holds_id(text, ids):
+    """A genome id anywhere in text, as a plain substring, wherever it stands."""
+    return any(i in text for i in ids)
+
+
+def holds_id_token(text, ids):
+    """A genome id standing as a whole token of text."""
+    return not ids.isdisjoint(TOKEN.findall(text))
+
+
 def scan_hits(paths, ids, names):
-    """Files holding a genome id (a whole token) and files holding a group name
-    (with no letter or digit beside it). Counts only."""
+    """Files holding a genome id as a substring, files holding one as a whole
+    token, tokens of a genome id's shape, and files holding a group name (with
+    no letter or digit beside it). Counts only."""
     pattern = None
     if names:
         alts = "|".join(re.escape(n) for n in sorted(names, key=lambda n: (-len(n), n)))
         pattern = re.compile(rf"(?<![A-Za-z0-9])(?:{alts})(?![A-Za-z0-9])")
-    id_files = name_files = 0
+    id_files = token_files = shapes = name_files = 0
     for path in paths:
         with open(path, encoding="utf-8") as handle:
             text = handle.read()
-        if ids & set(TOKEN.findall(text)):
-            id_files += 1
+        id_files += holds_id(text, ids)
+        token_files += holds_id_token(text, ids)
+        shapes += len(SHAPE.findall(text))
         if pattern is not None and pattern.search(text):
             name_files += 1
-    return id_files, name_files
+    return id_files, token_files, shapes, name_files
 
 
 def guard6(paths, ids, names, where):
-    id_files, name_files = scan_hits(paths, ids, names)
+    """The guard's line, whether it is clean, and the two counts `scan` prints
+    beside it. A file counts as holding a genome id when any id stands in it as
+    a substring; a token of an id's shape is counted, not stopped on."""
+    id_files, token_files, shapes, name_files = scan_hits(paths, ids, names)
     line = (f"guard 6 ({where}): {len(paths)} files, {id_files} with a genome id, {name_files} with a catalogue "
             f"group name, against {len(ids)} ids and {len(names)} group names")
-    return line, id_files + name_files == 0
+    more = f"{token_files} with a genome id as a whole token, {shapes} tokens of a genome id's shape"
+    return line, id_files + token_files + name_files == 0, more
 
 
 # ---------------------------------------------------------------- write
@@ -548,7 +584,7 @@ def write(reading, out_dir, ids, names):
     paths.append(os.path.join(out_dir, "guards.txt"))
     with open(paths[-1], "w", encoding="utf-8") as handle:
         handle.write("\n".join(lines) + "\n")
-    line6, clean = guard6(paths, ids, names, "tables")
+    line6, clean, _ = guard6(paths, ids, names, "tables")
     if not clean:
         for p in paths:
             os.remove(p)
@@ -563,37 +599,75 @@ def write(reading, out_dir, ids, names):
 
 # ---------------------------------------------------------------- strata (added after the reading)
 
-def m1_catalog_rows(rows):
-    """M1's rows for GRM's known-gene rule on the lineage split of the primary set."""
-    return [r for r in rows if (r["set"], r["split"], r["row"]) == ("primary", SPLIT, "catalog")]
+def m1_rows(rows, row):
+    """M1's rows of one caller on the lineage split of the primary set: `catalog`,
+    GRM's known-gene rule, or `program`, the AMRFinderPlus program's own call."""
+    return [r for r in rows if (r["set"], r["split"], r["row"]) == ("primary", SPLIT, row)]
 
 
 def m1_cell(r, name):
     v = r.get(name)
     if v is None or not v.isdigit():
-        raise Stop(f"strata: a catalog row of {r.get('dataset')} has no whole count in {name}")
+        raise Stop(f"strata: a {r.get('row')} row of {r.get('dataset')} has no whole count in {name}")
     return int(v)
+
+
+def m1_by_dataset(rows, row, primary):
+    """Per primary dataset, its row and (resistant, called) per stratum. Stops
+    unless the row holds each primary dataset once."""
+    chosen = m1_rows(rows, row)
+    seen = [r["dataset"] for r in chosen]
+    if len(seen) != len(set(seen)) or set(seen) != primary:
+        raise Stop(f"strata: the M1 file gives {len(seen)} {row} rows for {len(set(seen))} datasets on the "
+                   f"lineage split; the primary set has {len(primary)}, each once")
+    out = {}
+    for r in chosen:
+        cells = {}
+        for s in FOUR:
+            resistant, called = m1_cell(r, f"{s}_resistant"), m1_cell(r, f"{s}_called")
+            if called > resistant:
+                raise Stop(f"strata: {r['dataset']} calls more {s} genomes than it holds in its {row} row")
+            cells[s] = (resistant, called)
+        out[r["dataset"]] = (r, cells)
+    return out
+
+
+def overlap(resistant, no_call, program_called):
+    """Of one dataset's resistant genomes in one stratum, the fewest and the most
+    that the rule makes no call on and the program calls. The two counts fix
+    the margins, not how they meet: the fewest is what the margins force, the
+    most is the smaller margin."""
+    return max(0, no_call - (resistant - program_called)), min(no_call, program_called)
 
 
 def no_call_rows(m1_path, lists_path, record):
     """Per M1 stratum, summed over the primary datasets: resistant, called by
-    the rule, no call and the no-call share; then the three strata with a
-    program row and all four. Stops unless the catalog row holds each primary
-    dataset once and its sums equal step1.tsv and totals.tsv."""
+    the rule, no call and the no-call share; and resistant, called and not
+    called by the program, the rule's no call, and the fewest and the most
+    genomes the rule makes no call on and the program calls. Each then gives
+    the three strata with a program row and all four. Also the datasets and
+    strata where the program calls fewer genomes than hold a row meeting the
+    rule. Stops unless the catalog and program rows hold
+    each primary dataset once with the same resistant counts and the catalog
+    row's sums equal step1.tsv and totals.tsv."""
     primary = {r["dataset"] for r in read_tsv(lists_path) if set_of(r) == "primary"}
-    chosen = m1_catalog_rows(read_tsv(m1_path))
-    seen = [r["dataset"] for r in chosen]
-    if len(seen) != len(set(seen)) or set(seen) != primary:
-        raise Stop(f"strata: the M1 file gives {len(seen)} catalog rows for {len(set(seen))} datasets on the "
-                   f"lineage split; the primary set has {len(primary)}, each once")
-    sums = {s: [0, 0] for s in FOUR}
-    for r in chosen:
+    m1 = read_tsv(m1_path)
+    catalog, program = m1_by_dataset(m1, "catalog", primary), m1_by_dataset(m1, "program", primary)
+    sums = {s: [0, 0, 0, 0, 0] for s in FOUR}    # resistant, called, program called, fewest, most
+    uncalled = []
+    for d in sorted(catalog):
+        r, cells = catalog[d]
         for s in FOUR:
-            resistant, called = m1_cell(r, f"{s}_resistant"), m1_cell(r, f"{s}_called")
-            if called > resistant:
-                raise Stop(f"strata: {r['dataset']} calls more {s} genomes than it holds")
-            sums[s][0] += resistant
-            sums[s][1] += called
+            n, c = cells[s]
+            if program[d][1][s][0] != n:
+                raise Stop(f"strata: {d} holds another {s} resistant count in its program row than in its "
+                           "catalog row")
+            p = program[d][1][s][1]
+            low, high = overlap(n, n - c, p)
+            for k, v in enumerate((n, c, p, low, high)):
+                sums[s][k] += v
+            if s != "neither" and p < n:
+                uncalled.append((r["species"], r["antibiotic"], FOUR.index(s), s, n, p, c, low, high))
     step1 = {r["stratum"]: r for r in record_rows(record, "step1.tsv")}
     for s in FOUR:
         if str(sums[s][0]) != step1[s]["published_resistant"]:
@@ -605,18 +679,29 @@ def no_call_rows(m1_path, lists_path, record):
     if (called, resistant - called) != (int(totals["reader_call"]["resistant"]), no_call):
         raise Stop("strata: the catalog row's called and no-call sums differ from totals.tsv")
     groups = [(s, *sums[s]) for s in FOUR]
-    groups.append((WITH_ROW, sum(sums[s][0] for s in FOUR[:3]), sum(sums[s][1] for s in FOUR[:3])))
-    groups.append((ALL, resistant, called))
-    return [NO_CALL_HEADER] + [[s, str(n), str(c), str(n - c), share(n - c, n)] for s, n, c in groups]
+    groups.append((WITH_ROW, *[sum(sums[s][k] for s in FOUR[:3]) for k in range(5)]))
+    groups.append((ALL, *[sum(sums[s][k] for s in FOUR) for k in range(5)]))
+    no_call_table = [NO_CALL_HEADER] + [[s, str(n), str(c), str(n - c), share(n - c, n)]
+                                        for s, n, c, _, _, _ in groups]
+    program_table = [PROGRAM_HEADER] + [[s, str(n), str(p), str(n - p), str(n - c), str(lo), str(hi)]
+                                        for s, n, c, p, lo, hi in groups]
+    rows = [UNCALLED_HEADER] + [[sp, ab, s, str(n), str(p), str(n - p), str(c), str(n - c), str(lo), str(hi)]
+                                for sp, ab, _, s, n, p, c, lo, hi in sorted(uncalled)]
+    return no_call_table, program_table, rows
+
+
+STRATA_TABLES = (NO_CALL_TABLE, PROGRAM_TABLE, UNCALLED_TABLE)
 
 
 def strata(m1_path, lists_path, record):
-    path = os.path.join(record, NO_CALL_TABLE)
-    if os.path.exists(path):
-        raise Stop(f"strata: {NO_CALL_TABLE} exists")
-    rows = no_call_rows(m1_path, lists_path, record)
-    write_tsv(path, rows)
-    return rows
+    paths = [os.path.join(record, name) for name in STRATA_TABLES]
+    for path in paths:
+        if os.path.exists(path):
+            raise Stop(f"strata: {os.path.basename(path)} exists")
+    tables_out = no_call_rows(m1_path, lists_path, record)
+    for path, rows in zip(paths, tables_out):
+        write_tsv(path, rows)
+    return tables_out
 
 
 # ---------------------------------------------------------------- print
@@ -633,6 +718,13 @@ def d3(x):
 
 def count_words(n):
     return f"{int(n):,}"
+
+
+def span_words(r):
+    """The fewest to the most genomes the rule makes no call on and the program
+    calls, or one count where the two meet."""
+    lo, hi = r["no_call_program_called_low"], r["no_call_program_called_high"]
+    return count_words(lo) if lo == hi else f"{count_words(lo)} to {count_words(hi)}"
 
 
 def record_rows(record, name):
@@ -755,6 +847,21 @@ def page_tables(record):
                           "|---|---|---|---|---|"] + [
             f"| {GROUP_WORDS[r['stratum']]} | {count_words(r['resistant'])} | {count_words(r['called'])} | "
             f"{count_words(r['no_call'])} | {d3(r['no_call_share'])} |" for r in record_rows(record, NO_CALL_TABLE)]
+    if os.path.exists(os.path.join(record, PROGRAM_TABLE)):
+        out["program_call"] = ["| M1 stratum | Resistant | Called by the AMRFinderPlus program | Not called by the "
+                               "program | No call by GRM's known-gene rule | No call by the rule, called by the "
+                               "program |", "|---|---|---|---|---|---|"] + [
+            f"| {GROUP_WORDS[r['stratum']]} | {count_words(r['resistant'])} | {count_words(r['program_called'])} | "
+            f"{count_words(r['program_not_called'])} | {count_words(r['no_call'])} | {span_words(r)} |"
+            for r in record_rows(record, PROGRAM_TABLE)]
+    if os.path.exists(os.path.join(record, UNCALLED_TABLE)):
+        out["uncalled"] = ["| Species | Antibiotic | M1 stratum | Resistant | Called by the AMRFinderPlus program | "
+                           "Not called by the program | Called by GRM's known-gene rule | No call by the rule | "
+                           "No call by the rule, called by the program |", "|---|---|---|---|---|---|---|---|---|"] + [
+            f"| *{r['species']}* | {r['antibiotic']} | {GROUP_WORDS[r['stratum']]} | {count_words(r['resistant'])} | "
+            f"{count_words(r['program_called'])} | {count_words(r['program_not_called'])} | "
+            f"{count_words(r['called'])} | {count_words(r['no_call'])} | {span_words(r)} |"
+            for r in record_rows(record, UNCALLED_TABLE)]
     return out
 
 
@@ -832,7 +939,7 @@ def main(argv=None):
             with open(args.out, "w", encoding="utf-8") as handle:
                 json.dump(reading, handle, indent=1, sort_keys=True)
                 handle.write("\n")
-            line6, clean = guard6([args.out], ids, names, "reading")
+            line6, clean, _ = guard6([args.out], ids, names, "reading")
             if not clean:
                 os.remove(args.out)
                 raise Stop(line6)
@@ -852,16 +959,19 @@ def main(argv=None):
             print("\n".join(print_record(args.record)))
             return 0
         if args.cmd == "strata":
-            rows = strata(args.m1, args.lists, args.record)
-            for r in rows:
-                print("\t".join(r))
-            print(f"strata: {NO_CALL_TABLE} written, {len(rows) - 1} rows; the catalog row holds each primary "
-                  "dataset once and its sums equal step1.tsv and totals.tsv")
+            written = strata(args.m1, args.lists, args.record)
+            for rows in written:
+                for r in rows:
+                    print("\t".join(r))
+            print("strata: " + "; ".join(f"{name} written, {len(rows) - 1} rows"
+                                         for name, rows in zip(STRATA_TABLES, written))
+                  + "; the catalog and program rows hold each primary dataset once with the same resistant counts,"
+                  " and the catalog row's sums equal step1.tsv and totals.tsv")
             return 0
         ids, names, n = names_from(args.reports)
         kept = [p for p in args.paths if not excluded_by_path(p)]
-        line6, clean = guard6(kept, ids, names, f"scan over {n} reports")
-        print(f"{line6}; {len(args.paths) - len(kept)} more left out by path "
+        line6, clean, more = guard6(kept, ids, names, f"scan over {n} reports")
+        print(f"{line6}; {more}; {len(args.paths) - len(kept)} more left out by path "
               f"({', '.join(d + '/' for d in CODE_DIRS)})")
         return 0 if clean else 1
     except Stop as e:

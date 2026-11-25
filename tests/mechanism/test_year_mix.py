@@ -104,8 +104,10 @@ def thick():
 # M1's counts for the thick world, per stratum (resistant, susceptible): 19 resistant and 180 susceptible, as thick() holds.
 THICK_M1 = {"point_only": (6, 20), "gene_only": (8, 100), "both": (2, 10), "neither": (3, 50)}
 # M1's per-dataset table, per stratum (resistant, called): the catalog row on the lineage split calls 10 of 19,
-# as many as the reader calls in thick(); the program row, a learner's row and the random split call others.
+# as many as the reader calls in thick(); the program row calls 11, short of its rows on point only and gene only
+# as on sulfamethoxazole/trimethoprim; a learner's row and the random split call others.
 CATALOG = {"point_only": (6, 0), "gene_only": (8, 7), "both": (2, 2), "neither": (3, 1)}
+PROGRAM = {"point_only": (6, 4), "gene_only": (8, 5), "both": (2, 2), "neither": (3, 0)}
 OTHER_CALLS = {"point_only": (6, 6), "gene_only": (8, 8), "both": (2, 2), "neither": (3, 0)}
 
 
@@ -119,9 +121,9 @@ def m1_datasets(path, rows):
                               + [x for s in ym.FOUR for x in (str(cells[s][0]), str(cells[s][1]), "")]) + "\n")
 
 
-def thick_m1(catalog=CATALOG):
+def thick_m1(catalog=CATALOG, program=PROGRAM):
     t = slug("drug t")
-    return [(t, "primary", "lineage", "catalog", catalog), (t, "primary", "lineage", "program", OTHER_CALLS),
+    return [(t, "primary", "lineage", "catalog", catalog), (t, "primary", "lineage", "program", program),
             (t, "primary", "lineage", "scm", OTHER_CALLS), (t, "primary", "random", "catalog", OTHER_CALLS),
             (slug("drug m"), "M", "lineage", "catalog", catalog)]
 
@@ -481,6 +483,13 @@ class Read(unittest.TestCase):
         self.assertNotIn("9999.3001", text)
         self.assertEqual(os.listdir(self.out), [])
 
+    def test_an_id_inside_a_longer_word_stops_the_write(self):
+        rc, text = self.plant("x9999.3001y")
+        self.assertEqual(rc, 2)
+        self.assertIn("stop: guard 6 (tables): 6 files, 1 with a genome id, 0 with a catalogue group name", text)
+        self.assertNotIn("9999.3001", text)
+        self.assertEqual(os.listdir(self.out), [])
+
     def test_the_scan_leaves_out_scripts_and_tests_by_path_and_counts_them(self):
         self.assertEqual(self.go(*world())[0], 0)
         here = os.path.abspath(__file__)
@@ -489,11 +498,13 @@ class Read(unittest.TestCase):
         rc, text = run("scan", "--reports", self.rdir, here, copy)
         self.assertEqual(rc, 1)
         self.assertIn("1 files, 1 with a genome id, 1 with a catalogue group name", text)
+        self.assertIn("; 1 with a genome id as a whole token, ", text)
         self.assertIn("; 1 more left out by path (scripts/, tests/)", text)
         rc, text = run("scan", "--reports", self.rdir, here)
         self.assertEqual(rc, 0)
-        self.assertIn("0 files, 0 with a genome id, 0 with a catalogue group name", text)
-        self.assertIn("; 1 more left out by path (scripts/, tests/)", text)
+        self.assertIn("0 files, 0 with a genome id, 0 with a catalogue group name, against 11 ids and 3 group names; "
+                      "0 with a genome id as a whole token, 0 tokens of a genome id's shape; 1 more left out by path "
+                      "(scripts/, tests/)", text)
         self.assertNotIn(GROUPS[0], text)
 
     def test_a_group_name_in_a_written_file_stops_the_write(self):
@@ -503,15 +514,22 @@ class Read(unittest.TestCase):
         self.assertNotIn(GROUPS[2], text)
         self.assertEqual(os.listdir(self.out), [])
 
-    def test_the_scan_reads_whole_names_not_parts_of_words(self):
+    def test_the_scan_reads_whole_names_and_ids_wherever_they_stand(self):
+        """Counts (id as a substring, id as a whole token, tokens of an id's shape,
+        group name), worked by hand: 19999.1001 holds the id inside a longer token
+        and has the shape; 0.99991001 holds neither; catalogue and synBx hold a name
+        only as part of a word."""
         with tempfile.TemporaryDirectory() as tmp:
             path = os.path.join(tmp, "t.tsv")
             with open(path, "w", encoding="utf-8") as f:
                 f.write("catalogue\t0.99991001\tsynBx\t19999.1001\n")
-            self.assertEqual(ym.scan_hits([path], {"9999.1001"}, {"cat", "synB"}), (0, 0))
+            self.assertEqual(ym.scan_hits([path], {"9999.1001"}, {"cat", "synB"}), (1, 0, 1, 0))
             with open(path, "w", encoding="utf-8") as f:
-                f.write("a cat\t9999.1001\n")
-            self.assertEqual(ym.scan_hits([path], {"9999.1001"}, {"cat"}), (1, 1))
+                f.write("catalogue\t0.99991001\tsynBx\n")
+            self.assertEqual(ym.scan_hits([path], {"9999.1001"}, {"cat", "synB"}), (0, 0, 0, 0))
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("a cat\t9999.1001\t123.4\n")
+            self.assertEqual(ym.scan_hits([path], {"9999.1001"}, {"cat"}), (1, 1, 2, 1))
 
     def test_the_messages_print_no_id_or_group_name(self):
         rc, text = self.go(*world())
@@ -590,6 +608,12 @@ class Strata(unittest.TestCase):
         return run("strata", "--m1", self.m1, "--lists", self.lists, "--record", self.out)
 
     def test_the_strata_sum_the_catalogue_row_of_the_lineage_split(self):
+        """Worked by hand from CATALOG and PROGRAM. Point only: 6 resistant, the rule
+        calls none, the program calls 4 and leaves 2, so of the rule's 6 no-calls at
+        least 6 - 2 = 4 and at most 4 are called by the program. Gene only: 8, the
+        rule leaves 1, the program calls 5 and leaves 3, so the one is called by the
+        program or not: 0 to 1. Both: none left by either. Neither: the program
+        calls none, so 0."""
         rc, text = self.strata(thick_m1())
         self.assertEqual(rc, 0, text)
         self.assertEqual(tsv(os.path.join(self.out, ym.NO_CALL_TABLE)), [
@@ -600,12 +624,36 @@ class Strata(unittest.TestCase):
             ["neither", "3", "1", "2", "0.666666666667"],
             ["program_row", "16", "9", "7", "0.437500000000"],
             ["all_strata", "19", "10", "9", "0.473684210526"]])
-        self.assertIn("strata: no-call-strata.tsv written, 6 rows", text)
+        self.assertEqual(tsv(os.path.join(self.out, ym.PROGRAM_TABLE)), [
+            ["stratum", "resistant", "program_called", "program_not_called", "no_call", "no_call_program_called_low",
+             "no_call_program_called_high"],
+            ["point_only", "6", "4", "2", "6", "4", "4"],
+            ["gene_only", "8", "5", "3", "1", "0", "1"],
+            ["both", "2", "2", "0", "0", "0", "0"],
+            ["neither", "3", "0", "3", "2", "0", "0"],
+            ["program_row", "16", "11", "5", "7", "4", "5"],
+            ["all_strata", "19", "11", "8", "9", "4", "5"]])
+        drug = slug("drug t").split("__")[1]
+        self.assertEqual(tsv(os.path.join(self.out, ym.UNCALLED_TABLE)), [
+            ["species", "antibiotic", "stratum", "resistant", "program_called", "program_not_called", "called",
+             "no_call", "no_call_program_called_low", "no_call_program_called_high"],
+            [SPECIES, drug, "point_only", "6", "4", "2", "0", "6", "4", "4"],
+            [SPECIES, drug, "gene_only", "8", "5", "3", "7", "1", "0", "1"]])
+        self.assertIn("strata: no-call-strata.tsv written, 6 rows; program-call-strata.tsv written, 6 rows; "
+                      "program-uncalled.tsv written, 2 rows", text)
+
+    def test_a_program_row_with_other_resistant_counts_stops(self):
+        rc, text = self.strata(thick_m1(program=dict(PROGRAM, both=(3, 2))))
+        self.assertEqual(rc, 2)
+        self.assertIn("holds another both resistant count in its program row than in its catalog row", text)
+        for name in ym.STRATA_TABLES:
+            self.assertFalse(os.path.exists(os.path.join(self.out, name)))
 
     def test_a_primary_dataset_missing_or_given_twice_stops(self):
         twice = thick_m1() + [(slug("drug t"), "primary", "lineage", "catalog", CATALOG)]
-        for rows in (twice, thick_m1()[1:]):
-            with self.subTest(rows=len(rows)):
+        no_program = [r for r in thick_m1() if r[3] != "program"]
+        for rows in (twice, thick_m1()[1:], no_program):
+            with self.subTest(rows=rows):
                 rc, text = self.strata(rows)
                 self.assertEqual(rc, 2)
                 self.assertIn("the primary set has 1, each once", text)
@@ -626,14 +674,30 @@ class Strata(unittest.TestCase):
         rc, text = self.strata(thick_m1())
         self.assertEqual(rc, 2)
         self.assertIn("no-call-strata.tsv exists", text)
+        for name in ym.STRATA_TABLES[:2]:
+            os.remove(os.path.join(self.out, name))
+        rc, text = self.strata(thick_m1())
+        self.assertEqual(rc, 2)
+        self.assertIn("program-uncalled.tsv exists", text)
+        for name in ym.STRATA_TABLES[:2]:
+            self.assertFalse(os.path.exists(os.path.join(self.out, name)))
 
-    def test_print_prints_the_no_call_table_once_the_record_holds_it(self):
-        self.assertNotIn("no_call", ym.page_tables(self.out))
+    def test_print_prints_the_no_call_tables_once_the_record_holds_them(self):
+        self.assertFalse({"no_call", "program_call", "uncalled"} & set(ym.page_tables(self.out)))
         self.assertEqual(self.strata(thick_m1())[0], 0)
-        self.assertEqual(ym.page_tables(self.out)["no_call"][2:], [
+        tables = ym.page_tables(self.out)
+        self.assertEqual(tables["no_call"][2:], [
             "| point only | 6 | 0 | 6 | 1.000 |", "| gene only | 8 | 7 | 1 | 0.125 |", "| both | 2 | 2 | 0 | 0.000 |",
             "| neither | 3 | 1 | 2 | 0.667 |", "| the three with a program row | 16 | 9 | 7 | 0.438 |",
             "| all four | 19 | 10 | 9 | 0.474 |"])
+        self.assertEqual(tables["program_call"][2:], [
+            "| point only | 6 | 4 | 2 | 6 | 4 |", "| gene only | 8 | 5 | 3 | 1 | 0 to 1 |", "| both | 2 | 2 | 0 | 0 | 0 |",
+            "| neither | 3 | 0 | 3 | 2 | 0 |", "| the three with a program row | 16 | 11 | 5 | 7 | 4 to 5 |",
+            "| all four | 19 | 11 | 8 | 9 | 4 to 5 |"])
+        drug = slug("drug t").split("__")[1]
+        self.assertEqual(tables["uncalled"][2:], [
+            f"| *{SPECIES}* | {drug} | point only | 6 | 4 | 2 | 0 | 6 | 4 |",
+            f"| *{SPECIES}* | {drug} | gene only | 8 | 5 | 3 | 7 | 1 | 0 to 1 |"])
 
 
 if __name__ == "__main__":

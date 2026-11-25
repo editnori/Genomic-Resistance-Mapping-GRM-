@@ -208,7 +208,7 @@ step 1: 7 published rows the same; strata two: reader_call, reader_no_call, read
 guard 6 (tables): 6 files, 0 with a genome id, 0 with a catalogue group name, against 23757 ids and 409 group names
 ```
 
-**Tests.** `tests/mechanism/test_year_mix.py` holds 43 SYNTHETIC tests of the script, with tables worked by hand. `tests/mechanism/test_year_faults.py` runs `scripts/mechanism/year_faults.py`, which plants each fault below in the script in turn and runs the test meant to catch it. `tests/mechanism/test_year_page.py` holds 17 tests of this page against `reference/mechanism-year/`.
+**Tests.** `tests/mechanism/test_year_mix.py` holds 45 SYNTHETIC tests of the script, with tables worked by hand. `tests/mechanism/test_year_faults.py` runs `scripts/mechanism/year_faults.py`, which plants each fault below in the script in turn and runs the test meant to catch it. `tests/mechanism/test_year_page.py` holds 17 tests of this page against `reference/mechanism-year/`.
 
 | Fault planted | Test that caught it |
 |---|---|
@@ -230,8 +230,11 @@ guard 6 (tables): 6 files, 0 with a genome id, 0 with a catalogue group name, ag
 | Y16. The species table's floor at 9 resistant genomes | `Read.test_the_species_table_keeps_strata_with_ten_or_more_resistant` |
 | Y17. The M1 strata summed over every row of the file, not the catalog row alone | `Strata.test_the_strata_sum_the_catalogue_row_of_the_lineage_split` |
 | Y18. The M1 strata summed over both splits | `Strata.test_the_strata_sum_the_catalogue_row_of_the_lineage_split` |
+| Y19. The id guard reading whole tokens only, not substrings | `Read.test_an_id_inside_a_longer_word_stops_the_write` |
+| Y20. The program's call read from the catalog row | `Strata.test_the_strata_sum_the_catalogue_row_of_the_lineage_split` |
+| Y21. The fewest genomes with no call by the rule and a call by the program taken as the smaller margin | `Strata.test_the_strata_sum_the_catalogue_row_of_the_lineage_split` |
 
-All 18 were caught.
+All 21 were caught.
 
 **Files.** The record is in `reference/mechanism-year/`, with `SHA256SUMS` over its six tables as `write` wrote them, and `no-call-strata.tsv` as `strata` wrote it.
 
