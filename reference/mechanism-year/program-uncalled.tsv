@@ -1,0 +1,10 @@
+species	antibiotic	stratum	resistant	program_called	program_not_called	called	no_call	no_call_program_called_low	no_call_program_called_high
+Acinetobacter baumannii	sulfamethoxazole/trimethoprim	gene_only	905	65	840	65	840	0	65
+Corynebacterium diphtheriae	sulfamethoxazole/trimethoprim	gene_only	27	10	17	8	19	2	10
+Enterobacter cloacae	sulfamethoxazole/trimethoprim	gene_only	41	39	2	39	2	0	2
+Klebsiella pneumoniae	sulfamethoxazole/trimethoprim	gene_only	1023	935	88	936	87	0	87
+Klebsiella quasipneumoniae	sulfamethoxazole/trimethoprim	gene_only	55	53	2	53	2	0	2
+Salmonella enterica	sulfamethoxazole/trimethoprim	gene_only	272	228	44	228	44	0	44
+Shigella sonnei	sulfamethoxazole/trimethoprim	gene_only	522	492	30	492	30	0	30
+Staphylococcus aureus	sulfamethoxazole/trimethoprim	point_only	6	2	4	0	6	2	2
+Staphylococcus aureus	sulfamethoxazole/trimethoprim	gene_only	118	0	118	0	118	0	0

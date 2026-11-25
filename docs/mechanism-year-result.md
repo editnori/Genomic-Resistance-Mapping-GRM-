@@ -12,7 +12,13 @@ The four strata of M1 were not readable from the release reports. Rebuilt from e
 
 **Rows with no year.** Of the 146,669 genome rows of the 204 primary datasets, a genome once per dataset, 50,329 carry no four-digit year: over a third. Every year row below describes the genomes that carry a year, and the rows without one are not assumed to be like them. They stand apart as `year_unknown`.
 
-**Two counts with no call, related stratum by stratum.** At the program's stage, the AMRFinderPlus program reports no row that meets the antibiotic's rule, neither a point mutation nor an acquired gene, for 6,035 of the 62,878 resistant genomes: M1's `neither` stratum. At the reader's stage, GRM's known-gene rule makes no call on 15,514 of the same 62,878: `reader_no_call` here, and the count a user of the release meets, as the release's reports carry the reader's call (`catalog_resistant`). M1's own table relates the two, stratum by stratum (section No call by stratum). The 15,514 are not the 6,035 plus a remainder: 5,501 of the 6,035 are among them, and the rule calls the other 534 resistant, so the two counts cannot be subtracted. The gap between the stages, resistant genomes with a program row that meets the rule on which the rule makes no call, is 10,013, and 7,839 of them are point only. The rule calls 124 of the 7,963 point-only resistant genomes, against 38,057 of the 39,814 gene-only and 8,649 of the 9,066 with both: GRM's known-gene rule is in effect a gene-presence rule, and it almost never fires on a point mutation.
+**Three counts of resistant genomes left uncalled, each with what it measures.** M1's table and the release's reports give three counts over the same 62,878 resistant genomes, and each measures something else:
+
+- 6,035 have no AMRFinderPlus row that meets the antibiotic's rule, neither a point mutation nor an acquired gene. This is M1's `neither` stratum, a count of the program's rows.
+- 7,180 are not called resistant by the AMRFinderPlus program's own call: the 6,035 with no such row, and 1,141 gene-only and 4 point-only genomes on sulfamethoxazole/trimethoprim, whose rule has two parts. A stratum counts a row that meets either part, while the program's call needs both.
+- 15,514 get no call from GRM's known-gene rule, GRM's own reader of the AMRFinderPlus catalogue: `reader_no_call` here, and the count a user of the release meets, as the release's reports carry the reader's call (`catalog_resistant`).
+
+M1's own table relates the three stratum by stratum (section No call by stratum). The rule's 15,514 no-calls are not the 6,035 genomes with no row plus a remainder: 5,501 of those 6,035 are among them, and the rule calls the other 534 resistant, so the count with no row cannot be subtracted from the rule's count. Among the 56,843 resistant genomes with a program row that meets the rule, the rule makes no call on 10,013, and 7,839 of them are point only. Those 10,013 are not the genomes the program calls and the rule does not: the program's own call leaves 1,145 of the 56,843 uncalled as well, and M1's table gives each dataset's counts, not which genomes the two calls share. Summed over datasets, the genomes the rule makes no call on and the program calls number between 8,869 and 9,107. The rule calls 124 of the 7,963 point-only resistant genomes, against 38,057 of the 39,814 gene-only and 8,649 of the 9,066 with both: GRM's known-gene rule is in effect a gene-presence rule, and it almost never fires on a point mutation.
 
 The five learners' mean vote on the lineage split calls 11,989 of the reader's 15,514 no-call resistant genomes (recall 0.773), and 41,800 of the 47,364 resistant genomes the reader calls (0.883). This reading counts genomes and reports recall: it fits nothing and reports no loss.
 
@@ -94,7 +100,32 @@ Added after the one reading. `no-call-strata.tsv` sums M1's `catalog` row, the c
 | the three with a program row | 56,843 | 46,830 | 10,013 | 0.176 |
 | all four | 62,878 | 47,364 | 15,514 | 0.247 |
 
-The `neither` stratum holds the resistant genomes with no program row that meets the rule, and the row with a program row sums the other three. On sulfamethoxazole/trimethoprim, whose rule has two parts, a stratum reads the rows that meet either part, as M1 reads them. The strata are M1's mechanism classes, read from the program's rows: they name no gene, variant or position, and the table is pooled over all years, not split by year.
+`program-call-strata.tsv` sets M1's `program` row, the AMRFinderPlus program's own call, beside it over the same genomes: the resistant genomes the program calls and does not call, those the rule makes no call on, and how many of those the program calls. M1's table gives each dataset's counts and not which genomes the two calls share, so the last column is a bound. In each dataset and stratum, the genomes the rule makes no call on and the program calls are at least the rule's no-calls less the program's no-calls, and at most the fewer of the rule's no-calls and the program's calls; the column sums both ends over the datasets. Where the program calls every resistant genome of a dataset and stratum, both ends are the rule's no-calls.
+
+| M1 stratum | Resistant | Called by the AMRFinderPlus program | Not called by the program | No call by GRM's known-gene rule | No call by the rule, called by the program |
+|---|---|---|---|---|---|
+| point only | 7,963 | 7,959 | 4 | 7,839 | 7,835 |
+| gene only | 39,814 | 38,673 | 1,141 | 1,757 | 617 to 855 |
+| both | 9,066 | 9,066 | 0 | 417 | 417 |
+| neither | 6,035 | 0 | 6,035 | 5,501 | 0 |
+| the three with a program row | 56,843 | 55,698 | 1,145 | 10,013 | 8,869 to 9,107 |
+| all four | 62,878 | 55,698 | 7,180 | 15,514 | 8,869 to 9,107 |
+
+The `neither` stratum holds the resistant genomes with no program row that meets the rule, and the row with a program row sums the other three. On sulfamethoxazole/trimethoprim the rule has two parts. A stratum counts a genome whose program rows meet either part, as M1 reads them, while the program's own call needs both, so a genome can carry a counted row and still not be called. Every resistant genome with a program row that the program does not call stands there: 1,145 in all, 1,141 gene only and 4 point only, in eight species (`program-uncalled.tsv`).
+
+| Species | Antibiotic | M1 stratum | Resistant | Called by the AMRFinderPlus program | Not called by the program | Called by GRM's known-gene rule | No call by the rule | No call by the rule, called by the program |
+|---|---|---|---|---|---|---|---|---|
+| *Acinetobacter baumannii* | sulfamethoxazole/trimethoprim | gene only | 905 | 65 | 840 | 65 | 840 | 0 to 65 |
+| *Corynebacterium diphtheriae* | sulfamethoxazole/trimethoprim | gene only | 27 | 10 | 17 | 8 | 19 | 2 to 10 |
+| *Enterobacter cloacae* | sulfamethoxazole/trimethoprim | gene only | 41 | 39 | 2 | 39 | 2 | 0 to 2 |
+| *Klebsiella pneumoniae* | sulfamethoxazole/trimethoprim | gene only | 1,023 | 935 | 88 | 936 | 87 | 0 to 87 |
+| *Klebsiella quasipneumoniae* | sulfamethoxazole/trimethoprim | gene only | 55 | 53 | 2 | 53 | 2 | 0 to 2 |
+| *Salmonella enterica* | sulfamethoxazole/trimethoprim | gene only | 272 | 228 | 44 | 228 | 44 | 0 to 44 |
+| *Shigella sonnei* | sulfamethoxazole/trimethoprim | gene only | 522 | 492 | 30 | 492 | 30 | 0 to 30 |
+| *Staphylococcus aureus* | sulfamethoxazole/trimethoprim | point only | 6 | 2 | 4 | 0 | 6 | 2 |
+| *Staphylococcus aureus* | sulfamethoxazole/trimethoprim | gene only | 118 | 0 | 118 | 0 | 118 | 0 |
+
+The strata are M1's mechanism classes, read from the program's rows: they name no gene, variant or position, and the tables are pooled over all years, not split by year.
 
 ## Groups
 
@@ -186,15 +217,15 @@ python3 -I scripts/mechanism/year_mix.py write --reading READING --reports REPOR
 python3 -I scripts/mechanism/year_mix.py print reference/mechanism-year
 ```
 
-REPORTS is the folder of the release's reports, READING the read's counts and OUT the record's folder, copied to `reference/mechanism-year/` as `write` wrote it. The `print` command came after the read: it reads the record alone and prints this page's tables, rounded to 3 decimals. The read ran the script whose sha256 `reading.txt` gives; later commits added `print` and changed nothing that `read` or `write` runs.
+REPORTS is the folder of the release's reports, READING the read's counts and OUT the record's folder, copied to `reference/mechanism-year/` as `write` wrote it. The `print` command came after the read: it reads the record alone and prints this page's tables, rounded to 3 decimals from the record's twelve by Python's formatting, which rounds a value lying exactly halfway to the even last digit. The read ran the script whose sha256 `reading.txt` gives. Later commits added `print` and `strata`; the one change to what `read` or `write` runs is guard 6's search, which changes no figure (section Method, Guards).
 
-**Added after the reading.** `no-call-strata.tsv` was written on 25 Nov 2026, after the one reading, at commit `8db9570` with a clean tree:
+**Added after the reading.** `strata` first wrote `no-call-strata.tsv` on 25 Nov 2026, after the one reading, at commit `8db9570` with a clean tree. Once it also read M1's `program` row, it ran again at commit `1f69a50` with a clean tree. The committed `no-call-strata.tsv` was moved aside, as `strata` refuses a table that exists, and the run wrote it again byte for byte, with `program-call-strata.tsv` and `program-uncalled.tsv`:
 
 ```
 python3 -I scripts/mechanism/year_mix.py strata --m1 reference/mechanism-split/page-m1-datasets.tsv --lists scripts/c3-inputs/lists.tsv --record reference/mechanism-year
 ```
 
-Its only new input is `page-m1-datasets.tsv`, a public table committed with M1. It opens no release report and no score, and it changes none of the six tables of the reading. It was added because the program's count with no row and the reader's count with no call needed relating, not listing. `strata` stops unless the `catalog` row holds each primary dataset once and its sums equal `step1.tsv` and `totals.tsv`, and `test_year_page.py` recomputes all six rows from M1's file.
+Its only new input is `page-m1-datasets.tsv`, a public table committed with M1. It opens no release report and no score, and it changes none of the six tables of the reading. The tables were added because the three counts of resistant genomes left uncalled needed relating, not listing. `strata` stops unless the `catalog` and `program` rows hold each primary dataset once with the same resistant counts and the catalog row's sums equal `step1.tsv` and `totals.tsv`, and `test_year_page.py` recomputes all three tables from M1's file.
 
 **Guards.** `write` checked step 1 and the six guards before it wrote a table, and none stopped it. `guards.txt` holds its printout:
 
@@ -208,7 +239,9 @@ step 1: 7 published rows the same; strata two: reader_call, reader_no_call, read
 guard 6 (tables): 6 files, 0 with a genome id, 0 with a catalogue group name, against 23757 ids and 409 group names
 ```
 
-**Tests.** `tests/mechanism/test_year_mix.py` holds 45 SYNTHETIC tests of the script, with tables worked by hand. `tests/mechanism/test_year_faults.py` runs `scripts/mechanism/year_faults.py`, which plants each fault below in the script in turn and runs the test meant to catch it. `tests/mechanism/test_year_page.py` holds 17 tests of this page against `reference/mechanism-year/`.
+At the read, guard 6 matched a genome id only as a whole token. Since commit `d4e0861` it searches for every id as a plain substring of each file, wherever it stands, with the whole-token lookup beside it, and `scan` also counts the tokens of a genome id's shape. Guard 6's line keeps its words, and a `write` from the same counts with the script as it stands at `1f69a50` writes the six tables, `guards.txt` and `SHA256SUMS` byte for byte.
+
+**Tests.** `tests/mechanism/test_year_mix.py` holds 45 SYNTHETIC tests of the script, with tables worked by hand. `tests/mechanism/test_year_faults.py` runs `scripts/mechanism/year_faults.py`, which plants each fault below in the script in turn and runs the test meant to catch it. `tests/mechanism/test_year_page.py` holds 18 tests of this page against `reference/mechanism-year/`.
 
 | Fault planted | Test that caught it |
 |---|---|
@@ -236,7 +269,7 @@ guard 6 (tables): 6 files, 0 with a genome id, 0 with a catalogue group name, ag
 
 All 21 were caught.
 
-**Files.** The record is in `reference/mechanism-year/`, with `SHA256SUMS` over its six tables as `write` wrote them, and `no-call-strata.tsv` as `strata` wrote it.
+**Files.** The record is in `reference/mechanism-year/`, with `SHA256SUMS` over its six tables as `write` wrote them, and the three tables `strata` wrote, as it wrote them.
 
 ## Datasets
 

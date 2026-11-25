@@ -1,0 +1,7 @@
+stratum	resistant	program_called	program_not_called	no_call	no_call_program_called_low	no_call_program_called_high
+point_only	7963	7959	4	7839	7835	7835
+gene_only	39814	38673	1141	1757	617	855
+both	9066	9066	0	417	417	417
+neither	6035	0	6035	5501	0	0
+program_row	56843	55698	1145	10013	8869	9107
+all_strata	62878	55698	7180	15514	8869	9107

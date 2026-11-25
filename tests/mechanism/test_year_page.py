@@ -2,8 +2,8 @@
 
 This test file reads committed result tables: the aggregates year_mix.py wrote
 from the one reading, by year, group, species and antibiotic, and M1's
-committed per-dataset table, which no-call-strata.tsv sums. It fits nothing
-and reads no genome.
+committed per-dataset table, whose catalog and program rows the three strata
+tables sum. It fits nothing and reads no genome.
 """
 
 import csv
@@ -23,8 +23,8 @@ M1 = common.ROOT / "reference" / "mechanism-split" / "page-m1-strata.tsv"
 M1_DATASETS = common.ROOT / "reference" / "mechanism-split" / "page-m1-datasets.tsv"
 SECTIONS = ["Reading", "Plan", "Step 1", "No call by stratum", "Groups", "Years", "Species", "Seen after", "Limits",
             "Method", "Datasets"]
-TABLES = {"Step 1": ["step1"], "No call by stratum": ["no_call"], "Groups": ["totals"], "Years": ["years", "ranges"],
-          "Datasets": ["datasets"]}
+TABLES = {"Step 1": ["step1"], "No call by stratum": ["no_call", "program_call", "uncalled"], "Groups": ["totals"],
+          "Years": ["years", "ranges"], "Datasets": ["datasets"]}
 STRATA_COMMAND = ("python3 -I scripts/mechanism/year_mix.py strata --m1 reference/mechanism-split/page-m1-datasets.tsv "
                   "--lists scripts/c3-inputs/lists.tsv --record reference/mechanism-year")
 FOUR = ["point_only", "gene_only", "both", "neither"]
@@ -55,6 +55,26 @@ def m1_no_call():
                 out[s][0] += int(r[f"{s}_resistant"])
                 out[s][1] += int(r[f"{s}_called"])
     return out
+
+
+def m1_two_rows():
+    """Per primary dataset on the lineage split, its species, antibiotic and, per stratum, the resistant genomes,
+    those the catalog row calls and those the program row calls."""
+    out = {}
+    for r in rows(M1_DATASETS):
+        if r["set"] == "primary" and r["split"] == "lineage" and r["row"] in ("catalog", "program"):
+            d = out.setdefault(r["dataset"], {"species": r["species"], "antibiotic": r["antibiotic"]})
+            for s in FOUR:
+                d.setdefault(s, {})[r["row"]] = int(r[f"{s}_called"])
+                d[s].setdefault("resistant", set()).add(int(r[f"{s}_resistant"]))
+    return out
+
+
+def met_counts(resistant, rule_no, program_no):
+    """The fewest and the most of a dataset's resistant genomes in a stratum that the rule makes no call on and the
+    program calls, from the two margins alone: the rule's no-calls less those that may be among the program's
+    no-calls, at most all of them and at least as many as the margins force to overlap."""
+    return rule_no - min(rule_no, program_no), rule_no - max(0, rule_no + program_no - resistant)
 
 
 def guards():
@@ -143,7 +163,7 @@ class Page(unittest.TestCase):
         self.assertIn(paragraph, reading)
         self.assertLess(reading.index(paragraph), reading.index("Among the "))
 
-    def test_the_two_no_call_counts_are_related_stratum_by_stratum(self):
+    def test_the_three_uncalled_counts_are_related_stratum_by_stratum(self):
         m1 = m1_no_call()
         table = {r["stratum"]: r for r in rows(RECORD / ym.NO_CALL_TABLE)}
         self.assertEqual(list(table), FOUR + ["program_row", "all_strata"])
@@ -157,37 +177,108 @@ class Page(unittest.TestCase):
             self.assertAlmostEqual(float(r["no_call_share"]), (resistant - called) / resistant, places=12, msg=name)
         for s in FOUR:
             self.assertEqual(str(m1[s][0]), self.step1[s]["published_resistant"], s)
+        program = self.program_strata()
         no = {s: count(m1[s][0] - m1[s][1]) for s in FOUR}
         yes = {s: count(m1[s][1]) for s in FOUR}
         held = {s: count(m1[s][0]) for s in FOUR}
         everyone = count(expect["all_strata"][0])
+        with_row = count(expect["program_row"][0])
         no_call = count(self.totals["reader_no_call"]["resistant"])
         gap = count(expect["program_row"][0] - expect["program_row"][1])
+        reading = self.sections["Reading"]
         self.assertIn(
-            f"**Two counts with no call, related stratum by stratum.** At the program's stage, the AMRFinderPlus "
-            f"program reports no row that meets the antibiotic's rule, neither a point mutation nor an acquired gene, "
-            f"for {held['neither']} of the {everyone} resistant genomes: M1's `neither` stratum. At the reader's stage, "
-            f"GRM's known-gene rule makes no call on {no_call} of the same {everyone}: `reader_no_call` here, and the "
-            "count a user of the release meets", self.sections["Reading"])
+            "**Three counts of resistant genomes left uncalled, each with what it measures.** M1's table and the "
+            f"release's reports give three counts over the same {everyone} resistant genomes, and each measures "
+            f"something else:\n\n- {held['neither']} have no AMRFinderPlus row that meets the antibiotic's rule, "
+            "neither a point mutation nor an acquired gene. This is M1's `neither` stratum, a count of the program's "
+            f"rows.\n- {count(program['all_strata'][2])} are not called resistant by the AMRFinderPlus program's own "
+            f"call: the {held['neither']} with no such row, and {count(program['gene_only'][2])} gene-only and "
+            f"{count(program['point_only'][2])} point-only genomes on sulfamethoxazole/trimethoprim, whose rule has "
+            "two parts. A stratum counts a row that meets either part, while the program's call needs both.\n"
+            f"- {no_call} get no call from GRM's known-gene rule, GRM's own reader of the AMRFinderPlus catalogue: "
+            "`reader_no_call` here, and the count a user of the release meets", reading)
+        self.assertEqual(program["all_strata"][2], m1["neither"][0] + program["program_row"][2])
         self.assertIn(
-            f"The {no_call} are not the {held['neither']} plus a remainder: {no['neither']} of the {held['neither']} are "
-            f"among them, and the rule calls the other {yes['neither']} resistant, so the two counts cannot be "
-            f"subtracted. The gap between the stages, resistant genomes with a program row that meets the rule on which "
-            f"the rule makes no call, is {gap}, and {no['point_only']} of them are point only. The rule calls "
+            f"The rule's {no_call} no-calls are not the {held['neither']} genomes with no row plus a remainder: "
+            f"{no['neither']} of those {held['neither']} are among them, and the rule calls the other {yes['neither']} "
+            "resistant, so the count with no row cannot be subtracted from the rule's count. Among the "
+            f"{with_row} resistant genomes with a program row that meets the rule, the rule makes no call on {gap}, "
+            f"and {no['point_only']} of them are point only. Those {gap} are not the genomes the program calls and the "
+            f"rule does not: the program's own call leaves {count(program['program_row'][2])} of the {with_row} "
+            "uncalled as well, and M1's table gives each dataset's counts, not which genomes the two calls share. "
+            "Summed over datasets, the genomes the rule makes no call on and the program calls number between "
+            f"{count(program['program_row'][3])} and {count(program['program_row'][4])}. The rule calls "
             f"{yes['point_only']} of the {held['point_only']} point-only resistant genomes, against {yes['gene_only']} "
             f"of the {held['gene_only']} gene-only and {yes['both']} of the {held['both']} with both: GRM's known-gene "
-            "rule is in effect a gene-presence rule, and it almost never fires on a point mutation.",
-            self.sections["Reading"])
+            "rule is in effect a gene-presence rule, and it almost never fires on a point mutation.", reading)
         method = self.sections["Method"]
         self.assertIn("```\n" + STRATA_COMMAND + "\n```", method)
         self.assertIn("Its only new input is `page-m1-datasets.tsv`, a public table committed with M1. It opens no "
                       "release report and no score", method)
+        self.assertIn("rounded to 3 decimals from the record's twelve by Python's formatting, which rounds a value "
+                      "lying exactly halfway to the even last digit", method)
         self.assertIn("Added after the one reading.", self.sections["No call by stratum"])
         self.assertIn(STRATA_COMMAND, (RECORD / "README.md").read_text(encoding="utf-8"))
+        self.assertNotRegex(self.text, r"\bstages?\b")
         for name in SECTIONS:
             for sentence in re.split(r"(?<=[.:;])\s", self.sections[name]):
                 if re.search(r"\bmiss(es|ed)?\b", sentence):
                     self.assertRegex(sentence, r"reader|program|known-gene rule", sentence)
+
+    def program_strata(self):
+        """program-call-strata.tsv held to M1's file, recomputed here per dataset: per row, (resistant, program
+        called, program not called, fewest, most) as whole numbers."""
+        datasets = m1_two_rows()
+        primary = {r["dataset"] for r in rows(LISTS) if (r["in_A"], r["in_M"]) == ("1", "0")}
+        self.assertEqual(set(datasets), primary)
+        out = {s: [0, 0, 0, 0, 0] for s in FOUR}
+        for d in datasets.values():
+            for s in FOUR:
+                (resistant,) = d[s]["resistant"]
+                rule_no, program_no = resistant - d[s]["catalog"], resistant - d[s]["program"]
+                low, high = met_counts(resistant, rule_no, program_no)
+                for i, v in enumerate((resistant, d[s]["program"], program_no, low, high)):
+                    out[s][i] += v
+        out["program_row"] = [sum(out[s][i] for s in FOUR[:3]) for i in range(5)]
+        out["all_strata"] = [sum(out[s][i] for s in FOUR) for i in range(5)]
+        table = {r["stratum"]: r for r in rows(RECORD / ym.PROGRAM_TABLE)}
+        no_call = {r["stratum"]: r["no_call"] for r in rows(RECORD / ym.NO_CALL_TABLE)}
+        self.assertEqual(list(table), FOUR + ["program_row", "all_strata"])
+        for name, (resistant, called, not_called, low, high) in out.items():
+            r = table[name]
+            self.assertEqual([r["resistant"], r["program_called"], r["program_not_called"], r["no_call"],
+                              r["no_call_program_called_low"], r["no_call_program_called_high"]],
+                             [str(resistant), str(called), str(not_called), no_call[name], str(low), str(high)], name)
+        self.assertEqual(out["neither"][1], 0)
+        return out
+
+    def test_the_program_leaves_uncalled_only_on_one_antibiotic_named_in_full(self):
+        expect = []
+        for d in m1_two_rows().values():
+            for s in FOUR[:3]:
+                (resistant,) = d[s]["resistant"]
+                if d[s]["program"] < resistant:
+                    rule_no, program_no = resistant - d[s]["catalog"], resistant - d[s]["program"]
+                    expect.append((d["species"], d["antibiotic"], FOUR.index(s), s, resistant, d[s]["program"],
+                                   program_no, d[s]["catalog"], rule_no, *met_counts(resistant, rule_no, program_no)))
+        expect = [[str(x) for i, x in enumerate(e) if i != 2] for e in sorted(expect)]
+        table = rows(RECORD / ym.UNCALLED_TABLE)
+        self.assertEqual([list(r.values()) for r in table], expect)
+        self.assertEqual({r["antibiotic"] for r in table}, {"sulfamethoxazole/trimethoprim"})
+        program = {r["stratum"]: r for r in rows(RECORD / ym.PROGRAM_TABLE)}
+        for s in FOUR[:3]:
+            self.assertEqual(sum(int(r["program_not_called"]) for r in table if r["stratum"] == s),
+                             int(program[s]["program_not_called"]), s)
+        species = sorted({r["species"] for r in table})
+        self.assertEqual(len(species), 8)
+        section = self.sections["No call by stratum"]
+        self.assertIn(f"{count(program['program_row']['program_not_called'])} in all, "
+                      f"{count(program['gene_only']['program_not_called'])} gene only and "
+                      f"{count(program['point_only']['program_not_called'])} point only, in eight species", section)
+        self.assertIn("On sulfamethoxazole/trimethoprim the rule has two parts. A stratum counts a genome whose program "
+                      "rows meet either part, as M1 reads them, while the program's own call needs both", section)
+        for name in species:
+            self.assertIn(f"| *{name}* | sulfamethoxazole/trimethoprim |", section)
 
     def test_the_four_no_call_counts_sum_to_the_readings_no_call(self):
         table = {r["stratum"]: r for r in rows(RECORD / ym.NO_CALL_TABLE)}
@@ -270,7 +361,8 @@ class Page(unittest.TestCase):
             listed[name] = digest
         self.assertEqual(sorted(listed), sorted(ym.TABLES))
         found = sorted(p.relative_to(RECORD).as_posix() for p in RECORD.rglob("*") if p.is_file())
-        self.assertEqual(found, sorted(list(ym.TABLES) + ["README.md", "SHA256SUMS", "reading.txt", ym.NO_CALL_TABLE]))
+        self.assertEqual(found, sorted(list(ym.TABLES) + ["README.md", "SHA256SUMS", "reading.txt"]
+                                       + list(ym.STRATA_TABLES)))
         for name, digest in listed.items():
             self.assertEqual(hashlib.sha256((RECORD / name).read_bytes()).hexdigest(), digest, name)
 
