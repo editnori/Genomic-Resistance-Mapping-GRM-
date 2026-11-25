@@ -80,7 +80,7 @@ The antibiotics of each set, the same for its three pairs:
 
 **Attention and target size.** The resistant genomes and the resistant share both carry how the world studied an antibiotic: which genomes were sequenced, tested and deposited. Telling attention from the number of ways an antibiotic can fail needs a source of evidence GRM does not hold.
 
-**One species, one catalogue, one database.** The reading covers *Mycobacterium tuberculosis* alone, the WHO catalogue as TBProfiler 6.6.3 ships it (`tbdb` commit `3ed1cb99`), and BV-BRC deposits chosen for having lab results, capped at 2,000 a species. A share is no prevalence, and no causal reading follows from a correlation across antibiotics.
+**One species, one catalogue, one database.** The reading covers *Mycobacterium tuberculosis* alone, the WHO catalogue as TBProfiler 6.6.3 ships it (`tbdb` commit `3ed1cb99`), and BV-BRC deposits chosen for having lab results, capped at 2,000 a species: deposits, not a sample of the world's genomes. A share is no prevalence, and no causal reading follows from a correlation across antibiotics.
 
 **Antibiotics that share calls.** The four proxies count another drug's graded variants, and antibiotics whose graded variants sit in the same genes are not independent of each other. A rank correlation counts each antibiotic as one.
 
