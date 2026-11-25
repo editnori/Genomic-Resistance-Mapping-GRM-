@@ -11,13 +11,14 @@ SUITE = "tests/mechanism"
 WORKFLOW = ROOT / ".github" / "workflows" / "ci.yml"
 CI_DOC = ROOT / "docs" / "ci.md"
 SPLIT_DOC = ROOT / "docs" / "mechanism-split.md"
-OWN = {"amr_rule", "common", "strata", "history", "combine", "scan", "drug_rules", "planted_faults", "tests"}
+OWN = {"amr_rule", "common", "strata", "history", "combine", "scan", "drug_rules", "planted_faults", "tests",
+       "learner_overlap"}
 
 
 UNITS = ("zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen "
          "seventeen eighteen nineteen").split()
 TENS = "zero ten twenty thirty forty fifty sixty seventy eighty ninety".split()
-COUNT = r"([a-z]+(?:-[a-z]+)?|\d+)"
+COUNT = r"([A-Za-z]+(?:-[a-z]+)?|\d+)"
 
 
 def suite_count():
@@ -33,9 +34,9 @@ def in_words(n):
 
 
 def as_number(written):
-    """A count written in digits or in words, or None."""
+    """A count written in digits or in words, a sentence's first word capitalised, or None."""
     words = {in_words(n): n for n in range(100)}
-    return int(written) if written.isdigit() else words.get(written)
+    return int(written) if written.isdigit() else words.get(written.lower())
 
 
 def runners():
@@ -48,11 +49,11 @@ class Wiring(unittest.TestCase):
         self.assertRegex(job, rf"\n          # SYNTHETIC [^\n]+\n          - suite: {re.escape(SUITE)}\n            top: \.\n")
         self.assertEqual(job.count(f"suite: {SUITE}\n"), 1)
         comment = re.search(rf"\n          (# SYNTHETIC [^\n]+)\n          - suite: {re.escape(SUITE)}\n", job).group(1)
-        self.assertEqual(len(runners()), 4)
-        planted = sum(runners().values())
-        self.assertIn(f" plants the {planted} faults of its four runners (scripts/mechanism/*_faults.py) ", comment)
+        self.assertTrue(runners())
+        planted, how_many = sum(runners().values()), in_words(len(runners()))
+        self.assertIn(f" plants the {planted} faults of its {how_many} runners (scripts/mechanism/*_faults.py) ", comment)
         self.assertEqual(CI_DOC.read_text(encoding="utf-8").count(
-            f"how many faults its four runners plant, {planted} in all."), 1)
+            f"how many faults its {how_many} runners plant, {planted} in all."), 1)
 
     def test_each_count_of_a_runners_faults_is_its_own_lists(self):
         # in docs/ci.md, the clause of the suite's text that ends at each runner's path; in docs/mechanism-split.md,
@@ -76,18 +77,22 @@ class Wiring(unittest.TestCase):
         self.assertEqual(len(lines), 1)
         loader = unittest.TestLoader()
         n = {name: loader.loadTestsFromName(f"tests.mechanism.test_{name}").countTestCases() for name in (
-            "tb_curve", "page_tables", "page_faults", "curve_tables", "curve_faults", "catalogue_size",
-            "catalogue_faults", "page", "lineage_page", "catalogue_page")}
+            "tb_curve", "page_tables", "page_faults", "curve_tables", "curve_faults", "learner_overlap", "overlap_second",
+            "overlap_faults", "catalogue_size", "catalogue_faults", "page", "lineage_page", "learner_overlap_page",
+            "catalogue_page")}
         total = suite_count()
-        synthetic = total - n["page"] - n["lineage_page"] - n["catalogue_page"]
+        synthetic = total - n["page"] - n["lineage_page"] - n["learner_overlap_page"] - n["catalogue_page"]
         parts = (f"`{SUITE}` has {total} tests: {synthetic} SYNTHETIC tests, {n['tb_curve']} of them on `tb_curve.py`, ",
                  f", {n['page_tables']} on the result page's table script and {n['page_faults']} on its planted faults, ",
                  f", {n['curve_tables']} on the lineage curve's table script and {n['curve_faults']} on its planted "
                  "faults, ",
+                 f", {n['learner_overlap']} on the learner overlap's table script (`docs/learner-overlap-result.md`), "
+                 f"{n['overlap_second']} on its second pass and {n['overlap_faults']} on their planted faults, ",
                  f", and {n['catalogue_size']} on the catalogue size reading's script "
                  f"(`docs/catalogue-size-result.md`) and {n['catalogue_faults']} on its planted faults; ",
                  f"; {n['page']} of the result page against its record; ",
                  f"; {n['lineage_page']} of the lineage curve's page against its record; ",
+                 f"; {n['learner_overlap_page']} of the learner overlap's page against its records; ",
                  f"; and {n['catalogue_page']} of the catalogue size page against its record.")
         for part in parts:
             self.assertIn(part, lines[0])

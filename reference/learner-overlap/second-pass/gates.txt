@@ -1,0 +1,41 @@
+check 1 parse: 274 files found, 274 read, 274 expected: pass
+check 2 lengths: 0 reports with a score list or test_fold of another length or a bad score: pass
+check 3 counts: 0 reports whose counts or labels differ from their samples; 19 used reports with no catalogue rule (catalog_resistant null on every genome): pass
+check 4 learner sets: 1 sets; the release's is cart,gbt,lasso,rf,scm on 268 reports; 0 reports differ
+check 5 skipped: 0 with no lineage split, 6 with fewer than 2 learners; 6 skipped and 268 used of 274 found: pass
+check 7 stored metrics: 0 learner rows whose counts at the cutoff differ from metrics: pass
+check 8 pairs: 0 species and antibiotic pairs on two reports: pass
+check 9 catalogue: 0 reports whose catalog calls differ from catalog_resistant: pass
+check 10 null folds: 0 learner rows whose null-fold genomes differ from no_call
+  skipped, fewer than 2 learners: Enterococcus faecium with chloramphenicol
+  skipped, fewer than 2 learners: Salmonella enterica with temocillin
+  skipped, fewer than 2 learners: Staphylococcus aureus with ceftaroline
+  skipped, fewer than 2 learners: Staphylococcus aureus with levofloxacin
+  skipped, fewer than 2 learners: Staphylococcus aureus with moxifloxacin
+  skipped, fewer than 2 learners: Staphylococcus aureus with vancomycin
+  no catalogue rule: Campylobacter coli with telithromycin
+  no catalogue rule: Klebsiella pneumoniae with cefpodoxime/ceftriaxone
+  no catalogue rule: Mycobacterium tuberculosis with capreomycin
+  no catalogue rule: Mycobacterium tuberculosis with clofazimine
+  no catalogue rule: Mycobacterium tuberculosis with cycloserine
+  no catalogue rule: Mycobacterium tuberculosis with delamanid
+  no catalogue rule: Mycobacterium tuberculosis with ethambutol
+  no catalogue rule: Mycobacterium tuberculosis with ethionamide
+  no catalogue rule: Mycobacterium tuberculosis with isoniazid
+  no catalogue rule: Mycobacterium tuberculosis with nicotinamide
+  no catalogue rule: Mycobacterium tuberculosis with para-aminosalicylic acid
+  no catalogue rule: Mycobacterium tuberculosis with prothionamide
+  no catalogue rule: Mycobacterium tuberculosis with pyrazinamide
+  no catalogue rule: Mycobacterium tuberculosis with rifabutin
+  no catalogue rule: Mycobacterium tuberculosis with rifampin
+  no catalogue rule: Salmonella enterica with pefloxacin
+  no catalogue rule: Shigella sonnei with cefpirome
+  no catalogue rule: Shigella sonnei with temocillin
+  no catalogue rule: Staphylococcus aureus with rifampin
+second check 1 first pass: 274 files found, every first-pass check passed, 268 reports used: pass
+second check 2 first-pass columns: 268 reports read again, 268 rows in datasets.tsv, 0 that differ: pass
+second check 3 arithmetic of the mean: 268 reports with the five, 0 where the mean misses a genome none of the five miss, calls one none call, or parts from all five: pass
+second check 4 null-fit cut: 0 reports where the all-five misses outside and inside null-fit folds do not add up: pass
+second check 5 the vote's edge: 0 genomes where a plain sum over 5 gives another call than math.fsum; 0 genomes whose sum lies within 1e-9 of 2.5
+second check 6 ids: 5 files scanned, 0 id-shaped tokens or barred keys outside the 436 cells of the computed decimal columns: pass
+reading rule outside null-fit folds: stack
