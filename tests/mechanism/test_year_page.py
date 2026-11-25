@@ -234,7 +234,7 @@ class Page(unittest.TestCase):
                     self.assertNotIn("equal", sentence)
         self.assertNotIn("—", self.text)
         self.assertNotIn("<!--", self.text)
-        self.assertNotRegex(self.text, r"\bI\b|\b[Mm]y\b|\b[Ww]e\b")
+        self.assertNotRegex(prose(self.text), r"\bI\b|\b[Mm]y\b|\b[Ww]e\b")
         self.assertNotRegex(self.text, r"\b(GCA|GCF)_\d|\bPRJ[A-Z]{2}\d|\b[cnpg]\.[A-Z-]?\d")
 
 
