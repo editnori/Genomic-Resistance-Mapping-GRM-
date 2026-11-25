@@ -12,7 +12,7 @@ The four strata of M1 were not readable from the release reports. Rebuilt from e
 
 **Rows with no year.** Of the 146,669 genome rows of the 204 primary datasets, a genome once per dataset, 50,329 carry no four-digit year: over a third. Every year row below describes the genomes that carry a year, and the rows without one are not assumed to be like them. They stand apart as `year_unknown`.
 
-**Two counts with no call, at two stages.** At the program's stage, the AMRFinderPlus program reports no row that meets the antibiotic's rule, neither a point mutation nor an acquired gene, for 6,035 of the 62,878 resistant genomes: M1's `neither` row. At the reader's stage, GRM's known-gene rule makes no call on 15,514 of the same 62,878: `reader_no_call` here. The second is the one a user of the release meets, as the release's reports carry the reader's call (`catalog_resistant`). The two differ because the reader's rule is gated: it calls on the catalogue's acquired-gene groups that count for the dataset's rule and holds no point mutation, so a genome the program hits can still get no call. For example, the reader calls 124 of M1's 7,963 point-only resistant genomes (`page-m1-strata.tsv`, `catalog` row).
+**Two counts with no call, related stratum by stratum.** At the program's stage, the AMRFinderPlus program reports no row that meets the antibiotic's rule, neither a point mutation nor an acquired gene, for 6,035 of the 62,878 resistant genomes: M1's `neither` stratum. At the reader's stage, GRM's known-gene rule makes no call on 15,514 of the same 62,878: `reader_no_call` here, and the count a user of the release meets, as the release's reports carry the reader's call (`catalog_resistant`). M1's own table relates the two, stratum by stratum (section No call by stratum). The 15,514 are not the 6,035 plus a remainder: 5,501 of the 6,035 are among them, and the rule calls the other 534 resistant, so the two counts cannot be subtracted. The gap between the stages, resistant genomes with a program row that meets the rule on which the rule makes no call, is 10,013, and 7,839 of them are point only. The rule calls 124 of the 7,963 point-only resistant genomes, against 38,057 of the 39,814 gene-only and 8,649 of the 9,066 with both: GRM's known-gene rule is in effect a gene-presence rule, and it almost never fires on a point mutation.
 
 The five learners' mean vote on the lineage split calls 11,989 of the reader's 15,514 no-call resistant genomes (recall 0.773), and 41,800 of the 47,364 resistant genomes the reader calls (0.883). This reading counts genomes and reports recall: it fits nothing and reports no loss.
 
@@ -77,9 +77,24 @@ M1's published counts, the rows of `reference/mechanism-split/page-m1-strata.tsv
 | neither | 6,035 | 64,480 | 14,129 | 62,927 | no |
 | all four | 62,878 | 83,791 | 62,878 | 83,791 | yes |
 
-The rebuild puts no genome in point only or both; gene only holds more resistant and more susceptible genomes than M1 published, and neither more resistant and fewer susceptible, over the same 62,878 resistant and 83,791 susceptible genomes. M1 took its strata from the AMRFinderPlus program's own rows, which mark a point mutation. The reports hold GRM's known-gene rule, whose catalogue holds acquired genes only, and no field of a report marks a group as a point mutation. The rebuild was not tuned, and the four strata are not used again on this page.
+The rebuild puts no genome in point only or both; gene only holds more resistant and more susceptible genomes than M1 published, and neither more resistant and fewer susceptible, over the same 62,878 resistant and 83,791 susceptible genomes. M1 took its strata from the AMRFinderPlus program's own rows, which mark a point mutation. The reports hold GRM's known-gene rule, whose catalogue holds acquired genes only, and no field of a report marks a group as a point mutation. The rebuild was not tuned and is not used again on this page. M1's own strata come back once, from M1's committed table, in section No call by stratum.
 
 Where M1 and the reports read the same thing, they agree: the 47,364 resistant and 18,678 susceptible genomes of `reader_call` equal, summed over M1's four strata, the genomes the `catalog` row of `page-m1-strata.tsv` calls resistant (124, 38,057, 8,649 and 534 resistant; 224, 9,468, 1,341 and 7,645 susceptible).
+
+## No call by stratum
+
+Added after the one reading. `no-call-strata.tsv` sums M1's `catalog` row, the call of GRM's known-gene rule, on the lineage split of the primary set in `reference/mechanism-split/page-m1-datasets.tsv`, over its 204 datasets, one row each, per M1 stratum: the resistant genomes, those the rule calls and those it makes no call on. Its sums equal the reading's own: 62,878 resistant, 47,364 called and 15,514 with no call (section Method, Added after the reading).
+
+| M1 stratum | Resistant | Called by GRM's known-gene rule | No call | Share with no call |
+|---|---|---|---|---|
+| point only | 7,963 | 124 | 7,839 | 0.984 |
+| gene only | 39,814 | 38,057 | 1,757 | 0.044 |
+| both | 9,066 | 8,649 | 417 | 0.046 |
+| neither | 6,035 | 534 | 5,501 | 0.912 |
+| the three with a program row | 56,843 | 46,830 | 10,013 | 0.176 |
+| all four | 62,878 | 47,364 | 15,514 | 0.247 |
+
+The `neither` stratum holds the resistant genomes with no program row that meets the rule, and the row with a program row sums the other three. On sulfamethoxazole/trimethoprim, whose rule has two parts, a stratum reads the rows that meet either part, as M1 reads them. The strata are M1's mechanism classes, read from the program's rows: they name no gene, variant or position, and the table is pooled over all years, not split by year.
 
 ## Groups
 
@@ -145,7 +160,7 @@ The lowest and highest of each column over the 29 years that are not thin, with 
 
 ## Limits
 
-**Two groups, not four.** The reader's call is not M1's strata. A resistant genome GRM's known-gene rule makes no call on may carry a point mutation or an acquired gene the AMRFinderPlus program reports, or no program row that meets the rule; this read cannot tell them apart.
+**Two groups, not four.** The reader's call is not M1's strata. A resistant genome GRM's known-gene rule makes no call on may carry a point mutation or an acquired gene the AMRFinderPlus program reports, or no program row that meets the rule. The year tables cannot tell these apart; section No call by stratum does, pooled over all years, from M1's table.
 
 **Deposits.** The genomes are BV-BRC deposits chosen for having lab results, capped at 2,000 a species. A share is no prevalence, and a share over collection years describes deposits, not resistance in any population.
 
@@ -173,6 +188,14 @@ python3 -I scripts/mechanism/year_mix.py print reference/mechanism-year
 
 REPORTS is the folder of the release's reports, READING the read's counts and OUT the record's folder, copied to `reference/mechanism-year/` as `write` wrote it. The `print` command came after the read: it reads the record alone and prints this page's tables, rounded to 3 decimals. The read ran the script whose sha256 `reading.txt` gives; later commits added `print` and changed nothing that `read` or `write` runs.
 
+**Added after the reading.** `no-call-strata.tsv` was written on 25 Nov 2026, after the one reading, at commit `8db9570` with a clean tree:
+
+```
+python3 -I scripts/mechanism/year_mix.py strata --m1 reference/mechanism-split/page-m1-datasets.tsv --lists scripts/c3-inputs/lists.tsv --record reference/mechanism-year
+```
+
+Its only new input is `page-m1-datasets.tsv`, a public table committed with M1. It opens no release report and no score, and it changes none of the six tables of the reading. It was added because the program's count with no row and the reader's count with no call needed relating, not listing. `strata` stops unless the `catalog` row holds each primary dataset once and its sums equal `step1.tsv` and `totals.tsv`, and `test_year_page.py` recomputes all six rows from M1's file.
+
 **Guards.** `write` checked step 1 and the six guards before it wrote a table, and none stopped it. `guards.txt` holds its printout:
 
 ```
@@ -185,7 +208,7 @@ step 1: 7 published rows the same; strata two: reader_call, reader_no_call, read
 guard 6 (tables): 6 files, 0 with a genome id, 0 with a catalogue group name, against 23757 ids and 409 group names
 ```
 
-**Tests.** `tests/mechanism/test_year_mix.py` holds 38 SYNTHETIC tests of the script, with tables worked by hand. `tests/mechanism/test_year_faults.py` runs `scripts/mechanism/year_faults.py`, which plants each fault below in the script in turn and runs the test meant to catch it. `tests/mechanism/test_year_page.py` holds 16 tests of this page against `reference/mechanism-year/`.
+**Tests.** `tests/mechanism/test_year_mix.py` holds 43 SYNTHETIC tests of the script, with tables worked by hand. `tests/mechanism/test_year_faults.py` runs `scripts/mechanism/year_faults.py`, which plants each fault below in the script in turn and runs the test meant to catch it. `tests/mechanism/test_year_page.py` holds 17 tests of this page against `reference/mechanism-year/`.
 
 | Fault planted | Test that caught it |
 |---|---|
@@ -205,10 +228,12 @@ guard 6 (tables): 6 files, 0 with a genome id, 0 with a catalogue group name, ag
 | Y14. A recall written over under 10 resistant genomes | `Read.test_recall_only_over_ten_resistant` |
 | Y15. The scan of the written files skipped | `Read.test_an_id_in_a_written_file_stops_the_write` |
 | Y16. The species table's floor at 9 resistant genomes | `Read.test_the_species_table_keeps_strata_with_ten_or_more_resistant` |
+| Y17. The M1 strata summed over every row of the file, not the catalog row alone | `Strata.test_the_strata_sum_the_catalogue_row_of_the_lineage_split` |
+| Y18. The M1 strata summed over both splits | `Strata.test_the_strata_sum_the_catalogue_row_of_the_lineage_split` |
 
-All 16 were caught.
+All 18 were caught.
 
-**Files.** The record is in `reference/mechanism-year/`, with `SHA256SUMS` over its six tables as `write` wrote them.
+**Files.** The record is in `reference/mechanism-year/`, with `SHA256SUMS` over its six tables as `write` wrote them, and `no-call-strata.tsv` as `strata` wrote it.
 
 ## Datasets
 
