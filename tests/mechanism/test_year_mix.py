@@ -660,11 +660,11 @@ class Strata(unittest.TestCase):
                 self.assertFalse(os.path.exists(os.path.join(self.out, ym.NO_CALL_TABLE)))
 
     def test_sums_that_differ_from_the_record_stop(self):
-        more_called = dict(CATALOG, neither=(3, 2))
-        other_resistant = dict(CATALOG, point_only=(7, 0))
-        for catalog, words in ((more_called, "differ from totals.tsv"), (other_resistant, "step1.tsv")):
+        more_called = (dict(CATALOG, neither=(3, 2)), PROGRAM)
+        other_resistant = (dict(CATALOG, point_only=(7, 0)), dict(PROGRAM, point_only=(7, 4)))
+        for (catalog, program), words in ((more_called, "differ from totals.tsv"), (other_resistant, "step1.tsv")):
             with self.subTest(words=words):
-                rc, text = self.strata(thick_m1(catalog))
+                rc, text = self.strata(thick_m1(catalog, program))
                 self.assertEqual(rc, 2)
                 self.assertIn(words, text)
                 self.assertFalse(os.path.exists(os.path.join(self.out, ym.NO_CALL_TABLE)))
