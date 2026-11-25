@@ -1,6 +1,6 @@
 # Assumption plan: corrections
 
-The plan in `docs/assumption-plan.md` is fixed, and its text does not change. This page lists what was found wrong in it after it was fixed, what a later design added to it, and what holds instead. Each entry gives its date. The first two were written on 22 Nov 2026, before any fit.
+The plan in `docs/assumption-plan.md` is fixed, and its text does not change. This page lists what was found wrong in it after it was fixed, what a later design or a ruling added to it, what a ruling settled where it left a rule open, and what holds instead. Each entry gives its date. The first two were written on 22 Nov 2026, before any fit.
 
 ## Study split
 
@@ -737,3 +737,96 @@ An eleventh came while the text was written. The project's wording rules put rec
 **Written.** This entry was written at 10:49Z on 23 Nov 2026, during the review. No comparison result had been read.
 
 **After the review.** The lead ruled two points at 12:19Z on 23 Nov 2026, with no C2 score read. H-1's ruling on a refused repeat holds for C2: a dataset whose lineage draws are refused past both replacements leaves the lineage count of every arm and the twin alike, the result page names it with its reason, and its study rows are scored as before. Every arm is scored on the default's test folds, so such a dataset has no lineage test for any arm, and leaving it out favours none. The 19 fitted datasets that add 1 to 19 labelled genomes stay in `cap-all`'s count of 116: the count was fixed with no threshold before the cohorts were listed, and a threshold set now would be chosen with the lists in hand. The result page gives the count over the other 97 datasets beside it, deciding nothing.
+
+## Label rule
+
+**Plan.** The plan marks 36 of its 274 datasets M: "M marks a dataset holding a pair with S and I or with I and R". S is a susceptible call, I an intermediate one and R a resistant one. Its Labels paragraph says: "The 36 wait for the maintainer's rule." Step 1 of its Order says: "The M datasets wait for the maintainer's label rule."
+
+**Pages.** Sentences like these two, that datasets of M wait for the label rule or for the maintainer's label rule, stand on 16 method and result pages, each for its own datasets in M.
+
+**Ruled.** On 24 Nov 2026 the maintainer left the plan's open rules to the lead. The lead ruled the label rule that day, with no dataset of M fitted for any block. The release's rule stays. It is `r-or-s-wins` in `docs/input-configuration.md`: S with I is S, I with R is R, R with S has no label.
+
+**Holds.** The 36 datasets of M are open for fits under `r-or-s-wins`. Each claim on them has two readings: one on every scored genome, and one without the genomes whose records for that antibiotic hold an intermediate call, with no refit. A claim on a dataset of M stands only if it holds both ways.
+
+**Merged pages.** These readings bind work started after 17:36Z on 24 Nov 2026, and no merged result changes. The mechanism split read its datasets of M on 23 Nov 2026 from the release's reports with one reading, and its lines on them stand apart in `docs/mechanism-split-result.md` as written.
+
+**Lineage curve.** Its reading started after that time, by a method fixed on 23 Nov 2026. `docs/lineage-curve-result.md` reads clofazimine and isoniazid of *Mycobacterium tuberculosis*, both in M, with the release's labels alone. Its rows for them owe the second reading, which has not been made. Until it is, the page's sentences that name clofazimine or isoniazid are shown one way only.
+
+**Later records.** Block T1's Datasets row says the label rule picked applies to the later-records test too, so that test uses `r-or-s-wins`. Its claims on datasets of M take the two readings as well.
+
+**Why.** `intermediate-aside` leaves out the borderline genomes, so the task would read easier than it is in practice. `most-resistant` changes labels outside M as well: by the plan, 33 of the 238 hold a pair with R and S. `intermediate-class` makes the task three classes. Every merged result uses `r-or-s-wins`.
+
+**Counts with M.** The lead ruled three more points at 17:09Z on 25 Nov 2026, with no dataset of M fitted for any block.
+
+- The plan's sentence "Each result names the rules it does not depend on" binds on M too. A result on a dataset of M names them, says so when it depends on all four, and gives both readings.
+- A block's first-run verdict stands. No arm that missed conditions 1 to 5 on the first run comes to meet them by a later count.
+- Block C1 reads its own rule. No lower line was a candidate on its 89 datasets, so the count over its 108 makes none.
+- For a candidate of the entry Condition 6 the rule runs one way. The release changes to it only if conditions 1 to 5 also hold on the count over all of its block's datasets, M included, read both ways.
+
+**Three counts.** When a block's datasets of M have run, its result page gives three counts: the first run's as it stands, the count over M alone, and the count over all its datasets. The block's rules and arguments stay unchanged. A design entry's "taken once" means the first run's count.
+
+**Code.** Blocks C2, C3, C4, C5, C7 and C9 refuse or drop a dataset of M in their code today, and none of their scorers takes the second reading. So the code changes for this run, and by step 3 of the plan's Order each change is reviewed before it runs.
+
+**Not fixed.** Three choices are not fixed yet: whether arms that are not candidates run on M, which sets condition 2's Holm family on the count over all datasets; whether the two readings share that family; and how a dataset enters the second reading when taking out the genomes with an intermediate call leaves a class too small to score.
+
+**Fixed before the run.** The design entry of the run on M fixes those three, written and reviewed before any dataset of M is fitted.
+
+**Not run.** No block of the plan has fitted a dataset of M. Until one has, a page's sentence that its datasets of M wait for the label rule means: the lead has made the rule, and the run has not started.
+
+**Read again.** Three sentences say a line is read again when the label rule is made: two in `docs/refit-result.md` and one in this page's Refit reading. That reading is D0's, over the 10 MISS datasets in M. It needs their refit, which has not started.
+
+**Written.** This entry was written at 16:49Z on 25 Nov 2026. No dataset of M had been fitted, then or at either change below. The maintainer can overrule it.
+
+**Changed.** After its independent review the lead added, at 17:12Z, the plan's words on M, the paragraphs Pages, Counts with M, Three counts and Read again, and the last sentence of Later records, and moved the count over M from Not run to Three counts.
+
+**Changed again.** After a second review the lead added, at 17:39Z, Merged pages, Lineage curve, Code and Not fixed, and changed Counts with M and Three counts.
+
+## Condition 6
+
+**Pages.** The plan's sixth condition for a release change is: "The maintainer rules the change." The result pages of blocks C2, C3, C4, C5, C7 and C9 each leave it to the maintainer.
+
+**Ruled on 24 Nov 2026.** The lead ruled condition 6 for the comparison blocks then read, under the maintainer's word of that day.
+
+- Blocks C2, C4, C5 and C9: no arm meets conditions 1 and 2, so there is no change to rule on, and the release keeps its rule.
+- Block C3: the AMRFinderPlus program's calls alone meet conditions 1 to 5 with `cart`, `rf`, `gbt` and `lasso` (`docs/input-arms-result.md`). That arm becomes a candidate for the one release change below. The release does not change now.
+
+**Beside those verdicts.** C2's `cap-4000` was withdrawn before any fit and has no reading. C4's `cmh-16000` meets conditions 1 and 2 on `gbt` and `lasso`, 2 of the 3 learners it touches, and the conditions ask all three. C3's verdict is read by C3's ruling 15, fixed before any C3 score was read. No arm meets the stricter reading beside it, which decides nothing.
+
+**Ruled on 25 Nov 2026.** The lead ruled condition 6 for block C7's three arms at 14:51Z, after the one reading of block C7 (`docs/outside-learners-result.md`) and before its independent review ended.
+
+- `xgboost`, XGBoost 3.0.5, is not a candidate. It meets conditions 1 to 4 and not 5: its study median is -0.002 on 55 study datasets, against a lineage median of 0.003. The release changes only when all six hold.
+- `lightgbm`, LightGBM 4.6.0, and `elasticnet`, the scikit-learn 1.7.2 elastic net, meet conditions 1 to 5 and become candidates for the one release change. The release does not change now.
+
+**C7's review.** It ended after the ruling. It traced the figures of the page's changed lines and of the pull request's text to the record, 1,537 with a program of its own and the other 5 by hand, and found 0 mismatch.
+
+**Its findings.** It made 12 findings, and none changes a verdict. Commit 96860bbc answers six of them, on the page, in its tests and in the workflow's comment. The other six concern the pull request's text, a commit message or working files outside the repository, or leave the page as it stands.
+
+**One release change.** The release changes at most once, after the block that follows C7. The plan does not hold that block: a later design adds it. Its plan is written and reviewed, and its entry stands on this page, before the lead reads its first number.
+
+**The pick.** The plan holds no pick among arms that each met conditions 1 to 5, and no limit of one release change. The ruling of 24 Nov adds both, after blocks C2, C3, C4, C5 and C9 were read. The lead makes the pick among today's release, C3's candidate, C7's two candidates and that later block's candidates, by the plan's rules on held-out scores, and writes it down before the later-records test.
+
+**The pick's rule.** It is not written yet. "By the plan's rules on held-out scores" does not say how the pick chooses among candidates that each meet conditions 1 to 5, and the count over M alone has no part in it so far.
+
+**Its timing.** The lead writes the rule on this page, with a review of its own, before any dataset of M is fitted and before reading the later block's first number. The first-run results of blocks C3 and C7 will be known when it is written.
+
+**Before the pick.** Each candidate's block first takes its count over all its datasets, M included, as the entry Label rule gives it. A candidate that does not meet conditions 1 to 5 there, read both ways, is not picked.
+
+**Later-records test.** Block T1's Scored row stands as the plan wrote it: "Once, after every block is ruled: the release's rule and each arm that met conditions 1 to 5, on the same genomes and measure". Today those arms are C3's candidate and C7's two.
+
+**A narrower ruling, taken back.** The ruling of 24 Nov named only the picked release and today's release for that scoring. That would have left out an arm that met conditions 1 to 5 and was not picked. The lead ruled at 16:47Z on 25 Nov 2026 that the plan's row holds, since the plan was written before any result.
+
+**Added to T1.** The test also scores the picked release when it is not one of those arms. It scores a candidate of the later block only if that block's design entry, written before the lead reads its first number, says so and gives the candidate's rule. The test's page reports an arm it cannot score as not scored, with its reason. The later records decide no pick.
+
+**Beside C7's candidates.** The pick weighs these, from `reference/outside-learners/`. The lineage medians are 0.003 for `lightgbm` and 0.006 for `elasticnet`, both inside the plan's band for "same" (0.02). By more than that band, `lightgbm` is better on 62 of 232 lineage datasets and worse on 14, and `elasticnet` better on 71 and worse on 19.
+
+**Twin.** The plan reads every count against the twin, the default fitted again with only the fold seeds changed. On the same 232 datasets `twin-gbt` is better on 40 and worse on 33, and `twin-lasso` better on 28 and worse on 19.
+
+**Costs.** On the study split `lightgbm`'s log loss is worse, by a median of 0.010. `elasticnet` kept no weight in 221 of 3,490 lineage folds, and its median fit took 5210.252 wall seconds against 4.878 for `lightgbm`. Either arm adds a library to the release. The lead rules on adding a dependency at the pick.
+
+**Holds.** These rulings change nothing in the release and no sentence on the site. The site's sentences on the study split change only with the one release change. A study split stays a retrospective split inside one database, never external validation.
+
+**Written.** This entry was written at 16:49Z on 25 Nov 2026, after the readings of blocks C2, C3, C4, C5, C7 and C9 and with no later record read. The maintainer can overrule each ruling in it.
+
+**Changed.** After its independent review the lead changed, at 17:12Z, the paragraphs Ruled on 24 Nov 2026, Ruled on 25 Nov 2026, C7's review, One release change, The pick, Added to T1 and Holds, and added Beside those verdicts, Before the pick and Twin.
+
+**Changed again.** After a second review the lead added, at 17:39Z, The pick's rule, Its timing and the last sentence of Holds, and split C7's review in two.
