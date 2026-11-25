@@ -750,7 +750,7 @@ An eleventh came while the text was written. The project's wording rules put rec
 
 **Merged pages.** These readings bind work started after 17:36Z on 24 Nov 2026, and no merged result changes. The mechanism split read its datasets of M on 23 Nov 2026 from the release's reports with one reading, and its lines on them stand apart in `docs/mechanism-split-result.md` as written.
 
-**Lineage curve.** Its reading started after that time, by a method fixed on 23 Nov 2026. `docs/lineage-curve-result.md` reads clofazimine and isoniazid of *Mycobacterium tuberculosis*, both in M, with the release's labels alone. Its rows for them owe the second reading, which has not been made. Until then no claim rests on those two rows.
+**Lineage curve.** Its reading started after that time, by a method fixed on 23 Nov 2026. `docs/lineage-curve-result.md` reads clofazimine and isoniazid of *Mycobacterium tuberculosis*, both in M, with the release's labels alone. Its rows for them owe the second reading, which has not been made. Until it is, the page's sentences that name clofazimine or isoniazid are shown one way only.
 
 **Later records.** Block T1's Datasets row says the label rule picked applies to the later-records test too, so that test uses `r-or-s-wins`. Its claims on datasets of M take the two readings as well.
 
