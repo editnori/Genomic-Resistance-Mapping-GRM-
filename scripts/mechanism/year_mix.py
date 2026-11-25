@@ -605,6 +605,18 @@ def recall_words(r):
            f"{count_words(r['resistant'])})"
 
 
+def year_runs(years):
+    """Years in order as words, a run of consecutive years as "a to b"."""
+    runs = []
+    for y in years:
+        if runs and int(y) == runs[-1][1] + 1:
+            runs[-1][1] = int(y)
+        else:
+            runs.append([int(y), int(y)])
+    words = [str(a) if a == b else f"{a} to {b}" for a, b in runs]
+    return words[0] if len(words) == 1 else ", ".join(words[:-1]) + " and " + words[-1]
+
+
 def page_tables(record):
     """The page's tables, printed from the record."""
     out = {}
@@ -649,6 +661,11 @@ def page_tables(record):
                       f"{share_words(sl, 'susceptible')} | {share_words(sh, 'susceptible')} | "
                       f"{recall_words(cl) if cl else ''} | {recall_words(ch) if ch else ''} |")
     out["ranges"] = ranges
+    by_species = {}
+    for r in record_rows(record, "species.tsv"):
+        by_species.setdefault(r["species"], set()).add(r["antibiotic"])
+    out["datasets"] = ["| Species | Datasets | Antibiotics |", "|---|---|---|"] + [
+        f"| *{name}* | {len(drugs)} | {', '.join(sorted(drugs))} |" for name, drugs in sorted(by_species.items())]
     return out
 
 
@@ -658,7 +675,7 @@ def print_record(record):
         lines += [f"## {name}", ""] + rows + [""]
     s = summary(record)
     lines += ["## figures", "", f"genomes: {s['genomes']}", f"years not thin: {len(s['kept_years'])}, "
-              f"{s['kept_years'][0]} to {s['kept_years'][-1]}, {s['kept_genomes']} genomes",
+              f"{year_runs(s['kept_years'])}, {s['kept_genomes']} genomes",
               f"thin years: {len(s['thin_years'])}, {s['thin_genomes']} genomes",
               f"year_unknown: {s['unknown_genomes']} genomes",
               f"species.tsv: {s['species_pairs']} species and antibiotics in {s['species_names']} species; "

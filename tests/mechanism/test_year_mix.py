@@ -504,9 +504,14 @@ class Read(unittest.TestCase):
             "1.000 (2018, 90 of 90) |  |  |"])
         self.assertEqual(tables["years"][2:], [
             "| 2018 | 100 | 10 | 90 | 10 (1.000) | 0 (0.000) | 0 (0.000) | 90 (1.000) | 0.700 |  |"])
+        self.assertEqual(tables["datasets"][2:], ["| *Synthia coli* | 1 | drug t |"])
         lines = ym.print_record(self.out)
-        self.assertIn("years not thin: 1, 2018 to 2018, 100 genomes", lines)
+        self.assertIn("years not thin: 1, 2018, 100 genomes", lines)
         self.assertIn("species.tsv: 1 species and antibiotics in 1 species; reader_call 1, reader_no_call 0", lines)
+
+    def test_years_in_a_run_are_joined(self):
+        self.assertEqual(ym.year_runs(["1985", "1994", "1995", "1996", "2001"]), "1985, 1994 to 1996 and 2001")
+        self.assertEqual(ym.year_runs(["2018"]), "2018")
 
     def test_a_tie_goes_to_the_earliest_year(self):
         rows = [{"year": "2012", "v": "0.5"}, {"year": "2010", "v": "0.5"}, {"year": "2011", "v": "0.2"},
