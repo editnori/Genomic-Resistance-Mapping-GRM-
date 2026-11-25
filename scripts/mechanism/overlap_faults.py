@@ -1,6 +1,6 @@
 """overlap_faults.py: the faults of the learner overlap's table script
-(learner_overlap.py), each planted in turn, and the SYNTHETIC test that must
-catch it.
+(learner_overlap.py, O1 to O17) and of its second pass (overlap_second.py, O18
+to O28), each planted in turn, and the SYNTHETIC test that must catch it.
 
     python3 -I scripts/mechanism/overlap_faults.py [--out faults.tsv]
 
@@ -27,13 +27,31 @@ from tests.mechanism import common as fixtures  # noqa: E402
 
 planted = fixtures.load("planted_faults")
 lo = fixtures.load("learner_overlap")
+os2 = fixtures.load("overlap_second")
 
 T = "tests.mechanism.test_learner_overlap."
+T2 = "tests.mechanism.test_overlap_second."
 
 
 def weighted_ratios(rows):
     # fault O7: each report's ratio counted once per genome
     return [float(r["ratio_all5"]) for r in rows if r["ratio_all5"] != "" for _ in range(int(r["genomes"]))]
+
+
+def weighted_nonull_ratios(rows):
+    # fault O25: each report's ratio outside null folds counted once per genome
+    return [float(r["nonull_ratio_all5"]) for r in rows if r["nonull_ratio_all5"] != ""
+            for _ in range(int(r["genomes"]))]
+
+
+def majority(scores):
+    # fault O19: three or more of the five calls in place of their mean
+    return sum(1 for x in scores if x >= lo.CUTOFF) >= 3
+
+
+def every_first_row(first_record):
+    # fault O26: every report of the first record pooled, whatever its resistant count
+    return set(os2.first_rows(first_record))
 
 
 def every_fold_null(lr):
@@ -87,6 +105,37 @@ FAULTS = [
     ("O17", "a null catalogue call read as a call",
      T + "Counts.test_a_report_with_no_catalogue_rule_is_counted_and_marked",
      lambda: mock.patch.object(lo, "uncalled", lambda catalog_call: catalog_call is False)),
+    ("O18", "a score sum of exactly 2.5 read as a miss by the mean", T2 + "Vote.test_a_sum_of_exactly_2_5_is_a_call",
+     lambda: mock.patch.object(os2, "vote", lambda scores: os2.math.fsum(scores) > os2.VOTE_SUM)),
+    ("O19", "the majority of the five read in place of their mean", T2 + "Vote.test_the_mean_is_not_the_majority",
+     lambda: mock.patch.object(os2, "vote", majority)),
+    ("O20", "a plain sum over 5 read in place of math.fsum",
+     T2 + "Vote.test_the_vote_edge_is_counted_and_the_read_goes_on",
+     lambda: mock.patch.object(os2, "vote", os2.plain_vote)),
+    ("O21", "the null folds of one learner cut in place of all five's",
+     T2 + "NullCut.test_null_folds_of_two_learners_are_both_cut",
+     lambda: mock.patch.object(os2, "null_union", lambda learners: lo.null_folds(learners["gbt"]))),
+    ("O22", "first-pass columns that differ from the record let through",
+     T2 + "SecondStops.test_a_first_record_that_differs_stops_the_read",
+     lambda: mock.patch.object(os2, "first_agrees", lambda row, first: True)),
+    ("O23", "a vote that parts from the five let through",
+     T2 + "Vote.test_a_vote_that_parts_from_the_five_stops_the_read",
+     lambda: mock.patch.object(os2, "arithmetic_holds", lambda counts, row: True)),
+    ("O24", "a null-fit cut that does not add up let through",
+     T2 + "NullCut.test_a_cut_that_does_not_add_up_stops_the_read",
+     lambda: mock.patch.object(os2, "null_cut_holds", lambda counts, row: True)),
+    ("O25", "the median outside null folds weighted by genome count",
+     T2 + "SecondPooled.test_the_median_outside_null_folds_weights_each_report_once",
+     lambda: mock.patch.object(os2, "nonull_ratios", weighted_nonull_ratios)),
+    ("O26", "a report under 10 resistant genomes pooled in the second pass",
+     T2 + "SecondPooled.test_a_report_under_10_resistant_stays_out_of_the_pool",
+     lambda: mock.patch.object(os2, "pooled_keys", every_first_row)),
+    ("O27", "the second pass's shape scan blind to an id-shaped token",
+     T2 + "SecondStops.test_an_id_shaped_token_in_the_reading_stops_the_write",
+     lambda: mock.patch.object(os2, "scan", lambda paths: 0)),
+    ("O28", "a genome 3 of the five miss counted with those all five miss",
+     T2 + "Vote.test_the_mean_misses_what_three_or_more_of_the_five_miss_here",
+     lambda: mock.patch.object(os2, "bucket", lambda k: "all5" if k >= 3 else ("none" if k == 0 else "1to4"))),
 ]
 
 

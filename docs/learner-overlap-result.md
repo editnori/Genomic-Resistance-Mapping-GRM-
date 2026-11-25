@@ -116,7 +116,7 @@ check 10 null folds: 0 learner rows whose null-fold genomes differ from no_call
 reading rule: stack
 ```
 
-`tests/mechanism/test_learner_overlap.py` holds 38 SYNTHETIC tests of the table script, with counts worked by hand. `tests/mechanism/test_learner_overlap_page.py` holds 15 tests of this page and its record. `scripts/mechanism/overlap_faults.py` plants each fault below in the script in turn and runs the test that must catch it:
+`tests/mechanism/test_learner_overlap.py` holds 38 SYNTHETIC tests of the table script, with counts worked by hand. `tests/mechanism/test_overlap_second.py` holds 22 SYNTHETIC tests of the second pass's script, worked the same way. `tests/mechanism/test_learner_overlap_page.py` holds 15 tests of this page and its record. `scripts/mechanism/overlap_faults.py` plants each fault below in one of the two scripts in turn and runs the test that must catch it:
 
 | Fault | Test |
 |---|---|
@@ -137,8 +137,19 @@ reading rule: stack
 | O15. Catalogue calls that differ from catalog_resistant let through | `Stops.test_catalogue_calls_that_differ_from_catalog_resistant_stop_the_read` |
 | O16. Every fold of a learner with a null fit read as null | `Counts.test_misses_in_a_null_fit_fold` |
 | O17. A null catalogue call read as a call | `Counts.test_a_report_with_no_catalogue_rule_is_counted_and_marked` |
+| O18. A score sum of exactly 2.5 read as a miss by the mean | `Vote.test_a_sum_of_exactly_2_5_is_a_call` |
+| O19. The majority of the five read in place of their mean | `Vote.test_the_mean_is_not_the_majority` |
+| O20. A plain sum over 5 read in place of math.fsum | `Vote.test_the_vote_edge_is_counted_and_the_read_goes_on` |
+| O21. The null folds of one learner cut in place of all five's | `NullCut.test_null_folds_of_two_learners_are_both_cut` |
+| O22. First-pass columns that differ from the record let through | `SecondStops.test_a_first_record_that_differs_stops_the_read` |
+| O23. A vote that parts from the five let through | `Vote.test_a_vote_that_parts_from_the_five_stops_the_read` |
+| O24. A null-fit cut that does not add up let through | `NullCut.test_a_cut_that_does_not_add_up_stops_the_read` |
+| O25. The median outside null folds weighted by genome count | `SecondPooled.test_the_median_outside_null_folds_weights_each_report_once` |
+| O26. A report under 10 resistant genomes pooled in the second pass | `SecondPooled.test_a_report_under_10_resistant_stays_out_of_the_pool` |
+| O27. The second pass's shape scan blind to an id-shaped token | `SecondStops.test_an_id_shaped_token_in_the_reading_stops_the_write` |
+| O28. A genome 3 of the five miss counted with those all five miss | `Vote.test_the_mean_misses_what_three_or_more_of_the_five_miss_here` |
 
-All 17 were caught.
+All 28 were caught.
 
 ## Plan
 

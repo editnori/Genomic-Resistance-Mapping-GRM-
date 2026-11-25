@@ -119,15 +119,17 @@ class Page(unittest.TestCase):
         method = self.sections["Method"]
         for fault, words, test, _ in faults.FAULTS:
             self.assertEqual(self.lines.count(f"| {fault}. {words[0].upper()}{words[1:]} | "
-                                              f"`{test.split('test_learner_overlap.')[1]}` |"), 1, fault)
+                                              f"`{'.'.join(test.rsplit('.', 2)[-2:])}` |"), 1, fault)
         self.assertIn(f"All {len(faults.FAULTS)} were caught.", method)
 
     def test_the_page_gives_the_suites_own_test_counts(self):
         loader = unittest.TestLoader()
         here = loader.loadTestsFromName("tests.mechanism.test_learner_overlap_page").countTestCases()
         script = loader.loadTestsFromName("tests.mechanism.test_learner_overlap").countTestCases()
+        second = loader.loadTestsFromName("tests.mechanism.test_overlap_second").countTestCases()
         method = self.sections["Method"]
         self.assertIn(f"`tests/mechanism/test_learner_overlap.py` holds {script} SYNTHETIC tests", method)
+        self.assertIn(f"`tests/mechanism/test_overlap_second.py` holds {second} SYNTHETIC tests", method)
         self.assertIn(f"`tests/mechanism/test_learner_overlap_page.py` holds {here} tests", method)
 
     def test_every_figure_of_the_prose_stands_in_the_record(self):
