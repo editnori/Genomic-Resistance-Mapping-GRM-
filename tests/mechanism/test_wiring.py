@@ -1,11 +1,11 @@
-"""The suite's wiring: the workflow's python job runs it, the python row of docs/ci.md gives its count, and the scripts use the standard library alone."""
+"""The suite's wiring: the workflow's python job runs it and its comment gives the faults the suite plants, the python row of docs/ci.md gives its count, and the scripts use the standard library alone."""
 
 import ast
 import re
 import sys
 import unittest
 
-from tests.mechanism.common import KIT, ROOT
+from tests.mechanism.common import KIT, ROOT, load
 
 SUITE = "tests/mechanism"
 WORKFLOW = ROOT / ".github" / "workflows" / "ci.yml"
@@ -22,6 +22,11 @@ class Wiring(unittest.TestCase):
         job = WORKFLOW.read_text(encoding="utf-8").split("\n  python:\n", 1)[1].split("\n    steps:", 1)[0]
         self.assertRegex(job, rf"\n          # SYNTHETIC [^\n]+\n          - suite: {re.escape(SUITE)}\n            top: \.\n")
         self.assertEqual(job.count(f"suite: {SUITE}\n"), 1)
+        comment = re.search(rf"\n          (# SYNTHETIC [^\n]+)\n          - suite: {re.escape(SUITE)}\n", job).group(1)
+        runners = sorted(KIT.glob("*_faults.py"))
+        self.assertEqual(len(runners), 4)
+        planted = sum(len(load(path.stem).FAULTS) for path in runners)
+        self.assertIn(f" plants the {planted} faults of its four runners (scripts/mechanism/*_faults.py) ", comment)
 
     def test_python_row_gives_the_count(self):
         rows = [line for line in CI_DOC.read_text(encoding="utf-8").split("\n") if line.startswith("| `python`")]
