@@ -223,6 +223,40 @@ The first read, on 24 November 2026 at the script's first commit, stopped at che
 
 No other rule, column, check or reading rule changed.
 
+### Second pass
+
+Fixed on 25 November 2026, after a review of the first reading, before the second pass's script was written and before the reports were read again. The first pass counted the five learners one by one, and the release ships their mean, so the second pass counts what the mean misses. It also works the yardstick again with the genomes of null-fit folds left out, since a null fit is one learner with no model, not five learners agreeing. It fits nothing, and no first-pass rule, column, file or figure changes. The mean of five stored scores is arithmetic, not a fit.
+
+- The mean vote calls a genome resistant when the sum of its five learner scores, added by Python's `math.fsum`, is 2.5 or more: the mean at the release's 0.5 cutoff. It is read only on reports that carry the five.
+- `scripts/mechanism/overlap_second.py` reads the same 274 reports. It runs every first-pass check again through the first pass's own reader, then reads each used report's five score lists again.
+
+Table `reference/learner-overlap/second-pass/vote.tsv`, one row per report the first pass used, species and antibiotic in full, with `genomes`, `resistant` and `susceptible`:
+
+- `mean_miss`: resistant genomes the mean misses; `mean_miss_by_all5`, `mean_miss_by_1to4` and `mean_miss_by_none`: of those, the ones missed by all five learners, by 1 to 4 and by none;
+- `mean_wrong`: susceptible genomes the mean calls resistant; `mean_wrong_by_all5`, `mean_wrong_by_1to4` and `mean_wrong_by_none`: of those, the ones all five, 1 to 4 or none of the five call resistant;
+- `nonull_resistant`: resistant genomes outside every outer fold where at least one of the five had a null fit; `nonull_miss_scm`, `nonull_miss_cart`, `nonull_miss_rf`, `nonull_miss_gbt`, `nonull_miss_lasso` and `nonull_miss_all5`: their misses at 0.5;
+- `nonull_expected_all5` and `nonull_ratio_all5`: the yardstick and the ratio worked from those columns as the first pass works them, the ratio blank where the yardstick is 0.
+
+A report with another learner set keeps its row with these columns blank.
+
+Table `reference/learner-overlap/second-pass/vote-pooled.tsv`: over the first pass's pooled reports, one row with `scope` `all` and one per species. It holds:
+
+- the sums of the count columns and of `nonull_expected_all5`;
+- `mean_share_median`: the median of `mean_miss / resistant`;
+- `nonull_datasets_with_ratio`, `nonull_ratio_median`, `nonull_ratio_q1`, `nonull_ratio_q3` and `nonull_datasets_ratio_over_1`: as the first pass works them, each report weighted once;
+- `paired_datasets`: the reports with both a first-pass ratio and a ratio outside null folds, with `paired_ratio_median` and `paired_nonull_ratio_median`, the two medians over those same reports.
+
+Checks of the second pass, each a stop unless marked:
+
+1. Every check of the first pass runs again and passes, and the files found are 274.
+2. The reports the second pass uses are the rows of the committed `datasets.tsv`, and each report's first-pass columns, counted again, equal its row.
+3. A mean of five scores cannot miss a genome none of the five miss, nor call resistant one none of the five call, and it misses every genome all five miss. So `mean_miss_by_none` and `mean_wrong_by_none` must be 0, and `mean_miss_by_all5` and `mean_wrong_by_all5` must equal `miss_5` and `wrong_5`.
+4. `nonull_miss_all5` plus `miss_all5_in_null_fold` equals `miss_all5`.
+5. The genomes where a plain sum, added in learner order and divided by 5, gives another call than `math.fsum` are counted, and so are the genomes whose sum lies within 1e-9 of 2.5. The read goes on.
+6. Every written file is scanned for the shape of a genome id and for a key named `id` or `samples` (the first pass's check 6).
+
+Reading: the first pass's reading rule is applied again to `nonull_ratio_median`. The page gives it beside the first pass's median and says whether the rule's reading changes. For the mean vote no rule is set: the page reports its counts.
+
 ## Datasets
 
 One row per report used, species and antibiotic in full. A report with fewer than five learners would show its counts and names only; none was found. "No rule" marks a report with no catalogue rule for its antibiotic, and "none" a ratio where the yardstick is 0. A yardstick shown as 0.00 is above 0 and rounds to 0.00 at two places, so its ratio is read.
