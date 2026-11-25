@@ -1,0 +1,13 @@
+PASS species: 23 copies, 23 species in lists.tsv's first run; 0 first copies set aside by time, 0 beside no newer DONE
+PASS SHA256SUMS: 23 of 23 species; 2446 of 2446 lines hold; results/ and score.tar's tables are the listed files in 23 of 23; stage 1's c3/score/ in the score.tar of 0 species, skipped unread
+PASS DONE: 23 of 23 DONE lines name their species, export binary, result count and SHA256SUMS; FAILED not set aside in 0 species; the elastic net run in 23 of 23
+  species per export commit: da70f4b 23
+  species per grm sha256: d3b53997a02c 23
+  species per code sha256: d3de72fcc10f 23
+  species per export grm sha256: 637b2da2b59b 23
+  species per elastic net pass: run 23
+PASS expect.py: 23 of 23 species: lists.txt names the first run, the seeds, twin seeds, arm seeds and the arms of its pass, expect.tsv is expect.py's, and results/outside/ is exactly its library arm rows; 2262 of 2262 results found, 0 more
+  datasets 233, study datasets 55, species 23
+PASS genome ids: 0 genome ids in 9462 files, against 23757 release ids of 23 species lists
+PASS features: 0 runs of 31 or more nucleotides, 0 LightGBM and 0 XGBoost column names in 9462 files
+CHECKS 6 of 6

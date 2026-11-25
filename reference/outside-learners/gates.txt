@@ -1,0 +1,17 @@
+1 reading: the reading holds reading.txt, checks.txt with every check passed, withdrawn.tsv, count/ with the four files, score/ and run/, and nothing else; withdrawn.tsv names, with a reason and a time, each library arm count.tsv marks withdrawn, and no other
+2 species: score/ and run/ each hold every species of lists.tsv's first run once, with its files; a folder named <species slug>.<UTC time> is a first copy set aside and never read as a species
+3 M: no dataset of M, or outside the first run, stands in any table; species and antibiotic are lists.tsv's
+4 pairs: xgboost and lightgbm stand on gbt only and elasticnet on lasso only, each read against the default's own learner at the arm's seeds (k31-at-arm-seeds); count.tsv holds the family's pairs
+5 twin: the twin's rows are lineage draws at seeds 45, 46 and 47 only, no arm's row is at a twin seed, and conditions.tsv reads the three arms and never the twin
+6 study: a study row is a study run at seed 42 on the study split, and every lineage row is a draw at 42, 43 or 44 or the twin's: a study row is never counted on the lineage split
+7 family: each count holds the five lineage pairs of the family on the primary measure, withdrawn or not, each with its Holm p
+8 withdrawn: a withdrawn arm holds no row, no report and no fold, enters no dataset of its pair, and its pair stays in the family at p = 1
+9 passes: a species whose DONE says the elastic net was left out (its first pass alone) holds no elastic net row or report, and unless the elastic net is withdrawn every species' DONE says it ran
+10 rows: each species' datasets.tsv and draws.tsv hold exactly the rows of its first-run datasets for the default, the twin and each arm not withdrawn, the study split on those in S
+11 missing: a draw not scored holds no figure, and a dataset with a draw not scored is not scored: a missing draw is never read as zero
+12 draws: datasets.tsv is the mean of draws.tsv's draws, k31-at-arm-seeds the default's at the arms' seeds
+13 reports: run/<species>/outside/ holds one report per library arm draw of draws.tsv and no other, each of its listed keys only, its fold counts the sums over its folds, draws.tsv's marks its own
+14 checks: each species' checks.tsv holds checks and every one passed, and plans.log's count line says each plans check passed at every lineage dataset seed of the arms
+15 binary: each DONE names its species and its result count; one code sha256 by binary.txt's code line (the DONE's code) and one version of each library in every species, or the page names each with its species
+16 beside: count-no-constant.tsv and count-no-unconverged.tsv are written as deciding nothing, never as the count, and the arm against its own learner's twin pair alone decides nothing
+17 count: the four count files are what score.py --count writes from the datasets.tsv files, with the arms withdrawn.tsv names

@@ -26,7 +26,7 @@ FIXED = [
     "The 35 datasets of M wait for the label rule.",
     "Condition 6 is the maintainer's.",
 ]
-# The one sentence a withdrawn elastic net changes.
+# The one sentence a withdrawn elastic net would have changed. No arm was withdrawn.
 ARMS_SENTENCE = "**Arms.** All three arms ran: `xgboost`, `lightgbm` and `elasticnet`."
 
 
@@ -53,7 +53,7 @@ class Page(unittest.TestCase):
             self.assertTrue(before.endswith("never ") or before.endswith("not "), before)
 
     def test_every_first_run_species_and_antibiotic_is_named_in_full(self):
-        page = text()
+        page = text().split("\n## Datasets\n", 1)[1]
         with open(common.KIT / "lists.tsv", newline="", encoding="utf-8") as handle:
             run = [r for r in csv.DictReader(handle, delimiter="\t") if r["first_run"] == "1"]
         self.assertEqual(len(run), 233)
@@ -64,18 +64,14 @@ class Page(unittest.TestCase):
                 self.assertEqual(len(row), 1)
                 self.assertIn(f"{r['antibiotic']} ({int(r['samples']):,})", row[0])
 
-    def test_a_withdrawn_elastic_net_changes_one_sentence(self):
+    def test_the_arms_sentence_stands_once_with_no_arm_withdrawn(self):
         page = text()
         self.assertEqual(page.count(ARMS_SENTENCE), 1)
         self.assertEqual(page.count("All three arms ran"), 1)
-        self.assertIn("the sentence above alone changes", page)
+        self.assertIn(ARMS_SENTENCE + " No arm was withdrawn.\n", page)
 
-    def test_each_placeholder_names_a_table_the_script_prints(self):
-        page = common.load("page_tables")
-        named = re.findall(r"\[([a-z-]+)\]", " ".join(re.findall(r"<!-- part 2: (.*?) -->", text())))
-        self.assertTrue(named)
-        for name in named:
-            self.assertIn(name, page.PRINTS)
+    def test_no_part_2_mark_is_left(self):
+        self.assertNotIn("<!--", text())
 
     def test_the_gates_table_is_the_scripts(self):
         page = common.load("page_tables")
