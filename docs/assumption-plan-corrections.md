@@ -737,3 +737,53 @@ An eleventh came while the text was written. The project's wording rules put rec
 **Written.** This entry was written at 10:49Z on 23 Nov 2026, during the review. No comparison result had been read.
 
 **After the review.** The lead ruled two points at 12:19Z on 23 Nov 2026, with no C2 score read. H-1's ruling on a refused repeat holds for C2: a dataset whose lineage draws are refused past both replacements leaves the lineage count of every arm and the twin alike, the result page names it with its reason, and its study rows are scored as before. Every arm is scored on the default's test folds, so such a dataset has no lineage test for any arm, and leaving it out favours none. The 19 fitted datasets that add 1 to 19 labelled genomes stay in `cap-all`'s count of 116: the count was fixed with no threshold before the cohorts were listed, and a threshold set now would be chosen with the lists in hand. The result page gives the count over the other 97 datasets beside it, deciding nothing.
+
+## Label rule
+
+**Plan.** The plan's Labels paragraph says of the 36 datasets marked M: "The 36 wait for the maintainer's rule." Step 1 of its Order says: "The M datasets wait for the maintainer's label rule." A search of `docs/` for that sentence finds it on 16 method and result pages, each for its own datasets in M.
+
+**Ruled.** On 24 Nov 2026 the maintainer left the plan's open rules to the lead. The lead ruled the label rule that day, with no dataset of M fitted for any block. The release's rule stays. It is `r-or-s-wins` in `docs/input-configuration.md`: S with I is S, I with R is R, R with S has no label.
+
+**Holds.** The 36 datasets of M are open for fits under `r-or-s-wins`. Each claim on them has two readings: one on every scored genome, and one without the genomes whose records for that antibiotic hold an intermediate call, with no refit. A claim on a dataset of M stands only if it holds both ways.
+
+**Later records.** Block T1's Datasets row says the label rule picked applies to the later-records test too, so that test uses `r-or-s-wins`.
+
+**Why.** `intermediate-aside` leaves out the borderline genomes, so the task would read easier than it is in practice. `most-resistant` changes labels outside M as well: by the plan, 33 of the 238 hold a pair with R and S. `intermediate-class` makes the task three classes. Every merged result uses `r-or-s-wins`.
+
+**Not run.** No block of the plan has fitted a dataset of M. A block takes its count over its datasets of M with its own rules, scorer and arguments unchanged, and its result page then gives that count beside the first run's. Until then, a page's sentence that its datasets of M wait for the label rule means: the lead has made the rule, and the run has not started.
+
+**Written.** This entry was written at 16:49Z on 25 Nov 2026. The maintainer can overrule it.
+
+## Condition 6
+
+**Pages.** The plan's sixth condition for a release change is: "The maintainer rules the change." The result pages of blocks C2, C3, C4, C5, C7 and C9 each leave it to the maintainer.
+
+**Ruled on 24 Nov 2026.** The lead ruled condition 6 for the blocks then read, under the maintainer's word of that day.
+
+- Blocks C2, C4, C5 and C9: no arm meets conditions 1 and 2, so there is no change to rule on, and the release keeps its rule.
+- Block C3: the AMRFinderPlus program's calls alone meet conditions 1 to 5 with `cart`, `rf`, `gbt` and `lasso` (`docs/input-arms-result.md`). That arm becomes a candidate for the one release change below. The release does not change now.
+
+**Ruled on 25 Nov 2026.** The lead ruled condition 6 for block C7's three arms at 14:51Z, after the one reading of `docs/outside-learners-result.md` and before its independent review ended.
+
+- `xgboost`, XGBoost 3.0.5, is not a candidate. It meets conditions 1 to 4 and not 5: its study median is -0.002 on 55 study datasets, against a lineage median of 0.003. The release changes only when all six hold.
+- `lightgbm`, LightGBM 4.6.0, and `elasticnet`, the scikit-learn 1.7.2 elastic net, meet conditions 1 to 5 and become candidates for the one release change. The release does not change now.
+
+**C7's review.** It ended after the ruling. It traced the figures of the page's changed lines and of the pull request's text to the record, 1,537 with a program of its own and the other 5 by hand, and found 0 mismatch. It made 12 findings, and none changes a verdict. The page's answers to them are in commit 96860bbc.
+
+**One release change.** The release changes at most once, after the block that follows C7. The plan does not hold that block: a later design adds it, and the lead writes its entry on this page before reading its first number.
+
+**The pick.** The lead makes it among today's release, C3's candidate, C7's two candidates and that later block's candidates, by the plan's rules on held-out scores, and writes it down before the later-records test.
+
+**Later-records test.** Block T1's Scored row stands as the plan wrote it: "Once, after every block is ruled: the release's rule and each arm that met conditions 1 to 5, on the same genomes and measure". Today those arms are C3's candidate and C7's two.
+
+**A narrower ruling, taken back.** The ruling of 24 Nov named only the picked release and today's release for that scoring. That would have left out an arm that met conditions 1 to 5 and was not picked. The lead ruled at 16:47Z on 25 Nov 2026 that the plan's row holds, since the plan was written before any result.
+
+**Added to T1.** The test also scores the picked release when it is not one of those arms. It scores a candidate of the later block only if that block's design entry says so before the lead reads its first number. The test's page reports an arm it cannot score as not scored, with its reason. The later records decide no pick.
+
+**Beside C7's candidates.** The pick weighs these, from `reference/outside-learners/`. The lineage medians are 0.003 for `lightgbm` and 0.006 for `elasticnet`, both inside the plan's band for "same" (0.02). By more than that band, `lightgbm` is better on 62 of 232 lineage datasets and worse on 14, and `elasticnet` better on 71 and worse on 19.
+
+**Costs.** On the study split `lightgbm`'s log loss is worse, by a median of 0.010. `elasticnet` kept no weight in 221 of 3,490 lineage folds, and its median fit took 5210.252 wall seconds against 4.878 for `lightgbm`. Either arm adds a library to the release. The lead rules on adding a dependency at the pick.
+
+**Holds.** These rulings change nothing in the release and no sentence on the site.
+
+**Written.** This entry was written at 16:49Z on 25 Nov 2026, after the readings of blocks C2, C3, C4, C5, C7 and C9 and with no later record read. The maintainer can overrule each ruling in it.
