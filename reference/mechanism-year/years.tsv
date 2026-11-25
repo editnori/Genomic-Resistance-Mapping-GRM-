@@ -1,0 +1,187 @@
+year	stratum	genomes	resistant	susceptible	resistant_called_mean5	susceptible_called_mean5	recall_mean5	thin
+1894	reader_call	0	0	0	0	0		yes
+1894	reader_no_call	3	0	3	0	0		yes
+1894	reader_no_rule	0	0	0	0	0		yes
+1943	reader_call	1	0	1	0	0		yes
+1943	reader_no_call	5	0	5	0	0		yes
+1943	reader_no_rule	0	0	0	0	0		yes
+1944	reader_call	1	0	1	0	0		yes
+1944	reader_no_call	5	0	5	0	0		yes
+1944	reader_no_rule	0	0	0	0	0		yes
+1945	reader_call	3	0	3	0	0		yes
+1945	reader_no_call	15	0	15	0	0		yes
+1945	reader_no_rule	0	0	0	0	0		yes
+1947	reader_call	1	0	1	0	0		yes
+1947	reader_no_call	5	0	5	0	0		yes
+1947	reader_no_rule	0	0	0	0	0		yes
+1951	reader_call	0	0	0	0	0		yes
+1951	reader_no_call	3	0	3	0	0		yes
+1951	reader_no_rule	0	0	0	0	0		yes
+1958	reader_call	1	0	1	0	0		yes
+1958	reader_no_call	5	0	5	0	0		yes
+1958	reader_no_rule	0	0	0	0	0		yes
+1959	reader_call	1	0	1	0	0		yes
+1959	reader_no_call	5	0	5	0	0		yes
+1959	reader_no_rule	0	0	0	0	0		yes
+1960	reader_call	1	0	1	0	0		yes
+1960	reader_no_call	5	0	5	0	0		yes
+1960	reader_no_rule	0	0	0	0	0		yes
+1963	reader_call	0	0	0	0	0		yes
+1963	reader_no_call	3	0	3	0	0		yes
+1963	reader_no_rule	0	0	0	0	0		yes
+1965	reader_call	1	0	1	0	0		yes
+1965	reader_no_call	5	0	5	0	0		yes
+1965	reader_no_rule	0	0	0	0	0		yes
+1966	reader_call	1	0	1	0	1		yes
+1966	reader_no_call	8	1	7	0	0		yes
+1966	reader_no_rule	0	0	0	0	0		yes
+1969	reader_call	0	0	0	0	0		yes
+1969	reader_no_call	3	0	3	0	0		yes
+1969	reader_no_rule	0	0	0	0	0		yes
+1970	reader_call	0	0	0	0	0		yes
+1970	reader_no_call	9	5	4	0	0		yes
+1970	reader_no_rule	0	0	0	0	0		yes
+1973	reader_call	4	0	4	0	0		yes
+1973	reader_no_call	20	0	20	0	0		yes
+1973	reader_no_rule	0	0	0	0	0		yes
+1974	reader_call	5	2	3	2	0		yes
+1974	reader_no_call	13	0	13	0	0		yes
+1974	reader_no_rule	0	0	0	0	0		yes
+1976	reader_call	1	0	1	0	0		yes
+1976	reader_no_call	5	0	5	0	0		yes
+1976	reader_no_rule	0	0	0	0	0		yes
+1977	reader_call	0	0	0	0	0		yes
+1977	reader_no_call	3	0	3	0	0		yes
+1977	reader_no_rule	0	0	0	0	0		yes
+1979	reader_call	6	5	1	2	0		yes
+1979	reader_no_call	4	0	4	0	0		yes
+1979	reader_no_rule	0	0	0	0	0		yes
+1980	reader_call	4	4	0	2	0		yes
+1980	reader_no_call	10	0	10	0	0		yes
+1980	reader_no_rule	0	0	0	0	0		yes
+1981	reader_call	0	0	0	0	0		yes
+1981	reader_no_call	9	0	9	0	1		yes
+1981	reader_no_rule	0	0	0	0	0		yes
+1982	reader_call	21	21	0	15	0	0.714285714286	yes
+1982	reader_no_call	13	1	12	1	0		yes
+1982	reader_no_rule	0	0	0	0	0		yes
+1983	reader_call	5	4	1	2	0		yes
+1983	reader_no_call	24	1	23	1	1		yes
+1983	reader_no_rule	0	0	0	0	0		yes
+1984	reader_call	0	0	0	0	0		yes
+1984	reader_no_call	93	0	93	0	0		yes
+1984	reader_no_rule	0	0	0	0	0		yes
+1985	reader_call	11	10	1	9	0	0.900000000000	no
+1985	reader_no_call	192	3	189	2	1		no
+1985	reader_no_rule	0	0	0	0	0		no
+1986	reader_call	1	1	0	1	0		yes
+1986	reader_no_call	14	0	14	0	1		yes
+1986	reader_no_rule	0	0	0	0	0		yes
+1987	reader_call	4	4	0	2	0		yes
+1987	reader_no_call	6	1	5	0	0		yes
+1987	reader_no_rule	0	0	0	0	0		yes
+1989	reader_call	0	0	0	0	0		yes
+1989	reader_no_call	8	3	5	2	1		yes
+1989	reader_no_rule	0	0	0	0	0		yes
+1990	reader_call	4	4	0	4	0		yes
+1990	reader_no_call	22	0	22	0	0		yes
+1990	reader_no_rule	0	0	0	0	0		yes
+1991	reader_call	13	10	3	4	2	0.400000000000	yes
+1991	reader_no_call	33	4	29	2	4		yes
+1991	reader_no_rule	0	0	0	0	0		yes
+1992	reader_call	2	1	1	1	1		yes
+1992	reader_no_call	50	0	50	0	2		yes
+1992	reader_no_rule	0	0	0	0	0		yes
+1993	reader_call	19	19	0	8	0	0.421052631579	yes
+1993	reader_no_call	75	9	66	4	5		yes
+1993	reader_no_rule	0	0	0	0	0		yes
+1994	reader_call	35	35	0	18	0	0.514285714286	no
+1994	reader_no_call	114	16	98	8	5	0.500000000000	no
+1994	reader_no_rule	0	0	0	0	0		no
+1995	reader_call	36	32	4	21	3	0.656250000000	no
+1995	reader_no_call	65	11	54	10	3	0.909090909091	no
+1995	reader_no_rule	0	0	0	0	0		no
+1996	reader_call	107	101	6	73	4	0.722772277228	no
+1996	reader_no_call	150	44	106	38	13	0.863636363636	no
+1996	reader_no_rule	0	0	0	0	0		no
+1997	reader_call	126	120	6	83	2	0.691666666667	no
+1997	reader_no_call	149	60	89	46	11	0.766666666667	no
+1997	reader_no_rule	0	0	0	0	0		no
+1998	reader_call	55	48	7	27	2	0.562500000000	no
+1998	reader_no_call	170	33	137	23	2	0.696969696970	no
+1998	reader_no_rule	0	0	0	0	0		no
+1999	reader_call	64	60	4	44	0	0.733333333333	no
+1999	reader_no_call	124	41	83	35	3	0.853658536585	no
+1999	reader_no_rule	0	0	0	0	0		no
+2000	reader_call	87	72	15	61	6	0.847222222222	no
+2000	reader_no_call	112	46	66	39	4	0.847826086957	no
+2000	reader_no_rule	0	0	0	0	0		no
+2001	reader_call	108	99	9	87	3	0.878787878788	no
+2001	reader_no_call	167	61	106	57	7	0.934426229508	no
+2001	reader_no_rule	0	0	0	0	0		no
+2002	reader_call	100	95	5	82	2	0.863157894737	no
+2002	reader_no_call	124	48	76	40	5	0.833333333333	no
+2002	reader_no_rule	0	0	0	0	0		no
+2003	reader_call	267	206	61	178	10	0.864077669903	no
+2003	reader_no_call	223	136	87	123	12	0.904411764706	no
+2003	reader_no_rule	0	0	0	0	0		no
+2004	reader_call	400	330	70	319	24	0.966666666667	no
+2004	reader_no_call	481	269	212	257	20	0.955390334572	no
+2004	reader_no_rule	0	0	0	0	0		no
+2005	reader_call	344	308	36	277	10	0.899350649351	no
+2005	reader_no_call	531	269	262	245	27	0.910780669145	no
+2005	reader_no_rule	0	0	0	0	0		no
+2006	reader_call	778	679	99	646	18	0.951399116348	no
+2006	reader_no_call	697	254	443	218	42	0.858267716535	no
+2006	reader_no_rule	0	0	0	0	0		no
+2007	reader_call	931	574	357	533	29	0.928571428571	no
+2007	reader_no_call	826	307	519	265	55	0.863192182410	no
+2007	reader_no_rule	0	0	0	0	0		no
+2008	reader_call	1798	1197	601	1056	85	0.882205513784	no
+2008	reader_no_call	1332	308	1024	252	78	0.818181818182	no
+2008	reader_no_rule	0	0	0	0	0		no
+2009	reader_call	1735	978	757	860	49	0.879345603272	no
+2009	reader_no_call	1583	373	1210	308	37	0.825737265416	no
+2009	reader_no_rule	0	0	0	0	0		no
+2010	reader_call	1860	1199	661	1070	89	0.892410341952	no
+2010	reader_no_call	1989	438	1551	376	138	0.858447488584	no
+2010	reader_no_rule	0	0	0	0	0		no
+2011	reader_call	2469	1888	581	1727	51	0.914724576271	no
+2011	reader_no_call	2663	275	2388	216	113	0.785454545455	no
+2011	reader_no_rule	0	0	0	0	0		no
+2012	reader_call	4795	3806	989	3331	185	0.875197057278	no
+2012	reader_no_call	4058	604	3454	385	111	0.637417218543	no
+2012	reader_no_rule	0	0	0	0	0		no
+2013	reader_call	3910	3261	649	2925	156	0.896964121435	no
+2013	reader_no_call	3226	556	2670	310	133	0.557553956835	no
+2013	reader_no_rule	0	0	0	0	0		no
+2014	reader_call	6293	4873	1420	4261	329	0.874410014365	no
+2014	reader_no_call	4242	823	3419	564	153	0.685297691373	no
+2014	reader_no_rule	0	0	0	0	0		no
+2015	reader_call	7858	5623	2235	5005	413	0.890094255735	no
+2015	reader_no_call	8099	1626	6473	1134	269	0.697416974170	no
+2015	reader_no_rule	0	0	0	0	0		no
+2016	reader_call	5143	3545	1598	3196	268	0.901551480959	no
+2016	reader_no_call	6872	977	5895	792	143	0.810644831116	no
+2016	reader_no_rule	0	0	0	0	0		no
+2017	reader_call	3580	2478	1102	2234	146	0.901533494754	no
+2017	reader_no_call	7344	1478	5866	1040	209	0.703653585927	no
+2017	reader_no_rule	0	0	0	0	0		no
+2018	reader_call	2069	1498	571	1393	94	0.929906542056	no
+2018	reader_no_call	2647	456	2191	320	128	0.701754385965	no
+2018	reader_no_rule	0	0	0	0	0		no
+2019	reader_call	230	125	105	105	27	0.840000000000	no
+2019	reader_no_call	525	126	399	40	31	0.317460317460	no
+2019	reader_no_rule	0	0	0	0	0		no
+2020	reader_call	522	202	320	172	10	0.851485148515	no
+2020	reader_no_call	934	73	861	62	28	0.849315068493	no
+2020	reader_no_rule	0	0	0	0	0		no
+2021	reader_call	158	45	113	40	7	0.888888888889	no
+2021	reader_no_call	211	8	203	5	5		no
+2021	reader_no_rule	0	0	0	0	0		no
+2022	reader_call	12	1	11	1	1		yes
+2022	reader_no_call	28	6	22	0	0		yes
+2022	reader_no_rule	0	0	0	0	0		yes
+year_unknown	reader_call	20061	13801	6260	11923	843	0.863922904137	no
+year_unknown	reader_no_call	30268	5764	24504	4769	682	0.827376821652	no
+year_unknown	reader_no_rule	0	0	0	0	0		no

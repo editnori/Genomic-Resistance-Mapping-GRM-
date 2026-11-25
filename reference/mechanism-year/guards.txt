@@ -1,0 +1,7 @@
+guard 1: 274 reports found, 274 read
+guard 2: 253 reports with a catalogue row, their cells equal catalog.metrics; 21 with no catalogue row and no call
+guard 3: 204 datasets, 1020 learner rows on the lineage split, each with one score per genome, each a number from 0 to 1
+guard 4: 3 strata, each summed over 62 year rows (32 thin, year_unknown included where present) equals its total
+guard 5: 204 used + 33 in_M + 31 not_in_A + 6 not_in_list + 0 no_lineage_split = 274 reports
+step 1: 7 published rows the same; strata two: reader_call, reader_no_call, reader_no_rule
+guard 6 (tables): 6 files, 0 with a genome id, 0 with a catalogue group name, against 23757 ids and 409 group names

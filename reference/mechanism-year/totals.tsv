@@ -1,0 +1,4 @@
+stratum	genomes	resistant	susceptible	resistant_called_mean5	susceptible_called_mean5	recall_mean5
+reader_call	66042	47364	18678	41800	2870	0.882526813614
+reader_no_call	80627	15514	65113	11989	2483	0.772785870826
+reader_no_rule	0	0	0	0	0	
