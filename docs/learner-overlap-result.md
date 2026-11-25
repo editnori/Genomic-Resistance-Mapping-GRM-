@@ -1,5 +1,145 @@
 # Learner overlap on the lineage split (revision 14)
 
+Revision 14 stores, for each report's lineage split, every learner's held-out score for every genome. This page counts how many of the five learners miss each resistant genome at the release's 0.5 cutoff, and sets the genomes all five miss beside a yardstick: the count expected if the five missed independently. It fits nothing, trains nothing and scores no genome again. The lineage split is a retrospective split inside one database, BV-BRC, and never external validation.
+
+## Reading
+
+The misses stack. Over the 259 pooled reports with a yardstick above 0, the median ratio of the genomes all five miss to the yardstick is 488.8, with quartiles 20.1 to 6,778.9, and 246 of the 259 have a ratio over 1. By the plan's rule, a median of 10 or more, the five learners miss largely the same resistant genomes, and for those genomes the data limits recall on this split. Summed over the 268 pooled reports, all five miss 6,316 of 93,786 resistant genomes, where the yardstick gives 656.85. The 9 reports with a yardstick of 0, where one learner misses no resistant genome, are counted apart.
+
+The shared misses are the smaller part of what the five miss. 23,859 resistant genomes are missed by 1 to 4 of the five, so at least one learner calls each of them. On a typical report the median share of resistant genomes missed by 1 to 4 is 0.263, against 0.057 missed by all five. That is room for a combination of the five. It has a cost on the other class, since 22,372 susceptible genomes are called resistant by 1 to 4 of the five.
+
+GRM's own reader of the AMRFinderPlus catalogue calls 3,056 of the 6,316 all-five misses resistant and leaves 3,260 without a resistant call. 719 of those 3,260 are on the 19 reports that hold no catalogue rule for their antibiotic. 493 of the 6,316 sit in an outer fold where at least one of the five had a null fit, which scores every genome of the fold at its training prevalence. *Staphylococcus aureus* with clindamycin holds 229 of them, among its 294 all-five misses, and its ratio is 1.5.
+
+## Overlap
+
+Summed over the 268 pooled reports. A resistant genome is missed when a learner's score is under 0.5, and a susceptible genome is called resistant at 0.5 or more.
+
+| Of the five | Resistant genomes missed | Susceptible genomes called resistant |
+|---|---:|---:|
+| 0 | 63,611 | 95,846 |
+| 1 | 9,795 | 12,151 |
+| 2 | 5,720 | 4,755 |
+| 3 | 4,447 | 3,249 |
+| 4 | 3,897 | 2,217 |
+| 5 | 6,316 | 3,315 |
+| 1 to 4 | 23,859 | 22,372 |
+| total | 93,786 | 121,533 |
+
+## Yardstick
+
+The yardstick of a report is its resistant count times the product of the five learners' miss rates. It is neither a model nor a test, and no p-value is computed. The ratio is read only where the yardstick is above 0, and each report counts once in the median and the quartiles.
+
+| Measure | Value |
+|---|---:|
+| pooled reports | 268 |
+| with a ratio | 259 |
+| yardstick of 0, reported apart | 9 |
+| missed by all five, summed | 6,316 |
+| of those, a catalogue call | 3,056 |
+| of those, no catalogue call | 3,260 |
+| of those, on a report with no catalogue rule | 719 |
+| reports with no catalogue rule | 19 |
+| of those, in a fold with a null fit | 493 |
+| yardstick, summed | 656.85 |
+| median ratio | 488.8 |
+| quartiles of the ratio | 20.1 to 6,778.9 |
+| reports with a ratio over 1 | 246 |
+| median share missed by all five | 0.057 |
+| median share missed by 1 to 4 | 0.263 |
+
+## Species
+
+One row per species, over its pooled reports. A species' median weighs each of its reports once.
+
+| Species | Reports | Resistant | Missed by all five | Yardstick | Median ratio | Share by all five | Share by 1 to 4 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| *Acinetobacter baumannii* | 18 | 11,818 | 339 | 9.66 | 392.6 | 0.028 | 0.260 |
+| *Campylobacter coli* | 8 | 923 | 23 | 0.09 | 105,156.4 | 0.022 | 0.391 |
+| *Campylobacter jejuni* | 4 | 605 | 14 | 3.37 | 111,344.1 | 0.027 | 0.435 |
+| *Clostridioides difficile* | 4 | 359 | 15 | 0.00 | 6,016.4 | 0.039 | 0.079 |
+| *Corynebacterium diphtheriae* | 3 | 104 | 13 | 3.54 | 14.5 | 0.087 | 0.848 |
+| *Enterobacter cloacae* | 9 | 444 | 51 | 23.74 | 5.6 | 0.132 | 0.700 |
+| *Enterococcus faecium* | 13 | 6,971 | 249 | 40.22 | 2,381.4 | 0.018 | 0.231 |
+| *Escherichia coli* | 36 | 11,255 | 791 | 26.11 | 536.3 | 0.071 | 0.211 |
+| *Klebsiella aerogenes* | 3 | 100 | 37 | 30.43 | 1.1 | 0.692 | 0.308 |
+| *Klebsiella oxytoca* | 4 | 229 | 16 | 0.69 | 143.2 | 0.088 | 0.292 |
+| *Klebsiella pneumoniae* | 38 | 15,804 | 1,046 | 115.34 | 137.3 | 0.047 | 0.354 |
+| *Klebsiella quasipneumoniae* | 3 | 178 | 10 | 0.00 | 29,552.7 | 0.048 | 0.048 |
+| *Mycobacterium tuberculosis* | 22 | 11,683 | 1,239 | 55.54 | 112.7 | 0.121 | 0.256 |
+| *Neisseria gonorrhoeae* | 7 | 2,982 | 194 | 36.18 | 101.7 | 0.031 | 0.272 |
+| *Pseudomonas aeruginosa* | 13 | 2,832 | 410 | 43.57 | 40.0 | 0.137 | 0.396 |
+| *Salmonella enterica* | 24 | 9,584 | 738 | 22.06 | 364.9 | 0.073 | 0.245 |
+| *Shigella flexneri* | 4 | 817 | 10 | 0.04 | 16,258.5 | 0.019 | 0.087 |
+| *Shigella sonnei* | 20 | 7,890 | 215 | 0.03 | 14,740.6 | 0.031 | 0.093 |
+| *Staphylococcus aureus* | 14 | 6,429 | 748 | 235.46 | 1,095.6 | 0.072 | 0.348 |
+| *Staphylococcus haemolyticus* | 3 | 154 | 19 | 3.72 | 22.0 | 0.154 | 0.270 |
+| *Streptococcus agalactiae* | 3 | 335 | 3 | 0.00 | 29,470.0 | 0.000 | 0.067 |
+| *Streptococcus pneumoniae* | 12 | 2,164 | 130 | 7.04 | 3,634.2 | 0.064 | 0.313 |
+| *Vibrio cholerae* | 3 | 126 | 6 | 0.00 | 1,283,202.7 | 0.025 | 0.000 |
+
+## Limits
+
+The yardstick assumes the five miss independently, and five learners fitted to the same genomes and the same 31-mers are not expected to. The ratio says how far the shared misses run above that yardstick. It does not say why, and a small yardstick makes a ratio large: the species medians run from 1.1 to 1,283,202.7.
+
+The counts are calls at the release's 0.5 cutoff. This page reads no log loss and no ranking measure, so it says nothing of how near the cutoff a missed genome's scores came.
+
+The room for a combination is an upper bound. It counts the resistant genomes at least one of the five calls, which a rule could reach only if it knew which learner to trust on each genome. No combination was fitted, and the page does not say any model would fail or succeed on the genomes all five miss.
+
+A null fit scores all its fold's genomes alike, so where two learners have null fits in one fold, their misses there come together. The release gives null fits to the boosted trees and the lasso only (docs/equal-scoring.md), and 493 of the 6,316 all-five misses sit in such folds.
+
+The labels are the release's laboratory labels as BV-BRC holds them. These are public bacterial genomes with public accession numbers, and the record holds no field about a patient. A row per report is an aggregate and keeps its genome count. The 6 reports with fewer than 2 learners on the lineage split were skipped and counted; they are named under Datasets.
+
+## Method
+
+The plan below was committed before the table script. The script and its tests were committed and proved on a box, and `scripts/mechanism/learner_overlap.py` then read the 274 reports and wrote `reference/learner-overlap/`. The commands, as `reference/learner-overlap/reading.txt` gives them:
+
+```
+python3 -I scripts/mechanism/learner_overlap.py plan
+python3 -I scripts/mechanism/learner_overlap.py read REPORTS --out READING
+python3 -I scripts/mechanism/learner_overlap.py write READING --out RECORD
+python3 -I scripts/mechanism/learner_overlap.py print RECORD
+```
+
+The first read stopped at check 3 and wrote nothing, as the plan's section "Change after the first read stopped" sets down. The second read, at the script's fix, passed every check:
+
+```
+check 1 parse: 274 files found, 274 read, 274 expected: pass
+check 2 lengths: 0 reports with a score list or test_fold of another length or a bad score: pass
+check 3 counts: 0 reports whose counts or labels differ from their samples; 19 used reports with no catalogue rule (catalog_resistant null on every genome): pass
+check 4 learner sets: 1 sets; the release's is cart,gbt,lasso,rf,scm on 268 reports; 0 reports differ
+check 5 skipped: 0 with no lineage split, 6 with fewer than 2 learners; 6 skipped and 268 used of 274 found: pass
+check 6 ids: 5 files scanned, 0 id-shaped tokens or barred keys: pass
+check 7 stored metrics: 0 learner rows whose counts at the cutoff differ from metrics: pass
+check 8 pairs: 0 species and antibiotic pairs on two reports: pass
+check 9 catalogue: 0 reports whose catalog calls differ from catalog_resistant: pass
+check 10 null folds: 0 learner rows whose null-fold genomes differ from no_call
+reading rule: stack
+```
+
+`tests/mechanism/test_learner_overlap.py` holds 38 SYNTHETIC tests of the table script, with counts worked by hand. `tests/mechanism/test_learner_overlap_page.py` holds 15 tests of this page and its record. `scripts/mechanism/overlap_faults.py` plants each fault below in the script in turn and runs the test that must catch it:
+
+| Fault | Test |
+|---|---|
+| O1. A score of exactly 0.5 read as a miss | `Counts.test_a_score_of_exactly_the_cutoff_is_a_call` |
+| O2. The random split read in place of the lineage split | `Counts.test_only_the_lineage_split_is_read` |
+| O3. The catalogue reader counted among the learners | `Counts.test_the_catalogue_reader_is_not_a_learner` |
+| O4. A score list of another length let through | `Stops.test_a_score_list_of_another_length_stops_the_read` |
+| O5. A report with one learner kept | `Skips.test_no_lineage_split_and_one_learner_are_skipped_and_counted` |
+| O6. The yardstick from the mean miss rate | `Counts.test_all_five_miss_the_same_genomes` |
+| O7. The median weighted by genome count | `Pooled.test_the_median_weights_each_report_once` |
+| O8. A report with a yardstick of 0 dropped from the pool | `Pooled.test_a_report_with_a_yardstick_of_0_is_reported_apart` |
+| O9. An all-five miss the catalogue reader calls counted as uncalled | `Counts.test_misses_with_no_catalogue_call` |
+| O10. A genome id kept as a report is parsed | `Ids.test_no_id_is_held_after_parsing` |
+| O11. Check 6 blind to an id-shaped token | `Ids.test_an_id_shaped_token_in_the_reading_stops_the_write` |
+| O12. Counts that differ from the samples let through | `Stops.test_counts_that_differ_from_the_samples_stop_the_read` |
+| O13. A report under 10 resistant genomes pooled | `Pooled.test_a_report_under_10_resistant_stays_out_of_the_pool` |
+| O14. Stored metrics that differ from the recount let through | `Stops.test_stored_metrics_that_differ_from_the_recount_stop_the_read` |
+| O15. Catalogue calls that differ from catalog_resistant let through | `Stops.test_catalogue_calls_that_differ_from_catalog_resistant_stop_the_read` |
+| O16. Every fold of a learner with a null fit read as null | `Counts.test_misses_in_a_null_fit_fold` |
+| O17. A null catalogue call read as a call | `Counts.test_a_report_with_no_catalogue_rule_is_counted_and_marked` |
+
+All 17 were caught.
+
 ## Plan
 
 This plan was fixed on 24 November 2026, before the table script was written and before any report was read for this question. It fits nothing, trains nothing and scores no genome again. Every figure comes from the held-out scores and labels that the 274 revision 14 release reports already store.
@@ -82,3 +222,280 @@ The first read, on 24 November 2026 at the script's first commit, stopped at che
 - a label that is not true or false still stops the read, and so does a report that mixes null calls with true or false ones.
 
 No other rule, column, check or reading rule changed.
+
+## Datasets
+
+One row per report used, species and antibiotic in full. A report with fewer than five learners would show its counts and names only; none was found. "No rule" marks a report with no catalogue rule for its antibiotic, and "none" a ratio where the yardstick is 0. A yardstick shown as 0.00 is above 0 and rounds to 0.00 at two places, so its ratio is read.
+
+| Species | Antibiotic | Genomes | Resistant | Missed by all five | No catalogue call | In a null-fit fold | Yardstick | Ratio |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| *Acinetobacter baumannii* | amikacin | 1,277 | 785 | 27 | 15 | 0 | 0.07 | 360.6 |
+| *Acinetobacter baumannii* | ampicillin/sulbactam | 989 | 555 | 62 | 0 | 0 | 0.15 | 424.7 |
+| *Acinetobacter baumannii* | cefepime | 437 | 412 | 0 | 0 | 0 | 0.00 | 0.0 |
+| *Acinetobacter baumannii* | cefotaxime | 808 | 778 | 10 | 0 | 0 | 0.00 | 66,288.4 |
+| *Acinetobacter baumannii* | ceftazidime | 1,247 | 1,087 | 33 | 0 | 0 | 0.01 | 5,413.8 |
+| *Acinetobacter baumannii* | ceftriaxone | 1,070 | 1,011 | 7 | 0 | 0 | 0.00 | 6,450.2 |
+| *Acinetobacter baumannii* | ciprofloxacin | 1,440 | 1,319 | 9 | 9 | 0 | 0.00 | 216,197,738.4 |
+| *Acinetobacter baumannii* | doripenem | 213 | 61 | 6 | 0 | 0 | 0.86 | 7.0 |
+| *Acinetobacter baumannii* | doxycycline | 167 | 107 | 9 | 1 | 0 | 0.10 | 88.6 |
+| *Acinetobacter baumannii* | gentamicin | 1,342 | 1,204 | 4 | 3 | 0 | 0.00 | 7,918.4 |
+| *Acinetobacter baumannii* | imipenem | 1,544 | 794 | 90 | 0 | 0 | 0.41 | 220.0 |
+| *Acinetobacter baumannii* | levofloxacin | 919 | 760 | 20 | 20 | 0 | 0.00 | 82,950.9 |
+| *Acinetobacter baumannii* | meropenem | 666 | 455 | 21 | 0 | 0 | 0.02 | 931.6 |
+| *Acinetobacter baumannii* | minocycline | 139 | 28 | 2 | 2 | 0 | 3.49 | 0.6 |
+| *Acinetobacter baumannii* | moxifloxacin | 91 | 60 | 0 | 0 | 0 | 0.00 | 0.0 |
+| *Acinetobacter baumannii* | sulfamethoxazole/trimethoprim | 1,114 | 962 | 4 | 4 | 0 | 0.01 | 592.2 |
+| *Acinetobacter baumannii* | tetracycline | 962 | 759 | 15 | 5 | 0 | 0.13 | 114.9 |
+| *Acinetobacter baumannii* | tobramycin | 981 | 681 | 20 | 15 | 0 | 4.42 | 4.5 |
+| *Campylobacter coli* | azithromycin | 389 | 78 | 2 | 1 | 0 | 0.00 | 60,482.1 |
+| *Campylobacter coli* | ciprofloxacin | 391 | 132 | 0 | 0 | 0 | 0.00 | none |
+| *Campylobacter coli* | clindamycin | 389 | 94 | 11 | 10 | 0 | 0.04 | 281.4 |
+| *Campylobacter coli* | erythromycin | 391 | 78 | 1 | 0 | 0 | 0.00 | 105,156.4 |
+| *Campylobacter coli* | gentamicin | 391 | 65 | 4 | 0 | 0 | 0.05 | 81.2 |
+| *Campylobacter coli* | nalidixic acid | 375 | 119 | 3 | 3 | 0 | 0.00 | 225,066.1 |
+| *Campylobacter coli* | telithromycin | 374 | 53 | 1 | no rule | 0 | 0.00 | 131,508.0 |
+| *Campylobacter coli* | tetracycline | 391 | 304 | 1 | 1 | 0 | 0.00 | 8,540,717,056.0 |
+| *Campylobacter jejuni* | ciprofloxacin | 508 | 113 | 3 | 3 | 0 | 0.00 | 118,407.7 |
+| *Campylobacter jejuni* | clindamycin | 508 | 25 | 6 | 5 | 3 | 3.37 | 1.8 |
+| *Campylobacter jejuni* | nalidixic acid | 506 | 110 | 3 | 3 | 0 | 0.00 | 104,280.6 |
+| *Campylobacter jejuni* | tetracycline | 508 | 357 | 2 | 2 | 0 | 0.00 | 203,040,595.0 |
+| *Clostridioides difficile* | azithromycin | 203 | 91 | 7 | 1 | 0 | 0.00 | 3,767.5 |
+| *Clostridioides difficile* | ceftriaxone | 136 | 90 | 1 | 0 | 0 | 0.00 | 8,265.3 |
+| *Clostridioides difficile* | clarithromycin | 203 | 92 | 5 | 2 | 0 | 0.00 | 1,762.1 |
+| *Clostridioides difficile* | moxifloxacin | 204 | 86 | 2 | 2 | 0 | 0.00 | 854,700.2 |
+| *Corynebacterium diphtheriae* | sulfamethoxazole/trimethoprim | 236 | 28 | 1 | 1 | 0 | 0.00 | 1,045.3 |
+| *Corynebacterium diphtheriae* | tetracycline | 243 | 46 | 4 | 4 | 1 | 0.28 | 14.5 |
+| *Corynebacterium diphtheriae* | trimethoprim | 229 | 30 | 8 | 8 | 3 | 3.27 | 2.5 |
+| *Enterobacter cloacae* | cefepime | 103 | 70 | 4 | 0 | 0 | 0.00 | 1,368.1 |
+| *Enterobacter cloacae* | ciprofloxacin | 110 | 67 | 6 | 3 | 0 | 0.74 | 8.2 |
+| *Enterobacter cloacae* | gentamicin | 104 | 27 | 5 | 0 | 1 | 1.60 | 3.1 |
+| *Enterobacter cloacae* | imipenem | 86 | 58 | 8 | 0 | 0 | 4.59 | 1.7 |
+| *Enterobacter cloacae* | levofloxacin | 104 | 58 | 8 | 3 | 3 | 5.52 | 1.4 |
+| *Enterobacter cloacae* | meropenem | 99 | 40 | 12 | 3 | 1 | 11.19 | 1.1 |
+| *Enterobacter cloacae* | sulfamethoxazole/trimethoprim | 80 | 41 | 0 | 0 | 0 | 0.00 | none |
+| *Enterobacter cloacae* | tobramycin | 99 | 45 | 3 | 1 | 0 | 0.07 | 40.2 |
+| *Enterobacter cloacae* | trimethoprim | 124 | 38 | 5 | 5 | 0 | 0.03 | 199.5 |
+| *Enterococcus faecium* | ampicillin | 1,680 | 1,291 | 9 | 9 | 0 | 0.00 | 46,469,028.0 |
+| *Enterococcus faecium* | clindamycin | 901 | 619 | 94 | 1 | 0 | 0.48 | 196.9 |
+| *Enterococcus faecium* | dalfopristin/quinupristin | 1,118 | 112 | 25 | 1 | 7 | 15.10 | 1.7 |
+| *Enterococcus faecium* | daptomycin | 333 | 55 | 35 | 35 | 8 | 24.45 | 1.4 |
+| *Enterococcus faecium* | doxycycline | 345 | 136 | 8 | 3 | 0 | 0.00 | 2,011.2 |
+| *Enterococcus faecium* | erythromycin | 1,151 | 1,063 | 18 | 0 | 0 | 0.02 | 765.7 |
+| *Enterococcus faecium* | gentamicin | 1,345 | 396 | 21 | 0 | 0 | 0.01 | 2,381.4 |
+| *Enterococcus faecium* | kanamycin | 944 | 612 | 11 | 0 | 0 | 0.00 | 2,901.1 |
+| *Enterococcus faecium* | linezolid | 1,367 | 70 | 3 | 2 | 0 | 0.15 | 19.7 |
+| *Enterococcus faecium* | streptomycin | 1,239 | 488 | 6 | 4 | 0 | 0.00 | 27,626.7 |
+| *Enterococcus faecium* | teicoplanin | 1,192 | 516 | 5 | 5 | 0 | 0.00 | 4,255,237.5 |
+| *Enterococcus faecium* | tetracycline | 958 | 717 | 13 | 7 | 0 | 0.00 | 221,689.1 |
+| *Enterococcus faecium* | vancomycin | 1,741 | 896 | 1 | 0 | 0 | 0.00 | 825,825.1 |
+| *Escherichia coli* | amikacin | 1,125 | 30 | 8 | 6 | 8 | 2.37 | 3.4 |
+| *Escherichia coli* | amoxicillin/clavulanate | 1,115 | 548 | 73 | 1 | 0 | 1.42 | 51.4 |
+| *Escherichia coli* | ampicillin | 1,965 | 1,596 | 47 | 2 | 0 | 0.00 | 45,886.4 |
+| *Escherichia coli* | ampicillin/sulbactam | 283 | 142 | 28 | 1 | 0 | 14.17 | 2.0 |
+| *Escherichia coli* | aztreonam | 699 | 225 | 15 | 0 | 0 | 0.20 | 74.7 |
+| *Escherichia coli* | cefazolin | 414 | 322 | 5 | 0 | 0 | 0.05 | 108.2 |
+| *Escherichia coli* | cefepime | 1,124 | 211 | 23 | 1 | 0 | 0.82 | 28.2 |
+| *Escherichia coli* | cefotaxime | 1,149 | 615 | 69 | 4 | 0 | 0.06 | 1,153.8 |
+| *Escherichia coli* | cefoxitin | 1,066 | 399 | 41 | 1 | 0 | 0.17 | 243.2 |
+| *Escherichia coli* | cefpodoxime | 175 | 103 | 21 | 0 | 0 | 0.30 | 69.2 |
+| *Escherichia coli* | cefpodoxime/clavulanate | 136 | 101 | 2 | 0 | 0 | 0.01 | 263.8 |
+| *Escherichia coli* | ceftazidime | 1,466 | 601 | 33 | 3 | 0 | 0.04 | 866.7 |
+| *Escherichia coli* | ceftiofur | 203 | 105 | 1 | 0 | 0 | 0.00 | 33,764.1 |
+| *Escherichia coli* | ceftriaxone | 923 | 438 | 31 | 0 | 0 | 0.02 | 1,678.8 |
+| *Escherichia coli* | cefuroxime | 548 | 272 | 37 | 4 | 0 | 0.12 | 305.0 |
+| *Escherichia coli* | cephalothin | 472 | 278 | 20 | 3 | 0 | 0.01 | 1,866.7 |
+| *Escherichia coli* | chloramphenicol | 709 | 250 | 19 | 10 | 0 | 0.03 | 577.4 |
+| *Escherichia coli* | ciprofloxacin | 1,615 | 826 | 30 | 19 | 0 | 0.00 | 60,713.7 |
+| *Escherichia coli* | colistin | 239 | 50 | 0 | 0 | 0 | 0.00 | none |
+| *Escherichia coli* | doxycycline | 227 | 147 | 0 | 0 | 0 | 0.00 | 0.0 |
+| *Escherichia coli* | ertapenem | 820 | 205 | 17 | 17 | 0 | 0.08 | 223.9 |
+| *Escherichia coli* | erythromycin | 205 | 71 | 0 | 0 | 0 | 0.00 | none |
+| *Escherichia coli* | gentamicin | 1,695 | 455 | 48 | 20 | 0 | 0.10 | 488.8 |
+| *Escherichia coli* | imipenem | 614 | 113 | 12 | 11 | 0 | 0.02 | 495.2 |
+| *Escherichia coli* | levofloxacin | 403 | 294 | 7 | 4 | 0 | 0.00 | 23,644.7 |
+| *Escherichia coli* | meropenem | 1,539 | 82 | 22 | 15 | 6 | 3.02 | 7.3 |
+| *Escherichia coli* | nalidixic acid | 406 | 164 | 3 | 3 | 0 | 0.00 | 36,452.2 |
+| *Escherichia coli* | nitrofurantoin | 482 | 46 | 14 | 14 | 1 | 2.77 | 5.0 |
+| *Escherichia coli* | norfloxacin | 197 | 41 | 4 | 1 | 0 | 0.00 | 1,698.2 |
+| *Escherichia coli* | piperacillin/tazobactam | 979 | 292 | 46 | 2 | 0 | 0.28 | 166.8 |
+| *Escherichia coli* | streptomycin | 386 | 254 | 10 | 8 | 0 | 0.01 | 984.5 |
+| *Escherichia coli* | sulfamethoxazole | 341 | 161 | 10 | 7 | 0 | 0.00 | 3,165.7 |
+| *Escherichia coli* | sulfamethoxazole/trimethoprim | 925 | 580 | 22 | 19 | 0 | 0.01 | 2,626.3 |
+| *Escherichia coli* | tetracycline | 782 | 464 | 26 | 22 | 0 | 0.00 | 13,457.6 |
+| *Escherichia coli* | tobramycin | 1,070 | 343 | 27 | 19 | 0 | 0.01 | 2,046.3 |
+| *Escherichia coli* | trimethoprim | 861 | 431 | 20 | 18 | 0 | 0.01 | 1,588.3 |
+| *Klebsiella aerogenes* | ertapenem | 83 | 48 | 0 | 0 | 0 | 0.18 | 0.0 |
+| *Klebsiella aerogenes* | imipenem | 68 | 26 | 19 | 17 | 19 | 13.23 | 1.4 |
+| *Klebsiella aerogenes* | meropenem | 78 | 26 | 18 | 16 | 16 | 17.01 | 1.1 |
+| *Klebsiella oxytoca* | cefotaxime | 98 | 57 | 4 | 0 | 0 | 0.03 | 126.0 |
+| *Klebsiella oxytoca* | cefoxitin | 99 | 47 | 6 | 0 | 0 | 0.04 | 160.4 |
+| *Klebsiella oxytoca* | cefpodoxime | 74 | 47 | 5 | 0 | 0 | 0.01 | 550.1 |
+| *Klebsiella oxytoca* | ertapenem | 112 | 78 | 1 | 0 | 0 | 0.61 | 1.6 |
+| *Klebsiella pneumoniae* | amikacin | 1,588 | 318 | 23 | 14 | 0 | 4.80 | 4.8 |
+| *Klebsiella pneumoniae* | amoxicillin/clavulanate | 778 | 591 | 2 | 0 | 0 | 0.01 | 273.9 |
+| *Klebsiella pneumoniae* | ampicillin/sulbactam | 744 | 536 | 13 | 6 | 0 | 0.01 | 893.6 |
+| *Klebsiella pneumoniae* | aztreonam | 1,050 | 693 | 4 | 3 | 0 | 0.04 | 95.7 |
+| *Klebsiella pneumoniae* | cefazolin | 1,141 | 763 | 21 | 17 | 0 | 0.02 | 1,214.9 |
+| *Klebsiella pneumoniae* | cefepime | 1,233 | 619 | 38 | 3 | 2 | 0.46 | 81.8 |
+| *Klebsiella pneumoniae* | cefotetan | 61 | 25 | 19 | 0 | 19 | 14.18 | 1.3 |
+| *Klebsiella pneumoniae* | cefoxitin | 1,181 | 550 | 101 | 19 | 0 | 3.75 | 26.9 |
+| *Klebsiella pneumoniae* | cefpodoxime | 221 | 180 | 5 | 0 | 0 | 0.00 | 3,029.1 |
+| *Klebsiella pneumoniae* | cefpodoxime/ceftriaxone | 56 | 28 | 1 | no rule | 0 | 0.00 | 1,600.7 |
+| *Klebsiella pneumoniae* | cefpodoxime/clavulanate | 207 | 182 | 0 | 0 | 0 | 0.00 | 0.0 |
+| *Klebsiella pneumoniae* | ceftazidime | 1,310 | 860 | 29 | 12 | 0 | 0.05 | 546.5 |
+| *Klebsiella pneumoniae* | ceftazidime/avibactam | 259 | 79 | 3 | 0 | 0 | 0.59 | 5.1 |
+| *Klebsiella pneumoniae* | ceftriaxone | 1,208 | 843 | 4 | 3 | 0 | 0.00 | 14,402.8 |
+| *Klebsiella pneumoniae* | cefuroxime | 565 | 468 | 6 | 5 | 0 | 0.00 | 3,756.1 |
+| *Klebsiella pneumoniae* | chloramphenicol | 409 | 302 | 15 | 0 | 0 | 0.11 | 137.3 |
+| *Klebsiella pneumoniae* | ciprofloxacin | 1,706 | 1,096 | 58 | 0 | 0 | 0.01 | 4,891.2 |
+| *Klebsiella pneumoniae* | colistin | 336 | 112 | 14 | 14 | 3 | 6.60 | 2.1 |
+| *Klebsiella pneumoniae* | doripenem | 243 | 217 | 0 | 0 | 0 | 0.00 | none |
+| *Klebsiella pneumoniae* | doxycycline | 141 | 46 | 18 | 4 | 9 | 5.32 | 3.4 |
+| *Klebsiella pneumoniae* | ertapenem | 952 | 671 | 11 | 9 | 0 | 0.02 | 469.4 |
+| *Klebsiella pneumoniae* | fosfomycin | 294 | 83 | 27 | 0 | 0 | 11.34 | 2.4 |
+| *Klebsiella pneumoniae* | gentamicin | 1,842 | 689 | 92 | 27 | 0 | 0.18 | 498.1 |
+| *Klebsiella pneumoniae* | imipenem | 1,158 | 615 | 24 | 19 | 0 | 0.03 | 806.3 |
+| *Klebsiella pneumoniae* | levofloxacin | 871 | 549 | 21 | 0 | 0 | 0.00 | 40,105.0 |
+| *Klebsiella pneumoniae* | meropenem | 1,765 | 736 | 74 | 25 | 32 | 0.49 | 149.6 |
+| *Klebsiella pneumoniae* | nitrofurantoin | 562 | 375 | 48 | 44 | 0 | 4.15 | 11.6 |
+| *Klebsiella pneumoniae* | norfloxacin | 194 | 29 | 8 | 0 | 7 | 1.30 | 6.2 |
+| *Klebsiella pneumoniae* | ofloxacin | 71 | 44 | 15 | 0 | 0 | 15.62 | 1.0 |
+| *Klebsiella pneumoniae* | piperacillin/tazobactam | 1,452 | 868 | 76 | 8 | 0 | 1.69 | 45.1 |
+| *Klebsiella pneumoniae* | polymyxin b | 100 | 48 | 0 | 0 | 0 | 0.00 | none |
+| *Klebsiella pneumoniae* | streptomycin | 80 | 54 | 0 | 0 | 0 | 0.00 | none |
+| *Klebsiella pneumoniae* | sulfamethoxazole/trimethoprim | 1,546 | 1,042 | 23 | 21 | 0 | 0.00 | 46,379.8 |
+| *Klebsiella pneumoniae* | tetracycline | 741 | 387 | 76 | 47 | 0 | 0.60 | 125.6 |
+| *Klebsiella pneumoniae* | ticarcillin/clavulanate | 250 | 107 | 23 | 2 | 0 | 5.76 | 4.0 |
+| *Klebsiella pneumoniae* | tigecycline | 924 | 257 | 95 | 30 | 0 | 38.17 | 2.5 |
+| *Klebsiella pneumoniae* | tobramycin | 1,230 | 630 | 54 | 37 | 0 | 0.02 | 2,656.5 |
+| *Klebsiella pneumoniae* | trimethoprim | 258 | 112 | 5 | 4 | 0 | 0.00 | 12,614.4 |
+| *Klebsiella quasipneumoniae* | cefotaxime | 101 | 62 | 3 | 0 | 0 | 0.00 | 29,552.7 |
+| *Klebsiella quasipneumoniae* | ceftazidime | 102 | 59 | 2 | 0 | 0 | 0.00 | 149,597.0 |
+| *Klebsiella quasipneumoniae* | sulfamethoxazole/trimethoprim | 101 | 57 | 5 | 4 | 0 | 0.00 | 3,393.8 |
+| *Mycobacterium tuberculosis* | amikacin | 1,813 | 548 | 67 | 67 | 0 | 0.15 | 445.9 |
+| *Mycobacterium tuberculosis* | amoxicillin | 57 | 25 | 3 | 0 | 0 | 0.07 | 43.1 |
+| *Mycobacterium tuberculosis* | capreomycin | 670 | 422 | 35 | no rule | 0 | 0.11 | 309.7 |
+| *Mycobacterium tuberculosis* | ciprofloxacin | 101 | 73 | 0 | 0 | 0 | 0.00 | 0.0 |
+| *Mycobacterium tuberculosis* | clofazimine | 1,303 | 193 | 36 | no rule | 1 | 23.25 | 1.5 |
+| *Mycobacterium tuberculosis* | cycloserine | 401 | 119 | 27 | no rule | 0 | 4.05 | 6.7 |
+| *Mycobacterium tuberculosis* | delamanid | 1,248 | 448 | 33 | no rule | 0 | 4.07 | 8.1 |
+| *Mycobacterium tuberculosis* | ethambutol | 1,947 | 1,338 | 164 | no rule | 0 | 0.65 | 251.5 |
+| *Mycobacterium tuberculosis* | ethionamide | 1,774 | 915 | 143 | no rule | 0 | 4.55 | 31.4 |
+| *Mycobacterium tuberculosis* | isoniazid | 1,954 | 1,388 | 55 | no rule | 0 | 0.00 | 45,291.7 |
+| *Mycobacterium tuberculosis* | kanamycin | 1,800 | 617 | 86 | 86 | 0 | 0.23 | 372.0 |
+| *Mycobacterium tuberculosis* | levofloxacin | 1,248 | 753 | 179 | 0 | 0 | 4.58 | 39.1 |
+| *Mycobacterium tuberculosis* | linezolid | 1,248 | 202 | 24 | 24 | 7 | 8.11 | 3.0 |
+| *Mycobacterium tuberculosis* | moxifloxacin | 1,524 | 733 | 125 | 0 | 0 | 0.19 | 645.7 |
+| *Mycobacterium tuberculosis* | nicotinamide | 166 | 83 | 19 | no rule | 0 | 1.72 | 11.1 |
+| *Mycobacterium tuberculosis* | ofloxacin | 643 | 355 | 33 | 0 | 0 | 0.01 | 4,431.6 |
+| *Mycobacterium tuberculosis* | para-aminosalicylic acid | 1,650 | 429 | 74 | no rule | 0 | 3.34 | 22.2 |
+| *Mycobacterium tuberculosis* | prothionamide | 170 | 92 | 19 | no rule | 0 | 0.10 | 182.3 |
+| *Mycobacterium tuberculosis* | pyrazinamide | 492 | 381 | 6 | no rule | 0 | 0.29 | 20.7 |
+| *Mycobacterium tuberculosis* | rifabutin | 1,317 | 665 | 23 | no rule | 0 | 0.00 | 20,118.5 |
+| *Mycobacterium tuberculosis* | rifampin | 1,967 | 1,365 | 73 | no rule | 0 | 0.00 | 20,926.1 |
+| *Mycobacterium tuberculosis* | streptomycin | 698 | 539 | 15 | 15 | 0 | 0.06 | 256.7 |
+| *Neisseria gonorrhoeae* | azithromycin | 1,899 | 408 | 142 | 141 | 0 | 12.57 | 11.3 |
+| *Neisseria gonorrhoeae* | cefixime | 600 | 103 | 6 | 6 | 0 | 0.06 | 101.7 |
+| *Neisseria gonorrhoeae* | ceftriaxone | 1,926 | 40 | 22 | 22 | 17 | 20.35 | 1.1 |
+| *Neisseria gonorrhoeae* | ciprofloxacin | 1,746 | 1,086 | 5 | 5 | 0 | 0.00 | 67,643,894.2 |
+| *Neisseria gonorrhoeae* | erythromycin | 179 | 98 | 3 | 3 | 0 | 0.00 | 1,819.7 |
+| *Neisseria gonorrhoeae* | penicillin | 1,354 | 888 | 9 | 9 | 0 | 3.20 | 2.8 |
+| *Neisseria gonorrhoeae* | tetracycline | 1,371 | 359 | 7 | 7 | 0 | 0.00 | 1,758.2 |
+| *Pseudomonas aeruginosa* | amikacin | 708 | 127 | 13 | 11 | 0 | 0.34 | 37.9 |
+| *Pseudomonas aeruginosa* | aztreonam | 235 | 114 | 9 | 0 | 5 | 1.78 | 5.1 |
+| *Pseudomonas aeruginosa* | cefepime | 245 | 122 | 26 | 0 | 13 | 8.78 | 3.0 |
+| *Pseudomonas aeruginosa* | ceftazidime | 833 | 372 | 51 | 0 | 0 | 1.27 | 40.0 |
+| *Pseudomonas aeruginosa* | ceftazidime/avibactam | 309 | 139 | 70 | 33 | 0 | 15.73 | 4.5 |
+| *Pseudomonas aeruginosa* | ceftolozane/tazobactam | 259 | 132 | 14 | 7 | 7 | 7.57 | 1.8 |
+| *Pseudomonas aeruginosa* | ciprofloxacin | 703 | 391 | 29 | 28 | 0 | 0.01 | 5,752.4 |
+| *Pseudomonas aeruginosa* | gentamicin | 346 | 101 | 17 | 14 | 0 | 0.04 | 436.0 |
+| *Pseudomonas aeruginosa* | imipenem | 447 | 235 | 28 | 28 | 0 | 0.31 | 89.6 |
+| *Pseudomonas aeruginosa* | levofloxacin | 702 | 330 | 18 | 18 | 0 | 0.01 | 2,645.2 |
+| *Pseudomonas aeruginosa* | meropenem | 883 | 488 | 84 | 84 | 0 | 0.87 | 96.6 |
+| *Pseudomonas aeruginosa* | piperacillin/tazobactam | 210 | 87 | 24 | 0 | 0 | 6.83 | 3.5 |
+| *Pseudomonas aeruginosa* | tobramycin | 645 | 194 | 27 | 25 | 0 | 0.03 | 844.4 |
+| *Salmonella enterica* | amoxicillin/clavulanate | 799 | 471 | 38 | 29 | 0 | 0.00 | 19,716.3 |
+| *Salmonella enterica* | ampicillin | 1,997 | 1,406 | 53 | 21 | 0 | 0.10 | 555.2 |
+| *Salmonella enterica* | ampicillin/sulbactam | 183 | 126 | 7 | 3 | 0 | 0.06 | 117.4 |
+| *Salmonella enterica* | azithromycin | 1,355 | 184 | 29 | 23 | 0 | 0.04 | 662.3 |
+| *Salmonella enterica* | cefazolin | 185 | 119 | 5 | 4 | 0 | 1.37 | 3.7 |
+| *Salmonella enterica* | cefotaxime | 941 | 319 | 38 | 27 | 3 | 2.64 | 14.4 |
+| *Salmonella enterica* | cefoxitin | 1,080 | 395 | 13 | 10 | 0 | 0.00 | 238,328.2 |
+| *Salmonella enterica* | ceftazidime | 783 | 30 | 13 | 6 | 7 | 6.19 | 2.1 |
+| *Salmonella enterica* | ceftiofur | 689 | 461 | 10 | 4 | 0 | 0.00 | 34,814.9 |
+| *Salmonella enterica* | ceftriaxone | 1,155 | 568 | 72 | 8 | 0 | 0.04 | 2,039.3 |
+| *Salmonella enterica* | chloramphenicol | 1,989 | 713 | 44 | 42 | 0 | 1.25 | 35.1 |
+| *Salmonella enterica* | ciprofloxacin | 1,503 | 353 | 58 | 36 | 0 | 0.06 | 910.1 |
+| *Salmonella enterica* | gentamicin | 1,675 | 415 | 22 | 16 | 0 | 0.69 | 31.9 |
+| *Salmonella enterica* | kanamycin | 584 | 154 | 36 | 31 | 0 | 0.50 | 71.9 |
+| *Salmonella enterica* | nalidixic acid | 1,599 | 500 | 65 | 40 | 0 | 0.08 | 824.5 |
+| *Salmonella enterica* | pefloxacin | 348 | 142 | 2 | no rule | 0 | 0.00 | 2,509,795.7 |
+| *Salmonella enterica* | spectinomycin | 396 | 208 | 14 | 14 | 0 | 0.09 | 158.1 |
+| *Salmonella enterica* | streptomycin | 1,269 | 640 | 22 | 16 | 0 | 0.04 | 570.9 |
+| *Salmonella enterica* | sulfamethoxazole | 275 | 92 | 12 | 5 | 3 | 0.46 | 26.1 |
+| *Salmonella enterica* | sulfamethoxazole/trimethoprim | 1,145 | 296 | 52 | 32 | 12 | 7.81 | 6.7 |
+| *Salmonella enterica* | sulfathiazole | 225 | 175 | 0 | 0 | 0 | 0.00 | 0.0 |
+| *Salmonella enterica* | sulfisoxazole | 544 | 443 | 4 | 1 | 0 | 0.00 | 9,426.3 |
+| *Salmonella enterica* | tetracycline | 1,869 | 1,118 | 109 | 48 | 0 | 0.62 | 174.6 |
+| *Salmonella enterica* | trimethoprim | 634 | 256 | 20 | 1 | 0 | 0.02 | 1,073.2 |
+| *Shigella flexneri* | ampicillin | 358 | 318 | 2 | 0 | 0 | 0.00 | 66,889.5 |
+| *Shigella flexneri* | azithromycin | 361 | 186 | 6 | 6 | 0 | 0.00 | 32,467.5 |
+| *Shigella flexneri* | ciprofloxacin | 361 | 33 | 2 | 0 | 0 | 0.04 | 49.4 |
+| *Shigella flexneri* | trimethoprim | 362 | 280 | 0 | 0 | 0 | 0.00 | 0.0 |
+| *Shigella sonnei* | amikacin | 580 | 270 | 1 | 1 | 0 | 0.00 | 479,293.8 |
+| *Shigella sonnei* | ampicillin | 1,674 | 848 | 46 | 0 | 0 | 0.01 | 5,497.5 |
+| *Shigella sonnei* | azithromycin | 1,307 | 602 | 27 | 26 | 0 | 0.00 | 222,419.8 |
+| *Shigella sonnei* | cefoperazone | 257 | 226 | 6 | 0 | 0 | 0.00 | 1,267,618.0 |
+| *Shigella sonnei* | cefotaxime | 593 | 112 | 6 | 0 | 0 | 0.00 | 4,789.9 |
+| *Shigella sonnei* | cefoxitin | 593 | 105 | 4 | 0 | 0 | 0.00 | 894.9 |
+| *Shigella sonnei* | cefpirome | 333 | 97 | 3 | no rule | 0 | 0.00 | 1,721.5 |
+| *Shigella sonnei* | ceftazidime | 582 | 98 | 4 | 0 | 0 | 0.00 | 3,596.0 |
+| *Shigella sonnei* | ceftriaxone | 1,163 | 439 | 7 | 0 | 0 | 0.00 | 3,887,115.0 |
+| *Shigella sonnei* | ciprofloxacin | 1,397 | 606 | 13 | 8 | 0 | 0.00 | 236,317.3 |
+| *Shigella sonnei* | colistin | 268 | 35 | 0 | 0 | 0 | 0.00 | 0.0 |
+| *Shigella sonnei* | ertapenem | 338 | 101 | 6 | 6 | 0 | 0.00 | 1,404.6 |
+| *Shigella sonnei* | gentamicin | 1,288 | 513 | 1 | 1 | 0 | 0.00 | 117,015.0 |
+| *Shigella sonnei* | nalidixic acid | 854 | 544 | 8 | 3 | 0 | 0.00 | 261,731.1 |
+| *Shigella sonnei* | streptomycin | 595 | 471 | 18 | 16 | 0 | 0.00 | 18,705.2 |
+| *Shigella sonnei* | sulfamethoxazole/trimethoprim | 617 | 524 | 21 | 18 | 0 | 0.00 | 10,776.0 |
+| *Shigella sonnei* | temocillin | 333 | 97 | 3 | no rule | 0 | 0.00 | 1,721.5 |
+| *Shigella sonnei* | tetracycline | 878 | 704 | 31 | 31 | 0 | 0.00 | 86,693.9 |
+| *Shigella sonnei* | tobramycin | 541 | 462 | 1 | 1 | 0 | 0.00 | 1,467.8 |
+| *Shigella sonnei* | trimethoprim | 1,104 | 1,036 | 9 | 3 | 0 | 0.00 | 71,123.4 |
+| *Staphylococcus aureus* | cefoxitin | 1,407 | 730 | 45 | 45 | 0 | 0.01 | 6,806.5 |
+| *Staphylococcus aureus* | chloramphenicol | 1,038 | 123 | 42 | 30 | 0 | 2.06 | 20.4 |
+| *Staphylococcus aureus* | ciprofloxacin | 1,624 | 625 | 45 | 45 | 0 | 0.02 | 1,901.2 |
+| *Staphylococcus aureus* | clindamycin | 1,543 | 693 | 294 | 40 | 229 | 194.55 | 1.5 |
+| *Staphylococcus aureus* | daptomycin | 904 | 47 | 30 | 30 | 17 | 30.94 | 1.0 |
+| *Staphylococcus aureus* | erythromycin | 1,957 | 948 | 58 | 56 | 10 | 5.88 | 9.9 |
+| *Staphylococcus aureus* | fusidic acid | 1,101 | 283 | 13 | 12 | 0 | 0.10 | 129.4 |
+| *Staphylococcus aureus* | gentamicin | 1,913 | 367 | 16 | 12 | 0 | 0.01 | 2,517.3 |
+| *Staphylococcus aureus* | mupirocin | 736 | 51 | 9 | 8 | 0 | 0.03 | 290.0 |
+| *Staphylococcus aureus* | oxacillin | 1,318 | 568 | 41 | 41 | 0 | 0.00 | 19,280.7 |
+| *Staphylococcus aureus* | penicillin | 1,508 | 1,252 | 35 | 35 | 0 | 0.00 | 100,543.2 |
+| *Staphylococcus aureus* | rifampin | 931 | 49 | 2 | no rule | 0 | 0.00 | 10,443.5 |
+| *Staphylococcus aureus* | sulfamethoxazole/trimethoprim | 1,389 | 285 | 31 | 31 | 0 | 0.01 | 3,263.5 |
+| *Staphylococcus aureus* | tetracycline | 1,647 | 408 | 87 | 0 | 0 | 1.86 | 46.9 |
+| *Staphylococcus haemolyticus* | ciprofloxacin | 124 | 78 | 3 | 3 | 0 | 0.00 | 31,727.2 |
+| *Staphylococcus haemolyticus* | fusidic acid | 114 | 39 | 6 | 2 | 0 | 3.27 | 1.8 |
+| *Staphylococcus haemolyticus* | tetracycline | 104 | 37 | 10 | 7 | 0 | 0.46 | 22.0 |
+| *Streptococcus agalactiae* | clindamycin | 141 | 115 | 0 | 0 | 0 | 0.00 | 0.0 |
+| *Streptococcus agalactiae* | erythromycin | 141 | 116 | 3 | 0 | 0 | 0.00 | 58,940.1 |
+| *Streptococcus agalactiae* | tetracycline | 141 | 104 | 0 | 0 | 0 | 0.00 | none |
+| *Streptococcus pneumoniae* | azithromycin | 1,297 | 147 | 9 | 9 | 0 | 0.02 | 517.0 |
+| *Streptococcus pneumoniae* | cefepime | 1,602 | 49 | 10 | 10 | 10 | 4.43 | 2.3 |
+| *Streptococcus pneumoniae* | cefotaxime | 1,884 | 43 | 5 | 5 | 0 | 0.11 | 46.0 |
+| *Streptococcus pneumoniae* | ceftriaxone | 1,839 | 56 | 4 | 4 | 1 | 1.86 | 2.2 |
+| *Streptococcus pneumoniae* | cefuroxime | 1,732 | 184 | 3 | 3 | 0 | 0.00 | 3,979,960.9 |
+| *Streptococcus pneumoniae* | chloramphenicol | 1,859 | 134 | 24 | 24 | 0 | 0.59 | 40.5 |
+| *Streptococcus pneumoniae* | clindamycin | 1,894 | 166 | 11 | 11 | 0 | 0.00 | 30,170.6 |
+| *Streptococcus pneumoniae* | erythromycin | 1,991 | 460 | 22 | 22 | 0 | 0.00 | 49,922.0 |
+| *Streptococcus pneumoniae* | meropenem | 1,808 | 72 | 3 | 3 | 1 | 0.03 | 88.7 |
+| *Streptococcus pneumoniae* | penicillin | 1,690 | 196 | 1 | 1 | 1 | 0.00 | 6,751.3 |
+| *Streptococcus pneumoniae* | sulfamethoxazole/trimethoprim | 1,777 | 343 | 10 | 10 | 0 | 0.00 | 13,097.0 |
+| *Streptococcus pneumoniae* | tetracycline | 1,971 | 314 | 28 | 19 | 0 | 0.00 | 12,040.7 |
+| *Vibrio cholerae* | nalidixic acid | 91 | 49 | 5 | 5 | 0 | 0.00 | 6,405.3 |
+| *Vibrio cholerae* | sulfamethoxazole | 74 | 37 | 0 | 0 | 0 | 0.00 | none |
+| *Vibrio cholerae* | trimethoprim | 74 | 40 | 1 | 1 | 0 | 0.00 | 2,560,000.0 |
+
+Skipped, with fewer than 2 learners on the lineage split: *Enterococcus faecium* with chloramphenicol, *Salmonella enterica* with temocillin, *Staphylococcus aureus* with ceftaroline, *Staphylococcus aureus* with levofloxacin, *Staphylococcus aureus* with moxifloxacin and *Staphylococcus aureus* with vancomycin.

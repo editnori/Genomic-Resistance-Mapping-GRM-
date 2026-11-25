@@ -443,6 +443,9 @@ class Record(Case):
         self.assertIn("| *Synthia coli* | drug c | 15 | 10 | 0 | 0 | 0 | 0.00 | none |", t["datasets"])
         self.assertIn("| median ratio | 72.0 |", t["yardstick"])
         self.assertIn("| 5 | 4 | 1 |", t["overlap"])
+        # misses by 1 to 4 of the five: 3 (a), 5 (b), 3 (c), 0 (h); wrong calls by 1 to 4: scm's genome 13 in a
+        self.assertIn("| 1 to 4 | 11 | 1 |", t["overlap"])
+        self.assertIn("| of those, a catalogue call | 3 |", t["yardstick"])
 
     def test_plan_prints_the_fixed_rules(self):
         rc, out = run("plan")

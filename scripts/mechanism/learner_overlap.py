@@ -519,12 +519,16 @@ def tables(record):
     out["overlap"] = (["| Of the five | Resistant genomes missed | Susceptible genomes called resistant |",
                        "|---|---:|---:|"]
                       + [f"| {k} | {count(a[f'miss_{k}'])} | {count(a[f'wrong_{k}'])} |" for k in KS]
-                      + [f"| total | {count(a['resistant'])} | {count(a['susceptible'])} |"])
+                      + [f"| 1 to 4 | {count(sum(int(a[f'miss_{k}']) for k in (1, 2, 3, 4)))} "
+                         f"| {count(sum(int(a[f'wrong_{k}']) for k in (1, 2, 3, 4)))} |",
+                         f"| total | {count(a['resistant'])} | {count(a['susceptible'])} |"])
     out["yardstick"] = ["| Measure | Value |", "|---|---:|",
                         f"| pooled reports | {count(a['datasets'])} |",
                         f"| with a ratio | {count(a['datasets_with_ratio'])} |",
                         f"| yardstick of 0, reported apart | {count(a['datasets_expected_zero'])} |",
                         f"| missed by all five, summed | {count(a['miss_all5'])} |",
+                        f"| of those, a catalogue call | "
+                        f"{count(int(a['miss_all5']) - int(a['miss_all5_no_catalog_call']))} |",
                         f"| of those, no catalogue call | {count(a['miss_all5_no_catalog_call'])} |",
                         f"| of those, on a report with no catalogue rule | {count(a['miss_all5_no_catalog_rule'])} |",
                         f"| reports with no catalogue rule | {count(a['datasets_no_catalog_rule'])} |",

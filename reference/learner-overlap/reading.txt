@@ -1,0 +1,16 @@
+# the second read, at commit cc3b7e9900baa84e66d0d0e8ea40a90768297c3b, clean
+# scripts/mechanism/learner_overlap.py sha256 cd7122ffa1477e37ec61ededbad10001803e31790e954fca85e42259b68807df
+# REPORTS: the 274 report files of the revision 14 release's datasets/ directory; READING, RECORD: the run's own directories
+python3 -I scripts/mechanism/learner_overlap.py plan
+python3 -I scripts/mechanism/learner_overlap.py read REPORTS --out READING
+python3 -I scripts/mechanism/learner_overlap.py write READING --out RECORD
+python3 -I scripts/mechanism/learner_overlap.py print RECORD
+88cf1261ef0e81a8dc4801b68db0d8bd39164fd414de0e42512a580209d4ac94  plan.json
+161670e5909fb13127e7be7425c9ccde74cb0a13fa9ca70dfc7256b6c491c87a  read.out
+45179144359673180abee0f53c50b75a60e4067123f727dea78ae18619a25e30  write.out
+d031953e87758279117a81b99580f24c7a06c22d1e9cb4972ccd4c0a6b4bdb91  print.txt
+56fe3e67db30830d5e89fe2fb86701c5d4d8651c94faceec3daec390010ec316  reading/reading.json
+6b923874e4ae09843d9090ad98a8e2e4e08dae5b256e36fe6a21d078300b9955  record/datasets.tsv
+aba2b11b4d61e5d0aa20e64be0f00bcb7738c5e5fc91eb2018de4f4df41fa046  record/pooled.tsv
+145dc3fabba5cbb088d027be566bb691eb6b720d543c34429e0d8ce377a64ec3  record/gates.txt
+456d3590a9590afa98c062894906b3e4b6e002f6ae168fea7c0a8e84b652820c  record/SHA256SUMS
