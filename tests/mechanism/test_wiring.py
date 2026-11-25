@@ -10,7 +10,8 @@ from tests.mechanism.common import KIT, ROOT
 SUITE = "tests/mechanism"
 WORKFLOW = ROOT / ".github" / "workflows" / "ci.yml"
 CI_DOC = ROOT / "docs" / "ci.md"
-OWN = {"amr_rule", "common", "strata", "history", "combine", "scan", "drug_rules", "planted_faults", "tests"}
+OWN = {"amr_rule", "common", "strata", "history", "combine", "scan", "drug_rules", "planted_faults", "tests",
+       "learner_overlap"}
 
 
 def suite_count():
