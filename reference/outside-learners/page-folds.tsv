@@ -1,0 +1,7 @@
+arm	learner	split	withdrawn	reports	reports_unavailable	folds	one_tree_folds	constant_folds	null_fit_folds	unconverged_refits	reports_unconverged
+xgboost	gbt	lineage	0	699	1	3490	99	0	0	0	0
+xgboost	gbt	study	0	55	0	275	5	0	0	0	0
+lightgbm	gbt	lineage	0	699	1	3490	96	0	0	0	0
+lightgbm	gbt	study	0	55	0	275	2	0	0	0	0
+elasticnet	lasso	lineage	0	699	1	3490	0	221	221	59	57
+elasticnet	lasso	study	0	55	0	275	0	1	1	4	3

@@ -1,0 +1,22 @@
+arm	pair	learner	condition	decides	conditions_decides	reads	met	withdrawn
+xgboost	xgboost-gbt	gbt	1	1	1	the lineage median difference's interval lies wholly above 0	1	0
+xgboost	xgboost-gbt	gbt	2	1	1	better beats worse by the one-sided sign test at p < 0.05 after Holm over the 5 lineage pairs	1	0
+xgboost	xgboost-gbt	gbt	3	1	1	the twin meets 1 in neither of its pairs (gbt, lasso) and 2 in neither, each read apart	1	0
+xgboost	xgboost-gbt	gbt	3	0	0	beside, deciding nothing: the twin meets 1 and 2 in neither on gbt, this arm's learner	1	0
+xgboost	xgboost-gbt	gbt	4	1	1	the recall interval does not lie wholly below -0.02	1	0
+xgboost	xgboost-gbt	gbt	5	1	1	the study median has the lineage median's sign	0	0
+xgboost	xgboost-gbt	gbt	6	1	1	the maintainer rules the change		0
+lightgbm	lightgbm-gbt	gbt	1	1	1	the lineage median difference's interval lies wholly above 0	1	0
+lightgbm	lightgbm-gbt	gbt	2	1	1	better beats worse by the one-sided sign test at p < 0.05 after Holm over the 5 lineage pairs	1	0
+lightgbm	lightgbm-gbt	gbt	3	1	1	the twin meets 1 in neither of its pairs (gbt, lasso) and 2 in neither, each read apart	1	0
+lightgbm	lightgbm-gbt	gbt	3	0	0	beside, deciding nothing: the twin meets 1 and 2 in neither on gbt, this arm's learner	1	0
+lightgbm	lightgbm-gbt	gbt	4	1	1	the recall interval does not lie wholly below -0.02	1	0
+lightgbm	lightgbm-gbt	gbt	5	1	1	the study median has the lineage median's sign	1	0
+lightgbm	lightgbm-gbt	gbt	6	1	1	the maintainer rules the change		0
+elasticnet	elasticnet-lasso	lasso	1	1	1	the lineage median difference's interval lies wholly above 0	1	0
+elasticnet	elasticnet-lasso	lasso	2	1	1	better beats worse by the one-sided sign test at p < 0.05 after Holm over the 5 lineage pairs	1	0
+elasticnet	elasticnet-lasso	lasso	3	1	1	the twin meets 1 in neither of its pairs (gbt, lasso) and 2 in neither, each read apart	1	0
+elasticnet	elasticnet-lasso	lasso	3	0	0	beside, deciding nothing: the twin meets 1 and 2 in neither on lasso, this arm's learner	1	0
+elasticnet	elasticnet-lasso	lasso	4	1	1	the recall interval does not lie wholly below -0.02	1	0
+elasticnet	elasticnet-lasso	lasso	5	1	1	the study median has the lineage median's sign	1	0
+elasticnet	elasticnet-lasso	lasso	6	1	1	the maintainer rules the change		0
