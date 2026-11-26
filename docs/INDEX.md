@@ -9,6 +9,7 @@ Every document under `docs/`, grouped by purpose. For the headline Revision 14 n
 | [release-summary.md](release-summary.md) | Main Revision 12 and 14 figures: per-learner medians with species bootstrap intervals, random-to-lineage drops, error-screen counts, FDA 2009 guidance wording, known-gene rule bands, and the path from lab records to datasets (revision 14). |
 | [study-split.md](study-split.md) | Retrospective split by study (BioProject) inside BV-BRC across 70 datasets in 9 species, compared with random and matched random folds. |
 | [time-split.md](time-split.md) | Retrospective first-public-day split inside BV-BRC across 24 datasets in 4 species, compared with size-matched random draws and study splits. |
+| [time-split-stagger.md](time-split-stagger.md) | Frozen plan for a staggered split by time inside BV-BRC, on the public day and the collection year: cut points, windows, contrasts, rule and predictions. Not run yet. |
 | [outside-study-results.md](outside-study-results.md) | Retrospective test of frozen models on newly deposited BV-BRC studies (7,258 primary genomes and 3,155 same-study genomes), including Revision 14 reading. |
 | [outside-study-results-by-species.md](outside-study-results-by-species.md) | Species-by-species breakdown of the outside-study test. |
 | [outside-study-test.md](outside-study-test.md) | Frozen evaluation plan for the outside-study test. |
