@@ -489,7 +489,9 @@ export const DatasetsView = ({ manifest, nav }: { manifest: Manifest; nav: Navig
   const [query, setQuery] = useKeptState("datasets.query", "");
   const [sort, setSort] = useKeptState<SortState>("datasets.sort", ARRIVAL_SORT);
   const [all, setAll] = useKeptState("datasets.all", false);
-  const [split, setSplit] = useKeptState<Scheme>("datasets.split", "random");
+  // Open every visit on the random split so VME and ME headers never silently
+  // carry another split across navigation.
+  const [split, setSplit] = useState<Scheme>("random");
   const rows = manifest.datasets;
   const audit = manifestAudit(manifest);
   // Optional: with no baselines files the MIC column shows the model alone.

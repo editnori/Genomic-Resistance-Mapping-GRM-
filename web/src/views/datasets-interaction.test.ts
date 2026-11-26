@@ -408,6 +408,9 @@ describe("returning to the catalog", () => {
     const isolates = [...table().querySelectorAll("th")].find((th) => th.textContent!.startsWith("Isolates"))!;
     act(() => isolates.querySelector("button")!.click());
     const shown = live();
+    const lineageBtn = host.querySelectorAll<HTMLButtonElement>("[role='group'][aria-label='Error rate split'] button")[1]!;
+    act(() => lineageBtn.click());
+    expect(lineageBtn.getAttribute("aria-pressed")).toBe("true");
 
     const writes = vi.spyOn(window.history, "replaceState");
     act(() => {
@@ -416,7 +419,8 @@ describe("returning to the catalog", () => {
     const left = writes.mock.calls.at(-1)![0] as { views: Record<string, unknown> };
     expect(left.views["datasets.query"]).toBe("a");
 
-    // Back: the catalog is drawn anew from the entry it left.
+    // Back: the catalog is drawn anew from the entry it left, while error-rate
+    // split always opens on Random split.
     act(() => root.unmount());
     window.history.replaceState(left, "", "/datasets");
     root = createRoot(host);
@@ -424,6 +428,7 @@ describe("returning to the catalog", () => {
     expect(host.querySelector<HTMLInputElement>("input[type='search']")!.value).toBe("a");
     expect(rail().querySelectorAll<HTMLInputElement>("input[type='checkbox']")[2]!.checked).toBe(true);
     expect([...table().querySelectorAll("th")].find((th) => th.getAttribute("aria-sort") !== null)!.textContent).toContain("Isolates");
+    expect(host.querySelectorAll<HTMLButtonElement>("[role='group'][aria-label='Error rate split'] button")[0]!.getAttribute("aria-pressed")).toBe("true");
     expect(live()).toBe(shown);
   });
 });
