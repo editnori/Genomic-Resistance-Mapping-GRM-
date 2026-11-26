@@ -725,6 +725,12 @@ fn analyze_dataset_as(
         }),
         cfg,
     )?;
+    // The C3 run on M (`held_scores`, off by default) writes each cohort
+    // genome's lineage score from the fit just made; the fit is unchanged.
+    if crate::learn::held_scores::enabled() {
+        let ids: Vec<String> = rows.iter().map(|p| p.genome_id.clone()).collect();
+        crate::learn::held_scores::record(&spec.id, cfg.seed, &ids, &resistant, &out.splits)?;
+    }
     // The C3 experiment (`input_arms`) writes its counts and the C9 writer's
     // per-fold calls; its rows carry no k-mer to annotate, so no report.
     if crate::input_arms::active().is_some() {
@@ -4974,6 +4980,170 @@ mod tests {
         )
         .unwrap()
         .unwrap()
+    }
+
+    /// Every "seconds" field of a report or pick file set to 0: the one part
+    /// of either that differs between two runs of the same fit.
+    fn zero_seconds(v: &mut serde_json::Value) {
+        match v {
+            serde_json::Value::Object(m) => {
+                for (k, x) in m.iter_mut() {
+                    if k == "seconds" || k.starts_with("seconds_") {
+                        *x = serde_json::json!(0);
+                    } else {
+                        zero_seconds(x);
+                    }
+                }
+            }
+            serde_json::Value::Array(a) => a.iter_mut().for_each(zero_seconds),
+            _ => {}
+        }
+    }
+
+    /// The report, the C9 pick files (at no inner fold, as the C3 run writes
+    /// them) and the C3 score files of `input`'s one dataset under
+    /// `quick_config`, with the score writer on when `held`.
+    #[allow(clippy::type_complexity)]
+    fn held_run(
+        input: &SpeciesInputs,
+        held: bool,
+    ) -> (
+        serde_json::Value,
+        Vec<(String, String)>,
+        Vec<(String, String)>,
+    ) {
+        let ((report, scores), picks) =
+            crate::learn::inner_pick::capture(0, crate::report::PickTie::Later, || {
+                if held {
+                    crate::learn::held_scores::capture(|| fixture_report(input))
+                } else {
+                    assert!(!crate::learn::held_scores::enabled());
+                    (fixture_report(input), vec![])
+                }
+            });
+        (serde_json::to_value(&report).unwrap(), picks, scores)
+    }
+
+    #[test]
+    fn held_scores_off_by_default_and_on_leave_the_report_and_pick_files_unchanged() {
+        let input = rule_inputs("tobramycin", "GENTAMICIN", "GENTAMICIN/TOBRAMYCIN");
+        let (mut off, picks_off, none) = held_run(&input, false);
+        let (mut on, picks_on, scores) = held_run(&input, true);
+        // Off writes no score file; on writes one, for the lineage split.
+        assert!(none.is_empty());
+        let names: Vec<&str> = scores.iter().map(|(n, _)| n.as_str()).collect();
+        let id = &input.datasets[0].id;
+        assert_eq!(names, [crate::learn::held_scores::file_name(id, 42)]);
+        // The report and each pick file are the same either way.
+        zero_seconds(&mut off);
+        zero_seconds(&mut on);
+        assert_eq!(off, on);
+        let parsed = |files: &[(String, String)]| -> Vec<(String, serde_json::Value)> {
+            files
+                .iter()
+                .map(|(n, text)| {
+                    let mut v: serde_json::Value = serde_json::from_str(text).unwrap();
+                    zero_seconds(&mut v);
+                    (n.clone(), v)
+                })
+                .collect()
+        };
+        assert!(!picks_off.is_empty());
+        assert_eq!(parsed(&picks_off), parsed(&picks_on));
+    }
+
+    #[test]
+    fn held_scores_give_back_each_folds_counts_as_the_pick_file_wrote_them() {
+        let input = rule_inputs("tobramycin", "GENTAMICIN", "GENTAMICIN/TOBRAMYCIN");
+        let (report, picks, scores) = held_run(&input, true);
+        let held: serde_json::Value = serde_json::from_str(&scores[0].1).unwrap();
+        let id = &input.datasets[0].id;
+        let pick_name = crate::learn::inner_pick::file_name(id, "lineage", 42);
+        let pick: serde_json::Value =
+            serde_json::from_str(&picks.iter().find(|(n, _)| *n == pick_name).unwrap().1).unwrap();
+        assert_eq!(held["format"], crate::learn::held_scores::FORMAT);
+        assert_eq!(
+            (held["arm"].as_str(), held["seed"].as_u64()),
+            (Some("k31"), Some(42))
+        );
+        // The genomes are the cohort's, in sample order, with its classes.
+        let e = eval_inputs(&input, &input.datasets[0]).unwrap().unwrap();
+        let genomes = held["genomes"].as_array().unwrap();
+        let ids: Vec<&str> = genomes
+            .iter()
+            .map(|g| g["genome_id"].as_str().unwrap())
+            .collect();
+        let cohort: Vec<&str> = e.cohort.rows.iter().map(|p| p.genome_id.as_str()).collect();
+        assert_eq!(ids, cohort);
+        let resistant: Vec<bool> = genomes
+            .iter()
+            .map(|g| g["resistant"].as_bool().unwrap())
+            .collect();
+        assert_eq!(resistant, e.resistant);
+        // Folds and scores are the report's lineage split's, learner by learner.
+        let lineage = report["splits"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|s| s["scheme"] == "lineage")
+            .unwrap();
+        let folds: Vec<u64> = genomes
+            .iter()
+            .map(|g| g["fold"].as_u64().unwrap())
+            .collect();
+        let report_folds: Vec<u64> = lineage["test_fold"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|f| f.as_u64().unwrap())
+            .collect();
+        assert_eq!(folds, report_folds);
+        for (j, l) in eval::LEARNERS.iter().enumerate() {
+            let row = &lineage["learners"][j];
+            assert_eq!(row["learner"].as_str(), Some(*l));
+            let from_held: Vec<&serde_json::Value> =
+                genomes.iter().map(|g| &g["scores"][j]).collect();
+            let from_report: Vec<&serde_json::Value> =
+                row["scores"].as_array().unwrap().iter().collect();
+            assert_eq!(from_held, from_report, "{l}");
+        }
+        // Each fold's calls taken again from the scores are the pick file's,
+        // the log loss sum bit for bit.
+        let pick_folds = pick["folds"].as_array().unwrap();
+        assert_eq!(pick_folds.len() as u64, held["folds"].as_u64().unwrap());
+        assert!(pick_folds.len() >= 2);
+        for fold in pick_folds {
+            let f = fold["fold"].as_u64().unwrap();
+            let members: Vec<&serde_json::Value> =
+                genomes.iter().filter(|g| g["fold"] == f).collect();
+            let truth: Vec<bool> = members
+                .iter()
+                .map(|g| g["resistant"].as_bool().unwrap())
+                .collect();
+            assert_eq!(fold["test"].as_u64(), Some(truth.len() as u64));
+            assert_eq!(
+                fold["test_resistant"].as_u64(),
+                Some(truth.iter().filter(|&&r| r).count() as u64)
+            );
+            for (j, written) in fold["outer"].as_array().unwrap().iter().enumerate() {
+                let s: Vec<f64> = members
+                    .iter()
+                    .map(|g| g["scores"][j].as_f64().unwrap())
+                    .collect();
+                let again = crate::cutoff::calls(&truth, &s);
+                let n = |k: &str| written[k].as_u64().unwrap() as usize;
+                assert_eq!(
+                    (again.n, again.tp, again.fp, again.tn, again.fn_),
+                    (n("n"), n("tp"), n("fp"), n("tn"), n("fn")),
+                    "fold {f}, learner {j}"
+                );
+                assert_eq!(
+                    again.loss_sum.to_bits(),
+                    written["loss_sum"].as_f64().unwrap().to_bits(),
+                    "fold {f}, learner {j}"
+                );
+            }
+        }
     }
 
     #[test]

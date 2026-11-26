@@ -308,6 +308,15 @@ enum Command {
         /// the earlier.
         #[arg(long, value_enum, default_value_t = PickTieArg::Later, requires = "exp_pick")]
         exp_pick_tie: PickTieArg,
+        /// Experiment, off by default (plan block C3's run on its datasets
+        /// of M): beside --exp-pick, also write each cohort genome's lineage
+        /// score from each drawn fit, with its class and outer test fold, to
+        /// DIR/<dataset>.lineage-s<seed>.scores.json. The fit and its other
+        /// outputs are unchanged. The file names genomes, so it stays on the
+        /// run's machine. Refused beside --fold-file, whose --fold-out result
+        /// already holds each tested genome's scores.
+        #[arg(long, requires = "exp_pick", conflicts_with = "fold_file")]
+        exp_scores: Option<PathBuf>,
         /// Experiment, off by default (docs/input-arms.md, plan block C3):
         /// fit the arm's matrix in place of the 31-mer projection, from the
         /// AMRFinderPlus program's per-genome tables in
@@ -758,6 +767,7 @@ fn run(cli: Cli) -> Result<()> {
             exp_pick,
             exp_pick_inner,
             exp_pick_tie,
+            exp_scores,
             exp_inputs,
             exp_program_tables,
             exp_input_matrix,
@@ -779,6 +789,9 @@ fn run(cli: Cli) -> Result<()> {
             }
             if let Some(dir) = &exp_pick {
                 grm::learn::inner_pick::enable(dir, exp_pick_inner, exp_pick_tie.into())?;
+            }
+            if let Some(dir) = &exp_scores {
+                grm::learn::held_scores::enable(dir)?;
             }
             if let Some(arm) = exp_inputs {
                 enable_input_arm(
@@ -2624,6 +2637,58 @@ mod tests {
             args.extend_from_slice(other);
             assert_eq!(kind(&args), Some(ArgumentConflict), "{other:?}");
         }
+    }
+
+    /// `--exp-scores` (plan block C3's run on M) is off unless given, needs
+    /// `--exp-pick`, and is refused beside `--fold-file`, whose result holds
+    /// each tested genome's scores already.
+    #[test]
+    fn learn_writes_held_scores_only_beside_the_pick_and_never_for_a_fold_file() {
+        use clap::error::ErrorKind::{ArgumentConflict, MissingRequiredArgument};
+        let parse = |args: &[&str]| Cli::try_parse_from(args.iter().copied());
+        let scores = |args: &[&str]| match parse(args).unwrap().command {
+            Command::Learn { exp_scores, .. } => exp_scores,
+            _ => panic!("parsed another command"),
+        };
+        assert_eq!(
+            scores(&["grm", "learn", "--species", "s", "--exp-pick", "p"]),
+            None
+        );
+        assert_eq!(
+            scores(&[
+                "grm",
+                "learn",
+                "--species",
+                "s",
+                "--exp-pick",
+                "p",
+                "--exp-scores",
+                "h"
+            ]),
+            Some(PathBuf::from("h"))
+        );
+        let kind = |args: &[&str]| parse(args).err().map(|e| e.kind());
+        assert_eq!(
+            kind(&["grm", "learn", "--species", "s", "--exp-scores", "h"]),
+            Some(MissingRequiredArgument)
+        );
+        assert_eq!(
+            kind(&[
+                "grm",
+                "learn",
+                "--species",
+                "s",
+                "--exp-pick",
+                "p",
+                "--exp-scores",
+                "h",
+                "--fold-file",
+                "f.json",
+                "--fold-out",
+                "o",
+            ]),
+            Some(ArgumentConflict)
+        );
     }
 
     /// `--exp-inputs` is off unless given, needs `--exp-pick`,

@@ -111,6 +111,8 @@ src/lib.rs analysis::tests::fingerprint_tracks_the_dataset_class_minimum
 src/lib.rs analysis::tests::fold_patterns_cover_the_features_scm_cart_and_lasso_name_and_no_others
 src/lib.rs analysis::tests::gene_panels_score_the_drug_s_targets_and_list_uncovered_organisms
 src/lib.rs analysis::tests::genomes_a_fold_file_leaves_unused_set_neither_the_support_floor_nor_the_tuning_groups
+src/lib.rs analysis::tests::held_scores_give_back_each_folds_counts_as_the_pick_file_wrote_them
+src/lib.rs analysis::tests::held_scores_off_by_default_and_on_leave_the_report_and_pick_files_unchanged
 src/lib.rs analysis::tests::kset_duplicates_group_samples_by_digest_in_sample_order
 src/lib.rs analysis::tests::learn_keeps_matching_reports_and_removes_those_of_datasets_that_no_longer_qualify
 src/lib.rs analysis::tests::learn_recomputes_a_current_report_whose_audit_is_invalid
@@ -401,6 +403,10 @@ src/lib.rs learn::gbt::tests::pure_xor_keeps_no_tree
 src/lib.rs learn::gbt::tests::rounding_puts_the_mirrored_feature_first_unless_the_rule_is_exact
 src/lib.rs learn::gbt::tests::the_exact_rule_moves_a_split_only_to_the_same_two_groups
 src/lib.rs learn::gbt::tests::the_exact_rule_takes_the_same_groups_where_rounding_turns_them_away
+src/lib.rs learn::held_scores::tests::held_scores_are_off_unless_enabled_or_captured
+src/lib.rs learn::held_scores::tests::held_scores_file_lists_each_genome_with_its_fold_and_five_scores_in_sample_order
+src/lib.rs learn::held_scores::tests::held_scores_of_an_undrawn_split_give_its_reason_and_no_genome
+src/lib.rs learn::held_scores::tests::held_scores_refuse_a_split_whose_genomes_do_not_match_the_cohort
 src/lib.rs learn::inner_pick::tests::a_supplied_split_writes_its_pick_with_no_default
 src/lib.rs learn::inner_pick::tests::a_tie_goes_where_the_rule_says_and_is_listed
 src/lib.rs learn::inner_pick::tests::an_unavailable_lineage_split_writes_its_reason_and_no_fold
@@ -744,6 +750,7 @@ src/main.rs tests::learn_takes_the_c9_pick_only_when_asked
 src/main.rs tests::learn_takes_the_cohort_experiment_only_with_an_output_and_no_other_experiment
 src/main.rs tests::learn_takes_the_mic_experiment_only_with_an_output_and_no_other_experiment
 src/main.rs tests::learn_with_a_fold_file_screens_as_many_features_as_it_is_told
+src/main.rs tests::learn_writes_held_scores_only_beside_the_pick_and_never_for_a_fold_file
 src/main.rs tests::matrix_and_pipeline_keep_the_stock_path_unless_disk_sparse_is_given
 src/main.rs tests::matrix_column_blocks_reach_the_block_merge_through_run
 src/main.rs tests::matrix_takes_only_a_column_block_width_of_whole_words
