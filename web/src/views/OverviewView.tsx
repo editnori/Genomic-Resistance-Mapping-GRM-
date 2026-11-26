@@ -26,7 +26,7 @@ export const LIMITS_ANCHOR = "limits";
 
 /** What the site is and the question it answers, above every chart. */
 const OVERVIEW_PURPOSE =
-  "GRM (Genomic Resistance Mapping) tests bacteria grown against an antibiotic in a lab, then asks how well the bacterium's genome, its full DNA sequence, predicts that lab result.";
+  "A lab grows a bacterium against an antibiotic and reports it resistant (R) or susceptible (S). GRM (Genomic Resistance Mapping) reads those public lab reports and asks how well the bacterium's genome, its full DNA sequence, predicts that lab result.";
 
 /** Supporting evidence under one explicit control, open on arrival from a
  *  link that names it. */

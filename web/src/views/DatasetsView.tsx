@@ -468,8 +468,10 @@ const ReadingNote = () => {
       </button>
       {open ? (
         <p className="type-note mt-2 max-w-[72ch]">
-          Each row shows the best random-split learner. Random and Lineage are balanced accuracy (50% is chance): Random hides a random fifth of genomes, while Lineage hides whole
-          families of close relatives. VME is resistant isolates called susceptible (limit ≤1.5%); ME is susceptible isolates called resistant (limit ≤3%).
+          Each row shows the best random-split learner. Random and Lineage are its balanced accuracy: the average of the share of resistant and the share of susceptible genomes it
+          calls right, where 50% is a coin toss. Random tests it on genomes picked at random, most with close relatives in training; Lineage tests it on whole lineages of close
+          relatives it never saw. VME is resistant genomes called susceptible (≤1.5%); ME is susceptible genomes called resistant (≤3%), limits adapted from FDA&apos;s 2009 guidance
+          for growth-based susceptibility test systems as a research screen.
         </p>
       ) : null}
     </div>

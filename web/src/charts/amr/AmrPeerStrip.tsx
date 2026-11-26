@@ -13,8 +13,6 @@ export interface AmrPeerStripProps {
   peers: readonly number[];
   /** Human-readable name of the peer group, e.g. "carbapenem datasets". */
   poolName: string;
-  /** Lower-is-better flips the good/bad tone (for VME/ME). Default false. */
-  lowerIsBetter?: boolean;
 }
 
 const quantile = (sorted: readonly number[], q: number): number => {
@@ -31,7 +29,7 @@ const HEIGHT = 48;
 const PAD = 10;
 const TRACK_Y = 25;
 
-export const AmrPeerStrip = ({ label, value, peers, poolName, lowerIsBetter = false }: AmrPeerStripProps) => {
+export const AmrPeerStrip = ({ label, value, peers, poolName }: AmrPeerStripProps) => {
   if (peers.length < 3) return null;
   const sorted = [...peers].sort((a, b) => a - b);
   const low = sorted[0]!;
@@ -52,19 +50,17 @@ export const AmrPeerStrip = ({ label, value, peers, poolName, lowerIsBetter = fa
   const span = Math.max(axisHi - axisLo, 0.01);
   const x = (v: number) => PAD + ((v - axisLo) / span) * (WIDTH - 2 * PAD);
 
-  const good = lowerIsBetter ? value <= p25 : value >= p75;
-  const bad = lowerIsBetter ? value >= p75 : value <= p25;
-  const fill = good ? "rgb(var(--live-text))" : bad ? "rgb(var(--coral-text))" : "rgb(var(--blue))";
-  const textClass = good ? "text-live-text" : bad ? "text-coral-text" : "text-ink";
+  // Neutral mark: a peer position carries no good/bad colour verdict.
+  const fill = "rgb(var(--ink))";
 
   return (
-    <figure data-amr-primitive="peer-strip" className="m-0 inline-block max-w-full">
+    <figure data-amr-primitive="peer-strip" data-peer-tone="neutral" className="m-0 inline-block max-w-full">
       <svg
         width={WIDTH}
         height={HEIGHT}
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
         role="img"
-        aria-label={`${label} ${pct(value)} among ${int(sorted.length)} ${poolName}; median ${pct(med)}, range ${pct(low)} to ${pct(high)}.`}
+        aria-label={`${label} ${pct(value)} among ${int(sorted.length)} ${poolName}; median ${pct(med)}, peer range ${pct(low)} to ${pct(high)}.`}
         className="block max-w-full overflow-visible"
       >
         <rect
@@ -80,7 +76,7 @@ export const AmrPeerStrip = ({ label, value, peers, poolName, lowerIsBetter = fa
           <line key={idx} x1={x(peer)} x2={x(peer)} y1={TRACK_Y - 3} y2={TRACK_Y + 3} stroke="rgb(var(--ink) / 0.35)" strokeWidth={1} />
         ))}
         <line x1={x(med)} x2={x(med)} y1={TRACK_Y - 7} y2={TRACK_Y + 7} stroke="rgb(var(--ink) / 0.65)" strokeWidth={1.5} />
-        <rect x={x(value) - 2} y={TRACK_Y - 8} width={4} height={16} rx={1} fill={fill} />
+        <rect data-peer-mark="" x={x(value) - 2} y={TRACK_Y - 8} width={4} height={16} rx={1} fill={fill} />
         <text
           x={Math.min(Math.max(x(value), 22), WIDTH - 22)}
           y={10}
@@ -99,10 +95,10 @@ export const AmrPeerStrip = ({ label, value, peers, poolName, lowerIsBetter = fa
         </text>
       </svg>
       <figcaption className="mt-1 text-tiny text-muted-text">
-        <span className={`font-semibold tabular-nums ${textClass}`}>
+        <span className="font-semibold tabular-nums text-ink">
           {label} {pct(value)}
         </span>{" "}
-        among {int(sorted.length)} {poolName} · median {pct(med)}
+        among {int(sorted.length)} {poolName} · median {pct(med)} (range {pct(low)}–{pct(high)})
       </figcaption>
     </figure>
   );

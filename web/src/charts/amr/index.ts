@@ -19,7 +19,8 @@ const median = (xs: readonly number[]): number | null => {
 };
 
 /** Antibiotic-class random vs lineage-held-out medians for classes with at
- *  least `minDatasets` paired datasets, sorted from steepest drop to smallest. */
+ *  least `minDatasets` paired datasets, sorted from steepest paired median drop
+ *  to smallest (matching `splitSummary` in `data/derive/overview.ts`). */
 export const classDropRows = (rows: readonly CatalogRow[], minDatasets = 5): DumbbellRow[] => {
   const paired = rows.filter((r) => r.best_random !== null && r.best_lineage !== null);
   if (paired.length === 0) return [];
@@ -35,15 +36,16 @@ export const classDropRows = (rows: readonly CatalogRow[], minDatasets = 5): Dum
     if (list.length < minDatasets) continue;
     const before = median(list.map((r) => r.best_random!));
     const after = median(list.map((r) => r.best_lineage!));
-    const diff = before === null || after === null ? null : after - before;
+    // Median of each dataset's own drop (lineage - random, so a drop is negative).
+    const pairedDelta = median(list.map((r) => r.best_lineage! - r.best_random!));
     out.push({
       key: cls,
       label: capitalize(cls),
       before,
       after,
-      delta: diff,
+      delta: pairedDelta,
       countText: `${int(list.length)} of ${int(paired.length)} datasets`,
-      sortDelta: diff ?? 0,
+      sortDelta: pairedDelta ?? 0,
     });
   }
   return out.sort((a, b) => a.sortDelta - b.sortDelta || a.label.localeCompare(b.label));

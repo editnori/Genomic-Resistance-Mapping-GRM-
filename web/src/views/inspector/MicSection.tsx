@@ -49,8 +49,12 @@ export const MicSection = ({ r, research, baselines }: { r: DatasetReport; resea
   const constant = baselines?.mic ?? null;
   const withMic = r.samples.filter((s) => s.mic !== null);
   const exact = withMic.filter((s) => s.mic?.censor === "Exact").length;
-  const foldCut = mic?.fold_breakpoints?.find((b) => b !== null)?.r_above ?? null;
-  const plateCut = r.breakpoint?.r_above ?? mic?.breakpoint?.r_above ?? foldCut;
+  const distinctFoldCuts = mic?.fold_breakpoints
+    ? [...new Set(mic.fold_breakpoints.flatMap((b) => (b === null ? [] : [b.r_above])))]
+    : [];
+  const foldsDiffer = distinctFoldCuts.length > 1;
+  const plateCut = foldsDiffer ? null : (distinctFoldCuts[0] ?? mic?.breakpoint?.r_above ?? r.breakpoint?.r_above ?? null);
+  const plateCutoffLabel = distinctFoldCuts.length === 1 ? "Fold threshold" : "Cohort breakpoint";
   return (
     <Section
       id="ds-mic"
@@ -70,7 +74,7 @@ export const MicSection = ({ r, research, baselines }: { r: DatasetReport; resea
         />
       ) : (
         <div className="space-y-6">
-          <MicPlateStrip rAbove={plateCut} label="Plate dilution steps and ±1 well tolerance" />
+          <MicPlateStrip mode="agreement" rAbove={plateCut} cutoffLabel={plateCutoffLabel} label="Essential agreement on a broth dilution plate (±1 doubling well)" />
           {/* grid-cols-1 keeps the narrow layout's one column at the dialog's width:
               the heatmap sizes itself from its frame, and an auto column would grow
               to the heatmap's own width and keep it there. */}

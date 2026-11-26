@@ -44,29 +44,34 @@ const GaugeRow = ({ name, limit, limitText, input }: GaugeRowProps) => {
   const scaleMax = Math.max(0.15, limit * 4, rate * 1.15, (hi ?? rate) * 1.08);
   const pos = (v: number) => `${Math.max(0, Math.min(100, (v / scaleMax) * 100)).toFixed(2)}%`;
 
-  const status: "meets" | "misses" | "open" = hasCi
-    ? hi <= limit
+  const status: "meets" | "misses" | "open" | "no-interval" = !hasCi
+    ? "no-interval"
+    : hi <= limit
       ? "meets"
       : lo > limit
         ? "misses"
-        : "open"
-    : rate <= limit
-      ? "meets"
-      : "misses";
+        : "open";
 
-  const color = status === "meets" ? "rgb(var(--live-text))" : status === "misses" ? "rgb(var(--coral-text))" : "rgb(var(--muted-text))";
-  const statusWords = hasCi
-    ? status === "meets"
+  // Without an interval, draw neutral ink and say "no interval" (never green on a plain rate).
+  const color =
+    status === "meets"
+      ? "rgb(var(--live-text))"
+      : status === "misses"
+        ? "rgb(var(--coral-text))"
+        : status === "no-interval"
+          ? "rgb(var(--ink))"
+          : "rgb(var(--muted-text))";
+  const statusWords =
+    status === "meets"
       ? "interval at or under limit"
       : status === "misses"
         ? "interval over limit"
-        : "interval crosses limit"
-    : status === "meets"
-      ? "at or under limit"
-      : "over limit";
+        : status === "open"
+          ? "interval crosses limit"
+          : "no interval";
 
   return (
-    <div className="min-w-0">
+    <div className="min-w-0" data-gauge-status={status}>
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 text-control">
         <span className="font-medium text-ink">
           {name} <span className="font-normal text-muted-text">({limitText})</span>
@@ -89,10 +94,10 @@ const GaugeRow = ({ name, limit, limitText, input }: GaugeRowProps) => {
         className="relative mt-1.5 h-4 w-full"
       >
         <span className="absolute inset-x-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-surface-subtle" />
-        {/* Safe zone up to limit */}
+        {/* Reference zone up to limit (neutral tint when no interval is available) */}
         <span
           className="absolute left-0 top-1/2 h-1.5 -translate-y-1/2 rounded-l-full"
-          style={{ width: pos(limit), background: "rgb(var(--live) / 0.22)" }}
+          style={{ width: pos(limit), background: hasCi ? "rgb(var(--live) / 0.22)" : "rgb(var(--ink) / 0.08)" }}
         />
         {/* Limit divider */}
         <span

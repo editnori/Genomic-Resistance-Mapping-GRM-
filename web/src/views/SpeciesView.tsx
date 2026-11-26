@@ -73,7 +73,7 @@ const Coverage = ({ row }: { row: SpeciesRow }) => (
       {`${int(row.genomes_analyzed)} genomes analyzed (${int(row.genomes_labeled)} carry any label, including MIC-inferred calls); ${int(row.datasets_reported)} of ${int(row.datasets_curated)} curated datasets have a report.`}
     </p>
     <p className="type-note max-w-[60rem]">
-      Selected from QC-passing genomes with a reported R or S call and no conflict (up to the species cap). Profiles, cross-resistance and call counts on this page include labels inferred from MIC, which dataset reports leave out.
+      The analyzed genomes are a selection, up to a cap per species, of genomes with a reported R or S call and no conflicting call. Genomes that failed quality control or had no DNA sequence file are left out. Profiles, cross-resistance and call counts on this page include labels inferred from MIC, which dataset reports leave out.
     </p>
   </div>
 );

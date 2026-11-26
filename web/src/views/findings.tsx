@@ -658,6 +658,9 @@ export const lineageFinding = (m: Manifest, opts: FindingOptions): Finding => {
               itemNoun="drug classes"
               ariaLabel="Random vs lineage-held-out median balanced accuracy by antibiotic class"
             />
+            <p className="type-note mt-1.5">
+              Each class row shows the medians on both splits beside the median of each dataset&apos;s own drop; coral marks a median drop of 5 points or more.
+            </p>
           </div>
         ) : null}
       </div>
@@ -804,7 +807,7 @@ export const learnersFinding = (m: Manifest, opts: FindingOptions): Finding => {
     caption: none
       ? "The table sets each learner, used alone for every dataset, beside the best learner picked for each dataset."
       : opts.page
-        ? "Each row is a median over the datasets with a score on both tests. The first row picks a learner for each dataset by its random-split score; every other row uses one learner for all datasets."
+        ? "Each row is a median over the datasets with a score on both tests. The first row picks a learner for each dataset by its random-split score, so its random-split median is read on the folds that picked it, and every other row uses one learner for all datasets. The drop is the median of each dataset's own drop from the random split to held-out lineages; coral marks a median drop of 5 points or more."
         : "Median balanced accuracy over the datasets scored on both tests. The first row picks a learner for each dataset by its random-split score, and every other row uses one learner for all datasets.",
     notesFold:
       opts.page && !none && (s.nBest > 0 || partial.length > 0)
@@ -961,7 +964,7 @@ export const barsFinding = (m: Manifest, opts: FindingOptions): Finding => {
                 ) : null}
                 <p>
                   A learner that misses no resistant genome still needs at least {int(ZERO_MISS_FLOOR)} resistant genomes before its interval lies under the VME bar. {int(atFloor)} of{" "}
-                  {plural(rows.length, "dataset")} {atFloor === 1 ? "has" : "have"} that many. Intervals treat each genome as an independent draw, so true intervals are likely wider.
+                  {plural(rows.length, "dataset")} {atFloor === 1 ? "has" : "have"} that many. It treats each genome as an independent draw, which related genomes are not, so the true interval is likely wider.
                 </p>
                 {rule.n > 0 ? (
                   <p>
@@ -1057,9 +1060,9 @@ export const catalogFinding = (m: Manifest, opts: FindingOptions): Finding => {
             wholeLabel="Known-gene rules vs best learner (lineages held out)"
             total={c.nCompared}
             parts={[
-              { key: "ahead", label: `Ahead by >${cut} pts`, count: c.regions.ahead, tone: "live" },
-              { key: "within", label: `Within ${cut} pts`, count: c.regions.within, tone: "blue" },
-              { key: "behind", label: `Behind by >${cut} pts`, count: c.regions.behind, tone: "coral" },
+              { key: "ahead", label: `Ahead by >${cut} pts`, count: c.regions.ahead, tone: "ink" },
+              { key: "within", label: `Within ${cut} pts`, count: c.regions.within, tone: "neutral" },
+              { key: "behind", label: `Behind by >${cut} pts`, count: c.regions.behind, tone: "subtle" },
             ]}
           />
         ) : null}
@@ -1069,7 +1072,7 @@ export const catalogFinding = (m: Manifest, opts: FindingOptions): Finding => {
     // A slide says the same in fewer lines, so a phone's plot keeps the size
     // its 12px labels need.
     caption: opts.page
-      ? "Each mark is one dataset: the known-gene rule's balanced accuracy against the best learner's with whole lineages held out. GRM matches acquired genes in the catalog with its own k-mers and does not test point mutations."
+      ? "Each mark is one dataset: the known-gene rule's balanced accuracy against the best learner's with whole lineages held out. GRM finds the catalog's acquired genes with its own k-mer matching and applies its own drug rules. It does not run the AMRFinderPlus program or test point mutations, so resistance from a point mutation counts against a rule."
       : "One mark per dataset. GRM's own k-mer matching finds the catalog's acquired genes for its own drug rules; it does not run AMRFinderPlus or test point mutations.",
     notesFold: opts.page
       ? {
@@ -1310,7 +1313,7 @@ export const panelsFinding = (m: Manifest, opts: FindingOptions): Finding => {
   if (lead === null) {
     return {
       id: "panels",
-      title: "PCR panels",
+      title: "Simulated PCR panels",
       result: "No simulated PCR panel targets an analyzed drug yet.",
       figure: null,
       caption: "Panels cover carbapenems, extended-spectrum cephalosporins, methicillin, vancomycin, and colistin.",
@@ -1325,7 +1328,7 @@ export const panelsFinding = (m: Manifest, opts: FindingOptions): Finding => {
   const shares = `${lead.name} targets are found in ${found} of ${int(p.calledResistant)} resistant isolates${same ? "" : " with a panel call"}${opts.page ? ` across ${plural(p.datasets, "dataset")}` : ""}; the best learner calls ${called} of ${same ? "them" : int(p.modelResistant)} resistant.`;
   return {
     id: "panels",
-    title: "PCR panels",
+    title: "Simulated PCR panels",
     result: opts.page ? `${PANEL_INTRO} ${shares}` : shares,
     figure: (fit: PagedFit) => <PanelFigure rows={lead.rows} height={fit.height} onOpen={opts.nav?.openDataset} page={fit.page} pages={fit.pages} onPages={fit.onPages} />,
     caption: `Each row is one of ${int(p.datasets)} datasets, and the two lines count every row together. Panel targets are found in assembled genomes by k-mer containment, in silico, meaning by computer with no lab test; the learner is ${BEST_LEARNER_WORDS}.${
@@ -1361,7 +1364,7 @@ export const micFinding = (m: Manifest, opts: FindingOptions): Finding => {
         ? null
         : (fit: PagedFit) => (
             <div className="space-y-5">
-              {opts.page ? <MicPlateStrip label="Essential agreement on a broth dilution plate (±1 doubling well)" /> : null}
+              {opts.page ? <MicPlateStrip mode="agreement" label="Essential agreement on a broth dilution plate (±1 doubling well)" /> : null}
               <MicStrip rows={rows} height={fit.height} onOpen={opts.nav?.openDataset} constants={b === null ? undefined : constants} />
             </div>
           ),
@@ -1459,7 +1462,7 @@ export const outsideFinding = (m: Manifest, opts: FindingOptions): Finding => {
       />
     ),
     caption: opts.page
-      ? `Each dot is one dataset and the set covering machine. Across is the report's figure with whole lineages held out; up is the same model on the new genomes with its ${level} interval. Hollow dots sit wholly under the line. Retrospective test within BV-BRC, not external validation.`
+      ? `Each dot is one dataset and the set covering machine. Across is the report's figure with whole lineages held out. Up is the same model's figure on the new genomes, and the bar through the dot is its ${level} interval. A dot under the line scored lower on the new genomes than its report says. A figure reads below, and its dot is hollow, when its whole interval is under the line. A dataset holds when neither its sensitivity nor its specificity reads below. Retrospective test within BV-BRC, not external validation.`
       : `One dot per dataset. A retrospective test on newly deposited studies from the same database, not external validation and not an untouched held-out set. The two groups are scored apart; setting them side by side, and counting a dataset as holding, were added after the results were read.`,
     notesFold: opts.page
       ? {
@@ -2060,7 +2063,7 @@ const ComparisonsSummaryTable = ({ page }: { page: boolean }) => {
           ]
         : [
             `${int(d.amrfinderplus.datasets)} sets`,
-            `Ahead of rule ${int(d.amrfinderplus.program_vs_known_gene_rule.ahead)}/${int(d.amrfinderplus.datasets)}; ties learners`,
+            `Ahead of rule ${int(d.amrfinderplus.program_vs_known_gene_rule.ahead)}/${int(d.amrfinderplus.datasets)}; roughly ties learners`,
             "Catalog overlap possible",
           ],
     },
@@ -2074,7 +2077,7 @@ const ComparisonsSummaryTable = ({ page }: { page: boolean }) => {
             `Assemblies not reads (${int(d.tbprofiler.by_name_rows_without_call)} no-calls)`,
           ]
         : [
-            `${int(d.tbprofiler.graded_endpoints)} TB drugs`,
+            `${int(d.tbprofiler.graded_endpoints)} graded`,
             `Ahead of SCM ${int(d.tbprofiler.graded_vs_learners_lineage.scm.tool_higher)}/${int(d.tbprofiler.graded_endpoints)}, RF ${int(d.tbprofiler.graded_vs_learners_lineage.rf.tool_higher)}/${int(d.tbprofiler.graded_endpoints)}`,
             "Assemblies, not reads",
           ],
@@ -2165,10 +2168,10 @@ export const comparisonsFinding = (_m: Manifest, opts: FindingOptions): Finding 
   const d = ADDITIONAL_STUDIES;
   return {
     id: "comparisons",
-    title: "Outside tools",
+    title: "Other comparisons",
     result: opts.page
-      ? `Five additional revision ${int(d.evaluation_revision)} records test earlier-vs-later public dates (${int(d.time_split.total_log_loss_worse)} of 5 learners worse across ${int(d.time_split.datasets)} datasets), a dense neural network (no gain across ${int(d.dense_network.datasets)} datasets), and outside tools. Kover 2.0.7 trails GRM's set covering machine on ${int(d.kover.datasets)} small datasets, AMRFinderPlus 4.2.7 ties lineage learners across ${int(d.amrfinderplus.datasets)} datasets, and TBProfiler 6.6.3 leads on ${int(d.tbprofiler.graded_vs_learners_lineage.scm.tool_higher)} of ${int(d.tbprofiler.graded_endpoints)} M. tuberculosis drugs.`
-      : `Five revision ${int(d.evaluation_revision)} comparisons: earlier-date training hurts all 5 learners, SCM leads Kover on ${int(d.kover.datasets)} small sets, a dense net shows no gain, AMRFinderPlus ties lineage learners on ${int(d.amrfinderplus.datasets)} sets, and TBProfiler leads SCM on ${int(d.tbprofiler.graded_vs_learners_lineage.scm.tool_higher)} of ${int(d.tbprofiler.graded_endpoints)} TB drugs.`,
+      ? `Five additional revision ${int(d.evaluation_revision)} records test temporal generalization and compare GRM against outside tools and a neural network. Training only on earlier public dates scores worse than a random draw on log loss and balanced accuracy for ${int(d.time_split.total_log_loss_worse)} of 5 learners (recall worse for ${int(d.time_split.total_recall_worse)} of 5, ${int(d.time_split.datasets)} datasets). On lineage splits, GRM's set covering machine leads Kover 2.0.7 by ${points(Math.abs(d.kover.balanced_accuracy.value))} as run on ${int(d.kover.datasets)} small datasets, a dense neural network establishes no gain over the classical learners (${int(d.dense_network.datasets)} datasets), the full AMRFinderPlus 4.2.7 program beats GRM's simplified known-gene rule on ${int(d.amrfinderplus.program_vs_known_gene_rule.ahead)} of ${int(d.amrfinderplus.datasets)} datasets while roughly tying the 5 learners, and TBProfiler 6.6.3 scores higher than SCM on ${int(d.tbprofiler.graded_vs_learners_lineage.scm.tool_higher)} of ${int(d.tbprofiler.graded_endpoints)} graded M. tuberculosis drugs on assemblies.`
+      : `Date splits score worse on log loss (${int(d.time_split.total_log_loss_worse)}/5), SCM leads Kover (${int(d.kover.datasets)} sets), dense net establishes no gain, AMRFinderPlus roughly ties learners, and TBProfiler leads SCM on ${int(d.tbprofiler.graded_vs_learners_lineage.scm.tool_higher)}/${int(d.tbprofiler.graded_endpoints)} graded TB drugs (assemblies).`,
     figure: <ComparisonsSummaryTable page={opts.page} />,
     caption: opts.page
       ? "Every row summarizes one committed revision 14 record. All five are retrospective comparisons on public genomes, not prospective or external validation. Catalogue tools (AMRFinderPlus and TBProfiler) use databases curated from public isolates and may overlap these cohorts; TBProfiler was run on assemblies rather than sequencing reads."

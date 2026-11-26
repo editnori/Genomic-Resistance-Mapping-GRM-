@@ -234,7 +234,7 @@ describe("continuation slides", () => {
     ] as const) {
       const n = panelAt + page;
       while (!status().startsWith(`Slide ${n} `)) await act(async () => dialog.querySelector("main")!.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })));
-      expect(status()).toBe(`Slide ${n} of ${SPLIT}: PCR panels (${page} of 2)`);
+      expect(status()).toBe(`Slide ${n} of ${SPLIT}: Simulated PCR panels (${page} of 2)`);
       const section = dialog.querySelector("main section")!;
       const ids = [...section.querySelectorAll("[data-dataset]")].map((g) => g.getAttribute("data-dataset")!);
       expect(ids).toHaveLength(last - first + 1);
@@ -247,8 +247,8 @@ describe("continuation slides", () => {
     await act(async () => selector.click());
     // The outline's options, not the open chart's keyboard option.
     const labels = [...document.querySelectorAll('[role="option"]')].map((o) => o.textContent ?? "").filter((t) => /^\d+ · /.test(t));
-    expect(labels).toContain(`${panelAt + 1} · PCR panels (1 of 2)`);
-    expect(labels).toContain(`${panelAt + 2} · PCR panels (2 of 2)`);
+    expect(labels).toContain(`${panelAt + 1} · Simulated PCR panels (1 of 2)`);
+    expect(labels).toContain(`${panelAt + 2} · Simulated PCR panels (2 of 2)`);
     expect(labels).toHaveLength(SPLIT);
     expect(labels.filter((t) => t.includes("New studies"))).toEqual([expect.stringContaining("(1 of 2)"), expect.stringContaining("(2 of 2)")]);
     expect(labels.filter((t) => t.includes("Input settings"))).toEqual([1, 2, 3, 4, 5, 6, 7].map((k) => expect.stringContaining(`(${k} of 7)`)));

@@ -7,6 +7,7 @@ import type { DatasetReport, LearnerResult } from "../../data/schema";
 import { int, LEARNER_NAME, learnerInSentence, pct } from "../../data/format";
 import { bestLearner } from "../../data/derive/dataset";
 import { LearnerSection } from "./LearnerSection";
+import { AmrPeerStrip, ErrorLimitGauge } from "../../charts/amr";
 import { intervalKey } from "../../data/intervals";
 
 const manifest = parseManifest(fixtureFile("/data/index.json"));
@@ -173,10 +174,57 @@ describe("offline intervals (X2)", () => {
     expect(html).toContain(`title="${int(m.fp)} of ${int(m.tn + m.fp)} susceptible isolates called resistant"`);
     expect(html).toContain("95% Clopper-Pearson interval from this report");
     expect(html).toContain("not calibration or clinical performance");
+    expect(html).toContain("growth-based susceptibility test systems");
+
+    // ErrorLimitGauge distinguishes meets, misses, open, and no-interval (neutral ink, never green).
+    const gaugeWithCi = renderToStaticMarkup(
+      createElement(ErrorLimitGauge, {
+        splitLabel: "Lineage split",
+        vme: { rate: 0.005, low: 0.001, high: 0.012 },
+        me: { rate: 0.05, low: 0.035, high: 0.07 },
+      }),
+    );
+    expect(gaugeWithCi).toContain('data-gauge-status="meets"');
+    expect(gaugeWithCi).toContain('data-gauge-status="misses"');
+    const gaugeOpen = renderToStaticMarkup(
+      createElement(ErrorLimitGauge, {
+        splitLabel: "Lineage split",
+        vme: { rate: 0.01, low: 0.002, high: 0.04 },
+        me: { rate: 0.01, low: 0.005, high: 0.05 },
+      }),
+    );
+    expect(gaugeOpen).toContain('data-gauge-status="open"');
+    const gaugeNoCi = renderToStaticMarkup(
+      createElement(ErrorLimitGauge, {
+        splitLabel: "Lineage split",
+        vme: { rate: 0.005 },
+        me: { rate: 0.01 },
+      }),
+    );
+    expect(gaugeNoCi).toContain('data-gauge-status="no-interval"');
+    expect(gaugeNoCi).toContain("no interval");
+    expect(gaugeNoCi).not.toContain("--live");
+
+    // AmrPeerStrip uses one neutral mark regardless of quartile.
+    for (const val of [0.62, 0.85, 0.98]) {
+      const strip = renderToStaticMarkup(createElement(AmrPeerStrip, { label: "Lineage accuracy", value: val, peers: [0.6, 0.75, 0.85, 0.92, 0.99], poolName: "carbapenem datasets" }));
+      expect(strip).toContain('data-peer-tone="neutral"');
+      expect(strip).toContain("data-peer-mark");
+      expect(strip).not.toContain("--live");
+      expect(strip).not.toContain("--coral");
+    }
   });
 
   it("renders a report without intervals exactly as before", () => {
     expect(renderToStaticMarkup(createElement(LearnerSection, { r: report, intervals: new Map() }))).toBe(render(report));
     expect(render(report)).not.toContain("95% interval");
+    expect(render(report)).toContain('data-gauge-status="no-interval"');
+    expect(render(report)).toContain("growth-based susceptibility test systems");
+    // Missing-lineage reason stays inline above any closed disclosure fold.
+    const randomOnly: DatasetReport = {
+      ...report,
+      splits: report.splits.filter((s) => s.scheme === "random"),
+    };
+    expect(render(randomOnly)).toContain("No lineage-held-out result: Fewer than 10 lineages");
   });
 });

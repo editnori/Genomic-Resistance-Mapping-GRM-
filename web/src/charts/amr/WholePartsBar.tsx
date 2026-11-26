@@ -5,7 +5,7 @@
 
 import { int, pct } from "../../data/format";
 
-export type PartTone = "live" | "coral" | "blue" | "neutral" | "resistant" | "susceptible";
+export type PartTone = "live" | "coral" | "blue" | "ink" | "neutral" | "subtle" | "resistant" | "susceptible";
 
 export interface BarPart {
   key: string;
@@ -33,7 +33,9 @@ const SOLID_FILL: Record<PartTone, string> = {
   live: "rgb(var(--live))",
   coral: "rgb(var(--coral))",
   blue: "rgb(var(--blue))",
+  ink: "rgb(var(--ink) / 0.78)",
   neutral: "var(--series-neutral)",
+  subtle: "rgb(var(--ink) / 0.24)",
   resistant: "var(--series-r)",
   susceptible: "var(--series-s)",
 };
@@ -42,7 +44,9 @@ const TEXT_CLASS: Record<PartTone, string> = {
   live: "text-live-text",
   coral: "text-coral-text",
   blue: "text-blue",
+  ink: "text-ink",
   neutral: "text-muted-text",
+  subtle: "text-muted-text",
   resistant: "text-coral-text",
   susceptible: "text-blue",
 };
@@ -51,7 +55,14 @@ const hatchFill = (tone: PartTone): string =>
   `repeating-linear-gradient(135deg, ${SOLID_FILL[tone]} 0 3px, rgb(var(--paper-pure)) 3px 6px)`;
 
 export const WholePartsBar = ({ wholeLabel, total, parts, ariaLabel, compact = false }: WholePartsBarProps) => {
-  const denom = total ?? parts.reduce((sum, p) => sum + p.count, 0);
+  if (parts.length > 4) {
+    throw new Error(`WholePartsBar "${wholeLabel}": expected at most 4 parts, got ${parts.length}`);
+  }
+  const partsSum = parts.reduce((sum, p) => sum + p.count, 0);
+  if (total !== undefined && partsSum !== total) {
+    throw new Error(`WholePartsBar "${wholeLabel}": part counts (${partsSum}) must equal total (${total})`);
+  }
+  const denom = total ?? partsSum;
   const label =
     ariaLabel ??
     `${wholeLabel}: ${int(denom)} total. ${parts.map((p) => `${p.label}: ${int(p.count)} (${pct(denom === 0 ? 0 : p.count / denom)})`).join("; ")}.`;

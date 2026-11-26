@@ -224,6 +224,9 @@ export const LearnerSection = ({
             vme={{ rate: bestForErrors.metrics.vme, low: bestCi?.vme?.lo ?? null, high: bestCi?.vme?.hi ?? null }}
             me={{ rate: bestForErrors.metrics.me, low: bestCi?.me?.lo ?? null, high: bestCi?.me?.hi ?? null }}
           />
+          <p className="type-note mt-2">
+            The limits under VME and ME are a screen adapted from FDA&apos;s 2009 guidance for growth-based susceptibility test systems.
+          </p>
         </div>
       ) : null}
       <div className="mb-3 flex flex-wrap gap-x-5 gap-y-1">
@@ -358,15 +361,20 @@ export const LearnerSection = ({
             : ""}
         </p>
       ) : null}
+      {lineage === undefined ? (
+        <p className="type-note mt-2">No lineage-held-out result: {splitAbsence(r, "lineage") ?? ""}</p>
+      ) : null}
+      {bestForErrors?.metrics == null ? (
+        <p className="type-note mt-2">
+          The limits under VME and ME are a screen adapted from FDA&apos;s 2009 guidance for growth-based susceptibility test systems.
+        </p>
+      ) : null}
       <div className="mt-2">
-        <Disclosure label="How folds, AUROC and limits are computed" ruled={false}>
+        <Disclosure label="How folds and AUROC are computed" ruled={false}>
           <p className="type-note">
             The genomes are cut into {random?.folds ?? 5} parts (folds), and each part is held out once while the model trains on the rest. Balanced accuracy pools those held-out
             predictions; faint dots are the single folds. AUROC is how well the scores rank resistant isolates above susceptible ones, from 0.5 for chance to 1 for a perfect ranking.
-            {" "}The limits under VME and ME are a screen adapted from FDA&apos;s 2009 guidance for growth-based susceptibility test systems.
-            {lineage !== undefined
-              ? ` With lineages held out, each of the ${lineage.n_groups} lineages goes whole to one fold.`
-              : ` No lineage-held-out result: ${splitAbsence(r, "lineage") ?? ""}`}
+            {lineage !== undefined ? ` With lineages held out, each of the ${lineage.n_groups} lineages goes whole to one fold.` : ""}
           </p>
         </Disclosure>
       </div>

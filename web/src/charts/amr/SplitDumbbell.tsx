@@ -36,8 +36,8 @@ export interface SplitDumbbellProps {
 
 export const SplitDumbbell = ({
   rows,
-  beforeLabel = "Random split",
-  afterLabel = "Lineages held out",
+  beforeLabel = "Random split (relatives in training)",
+  afterLabel = "Lineage split (families kept out)",
   largeDrop = 0.05,
   initialVisible,
   itemNoun = "rows",
@@ -51,7 +51,7 @@ export const SplitDumbbell = ({
   return (
     <div data-amr-primitive="split-dumbbell" role="region" aria-label={ariaLabel} className="w-full max-w-[54rem]">
       {/* Direct dot key aligned over track, and column headers over numbers */}
-      <div className="mb-2 grid grid-cols-1 items-baseline gap-x-4 gap-y-1.5 text-tiny text-muted-text sm:grid-cols-[minmax(9rem,13.5rem)_minmax(8rem,1fr)_8.5rem_5.5rem]">
+      <div className="mb-2 grid grid-cols-1 items-baseline gap-x-4 gap-y-1.5 text-tiny text-muted-text sm:grid-cols-[minmax(9rem,13.5rem)_minmax(8rem,1fr)_8.5rem_6.25rem]">
         <span className="hidden sm:block" />
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
           <span className="inline-flex items-center gap-1.5">
@@ -63,8 +63,8 @@ export const SplitDumbbell = ({
             <span className="font-medium text-ink">{afterLabel}</span>
           </span>
         </div>
-        <span className="hidden text-right font-medium text-ink sm:block">Score</span>
-        <span className="hidden text-right font-medium text-ink sm:block">Change</span>
+        <span className="hidden text-right font-medium text-ink sm:block">Medians</span>
+        <span className="hidden text-right font-medium text-ink sm:block">Median drop</span>
       </div>
 
       <ul className="divide-y divide-hair border-y border-hair">
@@ -79,7 +79,7 @@ export const SplitDumbbell = ({
           const hi = valid ? Math.max(clamp(r.before!), clamp(r.after!)) * 100 : 0;
 
           return (
-            <li key={r.key} className="grid grid-cols-1 items-center gap-x-4 gap-y-1.5 py-2.5 sm:grid-cols-[minmax(9rem,13.5rem)_minmax(8rem,1fr)_8.5rem_5.5rem]">
+            <li key={r.key} data-dumbbell-row={r.key} className="grid grid-cols-1 items-center gap-x-4 gap-y-1.5 py-2.5 sm:grid-cols-[minmax(9rem,13.5rem)_minmax(8rem,1fr)_8.5rem_6.25rem]">
               <div className="min-w-0">
                 <div className="truncate text-control font-medium text-ink" title={r.label}>
                   {r.label}
@@ -115,7 +115,7 @@ export const SplitDumbbell = ({
 
               {/* Before -> After values */}
               <div className="flex items-baseline justify-between gap-2 text-control tabular-nums sm:justify-end">
-                <span className="text-muted-text sm:hidden">Score</span>
+                <span className="text-muted-text sm:hidden">Medians</span>
                 <span className="whitespace-nowrap">
                   <span className="text-muted-text">{pct(r.before)}</span>
                   <span aria-hidden="true" className="mx-1 text-muted-text">
@@ -125,13 +125,12 @@ export const SplitDumbbell = ({
                 </span>
               </div>
 
-              {/* Arrow + unsigned magnitude (arrow owns direction) */}
+              {/* Arrow + paired median drop magnitude */}
               <div className="flex items-baseline justify-between gap-2 text-control tabular-nums sm:justify-end">
-                <span className="text-muted-text sm:hidden">Change</span>
+                <span className="text-muted-text sm:hidden">Median drop</span>
                 <span
-                  className={`whitespace-nowrap font-semibold ${
-                    big ? "text-coral-text" : up ? "text-live-text" : "text-muted-text"
-                  }`}
+                  data-dumbbell-delta={pts === null ? "" : pts.toFixed(1)}
+                  className={`whitespace-nowrap font-semibold ${big ? "text-coral-text" : "text-muted-text"}`}
                 >
                   {pts === null ? "–" : `${down ? "▼ " : up ? "▲ " : ""}${pts.toFixed(1)} pts`}
                 </span>
@@ -141,7 +140,7 @@ export const SplitDumbbell = ({
         })}
       </ul>
 
-      <div className="mt-1 hidden grid-cols-[minmax(9rem,13.5rem)_minmax(8rem,1fr)_8.5rem_5.5rem] gap-x-4 text-tiny tabular-nums text-muted-text sm:grid">
+      <div className="mt-1 hidden grid-cols-[minmax(9rem,13.5rem)_minmax(8rem,1fr)_8.5rem_6.25rem] gap-x-4 text-tiny tabular-nums text-muted-text sm:grid">
         <span />
         <div className="flex justify-between">
           <span>0%</span>

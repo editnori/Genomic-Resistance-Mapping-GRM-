@@ -315,7 +315,7 @@ export const primerSteps = (m: Manifest, ex: PrimerExample | null = primerExampl
       figure:
         ex === null ? null : (
           <div className="space-y-5">
-            <MicPlateStrip compact label="How a lab calls R or S on a broth plate" />
+            <MicPlateStrip mode="cutoff" compact label="How a lab calls R or S on a broth plate (drawing, not data)" />
             <CompositionFigure row={ex.row} />
           </div>
         ),
