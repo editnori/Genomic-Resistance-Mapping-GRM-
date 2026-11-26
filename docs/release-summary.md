@@ -283,13 +283,30 @@ Each count of genomes here describes what laboratories deposited in BV-BRC. None
 
 The table has no row for 80,967 genomes. A committed page counts 80,967 genomes with a scorable label and says the release's cap of 2,000 leaves out 57,206 (`docs/assumption-plan.md:7`). The index has no key for either count, and every row of the table comes from the index.
 
-**Not traced.** Three counts of committed pages differ from the index's. Each gives both sides, and neither side is asserted.
+**Differences.** Three counts of committed pages differ from the index's. Two were counted on a rebuilt copy of the release's table. The third is not traced.
 
-- `docs/assumption-plan.md:40` counts 1,064,823 pairs; the index counts 1,063,628.
-- `docs/assumption-plan.md:7` gives 80,967 genomes less the 57,206 the cap leaves out, which is 23,761; the index counts 23,757 genomes analyzed.
-- `docs/species-check.md:100` counts 96 failures among 35,231 genomes the species check judged; the index counts 80 genomes that fail the species check.
+The table revision 14 was curated from was not found. The copy was rebuilt on 21 Nov 2026 from a new download, cut to 1,285,111 lab records, the count the index gives (`docs/assumption-plan-later-records.md:9`). Its counts are in `reference/release-summary/rebuilt-table-20261121/`. Three of them differ from the index's before the pairs, and with them the count of genomes that pass.
 
-One lead, and no more: `docs/species-check.md:65` gives 23,761 as the genome count of the frozen 23-species candidate of revision 9, the same figure as 80,967 less 57,206.
+| Count | Index | Copy |
+| --- | --- | --- |
+| Genomes that fail the species check | 80 | none: the copy ran no species check |
+| Genomes that fail on length | 14 | 15 |
+| Records with a name not resolved | 395 | 433: the copy had GRM's own list of drug names alone |
+
+With no species check, the index's 80 genomes go on to the other checks (`src/curate.rs:610-617`). The counts fit 79 of them passing and 1 failing on length, and no committed file names the genomes. Another reading fits too: all 80 pass, and one other genome fails on length because a median or a length moved between the two downloads of the genome metadata (`src/curate.rs:583-596`). Either way 119,071 genomes pass in the copy, 79 more than the index's 118,992 (`docs/assumption-plan-corrections.md:53`).
+
+- **Pairs.** `docs/assumption-plan.md:40` counts 1,064,823 pairs; the index counts 1,063,628. The first is the copy's count, 1,195 pairs more.
+- **Genomes.** `docs/assumption-plan.md:7` gives 80,967 genomes less the 57,206 the cap leaves out, which is 23,761; the index counts 23,757 genomes analyzed. 80,967 and 57,206 are the copy's, so 23,761 is too. So is that line's 41,627, and its 94 datasets were counted on the copy.
+
+The 4 genomes are in two species under the cap. *Acinetobacter baumannii* has 1,705 genomes in the copy and 1,702 in the release, and *Enterobacter cloacae* has 271 and 270 (`cap-species.tsv`, `reference/input-arms/page-builds.tsv`). A run of 30 Oct 2026 with the October species check took the same 3 and 1 from those two species (`docs/species-check.md:403`).
+
+A species at the cap stays at 2,000. In 4 of them the copy's 2,000 differ from the release's, by 4, 68, 2 and 1 genomes, and that line names no species (`docs/cap-arms.md:29`).
+
+No committed file gives the release's own count of the genomes the cap picks among. If the species check took those 4, as on the run of 30 Oct, it takes at least 4 genomes from the 80,967 and at most its 80. The other list of drug names and the newer download of genome metadata can move the count too, and no file counts by how much.
+
+**Not traced.** `docs/species-check.md:100` counts 96 failures among 35,231 genomes the species check judged; the index counts 80 genomes that fail the species check. Neither side is asserted.
+
+One lead, and no more: beside the 79 failures of the October file, now lost, that page counts 1 more in *Klebsiella pneumoniae* and 16 more in *Salmonella enterica* (`docs/species-check.md:105`, `:108`, `:110`). 79 and 1 make 80, and 16 more make 96. The index does not record which file the release read.
 
 A genome the species check never judged passes that step, since only a genome on the check's list of failures leaves (`src/curate.rs:610-617`). The check judged every genome in the reports, 23,757, and none of them fails (`docs/species-check.md:114`).
 

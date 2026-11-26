@@ -1,0 +1,26 @@
+species	genomes_passing_qc_with_a_target	eligible_genomes	datasets	datasets_in_274	selected_cap_2000	left_out_cap_2000	selected_cap_4000	left_out_cap_4000	selected_cap_4096	left_out_cap_4096	selected_cap_all	left_out_cap_all
+Acinetobacter baumannii	1720	1705	18	18	1705	0	1705	0	1705	0	1705	0
+Campylobacter coli	391	391	8	8	391	0	391	0	391	0	391	0
+Campylobacter jejuni	508	508	4	4	508	0	508	0	508	0	508	0
+Clostridioides difficile	204	204	4	4	204	0	204	0	204	0	204	0
+Corynebacterium diphtheriae	243	243	3	3	243	0	243	0	243	0	243	0
+Enterobacter cloacae	280	271	9	9	271	0	271	0	271	0	271	0
+Enterococcus faecium	2907	2907	14	14	2000	907	2907	0	2907	0	2907	0
+Escherichia coli	8704	8704	37	36	2000	6704	4000	4704	4096	4608	8704	0
+Klebsiella aerogenes	97	93	3	3	93	0	93	0	93	0	93	0
+Klebsiella oxytoca	116	112	4	4	112	0	112	0	112	0	112	0
+Klebsiella pneumoniae	6159	6159	39	38	2000	4159	4000	2159	4096	2063	6159	0
+Klebsiella quasipneumoniae	134	109	3	3	109	0	109	0	109	0	109	0
+Mycobacterium tuberculosis	21295	21295	22	22	2000	19295	4000	17295	4096	17199	21295	0
+Neisseria gonorrhoeae	5396	5396	7	7	2000	3396	4000	1396	4096	1300	5396	0
+Pseudomonas aeruginosa	1422	1421	13	13	1421	0	1421	0	1421	0	1421	0
+Salmonella enterica	8183	8170	25	25	2000	6170	4000	4170	4096	4074	8170	0
+Shigella flexneri	366	362	4	4	362	0	362	0	362	0	362	0
+Shigella sonnei	1984	1984	20	20	1984	0	1984	0	1984	0	1984	0
+Staphylococcus aureus	5045	5045	19	18	2000	3045	4000	1045	4096	949	5045	0
+Staphylococcus haemolyticus	128	126	3	3	126	0	126	0	126	0	126	0
+Streptococcus agalactiae	157	141	3	3	141	0	141	0	141	0	141	0
+Streptococcus pneumoniae	15571	15530	12	12	2000	13530	4000	11530	4096	11434	15530	0
+Vibrio cholerae	91	91	3	3	91	0	91	0	91	0	91	0
+the 7 species over 4096	70353	70299	161	158	14000	56299	28000	42299	28672	41627	70299	0
+all	81101	80967	277	274	23761	57206	38668	42299	39340	41627	80967	0

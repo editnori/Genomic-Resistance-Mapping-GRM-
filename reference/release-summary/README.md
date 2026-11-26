@@ -4,6 +4,8 @@ These files are the outputs of the scripts in `scripts/release-summary/` on two 
 
 `rev14-274-20261112/path.json` was computed on 2026-11-26 from the revision 14 `index.json` alone. It is committed for revision 14 only, so `rev12-274-20261105/` has no `path.json`.
 
+`rebuilt-table-20261121/` holds two files of counts that no script here makes. The section "Rebuilt table" below says where they come from.
+
 ## Inputs
 
 Each release is one archive. The scripts read two things from it: `index.json` and the directory `intervals/`, one file per dataset.
@@ -63,7 +65,20 @@ f0c0e4e99759b1a7b0b846e23948369adacb21d06b56f63233f1202c14bee55e  rev12-274-2026
 307935431d2ecdf66274a65e1778ee59cfde9143e028a42f9b0c3898dd13f828  rev14-274-20261112/index-counts.json
 abce2c7c4c5bf940606e747543eded4771a939715a4fdfd7f0bdc9190b6ce14f  rev14-274-20261112/guidance.json
 93eed49c15770c06528fdcd515415bff0fc74d8042bf4caecc3de9f5eed664ca  rev14-274-20261112/path.json
+58a96bed047e4540d92c8bb7d09d467ad8797b29f08dc01cdaaa75568a87e052  rebuilt-table-20261121/funnel.json
+e8d3c20f13c0b2c660c2e61a4cfb31289da90ec7abd92ba19595b202a3c61a53  rebuilt-table-20261121/cap-species.tsv
 ```
+
+## Rebuilt table
+
+The table revision 14 was curated from was not found. On 21 Nov 2026 it was rebuilt from a new download of BV-BRC's lab records: the 1,285,111 records inserted before 2026-11-05T19:10:00, the same number the release's index counts (`docs/assumption-plan-later-records.md`, "File"). `rebuilt-table-20261121/` holds two files of counts made on that copy. Neither holds a genome id.
+
+- `funnel.json` is the `funnel.json` that `grm curate` wrote for the copy at main `77341aa`, byte for byte.
+- `cap-species.tsv` has one row for each of the 23 species with a dataset, then a row for the 7 species with more than 4,096 such genomes and a row for all 23. It counts the genomes the cap picks among, and how many a cap of 2,000, 4,000, 4,096 or none keeps and leaves out. The counts come from the selections `grm curate` wrote at each cap with `--min-class 25`, at main `934292c`. `src/` is the same at both commits.
+
+The copy differs from the release's table in three ways. It was curated with no species check, so its funnel counts no genome as failing that check. Its drug names were resolved with GRM's own list alone, without the reviewed vocabulary the release used. Its genome metadata was downloaded again on 21 Nov 2026, and the length check takes each species' median from that file (`src/curate.rs:583-596`).
+
+The download is not in the repository, so these two files cannot be made again from it. `docs/release-summary.md` reads them under "Curation path" to give the cause of two counts on `docs/assumption-plan.md` that differ from the index.
 
 ## Against the earlier runs
 

@@ -1016,10 +1016,30 @@ An eleventh came while the text was written. The project's wording rules put rec
 
 **Plan.** Row A16 of the plan's inventory cites the site's label text at `web/src/views/MethodsView.tsx:202-204` and calls it "silent on S with I and I with R".
 
-**Now.** Pull request #186, merged on 26 Nov 2026, moved that text to the Data page, at `web/src/views/DataView.tsx:254-256`. It also added one sentence: "A pair called susceptible and intermediate is labeled susceptible, and a pair called intermediate and resistant is labeled resistant." That is what the rule `r-or-s-wins` does, at `src/curate.rs:83-89`. The row's own code lines (`:34-36`, `:568`, `:227`) fit `src/curate.rs` as it stood before commit `429965e6` of 21 Nov 2026. Today lines 34 to 36 only end the list of call types.
+**Now.** Pull request #186, merged on 26 Nov 2026, moved that text to the Data page, at `web/src/views/DataView.tsx:254-256` as that file stood at the merge. Two later pull requests of the same day, #187 and #191, moved it down the file, and it stays in the section Labels and inclusion.
+
+**Added.** Pull request #186 also added one sentence: "A pair called susceptible and intermediate is labeled susceptible, and a pair called intermediate and resistant is labeled resistant." That is what the rule `r-or-s-wins` does, at `src/curate.rs:83-89`. The row's own code lines (`:34-36`, `:568`, `:227`) fit `src/curate.rs` as it stood before commit `429965e6` of 21 Nov 2026. Today lines 34 to 36 only end the list of call types.
 
 **Unchanged.** The row's rule and its counts stand as written. So does its mark in the column Defended, none: the site's sentence states the rule and gives no reason for it. The entry Label rule gives the ruling on those pairs.
 
 **Served.** The sentence is in the repository. The served site shows it from its next release.
 
 **Written.** This entry was written at 03:14Z on 26 Nov 2026.
+
+**Changed.** At 06:26Z on 26 Nov 2026, after pull requests #187 and #191 had merged, the lead changed Now and split Added off from it.
+
+## Rebuilt counts
+
+**Plan.** The paragraph All data says "At 4,096, 41,627 of 80,967 genomes with a scorable label are left out, and 94 of the 274 datasets lose at least one. The release's cap of 2,000 leaves out 57,206." Row A16 of the inventory counts "1,320 of 1,064,823 pairs".
+
+**Found.** The plan took six of these counts from the rebuilt revision 14 table, not from the release's own. `cap-species.tsv` gives three: 80,967 genomes the cap picks among, 57,206 left out at 2,000 and 41,627 left out at 4,096. `funnel.json` gives the 1,064,823 pairs. The 94 datasets were counted on the same selections and the 1,320 pairs on the same table, and neither file holds them.
+
+**Release.** The release's index counts 1,063,628 pairs at the same step of its own table. For genomes, 80,967 less 57,206 leaves 23,761 analyzed on the rebuilt table, and the index counts 23,757 at that step. The rebuilt table ran no species check and counts one more length failure, so 79 more genomes pass in it (the entry MIC checks, under Breakpoints).
+
+**Where.** `docs/release-summary.md` sets both sides out under Curation path, in the part Differences. `reference/release-summary/rebuilt-table-20261121/` holds the rebuilt table's counts.
+
+**Holds.** Read the six counts as the rebuilt table's. Training labels come from that table alone (the row Labels of the plan), so no rule of the plan moves. No committed file gives the release's own count of the genomes its cap picks among.
+
+**Written.** This entry was written at 04:54Z on 26 Nov 2026.
+
+**Changed.** After its independent review the lead changed, at 06:52Z on 26 Nov 2026, Plan, Found and Holds, which had named three counts where six are the rebuilt table's, and added Release.
