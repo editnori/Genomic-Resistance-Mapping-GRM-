@@ -502,7 +502,30 @@ class Check60(unittest.TestCase):
         lines = path.read_text().split("\n")
         lines[6] = self.names[5]
         path.write_text("\n".join(lines))
-        self.stopped(path, "1 of the reference table's 24 rows hold fewer cells than its header's 7: row 6")
+        self.stopped(path, "1 of the reference table's 24 rows hold another count of cells than its header's 7: row 6")
+
+    def test_a_row_one_cell_short_stops(self):
+        # A table with a last column the check does not read, as the 14 Nov record's has, and the 6th row without
+        # that cell. Every cut day is still the record's, so only the count of cells shows it.
+        path = self.table("short-row.tsv")
+        lines = path.read_text().split("\n")
+        lines[:25] = [lines[0] + "\ttest"] + [line + "\t3" for line in lines[1:25]]
+        lines[6] = lines[6].rsplit("\t", 1)[0]
+        path.write_text("\n".join(lines))
+        self.stopped(path, "1 of the reference table's 24 rows hold another count of cells than its header's 8: row 6")
+
+    def test_a_row_with_more_cells_than_the_header_stops(self):
+        # Rows 6 and 7 on one line, row 7's cut day two days early. Read by the header's seven names, that line is
+        # row 6 alone, and row 7's wrong day is never checked (R45). The stop names the row before the count of rows.
+        self.assertEqual(self.cuts[self.names[6]], "2020-01-08")
+        path = self.table("long-row.tsv", cuts={self.names[6]: "2020-01-06"})
+        lines = path.read_text().split("\n")
+        lines[6:8] = [lines[6] + "\t" + lines[7]]
+        path.write_text("\n".join(lines))
+        self.stopped(path, "1 of the reference table's 23 rows hold another count of cells than its header's 7: row 6")
+        # Handed its own count of 23, the check stops too, where it would read every cut day as the record's.
+        with self.assertRaises(sd.Stop):
+            sd.check60(sd.load_inputs(*self.paths), path, 23)
 
     def test_an_undated_cohort_genome_fails_its_dataset(self):
         # syn-k-030 is labelled in check_species__drug_23 alone. Undated, it leaves 29 dated genomes there:

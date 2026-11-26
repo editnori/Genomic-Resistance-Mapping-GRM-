@@ -1,6 +1,6 @@
 # Staggered split by time
 
-Not run yet. This page sets out the frozen plan of 25 Nov 2026 and the five rulings of 26 Nov that read it: R33, R35, R38, R40 and R41. No fold file, fit or score of this split exists.
+Not run yet. This page sets out the frozen plan of 25 Nov 2026 and the six rulings of 26 Nov that read it: R33, R35, R38, R40, R41 and R45. No fold file, fit or score of this split exists.
 
 ## Question
 
@@ -96,10 +96,10 @@ Example, at a test minimum of 15: a test set of 20 resistant and 20 susceptible 
 
 ## Checks
 
-- Before any fit, the design at the single share 60%, with the 14 Nov rules, gives the cut day of each of the 14 Nov split's 24 datasets. The check stops unless its table holds those 24, each once.
+- Before any fit, the design at the single share 60%, with the 14 Nov rules, gives the cut day of each of the 14 Nov split's 24 datasets. The check stops unless its table holds those 24, each once, one a row.
 - No path of the sealed later records is opened.
 - Before any reading, the four checks of 14 Nov: each result names its fold file's sha256, both fits of a pair scored the same genomes with the same labels, training counts match the design, and recall worked out again matches the evaluator's.
-- 101 planted faults, one a rule, each with the test that fails with it.
+- 103 planted faults, one a rule, each with the test that fails with it.
 
 ## Limits
 
@@ -109,4 +109,4 @@ Example, at a test minimum of 15: a test set of 20 resistant and 20 susceptible 
 - Species are few, so the interval is coarse.
 - The record will hold rows per dataset, species, clock, contrast, horizon, arm and learner. It holds no genome id and names no study.
 
-Record: frozen plan `FREEZE-STAGGER-20261125.md`, sha256 ceac8b5bf286fb5e94f05dad69d6ade622ad6234ee0a6fd0ac2469dfc182e39c; rulings R33, R35, R38, R40 and R41 of 26 Nov 2026; `scripts/time-split/stagger_design.py`, `scripts/time-split/stagger_analyze.py` and `scripts/time-split/stagger_faults.py`; the split of 14 Nov, [time-split.md](time-split.md).
+Record: frozen plan `FREEZE-STAGGER-20261125.md`, sha256 ceac8b5bf286fb5e94f05dad69d6ade622ad6234ee0a6fd0ac2469dfc182e39c; rulings R33, R35, R38, R40, R41 and R45 of 26 Nov 2026; `scripts/time-split/stagger_design.py`, `scripts/time-split/stagger_analyze.py` and `scripts/time-split/stagger_faults.py`; the split of 14 Nov, [time-split.md](time-split.md).

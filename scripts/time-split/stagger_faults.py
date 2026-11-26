@@ -415,6 +415,14 @@ FAULTS = [
      "need(not ragged,",
      "need(True,",
      TD + "Check60.test_a_row_of_one_cell_stops_with_one_line"),
+    ("check60-row-of-more-cells", "R45: a row with more cells than the header in the 60% check's table stops", DESIGN,
+     "if len(row) != len(head)]",
+     "if len(row) < len(head)]",
+     TD + "Check60.test_a_row_with_more_cells_than_the_header_stops"),
+    ("check60-row-one-cell-short", "R45: a row one cell short in the 60% check's table stops", DESIGN,
+     "if len(row) != len(head)]",
+     "if len(row) == 1]",
+     TD + "Check60.test_a_row_one_cell_short_stops"),
     # The second reviewer's 8 faults that failed no test of a rule, with its texts.
     ("check60-names-lower", "R38: each row a dataset of the metadata, letter for letter (the second reviewer's "
      "fault)", DESIGN,
