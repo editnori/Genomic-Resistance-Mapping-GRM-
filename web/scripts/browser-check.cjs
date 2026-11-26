@@ -269,13 +269,14 @@ async function referenceChecks(page, tag, finding, panelSeen = [], panelPaged = 
   await page.locator(first).first().waitFor({ state: 'attached', timeout: STATE_MS }).catch(() => {});
   const geometry = await page.evaluate(sel => {
     const svg = document.querySelector(sel);
-    if (svg === null) return { drawn: false, width: 0, height: 0, plotTop: null, plotHeight: null, refs: [], ids: [], text: '' };
+    if (svg === null) return { drawn: false, width: 0, height: 0, plotTop: null, plotWidth: null, plotHeight: null, refs: [], ids: [], text: '' };
     const clipRect = svg.querySelector('clipPath rect');
     return {
       drawn: true,
       width: svg.getBoundingClientRect().width,
       height: svg.getBoundingClientRect().height,
       plotTop: clipRect ? Number(clipRect.getAttribute('y')) : null,
+      plotWidth: clipRect ? Number(clipRect.getAttribute('width')) : null,
       plotHeight: clipRect ? Number(clipRect.getAttribute('height')) : null,
       refs: [...svg.querySelectorAll('line[aria-hidden="true"]')].map(l => ({ x: Number(l.getAttribute('x1')), y: Number(l.getAttribute('y1')) })),
       ids: [...svg.querySelectorAll('[data-dataset]')].map(e => e.getAttribute('data-dataset')),
@@ -307,7 +308,11 @@ async function referenceChecks(page, tag, finding, panelSeen = [], panelPaged = 
     });
     const panel = counts.reduce((a, c) => a + c.caught, 0) / counts.reduce((a, c) => a + c.called, 0);
     const model = counts.reduce((a, c) => a + c.modelCaught, 0) / counts.reduce((a, c) => a + c.modelResistant, 0);
-    const start = Math.min(220, Math.round(geometry.width * 0.5)) + 10;
+    const everyday = { 'Mycobacterium tuberculosis': 'TB', 'Neisseria gonorrhoeae': 'Gonorrhea', 'Salmonella enterica': 'Salmonella', 'Staphylococcus aureus': 'Staph', 'Streptococcus pneumoniae': 'Pneumococcus' };
+    const shortSp = sp => { const parts = sp.split(' '); return parts.length > 1 ? parts[0].charAt(0) + '.\u00a0' + parts.slice(1).join(' ') : sp; };
+    const rowTitle = p => { const d = byId.get(p.dataset) ?? p; return (everyday[d.species] ?? shortSp(d.species)) + ' vs\u00a0' + d.antibiotic; };
+    const maxRowLabelW = Math.max(220, ...expected.panels.map(p => Math.ceil(rowTitle(p).length * 7.1) + 6 + 4));
+    const start = Math.min(maxRowLabelW, Math.floor(geometry.width * 0.5)) + 10;
     wanted = [panel, model].map(v => start + v * (geometry.width - 20 - start));
     // Pooled reference lines span every row on every page; a page draws
     // only lead-panel datasets, and the pages together are checked in present().
@@ -329,6 +334,7 @@ async function referenceChecks(page, tag, finding, panelSeen = [], panelPaged = 
     // RefLineH is the figure's only aria-hidden line, so with no 50% line
     // there is no reference line at all.
     check(tag + ' catalog 50% reference', drawn && (lo < 0.5 ? at50.length > 0 : geometry.refs.length === 0), { lo, drawn, marks: geometry.ids.length, refs: geometry.refs });
+    check(tag + ' catalog plot box is square', drawn && geometry.plotWidth !== null && geometry.plotHeight !== null && Math.abs(geometry.plotWidth - geometry.plotHeight) <= 0.5, { plotWidth: geometry.plotWidth, plotHeight: geometry.plotHeight });
     check(tag + ' catalog region counts', geometry.text.includes(expected.stats.catalogAhead + ' ahead by more than 2') && geometry.text.includes(expected.stats.catalogWithin + ' within 2 points') && geometry.text.includes(expected.stats.catalogBehind + ' behind by more than 2'), geometry.text);
   } else check(tag + ' finding ' + finding + ' reference positions', geometry.drawn && wanted.length === geometry.refs.length && wanted.every((x, i) => close(geometry.refs[i].x, x)), { wanted, actual: geometry.refs, drawn: geometry.drawn });
 }
@@ -485,7 +491,15 @@ async function reachCheck(page, tag) {
  *  SVG text boxes overlap (oriented bounding boxes via getBBox + getScreenCTM
  *  so parallel rotated labels do not false-positive), no SVG text overlaps a
  *  data mark, no SVG text clips outside its SVG or overflow-hidden table cell,
- *  and no HTML chart header overflows or collides with its sibling. */
+ *  and no HTML chart header overflows or collides with its sibling.
+ *
+ *  What this check cannot see:
+ *  - Only `<circle>` and `<rect>` elements 4 to 14 px wide and tall count as
+ *    data marks; text overlapping a bar, line, path, or heat-map cell passes.
+ *  - Text boxes are compared only within the same `<svg>`; text from two
+ *    different SVGs is never compared against each other.
+ *  - No hosted CI job runs `browser-check.cjs`; outside this machine its first
+ *    run is release staging. */
 async function chartOverlapCheck(page, tag, rootSelector = null) {
   await settle(page);
   const res = await page.evaluate(rootSel => {

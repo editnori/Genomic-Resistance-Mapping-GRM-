@@ -50,6 +50,10 @@ export const HALO = { paintOrder: "stroke", stroke: "rgb(var(--paper))", strokeW
  *  inside the plot, never to shrink them. */
 export const labelWidth = (text: string): number => Math.ceil(text.length * 7.1) + 6;
 
+/** About how wide a 12px tick label draws; shared by AxisX and MicHeatmap to
+ *  size margins and blank interior ticks that would touch a neighbour. */
+export const tickWidth = (text: string): number => Math.ceil(text.length * 6.8) + 4;
+
 export interface LabelSpec {
   key: string;
   text: string;
@@ -132,18 +136,17 @@ export const useSvgId = (prefix: string): string => `${prefix}-${useId().replace
  *  touch an earlier label or the final label are left blank. */
 export const AxisX = ({ x, y, height, values, format }: { x: Linear; y: number; height: number; values: number[]; format(v: number): string }) => {
   const raw = values.map(format);
-  const tickW = (s: string) => Math.ceil(s.length * 6.8) + 2;
   const lastIdx = (() => {
     for (let i = raw.length - 1; i >= 0; i -= 1) if (raw[i] !== "") return i;
     return -1;
   })();
-  const lastLeft = lastIdx < 0 ? Infinity : x(values[lastIdx]!) - tickW(raw[lastIdx]!) / 2;
+  const lastLeft = lastIdx < 0 ? Infinity : x(values[lastIdx]!) - tickWidth(raw[lastIdx]!) / 2;
   let prevRight = -Infinity;
   const shown = values.map((v, i) => {
     const s = raw[i]!;
     if (s === "") return "";
     const cx = x(v);
-    const hw = tickW(s) / 2;
+    const hw = tickWidth(s) / 2;
     const left = cx - hw;
     const right = cx + hw;
     if (left < prevRight + 4) return "";

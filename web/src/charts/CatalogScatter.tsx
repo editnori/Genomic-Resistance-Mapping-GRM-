@@ -61,10 +61,9 @@ export const CatalogScatter = ({ rows, height, onOpen }: { rows: readonly Catalo
   const compared = rows.filter((r) => catalogDiff(r) !== null);
   const all = compared.flatMap((r) => [r.catalog!.balanced_accuracy, r.best_lineage!]);
   const lo = Math.max(0, Math.floor(Math.min(0.5, ...all) * 10) / 10);
-  // The axis title, and the legend when it sits below, reserve their actual
-  // height; beside the plot the legend takes width instead.
-  const side = Math.max(160, Math.min(wide ? Math.min(560, avail - LEGEND_W - 40) : avail, height === undefined ? 520 : height - footerHeight));
-  const width = side;
+  // Keep the plot box strictly square (plot width === plot height) at every
+  // viewport because both axes share one scale and the 45-degree diagonal is
+  // the comparison. Header rows sit above the plot box and never squash it.
   const { ahead, within, behind } = summary.regions;
   const cut = Math.round(CATALOG_CUTOFF * 100);
   const aheadText = `${int(ahead)} ahead by more than ${cut}`;
@@ -72,25 +71,36 @@ export const CatalogScatter = ({ rows, height, onOpen }: { rows: readonly Catalo
   const behindText = `${int(behind)} behind by more than ${cut}`;
   const padL = 40;
   const padR = 18;
-  const headX = width < 300 ? 2 : padL;
-  const headSpan = Math.max(0, width - padR - headX);
+  const padB = 30;
   const wAhead = labelWidth(aheadText);
   const wWithin = labelWidth(withinText);
   const wBehind = labelWidth(behindText);
-  // Keep all three region counts and the horizontal Y-axis title in a header
-  // band strictly above the plot box so no text ever overlaps a data mark or
-  // escapes the SVG.
-  const oneRowRegions = wAhead + wWithin + wBehind + 24 <= headSpan;
-  const twoRowRegions = !oneRowRegions && wAhead + wWithin + 10 <= headSpan;
-  const regionRows = oneRowRegions ? 1 : twoRowRegions ? 2 : 3;
-  const pad = { l: padL, r: padR, t: 20 + regionRows * 16 + 8, b: 30 };
-  const plotH = Math.max(80, side - pad.t - pad.b);
+  const maxSvgW = Math.max(160, wide ? Math.min(560, avail - LEGEND_W - 40) : avail);
+  const maxPlotW = Math.max(80, Math.min(maxSvgW - padL - padR, height === undefined ? 464 : Infinity));
+  let chosen: { plot: number; width: number; headX: number; oneRow: boolean; twoRow: boolean; padT: number } | null = null;
+  for (const rowsCount of [1, 2, 3] as const) {
+    const padT = 20 + rowsCount * 16 + 8;
+    const maxPlotH = height === undefined ? maxPlotW : Math.max(80, height - footerHeight - padT - padB);
+    const plot = Math.max(80, Math.min(maxPlotW, maxPlotH));
+    const w = plot + padL + padR;
+    const headX = w < 300 ? 2 : padL;
+    const headSpan = Math.max(0, w - padR - headX);
+    const oneRow = wAhead + wWithin + wBehind + 24 <= headSpan;
+    const twoRow = !oneRow && wAhead + wWithin + 10 <= headSpan;
+    const needed = oneRow ? 1 : twoRow ? 2 : 3;
+    if (needed <= rowsCount && (chosen === null || plot > chosen.plot)) {
+      chosen = { plot, width: w, headX, oneRow: rowsCount === 1, twoRow: rowsCount === 2, padT };
+    }
+  }
+  const { plot, width, headX, oneRow: oneRowRegions, twoRow: twoRowRegions, padT } = chosen!;
+  const pad = { l: padL, r: padR, t: padT, b: padB };
+  const plotH = plot;
   const svgHeight = pad.t + plotH + pad.b;
   const yTitle = labelWidth("Known-gene rule, balanced accuracy (%)") <= width - headX - 2 ? "Known-gene rule, balanced accuracy (%)" : "Known-gene rule (%)";
-  const x = linear([lo, 1], [pad.l, width - pad.r]);
+  const x = linear([lo, 1], [pad.l, pad.l + plot]);
   const y = linear([lo, 1], [pad.t + plotH, pad.t]);
   const clip = useSvgId("catalog-plot");
-  const values = ticks(lo, 1, side < 320 ? 3 : 6);
+  const values = ticks(lo, 1, plot < 260 ? 3 : 6);
   const band = `M${x(lo)},${y(lo - CATALOG_CUTOFF)} L${x(1)},${y(1 - CATALOG_CUTOFF)} L${x(1)},${y(1 + CATALOG_CUTOFF)} L${x(lo)},${y(lo + CATALOG_CUTOFF)} Z`;
   const marks: (ListMark & { call: UniformCall | null })[] = compared
     .map((r) => {

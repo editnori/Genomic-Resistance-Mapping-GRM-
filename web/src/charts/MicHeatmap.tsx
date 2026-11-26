@@ -6,7 +6,7 @@
 import { useRef } from "react";
 import { ScrollFrame } from "../ui/primitives";
 import { int, mgL, pct } from "../data/format";
-import { MarkListbox, TICK_CLASS, useSvgId, useWidth } from "./kit";
+import { MarkListbox, TICK_CLASS, tickWidth, useSvgId, useWidth } from "./kit";
 
 /** The band's share of exact MICs for the model and for a constant MIC from
  *  the training folds, when a baselines file gives the constant. */
@@ -26,9 +26,8 @@ export const MicHeatmap = ({ confusion, band }: { confusion: readonly [number, n
   const hi = Math.max(...steps);
   const n = hi - lo + 1;
   const values = Array.from({ length: n }, (_, i) => lo + i);
-  const tickW = (s: string) => Math.ceil(s.length * 6.8) + 4;
-  const maxTickW = Math.max(0, ...values.map((v) => tickW(mgL(v))));
-  const lastTickW = values.length === 0 ? 0 : tickW(mgL(values[values.length - 1]!));
+  const maxTickW = Math.max(0, ...values.map((v) => tickWidth(mgL(v))));
+  const lastTickW = values.length === 0 ? 0 : tickWidth(mgL(values[values.length - 1]!));
   const pad = { l: Math.max(46, maxTickW + 12), r: Math.max(12, Math.ceil(lastTickW / 2) + 4), t: 24, b: 44 };
   const max = Math.max(1, ...confusion.map((c) => c[2]));
   const cell = Math.max(24, String(max).length * 7 + 6, Math.min(34, Math.floor((Math.min(avail, 560) - pad.l - pad.r) / n)));
@@ -57,7 +56,7 @@ export const MicHeatmap = ({ confusion, band }: { confusion: readonly [number, n
   let prevXRight = -Infinity;
   const xTickShown = values.map((v) => {
     const s = mgL(v);
-    const hw = tickW(s) / 2;
+    const hw = tickWidth(s) / 2;
     const center = cx(v) + cell / 2;
     if (center - hw < prevXRight + 5) return "";
     prevXRight = center + hw;

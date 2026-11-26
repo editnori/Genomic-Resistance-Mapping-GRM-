@@ -1068,8 +1068,11 @@ export const PanelFigure = ({
   const p = pool(rows);
   const panelShare = share(p.caught, p.calledResistant);
   const modelShare = share(p.modelCaught, p.modelResistant);
-  const labelW = Math.min(220, Math.round(width * 0.5));
-  const rowH = height === undefined ? PANEL_ROW_MAX : Math.max(PANEL_ROW_MIN, Math.min(PANEL_ROW_MAX, Math.floor(room(count > 1) / Math.max(shown.length, 1))));
+  const maxRowLabelW = Math.max(220, ...rows.map((r) => labelWidth(datasetTitle(r)) + 4));
+  const labelW = Math.min(maxRowLabelW, Math.floor(width * 0.5));
+  const anyNeedsWrap = shown.some((r) => labelWidth(datasetTitle(r)) > labelW - 4);
+  const rowH = height === undefined ? (anyNeedsWrap ? 34 : PANEL_ROW_MAX) : Math.max(PANEL_ROW_MIN, Math.min(PANEL_ROW_MAX, Math.floor(room(count > 1) / Math.max(shown.length, 1))));
+  const canWrap = rowH >= 32;
   const plotTop = PANEL_TOP;
   const plotBottom = PANEL_TOP + shown.length * rowH;
   const x = linear([0, 1], [labelW + 10, width - 20]);
@@ -1099,16 +1102,38 @@ export const PanelFigure = ({
       ],
     };
   });
-  const fitRowLabel = (full: string, maxPx: number): string => {
-    if (labelWidth(full) <= maxPx) return full;
-    let lo = 1;
-    let hi = full.length - 1;
-    while (lo < hi) {
-      const mid = Math.ceil((lo + hi) / 2);
-      if (labelWidth(`${full.slice(0, mid).trimEnd()}…`) <= maxPx) lo = mid;
-      else hi = mid - 1;
+  // Fit a row label inside `maxPx` without ever cutting the antibiotic name:
+  // wrap to two lines ("species" / "vs antibiotic") when the row has height,
+  // or shorten only the species on a single-line narrow slide.
+  const fitRowLabel = (r: PanelRowJoined, maxPx: number): { lines: readonly string[]; cut: boolean } => {
+    const full = datasetTitle(r);
+    if (labelWidth(full) <= maxPx) return { lines: [full], cut: false };
+    const sp = speciesName(r.species);
+    const drugLine = `vs\u00a0${r.antibiotic}`;
+    if (canWrap) {
+      if (labelWidth(sp) <= maxPx) return { lines: [sp, drugLine], cut: false };
+      let lo = 1;
+      let hi = sp.length - 1;
+      while (lo < hi) {
+        const mid = Math.ceil((lo + hi) / 2);
+        if (labelWidth(`${sp.slice(0, mid).trimEnd()}…`) <= maxPx) lo = mid;
+        else hi = mid - 1;
+      }
+      return { lines: [`${sp.slice(0, lo).trimEnd()}…`, drugLine], cut: true };
     }
-    return `${full.slice(0, lo).trimEnd()}…`;
+    const suffix = ` ${drugLine}`;
+    if (labelWidth(`…${suffix}`) <= maxPx) {
+      let lo = 0;
+      let hi = sp.length - 1;
+      while (lo < hi) {
+        const mid = Math.ceil((lo + hi) / 2);
+        if (labelWidth(`${sp.slice(0, mid).trimEnd()}…${suffix}`) <= maxPx) lo = mid;
+        else hi = mid - 1;
+      }
+      const shortSp = lo > 0 ? `${sp.slice(0, lo).trimEnd()}…` : "…";
+      return { lines: [`${shortSp}${suffix}`], cut: true };
+    }
+    return { lines: [drugLine], cut: true };
   };
   const plot = (
     <svg aria-hidden="true" width={width} height={plotBottom + PANEL_AXIS} className="block overflow-visible">
@@ -1119,13 +1144,24 @@ export const PanelFigure = ({
         const v = at01(r);
         const cy = plotTop + i * rowH + rowH / 2;
         const fullTitle = datasetTitle(r);
-        const shownTitle = fitRowLabel(fullTitle, labelW - 4);
+        const fitted = fitRowLabel(r, labelW - 4);
         return (
           <g key={r.dataset} data-dataset={measuring ? undefined : r.dataset}>
             <line x1={labelW + 10} x2={width - 20} y1={cy} y2={cy} stroke="var(--chart-grid)" />
-            <text x={labelW} y={cy + 4} textAnchor="end" className={LABEL_CLASS}>
-              {shownTitle !== fullTitle ? <title>{fullTitle}</title> : null}
-              {shownTitle}
+            <text x={labelW} y={fitted.lines.length === 2 ? cy - 3 : cy + 4} textAnchor="end" className={LABEL_CLASS}>
+              {fitted.cut ? <title>{fullTitle}</title> : null}
+              {fitted.lines.length === 2 ? (
+                <>
+                  <tspan x={labelW} dy={0}>
+                    {fitted.lines[0]}
+                  </tspan>
+                  <tspan x={labelW} dy={14}>
+                    {fitted.lines[1]}
+                  </tspan>
+                </>
+              ) : (
+                fitted.lines[0]
+              )}
             </text>
             <line x1={x(v.panel)} x2={x(v.model)} y1={cy} y2={cy} stroke="var(--chart-axis)" strokeWidth={2} />
             <circle cx={x(v.model)} cy={cy} r={4.5} fill="rgb(var(--paper-pure))" stroke="var(--chart-mark)" strokeWidth={2} />
