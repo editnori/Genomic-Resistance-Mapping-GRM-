@@ -9,10 +9,8 @@ import { AxisX, ticks } from "./kit";
 export const STRIP_HEIGHT = 30;
 
 export const StripAxis = ({ x, width }: { x: Linear; width: number }) => (
-  <svg width={width} height={22} aria-hidden="true" className="block overflow-visible">
-    <g transform="translate(0,-2)">
-      <AxisX x={x} y={6} height={0} values={ticks(x.domain[0], x.domain[1], 5)} format={(v) => `${Math.round(v * 100)}`} />
-    </g>
+  <svg width={width} height={24} aria-hidden="true" className="block overflow-visible">
+    <AxisX x={x} y={5} height={0} values={ticks(x.domain[0], x.domain[1], 5)} format={(v) => `${Math.round(v * 100)}`} />
   </svg>
 );
 

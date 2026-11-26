@@ -269,8 +269,19 @@ async function referenceChecks(page, tag, finding, panelSeen = [], panelPaged = 
   await page.locator(first).first().waitFor({ state: 'attached', timeout: STATE_MS }).catch(() => {});
   const geometry = await page.evaluate(sel => {
     const svg = document.querySelector(sel);
-    if (svg === null) return { drawn: false, width: 0, height: 0, refs: [], ids: [], text: '' };
-    return { drawn: true, width: svg.getBoundingClientRect().width, height: svg.getBoundingClientRect().height, refs: [...svg.querySelectorAll('line[aria-hidden="true"]')].map(l => ({ x: Number(l.getAttribute('x1')), y: Number(l.getAttribute('y1')) })), ids: [...svg.querySelectorAll('[data-dataset]')].map(e => e.getAttribute('data-dataset')), text: svg.textContent };
+    if (svg === null) return { drawn: false, width: 0, height: 0, plotTop: null, plotWidth: null, plotHeight: null, refs: [], ids: [], text: '' };
+    const clipRect = svg.querySelector('clipPath rect');
+    return {
+      drawn: true,
+      width: svg.getBoundingClientRect().width,
+      height: svg.getBoundingClientRect().height,
+      plotTop: clipRect ? Number(clipRect.getAttribute('y')) : null,
+      plotWidth: clipRect ? Number(clipRect.getAttribute('width')) : null,
+      plotHeight: clipRect ? Number(clipRect.getAttribute('height')) : null,
+      refs: [...svg.querySelectorAll('line[aria-hidden="true"]')].map(l => ({ x: Number(l.getAttribute('x1')), y: Number(l.getAttribute('y1')) })),
+      ids: [...svg.querySelectorAll('[data-dataset]')].map(e => e.getAttribute('data-dataset')),
+      text: svg.textContent,
+    };
   }, first);
   const close = (actual, want) => Math.abs(actual - want) <= 1.5;
   let wanted = [];
@@ -297,7 +308,11 @@ async function referenceChecks(page, tag, finding, panelSeen = [], panelPaged = 
     });
     const panel = counts.reduce((a, c) => a + c.caught, 0) / counts.reduce((a, c) => a + c.called, 0);
     const model = counts.reduce((a, c) => a + c.modelCaught, 0) / counts.reduce((a, c) => a + c.modelResistant, 0);
-    const start = Math.min(220, Math.round(geometry.width * 0.5)) + 10;
+    const everyday = { 'Mycobacterium tuberculosis': 'TB', 'Neisseria gonorrhoeae': 'Gonorrhea', 'Salmonella enterica': 'Salmonella', 'Staphylococcus aureus': 'Staph', 'Streptococcus pneumoniae': 'Pneumococcus' };
+    const shortSp = sp => { const parts = sp.split(' '); return parts.length > 1 ? parts[0].charAt(0) + '.\u00a0' + parts.slice(1).join(' ') : sp; };
+    const rowTitle = p => { const d = byId.get(p.dataset) ?? p; return (everyday[d.species] ?? shortSp(d.species)) + ' vs\u00a0' + d.antibiotic; };
+    const maxRowLabelW = Math.max(220, ...expected.panels.map(p => Math.ceil(rowTitle(p).length * 7.1) + 6 + 4));
+    const start = Math.min(maxRowLabelW, Math.floor(geometry.width * 0.5)) + 10;
     wanted = [panel, model].map(v => start + v * (geometry.width - 20 - start));
     // Pooled reference lines span every row on every page; a page draws
     // only lead-panel datasets, and the pages together are checked in present().
@@ -312,11 +327,14 @@ async function referenceChecks(page, tag, finding, panelSeen = [], panelPaged = 
     // (lo < 0.5); at lo = 0.5 the axis floor is 50% and no line is drawn.
     // A missing line counts only from a figure that drew: a box, and one
     // mark per dataset with a catalog score and a lineage score.
-    const at50 = geometry.refs.filter(r => close(r.y, 22 + (1 - 0.5) / (1 - lo) * (geometry.height - 56)));
+    const plotTop = geometry.plotTop ?? 22;
+    const plotHeight = geometry.plotHeight ?? (geometry.height - 56);
+    const at50 = geometry.refs.filter(r => close(r.y, plotTop + (1 - 0.5) / (1 - lo) * plotHeight));
     const drawn = geometry.width > 0 && geometry.height > 0 && geometry.ids.length === expected.catalog.length;
     // RefLineH is the figure's only aria-hidden line, so with no 50% line
     // there is no reference line at all.
     check(tag + ' catalog 50% reference', drawn && (lo < 0.5 ? at50.length > 0 : geometry.refs.length === 0), { lo, drawn, marks: geometry.ids.length, refs: geometry.refs });
+    check(tag + ' catalog plot box is square', drawn && geometry.plotWidth !== null && geometry.plotHeight !== null && Math.abs(geometry.plotWidth - geometry.plotHeight) <= 0.5, { plotWidth: geometry.plotWidth, plotHeight: geometry.plotHeight });
     check(tag + ' catalog region counts', geometry.text.includes(expected.stats.catalogAhead + ' ahead by more than 2') && geometry.text.includes(expected.stats.catalogWithin + ' within 2 points') && geometry.text.includes(expected.stats.catalogBehind + ' behind by more than 2'), geometry.text);
   } else check(tag + ' finding ' + finding + ' reference positions', geometry.drawn && wanted.length === geometry.refs.length && wanted.every((x, i) => close(geometry.refs[i].x, x)), { wanted, actual: geometry.refs, drawn: geometry.drawn });
 }
@@ -467,6 +485,134 @@ async function smallMaps(page, tag) {
 async function reachCheck(page, tag) {
   const over = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1 ? [{ width: innerWidth, scroll: document.documentElement.scrollWidth }] : []);
   check(tag + ' nothing reaches past the page edge', over.length === 0, over);
+}
+
+/** Chart text geometry check across any view or live Present slide: no two
+ *  SVG text boxes overlap (oriented bounding boxes via getBBox + getScreenCTM
+ *  so parallel rotated labels do not false-positive), no SVG text overlaps a
+ *  data mark, no SVG text clips outside its SVG or overflow-hidden table cell,
+ *  and no HTML chart header overflows or collides with its sibling.
+ *
+ *  What this check cannot see:
+ *  - Only `<circle>` and `<rect>` elements 4 to 14 px wide and tall count as
+ *    data marks; text overlapping a bar, line, path, or heat-map cell passes.
+ *  - Text boxes are compared only within the same `<svg>`; text from two
+ *    different SVGs is never compared against each other.
+ *  - No hosted CI job runs `browser-check.cjs`; outside this machine its first
+ *    run is release staging. */
+async function chartOverlapCheck(page, tag, rootSelector = null) {
+  await settle(page);
+  const res = await page.evaluate(rootSel => {
+    const rectHit = (a, b, tol = 1) => a.left < b.right - tol && b.left < a.right - tol && a.top < b.bottom - tol && b.top < a.bottom - tol;
+    const polyFromRect = (r, tol = 0) => [
+      { x: r.left + tol, y: r.top + tol },
+      { x: r.right - tol, y: r.top + tol },
+      { x: r.right - tol, y: r.bottom - tol },
+      { x: r.left + tol, y: r.bottom - tol },
+    ];
+    const obbOfSvg = (el, tol = 1) => {
+      try {
+        const bb = el.getBBox();
+        const m = el.getScreenCTM();
+        if (!m || bb.width <= 0 || bb.height <= 0) return null;
+        const dx = Math.min(tol, bb.width * 0.25), dy = Math.min(tol, bb.height * 0.25);
+        const x0 = bb.x + dx, x1 = bb.x + bb.width - dx, y0 = bb.y + dy, y1 = bb.y + bb.height - dy;
+        const pt = (x, y) => ({ x: m.a * x + m.c * y + m.e, y: m.b * x + m.d * y + m.f });
+        return [pt(x0, y0), pt(x1, y0), pt(x1, y1), pt(x0, y1)];
+      } catch {
+        return null;
+      }
+    };
+    const satOverlap = (p1, p2) => {
+      if (!p1 || !p2) return false;
+      for (const poly of [p1, p2]) {
+        for (let i = 0; i < poly.length; i++) {
+          const a = poly[i], b = poly[(i + 1) % poly.length];
+          const nx = -(b.y - a.y), ny = b.x - a.x;
+          let min1 = Infinity, max1 = -Infinity, min2 = Infinity, max2 = -Infinity;
+          for (const p of p1) { const v = nx * p.x + ny * p.y; if (v < min1) min1 = v; if (v > max1) max1 = v; }
+          for (const p of p2) { const v = nx * p.x + ny * p.y; if (v < min2) min2 = v; if (v > max2) max2 = v; }
+          if (max1 <= min2 || max2 <= min1) return false;
+        }
+      }
+      return true;
+    };
+    const root = (rootSel && document.querySelector(rootSel))
+      || document.querySelector('dialog[open]')
+      || document.querySelector('[data-view-scroll]')
+      || document.body;
+    const rootRect = root.getBoundingClientRect();
+    const textVsText = [], textVsMark = [], clipped = [], html = [];
+    const svgs = [...root.querySelectorAll('svg')].filter(svg => {
+      if (svg.closest('[inert], .sr-only, [data-slide-measure]')) return false;
+      const cs = getComputedStyle(svg);
+      if (cs.visibility === 'hidden' || cs.display === 'none') return false;
+      const r = svg.getBoundingClientRect();
+      return r.width > 24 && r.height >= 16;
+    });
+    for (const svg of svgs) {
+      const svgRect = svg.getBoundingClientRect();
+      const where = svg.closest('section[id]')?.id
+        || svg.closest('[data-outside-plot]')?.getAttribute('data-outside-plot')
+        || svg.closest('[role="region"]')?.getAttribute('aria-label')
+        || 'svg';
+      const texts = [...svg.querySelectorAll('text')]
+        .filter(t => t.textContent && t.textContent.trim() !== '' && getComputedStyle(t).visibility !== 'hidden')
+        .map(t => ({ text: t.textContent.trim().slice(0, 48), rect: t.getBoundingClientRect(), obb: obbOfSvg(t, 1.0), rawObb: obbOfSvg(t, 0) }))
+        .filter(x => x.rect.width > 0 && x.rect.height > 0 && x.obb !== null);
+      for (let i = 0; i < texts.length; i++) {
+        for (let j = i + 1; j < texts.length; j++) {
+          if (rectHit(texts[i].rect, texts[j].rect, 0.5) && satOverlap(texts[i].obb, texts[j].obb)) textVsText.push({ where, a: texts[i].text, b: texts[j].text });
+        }
+      }
+      const marks = [...svg.querySelectorAll('circle, rect')]
+        .filter(m => { if (m.closest('defs, clipPath, pattern')) return false; const r = m.getBoundingClientRect(); return r.width >= 4 && r.width <= 14 && r.height >= 4 && r.height <= 14; })
+        .map(m => { const r = m.getBoundingClientRect(); return { rect: r, poly: polyFromRect(r, 0.5) }; });
+      for (const t of texts) {
+        let hits = 0;
+        for (const m of marks) if (rectHit(t.rect, m.rect, 0.5) && satOverlap(t.obb, m.poly)) hits++;
+        if (hits > 0) textVsMark.push({ where, text: t.text, marksHit: hits });
+      }
+      const clipCell = svg.closest('td.overflow-hidden, th.overflow-hidden');
+      const clipRect = clipCell ? clipCell.getBoundingClientRect() : null;
+      const inScroller = Boolean(svg.closest('[data-scroll-frame], .overflow-x-auto, [role="region"]'));
+      for (const t of texts) {
+        const xs = t.rawObb.map(p => p.x), ys = t.rawObb.map(p => p.y);
+        const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+        const svgOut = Math.max(svgRect.left - minX, maxX - svgRect.right, svgRect.top - minY, maxY - svgRect.bottom);
+        const clipOut = clipRect ? Math.max(clipRect.left - minX, maxX - clipRect.right) : 0;
+        const vpOut = inScroller ? 0 : Math.max(rootRect.left - minX, maxX - rootRect.right);
+        if (svgOut > 2 || clipOut > 2 || vpOut > 2) clipped.push({ where, text: t.text, svgOut: Math.round(svgOut), clipOut: Math.round(clipOut), vpOut: Math.round(vpOut) });
+      }
+    }
+    const outsidePlots = [...root.querySelectorAll('[data-outside-plot]')].filter(el => !el.closest('[data-slide-measure]'));
+    for (let i = 0; i < outsidePlots.length; i++) {
+      const p = outsidePlots[i], pr = p.getBoundingClientRect(), cnt = p.querySelector('[data-outside-counts]');
+      if (cnt) {
+        const cr = cnt.getBoundingClientRect(), svg = p.querySelector('svg'), sr = svg ? svg.getBoundingClientRect() : pr;
+        if (cr.right > Math.max(pr.right, sr.right) + 2 || cnt.scrollWidth > cnt.clientWidth + 2) html.push({ kind: 'outside-counts', text: cnt.textContent.trim() });
+      }
+      for (let j = i + 1; j < outsidePlots.length; j++) if (rectHit(pr, outsidePlots[j].getBoundingClientRect(), 1)) html.push({ kind: 'outside-plot-overlap', a: p.getAttribute('data-outside-plot'), b: outsidePlots[j].getAttribute('data-outside-plot') });
+    }
+    const structRoot = root.querySelector('[data-block-layout]');
+    if (structRoot) {
+      for (const grp of structRoot.querySelectorAll('div[aria-hidden="true"].pointer-events-none.absolute.tabular-nums')) {
+        for (const cell of grp.children) if (cell.scrollWidth > cell.clientWidth + 2 || cell.scrollHeight > cell.clientHeight + 2) html.push({ kind: 'structure-col-header', text: cell.textContent.trim() });
+      }
+      const axisCol = structRoot.querySelector('div[aria-hidden="true"].relative.min-w-\\[7rem\\]');
+      if (axisCol) {
+        const spans = [...axisCol.querySelectorAll(':scope > span.absolute')].map(s => ({ text: s.textContent.trim(), rect: s.getBoundingClientRect() })).filter(x => x.rect.width > 0 && x.rect.height > 0);
+        for (let i = 0; i < spans.length; i++) for (let j = i + 1; j < spans.length; j++) if (rectHit(spans[i].rect, spans[j].rect, 1)) html.push({ kind: 'structure-axis', a: spans[i].text, b: spans[j].text });
+      }
+    }
+    return { textVsText, textVsMark, clipped, html };
+  }, rootSelector);
+  check(tag + ' chart text has no overlap, mark collision or clipping', res.textVsText.length === 0 && res.textVsMark.length === 0 && res.clipped.length === 0 && res.html.length === 0, {
+    textVsText: res.textVsText.slice(0, 4),
+    textVsMark: res.textVsMark.slice(0, 4),
+    clipped: res.clipped.slice(0, 4),
+    html: res.html.slice(0, 4),
+  });
 }
 
 /** Every view opens with a visible 32px title and one quiet status line
@@ -1509,6 +1655,7 @@ async function interactions(page, tag, width) {
   await page.goto(BASE + '/datasets?dataset=' + micId);
   const heat = page.getByRole('region', { name: 'Measured and predicted MIC' }); await heat.waitFor();
   await scrollTo(page, '#ds-mic'); await shot(page, tag + '-mic-heatmap');
+  await chartOverlapCheck(page, tag + ' mic inspector');
   const cells = await heat.locator('svg g>rect').evaluateAll(es => es.map(e => ({ width: Number(e.getAttribute('width')), count: Number(e.nextElementSibling.textContent) })));
   check(tag + ' MIC cells and counts', cells.every(c => c.width >= 22) && JSON.stringify(cells.map(c => c.count)) === JSON.stringify(micReport.mic.confusion.map(c => c[2])), cells);
   const probeRow = manifest.panels.find(p => p.no_call !== undefined && (p.no_call.resistant + p.no_call.susceptible) > 0);
@@ -1693,6 +1840,7 @@ async function present(page, tag, width, height) {
       check(tag + ' slide ' + (slide + 1) + ' caption page: the title and the whole caption, no figure', pageAt !== null && pageAt[1] === pageAt[2] && prev !== null && Number(prev[1]) === Number(pageAt[1]) - 1 && pageKinds[slide - 1] === 'figure' && slideName(before) === slideName(labels[slide] ?? '') && m.title === titles[slide - 1] && m.captionWhole && m.captionHeard && want !== null && m.captionText === want && (seen === null || seen === m.captionText) && m.svgs === 0 && m.marks === 0, { label: labels[slide], before, beforeKind: pageKinds[slide - 1] ?? null, title: m.title, titleBefore: titles[slide - 1], captionWhole: m.captionWhole, captionHeard: m.captionHeard, caption: m.caption, sameAsCopy: m.captionText === want, sameAsOnePage: seen === null ? 'no one-page view yet' : seen === m.captionText, svgs: m.svgs, marks: m.marks });
     }
     check(tag + ' slide ' + (slide + 1) + ' labels inside', m.textOutside.length === 0, m.textOutside);
+    if (pageKind !== 'caption' && m.svgs > 0) await chartOverlapCheck(page, tag + ' slide ' + (slide + 1), LIVE_SLIDE);
     const finding = title.includes('unseen lineages') ? 1 : title.includes('Known-gene rules') ? 2 : title.includes('PCR panel') ? 3 : title.includes('(MIC)') ? 4 : 0;
     // A paged panel figure draws its share of the rows on each page; the
     // pages together must draw every lead-panel dataset once.
@@ -2298,6 +2446,7 @@ async function baselineChecks(browser) {
           await shot(page, tag + '-' + key);
           if (key === 'overview') await primerCheck(page, tag);
           await reachCheck(page, tag + ' ' + key);
+          await chartOverlapCheck(page, tag + ' ' + key);
           check(tag + ' ' + key + ' document has no horizontal overflow', await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), await page.evaluate(() => ({ width: innerWidth, scroll: document.documentElement.scrollWidth })));
           await tallShot(page, tag + '-' + key + '-full', width, height);
           check(tag + ' ' + key + ' page overflow', await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), await page.evaluate(() => ({ width: innerWidth, scroll: document.documentElement.scrollWidth })));
@@ -2308,6 +2457,7 @@ async function baselineChecks(browser) {
         await page.goto(BASE + '/datasets?dataset=' + inspectId);
         await page.locator('#ds-learners').waitFor();
         await shot(page, tag + '-inspector');
+        await chartOverlapCheck(page, tag + ' inspector');
         await intervalCheck(page, tag);
         await interactions(page, tag, width);
         if (width >= 1280) { await widestIntervalFit(page, tag); await stripFit(page, tag); }

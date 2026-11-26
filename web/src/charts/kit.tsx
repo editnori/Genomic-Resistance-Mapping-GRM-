@@ -48,7 +48,11 @@ export const HALO = { paintOrder: "stroke", stroke: "rgb(var(--paper))", strokeW
 
 /** About how wide a 12px Inter label draws; used to keep labels apart and
  *  inside the plot, never to shrink them. */
-export const labelWidth = (text: string): number => Math.ceil(text.length * 6.7) + 4;
+export const labelWidth = (text: string): number => Math.ceil(text.length * 7.1) + 6;
+
+/** About how wide a 12px tick label draws; shared by AxisX and MicHeatmap to
+ *  size margins and blank interior ticks that would touch a neighbour. */
+export const tickWidth = (text: string): number => Math.ceil(text.length * 6.8) + 4;
 
 export interface LabelSpec {
   key: string;
@@ -127,20 +131,43 @@ export const DirectLabel = ({ x, y, lx, ly, lines, anchor }: { x: number; y: num
 /** A document-unique id usable inside url(#...) references. */
 export const useSvgId = (prefix: string): string => `${prefix}-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
 
-/** Horizontal axis: a baseline hairline, vertical gridlines, labels below. */
-export const AxisX = ({ x, y, height, values, format }: { x: Linear; y: number; height: number; values: number[]; format(v: number): string }) => (
-  <g aria-hidden="true">
-    {values.map((v) => (
-      <g key={v}>
-        <line x1={x(v)} x2={x(v)} y1={y - height} y2={y} stroke="var(--chart-grid)" />
-        <text x={x(v)} y={y + 15} textAnchor="middle" className={TICK_CLASS}>
-          {format(v)}
-        </text>
-      </g>
-    ))}
-    <line x1={x.range[0]} x2={x.range[1]} y1={y} y2={y} stroke="var(--chart-axis)" />
-  </g>
-);
+/** Horizontal axis: a baseline hairline, vertical gridlines, labels below.
+ *  Every tick keeps its gridline and text node; interior labels that would
+ *  touch an earlier label or the final label are left blank. */
+export const AxisX = ({ x, y, height, values, format }: { x: Linear; y: number; height: number; values: number[]; format(v: number): string }) => {
+  const raw = values.map(format);
+  const lastIdx = (() => {
+    for (let i = raw.length - 1; i >= 0; i -= 1) if (raw[i] !== "") return i;
+    return -1;
+  })();
+  const lastLeft = lastIdx < 0 ? Infinity : x(values[lastIdx]!) - tickWidth(raw[lastIdx]!) / 2;
+  let prevRight = -Infinity;
+  const shown = values.map((v, i) => {
+    const s = raw[i]!;
+    if (s === "") return "";
+    const cx = x(v);
+    const hw = tickWidth(s) / 2;
+    const left = cx - hw;
+    const right = cx + hw;
+    if (left < prevRight + 4) return "";
+    if (i !== lastIdx && right + 4 > lastLeft) return "";
+    prevRight = right;
+    return s;
+  });
+  return (
+    <g aria-hidden="true">
+      {values.map((v, i) => (
+        <g key={v}>
+          <line x1={x(v)} x2={x(v)} y1={y - height} y2={y} stroke="var(--chart-grid)" />
+          <text x={x(v)} y={y + 16} textAnchor="middle" className={TICK_CLASS}>
+            {shown[i]}
+          </text>
+        </g>
+      ))}
+      <line x1={x.range[0]} x2={x.range[1]} y1={y} y2={y} stroke="var(--chart-axis)" />
+    </g>
+  );
+};
 
 /** Vertical axis: horizontal gridlines with labels on the left. */
 export const AxisY = ({ y, x0, x1, values, format }: { y: Linear; x0: number; x1: number; values: number[]; format(v: number): string }) => (
@@ -148,7 +175,7 @@ export const AxisY = ({ y, x0, x1, values, format }: { y: Linear; x0: number; x1
     {values.map((v) => (
       <g key={v}>
         <line x1={x0} x2={x1} y1={y(v)} y2={y(v)} stroke="var(--chart-grid)" />
-        <text x={x0 - 6} y={y(v) + 4} textAnchor="end" className={TICK_CLASS}>
+        <text x={x0 - 8} y={y(v) + 4} textAnchor="end" className={TICK_CLASS}>
           {format(v)}
         </text>
       </g>
