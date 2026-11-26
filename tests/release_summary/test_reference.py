@@ -21,6 +21,13 @@ OUTPUTS = ["uncertainty.json", "summary.json", "catalog.json", "index-counts.jso
 PATH_RELEASE = "rev14-274-20261112"  # the one release with a path.json
 COPY = "rebuilt-table-20261121"  # counts of the table rebuilt on 21 Nov 2026; no script here makes them
 COPY_FILES = ["funnel.json", "cap-species.tsv"]
+# funnel.json of the rebuilt table holds these keys and these reasons, each with a count, and no list
+COPY_FUNNEL_KEYS = ["records", "records_class_label", "records_not_antibiotic", "records_unresolved_name",
+                    "records_no_measure", "genomes_with_records", "genomes_without_metadata", "genomes_failed_qc",
+                    "genomes_passing_qc", "pairs", "pairs_conflict", "pairs_intermediate_only", "pairs_reported",
+                    "pairs_labeled_from_mic", "pairs_unlabeled"]
+COPY_REASONS = ["BV-BRC quality: Poor", "CheckM completeness low", "CheckM contamination high",
+                "genome length off species median", "no species"]
 CAP_COLUMNS = ["species", "genomes_passing_qc_with_a_target", "eligible_genomes", "datasets", "datasets_in_274"] + [
     f"{side}_cap_{cap}" for cap in ("2000", "4000", "4096", "all") for side in ("selected", "left_out")]
 LEARNERS = ["scm", "cart", "rf", "gbt", "lasso"]
@@ -264,6 +271,10 @@ class Reference(unittest.TestCase):
         self.assertEqual(sorted(p.name for p in folder.iterdir()), sorted(COPY_FILES))
         f = json.loads((folder / "funnel.json").read_text(encoding="utf-8"))
         index, species_sums = load(PATH_RELEASE, "path.json")["funnel"], load(PATH_RELEASE, "path.json")["species"]
+        # the funnel holds counts alone, so no genome id: its 15 keys and 5 reasons by name, each value a whole number
+        self.assertEqual((list(f), list(f["genomes_failed_qc"])), (COPY_FUNNEL_KEYS, COPY_REASONS))
+        counts = [f[key] for key in f if key != "genomes_failed_qc"] + list(f["genomes_failed_qc"].values())
+        self.assertEqual([type(count) for count in counts], [int] * (len(COPY_FUNNEL_KEYS) - 1 + len(COPY_REASONS)))
         # genomes with a record pass, have no metadata or fail a check; the five kinds of pair add up to the pairs
         self.assertEqual(f["genomes_with_records"],
                          f["genomes_passing_qc"] + f["genomes_without_metadata"] + sum(f["genomes_failed_qc"].values()))

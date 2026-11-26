@@ -1026,14 +1026,20 @@ An eleventh came while the text was written. The project's wording rules put rec
 
 **Written.** This entry was written at 03:14Z on 26 Nov 2026.
 
+**Changed.** At 06:26Z on 26 Nov 2026, after pull requests #187 and #191 had merged, the lead changed Now and split Added off from it.
+
 ## Rebuilt counts
 
-**Plan.** The paragraph All data counts "41,627 of 80,967 genomes with a scorable label" and says "The release's cap of 2,000 leaves out 57,206." Row A16 of the inventory counts "1,320 of 1,064,823 pairs".
+**Plan.** The paragraph All data says "At 4,096, 41,627 of 80,967 genomes with a scorable label are left out, and 94 of the 274 datasets lose at least one. The release's cap of 2,000 leaves out 57,206." Row A16 of the inventory counts "1,320 of 1,064,823 pairs".
 
-**Found.** The plan took three of these counts from the rebuilt revision 14 table, not from the release's own: 80,967, 57,206 and 1,064,823. The release's index counts 1,063,628 pairs at the same step of its own table. For genomes, 80,967 less 57,206 leaves 23,761 analyzed on the rebuilt table, and the index counts 23,757 at that step. The rebuilt table ran no species check, so 79 more genomes pass in it (the entry MIC checks, under Breakpoints).
+**Found.** The plan took six of these counts from the rebuilt revision 14 table, not from the release's own. `cap-species.tsv` gives three: 80,967 genomes the cap picks among, 57,206 left out at 2,000 and 41,627 left out at 4,096. `funnel.json` gives the 1,064,823 pairs. The 94 datasets were counted on the same selections and the 1,320 pairs on the same table, and neither file holds them.
+
+**Release.** The release's index counts 1,063,628 pairs at the same step of its own table. For genomes, 80,967 less 57,206 leaves 23,761 analyzed on the rebuilt table, and the index counts 23,757 at that step. The rebuilt table ran no species check and counts one more length failure, so 79 more genomes pass in it (the entry MIC checks, under Breakpoints).
 
 **Where.** `docs/release-summary.md` sets both sides out under Curation path, in the part Differences. `reference/release-summary/rebuilt-table-20261121/` holds the rebuilt table's counts.
 
-**Holds.** Read the three counts as the rebuilt table's. Training labels come from that table alone (the row Labels of the plan), so no rule of the plan moves. No committed file gives the release's own count of the genomes its cap picks among.
+**Holds.** Read the six counts as the rebuilt table's. Training labels come from that table alone (the row Labels of the plan), so no rule of the plan moves. No committed file gives the release's own count of the genomes its cap picks among.
 
 **Written.** This entry was written at 04:54Z on 26 Nov 2026.
+
+**Changed.** After its independent review the lead changed, at 06:52Z on 26 Nov 2026, Plan, Found and Holds, which had named three counts where six are the rebuilt table's, and added Release.

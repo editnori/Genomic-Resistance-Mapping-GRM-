@@ -25,6 +25,10 @@ COPY = "rebuilt-table-20261121"  # counts of the table rebuilt on 21 Nov 2026, r
 UNDER_CAP = ("Acinetobacter baumannii", "Enterobacter cloacae")  # under the cap, with a species check failure
 # The counts of committed pages that the section "Curation path" sets beside the index, and the lines they stand on.
 PAIRS_PAGE, POOL_PAGE, CAP_LEFT_OUT, CHECK_FAILED, CHECK_JUDGED = 1064823, 80967, 57206, 96, 35231
+WIDE_CAP, WIDE_LEFT_OUT = 4096, 41627  # the plan's largest arm and the genomes it leaves out, docs/assumption-plan.md:7
+# Two counts of the plan that were made on the rebuilt table and that neither of its two committed files holds.
+DATASETS_LOSING, MIXED_PAIRS = 94, 1320
+CORRECTIONS = ROOT / "docs" / "assumption-plan-corrections.md"
 
 
 def load(release, name):
@@ -326,6 +330,9 @@ class Document(unittest.TestCase):
             ("docs/assumption-plan.md", 40, f"{n(PAIRS_PAGE)} pairs"),
             ("docs/assumption-plan.md", 7, f"of {n(POOL_PAGE)} genomes with a scorable label"),
             ("docs/assumption-plan.md", 7, f"The release's cap of {n(CAP)} leaves out {n(CAP_LEFT_OUT)}."),
+            ("docs/assumption-plan.md", 7, f"At {n(WIDE_CAP)}, {n(WIDE_LEFT_OUT)} of {n(POOL_PAGE)} genomes with a scorable label "
+                                         f"are left out, and {DATASETS_LOSING} of the {s['datasets_with_report']} datasets lose at "
+                                         f"least one."),
             ("docs/assumption-plan-later-records.md", 9, f"The {n(f['records'])} records before the cut are the training table."),
             ("docs/assumption-plan-corrections.md", 53, f"The rebuilt revision 14 table passes {more} more genomes through QC."),
             ("docs/species-check.md", 403, f"*A. baumannii* ({n(a_copy)} → {n(a_release)}) and *E. cloacae* ({n(e_copy)} → "
@@ -347,6 +354,7 @@ class Document(unittest.TestCase):
         self.assertEqual(c["pairs"], PAIRS_PAGE)
         self.assertEqual((every["eligible_genomes"], every["left_out_cap_2000"], every["selected_cap_2000"]),
                          (POOL_PAGE, CAP_LEFT_OUT, POOL_PAGE - CAP_LEFT_OUT))
+        self.assertEqual(every[f"left_out_cap_{WIDE_CAP}"], WIDE_LEFT_OUT)
         # the copy ran no species check and has one more length failure; every other reason has the index's count
         self.assertNotIn(SPECIES_CHECK, c["genomes_failed_qc"])
         self.assertEqual({why: count for why, count in reasons.items() if why not in (SPECIES_CHECK, LENGTH)},
@@ -357,6 +365,11 @@ class Document(unittest.TestCase):
         for name in UNDER_CAP:
             self.assertEqual(caps[name]["eligible_genomes"], caps[name]["selected_cap_2000"])
             self.assertLess(caps[name]["eligible_genomes"], CAP)
+        # and they are the only two: every other species has the release's count of genomes, under the cap or at it
+        species = [name for name in caps if name not in ("all", f"the 7 species over {WIDE_CAP}")]
+        self.assertEqual(len(species), 23)
+        self.assertEqual(tuple(name for name in species if caps[name]["selected_cap_2000"] != release_genomes(name)),
+                         UNDER_CAP)
         # the third difference is still there, and the lead is the page's own table
         self.assertNotEqual(CHECK_FAILED, failed)
         self.assertEqual((today, older + kp, older + kp + se), (CHECK_FAILED, failed, CHECK_FAILED))
@@ -365,30 +378,38 @@ class Document(unittest.TestCase):
         differences = " ".join([
             "**Differences.** Three counts of committed pages differ from the index's. Two were counted on a rebuilt copy "
             "of the release's table. The third is not traced.",
-            f"The table revision 14 was curated from is not kept. The copy was rebuilt on 21 Nov 2026 from a new download, "
-            f"cut to the same {n(f['records'])} lab records (`docs/assumption-plan-later-records.md:9`). Its counts are in "
-            f"`reference/release-summary/{COPY}/`. Three of them differ from the index's before the pairs.",
+            f"The table revision 14 was curated from was not found. The copy was rebuilt on 21 Nov 2026 from a new download, "
+            f"cut to {n(f['records'])} lab records, the count the index gives (`docs/assumption-plan-later-records.md:9`). "
+            f"Its counts are in `reference/release-summary/{COPY}/`. Three of them differ from the index's before the pairs, "
+            f"and with them the count of genomes that pass.",
             *copy_rows(),
             f"With no species check, the index's {failed} genomes go on to the other checks (`src/curate.rs:610-617`). The "
-            f"counts fit {more} of them passing and {failed - more} failing on length, and no file names the genomes. So "
+            f"counts fit {more} of them passing and {failed - more} failing on length, and no committed file names the "
+            f"genomes. Another reading fits too: all {failed} pass, and one other genome fails on length because a median or "
+            f"a length moved between the two downloads of the genome metadata (`src/curate.rs:583-596`). Either way "
             f"{n(c['genomes_passing_qc'])} genomes pass in the copy, {more} more than the index's "
             f"{n(f['genomes_passing'])} (`docs/assumption-plan-corrections.md:53`).",
             f"- **Pairs.** `docs/assumption-plan.md:40` counts {n(PAIRS_PAGE)} pairs; the index counts {n(f['pairs'])}. The "
             f"first is the copy's count, {n(PAIRS_PAGE - f['pairs'])} pairs more.",
             f"- **Genomes.** `docs/assumption-plan.md:7` gives {n(POOL_PAGE)} genomes less the {n(CAP_LEFT_OUT)} the cap "
             f"leaves out, which is {n(POOL_PAGE - CAP_LEFT_OUT)}; the index counts {n(s['genomes_analyzed'])} genomes "
-            f"analyzed. All three counts of that line are the copy's.",
-            f"The {gap} genomes are in two species under the cap, where the species check only shrinks the count: "
-            f"*{a_name}* from {n(a_copy)} to {n(a_release)} and *{e_name}* from {n(e_copy)} to {n(e_release)} "
-            f"(`docs/species-check.md:403`). A species at the cap stays at {n(CAP)}. In 4 of them the copy's {n(CAP)} differ "
-            f"from the release's, by 4, 68, 2 and 1 genomes (`docs/cap-arms.md:29`).",
-            f"No committed file gives the release's own count of the genomes the cap picks among. The species check takes at "
-            f"least those {gap} genomes from the {n(POOL_PAGE)} and at most its {failed}. The other list of drug names can "
-            f"move it too, and no file counts by how much.",
+            f"analyzed. {n(POOL_PAGE)} and {n(CAP_LEFT_OUT)} are the copy's, so {n(POOL_PAGE - CAP_LEFT_OUT)} is too. So is "
+            f"that line's {n(WIDE_LEFT_OUT)}, and its {DATASETS_LOSING} datasets were counted on the copy.",
+            f"The {gap} genomes are in two species under the cap. *{a_name}* has {n(a_copy)} genomes in the copy and "
+            f"{n(a_release)} in the release, and *{e_name}* has {n(e_copy)} and {n(e_release)} (`cap-species.tsv`, "
+            f"`reference/input-arms/page-builds.tsv`). A run of 30 Oct 2026 with the October species check took the same "
+            f"{a_copy - a_release} and {e_copy - e_release} from those two species (`docs/species-check.md:403`).",
+            f"A species at the cap stays at {n(CAP)}. In 4 of them the copy's {n(CAP)} differ from the release's, by 4, 68, "
+            f"2 and 1 genomes, and that line names no species (`docs/cap-arms.md:29`).",
+            f"No committed file gives the release's own count of the genomes the cap picks among. If the species check "
+            f"took those {gap}, as on the run of 30 Oct, it takes at least {gap} genomes from the {n(POOL_PAGE)} and at most "
+            f"its {failed}. The other list of drug names and the newer download of genome metadata can move the count too, "
+            f"and no file counts by how much.",
             f"**Not traced.** `docs/species-check.md:100` counts {CHECK_FAILED} failures among {n(CHECK_JUDGED)} genomes the "
             f"species check judged; the index counts {failed} genomes that fail the species check. Neither side is asserted.",
-            f"One lead, and no more: beside an older file's {older} failures, that page counts {kp} more in *Klebsiella "
-            f"pneumoniae* and {se} more in *Salmonella enterica* (`docs/species-check.md:105`, `:108`, `:110`). {older} and "
+            f"One lead, and no more: beside the {older} failures of the October file, now lost, that page counts {kp} more "
+            f"in *Klebsiella pneumoniae* and {se} more in *Salmonella enterica* (`docs/species-check.md:105`, `:108`, "
+            f"`:110`). {older} and "
             f"{kp} make {older + kp}, and {se} more make {older + kp + se}. The index does not record which file the release "
             f"read.",
             "A genome the species check never judged passes that step, since only a genome on the check's list of failures "
@@ -406,6 +427,44 @@ class Document(unittest.TestCase):
         for sentence in sentences:
             with self.subTest(sentence=sentence[:60]):
                 self.assertIn(sentence, text)
+
+    def test_rebuilt_counts_entry_gives_the_files_counts(self):
+        """The entry Rebuilt counts of the plan's corrections page: its counts are the two files' and the index's."""
+        p, c, every = load(B, "path.json"), copy_funnel(), copy_caps()["all"]
+        f, s = p["funnel"], p["species"]
+        page = CORRECTIONS.read_text(encoding="utf-8")
+        entry = " ".join(page.split("\n## Rebuilt counts\n")[1].split("\n## ")[0].split())
+        sentences = [
+            f"**Found.** The plan took six of these counts from the rebuilt revision 14 table, not from the release's own. "
+            f"`cap-species.tsv` gives three: {n(every['eligible_genomes'])} genomes the cap picks among, "
+            f"{n(every['left_out_cap_2000'])} left out at {n(CAP)} and {n(every[f'left_out_cap_{WIDE_CAP}'])} left out at "
+            f"{n(WIDE_CAP)}. `funnel.json` gives the {n(c['pairs'])} pairs. The {DATASETS_LOSING} datasets were counted on "
+            f"the same selections and the {n(MIXED_PAIRS)} pairs on the same table, and neither file holds them.",
+            f"**Release.** The release's index counts {n(f['pairs'])} pairs at the same step of its own table. For genomes, "
+            f"{n(every['eligible_genomes'])} less {n(every['left_out_cap_2000'])} leaves {n(every['selected_cap_2000'])} "
+            f"analyzed on the rebuilt table, and the index counts {n(s['genomes_analyzed'])} at that step. The rebuilt table "
+            f"ran no species check and counts one more length failure, so "
+            f"{c['genomes_passing_qc'] - f['genomes_passing']} more genomes pass in it",
+            "**Holds.** Read the six counts as the rebuilt table's.",
+        ]
+        for sentence in sentences:
+            with self.subTest(sentence=sentence[:60]):
+                self.assertIn(sentence, entry)
+        # the entry's quotes are the plan's own words
+        plan = (ROOT / "docs" / "assumption-plan.md").read_text(encoding="utf-8").split("\n")
+        for number, quote in ((7, f"At {n(WIDE_CAP)}, {n(WIDE_LEFT_OUT)} of {n(POOL_PAGE)} genomes with a scorable label are "
+                                  f"left out, and {DATASETS_LOSING} of the {s['datasets_with_report']} datasets lose at least "
+                                  f"one. The release's cap of {n(CAP)} leaves out {n(CAP_LEFT_OUT)}."),
+                              (40, f"{n(MIXED_PAIRS)} of {n(PAIRS_PAGE)} pairs")):
+            with self.subTest(line=number):
+                self.assertIn(quote, plan[number - 1])
+                self.assertIn(f'"{quote}"', entry)
+        # the six counts: three in cap-species.tsv, one in funnel.json, two in neither
+        self.assertEqual(c["genomes_failed_qc"][LENGTH] - f["genomes_failing_a_check"]["reasons"][LENGTH], 1)
+        in_files = [value for row in copy_caps().values() for value in row.values()] + [
+            value for value in c.values() if isinstance(value, int)] + list(c["genomes_failed_qc"].values())
+        self.assertEqual([count in in_files for count in (DATASETS_LOSING, MIXED_PAIRS)], [False, False])
+
 
 if __name__ == "__main__":
     unittest.main()
