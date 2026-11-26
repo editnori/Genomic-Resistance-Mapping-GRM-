@@ -240,17 +240,19 @@ The best learner's random-split count carries its choice. The best learner is ch
 
 ## Curation path
 
-A release's `index.json` counts, in its `funnel` block and its species rows, how many lab records, genomes, genome-and-drug pairs and datasets each step of curation keeps and leaves out. The lab records are those of BV-BRC, the Bacterial and Viral Bioinformatics Resource Center. `path.json` gives these counts for revision 14, the one revision whose output is committed. `tests/release_summary/test_document.py` rebuilds every row of this table from `reference/release-summary/rev14-274-20261112/path.json`. The steps are in the code's order.
+A release's `index.json` counts, in its `funnel` block and its species rows, how many lab records, genomes, genome-and-drug pairs and datasets each step of curation keeps, and how many most steps leave out. The lab records are those of BV-BRC, the Bacterial and Viral Bioinformatics Resource Center.
+
+`path.json` gives these counts for revision 14. Revision 12 has no committed `path.json`. `tests/release_summary/test_document.py` rebuilds every row of this table from `reference/release-summary/rev14-274-20261112/path.json`. The steps are in the code's order.
 
 | Step | Count | Left out |
 | --- | --- | --- |
 | Lab records | 1,285,111 | |
 | Genomes those records cover | 123,503 | |
 | Genomes that pass quality checks | 118,992 | 4,491 genomes fail a check and 20 have no metadata |
-| Genome-and-drug pairs on those genomes | 1,063,628 | 9,756 records on any genome name a drug class, no antibiotic or an unresolved name; 42,695 records on passing genomes have no call and no MIC |
+| Genome-and-drug pairs on those genomes | 1,063,628 | 9,756 records on any genome name a drug class, no antibiotic or an unresolved name; the other records on the 4,511 genomes that did not pass are skipped with no count; 42,695 records on passing genomes have no call and no MIC |
 | Pairs with a reported resistant or susceptible call | 611,826 | 295,219 pairs have a label worked out from a MIC, 137,151 have no label, 15,609 are intermediate only and 3,823 conflict |
 | Datasets curated | 277 | species and drug combinations with under 25 resistant or under 25 susceptible genomes; the index does not count them |
-| Genomes analyzed | 23,757 | genomes past the cap of 2,000 a species; the index does not count them |
+| Genomes analyzed | 23,757 | passing genomes with no unconflicted reported resistant or susceptible call on a drug of one of their species' datasets, then genomes past the cap of 2,000 a species; the index counts neither |
 | Datasets with a report | 274 | 3 of 277 datasets have one class under 25 among the genomes kept |
 
 The rows are stages in four units: lab records, genomes, genome-and-drug pairs and datasets. Within one unit each later count nests inside the earlier one. Where a step's left-out counts share its unit, they add up to the difference from the step before it in that unit.
@@ -261,7 +263,9 @@ The quality checks then judge each genome in a fixed order. A genome with no met
 
 Three filters run on the records before they join into pairs. The name check runs first, on every record of every genome (`src/curate.rs:652-668`), so records dropped by name are counted on every genome, whether it passes or not. 9,756 records leave there: 8,709 name a drug class, 652 name something that is no antibiotic and 395 carry a name that is not resolved.
 
-A record on a genome that did not pass is then skipped with no count (`src/curate.rs:670-672`). Records with no call and no MIC are counted on passing genomes only, 42,695 records (`src/curate.rs:673-677`). The other records of passing genomes join into one pair for each genome and drug, 1,063,628 pairs (`src/curate.rs:679-680`).
+A record on a genome that did not pass is then skipped with no count (`src/curate.rs:670-672`). Records with no call and no MIC are counted on passing genomes only, 42,695 records (`src/curate.rs:673-677`).
+
+The records left, each naming an antibiotic on a passing genome with a call or a MIC, join into one pair for each genome and drug, 1,063,628 pairs (`src/curate.rs:679-680`).
 
 Each pair then falls in one of five kinds (`src/curate.rs:753-792`). 611,826 have a reported resistant or susceptible call, 295,219 have a label worked out from a MIC, 137,151 have no label, 15,609 are intermediate only and 3,823 conflict. The five add up to the 1,063,628 pairs.
 

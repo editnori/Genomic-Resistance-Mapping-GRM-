@@ -2,7 +2,8 @@
 
 Each table of the document is rebuilt here from the files under reference/release-summary, and the document must hold
 it line for line. The sentences that carry a count are checked one by one. The section "Curation path" quotes three
-committed pages by line; each quote must stand on the line the section names."""
+committed pages by line; each quote must stand on the line the section names. Its sentences on which genomes a count
+covers carry no count and are checked too, and its part "Not traced" is checked whole, to the next header."""
 
 import json
 import pathlib
@@ -46,15 +47,17 @@ def path_rows():
         f"| Genomes that pass quality checks | {n(f['genomes_passing'])} | {n(f['genomes_failing_a_check']['total'])} "
         f"genomes fail a check and {n(f['genomes_without_metadata'])} have no metadata |",
         f"| Genome-and-drug pairs on those genomes | {n(f['pairs'])} | {n(f['records_dropped_by_name']['total'])} records "
-        f"on any genome name a drug class, no antibiotic or an unresolved name; {n(f['records_no_call_no_mic'])} records "
-        f"on passing genomes have no call and no MIC |",
+        f"on any genome name a drug class, no antibiotic or an unresolved name; the other records on the "
+        f"{n(f['genomes_with_a_record'] - f['genomes_passing'])} genomes that did not pass are skipped with no count; "
+        f"{n(f['records_no_call_no_mic'])} records on passing genomes have no call and no MIC |",
         f"| Pairs with a reported resistant or susceptible call | {n(k['reported_resistant_or_susceptible'])} | "
         f"{n(k['label_from_mic'])} pairs have a label worked out from a MIC, {n(k['no_label'])} have no label, "
         f"{n(k['intermediate_only'])} are intermediate only and {n(k['conflict'])} conflict |",
         f"| Datasets curated | {n(s['datasets_curated'])} | species and drug combinations with under {MIN_CLASS} resistant "
         f"or under {MIN_CLASS} susceptible genomes; the index does not count them |",
-        f"| Genomes analyzed | {n(s['genomes_analyzed'])} | genomes past the cap of {n(CAP)} a species; the index does not "
-        f"count them |",
+        f"| Genomes analyzed | {n(s['genomes_analyzed'])} | passing genomes with no unconflicted reported resistant or "
+        f"susceptible call on a drug of one of their species' datasets, then genomes past the cap of {n(CAP)} a species; "
+        f"the index counts neither |",
         f"| Datasets with a report | {n(s['datasets_with_report'])} | {n(s['datasets_curated'] - s['datasets_with_report'])} "
         f"of {n(s['datasets_curated'])} datasets have one class under {MIN_CLASS} among the genomes kept |",
     ]
@@ -225,8 +228,8 @@ class Document(unittest.TestCase):
             f"{n(d['total'])} records leave there: {n(d['drug_class'])} name a drug class, {n(d['not_an_antibiotic'])} name "
             f"something that is no antibiotic and {n(d['name_not_resolved'])} carry a name that is not resolved.",
             f"Records with no call and no MIC are counted on passing genomes only, {n(f['records_no_call_no_mic'])} records "
-            f"(`src/curate.rs:673-677`). The other records of passing genomes join into one pair for each genome and drug, "
-            f"{n(f['pairs'])} pairs (`src/curate.rs:679-680`).",
+            f"(`src/curate.rs:673-677`). The records left, each naming an antibiotic on a passing genome with a call or a "
+            f"MIC, join into one pair for each genome and drug, {n(f['pairs'])} pairs (`src/curate.rs:679-680`).",
             f"{n(k['reported_resistant_or_susceptible'])} have a reported resistant or susceptible call, "
             f"{n(k['label_from_mic'])} have a label worked out from a MIC, {n(k['no_label'])} have no label, "
             f"{n(k['intermediate_only'])} are intermediate only and {n(k['conflict'])} conflict. The five add up to the "
@@ -243,6 +246,15 @@ class Document(unittest.TestCase):
             f"The species rows also count {n(s['genomes_with_any_label'])} genomes with a label of any kind on any drug, "
             f"intermediate calls and labels worked out from a MIC included (`src/report.rs:984-995`). That count is no step "
             f"of the path.",
+            # which genomes each count covers: these sentences carry no count of their own
+            "The name check runs first, on every record of every genome (`src/curate.rs:652-668`), so records dropped by "
+            "name are counted on every genome, whether it passes or not.",
+            "A record on a genome that did not pass is then skipped with no count (`src/curate.rs:670-672`).",
+            "It picks among the genomes with an unconflicted reported resistant or susceptible call on the drug of one of "
+            "their species' datasets (`src/curate.rs:904-921`, `src/curate.rs:942-962`). The index has no count of the "
+            "genomes the cap picks among.",
+            "Each count of genomes here describes what laboratories deposited in BV-BRC. None of them says how common "
+            "resistance is.",
         ]
         text = " ".join(self.text.split())
         for sentence in sentences:
@@ -273,18 +285,30 @@ class Document(unittest.TestCase):
         self.assertNotEqual(PAIRS_PAGE, f["pairs"])
         self.assertNotEqual(POOL_PAGE - CAP_LEFT_OUT, s["genomes_analyzed"])
         self.assertNotEqual(CHECK_FAILED, failed)
-        sentences = [
-            f"A committed page counts {n(POOL_PAGE)} genomes with a scorable label and says the release's cap of {n(CAP)} "
-            f"leaves out {n(CAP_LEFT_OUT)} (`docs/assumption-plan.md:7`). The index has no key for either count,",
+        differences = [
             f"`docs/assumption-plan.md:40` counts {n(PAIRS_PAGE)} pairs; the index counts {n(f['pairs'])}.",
             f"`docs/assumption-plan.md:7` gives {n(POOL_PAGE)} genomes less the {n(CAP_LEFT_OUT)} the cap leaves out, which "
             f"is {n(POOL_PAGE - CAP_LEFT_OUT)}; the index counts {n(s['genomes_analyzed'])} genomes analyzed.",
             f"`docs/species-check.md:100` counts {CHECK_FAILED} failures among {n(CHECK_JUDGED)} genomes the species check "
             f"judged; the index counts {failed} genomes that fail the species check.",
+        ]
+        # The part "Not traced" whole, to the next header: a sentence added to it that takes a side fails here.
+        not_traced = " ".join([
+            "**Not traced.** Three counts of committed pages differ from the index's. Each gives both sides, and neither "
+            "side is asserted.",
+            *(f"- {d}" for d in differences),
             f"One lead, and no more: `docs/species-check.md:65` gives {n(POOL_PAGE - CAP_LEFT_OUT)} as the genome count of "
             f"the frozen 23-species candidate of revision 9, the same figure as {n(POOL_PAGE)} less {n(CAP_LEFT_OUT)}.",
+            "A genome the species check never judged passes that step, since only a genome on the check's list of failures "
+            "leaves (`src/curate.rs:610-617`).",
             f"The check judged every genome in the reports, {n(s['genomes_analyzed'])}, and none of them fails "
             f"(`docs/species-check.md:114`).",
+            "## Limits",
+        ])
+        sentences = [
+            f"A committed page counts {n(POOL_PAGE)} genomes with a scorable label and says the release's cap of {n(CAP)} "
+            f"leaves out {n(CAP_LEFT_OUT)} (`docs/assumption-plan.md:7`). The index has no key for either count,",
+            not_traced,
         ]
         text = " ".join(self.text.split())
         for sentence in sentences:
