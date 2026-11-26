@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Plant each fault of the staggered split's rules and run the test meant to catch it.
+"""Plant each fault of the staggered split's rules and run the test that fails with it.
 
   python3 -I stagger_faults.py <out dir> [fault ...]
   python3 -I stagger_faults.py --list
@@ -7,21 +7,30 @@
 Copies this checkout's last commit to <out dir>/tree (git archive) and, one fault at a time (every fault, or those
 named), changes one piece of text there, runs the one test named for it, and puts the text back. A fault is caught
 when its test fails; each test must also pass with no fault planted, and each run must run exactly one test. The
-out dir must be new or empty: nothing is deleted. Writes <out dir>/faults.tsv (fault, rule, file, test, result)
-and <out dir>/logs/, prints one line per fault and `caught X of Y`, and exits 1 when a fault is not caught. Every
-test it runs is SYNTHETIC; it reads no data.
+out dir must be new or empty: nothing is deleted. An out dir whose path holds `latetest`, `sealed` or `held-out`,
+as given or where it leads, stops it before it makes any directory, with the stop line of the other two scripts.
+Writes <out dir>/faults.tsv (fault, rule, file, test, result) and <out dir>/logs/, prints one line per fault and
+`caught X of Y`, and exits 1 when a fault is not caught. Every test it runs is SYNTHETIC; it reads no data.
 """
 
+import importlib.util
 import os
 import subprocess
 import sys
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parents[2]
+HERE = Path(__file__).resolve().parent
+REPO = HERE.parents[1]
+_spec = importlib.util.spec_from_file_location("stagger_design_for_faults", HERE / "stagger_design.py")
+design_mod = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(design_mod)
+
 DESIGN = "scripts/time-split/stagger_design.py"
 ANALYZE = "scripts/time-split/stagger_analyze.py"
+RUNNER = "scripts/time-split/stagger_faults.py"
 TD = "tests.time_split.test_stagger_design."
 TA = "tests.time_split.test_stagger_analyze."
+TF = "tests.time_split.test_stagger_faults."
 
 # (fault, rule it breaks, file, text, planted text, test)
 FAULTS = [
@@ -73,7 +82,7 @@ FAULTS = [
      'size = dict(zip("RS", counts(arms[("all", 1)], labels)))',
      'size = dict(zip("RS", counts(arms[("all", j)], labels)))',
      TD + "HandWorld.test_recent_k_holds_as_many_of_each_class_as_all_1"),
-    ("copies-train", "item 5 and R33 point 3: copies of a window's test genomes train nowhere on it", DESIGN,
+    ("copies-train", "item 7 and R33 point 3: copies of a window's test genomes train nowhere on it", DESIGN,
      "copies = {g for g in cohort if g not in tested and digests[g] in seen}",
      "copies = set()",
      TD + "HandWorld.test_copies_per_window"),
@@ -170,6 +179,34 @@ FAULTS = [
      "need(not out.exists() or (out.is_dir() and not any(out.iterdir())),",
      "need(True,",
      TD + "Folds.test_an_out_dir_that_holds_a_file_is_refused"),
+    ("check60-count-not-24", "R38: the 60% check stops unless its table has 24 rows", DESIGN,
+     "need(len(reference) == datasets,",
+     "need(True,",
+     TD + "Check60.test_a_table_of_23_datasets_stops"),
+    ("check60-count-of-the-test", "R38: the 24 is one line of the script, and main gives it", DESIGN,
+     "CHECK_DATASETS = 24",
+     "CHECK_DATASETS = 2",
+     TD + "Check60.test_the_count_is_24_whatever_the_table"),
+    ("check60-dataset-twice", "R38: each row of the 60% check's table a different dataset", DESIGN,
+     "need(not twice,",
+     "need(True,",
+     TD + "Check60.test_one_dataset_twice_and_one_left_out_stops"),
+    ("check60-dataset-not-in-metadata", "R38: each row of the 60% check's table a dataset of the metadata", DESIGN,
+     "need(not lacking,",
+     "need(True,",
+     TD + "Check60.test_a_dataset_the_metadata_lacks_stops"),
+    ("check60-undated-ignored", "the 14 Nov rule: every cohort genome dated (the reviewer's fault)", DESIGN,
+     'int(cut == ref["cut_day"] and row["undated"] == 0)',
+     'int(cut == ref["cut_day"])',
+     TD + "Check60.test_an_undated_cohort_genome_fails_its_dataset"),
+    ("count-pairs-as-datasets", "a dataset enters at a horizon when it has a pair there (the reviewer's fault)", DESIGN,
+     '"datasets": len(hits),',
+     '"datasets": sum(n for _, _, n in hits),',
+     TD + "Counts.test_a_dataset_with_two_pairs_at_a_horizon_counts_once"),
+    ("species-as-datasets", "12 datasets in 3 species: species apart from datasets (the reviewer's fault)", DESIGN,
+     '"species": len({s["species_slug"] for s, _, _ in hits}),',
+     '"species": len(hits),',
+     TD + "Counts.test_two_datasets_of_one_species_count_one_species"),
     ("result-sha-unchecked", "item 5: each result names its fold file's sha256", ANALYZE,
      'r.get("fold_file_sha256") == fit["sha256"]',
      'r.get("fold_file_sha256") is not None',
@@ -284,14 +321,68 @@ FAULTS = [
      'rules[(clock, contrast, h, l)] == "cost" and reads[(clock, contrast, h, l)][1] == "worse"',
      'rules[(clock, contrast, h, l)] == "cost"',
      TA + "Predictions.test_p2"),
-    ("p3-descriptive-met", "prediction 3: not shown on every contrast; descriptive only is not not shown", ANALYZE,
-     'return all(verdicts.get((clock, c, h)) == "not shown" for c in CONTRASTS)',
-     'return all(verdicts.get((clock, c, h)) in ("not shown", "descriptive only") for c in CONTRASTS)',
-     TA + "Predictions.test_p3"),
-    ("prediction-first-only", "R33 point 10: met only when every reading made meets it", ANALYZE,
-     '"outcome": "met" if all(x == "met" for x in got.values()) else "not met"})',
-     '"outcome": got["first"]})',
-     TA + "Predictions.test_met_only_when_every_reading_made_meets_it"),
+    ("p3-descriptive-met", "R38: prediction 3 needs a verdict at horizon 1 on both contrasts", ANALYZE,
+     '        if any(got[(c, 1)] == "descriptive only" for c in CONTRASTS):\n            return False\n',
+     "",
+     TA + "Predictions.test_p3_needs_a_verdict_at_horizon_1_on_both_contrasts"),
+    ("p3-horizon-1-only", "R38: prediction 3 read at every horizon the clock has", ANALYZE,
+     "return [(c, k) for c in CONTRASTS for k in horizons[clock]]",
+     "return [(c, k) for c in CONTRASTS for k in (1,)]",
+     TA + "Predictions.test_p3_a_cost_at_a_later_horizon_is_not_met"),
+    ("p3-mixed-later-met", "R38: a mixed verdict at any horizon, prediction 3 not met", ANALYZE,
+     'return all(v in ("not shown", "descriptive only") for v in got.values())',
+     'return all(v != "cost shown" for v in got.values())',
+     TA + "Predictions.test_p3_a_mixed_verdict_at_a_later_horizon_is_not_met"),
+    ("p3-later-descriptive-fails", "R38: a horizon that is descriptive only gives no verdict", ANALYZE,
+     'return all(v in ("not shown", "descriptive only") for v in got.values())',
+     'return all(v == "not shown" for v in got.values())',
+     TA + "Predictions.test_p3_a_descriptive_later_horizon_gives_no_verdict"),
+    ("p3-no-verdict-unnamed", "R38: the predictions table names each horizon with no verdict", ANALYZE,
+     'unread += [f"{reading} {c} horizon {k}" for c, k in no_verdict(pid, v, horizons)]',
+     'unread += [f"{reading} {c} horizon {k}" for c, k in no_verdict(pid, v, horizons) if k == 1]',
+     TA + "Predictions.test_the_table_names_each_horizon_with_no_verdict"),
+    ("prediction-first-only", "R38: the outcome reads both readings, as stands.tsv does", ANALYZE,
+     '"outcome": outcome(got),',
+     '"outcome": got["first"],',
+     TA + "Agreement.test_without_lists_the_prediction_is_not_read_and_no_verdict_stands"),
+    ("prediction-one-reading-met", "R38: met only when both readings are made and both meet it", ANALYZE,
+     'if all(got.get(r) == "met" for r in READINGS):',
+     'if all(x == "met" for x in got.values()):',
+     TA + "Predictions.test_met_only_when_both_readings_are_made_and_both_meet_it"),
+    ("prediction-failed-unread", "R38: not met when a reading that was made fails it", ANALYZE,
+     '    if "not met" in got.values():\n        return "not met"\n',
+     "",
+     TA + "Predictions.test_not_met_when_a_reading_made_fails_it"),
+    ("prediction-unread-not-met", "R38: otherwise not read", ANALYZE,
+     '    return "not read"\n',
+     '    return "not met"\n',
+     TA + "Predictions.test_otherwise_not_read"),
+    ("list-names-no-dataset", "R38: each list file names a dataset of the design", ANALYZE,
+     "need(not strays,",
+     "need(True,",
+     TA + "Lists.test_a_list_file_that_names_no_dataset_of_the_design_stops"),
+    ("lists-genome-count", "R38: it prints the list files and the datasets they name, and no genome count", ANALYZE,
+     "they name {len(set(lists) & named)} datasets",
+     "they name {sum(map(len, lists.values()))} datasets",
+     TA + "Lists.test_it_prints_the_files_and_the_datasets_they_name"),
+    ("point-mean", "the median over datasets (the reviewer's fault)", ANALYZE,
+     "    point = statistics.median([v for s in species for v in by_species[s]])",
+     "    point = statistics.mean([v for s in species for v in by_species[s]])",
+     TA + "Interval.test_the_point_is_the_median_over_datasets"),
+    ("second-left-from-totals", "R33 point 9: the test minimum once listed genomes are out (the reviewer's fault)",
+     ANALYZE,
+     "    r = sum(1 for _, t in samples if t) - lr",
+     "    r = sum(1 for _, t in samples if t)",
+     TA + "SecondCase.test_the_resistant_class_alone_falls_under_the_minimum_once_out"),
+    ("same-size-fresh-all", "stale same size: recent(k) against recent(j) (the reviewer's fault)", ANALYZE,
+     'loaded[fits[(j, j, arm)]["file"]]',
+     'loaded[fits[(j, j, "all")]["file"]]',
+     TA + "SameSize.test_stale_same_size_scores_against_recent_j"),
+    # The runner's own text is written in two pieces here, so that it stands once in this file.
+    ("faults-out-unguarded", "R38: a barred out dir stops the runner before it makes any directory", RUNNER,
+     'design_mod.guard(argv[0], "out' ' dir")',
+     "Path(argv[0])",
+     TF + "OutDir.test_a_barred_out_dir_stops_before_any_directory_is_made"),
     ("stands-first-only", "R33 point 10: a verdict stands only when both readings give it", ANALYZE,
      '"stands": first if first == second else (',
      '"stands": first if True else (',
@@ -324,6 +415,11 @@ def main(argv):
     if unknown:
         print(f"no fault {', '.join(unknown)}", file=sys.stderr)
         return 2
+    try:
+        design_mod.guard(argv[0], "out dir")
+    except design_mod.Stop as e:
+        print(f"stagger_faults: stopped: {e}", file=sys.stderr)
+        return 1
     out = Path(argv[0]).resolve()
     if out.exists() and any(out.iterdir()):
         print("the out dir holds a file; nothing is written", file=sys.stderr)

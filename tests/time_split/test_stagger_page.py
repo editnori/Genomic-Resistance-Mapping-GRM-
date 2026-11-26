@@ -45,8 +45,11 @@ class Page(unittest.TestCase):
 
     def test_no_result(self):
         self.assertIsNone(re.search(r"[+-]\d*\.\d+|\[\s*[+-]?\d", self.page))
+        # The outcome rule of ruling R38 in its own words: a clause of a rule, once on the page, and no result.
+        rule = "a reading that was made"
+        self.assertEqual(self.page.count(rule), 1)
         for s in sentences(self.page):
-            self.assertIsNone(re.search(r"(?i)\b(was|were|found|came out|turned out)\b", s), s)
+            self.assertIsNone(re.search(r"(?i)\b(was|were|found|came out|turned out)\b", s.replace(rule, "")), s)
 
     def test_lengths(self):
         for block in re.split(r"\n\s*\n", self.page):

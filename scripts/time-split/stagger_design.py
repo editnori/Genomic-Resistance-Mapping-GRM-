@@ -21,8 +21,10 @@ arm and window that a pair uses, in the form `grm learn --fold-file` reads (docs
 genomes. recent(1) is all(1), so one file serves both arms at origin 1, and the design says so.
 
 check60: the design at the single share 60% on the public-day clock, with the rules of 14 Nov, against the cut day
-of each dataset of the 14 Nov record's datasets.tsv. It writes <out dir>/check60.tsv and exits 1 unless every cut
-day is the record's.
+of each dataset of the 14 Nov record's datasets.tsv. It stops, writing nothing and naming no cut day, unless the
+table has 24 rows, each a different dataset and each a dataset of the metadata (ruling R38; the 24 is
+CHECK_DATASETS, and no option changes it). It writes <out dir>/check60.tsv and exits 1 unless every cut day is the
+record's.
 
 Every path is checked before it is opened: a path that holds `latetest`, `sealed` or `held-out` stops the script,
 which names the path's role and that word and nothing more. An out dir that holds a file stops it too.
@@ -65,6 +67,7 @@ ARM_OF = {"stale-all": "all", "stale-same-size": "recent"}
 CHOICE_CONTRAST, CHOICE_HORIZON = "stale-all", 1
 MIN_DATASETS, MIN_SPECIES = 12, 3
 CHECK_SHARE = 60
+CHECK_DATASETS = 24
 BARRED = ("latetest", "sealed", "held-out")
 FOLD_FORMAT = "grm-fold-file-v1"
 SCHEME = re.compile(r"[a-z0-9-]{1,48}")
@@ -507,15 +510,28 @@ def fold_files(inputs, choices, plans):
 
 # ----------------------------------------------------------------- check60
 
-def check60(inputs, table_path):
-    """Rows of the 60% check against the 14 Nov record's datasets.tsv, and whether every cut day is the record's."""
+def check60(inputs, table_path, datasets=CHECK_DATASETS):
+    """Rows of the 60% check against the 14 Nov record's datasets.tsv, and whether every cut day is the record's.
+
+    It stops before it cuts any day unless the table has `datasets` rows, each a different dataset and each a
+    dataset of the metadata. main() gives the plan's 24 and nothing else; a test passes its own count."""
     text = read_text(table_path, "reference table")
     lines = text.rstrip("\n").split("\n")
     head = lines[0].split("\t")
     reference = [dict(zip(head, line.split("\t"))) for line in lines[1:]]
     need(reference and {"dataset", "cohort", "cut_day", "share_public_by_cut"} <= set(head),
          "the reference table has no dataset rows of the 14 Nov record's columns")
+    names = [ref["dataset"] for ref in reference]
+    need(len(reference) == datasets,
+         f"the 60% check needs {datasets} dataset rows, each a different dataset of the metadata; the reference "
+         f"table has {len(reference)}")
+    twice = sorted({n for n in names if names.count(n) > 1})
+    need(not twice, f"the 60% check needs {datasets} different datasets; the reference table's {len(reference)} rows "
+                    f"name {len(set(names))}, and these more than once: {', '.join(twice)}")
     specs = {s["id"]: s for s in inputs["specs"]}
+    lacking = sorted(set(names) - set(specs))
+    need(not lacking, f"the 60% check needs {datasets} datasets of the metadata; the metadata lacks "
+                      f"{len(lacking)} of the reference table's datasets: {', '.join(lacking)}")
     day = inputs["dates"]["public-day"]
     rows = []
     for ref in reference:

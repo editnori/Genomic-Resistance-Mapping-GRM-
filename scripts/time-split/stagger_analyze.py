@@ -15,11 +15,13 @@ the rule of 14 Nov. A dataset with several pairs at one horizon gives their mean
 learner and for a contrast, descriptive only under 12 datasets or 3 species.
 
 With --listed (one file a dataset of M, <dataset>.txt, one genome id a line, as m_list.py writes them) each
-contrast is read twice, by R33 points 8 to 10. The second reading takes the listed genomes out of a pair's test
-genomes for both fits, with no refit. A pair stays only when its test set lists no genome or at least 5 of each
-class, and each class keeps the test minimum once they are out. lacking.tsv names each dataset the second reading
-lacks at a horizon, with its reason. A pair left out for a short list gives no figure anywhere, and no count over
-datasets takes it in. A verdict stands only when both readings give it.
+contrast is read twice, by R33 points 8 to 10. It stops, writing nothing, unless each list file names a dataset of
+the design (R38), and it prints how many list files it read and how many datasets they name, and no genome count.
+The second reading takes the listed genomes out of a pair's test genomes for both fits, with no refit. A pair stays
+only when its test set lists no genome or at least 5 of each class, and each class keeps the test minimum once they
+are out. lacking.tsv names each dataset the second reading lacks at a horizon, with its reason. A pair left out for
+a short list gives no figure anywhere, and no count over datasets takes it in. A verdict stands only when both
+readings give it.
 
 What it writes holds rows per dataset, species, clock, contrast, horizon, arm and learner, and no genome id, study
 or row per genome: it stops before writing if a genome id of the results or the lists stands in any of its text.
@@ -27,15 +29,19 @@ or row per genome: it stops before writing if a genome id of the results or the 
 Its draws: one generator a clock and reading, seeded 20261125, drawn learner by learner, then by contrast, horizon
 and measure, as the 14 Nov script drew learner, contrast and measure.
 
-The predictions, each met or not met by a rule fixed here before any result exists (PREDICTIONS). A prediction is
-read in each reading made and is met only when every reading made meets it:
+The predictions, by a rule fixed here before any result exists (PREDICTIONS). Each reading made gives each
+prediction met or not met. The outcome (R38) is met only when both readings are made and both meet it, not met when
+a reading that was made fails it, and otherwise not read:
 
 - P1, public-day clock, stale same size, horizon 1: met when the contrast there is not descriptive only and recall
   reads not shown for at least 4 of 5 learners.
 - P2, public-day clock, stale all, horizon 1: met when the contrast there is not descriptive only and at least 3 of
   5 learners show a cost with log loss reading worse.
-- P3, collection-year clock: met when both contrasts at horizon 1 read not shown; descriptive only is not not
-  shown.
+- P3, collection-year clock, read on both contrasts at every horizon the clock has (R38): met only when horizon 1
+  has a verdict on both contrasts and every verdict at every horizon is not shown. A cost shown or a mixed verdict
+  at any horizon is not met. A contrast and horizon that is descriptive only, or has no dataset, gives no verdict.
+
+predictions.tsv names, per prediction and reading, each contrast and horizon it reads that gives no verdict.
 """
 
 import importlib.util
@@ -76,7 +82,8 @@ PREDICTIONS = (
     ("P1", "public-day", "stale-same-size", 1,
      "stale same size, horizon 1, recall: not shown for at least 4 of 5 learners"),
     ("P2", "public-day", "stale-all", 1, "stale all, horizon 1: a cost through log loss for at least 3 of 5"),
-    ("P3", "collection-year", None, 1, "collection-year clock: not shown on every contrast, read at horizon 1"),
+    ("P3", "collection-year", None, None,
+     "collection-year clock: not shown on every contrast, read at every horizon the clock has"),
 )
 
 ARM_COLUMNS = ["clock", "reading", "dataset", "species", "contrast", "horizon", "arm", "learner", "pairs", "test",
@@ -84,13 +91,13 @@ ARM_COLUMNS = ["clock", "reading", "dataset", "species", "contrast", "horizon", 
 CONTRAST_COLUMNS = ["clock", "reading", "dataset", "species", "contrast", "horizon", "learner", "pairs", "test",
                     "test_resistant"] + ["d_" + m for m in MEASURES]
 READING_COLUMNS = ["clock", "reading", "contrast", "horizon", "learner", "measure", "datasets", "species", "median",
-                   "low", "high", "read_as", "datasets_worse", "datasets_better", "datasets_equal"]
+                   "low", "high", "read_as", "datasets_worse", "datasets_better", "datasets_zero"]
 RULE_COLUMNS = ["clock", "reading", "contrast", "horizon", "learner", "recall", "log_loss", "rule"]
 VERDICT_COLUMNS = ["clock", "reading", "contrast", "horizon", "datasets", "species", "learners_with_cost",
                    "learners_better", "verdict"]
 STAND_COLUMNS = ["clock", "contrast", "horizon", "first", "second", "stands"]
 LACK_COLUMNS = ["clock", "contrast", "horizon", "dataset", "species", "reason"]
-PREDICTION_COLUMNS = ["prediction", "rule", "first", "second", "outcome"]
+PREDICTION_COLUMNS = ["prediction", "rule", "first", "second", "outcome", "no_verdict"]
 
 
 # ----------------------------------------------------------------- measures
@@ -170,11 +177,30 @@ def second_case(samples, listed, test_minimum):
     return {i for i in range(len(samples)) if i not in out}, ""
 
 
-def prediction_met(pid, verdicts, rules, reads):
+def read_at(pid, horizons):
+    """The (contrast, horizon) pairs a prediction reads on its clock: P1 and P2 their contrast at horizon 1, P3 both
+    contrasts at every horizon of horizons[clock], the horizons the clock's share set has (R38)."""
+    _, clock, contrast, h, _ = next(p for p in PREDICTIONS if p[0] == pid)
+    if pid == "P3":
+        return [(c, k) for c in CONTRASTS for k in horizons[clock]]
+    return [(contrast, h)]
+
+
+def no_verdict(pid, verdicts, horizons):
+    """What a prediction reads that gives no verdict: descriptive only, or no dataset, which is under 12 too."""
+    clock = next(p for p in PREDICTIONS if p[0] == pid)[1]
+    return [(c, k) for c, k in read_at(pid, horizons) if verdicts.get((clock, c, k), "descriptive only") ==
+            "descriptive only"]
+
+
+def prediction_met(pid, verdicts, rules, reads, horizons):
     """The rule of one prediction on one reading's verdicts, learner rules and readings."""
     _, clock, contrast, h, _ = next(p for p in PREDICTIONS if p[0] == pid)
     if pid == "P3":
-        return all(verdicts.get((clock, c, h)) == "not shown" for c in CONTRASTS)
+        got = {(c, k): verdicts.get((clock, c, k), "descriptive only") for c, k in read_at(pid, horizons)}
+        if any(got[(c, 1)] == "descriptive only" for c in CONTRASTS):
+            return False
+        return all(v in ("not shown", "descriptive only") for v in got.values())
     v = verdicts.get((clock, contrast, h))
     if v is None or v == "descriptive only":
         return False
@@ -348,7 +374,7 @@ def analyze(design, values, readings_made):
                                 "read_as": got[(contrast, h, l, m)],
                                 "datasets_worse": sum(1 for v in vs if v * WORSE[m] > 0),
                                 "datasets_better": sum(1 for v in vs if v * WORSE[m] < 0),
-                                "datasets_equal": sum(1 for v in vs if v == 0)})
+                                "datasets_zero": sum(1 for v in vs if v == 0)})
             for contrast in CONTRASTS:
                 for h in horizons:
                     rows = values.get((clock, reading, contrast, h), [])
@@ -390,18 +416,31 @@ def stands(design, verdicts, readings_made):
     return rows
 
 
-def predictions(verdicts, rules, reads, readings_made):
+def outcome(got):
+    """R38: met only when both readings are made and both meet it; not met when a reading that was made fails it;
+    otherwise not read. got: {reading made: met or not met}."""
+    if "not met" in got.values():
+        return "not met"
+    if all(got.get(r) == "met" for r in READINGS):
+        return "met"
+    return "not read"
+
+
+def predictions(verdicts, rules, reads, readings_made, horizons):
+    """One row a prediction: each reading, the outcome, and each contrast and horizon it reads with no verdict."""
     rows = []
     for pid, _, _, _, text in PREDICTIONS:
-        got = {}
+        got, unread = {}, []
         for reading in readings_made:
             v = {k[1:]: x for k, x in verdicts.items() if k[0] == reading}
             ru = {k[1:]: x for k, x in rules.items() if k[0] == reading}
             re_ = {k[1:]: x for k, x in reads.items() if k[0] == reading}
-            got[reading] = "met" if prediction_met(pid, v, ru, re_) else "not met"
+            got[reading] = "met" if prediction_met(pid, v, ru, re_, horizons) else "not met"
+            unread += [f"{reading} {c} horizon {k}" for c, k in no_verdict(pid, v, horizons)]
         rows.append({"prediction": pid, "rule": text, "first": got["first"],
                      "second": got.get("second", "not read"),
-                     "outcome": "met" if all(x == "met" for x in got.values()) else "not met"})
+                     "outcome": outcome(got),
+                     "no_verdict": "; ".join(unread) or "none"})
     return rows
 
 
@@ -441,12 +480,18 @@ def build(design_dir, results, listed_dir=None):
          "design.json: not a design of the frozen plan")
     results = guard(results, "result dir")
     lists = read_lists(listed_dir) if listed_dir is not None else None
+    named = {x["id"] for x in design["datasets"]}
+    if lists is not None:
+        strays = sorted(name + ".txt" for name in lists if name not in named)
+        need(not strays, f"{len(strays)} of {len(lists)} list files name no dataset of the design: "
+                         f"{', '.join(strays)}")
     readings_made = READINGS if lists is not None else READINGS[:1]
     values, lacking, ids = collect(design, results, lists)
     need(values, "no dataset with a pair to read")
     reading_rows, rule_rows, verdict_rows, verdicts, rules, reads = analyze(design, values, readings_made)
     stand_rows = stands(design, verdicts, readings_made)
-    prediction_rows = predictions(verdicts, rules, reads, readings_made)
+    horizons = {c: list(range(1, len(design["clocks"][c]["shares"]))) for c in CLOCKS}
+    prediction_rows = predictions(verdicts, rules, reads, readings_made, horizons)
     arms, contrasts = arm_and_contrast_rows(values)
     files = {"arms.tsv": tsv(ARM_COLUMNS, arms), "contrasts.tsv": tsv(CONTRAST_COLUMNS, contrasts),
              "readings.tsv": tsv(READING_COLUMNS, reading_rows), "rule.tsv": tsv(RULE_COLUMNS, rule_rows),
@@ -457,8 +502,7 @@ def build(design_dir, results, listed_dir=None):
              f"stands: {r['stands']}" for r in stand_rows]
     lines += [f"{r['prediction']} ({r['rule']}): {r['outcome']}" for r in prediction_rows]
     if lists is not None:
-        named = {x["id"] for x in design["datasets"]}
-        lines.append(f"lists: {len(lists)} files, {sum(1 for d in lists if d in named)} of them datasets of the design")
+        lines.append(f"lists: {len(lists)} list files read; they name {len(set(lists) & named)} datasets of the design")
     return files, lines
 
 

@@ -2,6 +2,7 @@
 and of R33 points 1 to 6, by values the test names itself, the variant rule step by step, both clocks, the 60% check,
 the barred paths and the fold files."""
 
+import datetime
 import hashlib
 import json
 import os
@@ -229,6 +230,53 @@ class Pairs(unittest.TestCase):
         self.assertEqual(sd.pairs_of({"windows": {2: w}}, labels, 20, "stale-all"), [])
 
 
+def count_world(base):
+    """One made-up species of 200 genomes, each public on its own day from 2020-01-01, each of a study of its own,
+    none with a collection year, R and S in turn. drug_a labels all 200, drug_b the first 160."""
+    start = datetime.date(2020, 1, 1)
+    genomes = [{"id": f"syn-n-{i:03d}", "slug": "count_species",
+                "day": (start + datetime.timedelta(days=i)).isoformat() + "T00:00:00Z", "year": None,
+                "study": f"syn-study-n-{i:03d}", "digest": f"syn-digest-n-{i}", "in_matrix": True} for i in range(200)]
+    datasets = [{"id": f"count_species__{drug}", "species_slug": "count_species", "antibiotic": drug,
+                 "labels": {g["id"]: "RS"[i % 2] for i, g in enumerate(genomes[:n])}}
+                for drug, n in (("drug_a", 200), ("drug_b", 160))]
+    return fx.write_custom(base, genomes, datasets)
+
+
+class Counts(unittest.TestCase):
+    """count on the made-up species of count_world, shares 40, 60 and 80 on the public day.
+
+    drug_a, 200 genomes: cut points at the 80th, 120th and 160th; windows 2 and 3 each test 20 R and 20 S, all of new
+    studies, and all(1) holds 40 of each class. So stale all has the pairs (1, 2) and (2, 3) at horizon 1 and (1, 3)
+    at horizon 2, at every test minimum. drug_b, 160 genomes: windows of 16 R and 16 S, so it has the same pairs at
+    test minimums 15 and 10, and none at 20."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = Path(tempfile.mkdtemp(prefix="stagger-count-"))
+        rows = sd.count(sd.load_inputs(*count_world(cls.tmp / "w")))[0]
+        cls.rows = {(r["clock"], r["shares"], r["test_minimum"], r["contrast"], r["horizon"]): r for r in rows}
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.tmp)
+
+    def row(self, minimum, horizon, contrast="stale-all"):
+        r = self.rows[("public-day", "40-60-80", minimum, contrast, horizon)]
+        return r["datasets"], r["species"], r["pairs"]
+
+    def test_a_dataset_with_two_pairs_at_a_horizon_counts_once(self):
+        # Test minimum 20: drug_a alone, 2 pairs at horizon 1 and 1 at horizon 2, on both contrasts.
+        self.assertEqual(self.row(20, 1), (1, 1, 2))
+        self.assertEqual(self.row(20, 2), (1, 1, 1))
+        self.assertEqual(self.row(20, 1, "stale-same-size"), (1, 1, 2))
+
+    def test_two_datasets_of_one_species_count_one_species(self):
+        # Test minimum 15: drug_a and drug_b, one species, 2 pairs each at horizon 1 and 1 each at horizon 2.
+        self.assertEqual(self.row(15, 1), (2, 1, 4))
+        self.assertEqual(self.row(10, 2), (2, 1, 2))
+
+
 def entry(shares, minimum, datasets, species):
     return {"shares": shares, "minimum": minimum, "datasets": datasets, "species": species}
 
@@ -331,47 +379,123 @@ class Clocks(unittest.TestCase):
                 self.assertNotIn("syn-c-003", members)
 
 
+CHECK_HEAD = "dataset\tspecies\tantibiotic\tcohort\tcohort_resistant\tcut_day\tshare_public_by_cut\n"
+
+
+def check_world(base, undated=()):
+    """24 made-up datasets of one species in the 14 Nov record's shape. Genome i is public on 2020-01-(i + 1);
+    syn-k-009 is out of the matrix; dataset k labels genomes 0 to 7 + k. Genomes named in undated have no day.
+    Returns (paths, {dataset: the cut day at 60%, worked out here}, {dataset: cohort})."""
+    genomes = [{"id": f"syn-k-{i:03d}", "slug": "check_species",
+                "day": None if i in undated else f"2020-01-{i + 1:02d}T10:00:00Z", "year": 2020, "study": None,
+                "digest": f"syn-digest-{i}", "in_matrix": i != 9} for i in range(31)]
+    datasets, cuts, cohorts = [], {}, {}
+    for k in range(24):
+        name = f"check_species__drug_{k:02d}"
+        labelled = list(range(8 + k))
+        datasets.append({"id": name, "species_slug": "check_species", "antibiotic": f"drug_{k:02d}",
+                         "labels": {genomes[i]["id"]: "RS"[i % 2] for i in labelled}})
+        cohort = [i for i in labelled if i != 9]
+        days = sorted(i + 1 for i in cohort if i not in undated)
+        # The place ceil(0.6 x n) of the n dated genomes, in whole numbers.
+        cuts[name] = f"2020-01-{days[-(-6 * len(days) // 10) - 1]:02d}"
+        cohorts[name] = len(cohort)
+    return fx.write_custom(base, genomes, datasets), cuts, cohorts
+
+
 class Check60(unittest.TestCase):
-    """A made-up dataset table in the 14 Nov record's columns, one cut day right and one wrong."""
+    """A made-up dataset table of 24 rows in the 14 Nov record's columns, right, and broken one way at a time."""
 
     @classmethod
     def setUpClass(cls):
         cls.tmp = Path(tempfile.mkdtemp(prefix="stagger-check-"))
-        genomes = [{"id": f"syn-k-{i:03d}", "slug": "check_species", "day": f"2020-01-{i + 1:02d}T10:00:00Z",
-                    "year": 2020, "study": None, "digest": f"syn-digest-{i}", "in_matrix": i != 9} for i in range(12)]
-        a = {g["id"]: "RS"[i % 2] for i, g in enumerate(genomes)}
-        b = {g["id"]: "R" for g in genomes[:7]}
-        cls.paths = fx.write_custom(cls.tmp / "w", genomes, [
-            {"id": "check_species__drug_a", "species_slug": "check_species", "antibiotic": "drug_a", "labels": a},
-            {"id": "check_species__drug_b", "species_slug": "check_species", "antibiotic": "drug_b", "labels": b}])
+        cls.paths, cls.cuts, cls.cohorts = check_world(cls.tmp / "w")
+        cls.names = sorted(cls.cuts)
 
     @classmethod
     def tearDownClass(cls):
         shutil.rmtree(cls.tmp)
 
-    def table(self, name, day_a, day_b):
-        head = "dataset\tspecies\tantibiotic\tcohort\tcohort_resistant\tcut_day\tshare_public_by_cut\n"
+    def table(self, name, names=None, cuts=None):
+        """The table of the given datasets in order, each with its cut day here or as given in cuts."""
         path = self.tmp / name
-        path.write_text(head + f"check_species__drug_a\tcheck_species\tdrug_a\t11\t6\t{day_a}\t0.6364\n"
-                               f"check_species__drug_b\tcheck_species\tdrug_b\t7\t7\t{day_b}\t0.7143\n")
+        rows = "".join(f"{n}\tcheck_species\t{n.split('__')[1]}\t{self.cohorts.get(n, 9)}\t1\t"
+                       f"{(cuts or {}).get(n, self.cuts.get(n, '2020-01-05'))}\t0.6\n"
+                       for n in (self.names if names is None else names))
+        path.write_text(CHECK_HEAD + rows)
         return path
 
+    def run_check(self, table, out, paths=None):
+        return fx.run(sd, "check60", *(paths or self.paths), table, self.tmp / out)
+
+    def stopped(self, table, message):
+        code, text, err = self.run_check(table, table.stem + "-out")
+        self.assertEqual((code, text), (1, ""))
+        self.assertEqual(err, f"stagger_design: stopped: {message}\n")
+        # The stop names no cut day, and nothing is written.
+        self.assertNotIn("2020-", err)
+        self.assertFalse((self.tmp / (table.stem + "-out")).exists())
+
     def test_the_cut_days_of_the_table(self):
-        # drug_a: 11 genomes (syn-k-009 is out of the matrix), ceil(6.6) = 7: the 7th day, 2020-01-07.
-        # drug_b: 7 genomes, ceil(4.2) = 5: 2020-01-05.
-        out = self.tmp / "right"
-        code, text, _ = fx.run(sd, "check60", *self.paths, self.table("right.tsv", "2020-01-07", "2020-01-05"), out)
+        # check_species__drug_00: genomes 0 to 7, 8 dated, ceil(4.8) = 5: the 5th day, 2020-01-05.
+        self.assertEqual(self.cuts["check_species__drug_00"], "2020-01-05")
+        # check_species__drug_23: genomes 0 to 30 less syn-k-009, 30 dated, ceil(18) = 18: day 19, 2020-01-19.
+        self.assertEqual(self.cuts["check_species__drug_23"], "2020-01-19")
+        code, text, _ = self.run_check(self.table("right.tsv"), "right")
         self.assertEqual(code, 0)
-        self.assertIn("check60: 2 of 2 cut days are the record's", text)
-        rows = (out / "check60.tsv").read_text().splitlines()
-        self.assertEqual(rows[1].split("\t"), ["check_species__drug_a", "11", "11", "0", "2020-01-07", "2020-01-07",
-                                               "0.6364", "0.6364", "1"])
+        self.assertIn("check60: 24 of 24 cut days are the record's", text)
+        rows = (self.tmp / "right" / "check60.tsv").read_text().splitlines()
+        self.assertEqual(len(rows), 25)
+        self.assertEqual(rows[24].split("\t")[:6], ["check_species__drug_23", "30", "30", "0", "2020-01-19",
+                                                    "2020-01-19"])
 
     def test_a_cut_day_other_than_the_tables(self):
-        out = self.tmp / "wrong"
-        code, text, _ = fx.run(sd, "check60", *self.paths, self.table("wrong.tsv", "2020-01-07", "2020-01-06"), out)
+        code, text, _ = self.run_check(self.table("wrong.tsv", cuts={"check_species__drug_05": "2020-01-06"}),
+                                       "wrong")
         self.assertEqual(code, 1)
-        self.assertIn("check60: 1 of 2 cut days are the record's", text)
+        self.assertIn("check60: 23 of 24 cut days are the record's", text)
+
+    def test_a_table_of_23_datasets_stops(self):
+        need = "the 60% check needs 24 dataset rows, each a different dataset of the metadata; the reference table has"
+        self.stopped(self.table("short.tsv", self.names[:11] + self.names[12:]), need + " 23")
+        self.stopped(self.table("one.tsv", self.names[:1]), need + " 1")
+        self.stopped(self.table("more.tsv", self.names + self.names[:1]), need + " 25")
+
+    def test_the_count_is_24_whatever_the_table(self):
+        self.assertEqual(sd.CHECK_DATASETS, 24)
+        source = fx.DESIGN.read_text(encoding="utf-8")
+        self.assertEqual(source.count("CHECK_DATASETS = "), 1)
+        self.assertNotIn("environ", source)
+        # A right table of 2 rows passes when a test passes its own count, and stops the script, which takes 24.
+        two = self.table("two.tsv", self.names[:2])
+        rows, ok = sd.check60(sd.load_inputs(*self.paths), two, 2)
+        self.assertEqual((len(rows), ok), (2, True))
+        self.stopped(two, "the 60% check needs 24 dataset rows, each a different dataset of the metadata; the "
+                          "reference table has 2")
+
+    def test_one_dataset_twice_and_one_left_out_stops(self):
+        self.stopped(self.table("twice.tsv", self.names[:23] + self.names[:1]),
+                     "the 60% check needs 24 different datasets; the reference table's 24 rows name 23, and these "
+                     "more than once: check_species__drug_00")
+
+    def test_a_dataset_the_metadata_lacks_stops(self):
+        self.stopped(self.table("lacks.tsv", self.names[:23] + ["check_species__drug_99"]),
+                     "the 60% check needs 24 datasets of the metadata; the metadata lacks 1 of the reference table's "
+                     "datasets: check_species__drug_99")
+
+    def test_an_undated_cohort_genome_fails_its_dataset(self):
+        # syn-k-030 is labelled in check_species__drug_23 alone. Undated, it leaves 29 dated genomes there:
+        # ceil(17.4) = 18, the 18th of days 1 to 9 and 11 to 30, day 19, the table's. The cut day agrees, and the
+        # dataset still fails, as the 14 Nov rule needs every cohort genome dated.
+        paths, cuts, _ = check_world(self.tmp / "w-undated", undated=(30,))
+        self.assertEqual(cuts["check_species__drug_23"], "2020-01-19")
+        code, text, _ = self.run_check(self.table("undated.tsv"), "undated", paths)
+        self.assertEqual(code, 1)
+        self.assertIn("check60: 23 of 24 cut days are the record's", text)
+        rows = [r.split("\t") for r in (self.tmp / "undated" / "check60.tsv").read_text().splitlines()]
+        self.assertEqual(rows[24][:6] + rows[24][-1:], ["check_species__drug_23", "30", "30", "1", "2020-01-19",
+                                                        "2020-01-19", "0"])
+        self.assertEqual({r[-1] for r in rows[1:24]}, {"1"})
 
 
 class BarredPaths(unittest.TestCase):

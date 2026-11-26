@@ -1,6 +1,7 @@
 """scripts/time-split/stagger_analyze.py on SYNTHETIC designs and result files: each stop, the mean over a dataset's
-pairs, the interval's two ends and its seed, each reading and verdict, the second reading's three cases, the scan of
-what it writes, the predictions and whether a verdict stands."""
+pairs, the median over datasets, the interval's two ends and its seed, each reading and verdict, the second
+reading's three cases, the list files, stale same size against recent(j), the scan of what it writes, the
+predictions and their outcome, and whether a verdict stands, as stands.tsv and predictions.tsv both give it."""
 
 import json
 import math
@@ -25,8 +26,9 @@ def samples_of(tag, r, s):
 
 def write_case(base, datasets, clock="public-day", minimum=10, lists=None):
     """A hand design and its result files. Each dataset: id, species, tests {window: samples}, scores
-    {(window, origin): one score list for every learner, or {learner: scores}}, pairs [(older, window)].
-    Returns (design dir, result dir, list dir or None)."""
+    {(window, origin): one score list for every learner, or {learner: scores}}, pairs [(older, window)]; and, for
+    stale same size, recent {(window, origin of 2 or more): scores} and same_size_pairs [(older, window)], with
+    recent(1) in the file of all(1), as the design writes it. Returns (design dir, result dir, list dir or None)."""
     base = Path(base)
     design_dir, results = base / "design", base / "results"
     design_dir.mkdir(parents=True)
@@ -51,8 +53,22 @@ def write_case(base, datasets, clock="public-day", minimum=10, lists=None):
                 (results / fit["file"]).write_text(json.dumps(fx.result(d["id"], scheme, fit["sha256"], samples,
                                                                         by_learner, fit["train"], 30)))
                 w["fits"].append(fit)
+            recent = {k: s for (jj, k), s in d.get("recent", {}).items() if jj == j}
+            if recent:
+                shared = next(f for f in w["fits"] if f["origin"] == 1)
+                w["fits"].append({**shared, "arm": "recent", "same_file_as": "all"})
+            for k, scores in sorted(recent.items()):
+                scheme = f"stagger-{clock}-w{j}-o{k}-recent"
+                fit = {"origin": k, "arm": "recent", "train": 50 + k, "train_resistant": 25, "scheme": scheme,
+                       "file": f"{d['id']}.{scheme}.json", "sha256": fx.sha(d["id"] + scheme)}
+                (results / fit["file"]).write_text(json.dumps(fx.result(d["id"], scheme, fit["sha256"], samples,
+                                                                        {l: scores for l in fx.LEARNERS},
+                                                                        fit["train"], 25)))
+                w["fits"].append(fit)
             row["windows"].append(w)
         row["pairs"]["stale-all"] = [{"older": k, "fresh": j, "window": j, "horizon": j - k} for k, j in d["pairs"]]
+        row["pairs"]["stale-same-size"] = [{"older": k, "fresh": j, "window": j, "horizon": j - k}
+                                           for k, j in d.get("same_size_pairs", [])]
         design["datasets"].append(row)
     (design_dir / "design.json").write_text(json.dumps(design))
     list_dir = None
@@ -91,8 +107,8 @@ class Case(unittest.TestCase):
                                       "scores": {(2, 1): scores_for(samples, missed), (2, 2): scores_for(samples)},
                                       "pairs": [(1, 2)]}], lists=lists), samples, missed
 
-    def run_it(self, design_dir, results, list_dir=None):
-        out = self.tmp / "out"
+    def run_it(self, design_dir, results, list_dir=None, out="out"):
+        out = self.tmp / out
         argv = [design_dir, results, out] + (["--listed", list_dir] if list_dir else [])
         code, text, err = fx.run(an, *argv)
         return code, text, err, out
@@ -243,6 +259,12 @@ class Interval(unittest.TestCase):
             self.assertEqual((row["learner"], row["measure"]), ("scm", m))
             self.assertEqual((row["low"], row["high"]), (f"{draws[250]:.6f}", f"{draws[9749]:.6f}"))
 
+    def test_the_point_is_the_median_over_datasets(self):
+        # Three datasets in two species: the median of 0.0, 0.1 and 0.5 is 0.1; their mean is 0.2, and the median
+        # of the two species' medians is 0.275.
+        point = an.interval({"a": [0.0, 0.1], "b": [0.5]}, random.Random(an.SEED))[0]
+        self.assertEqual(point, 0.1)
+
 
 class DescriptiveClock(unittest.TestCase):
     def test_a_clock_the_rule_marks_descriptive_gives_descriptive_only(self):
@@ -323,6 +345,14 @@ class SecondCase(unittest.TestCase):
         self.assertEqual(an.second_case(self.samples, self.listed(5, 5), 16), (None, an.UNDER))
         self.assertEqual(an.second_case(self.samples, self.listed(5, 5), 15)[1], "")
 
+    def test_the_resistant_class_alone_falls_under_the_minimum_once_out(self):
+        # 20 R and 30 S, 5 of each listed: 15 R and 25 S are left, under a minimum of 16 in R alone.
+        samples = samples_of("u", 20, 30)
+        listed = set([g for g, t in samples if t][:5] + [g for g, t in samples if not t][:5])
+        self.assertEqual(an.second_case(samples, listed, 16), (None, an.UNDER))
+        keep, why = an.second_case(samples, listed, 15)
+        self.assertEqual((len(keep), why), (40, ""))
+
 
 class SecondReading(Case):
     def test_the_listed_genomes_leave_both_fits(self):
@@ -336,7 +366,7 @@ class SecondReading(Case):
         # First reading: older recall 15 of 20, fresh 20 of 20. Second: 15 of 15 and 15 of 15.
         self.assertEqual((rows["first", "rf"]["d_recall"], rows["first", "rf"]["test"]), ("-0.250000", "40"))
         self.assertEqual((rows["second", "rf"]["d_recall"], rows["second", "rf"]["test"]), ("0.000000", "30"))
-        self.assertIn("lists: 1 files, 1 of them datasets of the design", text)
+        self.assertIn("lists: 1 list files read; they name 1 datasets of the design\n", text)
 
     def test_a_short_list_leaves_the_pair_out_with_no_figure(self):
         a, b = samples_of("a", 12, 12), samples_of("b", 12, 12)
@@ -357,6 +387,56 @@ class SecondReading(Case):
         second = [r for r in table(out / "readings.tsv") if r["reading"] == "second"]
         self.assertEqual({r["datasets"] for r in second}, {"1"})
         self.assertEqual({r["datasets"] for r in table(out / "readings.tsv") if r["reading"] == "first"}, {"2"})
+
+
+class Lists(Case):
+    a, b = samples_of("a", 12, 12), samples_of("b", 12, 12)
+
+    def two_datasets(self, lists):
+        datasets = [{"id": f"{n}_species__drug", "species": f"{n}_species", "tests": {2: s},
+                     "scores": {(2, 1): scores_for(s), (2, 2): scores_for(s)}, "pairs": [(1, 2)]}
+                    for n, s in (("one", self.a), ("two", self.b))]
+        return write_case(self.tmp, datasets, lists=lists)
+
+    def test_a_list_file_that_names_no_dataset_of_the_design_stops(self):
+        design_dir, results, list_dir = self.two_datasets({"one_species__drug": [self.a[0][0]],
+                                                           "three_species__drug": [self.a[1][0]],
+                                                           "two_species__drug": []})
+        code, text, err, out = self.run_it(design_dir, results, list_dir)
+        self.assertEqual((code, text), (1, ""))
+        self.assertEqual(err, "stagger_analyze: stopped: 1 of 3 list files name no dataset of the design: "
+                              "three_species__drug.txt\n")
+        self.assertFalse(out.exists())
+
+    def test_it_prints_the_files_and_the_datasets_they_name(self):
+        # Two list files naming 3 genomes and none: 2 files, 2 datasets, and no count of genomes.
+        listed = [self.a[0][0], self.a[1][0], self.a[12][0]]
+        design_dir, results, list_dir = self.two_datasets({"one_species__drug": listed, "two_species__drug": []})
+        code, text, err, _ = self.run_it(design_dir, results, list_dir)
+        self.assertEqual(code, 0, err)
+        self.assertEqual([x for x in text.splitlines() if x.startswith("lists")],
+                         ["lists: 2 list files read; they name 2 datasets of the design"])
+        self.assertNotIn("genome", text)
+
+
+class SameSize(Case):
+    def test_stale_same_size_scores_against_recent_j(self):
+        # Window 2, 20 R and 20 S. all(1), which is recent(1), misses 5 R; all(2) misses none; recent(2) misses
+        # the same 5 R. Stale all reads 15 of 20 against 20 of 20, stale same size 15 of 20 against 15 of 20.
+        samples = samples_of("z", 20, 20)
+        missed = {g for g, t in samples if t and g.endswith(("r00", "r01", "r02", "r03", "r04"))}
+        write_case(self.tmp, [{"id": "size_species__drug", "species": "size_species", "tests": {2: samples},
+                               "scores": {(2, 1): scores_for(samples, missed), (2, 2): scores_for(samples)},
+                               "recent": {(2, 2): scores_for(samples, missed)},
+                               "pairs": [(1, 2)], "same_size_pairs": [(1, 2)]}])
+        code, _, err, out = self.run_it(self.tmp / "design", self.tmp / "results")
+        self.assertEqual(code, 0, err)
+        rows = {(r["contrast"], r["learner"]): r for r in table(out / "contrasts.tsv")}
+        self.assertEqual({rows["stale-same-size", l]["d_recall"] for l in fx.LEARNERS}, {"0.000000"})
+        self.assertEqual({rows["stale-all", l]["d_recall"] for l in fx.LEARNERS}, {"-0.250000"})
+        fresh = {r["recall"] for r in table(out / "arms.tsv") if r["contrast"] == "stale-same-size"
+                 and r["arm"] == "fresh"}
+        self.assertEqual(fresh, {"0.750000"})
 
 
 class Scan(unittest.TestCase):
@@ -380,48 +460,112 @@ def reading_world(verdicts, reads):
     return verdicts, rules, reads
 
 
+# The horizons each clock has, as build() gives them: P3 is read at every one of the collection-year clock.
+TWO = {"public-day": [1], "collection-year": [1, 2]}
+THREE = {"public-day": [1], "collection-year": [1, 2, 3]}
+
+
 class Predictions(unittest.TestCase):
     def reads(self, clock, contrast, values):
         return {(clock, contrast, 1, l): v for l, v in zip(fx.LEARNERS, values)}
+
+    def p3(self, changes=(), drop=()):
+        """Collection-year verdicts at horizons 1 to 3 on both contrasts, each not shown, but for changes
+        ((contrast, horizon, verdict), ...) and with the (contrast, horizon) of drop given no dataset."""
+        v = {("collection-year", c, k): "not shown" for c in sd.CONTRASTS for k in THREE["collection-year"]}
+        for c, k, x in changes:
+            v[("collection-year", c, k)] = x
+        for c, k in drop:
+            del v[("collection-year", c, k)]
+        return an.prediction_met("P3", v, {}, {}, THREE)
 
     def test_p1(self):
         ns, w = ("not shown", "not shown"), ("worse", "not shown")
         v = {("public-day", "stale-same-size", 1): "not shown"}
         self.assertTrue(an.prediction_met("P1", *reading_world(v, self.reads("public-day", "stale-same-size",
-                                                                             [ns, ns, ns, ns, w]))))
+                                                                             [ns, ns, ns, ns, w])), TWO))
         self.assertFalse(an.prediction_met("P1", *reading_world(v, self.reads("public-day", "stale-same-size",
-                                                                              [ns, ns, ns, w, w]))))
+                                                                              [ns, ns, ns, w, w])), TWO))
         d = {("public-day", "stale-same-size", 1): "descriptive only"}
         self.assertFalse(an.prediction_met("P1", *reading_world(d, self.reads("public-day", "stale-same-size",
-                                                                              [ns] * 5))))
+                                                                              [ns] * 5)), TWO))
 
     def test_p2(self):
         ll, rc, ns = ("not shown", "worse"), ("worse", "not shown"), ("not shown", "not shown")
         v = {("public-day", "stale-all", 1): "cost shown"}
         self.assertTrue(an.prediction_met("P2", *reading_world(v, self.reads("public-day", "stale-all",
-                                                                             [ll, ll, ll, ns, ns]))))
+                                                                             [ll, ll, ll, ns, ns])), TWO))
         # Three costs, one through recall alone: two through log loss.
         self.assertFalse(an.prediction_met("P2", *reading_world(v, self.reads("public-day", "stale-all",
-                                                                              [ll, ll, rc, ns, ns]))))
+                                                                              [ll, ll, rc, ns, ns])), TWO))
 
-    def test_p3(self):
-        both = {("collection-year", c, 1): "not shown" for c in sd.CONTRASTS}
-        self.assertTrue(an.prediction_met("P3", both, {}, {}))
-        for other in ("descriptive only", "mixed", "cost shown"):
-            v = dict(both)
-            v[("collection-year", "stale-all", 1)] = other
-            self.assertFalse(an.prediction_met("P3", v, {}, {}), other)
-        self.assertFalse(an.prediction_met("P3", {("collection-year", "stale-all", 1): "not shown"}, {}, {}))
+    def test_p3_not_shown_on_both_contrasts_at_every_horizon(self):
+        self.assertTrue(self.p3())
+        self.assertEqual(an.read_at("P3", THREE), [(c, k) for c in sd.CONTRASTS for k in (1, 2, 3)])
 
-    def test_met_only_when_every_reading_made_meets_it(self):
-        v = {(r, "collection-year", c, 1): "not shown" for r in an.READINGS for c in sd.CONTRASTS}
-        rows = {r["prediction"]: r for r in an.predictions(v, {}, {}, an.READINGS)}
-        self.assertEqual((rows["P3"]["first"], rows["P3"]["second"], rows["P3"]["outcome"]), ("met", "met", "met"))
-        v[("second", "collection-year", "stale-all", 1)] = "cost shown"
-        rows = {r["prediction"]: r for r in an.predictions(v, {}, {}, an.READINGS)}
-        self.assertEqual((rows["P3"]["first"], rows["P3"]["second"], rows["P3"]["outcome"]),
-                         ("met", "not met", "not met"))
-        self.assertEqual(len(rows), 3)
+    def test_p3_needs_a_verdict_at_horizon_1_on_both_contrasts(self):
+        for c in sd.CONTRASTS:
+            self.assertFalse(self.p3(changes=[(c, 1, "descriptive only")]), c)
+            self.assertFalse(self.p3(drop=[(c, 1)]), c)
+
+    def test_p3_a_cost_at_a_later_horizon_is_not_met(self):
+        for c in sd.CONTRASTS:
+            for k in (2, 3):
+                self.assertFalse(self.p3(changes=[(c, k, "cost shown")]), (c, k))
+
+    def test_p3_a_mixed_verdict_at_a_later_horizon_is_not_met(self):
+        for c in sd.CONTRASTS:
+            for k in (1, 2, 3):
+                self.assertFalse(self.p3(changes=[(c, k, "mixed")]), (c, k))
+
+    def test_p3_a_descriptive_later_horizon_gives_no_verdict(self):
+        # A later horizon with no verdict, descriptive only or with no dataset, leaves P3 met on the rest.
+        self.assertTrue(self.p3(changes=[("stale-same-size", 2, "descriptive only")]))
+        self.assertTrue(self.p3(changes=[("stale-all", 3, "descriptive only")], drop=[("stale-same-size", 3)]))
+        self.assertFalse(self.p3(changes=[("stale-same-size", 2, "descriptive only"), ("stale-all", 3, "mixed")]))
+
+    def test_the_table_names_each_horizon_with_no_verdict(self):
+        v = {("first", "collection-year", c, 1): "not shown" for c in sd.CONTRASTS}
+        v[("first", "collection-year", "stale-all", 2)] = "descriptive only"
+        v[("first", "collection-year", "stale-same-size", 2)] = "not shown"
+        v[("first", "collection-year", "stale-all", 3)] = "not shown"
+        rows = {r["prediction"]: r for r in an.predictions(v, {}, {}, ("first",), THREE)}
+        self.assertEqual(rows["P3"]["no_verdict"], "first stale-all horizon 2; first stale-same-size horizon 3")
+        self.assertEqual(rows["P3"]["first"], "met")
+        self.assertEqual(rows["P1"]["no_verdict"], "first stale-same-size horizon 1")
+        self.assertEqual(rows["P2"]["no_verdict"], "first stale-all horizon 1")
+        v = {(r, "collection-year", c, k): "not shown" for r in an.READINGS for c in sd.CONTRASTS for k in (1, 2)}
+        rows = {r["prediction"]: r for r in an.predictions(v, {}, {}, an.READINGS, TWO)}
+        self.assertEqual(rows["P3"]["no_verdict"], "none")
+        self.assertEqual(an.PREDICTION_COLUMNS[-1], "no_verdict")
+
+    def outcomes(self, first, second=None):
+        """P3's row with the first reading met or not, and the second met, not met or not made (None)."""
+        v = {}
+        for reading, met in (("first", first), ("second", second)):
+            if met is not None:
+                for c in sd.CONTRASTS:
+                    for k in (1, 2):
+                        v[(reading, "collection-year", c, k)] = "not shown" if met else "cost shown"
+        made = an.READINGS if second is not None else an.READINGS[:1]
+        row = {r["prediction"]: r for r in an.predictions(v, {}, {}, made, TWO)}["P3"]
+        return row["first"], row["second"], row["outcome"]
+
+    def test_met_only_when_both_readings_are_made_and_both_meet_it(self):
+        self.assertEqual(self.outcomes(True, True), ("met", "met", "met"))
+        self.assertNotEqual(self.outcomes(True)[2], "met")
+        self.assertEqual(an.outcome({"first": "met", "second": "met"}), "met")
+        self.assertNotEqual(an.outcome({"first": "met"}), "met")
+
+    def test_not_met_when_a_reading_made_fails_it(self):
+        self.assertEqual(self.outcomes(True, False), ("met", "not met", "not met"))
+        self.assertEqual(self.outcomes(False, True), ("not met", "met", "not met"))
+        self.assertEqual(self.outcomes(False, False), ("not met", "not met", "not met"))
+        self.assertEqual(self.outcomes(False), ("not met", "not read", "not met"))
+
+    def test_otherwise_not_read(self):
+        self.assertEqual(self.outcomes(True), ("met", "not read", "not read"))
+        self.assertEqual(an.outcome({"first": "met"}), "not read")
 
 
 class Stands(unittest.TestCase):
@@ -441,6 +585,52 @@ class Stands(unittest.TestCase):
         v = {("first", "public-day", "stale-all", 1): "not shown"}
         rows = an.stands(self.design, v, an.READINGS[:1])
         self.assertEqual([(r["second"], r["stands"]) for r in rows], [("not read", "second reading not made")])
+
+
+class Agreement(unittest.TestCase):
+    """12 datasets in 3 species whose older fit scores each resistant genome 0.6 and the fresh fit 0.9: log loss
+    worse for every learner, recall not shown, so stale all at horizon 1 shows a cost and P2's first reading meets
+    it. Run without lists and with one empty list file."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = Path(tempfile.mkdtemp(prefix="stagger-agree-"))
+        datasets = []
+        for i in range(12):
+            s = samples_of(f"g{i:02d}", 10, 10)
+            older = [0.6 if t else 0.1 for _, t in s]
+            datasets.append({"id": f"sp{i % 3}_species__drug_{i:02d}", "species": f"sp{i % 3}_species",
+                             "tests": {2: s}, "scores": {(2, 1): older, (2, 2): scores_for(s)}, "pairs": [(1, 2)]})
+        design_dir, results, list_dir = write_case(cls.tmp, datasets, lists={datasets[0]["id"]: []})
+        cls.got = {}
+        for name, extra in (("unlisted", []), ("listed", ["--listed", list_dir])):
+            code, text, err = fx.run(an, design_dir, results, cls.tmp / name, *extra)
+            assert code == 0, err
+            cls.got[name] = ({r["prediction"]: r for r in table(cls.tmp / name / "predictions.tsv")},
+                             {(r["clock"], r["contrast"], r["horizon"]): r for r in
+                              table(cls.tmp / name / "stands.tsv")}, text)
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.tmp)
+
+    def test_without_lists_the_prediction_is_not_read_and_no_verdict_stands(self):
+        predictions, stands, text = self.got["unlisted"]
+        p2, row = predictions["P2"], stands[("public-day", "stale-all", "1")]
+        self.assertEqual((row["first"], row["second"], row["stands"]),
+                         ("cost shown", "not read", "second reading not made"))
+        self.assertEqual((p2["first"], p2["second"], p2["outcome"]), ("met", "not read", "not read"))
+        self.assertIn("P2 (" + p2["rule"] + "): not read\n", text)
+        # P1 reads stale same size, which has no dataset: no verdict, so the first reading does not meet it.
+        p1 = predictions["P1"]
+        self.assertEqual((p1["first"], p1["outcome"], p1["no_verdict"]),
+                         ("not met", "not met", "first stale-same-size horizon 1"))
+
+    def test_with_both_readings_the_prediction_and_the_verdict_agree(self):
+        predictions, stands, _ = self.got["listed"]
+        p2, row = predictions["P2"], stands[("public-day", "stale-all", "1")]
+        self.assertEqual((row["first"], row["second"], row["stands"]), ("cost shown", "cost shown", "cost shown"))
+        self.assertEqual((p2["first"], p2["second"], p2["outcome"]), ("met", "met", "met"))
 
 
 class MadeUpWorld(unittest.TestCase):
@@ -477,6 +667,14 @@ class MadeUpWorld(unittest.TestCase):
         names = sorted(p.name for p in self.out.iterdir())
         self.assertEqual(names, ["arms.tsv", "contrasts.tsv", "lacking.tsv", "predictions.tsv", "readings.tsv",
                                  "rule.tsv", "stands.tsv", "verdicts.tsv"])
+
+    def test_readings_count_the_datasets_with_a_difference_of_zero(self):
+        head = (self.out / "readings.tsv").read_text().splitlines()[0].split("\t")
+        self.assertEqual(head[-3:], ["datasets_worse", "datasets_better", "datasets_zero"])
+        self.assertNotIn("equal", " ".join(head))
+        for r in table(self.out / "readings.tsv"):
+            self.assertEqual(int(r["datasets_worse"]) + int(r["datasets_better"]) + int(r["datasets_zero"]),
+                             int(r["datasets"]))
 
     def test_no_genome_id_and_no_study_in_what_it_writes(self):
         for p in self.out.iterdir():
