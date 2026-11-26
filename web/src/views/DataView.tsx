@@ -469,6 +469,7 @@ const LabelsSection = ({ manifest }: { manifest: Manifest }) => {
         regression are scored on the same genomes. A genome and antibiotic pair with both an R and an S call is a conflict and gets no label; a pair with only intermediate calls is never
         an R or S label. A pair called susceptible and intermediate is labeled susceptible, and a pair called intermediate and resistant is labeled resistant.
       </Detail>
+      <LabelRuleTable />
       <ClindamycinMethods manifest={manifest} />
       <Detail>
         A pair with an MIC but no reported call gets a label from an inferred breakpoint during curation, and no model trains or is scored on that label. A dataset report counts the labels
@@ -492,6 +493,59 @@ const LabelsSection = ({ manifest }: { manifest: Manifest }) => {
     </DataSection>
   );
 };
+
+interface LabelRuleRow {
+  key: string;
+  calls: string;
+  label: string;
+  used: string;
+  kept: boolean;
+}
+
+/** Consolidation of reported lab calls on one genome-and-drug pair under the
+ *  release rule (`r-or-s-wins`, `src/curate.rs:77-89`, `src/curate.rs:753-793`). */
+const LABEL_RULES: readonly LabelRuleRow[] = [
+  { key: "s", calls: "S only", label: "Susceptible (S)", used: "Yes", kept: true },
+  { key: "r", calls: "R only", label: "Resistant (R)", used: "Yes", kept: true },
+  { key: "s-i", calls: "S and I", label: "Susceptible (S)", used: "Yes", kept: true },
+  { key: "i-r", calls: "I and R", label: "Resistant (R)", used: "Yes", kept: true },
+  { key: "i", calls: "I only", label: "Intermediate (I); no R or S label", used: "No", kept: false },
+  { key: "conflict", calls: "R and S (with or without I)", label: "Conflict; no label", used: "No", kept: false },
+  { key: "mic-only", calls: "No reported call, MIC only", label: "Inferred R or S at empirical breakpoint, else none", used: "No (curated records only)", kept: false },
+];
+
+const LabelRuleTable = () => (
+  <div id="m-label-rule" className="max-w-[44rem]">
+    <ScrollFrame label="Label rule">
+      <table className="w-full border-collapse text-control">
+        <thead>
+          <tr className="border-b border-hair">
+            <th scope="col" className="py-2 pl-0 pr-3 text-left text-tiny font-medium text-blue">
+              Reported calls on pair
+            </th>
+            <th scope="col" className="px-3 py-2 text-left text-tiny font-medium text-blue">
+              Label
+            </th>
+            <th scope="col" className="py-2 pl-3 pr-0 text-left text-tiny font-medium text-blue">
+              Used by models
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {LABEL_RULES.map((row) => (
+            <tr key={row.key} data-label-rule-row={row.key} className="border-b border-hair">
+              <th scope="row" className={`py-1.5 pl-0 pr-3 text-left align-top font-medium ${row.kept ? "text-ink" : "text-muted-text"}`}>
+                {row.calls}
+              </th>
+              <td className={`px-3 py-1.5 align-top ${row.kept ? "text-ink" : "text-muted-text"}`}>{row.label}</td>
+              <td className={`py-1.5 pl-3 pr-0 align-top ${row.kept ? "font-medium text-ink" : "text-muted-text"}`}>{row.used}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </ScrollFrame>
+  </div>
+);
 
 // ---- contents strip --------------------------------------------------------------------
 
