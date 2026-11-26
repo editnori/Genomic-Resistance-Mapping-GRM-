@@ -128,6 +128,7 @@ describe("MIC-inferred labels", () => {
     };
     const rev14Path = curationPath(rev14Like);
     expect(rev14Path.map((s) => s.count)).toEqual([1_285_111, 123_503, 118_992, 1_063_628, 611_826, 277, 23_757, 274]);
+    expect(rev14Path.map((s) => s.unitMax !== null)).toEqual([false, false, true, false, true, false, true, true]);
     const rev14Html = renderToStaticMarkup(createElement(DataView, { manifest: rev14Like }));
     const pathBlock = rev14Html.slice(rev14Html.indexOf('id="m-path"'), rev14Html.indexOf('id="m-genomes"'));
     expect(pathBlock).toContain("4,491 genomes fail a check and 20 have no metadata");
@@ -138,6 +139,8 @@ describe("MIC-inferred labels", () => {
     expect(pathBlock).toContain("8 of 23 species sit at 2,000");
     expect(pathBlock).toContain("3 of 277 datasets have one class under 25 among the genomes kept");
     expect(pathBlock).not.toContain("113,547");
+    expect(rev14Html).toContain("The three name checks (9,756 records) read the records of every genome, passing or not;");
+    expect(rev14Html).not.toContain("before QC");
     expect(rev14Html).not.toContain("80,967");
     expect(rev14Html).not.toContain("57,206");
     expect(rev14Html).not.toContain("1,064,823");

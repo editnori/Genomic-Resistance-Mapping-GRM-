@@ -157,7 +157,7 @@ export const curationPath = (manifest: Manifest): readonly PathStep[] => {
       step: "Lab records",
       unit: "Lab records",
       count: f.records,
-      unitMax: nests(f.records, f.records),
+      unitMax: null,
       leftOut: "",
     },
     {
@@ -165,7 +165,7 @@ export const curationPath = (manifest: Manifest): readonly PathStep[] => {
       step: "Genomes those records cover",
       unit: "Genomes",
       count: f.genomes_with_records,
-      unitMax: nests(f.genomes_with_records, f.genomes_with_records),
+      unitMax: null,
       leftOut: "",
     },
     {
@@ -181,7 +181,7 @@ export const curationPath = (manifest: Manifest): readonly PathStep[] => {
       step: "Genome-and-drug pairs on those genomes",
       unit: "Pairs",
       count: f.pairs,
-      unitMax: nests(f.pairs, f.pairs),
+      unitMax: null,
       leftOut: `${int(nameDropped)} records on any genome name a drug class, no antibiotic, or an unresolved name; the other records on the ${int(notPassed)} ${notPassed === 1 ? "genome" : "genomes"} that did not pass are skipped with no count; ${int(f.records_no_measure)} records on passing genomes have no call and no MIC`,
     },
     {
@@ -197,7 +197,7 @@ export const curationPath = (manifest: Manifest): readonly PathStep[] => {
       step: "Datasets curated",
       unit: "Datasets",
       count: datasetsCurated,
-      unitMax: nests(datasetsCurated, datasetsCurated),
+      unitMax: null,
       leftOut:
         minWord !== null
           ? `species and drug combinations with under ${minWord} resistant or under ${minWord} susceptible genomes; the index does not count them`
@@ -297,10 +297,9 @@ const PathTable = ({ steps }: { steps: readonly PathStep[] }) => (
       </table>
     </ScrollFrame>
     <p className="type-note mt-2">
-      Counts fall in four units: lab records, genomes, pairs, and datasets. Within one unit each later count nests inside the earlier one, and each bar compares the step to
-      the first count in its unit; where left-out counts share the step&apos;s unit, they add up to the difference from the step before it. Each count of genomes describes
-      what laboratories deposited in BV-BRC; none says how common resistance is. Each species&apos; count of genomes with any label (in Species coverage below, intermediate
-      calls and MIC-inferred labels included) is not a step of this path.
+      Counts fall in four units (lab records, genomes, pairs, datasets); within one unit each later count nests inside the earlier one, and each bar compares a later step to
+      the first count in its unit. Each count of genomes describes what laboratories deposited in BV-BRC; none says how common resistance is. Each species&apos; count of
+      genomes with any label (in Species coverage below, intermediate calls and MIC-inferred labels included) is not a step of this path.
     </p>
   </div>
 );
@@ -353,8 +352,9 @@ const FunnelSection = ({ manifest }: { manifest: Manifest }) => {
             ]}
           />
           <p className="type-note mt-2">
-            Shares are of all {int(f.records)} BV-BRC records. The three name checks ({int(nameDropped)} records) run on every genome before QC; other records on the{" "}
-            {int(notPassed)} {notPassed === 1 ? "genome" : "genomes"} that did not pass are skipped with no count; no-call/no-MIC records are counted on passing genomes only.
+            Shares are of all {int(f.records)} BV-BRC records. The three name checks ({int(nameDropped)} records) read the records of every genome, passing or not; other
+            records on the {int(notPassed)} {notPassed === 1 ? "genome" : "genomes"} that did not pass are skipped with no count; no-call/no-MIC records are counted on
+            passing genomes only.
           </p>
         </div>
         <div id="m-pairs" className="xl:col-span-2">
