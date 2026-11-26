@@ -16,6 +16,7 @@ import math
 import os
 import random
 import re
+import shutil
 import sys
 import tempfile
 import unittest
@@ -82,6 +83,40 @@ AFFINE = [((Q, Q, Q, T3, Q), 1, 4), ((Q, Q, T3, Q, Q), 9, 1), ((T3, Q, Q, T3, Q)
 
 # 2 resistant of 15 per copy: 10 resistant genomes in five copies, the least a report may hold.
 TEN = [(LOW, 1, 4), (one(2), 1, 1)] + [(one(j), 0, 2) for j in (0, 1, 3, 4)]
+
+# R46: LED's training share. Every copy holds 14 resistant genomes of 27, so each fold's training share is 56 of 108.
+LED_SHARE = 56 / 108
+
+
+def share_arrays():
+    """R46: three stored folds whose shares all differ. Fold 0 holds 6 genomes, 1 resistant; fold 1 holds 6, 4
+    resistant; fold 2 holds 7, 3 resistant: 8 resistant of 19. Fold 0's training share is 7 of 13, fold 1's 4 of 13
+    and fold 2's 5 of 12; fold 0's own share is 1 of 6 and the report's 8 of 19. 7 * (1 / 13) does not round to 7 /
+    13, nor 5 * (1 / 12) to 5 / 12. The five scores are whole hundredths, none of them a share."""
+    y = [i in (0, 6, 7, 8, 9, 12, 13, 14) for i in range(19)]
+    folds = [0] * 6 + [1] * 6 + [2] * 7
+    S = [tuple(((7 * i + 13 * j) % 89 + 5) / 100 for j in range(5)) for i in range(19)]
+    return S, y, folds
+
+
+def scored_at(S, j, genomes, value):
+    """Learner j's score set to `value` on the genomes given, by index."""
+    genomes = set(genomes)
+    return [tuple(value if (k == j and i in genomes) else x for k, x in enumerate(s)) for i, s in enumerate(S)]
+
+
+def share_report(species, genomes, tag, antibiotic="drug h"):
+    """LED's report with lasso scoring the given genomes of fold 0 at LED_SHARE, that fold's training share. Genomes 1
+    and 2 are susceptible genomes of the group no learner calls; range(27) is the whole fold, as a boosted model with
+    no tree or a lasso with no weight scores it. No count of the report moves: lasso's calls and the weighted mean's
+    stay as LED's."""
+    S, y, folds = as_arrays(LED)
+    return from_arrays(species, antibiotic, scored_at(S, 4, genomes, LED_SHARE), y, folds, tag)
+
+
+def share_set():
+    """kept_set()'s six rf-led reports and, as a seventh, share_report()'s with 2 genomes at the share."""
+    return kept_set() + [share_report(SPECIES[6], (1, 2), tag=7)]
 
 
 def odd_fold(odd=2, low=(4,), drop=()):
@@ -253,6 +288,24 @@ def gate_line(out, n):
     return lines[0] if lines else ""
 
 
+def by_species(reading):
+    """The reading's reports by species: the reading sorts them by name."""
+    return {x["species"]: x for x in reading["datasets"]}
+
+
+def printed_sha256(out):
+    """The sha256 the read printed for the reading it wrote."""
+    return re.search(rf"^read: \d+ reports; wrote {re.escape(cb.READING)}, sha256 ([0-9a-f]{{64}})$", out,
+                     flags=re.M).group(1)
+
+
+def rehash(record):
+    """SHA256SUMS written again over the record's files, as write writes it, after a test edits a file by hand."""
+    with open(os.path.join(record, cb.SUMS), "w", encoding="utf-8") as f:
+        for name in cb.RECORD_FILES:
+            f.write(f"{lo.sha256(os.path.join(record, name))}  {name}\n")
+
+
 def dataset_like(species, mean, arm):
     """A row of datasets.tsv as the record writes it: `mean` and `arm` are (tp, fn, fp, tn)."""
     row = {"species": species}
@@ -302,11 +355,30 @@ class Case(unittest.TestCase):
                       reports=len(reports) if count is None else count)
 
     def read_write(self, reports=None):
+        """The read, then write given the sha256 the read printed, as the lead runs them (R46)."""
         d, (rc, out) = self.read(reports)
         self.assertEqual(rc, 0, out)
-        rc, out2 = run(cb, "write", self.reading, "--reports", d, "--out", self.record)
+        rc, out2 = self.write(d, sha256=printed_sha256(out))
         self.assertEqual(rc, 0, out2)
         return d, out + out2
+
+    def digest(self):
+        """The sha256 of the reading's bytes as they stand, after any edit a test made."""
+        with open(os.path.join(self.reading, cb.READING), "rb") as f:
+            return hashlib.sha256(f.read()).hexdigest()
+
+    def write(self, d, out=None, sha256=None):
+        """Write on the reading as it stands, given the sha256 of its bytes unless `sha256` names another: a test of a
+        check after the sha256's passes the edited reading's own (R46)."""
+        return run(cb, "write", self.reading, "--reports", d, "--out", self.record if out is None else out,
+                   "--sha256", self.digest() if sha256 is None else sha256)
+
+    def write_safely(self, d, sha256=None):
+        """Write, with any crash turned into a failure: a stop must be write's own named line."""
+        try:
+            return self.write(d, sha256=sha256)
+        except Exception as e:      # noqa: BLE001 - a crash is the fault this test is meant to catch
+            self.fail(f"write crashed with {type(e).__name__} in place of its own stop line")
 
     def rows(self):
         return {(r["species"], r["antibiotic"]): r for r in lo.read_tsv(os.path.join(self.record, "datasets.tsv"))}
@@ -873,7 +945,7 @@ class Rule(Case):
         rows = [dataset_like(SPECIES[i], (0, 10, 0, 10), (8, 2, 0, 10)) for i in range(7)]
         for i, r in enumerate(rows):
             r.update({f"{a}_marked": "yes" if i < 2 else "no" for a in cb.ARMS}, one_score_fold="no",
-                     coefficient_under_0="no")
+                     coefficient_under_0="no", training_share_fold="no")
         got = [(r["arm"], r["count"], r["species"], r["outcome"], r["reading"]) for r in cb.rule_rows(rows)]
         only = ("descriptive only", "descriptive only")
         self.assertEqual(got, [("weighted", "all", 7, "kept", "kept"),
@@ -997,7 +1069,9 @@ class Flags(Case):
         _, out = self.read_write(reports)
         line = ("flags: 8 reports; 2 where a learner gives every genome of a fold one score, left out of both arms' "
                 "third counts; 2 where a logistic fold fit gives a learner a coefficient under 0, left out of the "
-                "logistic arm's; 1 with both")
+                "logistic arm's; 1 with both; 0 where a learner gives 2 or more genomes of a fold that fold's "
+                "training share as their score, left out of both arms' third counts, 0 of them not flagged by R30's "
+                "condition")
         self.assertEqual([x for x in out.split("\n") if x.startswith("flags:")], [line])
         self.assertIsNone(re.search(r"\d\.\d", line))
         with open(os.path.join(self.record, "gates.txt"), encoding="utf-8") as f:
@@ -1008,16 +1082,17 @@ class Flags(Case):
             [("yes", "no"), ("no", "yes"), ("yes", "yes"), ("no", "no")])
 
     def test_write_stops_on_a_reading_made_without_the_second_condition(self):
-        # a reading with no flags named, or the logistic arm's without the second, or a report or a logistic fold
-        # fit with no second flag or count: write stops and writes nothing
+        # a reading with no flags named, or the logistic arm's without the second, or a report with no second flag,
+        # or a logistic fold fit whose count is not a whole number: write stops and writes nothing. A fold fit with
+        # no count stops write by name (R46; FoldRecords)
         for change in (lambda reading: reading.pop("flags"),
                        lambda reading: reading["flags"].update(logistic=["one_score_fold"]),
                        lambda reading: reading["datasets"][0].pop("coefficient_under_0"),
-                       lambda reading: reading["datasets"][0]["logistic_folds"][0].pop("coefficients_under_0")):
+                       lambda reading: reading["datasets"][0]["logistic_folds"][0].update(coefficients_under_0=None)):
             d, (rc, out) = self.read()
             self.assertEqual(rc, 0, out)
             self.tamper(change)
-            rc, out = run(cb, "write", self.reading, "--reports", d, "--out", self.record)
+            rc, out = self.write(d)
             self.assertEqual((rc, out), (1, "the reading was made under other rules\n"))
             self.assertFalse(os.path.exists(self.record))
             self.tearDown()
@@ -1049,7 +1124,7 @@ class Flags(Case):
         with open(path, "rb") as f:
             again = hashlib.sha256(f.read()).hexdigest()
         self.assertNotEqual(again, digest)
-        rc, out = run(cb, "write", self.reading, "--reports", d, "--out", os.path.join(self.top, "again"))
+        rc, out = self.write(d, os.path.join(self.top, "again"))
         self.assertEqual(rc, 0, out)
         self.assertIn(f"write: read {cb.READING}, sha256 {again}\n", out)
 
@@ -1064,7 +1139,7 @@ class Flags(Case):
             self.assertEqual(rc, 0, out)
             self.tamper(lambda reading: change(next(x for x in reading["datasets"]
                                                     if (x["species"], x["antibiotic"]) == key)))
-            rc, out = run(cb, "write", self.reading, "--reports", d, "--out", self.record)
+            rc, out = self.write(d)
             self.assertEqual((rc, out), (1, f"stop flags: {key[0]} with {key[1]}: its sign flag differs from its "
                                             "logistic fold records: STOP\n"))
             self.assertFalse(os.path.exists(self.record))
@@ -1079,7 +1154,7 @@ class Flags(Case):
             d, (rc, out) = self.read()
             self.assertEqual(rc, 0, out)
             self.tamper(lambda reading: change(next(x for x in reading["datasets"] if x["species"] == SPECIES[2])))
-            rc, out = run(cb, "write", self.reading, "--reports", d, "--out", self.record)
+            rc, out = self.write(d)
             self.assertEqual((rc, out), (1, f"stop flags: {SPECIES[2]} with drug a: its logistic mark differs from its "
                                             "logistic fold records: STOP\n"))
             self.assertFalse(os.path.exists(self.record))
@@ -1099,7 +1174,7 @@ class Flags(Case):
             by[SPECIES[4]].update(logistic_marked=True, coefficient_under_0=True)
 
         self.tamper(change)
-        rc, out = run(cb, "write", self.reading, "--reports", d, "--out", self.record)
+        rc, out = self.write(d)
         self.assertEqual((rc, out), (1, f"stop flags: {SPECIES[1]} with drug a: its logistic mark differs from its "
                                         "logistic fold records: STOP\n"
                                         f"stop flags: {SPECIES[3]} with drug a: its sign flag differs from its "
@@ -1122,7 +1197,9 @@ class Flags(Case):
         _, out = self.read_write(reports)
         line = ("flags: 9 reports; 2 where a learner gives every genome of a fold one score, left out of both arms' "
                 "third counts; 3 where a logistic fold fit gives a learner a coefficient under 0, left out of the "
-                "logistic arm's; 1 with both")
+                "logistic arm's; 1 with both; 0 where a learner gives 2 or more genomes of a fold that fold's "
+                "training share as their score, left out of both arms' third counts, 0 of them not flagged by R30's "
+                "condition")
         self.assertEqual([x for x in out.split("\n") if x.startswith("flags:")], [line])
         rows = list(self.rows().values())
         turned = [dict(r, coefficient_under_0="no" if r["coefficient_under_0"] == "yes" else "yes") for r in rows]
@@ -1157,7 +1234,7 @@ class Flags(Case):
             d, (rc, out) = self.read()
             self.assertEqual(rc, 0, out)
             self.tamper(lambda reading: reading["datasets"][0].update(coefficient_under_0=value))
-            rc, out = run(cb, "write", self.reading, "--reports", d, "--out", self.record)
+            rc, out = self.write(d)
             self.assertEqual((rc, out), (1, "the reading was made under other rules\n"), value)
             self.assertFalse(os.path.exists(self.record))
             self.tearDown()
@@ -1170,7 +1247,7 @@ class Flags(Case):
             d, (rc, out) = self.read()
             self.assertEqual(rc, 0, out)
             self.tamper(lambda reading: reading["datasets"][0]["logistic_folds"][0].update(coefficients_under_0=value))
-            rc, out = run(cb, "write", self.reading, "--reports", d, "--out", self.record)
+            rc, out = self.write(d)
             self.assertEqual((rc, out), (1, "the reading was made under other rules\n"), value)
             self.assertFalse(os.path.exists(self.record))
             self.tearDown()
@@ -1215,7 +1292,8 @@ class Descriptive(Case):
         decimals = ("median_gain", "gain_lo", "gain_hi", "vme_median", "vme_lo", "vme_hi")
         for rows, weighted in ((gain, "kept"), (none, "no difference shown"), (gain[:5], "no difference shown")):
             for r in rows:
-                r.update({f"{a}_marked": "no" for a in cb.ARMS}, one_score_fold="no", coefficient_under_0="no")
+                r.update({f"{a}_marked": "no" for a in cb.ARMS}, one_score_fold="no", coefficient_under_0="no",
+                         training_share_fold="no")
             got = cb.rule_rows(rows)
             self.assertEqual(len(got), 6)
             for r in got:
@@ -1277,7 +1355,7 @@ class Descriptive(Case):
             got = [run(cb, "plan"),
                    run(cb, "read", d, "--first", self.first, "--second", self.second, "--out", self.reading,
                        "--expect", 6, reports=6),
-                   run(cb, "write", self.reading, "--reports", d, "--out", self.record),
+                   self.write(d),
                    run(cb, "print", self.record)]
         self.assertEqual([rc for rc, _ in got], [0] * 4, got)
         self.assertTrue(env.asked)
@@ -1285,11 +1363,11 @@ class Descriptive(Case):
         commands = next(a for a in cb.parser()._actions if isinstance(a, argparse._SubParsersAction)).choices
         self.assertEqual({name: sorted(o for a in p._actions for o in a.option_strings) for name, p in commands.items()},
                          {"plan": ["--help", "-h"], "read": ["--expect", "--first", "--help", "--out", "--second", "-h"],
-                          "write": ["--help", "--out", "--reports", "-h"], "print": ["--help", "-h"]})
+                          "write": ["--help", "--out", "--reports", "--sha256", "-h"], "print": ["--help", "-h"]})
         for option in ("--can-be-kept", "--arms", "--keep"):
             with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
-                run(cb, "write", self.reading, "--reports", d, "--out", os.path.join(self.top, "other"), option,
-                    "logistic")
+                run(cb, "write", self.reading, "--reports", d, "--out", os.path.join(self.top, "other"), "--sha256",
+                    self.digest(), option, "logistic")
         self.assertFalse(os.path.exists(os.path.join(self.top, "other")))
 
     def test_write_stops_on_a_reading_made_under_other_arms(self):
@@ -1301,7 +1379,7 @@ class Descriptive(Case):
             d, (rc, out) = self.read()
             self.assertEqual(rc, 0, out)
             self.tamper(change)
-            rc, out = run(cb, "write", self.reading, "--reports", d, "--out", self.record)
+            rc, out = self.write(d)
             self.assertEqual((rc, out), (1, "the reading was made under other rules\n"))
             self.assertFalse(os.path.exists(self.record))
             self.tearDown()
@@ -1313,7 +1391,7 @@ class Descriptive(Case):
         d, (rc, out) = self.read()
         self.assertEqual(rc, 0, out)
         with mock.patch.object(cb, "descriptive", lambda r: r):
-            rc, out = run(cb, "write", self.reading, "--reports", d, "--out", self.record)
+            rc, out = self.write(d)
         self.assertEqual((rc, out), (1, "stop rule: the logistic arm has an outcome or a reading other than descriptive "
                                         "only in the rule rows: STOP\n"))
         self.assertFalse(os.path.exists(self.record))
@@ -1327,9 +1405,362 @@ class Descriptive(Case):
             if (r["arm"], r["count"]) == ("logistic", "all"):
                 r.update(outcome="kept", reading="kept")
         lo.write_tsv(path, cb.RULE_COLUMNS, rows)
+        rehash(self.record)         # SHA256SUMS written again, so that print's check of the record passes (R46)
         rc, out = run(cb, "print", self.record)
         self.assertEqual((rc, out), (1, "stop rule: the logistic arm has an outcome or a reading other than descriptive "
                                         "only in rule.tsv: STOP\n"))
+
+    def test_write_stops_on_one_field_of_a_logistic_rule_row_changed(self):
+        # R46 finding 7: rule rows made with one field of one logistic row other than descriptive only, the outcome
+        # alone or the reading alone, in each of the three counts. Write stops on each with its line, and writes
+        # nothing
+        d, (rc, out) = self.read()
+        self.assertEqual(rc, 0, out)
+        real = cb.descriptive
+        for count in cb.COUNTS_OF_RULE:
+            for field in ("outcome", "reading"):
+                def one_field(r, count=count, field=field):
+                    return dict(real(r), **({field: "kept"} if r["count"] == count else {}))
+
+                with mock.patch.object(cb, "descriptive", one_field):
+                    rc, out = self.write(d)
+                self.assertEqual((rc, out), (1, "stop rule: the logistic arm has an outcome or a reading other than "
+                                                "descriptive only in the rule rows: STOP\n"), (count, field))
+                self.assertFalse(os.path.exists(self.record), (count, field))
+
+    def test_print_stops_on_one_field_of_a_logistic_rule_row_changed(self):
+        # R46 finding 7: rule.tsv edited by hand, the outcome alone or the reading alone of one logistic row, in each
+        # of the three counts, with SHA256SUMS written again over it. Print stops on each with its line
+        self.read_write()
+        for count in cb.COUNTS_OF_RULE:
+            for field in ("outcome", "reading"):
+                copy = os.path.join(self.top, f"{count} {field}")
+                shutil.copytree(self.record, copy)
+                path = os.path.join(copy, "rule.tsv")
+                rows = lo.read_tsv(path)
+                for r in rows:
+                    if (r["arm"], r["count"]) == ("logistic", count):
+                        r[field] = "kept"
+                lo.write_tsv(path, cb.RULE_COLUMNS, rows)
+                rehash(copy)
+                rc, out = run(cb, "print", copy)
+                self.assertEqual((rc, out), (1, "stop rule: the logistic arm has an outcome or a reading other than "
+                                                "descriptive only in rule.tsv: STOP\n"), (count, field))
+
+
+class Share(Case):
+    """R46: a report is flagged for both arms when some learner gives 2 or more genomes of one stored fold that fold's
+    training share as their score, read with == and no tolerance."""
+
+    def test_the_training_share_is_one_division_of_two_whole_numbers(self):
+        # the report's resistant genomes outside the fold over its genomes outside it, as the release divides them:
+        # not the fold's own share, not the report's, and not a division rounded twice
+        S, y, folds = share_arrays()
+        for f, (r, n) in ((0, (7, 13)), (1, (4, 13)), (2, (5, 12))):
+            outside = [t for t, g in zip(y, folds) if g != f]
+            self.assertEqual((sum(outside), len(outside)), (r, n))
+            self.assertEqual(cb.training_share(y, folds, f).hex(), (r / n).hex(), f)
+        self.assertNotIn(7 / 13, (1 / 6, 8 / 19, 7 * (1 / 13)))
+        self.assertNotEqual(5 / 12, 5 * (1 / 12))
+        S, y, folds = as_arrays(LED)
+        self.assertEqual([cb.training_share(y, folds, f) for f in range(5)], [LED_SHARE] * 5)
+        self.assertIsNone(cb.training_share([True, False], [0, 0], 0))
+
+    def test_two_genomes_of_a_fold_at_its_training_share_flag_the_report(self):
+        S, y, folds = share_arrays()
+        share = 7 / 13
+        self.assertFalse(cb.training_share_fold(S, y, folds))
+        two = scored_at(S, 4, (1, 2), share)
+        self.assertEqual((cb.training_share_fold(two, y, folds), cb.one_score_fold(two, folds)), (True, False))
+        # each learner is read, a fold's genomes need not be its first, and each fold is read at its own share
+        for j in range(5):
+            self.assertTrue(cb.training_share_fold(scored_at(S, j, (3, 5), share), y, folds), j)
+        self.assertTrue(cb.training_share_fold(scored_at(S, 0, (7, 11), 4 / 13), y, folds))
+        # not flagged: 1 genome at the share; 2 at the fold's own share, at the report's, a hair to either side of the
+        # share, or at the share rounded twice; one genome in each of two folds at its fold's share; one genome each
+        # of two learners at the share
+        for value, genomes in ((share, (1,)), (1 / 6, (1, 2)), (8 / 19, (1, 2)), (math.nextafter(share, 1.0), (1, 2)),
+                               (math.nextafter(share, 0.0), (1, 2)), (7 * (1 / 13), (1, 2))):
+            self.assertFalse(cb.training_share_fold(scored_at(S, 4, genomes, value), y, folds), (value, genomes))
+        self.assertFalse(cb.training_share_fold(scored_at(scored_at(S, 4, (1,), share), 4, (7,), 4 / 13), y, folds))
+        self.assertFalse(cb.training_share_fold(scored_at(scored_at(S, 3, (1,), share), 4, (2,), share), y, folds))
+        # every genome of fold 2 at its share, as a boosted model with no tree scores it: R30's condition flags it too
+        whole = scored_at(S, 3, range(12, 19), 5 / 12)
+        self.assertEqual((cb.training_share_fold(whole, y, folds), cb.one_score_fold(whole, folds)), (True, True))
+
+    def test_a_report_the_share_flags_leaves_both_arms_third_counts(self):
+        # share_set(): the seventh report's lasso scores 2 susceptible genomes of fold 0 at 56 of 108, so R46's
+        # condition alone flags it. Both arms' third counts leave it out, 6 reports in 6 species. Its counts are
+        # LED's, so the weighted mean is kept in each count; the logistic arm is descriptive only
+        self.read_write(share_set())
+        rows = self.rows()
+        r = rows[(SPECIES[6], "drug h")]
+        self.assertEqual([r[k] for k in ("one_score_fold", "coefficient_under_0", "training_share_fold",
+                                         "weighted_marked", "logistic_marked")], ["no", "no", "yes", "no", "no"])
+        self.assertEqual(list(r)[-3:], ["one_score_fold", "coefficient_under_0", "training_share_fold"])
+        self.assertEqual({x["training_share_fold"] for key, x in rows.items() if key[1] == "drug a"}, {"no"})
+        rules = {(x["arm"], x["count"]): (x["datasets"], x["species"], x["outcome"], x["reading"])
+                 for x in lo.read_tsv(os.path.join(self.record, "rule.tsv"))}
+        only = ("descriptive only", "descriptive only")
+        self.assertEqual(rules, {
+            ("weighted", "all"): ("7", "7", "kept", "kept"),
+            ("weighted", "without_marked"): ("7", "7", "kept", "decides nothing"),
+            ("weighted", "without_flagged"): ("6", "6", "kept", "kept"),
+            ("logistic", "all"): ("7", "7") + only, ("logistic", "without_marked"): ("7", "7") + only,
+            ("logistic", "without_flagged"): ("6", "6") + only})
+
+    def test_the_flags_line_gives_the_share_conditions_counts(self):
+        # one rf-led report with lasso at 0.2 on fold 0 (R30's condition alone), share_report()'s with 2 genomes at
+        # the share (R46's alone), and share_report()'s with every genome of fold 0 at the share (both). R46's
+        # condition flags 2 reports, 1 of them not flagged by R30's; both arms' third counts hold the other 5
+        reports = kept_set()
+        flat = reports[0]
+        flat.scores["lasso"] = [0.2 if g == 0 else x for x, g in zip(flat.scores["lasso"], flat.folds)]
+        flat.random = dict(flat.scores)
+        reports += [share_report(SPECIES[6], (1, 2), tag=7), share_report(SPECIES[5], range(27), tag=8)]
+        _, out = self.read_write(reports)
+        line = ("flags: 8 reports; 2 where a learner gives every genome of a fold one score, left out of both arms' "
+                "third counts; 0 where a logistic fold fit gives a learner a coefficient under 0, left out of the "
+                "logistic arm's; 0 with both; 2 where a learner gives 2 or more genomes of a fold that fold's "
+                "training share as their score, left out of both arms' third counts, 1 of them not flagged by R30's "
+                "condition")
+        self.assertEqual([x for x in out.split("\n") if x.startswith("flags:")], [line])
+        with open(os.path.join(self.record, "gates.txt"), encoding="utf-8") as f:
+            self.assertIn(line + "\n", f.read())
+        rows = self.rows()
+        self.assertEqual([(rows[k]["one_score_fold"], rows[k]["training_share_fold"]) for k in (
+            (SPECIES[0], "drug a"), (SPECIES[6], "drug h"), (SPECIES[5], "drug h"), (SPECIES[1], "drug a"))],
+            [("yes", "no"), ("no", "yes"), ("yes", "yes"), ("no", "no")])
+        rules = {(x["arm"], x["count"]): x["datasets"] for x in lo.read_tsv(os.path.join(self.record, "rule.tsv"))}
+        self.assertEqual((rules["weighted", "without_flagged"], rules["logistic", "without_flagged"]), ("5", "5"))
+
+    def test_write_stops_on_a_reading_made_without_the_share_condition(self):
+        # a reading with no share count of genomes, or another; a report with no third flag, or with it as text; an
+        # arm's flags without it. Each edited reading is given its own sha256, so that write reaches its rules: it
+        # stops and writes nothing
+        for change in (lambda reading: reading.pop("share_genomes"),
+                       lambda reading: reading.update(share_genomes=1),
+                       lambda reading: reading["datasets"][0].pop("training_share_fold"),
+                       lambda reading: reading["datasets"][0].update(training_share_fold="no"),
+                       lambda reading: reading["flags"].update(weighted=["one_score_fold"]),
+                       lambda reading: reading["flags"].update(logistic=["one_score_fold", "coefficient_under_0"])):
+            d, (rc, out) = self.read()
+            self.assertEqual(rc, 0, out)
+            self.tamper(change)
+            rc, out = self.write_safely(d)
+            self.assertEqual((rc, out), (1, "the reading was made under other rules\n"))
+            self.assertFalse(os.path.exists(self.record))
+            self.tearDown()
+            self.setUp()
+
+    def test_the_plan_names_the_share_condition(self):
+        plan = cb.plan()
+        self.assertEqual((cb.SHARE_GENOMES, plan["share_genomes"]), (2, 2))
+        self.assertEqual(plan["flags"], {"weighted": ["one_score_fold", "training_share_fold"],
+                                         "logistic": ["one_score_fold", "coefficient_under_0", "training_share_fold"]})
+        self.assertIn("one division", plan["training_share_fold"])
+        self.assertEqual(plan["datasets_columns"][-3:], ["one_score_fold", "coefficient_under_0", "training_share_fold"])
+
+
+class Sha256(Case):
+    """R46: write takes the sha256 the read printed, and stops with one line when the reading's bytes give another."""
+
+    def flat_set(self):
+        """kept_set() with lasso at 0.2 on fold 0 of its first report, which R30's condition flags."""
+        reports = kept_set()
+        reports[0].scores["lasso"] = [0.2 if g == 0 else x for x, g in zip(reports[0].scores["lasso"], reports[0].folds)]
+        reports[0].random = dict(reports[0].scores)
+        return reports
+
+    def test_write_stops_on_an_edited_reading_given_the_reads_sha256(self):
+        # the review's finding 2, made up: R30's flag cleared on every report, or 8 missed resistant genomes of each
+        # report moved to called with the transitions to match; and the reading laid out again with no edit. Each is
+        # given the sha256 the read printed: write stops with one line, gives no figure, and writes nothing
+        def cleared(reading):
+            for x in reading["datasets"]:
+                x["one_score_fold"] = False
+
+        def moved(reading):
+            for x in reading["datasets"]:
+                k = min(8, x["weighted"]["fn"])
+                x["weighted"].update(tp=x["weighted"]["tp"] + k, fn=x["weighted"]["fn"] - k)
+                x["weighted_transitions"]["recovered_1to4"] += k
+
+        for change in (cleared, moved, lambda reading: None):
+            d, (rc, out) = self.read(self.flat_set())
+            self.assertEqual(rc, 0, out)
+            printed = printed_sha256(out)
+            self.assertEqual(printed, self.digest())
+            self.tamper(change)
+            rc, out = self.write(d, sha256=printed)
+            self.assertEqual((rc, out), (1, f"stop sha256: {cb.READING} is not the reading the read wrote: its bytes "
+                                            "give another sha256: STOP\n"))
+            self.assertFalse(os.path.exists(self.record))
+            self.tearDown()
+            self.setUp()
+        # the reading as the read wrote it, given the sha256 of other bytes
+        d, (rc, out) = self.read()
+        self.assertEqual(rc, 0, out)
+        rc, out = self.write(d, sha256=hashlib.sha256(b"another reading").hexdigest())
+        self.assertEqual(rc, 1, out)
+        self.assertFalse(os.path.exists(self.record))
+
+    def test_write_stops_on_a_value_not_64_hex_characters(self):
+        # none of these is a sha256 as the read prints one: write stops with one line and writes nothing. The right
+        # sha256 in capitals is one
+        d, (rc, out) = self.read()
+        self.assertEqual(rc, 0, out)
+        digest = self.digest()
+        for value in ("", "abc", digest[:63], digest + "0", "g" * 64, digest[:63] + "z", " " + digest[1:]):
+            rc, out = self.write(d, sha256=value)
+            self.assertEqual((rc, out), (1, "stop sha256: the value given is not 64 hex characters: STOP\n"), value)
+            self.assertFalse(os.path.exists(self.record))
+        rc, out = self.write(d, sha256=digest.upper())
+        self.assertEqual(rc, 0, out)
+        self.assertIn(f"write: read {cb.READING}, sha256 {digest}\n", out)
+
+    def test_write_needs_the_sha256(self):
+        # the option is required: write with none given is refused before it reads the reading
+        d, (rc, out) = self.read()
+        self.assertEqual(rc, 0, out)
+        with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+            run(cb, "write", self.reading, "--reports", d, "--out", self.record)
+        self.assertFalse(os.path.exists(self.record))
+
+    def test_gates_txt_carries_the_readings_sha256(self):
+        # gates.txt's last line gives the sha256 the read printed, and SHA256SUMS gives gates.txt's own, so the record
+        # is bound to the reading. Gate 8 still passes
+        _, out = self.read_write()
+        digest = printed_sha256(out)
+        path = os.path.join(self.record, "gates.txt")
+        with open(path, encoding="utf-8") as f:
+            text = f.read()
+        self.assertTrue(text.endswith(f"\nsha256 of {cb.READING}: {digest}\n"), text[-200:])
+        self.assertEqual(text.count(digest), 1)
+        self.assertTrue(gate_line(text, 8).endswith(": pass"), text)
+        with open(os.path.join(self.record, cb.SUMS), encoding="utf-8") as f:
+            self.assertIn(f"{lo.sha256(path)}  gates.txt\n", f.read())
+
+
+class FoldRecords(Case):
+    """R46: a fold record that lacks a key write reads stops write with a line that names the report."""
+
+    def test_write_stops_on_a_fold_record_with_a_key_missing(self):
+        # the review's two records with no end, a weighted one and a logistic one, logistic records with no column
+        # counts or no count of coefficients under 0, each in a record other than the first but one, a logistic
+        # record that is not a mapping, and a report with no weighted fold records. Each
+        # edited reading is given its own sha256: write stops with one line naming the report by species and
+        # antibiotic, with no traceback and no figure, and writes nothing
+        def drop(arm, k, key):
+            def change(reading):
+                del by_species(reading)[SPECIES[2]][f"{arm}_folds"][k][key]
+            return change
+
+        for change, what in ((drop("weighted", 0, "end"), "a weighted fold record has no end"),
+                             (drop("logistic", 3, "end"), "a logistic fold record has no end"),
+                             (drop("logistic", 4, "columns_aside"), "a logistic fold record has no columns_aside"),
+                             (drop("logistic", 1, "columns_shared"), "a logistic fold record has no columns_shared"),
+                             (drop("logistic", 2, "coefficients_under_0"),
+                              "a logistic fold record has no coefficients_under_0"),
+                             (drop("weighted", 2, "end"), "a weighted fold record has no end"),
+                             (lambda reading: by_species(reading)[SPECIES[2]]["logistic_folds"].__setitem__(0, "end"),
+                              "a logistic fold record has no end"),
+                             (lambda reading: by_species(reading)[SPECIES[2]].pop("weighted_folds"),
+                              "no weighted fold records")):
+            d, (rc, out) = self.read()
+            self.assertEqual(rc, 0, out)
+            self.tamper(change)
+            rc, out = self.write_safely(d)
+            self.assertEqual((rc, out), (1, f"stop fold records: {SPECIES[2]} with drug a: {what}: STOP\n"))
+            self.assertFalse(os.path.exists(self.record))
+            self.tearDown()
+            self.setUp()
+
+    def test_write_names_each_report_whose_fold_records_lack_a_key(self):
+        # two reports with a key missing: one line a report, in the reading's order, with no figure
+        d, (rc, out) = self.read()
+        self.assertEqual(rc, 0, out)
+
+        def change(reading):
+            del by_species(reading)[SPECIES[2]]["logistic_folds"][2]["end"]
+            del by_species(reading)[SPECIES[1]]["weighted_folds"][4]["end"]
+
+        self.tamper(change)
+        rc, out = self.write_safely(d)
+        self.assertEqual((rc, out), (1, f"stop fold records: {SPECIES[1]} with drug a: a weighted fold record has no "
+                                        "end: STOP\n"
+                                        f"stop fold records: {SPECIES[2]} with drug a: a logistic fold record has no "
+                                        "end: STOP\n"))
+        self.assertIsNone(re.search(r"\d", out))
+        self.assertFalse(os.path.exists(self.record))
+
+
+class Record(Case):
+    """R46: print reads SHA256SUMS first and stops with one line naming the file."""
+
+    def edited(self, edit):
+        """A copy of the record, with `edit` made to it."""
+        copy = os.path.join(self.top, f"copy {len(os.listdir(self.top))}")
+        shutil.copytree(self.record, copy)
+        edit(copy)
+        return copy
+
+    def test_print_stops_on_a_file_whose_bytes_give_another_sha256(self):
+        # a line break added to each record file in turn, SHA256SUMS as write wrote it: print stops and names the
+        # file. The record as written prints
+        self.read_write()
+        for name in cb.RECORD_FILES:
+            def add(copy, name=name):
+                with open(os.path.join(copy, name), "a", encoding="utf-8") as f:
+                    f.write("\n")
+
+            rc, out = run(cb, "print", self.edited(add))
+            self.assertEqual((rc, out), (1, f"stop record: {name} gives another sha256 than SHA256SUMS lists: STOP\n"))
+        rc, out = run(cb, "print", self.record)
+        self.assertEqual(rc, 0, out)
+
+    def test_print_stops_on_a_file_the_list_does_not_name(self):
+        # gates.txt's line taken out of SHA256SUMS, and a file put in the record that the list does not name
+        self.read_write()
+
+        def unlisted(copy):
+            path = os.path.join(copy, cb.SUMS)
+            with open(path, encoding="utf-8") as f:
+                kept = [x for x in f.read().split("\n") if x and not x.endswith("  gates.txt")]
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("\n".join(kept) + "\n")
+
+        def extra(copy):
+            with open(os.path.join(copy, "notes.txt"), "w", encoding="utf-8") as f:
+                f.write("a note\n")
+
+        for edit, name in ((unlisted, "gates.txt"), (extra, "notes.txt")):
+            rc, out = run(cb, "print", self.edited(edit))
+            self.assertEqual((rc, out), (1, f"stop record: {name} is not listed in SHA256SUMS: STOP\n"), name)
+
+    def test_print_stops_on_a_missing_list_or_file(self):
+        # SHA256SUMS removed; a listed file removed; a line naming no record file; a record file listed twice
+        self.read_write()
+
+        def no_list(copy):
+            os.remove(os.path.join(copy, cb.SUMS))
+
+        def no_file(copy):
+            os.remove(os.path.join(copy, "transitions.tsv"))
+
+        def append(line):
+            def edit(copy):
+                with open(os.path.join(copy, cb.SUMS), "a", encoding="utf-8") as f:
+                    f.write(line(copy))
+            return edit
+
+        other = "stop record: SHA256SUMS holds a line other than a sha256 and a record file's name: STOP"
+        for edit, line in ((no_list, "stop record: SHA256SUMS is missing: STOP"),
+                           (no_file, "stop record: transitions.tsv is listed in SHA256SUMS and missing: STOP"),
+                           (append(lambda copy: f"{'0' * 64}  {cb.READING}\n"), other),
+                           (append(lambda copy: f"{lo.sha256(os.path.join(copy, 'rule.tsv'))}  rule.tsv\n"), other)):
+            rc, out = run(cb, "print", self.edited(edit))
+            self.assertEqual((rc, out), (1, line + "\n"))
 
 
 class Pooled(unittest.TestCase):
@@ -1585,7 +2016,7 @@ class Gates(Case):
             d, (rc, out) = self.read()
             self.assertEqual(rc, 0, out)
             self.tamper(change)
-            rc, out = run(cb, "write", self.reading, "--reports", d, "--out", self.record)
+            rc, out = self.write(d)
             self.assertEqual((rc, out), (1, "the reading was made under other rules\n"))
             self.assertFalse(os.path.exists(self.record))
             self.tearDown()
@@ -1597,7 +2028,7 @@ class Gates(Case):
             d, (rc, out) = self.read()
             self.assertEqual(rc, 0, out)
             self.tamper(lambda reading: reading.update(flag_fold=size))
-            rc, out = run(cb, "write", self.reading, "--reports", d, "--out", self.record)
+            rc, out = self.write(d)
             self.assertEqual((rc, out), (1, "the reading was made under other rules\n"), size)
             self.assertFalse(os.path.exists(self.record))
             self.tearDown()
@@ -1626,7 +2057,7 @@ class Gates(Case):
         d, (rc, out) = self.read()
         self.assertEqual(rc, 0, out)
         self.tamper(lambda reading: reading["datasets"][0]["weighted_transitions"].update(lost=1))
-        rc, out = run(cb, "write", self.reading, "--reports", d, "--out", self.record)
+        rc, out = self.write(d)
         self.assertEqual(rc, 1, out)
         self.assertTrue(out.startswith("gate 7 rows:") and ": STOP" in out, out)
         self.assertFalse(os.path.exists(self.record))
@@ -1659,7 +2090,7 @@ class Gates(Case):
         d, (rc, out) = self.read()
         self.assertEqual(rc, 0, out)
         self.tamper(lambda reading: reading.update(note="12" + "3.45"))      # an id-shaped token, put together here
-        rc, out = run(cb, "write", self.reading, "--reports", d, "--out", self.record)
+        rc, out = self.write(d)
         self.assertEqual(rc, 1, out)
         self.assertTrue(out.startswith("gate 8 ids:") and "0 holding one as a substring, 1 id-shaped" in out, out)
 
@@ -1702,7 +2133,11 @@ class Ids(Case):
                                        "mean_miss_by_1to4", "mean_miss_by_all5", "mean", "weighted", "logistic",
                                        "weighted_folds", "logistic_folds", "weighted_transitions",
                                        "logistic_transitions", "weighted_marked", "logistic_marked",
-                                       "one_score_fold", "coefficient_under_0"}, set())
+                                       "one_score_fold", "coefficient_under_0", "training_share_fold"}, set())
+            self.assertIsInstance(r["training_share_fold"], bool)
+        self.assertEqual((reading["share_genomes"], reading["flags"]),
+                         (2, {"weighted": ["one_score_fold", "training_share_fold"],
+                              "logistic": ["one_score_fold", "coefficient_under_0", "training_share_fold"]}))
 
 
 if __name__ == "__main__":

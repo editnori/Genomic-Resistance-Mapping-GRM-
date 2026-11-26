@@ -33,7 +33,7 @@ FIXED = ("A lineage split is a retrospective split inside one database, never ex
          "Coverage is the share of genomes answered and is never accuracy.")
 COMMANDS = ("python3 -I scripts/mechanism/combiner.py read REPORTS --first reference/learner-overlap "
             "--second reference/learner-overlap/second-pass --out READING",
-            "python3 -I scripts/mechanism/combiner.py write READING --reports REPORTS --out OUT",
+            "python3 -I scripts/mechanism/combiner.py write READING --reports REPORTS --out OUT --sha256 SHA256",
             "python3 -I scripts/mechanism/combiner.py print OUT")
 
 
@@ -116,7 +116,7 @@ class Page(unittest.TestCase):
                       "No fold is scored from coefficients left at 0",
                       "the weighted mean is kept only if the rule keeps it in both",
                       f"gives every genome of a fold of {cb.FLAG_FOLD} or more genomes one score",
-                      "The record gives each count's own outcome and the arm's reading",
+                      "The record gives each count's own outcome for the weighted mean and the arm's reading.",
                       f"Gate 1 stops the read unless it reads exactly those {cb.FROZEN_REPORTS} reports",
                       "A report with one fold, or a genome with no fold number, stops the read"):
             self.assertIn(words, plan)
@@ -126,12 +126,13 @@ class Page(unittest.TestCase):
 
     def test_the_plan_states_r37s_rules(self):
         plan, limits = self.sections["Plan"], self.sections["Limits"]
-        rows = re.findall(r"^\| (One score|Coefficient under 0) \((R\d+)\) \| (.+) \| (both|logistic only) \|$", plan,
-                          flags=re.M)
+        rows = re.findall(r"^\| (One score|Coefficient under 0|Training share) \((R\d+)\) \| (.+) \| "
+                          r"(both|logistic only) \|$", plan, flags=re.M)
         self.assertEqual([(name, ruling, arms) for name, ruling, _, arms in rows],
-                         [("One score", "R30", "both"), ("Coefficient under 0", "R37", "logistic only")])
-        self.assertEqual(cb.FLAGS, {"weighted": ("one_score_fold",),
-                                    "logistic": ("one_score_fold", "coefficient_under_0")})
+                         [("One score", "R30", "both"), ("Coefficient under 0", "R37", "logistic only"),
+                          ("Training share", "R46", "both")])
+        self.assertEqual(cb.FLAGS, {"weighted": ("one_score_fold", "training_share_fold"),
+                                    "logistic": ("one_score_fold", "coefficient_under_0", "training_share_fold")})
         self.assertEqual(cb.plan()["flags"], {a: list(cb.FLAGS[a]) for a in cb.ARMS})
         self.assertIn("a coefficient under 0; a coefficient of exactly 0 does not flag", rows[1][2])
         for words in ("the count without the arm's flagged reports decide",
@@ -158,13 +159,13 @@ class Page(unittest.TestCase):
                       "kept in 0 of 8 made-up readings whose true gain was near 0.05",
                       "got the logistic arm kept through the fold's share alone, and R37's condition flagged 0 of its "
                       "20 reports",
-                      "The weighted mean is the one arm the rule can keep, under R30's condition as before. It has no "
-                      "intercept and no weight under 0.",
-                      "its median gain in balanced accuracy was -0.0096 over 20 reports",
+                      "The weighted mean is the one arm the rule can keep. It has no intercept and no weight under 0.",
+                      "its median gain in balanced accuracy was -0.0096 over 20 reports, on the reviewer's made-up "
+                      "reports.",
                       "Four of the five, the decision tree, the forest, the boosted trees and the lasso, fit with class "
                       "weights that give each class half the total weight. The rule learner gives a 0 or 1 call.",
-                      "A fold whose fit is empty scores every genome at its training share, and R30's condition flags "
-                      "that fold. This is a reading of the code and no measurement.",
+                      "An empty tree or forest scores its fold 0.5. R30's condition flags both. No learner scores a "
+                      "part of a fold at the share. This is a reading of the code and no measurement.",
                       "With every coefficient at 0 or above, the share moves a fold's calls nearly always the wrong "
                       "way: on the reviewer's made-up reports, 3 of 248 fold fits moved them the right way.",
                       "The logistic arm is descriptive only."):
@@ -179,20 +180,68 @@ class Page(unittest.TestCase):
 
     def test_write_works_the_flags_out_again(self):
         method = self.sections["Method"]
-        for words in ("Write does not fit again. It works each report's sign flag, R37's condition, and its logistic "
-                      "mark out again from the logistic fold records it parses, and stops on a difference with a line, "
-                      "`stop flags:`, that names the report by species and antibiotic and gives no figure. It trusts "
-                      "the read's R30 flag and weighted mark. The read prints the sha256 of the reading it wrote, and "
-                      "write prints the sha256 of the reading it read",
+        for words in ("Write works each report's sign flag, R37's condition, and its logistic mark out again from the "
+                      "logistic fold records it parses, and stops on a difference with a line, `stop flags:`, that "
+                      "names the report by species and antibiotic and gives no figure.",
                       "Write and print stop, with a line `stop rule:`, on a rule row that gives the logistic arm an "
                       "outcome or a reading other than descriptive only.",
-                      "a line, `flags:`, with how many reports each condition flags and how many have both, and no "
-                      "score. Those counts decide nothing (R43)."):
+                      "a line, `flags:`, with how many reports each condition flags, how many have both R30's and "
+                      "R37's, and how many R46's flags that R30's does not, and no score. Those counts decide nothing "
+                      "(R43)."):
             self.assertIn(words, method)
+        self.assertNotIn("It trusts the read's R30 flag and weighted mark", self.text)
         script = SCRIPT.read_text(encoding="utf-8")
         for printed in ('wrote {READING}, sha256 {written}"', 'print(f"write: read {READING}, sha256 {digest}")',
                         'f"flags: {len(rows)} reports; ', 'f"stop flags: {d.get(\'species\')} with {d.get(\'antibiotic\')}: ',
                         'f"stop rule: the {arm} arm has an outcome or a reading other than {DESCRIPTIVE} in {where}: STOP"'):
+            self.assertEqual(script.count(printed), 1, printed)
+
+    def test_the_plan_states_r46s_rules(self):
+        # R46: the gap with the reviewer's figures, the rule that closes it, the learners' code, its limit, and write
+        # and print as the script stands
+        plan, limits, method = self.sections["Plan"], self.sections["Limits"], self.sections["Method"]
+        self.assertEqual(cb.SHARE_GENOMES, 2)
+        self.assertEqual(cb.plan()["share_genomes"], cb.SHARE_GENOMES)
+        self.assertIn("one division", cb.plan()["training_share_fold"])
+        self.assertIn(f"some learner gives {cb.SHARE_GENOMES} or more genomes of one fold that fold's training share "
+                      "of resistant genomes as their score, by `==`", plan)
+        for words in ("a learner scored about 97 of 100 genomes of each fold at that fold's training share. The plain "
+                      "mean's median balanced accuracy fell by 0.0381 and 0.0320, and the weighted mean's by 0.0000. "
+                      "The weighted mean was kept in 10 of 10 readings of two such families, and in 0 of their 10 "
+                      "controls. R30's condition flagged 3 of 200 reports, as no fold had one score. R46 closes it "
+                      "with the training share condition above.",
+                      "The release works a fold's training share by one division: resistant training genomes over "
+                      "training genomes, the report's genomes outside the fold. Only a boosted model with no tree, or "
+                      "a lasso with no weight, gives it as a score, to every genome of its fold.",
+                      "Each fold's counts enter every fit of those four, and a leaf of fixed counts scores lower as the "
+                      "share rises. In 6 made-up families with a falling learner, two mimicking the class weights, the "
+                      "weighted mean was kept wrongly in 0 of 30 readings.",
+                      "gives no fold one score and no genome the share, so neither R30's condition nor R46's flags it"):
+            self.assertIn(words, plan)
+        self.assertIn("A tree leaf can score exactly the share by chance, when the leaf's ratio of resistant to "
+                      "susceptible genomes is the square of the training set's. Such a report leaves the third count, "
+                      "and the `flags:` line counts it. A made-up learner within a hair of the share is not flagged.",
+                      limits)
+        for words in ("It takes the sha256 the read printed, works the sha256 of the reading's bytes before it parses "
+                      "them, and stops with one line, `stop sha256:`, on a difference or on a value that is not 64 hex "
+                      "characters. It then writes nothing. The record's `gates.txt` carries that sha256. Write does not "
+                      "work R30's flag or R46's out again: the sha256 covers every edit.",
+                      "A fold record that lacks a key write reads stops write with a line, `stop fold records:`, that "
+                      "names the report in the same way.",
+                      "Print reads the record's `SHA256SUMS` first. It stops with one line, `stop record:`, naming the "
+                      "file, when the list is missing, a file of the record is not listed, or a listed file is missing "
+                      "or its bytes give another sha256.",
+                      "or that lacks R46's flag or names other flags."):
+            self.assertIn(words, method)
+        for gone in ("The training share enters a stored score in one place", "No learner is built to fall",
+                     "sets no rule for it", "R30's condition alone misses it"):
+            self.assertNotIn(gone, self.text)
+        script = SCRIPT.read_text(encoding="utf-8")
+        for printed in ('"stop sha256: the value given is not 64 hex characters: STOP"',
+                        'f"stop sha256: {READING} is not the reading the read wrote: its bytes give another sha256: STOP"',
+                        'f"stop fold records: {d.get(\'species\')} with {d.get(\'antibiotic\')}: {what}: STOP"',
+                        'f"stop record: {SUMS} is missing: STOP"', 'f"stop record: {name} is not listed in {SUMS}: STOP"',
+                        'f"stop record: {name} gives another sha256 than {SUMS} lists: STOP"'):
             self.assertEqual(script.count(printed), 1, printed)
 
     def test_the_page_keeps_its_size(self):
@@ -257,7 +306,7 @@ class Page(unittest.TestCase):
 
     def test_the_fault_table_names_each_planted_faults_test(self):
         method = self.sections["Method"]
-        rows = re.findall(r"^\| (C\d+)\. (.+) \| `([A-Za-z]+\.test_\w+)` \|$", method, flags=re.M)
+        rows = re.findall(r"^\| (C\d+)\. (.+) \| `([A-Za-z][A-Za-z0-9]*\.test_\w+)` \|$", method, flags=re.M)
         self.assertEqual(rows, [(fault, words[0].upper() + words[1:], test.rsplit(".", 2)[-2] + "." + test.rsplit(".", 1)[-1])
                                 for fault, words, test, _ in faults.FAULTS])
         self.assertIn(f"{len(faults.FAULTS)} of {len(faults.FAULTS)} faults failed their test.", method)

@@ -1,6 +1,7 @@
-"""combiner_faults.py: the faults of the combiner reading's script (combiner.py, C1 to C91), each planted in turn, and
-the SYNTHETIC test that must catch it. C39 to C60 are the rules of ruling R30, C61 to C74 those of ruling R37, and
-C75 to C91 those of ruling R43, the last four the third review's N11, N12, N15 and N16.
+"""combiner_faults.py: the faults of the combiner reading's script (combiner.py, C1 to C123), each planted in turn, and
+the SYNTHETIC test that must catch it. C39 to C60 are the rules of ruling R30, C61 to C74 those of ruling R37, C75 to
+C91 those of ruling R43, the last four the third review's N11, N12, N15 and N16, and C92 to C123 those of ruling R46,
+the last four the fourth review's M5, M6, M7 and M22.
 
     python3 -I scripts/mechanism/combiner_faults.py [--out faults.tsv]
 
@@ -12,6 +13,7 @@ Python 3.12, standard library only; run with -I.
 """
 
 import argparse
+import collections
 import fractions
 import hashlib
 import json
@@ -319,6 +321,143 @@ def bool_count_taken(reading):
                     for d in reading.get("datasets") or []))
 
 
+def own_share(labels, folds, f):
+    # fault C92: the fold's own share of resistant genomes in place of its training share
+    inside = [t for t, g in zip(labels, folds) if g == f]
+    return sum(1 for t in inside if t) / len(inside)
+
+
+def report_share(labels, folds, f):
+    # fault C93: the report's share of resistant genomes in place of the fold's training share
+    return sum(1 for t in labels if t) / len(labels)
+
+
+def rounded_twice(labels, folds, f):
+    # fault C94: the training share as resistant genomes times one over the genomes, rounded twice
+    outside = [t for t, g in zip(labels, folds) if g != f]
+    return sum(1 for t in outside if t) * (1 / len(outside)) if outside else None
+
+
+def by_fold(S, folds):
+    by = collections.defaultdict(list)
+    for s, f in zip(S, folds):
+        by[f].append(s)
+    return by
+
+
+def share_with_tolerance(S, labels, folds):
+    # fault C95: a score read as the training share within a relative 1e-9
+    return any(sum(1 for s in ss if math.isclose(s[j], cb.training_share(labels, folds, f), rel_tol=1e-9))
+               >= cb.SHARE_GENOMES for f, ss in by_fold(S, folds).items() for j in range(len(cb.FIVE)))
+
+
+def share_whole_fold(S, labels, folds):
+    # fault C97: a report flagged only when a learner gives every genome of a fold its training share
+    return any(len(ss) >= cb.SHARE_GENOMES and all(s[j] == cb.training_share(labels, folds, f) for s in ss)
+               for f, ss in by_fold(S, folds).items() for j in range(len(cb.FIVE)))
+
+
+def share_over_report(S, labels, folds):
+    # fault C98: the genomes at their own fold's training share counted over the report, not within one fold
+    shares = {f: cb.training_share(labels, folds, f) for f in set(folds)}
+    return any(sum(1 for s, g in zip(S, folds) if s[j] == shares[g]) >= cb.SHARE_GENOMES for j in range(len(cb.FIVE)))
+
+
+def share_count_twice(rows, _orig=cb.share_counts):
+    # fault C102: the flags line gives R46's whole count where the count R30's condition does not flag belongs
+    share, _ = _orig(rows)
+    return share, share
+
+
+def form_only(given, digest):
+    # fault C104: write checks the form of the sha256 it is given, and not that the reading's bytes give it
+    return None if cb.sha256_form(given) else "stop sha256: the value given is not 64 hex characters: STOP"
+
+
+class AnySha256(str):
+    """A value every sha256 check of write takes: 64 hex characters that differ from no digest."""
+
+    def lower(self):
+        return self
+
+    def __ne__(self, other):
+        return False
+
+
+def optional_sha256(_orig=cb.parser):
+    # fault C107: the sha256 an option write may leave out, and write unchecked when it is not given
+    ap = _orig()
+    commands = next(a for a in ap._actions if isinstance(a, argparse._SubParsersAction)).choices
+    for a in commands["write"]._actions:
+        if "--sha256" in a.option_strings:
+            a.required, a.default = False, AnySha256("0" * 64)
+    return ap
+
+
+def fold_stop_by_species(d, missing):
+    # fault C109: the stop line for a fold record with a key missing names the report by species only
+    arm, key = missing
+    what = f"no {arm} fold records" if key is None else f"a {arm} fold record has no {key}"
+    return f"stop fold records: {d.get('species')}: {what}: STOP"
+
+
+def missing_key(d, arms, first_only):
+    for arm in arms:
+        recs = d.get(f"{arm}_folds")
+        if not isinstance(recs, list) or not recs:
+            return arm, None
+        for key in cb.FOLD_KEYS[arm]:
+            if any(not isinstance(r, dict) or key not in r for r in (recs[:1] if first_only else recs)):
+                return arm, key
+    return None
+
+
+def record_check(record, list_needed=True, unlisted_stops=True, files=cb.RECORD_FILES, names_the_file=True):
+    """record_stop with one of its rules changed, for faults C113 to C117."""
+    path = os.path.join(record, cb.SUMS)
+    if not os.path.isfile(path):
+        return f"stop record: {cb.SUMS} is missing: STOP" if list_needed else None
+    with open(path, encoding="utf-8") as f:
+        listed = cb.listed_files(f.read())
+    if listed is None:
+        return f"stop record: {cb.SUMS} holds a line other than a sha256 and a record file's name: STOP"
+    present = sorted(n for n in os.listdir(record) if n != cb.SUMS)
+    for name in list(cb.RECORD_FILES) + [n for n in present if n not in cb.RECORD_FILES]:
+        if name not in listed and unlisted_stops:
+            return f"stop record: {name if names_the_file else 'a file'} is not listed in {cb.SUMS}: STOP"
+    for name in files:
+        file = os.path.join(record, name)
+        if name not in listed:
+            continue
+        if not os.path.isfile(file):
+            return f"stop record: {name if names_the_file else 'a file'} is listed in {cb.SUMS} and missing: STOP"
+        if lo.sha256(file) != listed[name]:
+            return f"stop record: {name if names_the_file else 'a file'} gives another sha256 than {cb.SUMS} lists: STOP"
+    return None
+
+
+def outcome_only(rules):
+    # fault C120, the review's M5: a rule row checked on its outcome alone
+    return sorted({r["arm"] for r in rules if not cb.can_be_kept(r["arm"]) and r["outcome"] != cb.DESCRIPTIVE})
+
+
+def reading_only(rules):
+    # fault C121, the review's M6: a rule row checked on its reading alone
+    return sorted({r["arm"] for r in rules if not cb.can_be_kept(r["arm"]) and r["reading"] != cb.DESCRIPTIVE})
+
+
+def all_count_only(rules):
+    # fault C122, the review's M7: only the count over all checked
+    return sorted({r["arm"] for r in rules if not cb.can_be_kept(r["arm"]) and r["count"] == "all"
+                   and (r["outcome"], r["reading"]) != (cb.DESCRIPTIVE, cb.DESCRIPTIVE)})
+
+
+def tables_all_count_only(record, _orig=cb.tables, _check=cb.not_descriptive):
+    # fault C123, the review's M22: print checks the count over all only
+    with mock.patch.object(cb, "not_descriptive", lambda rules: _check([r for r in rules if r["count"] == "all"])):
+        return _orig(record)
+
+
 def plain_load(path):
     # fault C26: a report parsed with every genome id kept
     with open(path, encoding="utf-8") as f:
@@ -503,10 +642,12 @@ FAULTS = [
      lambda: mock.patch.object(cb, "coefficient_under_0", first_fold_only)),
     ("C66", "the logistic arm's third count leaving out R30's flagged reports only",
      T + "Flags.test_one_fold_fit_under_0_flags_the_logistic_arm_only",
-     lambda: mock.patch.object(cb, "FLAGS", {"weighted": ("one_score_fold",), "logistic": ("one_score_fold",)})),
+     lambda: mock.patch.object(cb, "FLAGS", {"weighted": ("one_score_fold", "training_share_fold"),
+                                             "logistic": ("one_score_fold", "training_share_fold")})),
     ("C67", "the weighted arm's third count also leaving out the reports flagged for a coefficient under 0",
      T + "Flags.test_one_fold_fit_under_0_flags_the_logistic_arm_only",
-     lambda: mock.patch.object(cb, "FLAGS", {a: ("one_score_fold", "coefficient_under_0") for a in cb.ARMS})),
+     lambda: mock.patch.object(cb, "FLAGS", {a: ("one_score_fold", "coefficient_under_0", "training_share_fold")
+                                             for a in cb.ARMS})),
     ("C68", "a count of 5 species given an interval",
      T + "Flags.test_a_logistic_third_count_under_6_species_gets_no_interval",
      lambda: mock.patch.object(common, "MIN_SPECIES", 5)),
@@ -579,6 +720,108 @@ FAULTS = [
     ("C91", "write taking a fold fit's count given as true or false",
      T + "Flags.test_write_stops_on_a_fold_count_given_as_true_or_false",
      lambda: mock.patch.object(cb, "second_condition_written", bool_count_taken)),
+    ("C92", "the training share worked as the fold's own share",
+     T + "Share.test_the_training_share_is_one_division_of_two_whole_numbers",
+     lambda: mock.patch.object(cb, "training_share", own_share)),
+    ("C93", "the training share worked as the report's share",
+     T + "Share.test_the_training_share_is_one_division_of_two_whole_numbers",
+     lambda: mock.patch.object(cb, "training_share", report_share)),
+    ("C94", "the training share rounded twice, its resistant genomes times one over its genomes",
+     T + "Share.test_the_training_share_is_one_division_of_two_whole_numbers",
+     lambda: mock.patch.object(cb, "training_share", rounded_twice)),
+    ("C95", "a score read as the training share within a tolerance",
+     T + "Share.test_two_genomes_of_a_fold_at_its_training_share_flag_the_report",
+     lambda: mock.patch.object(cb, "training_share_fold", share_with_tolerance)),
+    ("C96", "a report flagged by 1 genome at its fold's training share",
+     T + "Share.test_two_genomes_of_a_fold_at_its_training_share_flag_the_report",
+     lambda: mock.patch.object(cb, "SHARE_GENOMES", 1)),
+    ("C97", "a report flagged only when a learner gives every genome of a fold its training share",
+     T + "Share.test_two_genomes_of_a_fold_at_its_training_share_flag_the_report",
+     lambda: mock.patch.object(cb, "training_share_fold", share_whole_fold)),
+    ("C98", "the genomes at their fold's training share counted over the report, not within one fold",
+     T + "Share.test_two_genomes_of_a_fold_at_its_training_share_flag_the_report",
+     lambda: mock.patch.object(cb, "training_share_fold", share_over_report)),
+    ("C99", "the share's flag left out of the weighted mean's third count",
+     T + "Share.test_a_report_the_share_flags_leaves_both_arms_third_counts",
+     lambda: mock.patch.object(cb, "FLAGS", {"weighted": ("one_score_fold",),
+                                             "logistic": ("one_score_fold", "coefficient_under_0",
+                                                          "training_share_fold")})),
+    ("C100", "the share's flag left out of the logistic arm's third count",
+     T + "Share.test_a_report_the_share_flags_leaves_both_arms_third_counts",
+     lambda: mock.patch.object(cb, "FLAGS", {"weighted": ("one_score_fold", "training_share_fold"),
+                                             "logistic": ("one_score_fold", "coefficient_under_0")})),
+    ("C101", "no report flagged by the share",
+     T + "Share.test_a_report_the_share_flags_leaves_both_arms_third_counts",
+     lambda: mock.patch.object(cb, "training_share_fold", lambda S, labels, folds: False)),
+    ("C102", "the flags line giving the share's whole count where the count R30's condition does not flag belongs",
+     T + "Share.test_the_flags_line_gives_the_share_conditions_counts",
+     lambda: mock.patch.object(cb, "share_counts", share_count_twice)),
+    ("C103", "write blind to a reading made without the share condition",
+     T + "Share.test_write_stops_on_a_reading_made_without_the_share_condition",
+     lambda: mock.patch.object(cb, "share_condition_written", lambda reading: True)),
+    ("C104", "write not comparing the sha256 it is given with the reading's bytes",
+     T + "Sha256.test_write_stops_on_an_edited_reading_given_the_reads_sha256",
+     lambda: mock.patch.object(cb, "sha256_stop", form_only)),
+    ("C105", "write taking a sha256 that is not 64 hex characters",
+     T + "Sha256.test_write_stops_on_a_value_not_64_hex_characters",
+     lambda: mock.patch.object(cb, "sha256_form", lambda given: True)),
+    ("C106", "gates.txt written without the reading's sha256",
+     T + "Sha256.test_gates_txt_carries_the_readings_sha256",
+     lambda: mock.patch.object(cb, "sha256_line", lambda digest: "")),
+    ("C107", "the sha256 an option write may leave out, and write unchecked without it",
+     T + "Sha256.test_write_needs_the_sha256",
+     lambda: mock.patch.object(cb, "parser", optional_sha256)),
+    ("C108", "write blind to a fold record with a key missing",
+     T + "FoldRecords.test_write_stops_on_a_fold_record_with_a_key_missing",
+     lambda: mock.patch.object(cb, "fold_keys_missing", lambda reading: [])),
+    ("C109", "the fold records' stop line naming the report by species only",
+     T + "FoldRecords.test_write_stops_on_a_fold_record_with_a_key_missing",
+     lambda: mock.patch.object(cb, "fold_key_stop", fold_stop_by_species)),
+    ("C110", "the logistic fold records alone checked for a key",
+     T + "FoldRecords.test_write_stops_on_a_fold_record_with_a_key_missing",
+     lambda: mock.patch.object(cb, "missing_fold_key", lambda d: missing_key(d, ("logistic",), False))),
+    ("C111", "the first fold record of each arm alone checked for a key",
+     T + "FoldRecords.test_write_stops_on_a_fold_record_with_a_key_missing",
+     lambda: mock.patch.object(cb, "missing_fold_key", lambda d: missing_key(d, cb.ARMS, True))),
+    ("C112", "write naming only the first report whose fold records lack a key",
+     T + "FoldRecords.test_write_names_each_report_whose_fold_records_lack_a_key",
+     lambda: mock.patch.object(cb, "fold_keys_missing", lambda reading, _orig=cb.fold_keys_missing: _orig(reading)[:1])),
+    ("C113", "print not checking the record against SHA256SUMS",
+     T + "Record.test_print_stops_on_a_file_whose_bytes_give_another_sha256",
+     lambda: mock.patch.object(cb, "record_stop", lambda record: None)),
+    ("C114", "print checking rule.tsv alone against SHA256SUMS",
+     T + "Record.test_print_stops_on_a_file_whose_bytes_give_another_sha256",
+     lambda: mock.patch.object(cb, "record_stop", lambda record: record_check(record, files=("rule.tsv",)))),
+    ("C115", "a record file SHA256SUMS does not list let through",
+     T + "Record.test_print_stops_on_a_file_the_list_does_not_name",
+     lambda: mock.patch.object(cb, "record_stop", lambda record: record_check(record, unlisted_stops=False))),
+    ("C116", "a record with no SHA256SUMS let through",
+     T + "Record.test_print_stops_on_a_missing_list_or_file",
+     lambda: mock.patch.object(cb, "record_stop", lambda record: record_check(record, list_needed=False))),
+    ("C117", "print's record stop line not naming the file",
+     T + "Record.test_print_stops_on_a_file_whose_bytes_give_another_sha256",
+     lambda: mock.patch.object(cb, "record_stop", lambda record: record_check(record, names_the_file=False))),
+    ("C118", "write checking the rules before the fold records",
+     T + "FoldRecords.test_write_stops_on_a_fold_record_with_a_key_missing",
+     lambda: mock.patch.object(cb, "fold_keys_missing",
+                               lambda reading, _orig=cb.fold_keys_missing: _orig(reading) if cb.same_rules(reading)
+                               else [])),
+    ("C119", "the count of coefficients under 0 not among the fold keys write checks",
+     T + "FoldRecords.test_write_stops_on_a_fold_record_with_a_key_missing",
+     lambda: mock.patch.object(cb, "FOLD_KEYS", {"weighted": ("end",),
+                                                 "logistic": ("end", "columns_aside", "columns_shared")})),
+    ("C120", "a rule row checked on its outcome alone",
+     T + "Descriptive.test_write_stops_on_one_field_of_a_logistic_rule_row_changed",
+     lambda: mock.patch.object(cb, "not_descriptive", outcome_only)),
+    ("C121", "a rule row checked on its reading alone",
+     T + "Descriptive.test_print_stops_on_one_field_of_a_logistic_rule_row_changed",
+     lambda: mock.patch.object(cb, "not_descriptive", reading_only)),
+    ("C122", "a rule row checked in the count over all alone",
+     T + "Descriptive.test_write_stops_on_one_field_of_a_logistic_rule_row_changed",
+     lambda: mock.patch.object(cb, "not_descriptive", all_count_only)),
+    ("C123", "print checking the rule rows of the count over all alone",
+     T + "Descriptive.test_print_stops_on_one_field_of_a_logistic_rule_row_changed",
+     lambda: mock.patch.object(cb, "tables", tables_all_count_only)),
 ]
 
 

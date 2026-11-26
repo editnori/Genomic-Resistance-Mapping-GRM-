@@ -58,28 +58,31 @@ The weighted mean starts from the equal weights and only ever lowers the loss, s
 
 - **Three counts.** The count over every report and the count without the arm's flagged reports decide: the weighted mean is kept only if the rule keeps it in both. Otherwise its reading is no difference shown.
 - **Few species.** A count of under 6 species has no interval, so it keeps nothing, and the weighted mean's reading is no difference shown, whatever the other count gives.
-- **Second count.** Beside them, a second count without the arm's marked reports is written, and it decides nothing. The record gives each count's own outcome and the arm's reading.
+- **Second count.** Beside them, a second count without the arm's marked reports is written, and it decides nothing. The record gives each count's own outcome for the weighted mean and the arm's reading.
 
-A report is flagged for an arm by either of two conditions, each read on the stored values with no tolerance:
+A report is flagged for an arm by any of three conditions, each read on the stored values with no tolerance:
 
 | Condition | Flags the report when | Arms |
 |---|---|---|
 | One score (R30) | some learner gives every genome of a fold of 2 or more genomes one score | both |
 | Coefficient under 0 (R37) | some fold's logistic fit gives one of the five learners a coefficient under 0; a coefficient of exactly 0 does not flag | logistic only |
+| Training share (R46) | some learner gives 2 or more genomes of one fold that fold's training share of resistant genomes as their score, by `==` | both |
 
-**Training share.** The release scores a learner that selected nothing at its fold's training share of resistant genomes. That share falls as the held-out fold's own share rises, so it carries the held-out labels, upside down.
+**Training share.** The release scores a learner that selected nothing at its fold's training share of resistant genomes. That share falls as the held-out fold's own share rises, so it carries the held-out labels, upside down. R46, ruled on 26 Nov 2026 before any reading, adds a condition for it.
 
-**Sign.** A score that follows the training share points the wrong way for the held-out fold. With every coefficient at 0 or above, the share moves a fold's calls nearly always the wrong way: on the reviewer's made-up reports, 3 of 248 fold fits moved them the right way. A learner that scores each genome within a hair of the share gives no fold one score, so R30's condition alone misses it. The weighted mean's weights are never under 0.
+**Sign.** A score that follows the training share points the wrong way for the held-out fold. With every coefficient at 0 or above, the share moves a fold's calls nearly always the wrong way: on the reviewer's made-up reports, 3 of 248 fold fits moved them the right way. A learner within a hair of the share gives no fold one score and no genome the share, so neither R30's condition nor R46's flags it. The weighted mean's weights are never under 0.
 
-**Logistic arm.** R43, ruled on 26 Nov 2026 before any reading, reads the logistic arm as descriptive only. Its three counts, medians and intervals are written as before, and its outcome and reading say "descriptive only" in each count, whatever its figures. R37's condition, its column, the logistic arm's third count and the `flags:` line stay as counts, and decide nothing.
+**Logistic arm.** R43, ruled on 26 Nov 2026 before any reading, reads the logistic arm as descriptive only. Its three counts, medians and intervals are written as before, and its outcome and reading say "descriptive only" in each count, whatever its figures. R37's condition, its column, the logistic arm's third count and the `flags:` line stay as counts, and decide nothing. The weighted mean is the one arm the rule can keep. It has no intercept and no weight under 0.
 
 **Cost.** With the five learners' scores correlated at 0.8, and again at 0.95, R37's condition flagged 200 of 200 honest made-up reports, where no learner carries a fold's share. The logistic arm was then kept in 0 of 8 made-up readings whose true gain was near 0.05. With R30's condition alone, it was kept in 8 of 8.
 
-**Break.** On the reviewer's made-up reports, a learner with real signal, whose score also falls as its training share rises, got the logistic arm kept through the fold's share alone, and R37's condition flagged 0 of its 20 reports. The same learners at each report's own share were not kept.
+**Break.** On the reviewer's made-up reports, a learner with real signal, whose score also falls as its training share rises, got the logistic arm kept through the fold's share alone, and R37's condition flagged 0 of its 20 reports. The same learners at each report's own share were not kept. With that learner, the weighted mean was not kept: its median gain in balanced accuracy was -0.0096 over 20 reports, on the reviewer's made-up reports.
 
-**Weighted mean.** The weighted mean is the one arm the rule can keep, under R30's condition as before. It has no intercept and no weight under 0. With that falling learner, it was not kept: its median gain in balanced accuracy was -0.0096 over 20 reports.
+**Weighted mean.** On the reviewer's made-up reports, a learner scored about 97 of 100 genomes of each fold at that fold's training share. The plain mean's median balanced accuracy fell by 0.0381 and 0.0320, and the weighted mean's by 0.0000. The weighted mean was kept in 10 of 10 readings of two such families, and in 0 of their 10 controls. R30's condition flagged 3 of 200 reports, as no fold had one score. R46 closes it with the training share condition above.
 
-**Learners' code.** R43 reads the five learners' code for a score that falls as its training share rises. Four of the five, the decision tree, the forest, the boosted trees and the lasso, fit with class weights that give each class half the total weight. The rule learner gives a 0 or 1 call. A fold whose fit is empty scores every genome at its training share, and R30's condition flags that fold. This is a reading of the code and no measurement.
+**Learners' code.** The release works a fold's training share by one division: resistant training genomes over training genomes, the report's genomes outside the fold. Only a boosted model with no tree, or a lasso with no weight, gives it as a score, to every genome of its fold. An empty tree or forest scores its fold 0.5. R30's condition flags both. No learner scores a part of a fold at the share. This is a reading of the code and no measurement.
+
+**Class weights.** Four of the five, the decision tree, the forest, the boosted trees and the lasso, fit with class weights that give each class half the total weight. The rule learner gives a 0 or 1 call. Each fold's counts enter every fit of those four, and a leaf of fixed counts scores lower as the share rises. In 6 made-up families with a falling learner, two mimicking the class weights, the weighted mean was kept wrongly in 0 of 30 readings.
 
 ### Decision
 
@@ -128,17 +131,17 @@ Not read yet.
 
 **Free sign.** The stored scores come from one layer of folds. On them, a combiner with a free sign and an intercept cannot be told from one that reads the fold's share, so the logistic arm is read as descriptive only. A coefficient under 0 also arises when two learners score nearly alike, with no fold's share in either.
 
-**Incumbent.** A learner that carries the share lowers the incumbent, the mean with equal weights, so the weighted mean can gain beside it. R43 takes this in words and sets no rule for it.
+**Incumbent.** A learner that carries the share lowers the incumbent, the mean with equal weights, so the weighted mean can gain beside it. A tree leaf can score exactly the share by chance, when the leaf's ratio of resistant to susceptible genomes is the square of the training set's. Such a report leaves the third count, and the `flags:` line counts it. A made-up learner within a hair of the share is not flagged.
 
 **Rows.** The record bars a row per genome; a row per report is an aggregate and keeps its genome count. These are public bacterial genomes with public accession numbers, and the record holds no field about a patient.
 
 ## Method
 
-**Reading.** The commands, with the release's report directory as REPORTS, the reading's directory as READING and the record as OUT:
+**Reading.** The commands, with the release's report directory as REPORTS, the reading's directory as READING, the sha256 the read printed as SHA256 and the record as OUT:
 
 ```
 python3 -I scripts/mechanism/combiner.py read REPORTS --first reference/learner-overlap --second reference/learner-overlap/second-pass --out READING
-python3 -I scripts/mechanism/combiner.py write READING --reports REPORTS --out OUT
+python3 -I scripts/mechanism/combiner.py write READING --reports REPORTS --out OUT --sha256 SHA256
 python3 -I scripts/mechanism/combiner.py print OUT
 ```
 
@@ -157,13 +160,19 @@ Every key named `id` is dropped as a report is parsed. Gate 8 holds the reports'
 | 7. rows | the record holds a row per genome, or an arm's counts do not follow from the incumbent's and the transitions |
 | 8. ids | a written file holds a genome id, a token of an id's shape, or an `id` or `samples` key, or a decimal cell is 10 or more in size |
 
-Before gate 1, a report with one fold or a genome with no fold number stops the read with a line of its own, `stop folds:`, naming the report. Gate 5 names in the same way each report with a fold whose first Newton step has no finite solution. After the gates the read prints a line, `flags:`, with how many reports each condition flags and how many have both, and no score. Those counts decide nothing (R43).
+Before gate 1, a report with one fold or a genome with no fold number stops the read with a line of its own, `stop folds:`, naming the report. Gate 5 names in the same way each report with a fold whose first Newton step has no finite solution.
 
-**Write.** Write does not fit again. It works each report's sign flag, R37's condition, and its logistic mark out again from the logistic fold records it parses, and stops on a difference with a line, `stop flags:`, that names the report by species and antibiotic and gives no figure. It trusts the read's R30 flag and weighted mark. The read prints the sha256 of the reading it wrote, and write prints the sha256 of the reading it read, so the two can be matched.
+**Flags.** After the gates the read prints a line, `flags:`, with how many reports each condition flags, how many have both R30's and R37's, and how many R46's flags that R30's does not, and no score. Those counts decide nothing (R43).
 
-**Arms.** Write stops on a reading that names any arm but the weighted mean as one the rule can keep. Write and print stop, with a line `stop rule:`, on a rule row that gives the logistic arm an outcome or a reading other than descriptive only. No option and no environment setting changes the arms the rule can keep.
+**Write.** Write does not fit again. It takes the sha256 the read printed, works the sha256 of the reading's bytes before it parses them, and stops with one line, `stop sha256:`, on a difference or on a value that is not 64 hex characters. It then writes nothing. The record's `gates.txt` carries that sha256. Write does not work R30's flag or R46's out again: the sha256 covers every edit.
 
-**Tests.** `tests/mechanism/test_combiner.py` holds 98 SYNTHETIC tests of the script. `tests/mechanism/test_combiner_faults.py` runs `scripts/mechanism/combiner_faults.py`, which plants each fault below in the script in turn and runs the test named beside it. `tests/mechanism/test_combiner_page.py` holds 18 tests of this page against the script.
+**Fold records.** Write works each report's sign flag, R37's condition, and its logistic mark out again from the logistic fold records it parses, and stops on a difference with a line, `stop flags:`, that names the report by species and antibiotic and gives no figure. A fold record that lacks a key write reads stops write with a line, `stop fold records:`, that names the report in the same way.
+
+**Print.** Print reads the record's `SHA256SUMS` first. It stops with one line, `stop record:`, naming the file, when the list is missing, a file of the record is not listed, or a listed file is missing or its bytes give another sha256. Write prints the sha256 of the reading it read, so it can be matched with the read's.
+
+**Arms.** Write stops on a reading that names any arm but the weighted mean as one the rule can keep, or that lacks R46's flag or names other flags. Write and print stop, with a line `stop rule:`, on a rule row that gives the logistic arm an outcome or a reading other than descriptive only. No option and no environment setting changes the arms the rule can keep.
+
+**Tests.** `tests/mechanism/test_combiner.py` holds 115 SYNTHETIC tests of the script. `tests/mechanism/test_combiner_faults.py` runs `scripts/mechanism/combiner_faults.py`, which plants each fault below in the script in turn and runs the test named beside it. `tests/mechanism/test_combiner_page.py` holds 19 tests of this page against the script.
 
 | Fault planted | Test that fails with it |
 |---|---|
@@ -258,5 +267,37 @@ Before gate 1, a report with one fold or a genome with no fold number stops the 
 | C89. Gate 5 naming a report only with 2 or more folds whose first Newton step has no finite solution | `Flags.test_gate_5_names_a_report_with_exactly_1_fold_with_no_finite_first_step` |
 | C90. Write taking a report's sign flag given as text | `Flags.test_write_stops_on_a_sign_flag_given_as_text` |
 | C91. Write taking a fold fit's count given as true or false | `Flags.test_write_stops_on_a_fold_count_given_as_true_or_false` |
+| C92. The training share worked as the fold's own share | `Share.test_the_training_share_is_one_division_of_two_whole_numbers` |
+| C93. The training share worked as the report's share | `Share.test_the_training_share_is_one_division_of_two_whole_numbers` |
+| C94. The training share rounded twice, its resistant genomes times one over its genomes | `Share.test_the_training_share_is_one_division_of_two_whole_numbers` |
+| C95. A score read as the training share within a tolerance | `Share.test_two_genomes_of_a_fold_at_its_training_share_flag_the_report` |
+| C96. A report flagged by 1 genome at its fold's training share | `Share.test_two_genomes_of_a_fold_at_its_training_share_flag_the_report` |
+| C97. A report flagged only when a learner gives every genome of a fold its training share | `Share.test_two_genomes_of_a_fold_at_its_training_share_flag_the_report` |
+| C98. The genomes at their fold's training share counted over the report, not within one fold | `Share.test_two_genomes_of_a_fold_at_its_training_share_flag_the_report` |
+| C99. The share's flag left out of the weighted mean's third count | `Share.test_a_report_the_share_flags_leaves_both_arms_third_counts` |
+| C100. The share's flag left out of the logistic arm's third count | `Share.test_a_report_the_share_flags_leaves_both_arms_third_counts` |
+| C101. No report flagged by the share | `Share.test_a_report_the_share_flags_leaves_both_arms_third_counts` |
+| C102. The flags line giving the share's whole count where the count R30's condition does not flag belongs | `Share.test_the_flags_line_gives_the_share_conditions_counts` |
+| C103. Write blind to a reading made without the share condition | `Share.test_write_stops_on_a_reading_made_without_the_share_condition` |
+| C104. Write not comparing the sha256 it is given with the reading's bytes | `Sha256.test_write_stops_on_an_edited_reading_given_the_reads_sha256` |
+| C105. Write taking a sha256 that is not 64 hex characters | `Sha256.test_write_stops_on_a_value_not_64_hex_characters` |
+| C106. Gates.txt written without the reading's sha256 | `Sha256.test_gates_txt_carries_the_readings_sha256` |
+| C107. The sha256 an option write may leave out, and write unchecked without it | `Sha256.test_write_needs_the_sha256` |
+| C108. Write blind to a fold record with a key missing | `FoldRecords.test_write_stops_on_a_fold_record_with_a_key_missing` |
+| C109. The fold records' stop line naming the report by species only | `FoldRecords.test_write_stops_on_a_fold_record_with_a_key_missing` |
+| C110. The logistic fold records alone checked for a key | `FoldRecords.test_write_stops_on_a_fold_record_with_a_key_missing` |
+| C111. The first fold record of each arm alone checked for a key | `FoldRecords.test_write_stops_on_a_fold_record_with_a_key_missing` |
+| C112. Write naming only the first report whose fold records lack a key | `FoldRecords.test_write_names_each_report_whose_fold_records_lack_a_key` |
+| C113. Print not checking the record against SHA256SUMS | `Record.test_print_stops_on_a_file_whose_bytes_give_another_sha256` |
+| C114. Print checking rule.tsv alone against SHA256SUMS | `Record.test_print_stops_on_a_file_whose_bytes_give_another_sha256` |
+| C115. A record file SHA256SUMS does not list let through | `Record.test_print_stops_on_a_file_the_list_does_not_name` |
+| C116. A record with no SHA256SUMS let through | `Record.test_print_stops_on_a_missing_list_or_file` |
+| C117. Print's record stop line not naming the file | `Record.test_print_stops_on_a_file_whose_bytes_give_another_sha256` |
+| C118. Write checking the rules before the fold records | `FoldRecords.test_write_stops_on_a_fold_record_with_a_key_missing` |
+| C119. The count of coefficients under 0 not among the fold keys write checks | `FoldRecords.test_write_stops_on_a_fold_record_with_a_key_missing` |
+| C120. A rule row checked on its outcome alone | `Descriptive.test_write_stops_on_one_field_of_a_logistic_rule_row_changed` |
+| C121. A rule row checked on its reading alone | `Descriptive.test_print_stops_on_one_field_of_a_logistic_rule_row_changed` |
+| C122. A rule row checked in the count over all alone | `Descriptive.test_write_stops_on_one_field_of_a_logistic_rule_row_changed` |
+| C123. Print checking the rule rows of the count over all alone | `Descriptive.test_print_stops_on_one_field_of_a_logistic_rule_row_changed` |
 
-91 of 91 faults failed their test. Each test passes as the script stands and fails with its fault planted.
+123 of 123 faults failed their test. Each test passes as the script stands and fails with its fault planted.

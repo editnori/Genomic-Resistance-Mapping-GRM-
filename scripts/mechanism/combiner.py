@@ -3,7 +3,7 @@ FREEZE-COMBINE (docs/combiner-result.md).
 
     python3 -I combiner.py plan
     python3 -I combiner.py read REPORTS_DIR --first FIRST --second SECOND --out READING_DIR [--expect 274]
-    python3 -I combiner.py write READING_DIR --reports REPORTS_DIR --out RECORD_DIR
+    python3 -I combiner.py write READING_DIR --reports REPORTS_DIR --out RECORD_DIR --sha256 SHA256
     python3 -I combiner.py print RECORD_DIR
 
 FIRST is the learner overlap's record (reference/learner-overlap, its datasets.tsv) and SECOND its second pass's
@@ -50,12 +50,25 @@ changes it. Write stops on a reading made under other arms, and write and print 
 logistic arm any other outcome or reading. R37's flag, its column, the logistic third count and the flags line stay
 as counts, and decide nothing. Write does not fit again: it works each report's sign flag (R37's condition) and its
 logistic mark out again from the logistic fold records it parses, and stops on a difference with a line naming the
-report by species and antibiotic. It trusts the read's R30 flag and weighted mark.
+report by species and antibiotic.
+
+R46 (26 Nov 2026) adds a third condition, for both arms: a report is flagged when some learner gives SHARE_GENOMES
+or more genomes of one stored fold that fold's training share as their score, read with == and no tolerance. The
+share is worked as the release works it, by one division of two whole numbers: the report's resistant genomes
+outside the fold over its genomes outside it. A flagged report leaves both arms' third counts, and the flags line
+gives its count and how many of those R30's condition does not flag. Write takes the sha256 the read printed, as a
+required option, and stops with one line, writing nothing, when the reading's bytes give another or the value is
+not 64 hex characters; gates.txt carries that sha256, so SHA256SUMS binds the record to the reading. Write does not
+work R30's flag or the third condition out again: the sha256 covers every edit. A fold record that lacks a key
+write reads stops write with a line naming the report. Print reads SHA256SUMS first and stops with one line naming
+the file when a listed file's bytes give another sha256, when a record file is not listed, or when the list is
+missing.
 
 `read` runs the learner overlap's checks through learner_overlap.read_reports, which drops every key named `id`
-as a file is parsed, then gates 1 to 6, and writes reading.json: per report, counts only. `write` runs gates 7 and
-8 and writes datasets.tsv, pooled.tsv, rule.tsv, transitions.tsv, gates.txt and SHA256SUMS. `print` prints the
-page's tables. A failed gate writes nothing and exits 1.
+as a file is parsed, then gates 1 to 6, and writes reading.json: per report, counts only. `write` checks the
+reading's sha256, runs gates 7 and 8 and writes datasets.tsv, pooled.tsv, rule.tsv, transitions.tsv, gates.txt and
+SHA256SUMS. `print` checks the record against SHA256SUMS and prints the page's tables. A failed gate writes nothing
+and exits 1.
 
 Python 3.12, standard library only; run with -I.
 """
@@ -95,9 +108,12 @@ NO_FIRST_STEP = "no_finite_first_step"   # a logistic fold whose first Newton st
 COUNTS_OF_RULE = ("all", "without_marked", "without_flagged")
 BESIDE = "decides nothing"
 FLAG_FOLD = 2                   # a report is flagged when a learner gives every genome of a fold this size or more one score
-FLAGS = {"weighted": ("one_score_fold",),                          # the flags each arm's third count leaves out (R37):
-         "logistic": ("one_score_fold", "coefficient_under_0")}    # R30's for both arms, the sign for the logistic arm
-FLAG_NAMES = ("one_score_fold", "coefficient_under_0")
+SHARE_GENOMES = 2               # R46: or this many genomes or more of one fold that fold's training share as their score
+FLAGS = {"weighted": ("one_score_fold", "training_share_fold"),    # the flags each arm's third count leaves out: R30's
+         "logistic": ("one_score_fold", "coefficient_under_0",     # and R46's for both arms (R37, R46), the sign for
+                      "training_share_fold")}                      # the logistic arm
+FLAG_NAMES = ("one_score_fold", "coefficient_under_0", "training_share_fold")
+HEX = "0123456789abcdef"        # R46: write's --sha256 is 64 of these, in either case
 FROZEN_REPORTS = 268            # gate 1: the freeze's reports; the command line gives no way to change it
 VME_RULE = ("the species-clustered interval of the median change in the very major error rate does not lie wholly "
             "above 0")
@@ -108,6 +124,9 @@ LOWER_BETTER = ("vme", "log_loss")
 DECIMAL_LIMIT = 10              # a decimal cell under 10 in size has one digit before its point
 READING = "reading.json"
 RECORD_FILES = ("datasets.tsv", "pooled.tsv", "rule.tsv", "transitions.tsv", "gates.txt")
+SUMS = "SHA256SUMS"
+FOLD_KEYS = {"weighted": ("end",),                                 # R46: the keys of an arm's fold record that write
+             "logistic": ("end", "columns_aside", "columns_shared", "coefficients_under_0")}   # reads
 TRANSITIONS = ("recovered_1to4", "recovered_all5", "lost", "cleared", "new_wrong")
 COUNTS = ("tp", "fn", "fp", "tn", "called")
 DATASET_COLUMNS = (["species", "antibiotic", "genomes", "resistant", "susceptible", "mean_miss_by_1to4",
@@ -465,6 +484,28 @@ def one_score_fold(S, folds):
                for ss in by.values())
 
 
+def training_share(labels, folds, f):
+    """Fold f's training share of resistant genomes as the release works it (src/learn/mod.rs, train_prevalence): the
+    report's resistant genomes outside fold f over its genomes outside it, one division of two whole numbers, which
+    Python rounds once, as the release's f64 division does. None when no genome lies outside the fold."""
+    outside = [t for t, g in zip(labels, folds) if g != f]
+    return sum(1 for t in outside if t) / len(outside) if outside else None
+
+
+def training_share_fold(S, labels, folds):
+    """The report's third flag (R46), for both arms: some learner gives SHARE_GENOMES or more genomes of one stored
+    fold that fold's training share as their score, read with == and no tolerance. A boosted model with no tree, or
+    a lasso with no weight, scores every genome of its fold at that share."""
+    by = collections.defaultdict(list)
+    for s, f in zip(S, folds):
+        by[f].append(s)
+    for f, ss in by.items():
+        share = training_share(labels, folds, f)
+        if share is not None and any(sum(1 for s in ss if s[j] == share) >= SHARE_GENOMES for j in range(len(FIVE))):
+            return True
+    return False
+
+
 def fold_number(g):
     """A genome's stored fold is a whole number."""
     return isinstance(g, int) and not isinstance(g, bool)
@@ -532,7 +573,7 @@ def report_counts(labels, S, folds):
     row = {"genomes": n, "resistant": sum(labels), "susceptible": n - sum(labels),
            "mean_miss_by_1to4": sum(1 for t, m, k in zip(labels, mean_calls, called_by) if t and not m and k > 0),
            "mean_miss_by_all5": sum(1 for t, m, k in zip(labels, mean_calls, called_by) if t and not m and k == 0),
-           "one_score_fold": one_score_fold(S, folds)}
+           "one_score_fold": one_score_fold(S, folds), "training_share_fold": training_share_fold(S, labels, folds)}
     for arm in ARMS:
         p, recs = crossfit(arm, S, labels, folds)
         probs[arm], calls[arm] = p, [None if x is None else is_call(x) for x in p]
@@ -680,6 +721,12 @@ def flag_counts(rows):
             sum(1 for r in rows if r["one_score_fold"] and r["coefficient_under_0"]))
 
 
+def share_counts(rows):
+    """The reports flagged by R46's condition, and how many of those R30's does not flag: counts of reports only."""
+    return (sum(1 for r in rows if r["training_share_fold"]),
+            sum(1 for r in rows if r["training_share_fold"] and not r["one_score_fold"]))
+
+
 def read(directory, first_record, second_record, expect=lo.EXPECT_FILES, reports=None):
     """The learner overlap's checks, then gates 1 to 6; return the reading or raise Stop. Gate 1 holds the read to
     `reports` reports, FROZEN_REPORTS when None; only a test passes its own count."""
@@ -744,13 +791,16 @@ def read(directory, first_record, second_record, expect=lo.EXPECT_FILES, reports
     lines += [f"  gate 3 differs: {d}" for d in sorted(differ)]
     lines += [f"  gate 5 no finite first step: {d}" for d in sorted(first_step)]
     one_score, under, both = flag_counts(rows)
+    share, share_only = share_counts(rows)
     lines.append(f"flags: {len(rows)} reports; {one_score} where a learner gives every genome of a fold one score, "
                  f"left out of both arms' third counts; {under} where a logistic fold fit gives a learner a coefficient "
-                 f"under 0, left out of the logistic arm's; {both} with both")
+                 f"under 0, left out of the logistic arm's; {both} with both; {share} where a learner gives "
+                 f"{SHARE_GENOMES} or more genomes of a fold that fold's training share as their score, left out of "
+                 f"both arms' third counts, {share_only} of them not flagged by R30's condition")
     if any("STOP" in line for line in lines):
         raise Stop("\n".join(first["checks"] + lines))
     return {"cutoff": CUTOFF, "forms": list(FORMS), "five": list(FIVE), "clip": CLIP, "margin": MARGIN,
-            "counts_of_rule": list(COUNTS_OF_RULE), "flag_fold": FLAG_FOLD,
+            "counts_of_rule": list(COUNTS_OF_RULE), "flag_fold": FLAG_FOLD, "share_genomes": SHARE_GENOMES,
             "flags": {a: list(FLAGS[a]) for a in ARMS}, "can_be_kept": list(CAN_BE_KEPT),
             "first_checks": first["checks"], "checks": lines,
             "datasets": sorted(rows, key=lambda r: (r["species"], r["antibiotic"]))}
@@ -855,8 +905,9 @@ def unmarked(rows, arm):
 
 
 def unflagged(rows, arm):
-    """The reports with none of the arm's flags (R37): for the weighted arm, no learner gives every genome of a fold
-    one score; for the logistic arm, that, and no logistic fold fit gives a learner a coefficient under 0."""
+    """The reports with none of the arm's flags (R37, R46): for the weighted arm, no learner gives every genome of a
+    fold one score and none gives SHARE_GENOMES or more genomes of a fold its training share; for the logistic arm,
+    those, and no logistic fold fit gives a learner a coefficient under 0."""
     return [r for r in rows if all(r[flag] != "yes" for flag in FLAGS[arm])]
 
 
@@ -977,14 +1028,50 @@ def kept_arms_written(reading):
     return reading.get("can_be_kept") == list(CAN_BE_KEPT)
 
 
+def share_condition_written(reading):
+    """The reading was made under R46: it gives the share condition's count of genomes as this script does, and every
+    report carries its third flag as true or false. The flags each arm leaves out are checked with R37's."""
+    return (reading.get("share_genomes") == SHARE_GENOMES
+            and all(isinstance(d.get("training_share_fold"), bool) for d in reading.get("datasets") or []))
+
+
 def same_rules(reading):
     """The reading was made under this script's rules: its cutoff, forms, five learners and clip, the rule's three
-    counts and the flag's fold size, R30's flag on every report, R37's flags, and R43's arms that can be kept."""
+    counts and the flag's fold size, R30's flag on every report, R46's, R37's flags, and R43's arms that can be
+    kept."""
     return ((reading.get("cutoff"), reading.get("forms"), reading.get("five"), reading.get("clip"),
              reading.get("counts_of_rule"), reading.get("flag_fold"))
             == (CUTOFF, list(FORMS), list(FIVE), CLIP, list(COUNTS_OF_RULE), FLAG_FOLD)
             and all(isinstance(d.get("one_score_fold"), bool) for d in reading.get("datasets") or [])
+            and share_condition_written(reading)
             and second_condition_written(reading) and kept_arms_written(reading))
+
+
+def missing_fold_key(d):
+    """The first key, by arm and in FOLD_KEYS' order, that one of a report's fold records lacks and write reads, as
+    (arm, key), or None (R46). A report with no list of fold records for an arm lacks them all."""
+    for arm in ARMS:
+        recs = d.get(f"{arm}_folds")
+        if not isinstance(recs, list) or not recs:
+            return arm, None
+        for key in FOLD_KEYS[arm]:
+            if any(not isinstance(r, dict) or key not in r for r in recs):
+                return arm, key
+    return None
+
+
+def fold_key_stop(d, missing):
+    """The stop line for a report whose fold records lack a key write reads: it names the report by species and
+    antibiotic, and gives no figure and no traceback."""
+    arm, key = missing
+    what = f"no {arm} fold records" if key is None else f"a {arm} fold record has no {key}"
+    return f"stop fold records: {d.get('species')} with {d.get('antibiotic')}: {what}: STOP"
+
+
+def fold_keys_missing(reading):
+    """A stop line for each report whose fold records lack a key write reads."""
+    return [fold_key_stop(d, missing) for d in reading.get("datasets") or [] for missing in [missing_fold_key(d)]
+            if missing]
 
 
 def worked_out(d):
@@ -1014,12 +1101,41 @@ def reading_sha256(raw):
     return hashlib.sha256(raw).hexdigest()
 
 
-def write_record(reading_dir, reports_dir, out):
-    """Gates 7 and 8 and the record. The reading is parsed from the bytes whose sha256 write prints."""
+def sha256_form(given):
+    """A sha256 as the read prints it: 64 hex characters, in either case (R46)."""
+    return len(given) == 64 and all(ch in HEX for ch in given.lower())
+
+
+def sha256_stop(given, digest):
+    """Why write stops on the sha256 it was given, as one line with no figure, or None (R46): the value is not 64 hex
+    characters, or the reading's bytes give another sha256."""
+    if not sha256_form(given):
+        return "stop sha256: the value given is not 64 hex characters: STOP"
+    if given.lower() != digest:
+        return f"stop sha256: {READING} is not the reading the read wrote: its bytes give another sha256: STOP"
+    return None
+
+
+def sha256_line(digest):
+    """gates.txt's last line: the sha256 of the reading the record was written from, which SHA256SUMS then binds to
+    the record (R46)."""
+    return f"sha256 of {READING}: {digest}\n"
+
+
+def write_record(reading_dir, reports_dir, out, sha256):
+    """Gates 7 and 8 and the record. Write works the sha256 of the reading's bytes first and stops unless it is the
+    one given (R46); the reading is parsed from those bytes. A fold record that lacks a key write reads stops it next,
+    before the rules are checked, so that the stop names the report."""
     with open(os.path.join(reading_dir, READING), "rb") as f:
         raw = f.read()
-    reading = json.loads(raw.decode("utf-8"))
     digest = reading_sha256(raw)
+    why = sha256_stop(sha256, digest)
+    if why:
+        raise Stop(why)
+    reading = json.loads(raw.decode("utf-8"))
+    missing = fold_keys_missing(reading)
+    if missing:
+        raise Stop("\n".join(missing))
     if not same_rules(reading):
         raise Stop("the reading was made under other rules")
     differ = flags_differ(reading)
@@ -1057,10 +1173,11 @@ def write_record(reading_dir, reports_dir, out):
             f.write("\n".join(reading["first_checks"] + reading["checks"] + [line7, line8]) + "\n")
             f.write(f"rule: the very major error rate is not higher on that interval: {VME_RULE}\n")
             f.write("".join(f"reading {r['arm']}: {r['reading']}\n" for r in rules if r["count"] == "all"))
-        with open(os.path.join(tmp, "SHA256SUMS"), "w", encoding="utf-8") as f:
+            f.write(sha256_line(digest))
+        with open(os.path.join(tmp, SUMS), "w", encoding="utf-8") as f:
             for name in RECORD_FILES:
                 f.write(f"{lo.sha256(os.path.join(tmp, name))}  {name}\n")
-        if any(id_scan([os.path.join(tmp, "gates.txt"), os.path.join(tmp, "SHA256SUMS")], ids)):
+        if any(id_scan([os.path.join(tmp, "gates.txt"), os.path.join(tmp, SUMS)], ids)):
             raise Stop("gate 8 ids: gates.txt or SHA256SUMS holds a genome id or an id-shaped token: STOP")
         lo.publish(tmp, out)
     finally:
@@ -1081,7 +1198,46 @@ def dec(x, places):
     return f"{sign}{whole:,}.{part:0{places}d}"
 
 
+def listed_files(text):
+    """SHA256SUMS' lines as {name: sha256}, or None when a line is not a sha256, two spaces and a record file's name,
+    or names a file twice."""
+    listed = {}
+    for line in text.split("\n")[:-1] if text.endswith("\n") else text.split("\n"):
+        digest, sep, name = line.partition("  ")
+        if not sep or name not in RECORD_FILES or name in listed:
+            return None
+        listed[name] = digest
+    return listed
+
+
+def record_stop(record):
+    """Why print stops before it reads the record, as one line naming the file, or None (R46): SHA256SUMS is
+    missing or holds a line other than a record file's; a record file, or any other file of the record, is not
+    listed; a listed file is missing; or a listed file's bytes give another sha256 than the list."""
+    path = os.path.join(record, SUMS)
+    if not os.path.isfile(path):
+        return f"stop record: {SUMS} is missing: STOP"
+    with open(path, encoding="utf-8") as f:
+        listed = listed_files(f.read())
+    if listed is None:
+        return f"stop record: {SUMS} holds a line other than a sha256 and a record file's name: STOP"
+    present = sorted(n for n in os.listdir(record) if n != SUMS)
+    for name in list(RECORD_FILES) + [n for n in present if n not in RECORD_FILES]:
+        if name not in listed:
+            return f"stop record: {name} is not listed in {SUMS}: STOP"
+    for name in RECORD_FILES:
+        file = os.path.join(record, name)
+        if not os.path.isfile(file):
+            return f"stop record: {name} is listed in {SUMS} and missing: STOP"
+        if lo.sha256(file) != listed[name]:
+            return f"stop record: {name} gives another sha256 than {SUMS} lists: STOP"
+    return None
+
+
 def tables(record):
+    why = record_stop(record)
+    if why:
+        raise Stop(why)
     rules = lo.read_tsv(os.path.join(record, "rule.tsv"))
     others = not_descriptive(rules)
     if others:
@@ -1136,6 +1292,12 @@ def plan():
             "flags": {a: list(FLAGS[a]) for a in ARMS},
             "coefficient_under_0": "a logistic fold fit gives one of the five learners a coefficient under 0.0, read "
             "with no tolerance; the intercept is not one of the five",
+            "share_genomes": SHARE_GENOMES,
+            "training_share_fold": "a learner gives SHARE_GENOMES or more genomes of one stored fold that fold's "
+            "training share as their score, read with == and no tolerance; the share is the report's resistant "
+            "genomes outside the fold over its genomes outside it, one division",
+            "write_sha256": "write takes the sha256 the read printed and stops when the reading's bytes give another",
+            "print_checks": SUMS,
             "counts": {"all": "decides", "without_marked": BESIDE, "without_flagged": "decides"},
             "can_be_kept": list(CAN_BE_KEPT), "descriptive_only": [a for a in ARMS if not can_be_kept(a)],
             "vme_rule": VME_RULE,
@@ -1158,6 +1320,7 @@ def parser():
     w.add_argument("reading")
     w.add_argument("--reports", required=True)
     w.add_argument("--out", required=True)
+    w.add_argument("--sha256", required=True)
     p = sub.add_parser("print")
     p.add_argument("record")
     return ap
@@ -1179,7 +1342,7 @@ def main(argv=None, reports=None):
             print("\n".join(reading["first_checks"] + reading["checks"]))
             print(f"read: {len(reading['datasets'])} reports; wrote {READING}, sha256 {written}")
         elif args.cmd == "write":
-            rows, rules, line7, line8, digest = write_record(args.reading, args.reports, args.out)
+            rows, rules, line7, line8, digest = write_record(args.reading, args.reports, args.out, args.sha256)
             print(f"write: read {READING}, sha256 {digest}")
             print(line7)
             print(line8)
