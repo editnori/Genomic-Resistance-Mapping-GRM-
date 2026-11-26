@@ -15,9 +15,13 @@ the rule of 14 Nov. A dataset with several pairs at one horizon gives their mean
 learner and for a contrast, descriptive only under 12 datasets or 3 species.
 
 With --listed (one file a dataset of M, <dataset>.txt, one genome id a line, as m_list.py writes them) each
-contrast is read twice, by R33 points 8 to 10. It stops, writing nothing, unless the list dir holds a list file
-and each list file names a dataset of the design (R38), and it prints how many list files it read and how many
-datasets they name, and no genome count.
+contrast is read twice, by R33 points 8 to 10. It stops, writing nothing, unless the list dir holds a list file,
+each <dataset>.txt there is a file, each list file names a dataset of the design (R38), matched letter for letter,
+and each list file names at least 1 genome that a fit of its dataset scored (R41). So a list file with no id, a
+list file whose ids are in no test set of its dataset, and a list file for a dataset the design leaves out on every
+clock each stop it, with a line that names the files and no id. A list file is read with a byte-order mark
+dropped. It prints how many list files it read and how many datasets they name, and no genome count. A dataset
+with no list file lists no genome, so its second reading is its first.
 The second reading takes the listed genomes out of a pair's test genomes for both fits, with no refit. A pair stays
 only when its test set lists no genome or at least 5 of each class, and each class keeps the test minimum once they
 are out. lacking.tsv names each dataset the second reading lacks at a horizon, with its reason. A pair left out for
@@ -263,21 +267,41 @@ def checked_result(name, r, d, fit, window):
 
 
 def read_lists(folder):
-    """{dataset: set of listed genome ids} from <dataset>.txt files."""
+    """{dataset: set of listed genome ids} from <dataset>.txt files, each read with a byte-order mark dropped, so
+    that its first id matches its genome (R41). A <dataset>.txt that is not a file stops it."""
     lists = {}
     root = guard(folder, "list dir")
     need(root.is_dir(), "the list dir is not a directory")
     for path in sorted(root.glob("*.txt")):
-        text = guard(path, "list file").read_text(encoding="utf-8")
+        path = guard(path, "list file")
+        need(path.is_file(), f"{path.name} in the list dir is not a file")
+        text = path.read_text(encoding="utf-8-sig")
         lists[path.name[:-4]] = {x.strip() for x in text.splitlines() if x.strip()}
     return lists
 
 
+def check_lists(design, lists, scored):
+    """R41: each list file names at least 1 genome that a fit of its dataset scored, on either clock. Three stops,
+    in this order, each naming the files and no id: a file with no id, a file for a dataset the design leaves out on
+    every clock, and a file whose ids are in no test set of its dataset. scored: {dataset: genome ids its fits
+    scored}."""
+    names = sorted(lists)
+    empty = [n + ".txt" for n in names if not lists[n]]
+    need(not empty, f"{len(empty)} of {len(names)} list files name no genome id: {', '.join(empty)}")
+    kept = {d["id"] for d in design["datasets"] if not d["why_not"]}
+    left_out = [n + ".txt" for n in names if n not in kept]
+    need(not left_out, f"{len(left_out)} of {len(names)} list files are for a dataset the design leaves out: "
+                       f"{', '.join(left_out)}")
+    untested = [n + ".txt" for n in names if not lists[n] & scored.get(n, set())]
+    need(not untested, f"{len(untested)} of {len(names)} list files name no test genome of their dataset: "
+                       f"{', '.join(untested)}")
+
+
 def collect(design, results, lists):
-    """Per clock and reading, the dataset values of each contrast, horizon and learner, the lacking rows, and every
-    genome id seen. Stops on any failed check."""
+    """Per clock and reading, the dataset values of each contrast, horizon and learner, the lacking rows, every
+    genome id seen, and per dataset the genome ids its fits scored. Stops on any failed check."""
     values = {}   # (clock, reading, contrast, h) -> list of dataset rows
-    lacking, ids = [], set()
+    lacking, ids, scored = [], set(), {}
     for lst in (lists or {}).values():
         ids |= lst
     for d in design["datasets"]:
@@ -296,6 +320,7 @@ def collect(design, results, lists):
             need(fold["train"] == fit["train"] and fold["train_resistant"] == fit["train_resistant"],
                  f"{fit['file']}: training counts other than the design's for {arm}({k}) on window {j}")
             ids.update(g for g, _ in samples)
+            scored.setdefault(d["id"], set()).update(g for g, _ in samples)
         for contrast in CONTRASTS:
             arm = ARM_OF[contrast]
             by_h = {}
@@ -325,7 +350,7 @@ def collect(design, results, lists):
                         continue
                     values.setdefault((clock, reading, contrast, h), []).append(
                         dataset_rows(d, kept))
-    return values, lacking, ids
+    return values, lacking, ids, scored
 
 
 def dataset_rows(d, kept):
@@ -488,7 +513,9 @@ def build(design_dir, results, listed_dir=None):
         need(not strays, f"{len(strays)} of {len(lists)} list files name no dataset of the design: "
                          f"{', '.join(strays)}")
     readings_made = READINGS if lists is not None else READINGS[:1]
-    values, lacking, ids = collect(design, results, lists)
+    values, lacking, ids, scored = collect(design, results, lists)
+    if lists is not None:
+        check_lists(design, lists, scored)
     need(values, "no dataset with a pair to read")
     reading_rows, rule_rows, verdict_rows, verdicts, rules, reads = analyze(design, values, readings_made)
     stand_rows = stands(design, verdicts, readings_made)

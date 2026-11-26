@@ -14,7 +14,7 @@ from pathlib import Path
 from tests.time_split import stagger_fixture as fx
 
 runner = fx.load(fx.FAULTS, "stagger_faults_under_test")
-COUNT = 87
+COUNT = 101
 
 
 class Faults(unittest.TestCase):

@@ -22,9 +22,9 @@ genomes. recent(1) is all(1), so one file serves both arms at origin 1, and the 
 
 check60: the design at the single share 60% on the public-day clock, with the rules of 14 Nov, against the cut day
 of each dataset of the 14 Nov record's datasets.tsv. It stops, writing nothing and naming no cut day, unless the
-table has 24 rows, each a different dataset and each a dataset of the metadata (ruling R38; the 24 is
-CHECK_DATASETS, and no option changes it). It writes <out dir>/check60.tsv and exits 1 unless every cut day is the
-record's.
+table has 24 rows, each a different dataset and each a dataset of the metadata, matched letter for letter (ruling
+R38; the 24 is CHECK_DATASETS, and no option changes it). A row with fewer cells than the header stops it too, with
+one line (R41). It writes <out dir>/check60.tsv and exits 1 unless every cut day is the record's.
 
 Every path is checked before it is opened: a path that holds `latetest`, `sealed` or `held-out` stops the script,
 which names the path's role and that word and nothing more. An out dir that holds a file stops it too.
@@ -518,9 +518,13 @@ def check60(inputs, table_path, datasets=CHECK_DATASETS):
     text = read_text(table_path, "reference table")
     lines = text.rstrip("\n").split("\n")
     head = lines[0].split("\t")
-    reference = [dict(zip(head, line.split("\t"))) for line in lines[1:]]
+    cells = [line.split("\t") for line in lines[1:]]
+    reference = [dict(zip(head, row)) for row in cells]
     need(reference and {"dataset", "cohort", "cut_day", "share_public_by_cut"} <= set(head),
          "the reference table has no dataset rows of the 14 Nov record's columns")
+    ragged = [str(i) for i, row in enumerate(cells, 1) if len(row) < len(head)]
+    need(not ragged, f"{len(ragged)} of the reference table's {len(cells)} rows hold fewer cells than its header's "
+                     f"{len(head)}: row {', '.join(ragged)}")
     names = [ref["dataset"] for ref in reference]
     need(len(reference) == datasets,
          f"the 60% check needs {datasets} dataset rows, each a different dataset of the metadata; the reference "

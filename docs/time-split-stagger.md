@@ -1,6 +1,6 @@
 # Staggered split by time
 
-Not run yet. This page sets out the frozen plan of 25 Nov 2026 and the three rulings of 26 Nov that read it. No fold file, fit or score of this split exists.
+Not run yet. This page sets out the frozen plan of 25 Nov 2026 and the five rulings of 26 Nov that read it: R33, R35, R38, R40 and R41. No fold file, fit or score of this split exists.
 
 ## Question
 
@@ -76,7 +76,7 @@ The plan wrote three before any fold file:
 2. Stale all, horizon 1: a cost through log loss for at least 3 of 5.
 3. Collection-year clock: not shown on every contrast.
 
-The analysis marks each met, not met or not read, by a rule fixed in its code before any result. It reads the first two on the public-day clock. It reads the third on both contrasts at every horizon the collection-year clock has. The third is met only when horizon 1 has a verdict on both contrasts and every verdict at every horizon is not shown.
+The analysis marks each met, not met or not read, by a rule fixed in its code before any result. It reads the first two on the public-day clock. It reads the third on both contrasts at every horizon the collection-year clock has. The third is met only when horizon 1 has a verdict on both contrasts and every verdict at every horizon is not shown. A later horizon that is descriptive only, or has no dataset, gives no verdict.
 
 Descriptive only is never met. A prediction is met only when both readings are made and both meet it. It is not met when a reading that was made fails it, and otherwise it is not read.
 
@@ -89,7 +89,8 @@ The plan gives one verdict from one reading. The second reading, and the rule th
 - A pair enters the second reading only when its test set lists no genome, or at least 5 of each class, and each class keeps the test minimum once they are out.
 - A dataset with no such pair at a horizon is left out of the second reading there and named with its reason. A pair left out gives no figure.
 - A verdict stands only when both readings give it.
-- The lists stay on the computer that makes the run. The analysis stops when it is given no list, or a list that names no dataset of the design.
+- The lists stay on the computer that makes the run.
+- With lists given, the analysis stops when the list directory has no list file, when a list file names no dataset of the design, or when a list file names no test genome of its dataset. Without lists, no second reading is made.
 
 Example, at a test minimum of 15: a test set of 20 resistant and 20 susceptible genomes that lists 5 of each is read again on 15 and 15. One that lists 3 resistant genomes and no susceptible one leaves the second reading.
 
@@ -98,7 +99,7 @@ Example, at a test minimum of 15: a test set of 20 resistant and 20 susceptible 
 - Before any fit, the design at the single share 60%, with the 14 Nov rules, gives the cut day of each of the 14 Nov split's 24 datasets. The check stops unless its table holds those 24, each once.
 - No path of the sealed later records is opened.
 - Before any reading, the four checks of 14 Nov: each result names its fold file's sha256, both fits of a pair scored the same genomes with the same labels, training counts match the design, and recall worked out again matches the evaluator's.
-- 87 planted faults, one a rule, each with the test that fails with it.
+- 101 planted faults, one a rule, each with the test that fails with it.
 
 ## Limits
 
@@ -108,4 +109,4 @@ Example, at a test minimum of 15: a test set of 20 resistant and 20 susceptible 
 - Species are few, so the interval is coarse.
 - The record will hold rows per dataset, species, clock, contrast, horizon, arm and learner. It holds no genome id and names no study.
 
-Record: frozen plan `FREEZE-STAGGER-20261125.md`, sha256 ceac8b5bf286fb5e94f05dad69d6ade622ad6234ee0a6fd0ac2469dfc182e39c; rulings R33, R35 and R38 of 26 Nov 2026; `scripts/time-split/stagger_design.py`, `scripts/time-split/stagger_analyze.py` and `scripts/time-split/stagger_faults.py`; the split of 14 Nov, [time-split.md](time-split.md).
+Record: frozen plan `FREEZE-STAGGER-20261125.md`, sha256 ceac8b5bf286fb5e94f05dad69d6ade622ad6234ee0a6fd0ac2469dfc182e39c; rulings R33, R35, R38, R40 and R41 of 26 Nov 2026; `scripts/time-split/stagger_design.py`, `scripts/time-split/stagger_analyze.py` and `scripts/time-split/stagger_faults.py`; the split of 14 Nov, [time-split.md](time-split.md).

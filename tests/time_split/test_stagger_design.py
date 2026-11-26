@@ -483,6 +483,27 @@ class Check60(unittest.TestCase):
                      "the 60% check needs 24 datasets of the metadata; the metadata lacks 1 of the reference table's "
                      "datasets: check_species__drug_99")
 
+    def test_a_dataset_name_in_upper_case_stops(self):
+        # Names are matched letter for letter: the metadata has no dataset of that name.
+        names = self.names[:5] + [self.names[5].upper()] + self.names[6:]
+        self.stopped(self.table("upper.tsv", names),
+                     "the 60% check needs 24 datasets of the metadata; the metadata lacks 1 of the reference table's "
+                     "datasets: CHECK_SPECIES__DRUG_05")
+
+    def test_a_dataset_name_with_a_space_after_it_stops(self):
+        names = self.names[:5] + [self.names[5] + " "] + self.names[6:]
+        self.stopped(self.table("spaced.tsv", names),
+                     "the 60% check needs 24 datasets of the metadata; the metadata lacks 1 of the reference table's "
+                     "datasets: check_species__drug_05 ")
+
+    def test_a_row_of_one_cell_stops_with_one_line(self):
+        # 24 rows, the 6th its dataset's name alone: one stop line where a traceback was (R41).
+        path = self.table("cell.tsv")
+        lines = path.read_text().split("\n")
+        lines[6] = self.names[5]
+        path.write_text("\n".join(lines))
+        self.stopped(path, "1 of the reference table's 24 rows hold fewer cells than its header's 7: row 6")
+
     def test_an_undated_cohort_genome_fails_its_dataset(self):
         # syn-k-030 is labelled in check_species__drug_23 alone. Undated, it leaves 29 dated genomes there:
         # ceil(17.4) = 18, the 18th of days 1 to 9 and 11 to 30, day 19, the table's. The cut day agrees, and the

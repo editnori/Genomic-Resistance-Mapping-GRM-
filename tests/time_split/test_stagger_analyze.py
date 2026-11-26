@@ -24,18 +24,19 @@ def samples_of(tag, r, s):
     return [(f"syn-{tag}-r{i:02d}", True) for i in range(r)] + [(f"syn-{tag}-s{i:02d}", False) for i in range(s)]
 
 
-def write_case(base, datasets, clock="public-day", minimum=10, lists=None):
+def write_case(base, datasets, clock="public-day", minimum=10, lists=None, shares=None):
     """A hand design and its result files. Each dataset: id, species, tests {window: samples}, scores
     {(window, origin): one score list for every learner, or {learner: scores}}, pairs [(older, window)]; and, for
     stale same size, recent {(window, origin of 2 or more): scores} and same_size_pairs [(older, window)], with
-    recent(1) in the file of all(1), as the design writes it. Returns (design dir, result dir, list dir or None)."""
+    recent(1) in the file of all(1), as the design writes it. shares: {clock: share set}, 40, 60 and 80 where absent.
+    Returns (design dir, result dir, list dir or None)."""
     base = Path(base)
     design_dir, results = base / "design", base / "results"
     design_dir.mkdir(parents=True)
     results.mkdir()
     design = {"plan_sha256": sd.PLAN_SHA256, "key": sd.KEY, "min_train_class": 25,
-              "clocks": {c: {"shares": [40, 60, 80], "test_minimum": minimum, "descriptive_only": False}
-                         for c in sd.CLOCKS}, "datasets": []}
+              "clocks": {c: {"shares": list((shares or {}).get(c, (40, 60, 80))), "test_minimum": minimum,
+                             "descriptive_only": False} for c in sd.CLOCKS}, "datasets": []}
     for d in datasets:
         row = {"id": d["id"], "species_slug": d["species"], "antibiotic": "drug", "clock": clock, "built": True,
                "why_not": "", "windows": [], "pairs": {c: [] for c in sd.CONTRASTS}}
@@ -265,6 +266,12 @@ class Interval(unittest.TestCase):
         point = an.interval({"a": [0.0, 0.1], "b": [0.5]}, random.Random(an.SEED))[0]
         self.assertEqual(point, 0.1)
 
+    def test_the_point_of_an_even_count_of_datasets_is_the_mean_of_the_two_middle_values(self):
+        # Four datasets in two species, 0.0, 0.25, 0.75 and 1.0: the median is 0.5. The lower of the two middle
+        # values is 0.25 and the higher 0.75.
+        point = an.interval({"a": [0.0, 0.75], "b": [0.25, 1.0]}, random.Random(an.SEED))[0]
+        self.assertEqual(point, 0.5)
+
 
 class DescriptiveClock(unittest.TestCase):
     def test_a_clock_the_rule_marks_descriptive_gives_descriptive_only(self):
@@ -353,6 +360,14 @@ class SecondCase(unittest.TestCase):
         keep, why = an.second_case(samples, listed, 15)
         self.assertEqual((len(keep), why), (40, ""))
 
+    def test_the_susceptible_class_alone_falls_under_the_minimum_once_out(self):
+        # 30 R and 20 S, 5 of each listed: 25 R and 15 S are left, under a minimum of 16 in S alone.
+        samples = samples_of("v", 30, 20)
+        listed = set([g for g, t in samples if t][:5] + [g for g, t in samples if not t][:5])
+        self.assertEqual(an.second_case(samples, listed, 16), (None, an.UNDER))
+        keep, why = an.second_case(samples, listed, 15)
+        self.assertEqual((len(keep), why), (40, ""))
+
 
 class SecondReading(Case):
     def test_the_listed_genomes_leave_both_fits(self):
@@ -369,11 +384,12 @@ class SecondReading(Case):
         self.assertIn("lists: 1 list files read; they name 1 datasets of the design\n", text)
 
     def test_a_short_list_leaves_the_pair_out_with_no_figure(self):
+        # two_species__drug has no list file: it lists no genome, so its second reading is its first.
         a, b = samples_of("a", 12, 12), samples_of("b", 12, 12)
         datasets = [{"id": f"{n}_species__drug", "species": f"{n}_species", "tests": {2: s},
                      "scores": {(2, 1): scores_for(s, {s[0][0]}), (2, 2): scores_for(s)}, "pairs": [(1, 2)]}
                     for n, s in (("one", a), ("two", b))]
-        lists = {"one_species__drug": [a[0][0], a[1][0], a[12][0]], "two_species__drug": []}
+        lists = {"one_species__drug": [a[0][0], a[1][0], a[12][0]]}
         design_dir, results, list_dir = write_case(self.tmp, datasets, lists=lists)
         code, _, err, out = self.run_it(design_dir, results, list_dir)
         self.assertEqual(code, 0, err)
@@ -381,9 +397,13 @@ class SecondReading(Case):
         self.assertEqual(lacking, [{"clock": "public-day", "contrast": "stale-all", "horizon": "1",
                                     "dataset": "one_species__drug", "species": "one_species", "reason": an.SHORT}])
         for name in ("arms.tsv", "contrasts.tsv"):
-            second = [r for r in table(out / name) if r["reading"] == "second"]
+            rows = table(out / name)
+            second = [r for r in rows if r["reading"] == "second"]
             self.assertTrue(second)
             self.assertEqual({r["dataset"] for r in second}, {"two_species__drug"}, name)
+            first = [{**r, "reading": "second"} for r in rows
+                     if r["reading"] == "first" and r["dataset"] == "two_species__drug"]
+            self.assertEqual(second, first, name)
         second = [r for r in table(out / "readings.tsv") if r["reading"] == "second"]
         self.assertEqual({r["datasets"] for r in second}, {"1"})
         self.assertEqual({r["datasets"] for r in table(out / "readings.tsv") if r["reading"] == "first"}, {"2"})
@@ -398,15 +418,80 @@ class Lists(Case):
                     for n, s in (("one", self.a), ("two", self.b))]
         return write_case(self.tmp, datasets, lists=lists)
 
+    def stopped(self, design_dir, results, list_dir, message, out="out"):
+        code, text, err, out = self.run_it(design_dir, results, list_dir, out=out)
+        self.assertEqual((code, text), (1, ""))
+        self.assertEqual(err, f"stagger_analyze: stopped: {message}\n")
+        self.assertFalse(out.exists())
+        return err
+
     def test_a_list_file_that_names_no_dataset_of_the_design_stops(self):
         design_dir, results, list_dir = self.two_datasets({"one_species__drug": [self.a[0][0]],
                                                            "three_species__drug": [self.a[1][0]],
+                                                           "two_species__drug": [self.b[0][0]]})
+        self.stopped(design_dir, results, list_dir,
+                     "1 of 3 list files name no dataset of the design: three_species__drug.txt")
+
+    def test_a_list_file_named_in_upper_case_stops(self):
+        # Names are matched letter for letter: the upper-case name names no dataset of the design.
+        design_dir, results, list_dir = self.two_datasets({"ONE_SPECIES__DRUG": [self.a[0][0]],
+                                                           "two_species__drug": [self.b[0][0]]})
+        self.stopped(design_dir, results, list_dir,
+                     "1 of 2 list files name no dataset of the design: ONE_SPECIES__DRUG.txt")
+
+    def test_a_list_file_with_no_id_stops(self):
+        # No line, then blank lines alone: with nothing listed, the second reading would be the first again (R41).
+        design_dir, results, list_dir = self.two_datasets({"one_species__drug": [self.a[0][0]],
                                                            "two_species__drug": []})
-        code, text, err, out = self.run_it(design_dir, results, list_dir)
-        self.assertEqual((code, text), (1, ""))
-        self.assertEqual(err, "stagger_analyze: stopped: 1 of 3 list files name no dataset of the design: "
-                              "three_species__drug.txt\n")
-        self.assertFalse(out.exists())
+        for i, text in enumerate(("", "\n  \n\t\n")):
+            with self.subTest(text=repr(text)):
+                (Path(list_dir) / "two_species__drug.txt").write_text(text, encoding="utf-8")
+                self.stopped(design_dir, results, list_dir,
+                             "1 of 2 list files name no genome id: two_species__drug.txt", out=f"out{i}")
+
+    def test_a_list_file_whose_ids_are_in_no_test_set_of_its_dataset_stops(self):
+        # A test genome of the other dataset, and an id of no test set at all: no fit of two_species__drug scored
+        # either. The stop names the file and no id.
+        design_dir, results, list_dir = self.two_datasets({"one_species__drug": [self.a[0][0]],
+                                                           "two_species__drug": [self.a[1][0], "syn-nowhere-0001"]})
+        err = self.stopped(design_dir, results, list_dir,
+                           "1 of 2 list files name no test genome of their dataset: two_species__drug.txt")
+        self.assertNotIn("syn-", err)
+
+    def test_a_list_file_for_a_dataset_the_design_leaves_out_stops(self):
+        # three_species__drug is in the design with no pair at any horizon. one_species__drug is left out on the
+        # collection-year clock and kept on the public-day clock, so its list file passes.
+        design_dir, results, list_dir = self.two_datasets({"one_species__drug": [self.a[0][0]],
+                                                           "three_species__drug": [self.a[1][0]]})
+        path = Path(design_dir) / "design.json"
+        design = json.loads(path.read_text())
+        for dataset, clock in (("three_species__drug", "public-day"), ("one_species__drug", "collection-year")):
+            design["datasets"].append({"id": dataset, "species_slug": dataset.split("__")[0], "antibiotic": "drug",
+                                       "clock": clock, "built": True, "why_not": "no pair at any horizon",
+                                       "windows": [], "pairs": {c: [] for c in sd.CONTRASTS}})
+        path.write_text(json.dumps(design))
+        self.stopped(design_dir, results, list_dir,
+                     "1 of 2 list files are for a dataset the design leaves out: three_species__drug.txt")
+
+    def test_a_byte_order_mark_is_dropped(self):
+        # 20 R and 20 S, 5 of each listed, the first listed id after the mark. With the mark dropped, that id
+        # matches its genome: 5 R and 5 S leave the second reading, which scores 15 and 15.
+        samples = samples_of("p", 20, 20)
+        listed = [g for g, t in samples if t][:5] + [g for g, t in samples if not t][:5]
+        (design_dir, results, list_dir), _, _ = self.one_pair(lists={"hand_species__drug": listed})
+        path = Path(list_dir) / "hand_species__drug.txt"
+        self.assertEqual(path.read_text(encoding="utf-8").split("\n")[0], samples[0][0])
+        path.write_text("﻿" + path.read_text(encoding="utf-8"), encoding="utf-8")
+        code, _, err, out = self.run_it(design_dir, results, list_dir)
+        self.assertEqual(code, 0, err)
+        self.assertEqual(table(out / "lacking.tsv"), [])
+        rows = {(r["reading"], r["test"], r["test_resistant"]) for r in table(out / "contrasts.tsv")}
+        self.assertEqual(rows, {("first", "40", "20"), ("second", "30", "15")})
+
+    def test_a_directory_named_as_a_list_file_stops(self):
+        design_dir, results, list_dir = self.two_datasets({"one_species__drug": [self.a[0][0]]})
+        (Path(list_dir) / "two_species__drug.txt").mkdir()
+        self.stopped(design_dir, results, list_dir, "two_species__drug.txt in the list dir is not a file")
 
     def test_a_list_dir_with_no_list_file_stops(self):
         # No list file, and then a file of another kind alone: a second reading with nothing listed is the first
@@ -424,9 +509,10 @@ class Lists(Case):
                 self.assertFalse(out.exists())
 
     def test_it_prints_the_files_and_the_datasets_they_name(self):
-        # Two list files naming 3 genomes and none: 2 files, 2 datasets, and no count of genomes.
+        # Two list files naming 3 genomes and 1: 2 files, 2 datasets, and no count of genomes.
         listed = [self.a[0][0], self.a[1][0], self.a[12][0]]
-        design_dir, results, list_dir = self.two_datasets({"one_species__drug": listed, "two_species__drug": []})
+        design_dir, results, list_dir = self.two_datasets({"one_species__drug": listed,
+                                                           "two_species__drug": [self.b[0][0]]})
         code, text, err, _ = self.run_it(design_dir, results, list_dir)
         self.assertEqual(code, 0, err)
         self.assertEqual([x for x in text.splitlines() if x.startswith("lists")],
@@ -554,6 +640,18 @@ class Predictions(unittest.TestCase):
         self.assertEqual(rows["P3"]["no_verdict"], "none")
         self.assertEqual(an.PREDICTION_COLUMNS[-1], "no_verdict")
 
+    def test_no_verdict_names_the_second_readings_horizons_too(self):
+        # Both readings made. The second has no verdict at horizon 2: no dataset on stale all, descriptive only on
+        # stale same size. P1 and P2 have no dataset in either reading.
+        v = {(r, "collection-year", c, k): "not shown" for r in an.READINGS for c in sd.CONTRASTS for k in (1, 2)}
+        del v[("second", "collection-year", "stale-all", 2)]
+        v[("second", "collection-year", "stale-same-size", 2)] = "descriptive only"
+        rows = {r["prediction"]: r for r in an.predictions(v, {}, {}, an.READINGS, TWO)}
+        self.assertEqual((rows["P3"]["first"], rows["P3"]["second"], rows["P3"]["outcome"]), ("met", "met", "met"))
+        self.assertEqual(rows["P3"]["no_verdict"], "second stale-all horizon 2; second stale-same-size horizon 2")
+        self.assertEqual(rows["P1"]["no_verdict"], "first stale-same-size horizon 1; second stale-same-size horizon 1")
+        self.assertEqual(rows["P2"]["no_verdict"], "first stale-all horizon 1; second stale-all horizon 1")
+
     def outcomes(self, first, second=None):
         """P3's row with the first reading met or not, and the second met, not met or not made (None)."""
         v = {}
@@ -583,6 +681,54 @@ class Predictions(unittest.TestCase):
         self.assertEqual(an.outcome({"first": "met"}), "not read")
 
 
+def horizon_datasets(windows, cost_at=None):
+    """12 datasets in 3 species on the collection-year clock, with test sets of 20 R and 20 S on windows 2 to
+    windows and pairs at every horizon on both contrasts. A fit scores each resistant genome 0.9 and each
+    susceptible one 0.1, but an older fit at horizon cost_at scores each resistant genome 0.6: log loss worse and
+    recall the same for all 5 learners, a cost shown there."""
+    datasets = []
+    for i in range(12):
+        tests = {j: samples_of(f"h{i:02d}w{j}", 20, 20) for j in range(2, windows + 1)}
+        scores = {(j, k): [0.6 if t else 0.1 for _, t in s] if j - k == cost_at else scores_for(s)
+                  for j, s in tests.items() for k in range(1, j + 1)}
+        pairs = [(k, j) for j in tests for k in range(1, j)]
+        datasets.append({"id": f"sp{i % 3}_species__drug_{i:02d}", "species": f"sp{i % 3}_species", "tests": tests,
+                         "scores": scores, "recent": {(j, k): x for (j, k), x in scores.items() if k >= 2},
+                         "pairs": pairs, "same_size_pairs": pairs})
+    return datasets
+
+
+class Horizons(Case):
+    """Prediction 3 through build(): read at every horizon the collection-year clock's share set gives (R38)."""
+
+    def p3(self, shares, windows, cost_at=None, name="case"):
+        write_case(self.tmp / name, horizon_datasets(windows, cost_at), clock="collection-year", shares=shares)
+        code, text, err = fx.run(an, self.tmp / name / "design", self.tmp / name / "results", self.tmp / name / "out")
+        self.assertEqual(code, 0, err)
+        p3 = {r["prediction"]: r for r in table(self.tmp / name / "out" / "predictions.tsv")}["P3"]
+        verdicts = {(r["contrast"], r["horizon"]): r["verdict"] for r in table(self.tmp / name / "out" / "verdicts.tsv")
+                    if r["clock"] == "collection-year"}
+        return p3["first"], p3["no_verdict"], verdicts
+
+    def test_p3_a_cost_at_the_last_horizon_through_build_is_not_met(self):
+        # Both clocks with shares 40, 60 and 80: horizons 1 and 2. Not shown at horizon 1, a cost at horizon 2.
+        first, no_verdict, verdicts = self.p3({c: (40, 60, 80) for c in sd.CLOCKS}, 3, cost_at=2)
+        self.assertEqual(verdicts, {("stale-all", "1"): "not shown", ("stale-all", "2"): "cost shown",
+                                    ("stale-same-size", "1"): "not shown", ("stale-same-size", "2"): "cost shown"})
+        self.assertEqual((first, no_verdict), ("not met", "none"))
+
+    def test_p3_reads_the_collection_year_clocks_own_horizons(self):
+        # The public-day clock has 1 horizon and the collection-year clock 2, with a cost at horizon 2: not met.
+        # Then the other way: the collection-year clock's 1 horizon, not shown, is all P3 reads, and it is met.
+        first, no_verdict, _ = self.p3({"public-day": (50, 70), "collection-year": (40, 60, 80)}, 3, cost_at=2,
+                                       name="fewer-public")
+        self.assertEqual((first, no_verdict), ("not met", "none"))
+        first, no_verdict, verdicts = self.p3({"public-day": (40, 60, 80), "collection-year": (50, 70)}, 2,
+                                              name="fewer-collection")
+        self.assertEqual(verdicts, {("stale-all", "1"): "not shown", ("stale-same-size", "1"): "not shown"})
+        self.assertEqual((first, no_verdict), ("met", "none"))
+
+
 class Stands(unittest.TestCase):
     design = {"clocks": {c: {"shares": [50, 70]} for c in sd.CLOCKS}}
 
@@ -603,34 +749,38 @@ class Stands(unittest.TestCase):
 
 
 class Agreement(unittest.TestCase):
-    """12 datasets in 3 species whose older fit scores each resistant genome 0.6 and the fresh fit 0.9: log loss
-    worse for every learner, recall not shown, so stale all at horizon 1 shows a cost and P2's first reading meets
-    it. Run without lists and with one empty list file."""
+    """12 datasets in 3 species of 20 R and 20 S whose older fit scores each resistant genome 0.6 and the fresh fit
+    0.9: log loss worse for every learner, recall not shown, so stale all at horizon 1 shows a cost and P2's first
+    reading meets it. Run without lists, and with a list file a dataset that names 5 R and 5 S of its test
+    genomes."""
 
     @classmethod
     def setUpClass(cls):
         cls.tmp = Path(tempfile.mkdtemp(prefix="stagger-agree-"))
-        datasets = []
+        datasets, lists = [], {}
         for i in range(12):
-            s = samples_of(f"g{i:02d}", 10, 10)
+            s = samples_of(f"g{i:02d}", 20, 20)
             older = [0.6 if t else 0.1 for _, t in s]
             datasets.append({"id": f"sp{i % 3}_species__drug_{i:02d}", "species": f"sp{i % 3}_species",
                              "tests": {2: s}, "scores": {(2, 1): older, (2, 2): scores_for(s)}, "pairs": [(1, 2)]})
-        design_dir, results, list_dir = write_case(cls.tmp, datasets, lists={datasets[0]["id"]: []})
+            lists[datasets[-1]["id"]] = [g for g, t in s if t][:5] + [g for g, t in s if not t][:5]
+        design_dir, results, list_dir = write_case(cls.tmp, datasets, lists=lists)
         cls.got = {}
         for name, extra in (("unlisted", []), ("listed", ["--listed", list_dir])):
             code, text, err = fx.run(an, design_dir, results, cls.tmp / name, *extra)
             assert code == 0, err
             cls.got[name] = ({r["prediction"]: r for r in table(cls.tmp / name / "predictions.tsv")},
                              {(r["clock"], r["contrast"], r["horizon"]): r for r in
-                              table(cls.tmp / name / "stands.tsv")}, text)
+                              table(cls.tmp / name / "stands.tsv")}, text,
+                             {(r["reading"], r["test"], r["test_resistant"])
+                              for r in table(cls.tmp / name / "contrasts.tsv")})
 
     @classmethod
     def tearDownClass(cls):
         shutil.rmtree(cls.tmp)
 
     def test_without_lists_the_prediction_is_not_read_and_no_verdict_stands(self):
-        predictions, stands, text = self.got["unlisted"]
+        predictions, stands, text, _ = self.got["unlisted"]
         p2, row = predictions["P2"], stands[("public-day", "stale-all", "1")]
         self.assertEqual((row["first"], row["second"], row["stands"]),
                          ("cost shown", "not read", "second reading not made"))
@@ -642,10 +792,13 @@ class Agreement(unittest.TestCase):
                          ("not met", "not met", "first stale-same-size horizon 1"))
 
     def test_with_both_readings_the_prediction_and_the_verdict_agree(self):
-        predictions, stands, _ = self.got["listed"]
+        predictions, stands, text, tested = self.got["listed"]
         p2, row = predictions["P2"], stands[("public-day", "stale-all", "1")]
         self.assertEqual((row["first"], row["second"], row["stands"]), ("cost shown", "cost shown", "cost shown"))
         self.assertEqual((p2["first"], p2["second"], p2["outcome"]), ("met", "met", "met"))
+        # The second reading is not the first again: each dataset's 10 listed test genomes are out of it.
+        self.assertEqual(tested, {("first", "40", "20"), ("second", "30", "15")})
+        self.assertIn("lists: 12 list files read; they name 12 datasets of the design\n", text)
 
 
 class MadeUpWorld(unittest.TestCase):
@@ -669,7 +822,6 @@ class MadeUpWorld(unittest.TestCase):
                     body = json.loads((design_dir / "fold-files" / w["fits"][0]["file"]).read_text())
                     tests.update(body["test"][0][:2])
         (lists / f"{cls.short}.txt").write_text("".join(g + "\n" for g in sorted(tests)))
-        (lists / "beta_species__drug_one.txt").write_text("")
         cls.out = cls.tmp / "out"
         cls.code, cls.text, cls.err = fx.run(an, design_dir, cls.tmp / "results", cls.out, "--listed", lists)
 
