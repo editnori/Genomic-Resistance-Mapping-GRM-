@@ -17,7 +17,7 @@ faults = common.load("m_faults")
 ROOT = common.ROOT
 # The new rules of the run on the datasets of M, each with a fault.
 RULES = ("list", "floor", "check species", "Same build", "Same results", "Same counts", "second reading",
-         "first run", "Holm", "counts", "tables", "pack", "cost", "run script")
+         "first run", "Holm", "counts", "small lists", "tables", "pack", "cost", "run script")
 
 
 def tests_of(module):

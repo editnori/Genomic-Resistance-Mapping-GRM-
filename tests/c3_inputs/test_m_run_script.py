@@ -12,13 +12,16 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tests.c3_inputs import common
+from tests.c3_inputs import common, m_common
 
 expect = common.load("expect")
+checks = common.load("m_checks")
 SCRIPT = (common.KIT / "run_m.sh").read_text()
 SPECIES_SCRIPT = (common.KIT / "run_species.sh").read_text()
 CODE = "\n".join(line for line in SCRIPT.splitlines() if not line.lstrip().startswith("#"))
 D = "synthia_coli__drug_m"
+# The records file of ruling R26: the 1,285,111 lab records the pinned table was rebuilt from on 21 Nov 2026.
+RECORDS_SHA256 = "d231fa768a31fc4ce4c8a6bb7024d05d632621846070688adb892fbfe340fd78"
 
 
 def function(name, text=SCRIPT):
@@ -45,7 +48,7 @@ def at(text):
 
 class Order(unittest.TestCase):
     def test_the_three_checks_run_before_any_fit_of_m(self):
-        steps = ["step same_build first_build", 'm_checks.py" build', "step build changed_build",
+        steps = ["\nchanged_files\n", "step same_build first_build", 'm_checks.py" build', "step build changed_build",
                  '"$KIT/m-checked.txt" "$CHECK_SPECIES" "$CODE" "$GRM_COMMIT"', "step matrix matrix",
                  "step m_list m_list", 'm_fits "$OUT/expect-first.tsv"', 'm_checks.py" results',
                  'same_counts "$OUT/expect-first.tsv" first', 'touch "$OUT/flags/m_checked.done"',
@@ -168,25 +171,126 @@ class Shared(unittest.TestCase):
     def test_the_pins_are_run_species_sh_s(self):
         pin = re.compile(r'(?m)^\s*pinned "(\$[A-Z]+[^"]*)" ([0-9a-f]{64})$')
         mine, theirs = dict(pin.findall(SCRIPT)), dict(pin.findall(SPECIES_SCRIPT))
-        self.assertEqual(len(mine), 10)
+        self.assertEqual(len(mine), 11)
+        # The records file is run_m.sh's own pin (ruling R26); run_species.sh reads no records file.
+        self.assertEqual(mine.pop("$KIT/genome_amr.jsonl"), RECORDS_SHA256)
         for path, sha in mine.items():
             self.assertEqual(theirs.get(path), sha, path)
         # bcalm2 runs only when GRAPH is not grm; the test genome is pinned inside program_env, which is read.
         self.assertEqual(set(theirs) - set(mine),
                          {"$KIT/bcalm-binaries-v2.2.3-Linux.tar.gz", "$AMR/testdna/test_dna.fa"})
 
-    def test_the_records_file_is_held_to_its_line_in_the_master_list(self):
-        self.assertIn('master bvbrc/genome_amr.jsonl "$KIT/genome_amr.jsonl"', CODE)
+    def test_the_records_file_is_pinned_by_its_own_sha256(self):
+        # The 1,285,111 lab records the pinned table was rebuilt from (ruling R26), not the master list's file.
+        self.assertIn(f'pinned "$KIT/genome_amr.jsonl" {RECORDS_SHA256}', CODE)
+        self.assertNotIn("bvbrc/genome_amr.jsonl", CODE)
         self.assertIn('m_list.py" "$ROOT" "$KIT/genome_amr.jsonl"', function("m_list"))
+        line = next(l for l in CODE.splitlines() if l.startswith('pinned "$KIT/genome_amr.jsonl"'))
+        with tempfile.TemporaryDirectory() as d:
+            kit = Path(d)
+            (kit / "genome_amr.jsonl").write_text('{"made": "up"}\n')
+            sha = subprocess.run(["sha256sum", str(kit / "genome_amr.jsonl")], capture_output=True, text=True).stdout[:64]
+            code = 'say() { echo "$*"; }\n' + function("pinned", SPECIES_SCRIPT)
+            self.assertEqual(bash(code + line.replace(RECORDS_SHA256, sha), {"KIT": str(kit)})[0], 0)
+            rc, out, _ = bash(code + line, {"KIT": str(kit)})
+            self.assertEqual((rc, "sha256 differs from the pinned value" in out), (1, True))
+
+    def test_scrub_reads_an_id_as_the_pack_check_does(self):
         with tempfile.TemporaryDirectory() as d:
             top = Path(d)
-            (top / "genome_amr.jsonl").write_text('{"made": "up"}\n')
-            sha = subprocess.run(["sha256sum", str(top / "genome_amr.jsonl")], capture_output=True, text=True).stdout[:64]
-            (top / "master").write_text(f"{'0' * 64}  bvbrc/other.jsonl\n{sha}  bvbrc/genome_amr.jsonl\n")
-            code = function("master", SPECIES_SCRIPT) + f'master bvbrc/genome_amr.jsonl "{top}/genome_amr.jsonl"'
-            self.assertEqual(bash(code, {"M": str(top / "master")})[0], 0)
-            (top / "genome_amr.jsonl").write_text('{"made": "up", "changed": 1}\n')
-            self.assertNotEqual(bash(code, {"M": str(top / "master")})[0], 0)
+            (top / "release" / "species").mkdir(parents=True)
+            (top / "release" / "species" / "synthia_coli.json").write_text(
+                '{"genomes": [{"id": "90007.3"}, {"id": "90007.4"}]}')
+            log = top / "out" / "fit.log"
+            log.parent.mkdir()
+            log.write_text("wrote 90007.3_scores and 0.90007.4, read 90007.33 and v90007.4\n")
+            env = {"W": str(top / "work"), "R": str(top / "release"), "SP": "synthia_coli", "HERE": str(common.KIT)}
+            rc, _, err = bash(function("scrub") + f'scrub "{log}"', env)
+            self.assertEqual(rc, 0, err)
+            self.assertEqual(log.read_text(), "wrote [genome id]_scores and 0.[genome id], read 90007.33 and v90007.4\n")
+            self.assertIn("90007.3_scores", (top / "work" / "raw-logs" / "fit.log").read_text())
+
+
+class Builds(unittest.TestCase):
+    """Both builds run with cargo's home at the first run's path and write it to their record; stubs stand in for
+    git, tar, cargo and objcopy."""
+
+    STUBS = (
+        'git() { :; }\ntar() { :; }\n'
+        'cargo() { mkdir -p "$CARGO_TARGET_DIR/release"; echo "home $CARGO_HOME" > "$CARGO_TARGET_DIR/release/grm"; '
+        'echo "$CARGO_HOME" >> "$OUT/homes"; }\n'
+        'objcopy() { cp "$4" "$5"; }\n')
+
+    def run_build(self, name, export=None):
+        export = re.search(r"(?m)^export CARGO_HOME=.*$", SCRIPT).group(0) if export is None else export
+        with tempfile.TemporaryDirectory() as d:
+            top = Path(d)
+            env = {"W": str(top / "w"), "OUT": str(top / "out"), "REPO": str(top), "FIRST_COMMIT": "a" * 40,
+                   "GRM_COMMIT": "b" * 40, "GRM": str(top / "w" / "target" / "release" / "grm")}
+            (top / "out").mkdir()
+            rc, out, err = bash(export + "\n" + self.STUBS + function(name) + name, env)
+            record = "binary-first.txt" if name == "first_build" else "binary.txt"
+            text = (top / "out" / record).read_text() if (top / "out" / record).exists() else ""
+            homes = (top / "out" / "homes").read_text() if (top / "out" / "homes").exists() else ""
+            return rc, text, homes, err
+
+    def test_both_builds_use_the_first_runs_cargo_home(self):
+        self.assertIn("export CARGO_HOME=/home/user/.cargo\n", SCRIPT)
+        for name in ("first_build", "changed_build"):
+            rc, _, homes, err = self.run_build(name)
+            self.assertEqual((rc, homes), (0, "/home/user/.cargo\n"), err)
+
+    def test_each_builds_record_names_its_cargo_home(self):
+        for name in ("first_build", "changed_build"):
+            rc, text, _, err = self.run_build(name)
+            self.assertEqual(rc, 0, err)
+            self.assertIn("\ncargo_home /home/user/.cargo\n", text)
+        self.assertIn('[ "$(sed -n \'s/^cargo_home //p\' "$OUT/binary.txt")" = "$CARGO_HOME" ]', CODE)
+
+    def test_same_build_names_the_cargo_home_when_it_differs(self):
+        line = next(l for l in CODE.splitlines() if "Same build differs" in l)
+        self.assertIn("cargo's home $CARGO_HOME", line)
+        call = CODE[at('m_checks.py" build'):at("Same build differs")]
+        self.assertIn('"$(sed -n \'s/^cargo_home //p\' "$OUT/binary-first.txt")"', call)
+
+
+class SameCountsRun(unittest.TestCase):
+    """same_counts itself, run in bash on SYNTHETIC fits: a difference ends it with a non-zero exit."""
+
+    def lay_out(self, top, change=None):
+        rows = expect.rows(m_common.SPECIES, [m_common.M_SET], [m_common.M_SET], [], [42], [], ["k31-counts"])
+        gs = m_common.genomes()
+        exp, picks, scores, kept, study = m_common.lay_out(top, rows, lambda e: gs)
+        path = Path(top) / "expect.tsv"
+        with open(path, "w") as f:
+            f.write("\t".join(common.COLUMNS) + "\n" + "".join("\t".join(e[c] for c in common.COLUMNS) + "\n" for e in exp))
+        if change:
+            change(picks)
+        (Path(top) / "out" / "check").mkdir(parents=True)
+        env = {"HERE": str(common.KIT), "PICKS": str(picks), "SCORES": str(scores), "KEPT": str(kept),
+               "STUDY": str(study), "OUT": str(Path(top) / "out"), "W": str(Path(top) / "work"),
+               "R": str(Path(top) / "release"), "SP": m_common.SPECIES}
+        code = 'say() { echo "said: $*"; }\n' + function("scrub") + function("same_counts") + f'same_counts "{path}" m\n'
+        return bash(code, env)
+
+    def test_same_counts_ends_non_zero_on_a_synthetic_difference(self):
+        def change(picks):
+            path = picks / "k31-counts" / f"{m_common.M_SET}.lineage-s42.pick.json"
+            doc = checks.load(path)
+            doc["folds"][1]["outer"][0]["tp"] += 1
+            doc["folds"][1]["outer"][0]["fn"] -= 1
+            m_common.write_json(path, doc)
+        with tempfile.TemporaryDirectory() as d:
+            rc, out, err = self.lay_out(d, change)
+            self.assertNotEqual(rc, 0, out + err)
+            self.assertIn("said: Same counts differs", out)
+            self.assertIn("stopped", (Path(d) / "out" / "check" / "same-counts-m.txt").read_text())
+
+    def test_same_counts_passes_on_synthetic_fits_that_agree(self):
+        with tempfile.TemporaryDirectory() as d:
+            rc, out, err = self.lay_out(d)
+            self.assertEqual(rc, 0, out + err)
+            self.assertIn("said: Same counts: ", out)
 
 
 class Commits(unittest.TestCase):
@@ -208,7 +312,18 @@ class Commits(unittest.TestCase):
                                capture_output=True, text=True, check=True).stdout.split()
         changed = re.search(r'(?m)^CHANGED="([^"]*)"$', SCRIPT).group(1).split()
         self.assertEqual(sorted(moved), sorted(changed))
-        self.assertIn('git -C "$REPO" diff --name-only "$FIRST_COMMIT" "$GRM_COMMIT"', function("changed_build"))
+        self.assertIn('git -C "$REPO" diff --name-only "$FIRST_COMMIT" "$GRM_COMMIT"', function("changed_files"))
+
+    def test_a_diff_touching_a_file_off_the_changed_list_stops(self):
+        # changed_files itself, in bash, with a stub git: the order of the diff does not matter, a file more or less
+        # than CHANGED ends it with a non-zero exit. It runs where the clone holds neither commit.
+        changed = re.search(r'(?m)^CHANGED="([^"]*)"$', SCRIPT).group(1).split()
+        env = {"REPO": "/nowhere", "FIRST_COMMIT": self.first, "GRM_COMMIT": self.grm, "CHANGED": " ".join(changed)}
+        for diff, stops in ((changed[::-1], False), (changed + ["src/synthetic.rs"], True), (changed[1:], True)):
+            stub = "git() { printf '%s\\n' " + " ".join(diff) + "; }\n"
+            rc, out, err = bash('say() { echo "said: $*"; }\n' + stub + function("changed_files") + "changed_files\n", env)
+            self.assertEqual(rc != 0, stops, out + err)
+            self.assertEqual("said: the changed commit's diff from the first run's touches:" in out, stops, out)
 
 
 class End(unittest.TestCase):

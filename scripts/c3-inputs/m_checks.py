@@ -1,7 +1,7 @@
 """The three checks of plan block C3's run on its datasets of M, before any dataset of M is read.
 
   python3 -I m_checks.py species <lists.tsv>
-  python3 -I m_checks.py build <page-binaries.tsv> <species slug> <commit> <code sha256>
+  python3 -I m_checks.py build <page-binaries.tsv> <species slug> <commit> <code sha256> [<cargo home>]
   python3 -I m_checks.py results <reference dir> <species slug> <datasets.tsv>
   python3 -I m_checks.py counts <expect.tsv> <picks dir> <scores dir> <reports dir> <study dir>
 
@@ -11,7 +11,10 @@ the fewest first-run datasets, the first by name on a tie.
 
 build (Same build) holds the code sha256 of the first-run commit's own
 build to the species' row of reference/input-arms/page-binaries.tsv: the
-row's commit must be <commit> and its code sha256 <code sha256>.
+row's commit must be <commit> and its code sha256 <code sha256>. The code
+sha256 moves with cargo's home, whose registry paths are built into the
+binary, so a difference names the home the build used (<cargo home>, as
+binary-first.txt records it).
 
 results (Same results) holds score.py's datasets.tsv over the check
 species' first-run datasets, fitted by the changed binary, to that
@@ -95,16 +98,18 @@ def check_species(lists_rows):
 
 # ---------- Same build ----------
 
-def same_build(binaries_rows, slug, commit, code):
+def same_build(binaries_rows, slug, commit, code, home=None):
     rows = [r for r in binaries_rows if r["species_slug"] == slug]
     if len(rows) != 1:
         raise Stop(f"page-binaries.tsv holds {len(rows)} rows for {slug}")
     row = rows[0]
     if row["commit"] != commit:
         raise Stop(f"Same build: the record's commit for {slug} is {row['commit']}, the build's {commit}")
+    built = f"built {code}" + (f" with cargo's home {home}" if home else " with cargo's home not named")
     if row["code"] != code:
-        raise Stop(f"Same build: the code sha256 differs for {slug}: recorded {row['code']}, built {code}")
-    return f"Same build: {slug} at {commit}, code sha256 {code}, equal to page-binaries.tsv"
+        raise Stop(f"Same build: the code sha256 differs for {slug}: recorded {row['code']}, {built}")
+    return f"Same build: {slug} at {commit}, code sha256 {code}, equal to page-binaries.tsv" \
+        + (f", cargo's home {home}" if home else "")
 
 
 # ---------- Same results ----------
@@ -316,8 +321,8 @@ def main(argv):
             slug, n = check_species(read_tsv(args[0]))
             print(slug)
             print(f"check species: {slug}, {n} first-run datasets", file=sys.stderr)
-        elif form == "build" and len(args) == 4:
-            print(same_build(read_tsv(args[0]), args[1], args[2], args[3]))
+        elif form == "build" and len(args) in (4, 5):
+            print(same_build(read_tsv(args[0]), *args[1:]))
         elif form == "results" and len(args) == 3:
             print(same_results(args[0], args[1], read_tsv(args[2])))
         elif form == "counts" and len(args) == 5:

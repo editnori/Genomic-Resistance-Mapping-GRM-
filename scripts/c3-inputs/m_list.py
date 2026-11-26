@@ -8,9 +8,11 @@ and no fit, report or score.
 
 The pinned table (curated/phenotypes.jsonl, from curated.tar) holds each
 genome and antibiotic pair's consolidated call, `reported` and `conflict`,
-and no record's call. So the records file <records> (the data root's
-bvbrc/genome_amr.jsonl, which the run script holds to the master list) is
-named with its sha256 before the list is built. Each record's raw
+and no record's call. So the records file <records> (the kit's
+genome_amr.jsonl: the 1,285,111 lab records the pinned table was rebuilt
+from on 21 Nov 2026, which the run script pins by its own sha256) is named
+with its sha256 before the list is built: that line is printed and
+flushed first, before any check, so a stop still shows it. Each record's raw
 antibiotic name goes through curated/drug_names.json, as `grm curate`
 resolves it; a record whose name is not a drug, or whose genome has no row
 in the table, is passed over. Its call is read with parse_call's words
@@ -30,7 +32,7 @@ scores) less the list.
 
 Writes <list dir>/<dataset>.txt (the listed genome ids, one a line; it
 stays on the run's machine) and <floor.tsv> (counts only), and prints the
-records file's sha256 and the counts per dataset. Exits 1, writing
+records file's sha256, then the counts per dataset. Exits 1, writing
 nothing, on any difference.
 """
 
@@ -101,11 +103,16 @@ def sha256(path):
     return h.hexdigest()
 
 
+def records_line(records_path):
+    """The line that names the records file with its sha256: main prints it before any check."""
+    return (f"the pinned table curated/phenotypes.jsonl holds no record's call; the calls are read from "
+            f"{Path(records_path).name}, sha256 {sha256(records_path)}")
+
+
 def build(root, records_path, lists_rows, slug, datasets):
     """(floor rows, {dataset: listed genome ids}, printout lines). Raises Stop on any difference."""
     root = Path(root)
-    lines = [f"the pinned table curated/phenotypes.jsonl holds no record's call; the calls are read from "
-             f"{Path(records_path).name}, sha256 {sha256(records_path)}"]
+    lines = []
     listed_rows = {r["dataset"]: r for r in lists_rows}
     specs = {d["id"]: d for d in json.loads((root / "curated" / "datasets.json").read_text())}
     for d in datasets:
@@ -199,6 +206,7 @@ def main(argv):
         print(__doc__.strip().splitlines()[2], file=sys.stderr)
         return 2
     root, records, lists_path, slug, datasets, list_dir, floor_path = argv
+    print(records_line(records), flush=True)
     try:
         rows, lists, lines = build(root, records, read_tsv(lists_path), slug, datasets.split(","))
     except Stop as e:

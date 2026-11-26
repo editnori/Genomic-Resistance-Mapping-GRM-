@@ -4,7 +4,12 @@ Every data root here is SYNTHETIC: a made-up table, records, drug names and
 matrix, with ids of the form a genome id takes. No record or call is real.
 """
 
+import contextlib
+import hashlib
+import io
 import json
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -105,7 +110,7 @@ class List(unittest.TestCase):
             self.assertEqual((r["cohort"], r["resistant"], r["susceptible"]), (63, 32, 31))
             self.assertEqual((r["listed"], r["listed_resistant"], r["listed_susceptible"]), (3, 2, 1))
             self.assertEqual((r["second_resistant"], r["second_susceptible"], r["enters"]), (30, 30, 1))
-            self.assertIn("sha256", lines[0])
+            self.assertTrue(lines[0].startswith("records: every pair"))
             self.assertFalse(any(g in "".join(lines) for g in gids))
 
     def test_records_that_consolidate_to_another_call_stop(self):
@@ -149,8 +154,6 @@ class Floor(unittest.TestCase):
             top, records, lrows, gids = root(d)
             lists_path = Path(d) / "lists.tsv"
             m_common.write_tsv(lists_path, list(lrows[0]), lrows)
-            import contextlib
-            import io
             with contextlib.redirect_stdout(io.StringIO()) as out:
                 rc = m_list.main([str(top), str(records), str(lists_path), SP, D, str(Path(d) / "list"),
                                   str(Path(d) / "m" / "floor.tsv")])
@@ -159,6 +162,40 @@ class Floor(unittest.TestCase):
             floor = (Path(d) / "m" / "floor.tsv").read_text()
             self.assertEqual(floor.splitlines()[0].split("\t"), m_list.FLOOR_COLUMNS)
             self.assertFalse(any(g in floor or g in out.getvalue() for g in gids))
+            self.assertEqual(out.getvalue().splitlines()[0], m_list.records_line(records))
+
+
+class RecordsLine(unittest.TestCase):
+    """The records file's sha256 is printed and flushed before any check, so a stop still shows it."""
+
+    def lay_out(self, d, bad):
+        top, records, lrows, gids = root(d)
+        with open(records, "a") as f:
+            f.write(bad)
+        lists_path = Path(d) / "lists.tsv"
+        m_common.write_tsv(lists_path, list(lrows[0]), lrows)
+        argv = [str(top), str(records), str(lists_path), SP, D, str(Path(d) / "list"), str(Path(d) / "m" / "floor.tsv")]
+        want = f"the calls are read from records.jsonl, sha256 {hashlib.sha256(records.read_bytes()).hexdigest()}"
+        return argv, want, gids
+
+    def test_a_stop_on_a_bad_record_still_prints_the_records_sha256_first(self):
+        with tempfile.TemporaryDirectory() as d:
+            argv, want, gids = self.lay_out(d, json.dumps({"genome_id": "90007.99999", "antibiotic": " "}) + "\n")
+            with contextlib.redirect_stdout(io.StringIO()) as out:
+                self.assertEqual(m_list.main(argv), 1)
+            lines = out.getvalue().splitlines()
+            self.assertTrue(lines[0].endswith(want), lines)
+            self.assertEqual(lines[1:], ["m_list: stopped: a record has no antibiotic name"])
+            self.assertFalse((Path(d) / "m" / "floor.tsv").exists())
+
+    def test_a_record_that_is_not_json_ends_the_run_after_the_line_is_out(self):
+        with tempfile.TemporaryDirectory() as d:
+            argv, want, _ = self.lay_out(d, "{not json\n")
+            done = subprocess.run([sys.executable, "-I", "-B", str(common.KIT / "m_list.py")] + argv,
+                                  capture_output=True, text=True)
+            self.assertNotEqual(done.returncode, 0)
+            self.assertTrue(done.stdout.splitlines()[0].endswith(want), done.stdout)
+            self.assertIn("JSONDecodeError", done.stderr)
 
 
 if __name__ == "__main__":

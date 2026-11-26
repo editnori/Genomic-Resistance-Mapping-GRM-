@@ -18,22 +18,25 @@
 # and the fit and study functions are run_species.sh's own, read from it.
 #
 # KIT holds run_species.sh's files, each held to the sha256 it pins, and:
-#   genome_amr.jsonl  the data root's bvbrc/genome_amr.jsonl, the records the
-#                     pinned table was built from, held to its line in the
-#                     master list: the table holds no record's call, so the
-#                     list of genomes with an intermediate call is read here
+#   genome_amr.jsonl  the 1,285,111 lab records the pinned table (curated.tar)
+#                     was rebuilt from on 21 Nov 2026, held to its own
+#                     sha256 (ruling R26): the table holds no record's call,
+#                     so the list of genomes with an intermediate call is
+#                     read from these
 #   m-checked.txt     on every species but the check species: the check
 #                     species' record that the three checks passed
 #
 # Steps, in order:
+# 0. Before any build: GRM_COMMIT's diff from FIRST_COMMIT must touch the
+#    CHANGED files only.
 # 1. Same build. FIRST_COMMIT (8bfd4ca, the first run's commit) is built from
-#    git archive with rustc 1.98.1 and --locked, and its code sha256 (the
-#    binary less its build id) must be the species' row of
-#    reference/input-arms/page-binaries.tsv.
+#    git archive with rustc 1.98.1, --locked and cargo's home at
+#    /home/user/.cargo, the first run's (the registry paths it holds are
+#    built into the binary), and its code sha256 (the binary less its build
+#    id) must be the species' row of reference/input-arms/page-binaries.tsv.
 # 2. The changed binary: GRM_COMMIT, the reviewed commit of the branch
 #    run-m/input-arms-grm, FIRST_COMMIT with one change (grm learn
-#    --exp-scores), built the same way. Its diff from FIRST_COMMIT must touch
-#    the CHANGED files only. Every later step runs it.
+#    --exp-scores), built the same way. Every later step runs it.
 # 3. The data steps, the builds, the study plans and the program, as
 #    run_species.sh runs them. Then m_list.py, before any fit: the list of
 #    genomes with an intermediate call (work/m/list, on this machine only)
@@ -65,10 +68,12 @@
 # check/m-checked.txt on the check species, score/second/, binary-first.txt
 # and expect-first.tsv on the check species. The end writes SHA256SUMS,
 # OUT/pack.tar (pack.py: every file but work/ and flags/, refused if it would
-# carry a score file, a report, a fold result, a list or a genome id) and
-# OUT/DONE:
+# carry a score file, a report, a fold result, a list, a compressed or
+# non-UTF-8 file, or a genome id in a path or a file) and OUT/DONE:
 #   DONE <species> <time> binary <sha256> code <sha256> results <n> pack <sha256>
-# Only pack.tar and DONE leave the machine.
+# Only pack.tar and DONE leave the machine. The pack holds both readings, so
+# it goes unopened to the one machine that takes the count over all the
+# species, and to no other: it is no page file.
 set -Eeuo pipefail
 KIT=$(cd "${1:?kit folder}" && pwd); SP=${2:?species slug}; OUT=${3:?out folder}
 JOBS=${4:-$(nproc)}; TABLES_FROM=${5:-}
@@ -86,6 +91,9 @@ TABLES=$AMR/tool/$SP; REPORTS=$ROOT/species/$SP/results
 INPUTS=$W/inputs; PRODIGAL=$W/tools/prodigal; BCALM=$W/tools/bcalm-binaries-v2.2.3-Linux/bin/bcalm
 SCORES=$W/scores; KEPT=$W/reports; LIST=$W/m/list; FLOOR=$OUT/results/m/floor.tsv
 export RUSTUP_TOOLCHAIN=1.98.1 CARGO_BUILD_JOBS=$JOBS RAYON_NUM_THREADS=$JOBS
+# Cargo's home is the first run's: the registry paths under it are built into the binary, so the code sha256
+# moves with it. Both builds use it, and binary-first.txt and binary.txt name it.
+export CARGO_HOME=/home/user/.cargo
 export PATH=$HOME/.cargo/bin:/usr/local/cargo/bin:$PATH
 exec 9> "$OUT/run.lock"
 flock -n 9 || { echo "$(date -u +%FT%TZ) another start runs on this OUT; this one ends"; exit 1; }
@@ -111,6 +119,13 @@ for f in $SHARED; do
   declare -F "$f" > /dev/null || { say "scripts/c3-inputs/run_species.sh has no function $f"; false; }
 done
 has_arm() { echo ",$ARMS," | grep -q ",$1,"; }
+# scrub reads an id as pack.py does (after "_" or "." too, and inside a longer run of points and digits), so a log
+# keeps no id that pack.py's check would refuse. run_species.sh's own scrub is unchanged.
+scrub() {  # scrub <log>
+  local raw; raw=$W/raw-logs/$(basename "$1")
+  mkdir -p "$W/raw-logs"; mv -f "$1" "$raw"
+  python3 -I -B "$HERE/pack.py" mask "$R/species/$SP.json" < "$raw" > "$1"
+}
 # lists.tsv's datasets of a species: lists <column> [<column> ...], each 1.
 lists() { python3 -I -c '
 import csv, sys
@@ -128,6 +143,8 @@ python3 -I -c 'import numpy' 2> /dev/null || { say "python3 has no numpy, which 
 for tool in cargo objcopy unshare flock /usr/bin/time curl tar xz zstd sha256sum git; do
   command -v "$tool" > /dev/null || { say "$tool is not installed, which a later step needs"; false; }
 done
+{ mkdir -p "$CARGO_HOME" && [ -w "$CARGO_HOME" ]; } 2> /dev/null \
+  || { say "cargo's home $CARGO_HOME, the first run's, cannot be written; both builds need it"; false; }
 pinned "$KIT/rev14-274-20261112.tar.zst" c67155f598dbb1ebe1a4ab908e793124ebc058430a33c1c67d7e2058910256de
 pinned "$M" 7dd00779bc4b538b325d947137c525afb4e723ca494bd14b607a8730b7902887
 pinned "$KIT/curated.tar" d77e2c6f75f8d986268d0c075cb2ea364fba9972fa22a55139495ac0eb376d97
@@ -138,12 +155,19 @@ pinned "$KIT/marks.tsv" ba662467864edce9e8cc617651b81598feac5f32bb1219d7409467ff
 pinned "$KIT/amrkit.tar" da07f277a7d271f1ae006919d2c2df4185737526348302f665a9bcb3a083d0e6
 pinned "$KIT/tool-tables.sha256" 9291b83f4c7d01a0384f35446e6de8f986dff5f659439ee3d673bccdd09427ba
 pinned "$KIT/prodigal.linux" 80a3d7acb08ba9f63dde6b6ef4e95ec356128ac355f36960ea722f381150f246
-# The records the list is read from (m_list.py): the master list's own file.
+# The records the list is read from (m_list.py): the 1,285,111 lab records the pinned table was rebuilt from on
+# 21 Nov 2026 (reference/release-summary/README.md), held to their own sha256 (ruling R26), not to a master list line.
 [ -f "$KIT/genome_amr.jsonl" ] || { say "the kit has no genome_amr.jsonl, the records m_list.py reads the intermediate calls from"; false; }
-master bvbrc/genome_amr.jsonl "$KIT/genome_amr.jsonl" \
-  || { say "genome_amr.jsonl: the master list has no line bvbrc/genome_amr.jsonl, or the kit's file differs from it"; false; }
+pinned "$KIT/genome_amr.jsonl" d231fa768a31fc4ce4c8a6bb7024d05d632621846070688adb892fbfe340fd78
 git -C "$REPO" cat-file -e "$FIRST_COMMIT^{commit}" 2> /dev/null || { say "the checkout does not hold the first run's commit $FIRST_COMMIT"; false; }
 git -C "$REPO" cat-file -e "$GRM_COMMIT^{commit}" 2> /dev/null || { say "the checkout does not hold the changed commit $GRM_COMMIT"; false; }
+# The changed commit's diff from the first run's touches the CHANGED files alone: checked here, before any build.
+changed_files() {
+  local moved; moved=$(git -C "$REPO" diff --name-only "$FIRST_COMMIT" "$GRM_COMMIT" | LC_ALL=C sort | paste -sd' ' -)
+  [ "$moved" = "$(echo "$CHANGED" | tr ' ' '\n' | LC_ALL=C sort | paste -sd' ' -)" ] \
+    || { say "the changed commit's diff from the first run's touches: $moved"; return 1; }
+}
+changed_files
 M_DATASETS=$(lists in_M)
 [ -n "$M_DATASETS" ] || { say "$SP holds no dataset of M on lists.tsv"; false; }
 M_A=$(lists in_M in_A); M_S=$(lists in_M in_S)
@@ -192,33 +216,32 @@ first_build() {
   ( cd "$W/src-first" && CARGO_TARGET_DIR=$W/target-first cargo build --release --locked --bin grm )
   objcopy -O binary --remove-section=.note.gnu.build-id "$W/target-first/release/grm" "$W/grm-first.image"
   { echo "commit $FIRST_COMMIT"; echo "grm $(sha256sum "$W/target-first/release/grm" | cut -c1-64)"
-    echo "code $(sha256sum "$W/grm-first.image" | cut -c1-64)"; } > "$OUT/binary-first.txt"
+    echo "code $(sha256sum "$W/grm-first.image" | cut -c1-64)"; echo "cargo_home $CARGO_HOME"; } > "$OUT/binary-first.txt"
   rm -rf "$W/grm-first.image" "$W/src-first" "$W/target-first"
   cat "$OUT/binary-first.txt"
 }
 changed_build() {
-  moved=$(git -C "$REPO" diff --name-only "$FIRST_COMMIT" "$GRM_COMMIT" | LC_ALL=C sort | paste -sd' ' -)
-  [ "$moved" = "$(echo "$CHANGED" | tr ' ' '\n' | LC_ALL=C sort | paste -sd' ' -)" ] \
-    || { echo "the changed commit's diff from the first run's touches: $moved"; exit 1; }
   rm -rf "$W/src-changed" "$W/target"; mkdir -p "$W/src-changed"
   git -C "$REPO" archive "$GRM_COMMIT" | tar -x -C "$W/src-changed"
   ( cd "$W/src-changed" && CARGO_TARGET_DIR=$W/target cargo build --release --locked --bin grm )
   objcopy -O binary --remove-section=.note.gnu.build-id "$GRM" "$W/grm.image"
   { echo "commit $GRM_COMMIT"; echo "grm $(sha256sum "$GRM" | cut -c1-64)"
-    echo "code $(sha256sum "$W/grm.image" | cut -c1-64)"; } > "$OUT/binary.txt"
+    echo "code $(sha256sum "$W/grm.image" | cut -c1-64)"; echo "cargo_home $CARGO_HOME"; } > "$OUT/binary.txt"
   rm -rf "$W/grm.image" "$W/src-changed"
   cat "$OUT/binary.txt"
 }
 step same_build first_build
 STEP=same-build
 python3 -I -B "$HERE/m_checks.py" build "$REPO/reference/input-arms/page-binaries.tsv" "$SP" "$FIRST_COMMIT" \
-  "$(sed -n 's/^code //p' "$OUT/binary-first.txt")" > "$OUT/check/same-build.txt" \
-  || { cat "$OUT/check/same-build.txt"; say "Same build differs: the run on M does not start; the lead rules"; false; }
+  "$(sed -n 's/^code //p' "$OUT/binary-first.txt")" "$(sed -n 's/^cargo_home //p' "$OUT/binary-first.txt")" \
+  > "$OUT/check/same-build.txt" \
+  || { cat "$OUT/check/same-build.txt"; say "Same build differs (cargo's home $CARGO_HOME): the run on M does not start; the lead rules"; false; }
 say "$(cat "$OUT/check/same-build.txt")"
 step build changed_build
 STEP=build-check
 [ "$(sed -n 's/^grm //p' "$OUT/binary.txt")" = "$(sha256sum "$GRM" | cut -c1-64)" ] || { say "the binary changed since the build"; false; }
 [ "$(sed -n 's/^commit //p' "$OUT/binary.txt")" = "$GRM_COMMIT" ] || { say "binary.txt names another commit"; false; }
+[ "$(sed -n 's/^cargo_home //p' "$OUT/binary.txt")" = "$CARGO_HOME" ] || { say "binary.txt names another cargo home"; false; }
 CODE=$(sed -n 's/^code //p' "$OUT/binary.txt")
 if [ "$SP" != "$CHECK_SPECIES" ]; then
   python3 -I -c '

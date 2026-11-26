@@ -9,6 +9,8 @@ back, and one cell off must stop it. No fit is read.
 
 import copy
 import shutil
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -48,6 +50,19 @@ class SameBuild(unittest.TestCase):
             checks.same_build(self.rows, GONORRHOEAE, checks.FIRST_RUN_COMMIT, other)
         with self.assertRaises(checks.Stop):
             checks.same_build(self.rows, GONORRHOEAE, "0" * 40, self.code)
+
+    def test_a_difference_names_the_cargo_home_the_build_used(self):
+        other = ("0" if self.code[0] != "0" else "1") + self.code[1:]
+        with self.assertRaisesRegex(checks.Stop, f"built {other} with cargo's home /tmp/elsewhere/cargo$"):
+            checks.same_build(self.rows, GONORRHOEAE, checks.FIRST_RUN_COMMIT, other, "/tmp/elsewhere/cargo")
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "page-binaries.tsv"
+            path.write_text((REFERENCE / "page-binaries.tsv").read_text())
+            done = subprocess.run([sys.executable, "-I", "-B", str(common.KIT / "m_checks.py"), "build", str(path),
+                                   GONORRHOEAE, checks.FIRST_RUN_COMMIT, other, "/home/user/.cargo"],
+                                  capture_output=True, text=True)
+            self.assertEqual(done.returncode, 1)
+            self.assertIn("with cargo's home /home/user/.cargo", done.stdout + done.stderr)
 
 
 class SameResults(unittest.TestCase):

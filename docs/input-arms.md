@@ -77,7 +77,7 @@ Only `grm learn --fold-file` refuses a run because an outer fold's training geno
 | L | 268 | 23 | 233 | 55 |
 | A | 237 | 21 | 204 | 54 |
 
-On the datasets not in M, three of the four label rules give the same labels. Of L's 233, 32 hold an S and R pair and depend on the most resistant call against the other three; of A's 204, 21 do. The rest depend on none of the four. Every measure on M waits for the maintainer's label rule.
+On the datasets not in M, three of the four label rules give the same labels. Of L's 233, 32 hold an S and R pair and depend on the most resistant call against the other three; of A's 204, 21 do. The rest depend on none of the four. On M, the entry Label rule of `docs/assumption-plan-corrections.md` now sets `r-or-s-wins`, the release's rule, and each claim on M takes two readings; the run on M has not happened.
 
 ## Running
 
@@ -93,7 +93,7 @@ The pilot of all five arms ran the same draw at seed 42, with no twin, `GRAPH` c
 
 ## Tests and planted faults
 
-`input_arms` holds 14 SYNTHETIC tests, `input_build` 8, `learn::eval` one on the screen count and `src/main.rs` 2 on the flags. `tests/c3_inputs` holds 243 tests: 152 SYNTHETIC ones, 71 of the scorer, the refusal record, the lists, the expected results and the run script's rules and 81 of the result page's table script, the run's checks and their fault runner (`docs/input-arms-result.md`, Method); and 91 of the run on the datasets of M (below). `scripts/c3-inputs/planted_faults.py` plants each fault below in a copy of the tree and runs the test meant to catch it, which must fail.
+`input_arms` holds 14 SYNTHETIC tests, `input_build` 8, `learn::eval` one on the screen count and `src/main.rs` 2 on the flags. `tests/c3_inputs` holds 273 tests: 152 SYNTHETIC ones, 71 of the scorer, the refusal record, the lists, the expected results and the run script's rules and 81 of the result page's table script, the run's checks and their fault runner (`docs/input-arms-result.md`, Method); and 121 of the run on the datasets of M (below). `scripts/c3-inputs/planted_faults.py` plants each fault below in a copy of the tree and runs the test meant to catch it, which must fail.
 
 | Fault | Caught by |
 |---|---|
@@ -118,18 +118,34 @@ The pilot of all five arms ran the same draw at seed 42, with no twin, `GRAPH` c
 
 ## The run on the datasets of M
 
-The first run left out the 35 datasets of M, in 9 species. A dataset is in M when, for its antibiotic, some genome's records pair an intermediate call with S or with R. The entry M run of `docs/assumption-plan-corrections.md` runs them once, read two ways. This part says what block C3's code for it does. These are retrospective splits inside one database, never external validation, and "no difference shown" is never "equal".
+The first run left out the 35 datasets of M, in 9 species. A dataset is in M when, for its antibiotic, some genome's records pair an intermediate call with S or with R. The entry M run of `docs/assumption-plan-corrections.md` says how they run once, read two ways. This part says what block C3's code for that run does.
 
-`scripts/c3-inputs/run_m.sh KIT SPECIES OUT [JOBS] [TABLES]` is the one driver that admits a dataset of M; `run_species.sh`, which blocks C4 and C7 read, still refuses one. It runs a species' datasets of M at the first run's seeds (42, 43 and 44), twin (45, 46 and 47), arms (all five, the program arms on the 33 in A) and graph (GRM's own), and the study split on the 14 in S. Its data steps, builds, program and fit functions are `run_species.sh`'s own, read from it; a test holds the 27 functions it reads and its 10 pinned files to that script.
+**Not run.** The run has not happened: no dataset of M has been fitted, and no figure below comes from one. These are retrospective splits inside one database, never external validation, and "no difference shown" is never "equal".
 
-- **Binary.** It builds two binaries from `git archive` with rustc 1.98.1 and `--locked`. The first is the first run's commit, `8bfd4ca`. The second is the head of the branch `run-m/input-arms-grm`: `8bfd4ca` with one change, `grm learn --exp-scores DIR`, off by default, which writes each lineage fit's held-out genomes with their fold and the five learners' scores to `DIR/<dataset>.lineage-s<seed>.scores.json` (format `grm-c3-scores-1`) and changes no fit. The run script refuses that commit if its diff from `8bfd4ca` touches any file but the six it names. Every fit of the run uses the second binary.
-- **Same build.** The first binary's code sha256 (the binary less its build id) must be the species' row of `reference/input-arms/page-binaries.tsv` (`m_checks.py build`).
-- **Same results.** The check species is the one with the fewest first-run datasets among those with a dataset of M, the first by name on a tie: *Neisseria gonorrhoeae*, with 6. Its box fits those 6 again with the second binary, and `score.py`'s `datasets.tsv` must give back that species' rows of the committed `reference/input-arms/page-datasets.tsv` at 12 decimals, that file equal to its sha256 in `SHA256SUMS` (`m_checks.py results`). Its `check/m-checked.txt` names the second binary's code sha256, and every other species' box refuses to fit until its own binary matches that record.
+For block C3, `run_m.sh` and `m_reading.py` admit the datasets of M; `run_species.sh` and `page_tables.py` stay as the first run left them and still refuse one, because blocks C4 and C7 read them and Same results needs the first run's scorer unchanged.
+
+`scripts/c3-inputs/run_m.sh KIT SPECIES OUT [JOBS] [TABLES]` runs a species' datasets of M at the first run's seeds (42, 43 and 44), twin (45, 46 and 47), arms (all five, the program arms on the 33 in A) and graph (GRM's own), and the study split on the 14 in S. Its data steps, builds, program and fit functions are `run_species.sh`'s own, read from it; a test holds the 27 functions it reads and 10 of its 11 pinned files to that script.
+
+- **Binary.** It builds two binaries from `git archive` with rustc 1.98.1, `--locked` and cargo's home at `/home/user/.cargo`, the first run's. The first is the first run's commit, `8bfd4ca`. The second is the head of `run-m/input-arms-grm`, and every fit uses it.
+- **The change.** The second is `8bfd4ca` with one change, `grm learn --exp-scores DIR`, off by default: each lineage fit writes its held-out genomes with their fold and the five learners' scores to `DIR/<dataset>.lineage-s<seed>.scores.json` (format `grm-c3-scores-1`), and no fit changes.
+- **Diff.** On the box, before any build, the run script refuses the second commit if its diff from `8bfd4ca` touches any file but the six it names. A test makes the same check where the clone holds both commits.
+- **Same build.** The first binary's code sha256, the binary less its build id, must be the species' row of `reference/input-arms/page-binaries.tsv` (`m_checks.py build`). Cargo's home is built into the binary, so each build's record names it, and so does a difference.
+- **Check species.** The species with the fewest first-run datasets among those that hold a dataset of M and a first-run dataset, the first by name on a tie: *Neisseria gonorrhoeae*, with 6.
+- **Same results.** The check species' box fits its 6 first-run datasets again with the second binary. `score.py`'s `datasets.tsv` must give back its rows of the committed `reference/input-arms/page-datasets.tsv` at 12 decimals, that file equal to its sha256 in `SHA256SUMS` (`m_checks.py results`).
+- **Checked.** Its `check/m-checked.txt` names the second binary's code sha256, and every other species' box refuses to fit until its own binary matches that record.
 - **Same counts.** For every fit, each fold's calls and log loss sum must come back from the genomes' scores by GRM's cutoff (R at 0.5 and above): a lineage fit's from its score file, the default's and the twin's also from their reports, which the run keeps as each fit writes them, and a study fit's from its fold result (`m_checks.py counts`). It runs on the check species' first-run fits before any dataset of M, and on every fit of M before scoring.
 
-On a difference in any of the three the run names what differs, writes `OUT/FAILED` and stops; the lead rules before another build, machine or genome set is used.
+On a difference in any of the three the run names what differs, writes `OUT/FAILED` and stops. The lead, who rules on the plan's entries in `docs/assumption-plan-corrections.md`, then rules before another build, machine or genome set is used.
 
-**List and floor.** After the matrix and before any fit, `m_list.py` builds the list. The pinned table `curated.tar` holds each genome's consolidated call and not its records' calls, so `m_list.py` reads the calls from the data root's `bvbrc/genome_amr.jsonl`. The kit carries that file, the run refuses it unless its sha256 is its line in the master list, and `m_list.py` prints that sha256. Every genome and antibiotic pair of the records must consolidate to the table's call under r-or-s-wins (S with an intermediate call is S, an intermediate call with R is R, R with S is a conflict), and the records' name counts must equal `curated/drug_names.json`'s, or it stops. A dataset's list is the genomes of its cohort (the matrix's genomes with an unconflicted R or S call not taken from an MIC, as `lists.tsv` counts them) whose records for its antibiotic hold an intermediate call. The list stays in `work/m/list/` on the box. `results/m/floor.tsv` gives each dataset's cohort, its listed genomes and the genomes left for the second reading, each by class, and whether the dataset enters that reading: 25 genomes of each class at least, the release's class minimum.
+**List.** After the matrix and before any fit, `m_list.py` builds the list. The pinned table `curated.tar` holds each pair's consolidated call and no record's call. So `m_list.py` reads the calls from the kit's `genome_amr.jsonl`, the 1,285,111 lab records that table was rebuilt from on 21 Nov 2026, which the run pins by its own sha256. `m_list.py` prints and flushes that sha256 before any check, so a stop still shows it.
+
+**Records.** Every genome and antibiotic pair of the records must consolidate to the table's call under r-or-s-wins (S with an intermediate call is S, an intermediate call with R is R, R with S is a conflict), and the records' name counts must equal `curated/drug_names.json`'s, or it stops.
+
+**Listed genomes.** A dataset's list is the genomes of its cohort (the matrix's genomes with an unconflicted R or S call not taken from an MIC, as `lists.tsv` counts them) whose records for its antibiotic hold an intermediate call. The list stays in `work/m/list/` on the box.
+
+**Floor.** `results/m/floor.tsv` gives each dataset's cohort, its listed genomes and the genomes left for the second reading, each by class, and whether the dataset enters that reading: 25 genomes of each class at least, the release's class minimum.
+
+**Floor form.** `m_reading.py floor` writes `m-floor.tsv` and `m-left-out.tsv` from the species' `floor.tsv` files alone, before any score is read. `m-left-out.tsv` names each dataset left out of the second reading in full, with its counts by class. `m_reading.py count` stops unless both files are, byte for byte, the ones the floor form writes from the same species' files.
 
 **Second reading.** `second.py` reads every result again with no refit. Each dataset's listed genomes leave every outer test fold of every arm, the default and the twin, at every seed and on both splits. A fold that holds a listed genome gets each learner's calls taken again from the scores; a fold that holds none keeps its counts; the training counts stay as fitted. An arm's study fit refused for no candidate is the constant model on the default's study folds less the list (ruling 16), and a split that could not be drawn stays unscored. Before it reads, every result's counts must come back from its scores, every listed genome must be in each lineage fit's cohort, and the genomes each lineage fit keeps must give `floor.tsv`'s counts. A dataset under the floor is not scored in this reading. It writes `score/second/` in `score.py`'s columns.
 
@@ -141,13 +157,44 @@ On a difference in any of the three the run names what differs, writes `OUT/FAIL
 
 Before it counts, `m_reading.py check` must give back from the record every row of the first run's published count on those two measures, 110 rows, and its 55 condition rows (`page-count.tsv` and `page-conditions.tsv`, each equal to its sha256 in `SHA256SUMS`); it stops on any difference. No count leaves out the constant-model datasets, since the counts are read once with no other subset. A dataset under the floor is not in the second reading's counts.
 
-**Tables.** `m_reading.py count` writes `m-count.tsv` and `m-conditions.tsv` (each count and reading); `m-both.tsv` (per arm, conditions 1 to 5 of ruling 15 on the count over all datasets in each reading, and whether both readings meet each, as a claim on all datasets needs); `m-size.tsv` (per reading, arm, the twin too, and learner: the datasets entered, better, worse and the same, the counts the Pick rule's size rule reads; it decides no pick); `m-floor.tsv`; `m-left-out.tsv` (each dataset left out of the second reading, named in full with its counts by class); and `m-datasets.tsv` (per reading, dataset, split, pair and learner). They hold counts per dataset and no genome. The first run's own table script, `page_tables.py`, still refuses a dataset of M.
+**Small lists.** In a dataset that lists 1 genome, the first reading less the second gives back that genome's class, calls and scores. So a dataset's second-reading figures go in a table only where each class lists no genome or at least 5 (`SMALLEST_LISTED`, read from `floor.tsv`'s listed counts by class). Five is a convention for a smallest cell; it does not prove that no genome's call can be worked out.
 
-**Pack.** Only `OUT/pack.tar` and `OUT/DONE` leave the box. `pack.py` packs every file under OUT but `work/` and `flags/`: the result files (counts per fold), the build records, `floor.tsv`, the checks, both readings' tables and the logs, each log with every genome id written as `[genome id]`. It refuses the pack, naming the path and why with no genome id, when it would carry a link, a score file (by its name or its format), a study fit's fold result, a report or a list of samples, a list file of genomes, or any genome id of the species. The tar holds those files alone, in name order, with no owner, group or time.
+**Not shown.** Every other dataset that enters the second reading is counted and not shown. It enters every count over datasets, and its rows in `m-datasets.tsv` give its first reading, its listed counts by class and that state, with no second-reading row.
 
-**Cost.** `cost.py model` estimates the run from the entry C3 arms' cost model of the first run, since the first run's measured times were not copied into `reference/input-arms/`. Each arm costs its figure times its share of samples, and for the three matrix arms the larger of that and the species' share of genomes. Added to that: the program on the species of M in A, 9 of the 23 boxes' data steps, one more build a box (45.05 s measured on the helper box for `8bfd4ca` at 16 jobs) and the check species' first-run fits again. It gives 44.76 xlarge-hours central (716.1 core-hours, $8.95) and 102.77 upper (1,644.4 core-hours, $20.55); with the program's tables reused, 27.77 and 77.29. `cost.py measured` takes the first run's `logs/timing.tsv` copies instead, each equal to its sha256 in its copy's `SHA256SUMS`.
+**Withheld rows.** A count row of the second reading gives no figures where exactly one dataset's value in it is on no page and that dataset is counted and not shown; its `figures` column says so, and its counts of datasets stay. The record's datasets and the shown datasets of M are on a page on balanced accuracy and recall; on the other four measures no dataset of M is.
 
-**Tests.** `tests/c3_inputs/test_m_*.py` holds 91 tests of this run, on SYNTHETIC fits, score files, reports, lists, folders and timing copies, and on the committed `lists.tsv`, `page-binaries.tsv`, `page-datasets.tsv`, `page-count.tsv`, `page-conditions.tsv` and C3 arms entry. `scripts/c3-inputs/m_faults.py` plants 61 faults, at least one for each new rule, in a copy of the tree and runs the test meant to catch each.
+**Tables.** `m_reading.py count` writes five tables, each of counts per dataset and no genome:
+
+- `m-count.tsv` and `m-conditions.tsv`: each count and reading;
+- `m-both.tsv`: per arm, conditions 1 to 5 of ruling 15 on the count over all datasets in each reading, and whether both readings meet each, as a claim on all datasets needs;
+- `m-size.tsv`: per reading, arm (the twin too) and learner, the datasets entered, better, worse and the same, the counts the Pick rule's size rule reads; it decides no pick;
+- `m-datasets.tsv`: per reading, dataset, split, pair and learner, with each dataset's listed counts by class and its second reading's state.
+
+**Pack.** Only `OUT/pack.tar` and `OUT/DONE` leave the box. `pack.py` packs every file under OUT but `work/` and `flags/`: the result files (counts per fold), the build records, `floor.tsv`, the checks, both readings' tables and the logs. The pack holds both readings, as the count needs them. So it goes unopened to the one machine that takes the count over all 9 species, and to no other; it is no page file.
+
+**Pack check.** `pack.py check` refuses the pack, naming the path and why with no genome id, when it would carry a link, a score file (by its name or its format), a study fit's fold result, a report or a list of samples, a list file of genomes, a compressed file, a file that is not UTF-8 text or holds a NUL byte, or a genome id of the species in a path or a file.
+
+**Ids.** An id is read after "_" or "." and inside a longer run of points and digits, and each log is copied with every such id written as `[genome id]`. The tar holds the checked files alone, in name order, with no user, group or time stamp. Only the count tables and the page tables leave the count machine.
+
+**Cost.** `cost.py measured` estimates the run, before it starts, from the first run's own step times in `reference/input-arms/first-run-times.tsv`: 592 steps of the 9 species, in whole seconds, each row naming its box's `logs/timing.tsv` by sha256. C3's budget is 45 xlarge-hours.
+
+- With the program's tables reused on the 8 species with a dataset of M in set A, whose first-run boxes hold them: 12.32 xlarge-hours, 197.1 core-hours, $2.46. *Mycobacterium tuberculosis* has no dataset of M in A and needs no table.
+- With the program run again on those 8: 17.02 xlarge-hours, 272.3 core-hours, $3.40.
+- `cost.py model`, the entry C3 arms' cost model, gives 44.76 xlarge-hours central and 102.77 xlarge-hours upper. It stands only as an upper bound: its arm figures take the slower of two pilots, and each matrix arm the larger of its samples' and genomes' share.
+
+**Scaling.** Each lineage fit is scaled by its arm's samples of M over its first-run samples, and each study fit by the same counts in set S. *Enterococcus faecium* has datasets of M in S and no first-run study fit, so its study fits are taken as its seed-42 lineage fit per sample. The grm build counts twice, and the check species' first-run fits run again.
+
+**Left out.** The estimate names as left out `m_list`, Same counts, `score.py`, `second.py`, the pack, the `git archive` copies, and box start-up and idle time.
+
+**Old figure.** The `cost.py` the review read gave 12.468 xlarge-hours ($2.49) from the same 9 timing tables. Five changes take 0.148 off it, to 12.320:
+
+- *Neisseria gonorrhoeae*'s program counts as tables copied, 6 s, not run again, 981 s: less 0.271;
+- each study fit is scaled by its samples in set S, not all samples of M: plus 0.136;
+- a species with no dataset of M in S runs no study fit: less 0.018;
+- *Enterococcus faecium*'s study fits are counted: plus 0.007;
+- whole seconds: less 0.002.
+
+**Tests.** `tests/c3_inputs/test_m_*.py` holds 121 tests of this run, on SYNTHETIC fits, score files, reports, lists, species directories, logs and timing copies, and on the committed `lists.tsv`, `page-binaries.tsv`, `page-datasets.tsv`, `page-count.tsv`, `page-conditions.tsv`, `first-run-times.tsv`, C3 arms entry and this page's Cost. `scripts/c3-inputs/m_faults.py` plants 97 faults, at least one for each new rule, in a copy of the tree and runs the test meant to catch each.
 
 ## What it does not do
 

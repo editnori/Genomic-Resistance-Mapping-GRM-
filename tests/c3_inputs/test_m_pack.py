@@ -105,6 +105,40 @@ class Check(unittest.TestCase):
             (out / "results" / "m" / "list" / f"{D}.txt").write_text("")
         self.refused(plant, "a list file")
 
+    def test_an_id_followed_by_an_underscore_or_a_point_is_refused(self):
+        self.refused(lambda out, gs: (out / "logs" / "a.log").write_text(f"wrote {gs[5][0]}_scores\n"),
+                     "names 1 genome ids")
+        self.refused(lambda out, gs: (out / "logs" / "b.log").write_text(f"wrote {gs[5][0]}.fna\n"),
+                     "names 1 genome ids")
+
+    def test_an_id_after_an_underscore_or_a_point_is_refused(self):
+        self.refused(lambda out, gs: (out / "logs" / "c.log").write_text(f"set_{gs[6][0]} and x.{gs[7][0]}\n"),
+                     "names 2 genome ids")
+        # Inside a longer run of points and digits, where a shorter match would hide it.
+        self.refused(lambda out, gs: (out / "logs" / "d.log").write_text(f"0.{gs[8][0]}\n"), "names 1 genome ids")
+
+    def test_an_id_in_a_file_or_folder_name_is_refused_and_not_printed(self):
+        self.refused(lambda out, gs: (out / "score" / f"{gs[9][0]}.tsv").write_text("dataset\n"),
+                     r"score/\[genome id\]\.tsv: its path names 1 genome ids")
+        def folder(out, gs):
+            (out / "check" / f"run_{gs[10][0]}").mkdir(parents=True)
+            (out / "check" / f"run_{gs[10][0]}" / "x.txt").write_text("0.75\n")
+        self.refused(folder, r"check/run_\[genome id\]/x\.txt: its path names 1 genome ids")
+
+    def test_a_compressed_file_is_refused_by_its_bytes_or_its_name(self):
+        import gzip
+        self.refused(lambda out, gs: (out / "logs" / "fit.log").write_bytes(gzip.compress(gs[11][0].encode())),
+                     r"a compressed file \(gzip\)")
+        self.refused(lambda out, gs: (out / "score" / "rows.tsv.xz").write_bytes(b"dataset\n"),
+                     r"a compressed file \(by its name\)")
+
+    def test_a_file_that_is_not_utf_8_or_holds_a_nul_is_refused(self):
+        self.refused(lambda out, gs: (out / "logs" / "w.log").write_bytes(f"\ufeff{gs[12][0]}".encode("utf-16")),
+                     "not UTF-8 text")
+        self.refused(lambda out, gs: (out / "logs" / "n.log").write_bytes(gs[12][0].encode("utf-16-le")),
+                     "holds a NUL byte")
+        self.refused(lambda out, gs: (out / "logs" / "l.log").write_bytes(b"read \xe9t\xe9\n"), "not UTF-8 text")
+
     def test_figures_and_versions_of_the_form_of_an_id_that_name_no_genome_pass(self):
         with tempfile.TemporaryDirectory() as d:
             out, species, gs = out_dir(d)

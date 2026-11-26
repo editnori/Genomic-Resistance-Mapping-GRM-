@@ -285,10 +285,12 @@ jobs:
           # page_tables.py and run_checks.py under scripts/c3-inputs and fits nothing. test_page_faults.py reads scripts/c3-inputs/page_faults.py and the files it plants in.
           # test_lists.py also reads the committed lists scripts/c9-pick/l.tsv, reference/amrfinderplus-comparison/datasets.tsv and scripts/c3-inputs/lists.tsv.
           # The test_m_*.py modules run m_list.py, m_checks.py, second.py, m_reading.py, pack.py and cost.py and the shell functions of run_m.sh on SYNTHETIC files,
-          # and read the committed reference/input-arms, scripts/c3-inputs/lists.tsv, run_species.sh and docs/assumption-plan-corrections.md; test_m_faults.py reads
-          # scripts/c3-inputs/m_faults.py and the files it plants in.
+          # and read the committed reference/input-arms, scripts/c3-inputs/lists.tsv, run_species.sh, docs/input-arms.md and docs/assumption-plan-corrections.md;
+          # test_m_faults.py reads scripts/c3-inputs/m_faults.py and the files it plants in. Its test of the changed commit's diff needs both commits and this
+          # checkout holds one, so it skips here; run_m.sh makes the same check on the box before any build.
           - suite: tests/c3_inputs
             top: .
+            ok: OK (skipped=1)
           # SYNTHETIC species, cohorts, plans, training traces, fold files, predictions and pick files built in the test; it runs the scripts under scripts/c2-cap and fits nothing.
           # test_lists.py also reads the committed lists scripts/c2-cap/lists.tsv and species.tsv.
           - suite: tests/c2_cap

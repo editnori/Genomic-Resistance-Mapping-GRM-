@@ -942,7 +942,7 @@ An eleventh came while the text was written. The project's wording rules put rec
 
 **Arms by block.** Block C4's list names no arm for its datasets of M, so they take the arms of its first-run datasets. Block C7's default and twin come from block C3's run, as on its first run. Each block's datasets of M in set S run the study split. That includes block C7's, whose list gives them none today.
 
-**Code.** The run on M changes code in each block, and each change is reviewed before it runs. Today the run scripts of blocks C2, C3, C4, C5, C7 and C9 refuse a dataset of M. So do the six blocks' page-table gates and block C7's `score.py --count`. Each comes to admit the datasets of M. Block C7's list changes to give its datasets of M in set S the study split, and block C4's list to give its datasets of M their arms.
+**Code.** The run on M changes code in each block, and each change is reviewed before it runs. Today the run scripts of blocks C2, C3, C4, C5, C7 and C9 refuse a dataset of M. So do the six blocks' page-table gates and block C7's `score.py --count`. Each comes to admit the datasets of M, or gives way to a new script that does. For block C3 the driver `run_m.sh` and the table script `m_reading.py` admit them, and `run_species.sh` and `page_tables.py` stay as the first run left them, because blocks C4 and C7 read them. Block C7's list changes to give its datasets of M in set S the study split, and block C4's list to give its datasets of M their arms.
 
 **Changed scripts.** The run scripts change to build `grm` as Binary says and to keep each genome's score as Scores says. The scorers change to take the second reading and the three counts, and the page tables change to show them.
 
@@ -986,7 +986,11 @@ An eleventh came while the text was written. The project's wording rules put rec
 
 **Left out.** A dataset left out of the second reading leaves that reading's count, which then has fewer datasets than the first. A claim on that dataset cannot hold both ways, so it does not stand, and its page shows its figures one way only.
 
-**List.** The scorer builds the list of those genomes on the run's machine. It reads them from the rebuilt revision 14 table that the run scripts pin as `curated.tar`, sha256 `d77e2c6f75f8d986268d0c075cb2ea364fba9972fa22a55139495ac0eb376d97`. If that table does not hold each record's call, the run names the file that does, with its sha256, before the list is built. The list and the scores of each genome stay on that machine. A page gives counts per dataset and no row per genome.
+**List.** The scorer builds the list of those genomes on the run's machine. The rebuilt revision 14 table that the run scripts pin as `curated.tar`, sha256 `d77e2c6f75f8d986268d0c075cb2ea364fba9972fa22a55139495ac0eb376d97`, holds each pair's consolidated call and no record's call. So the run reads each record's call from the 1,285,111 lab records that table was rebuilt from, sha256 `d231fa768a31fc4ce4c8a6bb7024d05d632621846070688adb892fbfe340fd78`, and names that file with its sha256 before the list is built. The list and each genome's score file stay on the machine that fitted them. A page gives counts per dataset and no row per genome.
+
+**Small lists.** In a dataset that lists 1 genome, the first reading less the second gives back that genome's class, its calls and its scores. So a dataset's second-reading figures go on a page only where each class lists no genome or at least 5. Otherwise the page gives its first reading and its listed counts by class, and says its second reading is counted and not shown. That reading still enters every count over datasets. Five is a convention for a smallest cell; it does not prove that no genome's call can be worked out.
+
+**Packs.** Each species' machine packs its results with no list and no genome's score file. The packs go unopened to the one machine that takes the block's counts over all its species. Only the count tables and the page tables leave that machine.
 
 **First run.** The count over all datasets does not score the first run again. It takes the first run's rows from the block's committed record of one row per dataset. That record is its `page-datasets.tsv` under `reference/`, held to the sha256 in the block's `SHA256SUMS`. It holds balanced accuracy and recall for each pair and learner, and block C5's also holds log loss.
 
@@ -1011,6 +1015,8 @@ An eleventh came while the text was written. The project's wording rules put rec
 **Review.** An independent review read it before it was filed and showed the first draft could not run as written. In five of the six blocks some fits keep no score per genome, today's code does not build the first run's binary, and the record holds two measures of the six a count gives. The paragraphs Scores kept, Binary, Other measures and Block C9's picks give the lead's rulings on them.
 
 **Changed.** A re-check read this entry against the entry Pick rule. After it the lead changed, at 19:24Z, Same build, Block C7's binaries, Other measures, Pick and Review, and added On a difference, Genome files, Then, Block C2, Block C7's check and Mirror. No reviewer has read Block C2 or Block C7's check.
+
+**Changed again.** After the independent review of block C3's code for this run, the lead changed Code and List at 07:57Z on 26 Nov 2026 and added Small lists and Packs. No dataset of M had been fitted.
 
 ## Label text
 

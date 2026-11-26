@@ -159,6 +159,11 @@ class Stops(unittest.TestCase):
         self.stops(lambda fx: fx.listed[D].pop(), "the list file")
         self.stops(lambda fx: fx.floor.pop(), "not expect.tsv's")
 
+    def test_a_floor_tsv_whose_floor_is_24_with_a_matching_entry_stops(self):
+        # Each row's entry follows its own floor of 24, so only the floor itself is wrong.
+        self.stops(lambda fx: fx.floor[0].update(floor="24"), "floor of 25 a class")
+        self.stops(lambda fx: fx.floor[1].update(floor="24"), "floor of 25 a class")
+
     def test_a_missing_result_or_score_file_stops(self):
         self.stops(lambda fx: (fx.picks / f"k31/{D}.lineage-s43.pick.json").unlink(), "no result")
         self.stops(lambda fx: (fx.scores / f"program/{D}.lineage-s42.scores.json").unlink(), "were not kept")
