@@ -2,6 +2,8 @@
 
 These files are the outputs of the scripts in `scripts/release-summary/` on two public GRM releases. `docs/release-summary.md` says what each output holds and how each number is made. They were computed on 2026-11-13 at the commit that added them. The two `index-counts.json` files were computed again on 2026-11-15, when `index_counts.py` began to count the index's labels inferred from a MIC; every count they held before is unchanged.
 
+`rev14-274-20261112/path.json` was computed on 2026-11-26 from the revision 14 `index.json` alone. It is committed for revision 14 only, so `rev12-274-20261105/` has no `path.json`.
+
 ## Inputs
 
 Each release is one archive. The scripts read two things from it: `index.json` and the directory `intervals/`, one file per dataset.
@@ -34,9 +36,10 @@ python3 -I scripts/release-summary/summary.py      "$R/index.json" "$R/intervals
 python3 -I scripts/release-summary/catalog.py      "$R/index.json" "$R/intervals" > "$OUT/catalog.json"
 python3 -I scripts/release-summary/index_counts.py "$R/index.json" "$R/intervals" > "$OUT/index-counts.json"
 python3 -I scripts/release-summary/guidance.py     "$R/index.json" "$R/intervals" > "$OUT/guidance.json"
+python3 -I scripts/release-summary/path.py         "$R/index.json" "$R/intervals" > "$OUT/path.json"
 ```
 
-`uncertainty.py` uses its default of 4000 bootstrap repetitions and seed 20261111; both are in its output. To put the two releases side by side:
+`path.py` reads `index.json` only; it takes the second argument so that every script has the same command line. `uncertainty.py` uses its default of 4000 bootstrap repetitions and seed 20261111; both are in its output. To put the two releases side by side:
 
 ```sh
 python3 -I scripts/release-summary/compare.py \
@@ -59,6 +62,7 @@ f0c0e4e99759b1a7b0b846e23948369adacb21d06b56f63233f1202c14bee55e  rev12-274-2026
 2d74fab696e2c7a5bb0814ac86082116d2c787f0440cdf5ba872b302532da6bd  rev14-274-20261112/catalog.json
 307935431d2ecdf66274a65e1778ee59cfde9143e028a42f9b0c3898dd13f828  rev14-274-20261112/index-counts.json
 abce2c7c4c5bf940606e747543eded4771a939715a4fdfd7f0bdc9190b6ce14f  rev14-274-20261112/guidance.json
+93eed49c15770c06528fdcd515415bff0fc74d8042bf4caecc3de9f5eed664ca  rev14-274-20261112/path.json
 ```
 
 ## Against the earlier runs
@@ -76,3 +80,5 @@ The same scripts ran from outside the repository before they moved here. `docs/r
 On 2026-11-15 both `index-counts.json` files gained one block, `labels_from_mic_excluded`, read from the same `index.json`. Rebuilt from the same inputs, the other four outputs of each release are byte-identical, and the two `index-counts.json` files differ from the files they replace only by that block.
 
 `guidance.json` is new. No earlier run computed it.
+
+`path.json` is new. No earlier run computed it.

@@ -4,7 +4,8 @@ The suite recomputes nothing from a release. It checks that each output parses, 
 datasets, that its counts partition as they must, and that the README lists the sha256 of each output. guidance.json must
 read the same rows as uncertainty.json, sort them into the same screen classes, and count the no-call rows that
 index-counts.json finds. index-counts.json must count the labels inferred from a MIC over the datasets that hold the
-field, and count a dataset without it apart."""
+field, and count a dataset without it apart. path.json, committed for revision 14 only, must pass its own two checks
+and give the same count as the other outputs wherever both hold one."""
 
 import hashlib
 import json
@@ -16,6 +17,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[2]
 REFERENCE = ROOT / "reference" / "release-summary"
 RELEASES = {"rev12-274-20261105": 12, "rev14-274-20261112": 14}
 OUTPUTS = ["uncertainty.json", "summary.json", "catalog.json", "index-counts.json", "guidance.json"]
+PATH_RELEASE = "rev14-274-20261112"  # the one release with a path.json
 LEARNERS = ["scm", "cart", "rf", "gbt", "lasso"]
 
 
@@ -23,11 +25,15 @@ def load(release, name):
     return json.loads((REFERENCE / release / name).read_text(encoding="utf-8"))
 
 
+def outputs(release):
+    return OUTPUTS + (["path.json"] if release == PATH_RELEASE else [])
+
+
 class Reference(unittest.TestCase):
     def test_every_output_is_there_and_parses(self):
         for release in RELEASES:
-            self.assertEqual(sorted(p.name for p in (REFERENCE / release).iterdir()), sorted(OUTPUTS), release)
-            for name in OUTPUTS:
+            self.assertEqual(sorted(p.name for p in (REFERENCE / release).iterdir()), sorted(outputs(release)), release)
+            for name in outputs(release):
                 self.assertIsInstance(load(release, name), dict, f"{release}/{name}")
 
     def test_revision_and_datasets(self):
@@ -201,10 +207,48 @@ class Reference(unittest.TestCase):
                 if revision == 14:
                     self.assertEqual(sum(r["fewer_than_every_genome"] for r in g["rows"].values()), 0)
 
+    def test_path_counts_and_checks(self):
+        p = load(PATH_RELEASE, "path.json")
+        self.assertEqual(list(p), ["revision", "datasets", "species_rows", "funnel", "species", "dataset_rows", "checks"])
+        self.assertEqual((p["revision"], p["datasets"]), (RELEASES[PATH_RELEASE], 274))
+        f, c, s = p["funnel"], p["checks"], p["species"]
+        by_name, failing = f["records_dropped_by_name"], f["genomes_failing_a_check"]
+        self.assertEqual(by_name["total"], sum(v for k, v in by_name.items() if k != "total"))
+        self.assertEqual(failing["total"], sum(failing["reasons"].values()))
+        self.assertIn("species check: sequence is another species", failing["reasons"])
+        self.assertEqual(len(f["pair_kinds"]), 5)
+        # both checks, each side rebuilt here from the funnel block
+        self.assertEqual(c["genomes"], {"with_a_record": f["genomes_with_a_record"],
+                                        "passing_plus_without_metadata_plus_failing":
+                                            f["genomes_passing"] + f["genomes_without_metadata"] + failing["total"]})
+        self.assertEqual(c["pairs"], {"pairs": f["pairs"], "sum_of_five_kinds": sum(f["pair_kinds"].values())})
+        for name, sides in c.items():
+            with self.subTest(check=name):
+                self.assertEqual(len(set(sides.values())), 1, sides)
+        # each pair holds at least one record left after the name check and the no-measure count
+        self.assertLessEqual(f["pairs"], f["records"] - by_name["total"] - f["records_no_call_no_mic"])
+        self.assertLessEqual(f["genomes_with_a_record"], f["records"])
+        self.assertLessEqual(s["datasets_with_report"], s["datasets_curated"])
+        self.assertLessEqual(s["species_at_highest"], p["species_rows"])
+        self.assertLessEqual(s["genomes_analyzed_highest"] * s["species_at_highest"], s["genomes_analyzed"])
+        self.assertLessEqual(p["dataset_rows"]["n_resistant"], p["dataset_rows"]["n"])
+
+    def test_path_counts_agree_with_the_other_outputs(self):
+        p, summary = load(PATH_RELEASE, "path.json"), load(PATH_RELEASE, "summary.json")
+        for name in OUTPUTS:
+            with self.subTest(output=name):
+                self.assertEqual(p["datasets"], load(PATH_RELEASE, name)["datasets"])
+        # summary.json's genome_rows is the sum of n over the same dataset rows
+        self.assertEqual(p["dataset_rows"]["n"], summary["genome_rows"])
+        # each dataset row is one report, so the species rows' reports add up to the dataset rows
+        self.assertEqual(p["species"]["datasets_with_report"], p["datasets"])
+        # a species with a report has a species row
+        self.assertGreaterEqual(p["species_rows"], summary["species"])
+
     def test_readme_lists_the_sha256_of_each_output(self):
         readme = (REFERENCE / "README.md").read_text(encoding="utf-8")
         listed = dict((path, digest) for digest, path in re.findall(r"^([0-9a-f]{64})  (\S+)$", readme, re.M))
-        expected = sorted(f"{release}/{name}" for release in RELEASES for name in OUTPUTS)
+        expected = sorted(f"{release}/{name}" for release in RELEASES for name in outputs(release))
         self.assertEqual(sorted(listed), expected)
         for path, digest in listed.items():
             self.assertEqual(hashlib.sha256((REFERENCE / path).read_bytes()).hexdigest(), digest, path)
