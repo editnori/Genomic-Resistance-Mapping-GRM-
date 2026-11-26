@@ -67,9 +67,9 @@ A report is flagged for an arm by either of two conditions, each read on the sto
 | One score (R30) | some learner gives every genome of a fold of 2 or more genomes one score | both |
 | Coefficient under 0 (R37) | some fold's logistic fit gives one of the five learners a coefficient under 0; a coefficient of exactly 0 does not flag | logistic only |
 
-**Why one score.** The release scores a learner that selected nothing at its fold's training share of resistant genomes. That share falls as the held-out fold's own share rises, so it carries the held-out labels, upside down.
+**Training share.** The release scores a learner that selected nothing at its fold's training share of resistant genomes. That share falls as the held-out fold's own share rises, so it carries the held-out labels, upside down.
 
-**Why the sign.** A score that follows the training share points the wrong way for the held-out fold. A fit gains from it only by giving that learner a coefficient under 0; with every coefficient at 0 or above, the share moves the fold's calls the wrong way or nowhere. A learner that scores each genome within a hair of the share gives no fold one score, so R30's condition alone misses it. The weighted mean's weights are never under 0.
+**Sign.** A score that follows the training share points the wrong way for the held-out fold. A fit gains from it only by giving that learner a coefficient under 0; with every coefficient at 0 or above, the share moves the fold's calls the wrong way or nowhere. A learner that scores each genome within a hair of the share gives no fold one score, so R30's condition alone misses it. The weighted mean's weights are never under 0.
 
 ### Decision
 
