@@ -77,7 +77,7 @@ export const Segmented = <T extends string>({
   <div
     role="group"
     aria-label={ariaLabel}
-    className={`inline-flex min-h-7 max-w-full flex-wrap items-center gap-0.5 rounded-md border border-hair bg-paper-pure p-0.5 ${fill ? "w-full" : "w-max"}`}
+    className={`inline-flex min-h-[30px] max-w-full flex-wrap items-center gap-0.5 rounded-md border border-hair bg-paper-pure p-0.5 ${fill ? "w-full" : "w-max"}`}
   >
     {options.map((o) => {
       const selected = o.id === value;
@@ -88,7 +88,7 @@ export const Segmented = <T extends string>({
           aria-pressed={selected}
           disabled={o.disabled === true}
           onClick={() => onSelect(o.id)}
-          className={`ui-control-target inline-flex h-[22px] items-center justify-center whitespace-nowrap rounded px-3 text-control font-medium tracking-tight transition-[color,background-color,transform] duration-fast ease-out active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45 ${FOCUS_RING} ${
+          className={`ui-control-target inline-flex h-6 items-center justify-center whitespace-nowrap rounded px-3 text-control font-medium tracking-tight transition-[color,background-color,transform] duration-fast ease-out active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45 ${FOCUS_RING} ${
             fill ? "flex-1 basis-0" : ""
           } ${selected ? "bg-ink text-paper-pure" : "text-ink enabled:hover:bg-surface-subtle"}`}
         >

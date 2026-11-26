@@ -13,6 +13,7 @@ import { findFocusToken, isAppPath, lastNavKind, navigate, useLocationKey, useRo
 import { OverviewView } from "../views/OverviewView";
 import { DatasetsView } from "../views/DatasetsView";
 import { SpeciesView } from "../views/SpeciesView";
+import { DataView } from "../views/DataView";
 import { MethodsView } from "../views/MethodsView";
 import { DatasetInspector } from "../views/inspector/DatasetInspector";
 
@@ -26,8 +27,10 @@ const ViewBody = ({ manifest, nav }: { manifest: Manifest; nav: Navigator }) => 
       return <DatasetsView manifest={manifest} nav={nav} />;
     case "species":
       return <SpeciesView manifest={manifest} nav={nav} />;
+    case "data":
+      return <DataView manifest={manifest} nav={nav} />;
     case "methods":
-      return <MethodsView manifest={manifest} />;
+      return <MethodsView manifest={manifest} nav={nav} />;
   }
 };
 

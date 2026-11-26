@@ -16,6 +16,7 @@ import type { Navigator } from "../app/router";
 import { wordingSummary } from "../data/derive/evidence";
 import { barsLead, FINDINGS } from "./findings";
 import { datasetColumns } from "./DatasetsView";
+import { DataView } from "./DataView";
 import { MethodsView } from "./MethodsView";
 import { OverviewView } from "./OverviewView";
 
@@ -83,13 +84,19 @@ describe("the Overview's first reading against the limits", () => {
 });
 
 describe("FDA is named only with growth-based", () => {
-  it("in the rendered Overview, primer and Methods", () => {
-    for (const html of [renderToStaticMarkup(createElement(OverviewView, { manifest, nav })), renderToStaticMarkup(createElement(MethodsView, { manifest }))]) {
+  it("in the rendered Overview, primer, Data and Methods", () => {
+    for (const html of [
+      renderToStaticMarkup(createElement(OverviewView, { manifest, nav })),
+      renderToStaticMarkup(createElement(MethodsView, { manifest })),
+    ]) {
       const text = textOf(html);
       expect(text).toMatch(/FDA/);
       expect(unscoped(text)).toEqual([]);
       expect(text).not.toMatch(OVERCLAIM);
     }
+    const dataText = textOf(renderToStaticMarkup(createElement(DataView, { manifest })));
+    expect(unscoped(dataText)).toEqual([]);
+    expect(dataText).not.toMatch(OVERCLAIM);
   });
 
   it("in every Present slide's headline and caption", () => {
