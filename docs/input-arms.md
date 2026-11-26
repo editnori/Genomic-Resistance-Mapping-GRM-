@@ -143,7 +143,7 @@ On a difference in any of the three the run names what differs, writes `OUT/FAIL
 
 **Listed genomes.** A dataset's list is the genomes of its cohort (the matrix's genomes with an unconflicted R or S call not taken from an MIC, as `lists.tsv` counts them) whose records for its antibiotic hold an intermediate call. The list stays in `work/m/list/` on the box.
 
-**Floor.** `results/m/floor.tsv` gives each dataset's cohort, its listed genomes and the genomes left for the second reading, each by class, and whether the dataset enters that reading: 25 genomes of each class at least, the release's class minimum.
+**Floor.** `results/m/floor.tsv` gives each dataset's cohort, its listed genomes and the genomes left for the second reading, each by class, and whether the dataset passes the floor (the column `enters`): 25 genomes of each class at least, the release's class minimum. Small lists, below, says what else the second reading needs.
 
 **Floor form.** `m_reading.py floor` writes `m-floor.tsv` and `m-left-out.tsv` from the species' `floor.tsv` files alone, before any score is read. `m-floor.tsv` gives each dataset's second reading as in it, left out under the floor, or left out for a short list (Small lists, below). `m_reading.py count` stops unless both files are, byte for byte, the ones the floor form writes from the same species' files.
 
@@ -159,7 +159,9 @@ On a difference in any of the three the run names what differs, writes `OUT/FAIL
 
 Before it counts, `m_reading.py check` must give back from the record every row of the first run's published count on those two measures, 110 rows, and its 55 condition rows (`page-count.tsv` and `page-conditions.tsv`, each equal to its sha256 in `SHA256SUMS`); it stops on any difference. No count leaves out the constant-model datasets, since the counts are read once with no other subset. A dataset left out of the second reading, for either reason, is not in that reading's counts.
 
-**Small lists.** A dataset enters the second reading only when it passes the floor and each class lists no genome or at least 5 (`SMALLEST_LISTED`, read from `floor.tsv`'s listed counts by class). Every other dataset that passes the floor is left out of it for a short list and read once, in the first. Five is a convention for a smallest cell; it does not prove that no genome's call can be worked out.
+**Small lists.** A dataset enters the second reading only when it passes the floor and each class lists no genome or at least 5 (`SMALLEST_LISTED`, read from `floor.tsv`'s listed counts by class). Every other dataset that passes the floor is left out of it for a short list and read once, in the first.
+
+**Smallest cell.** Five is a convention for a smallest cell. It does not prove that no genome's call can be worked out: a class of 5 genomes all called alike still shows each one's call.
 
 **Dropped rows.** `second.py` still writes the rows of a dataset left out for a short list. `m_reading.py count` stops without them, then drops them before any count, table or line reads them.
 

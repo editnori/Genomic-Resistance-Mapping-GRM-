@@ -26,7 +26,7 @@ for its antibiotic among the matrix genomes, with an unconflicted reported R
 or S and no label from an MIC. Its size and classes must equal lists.tsv's.
 The list holds the cohort genomes whose records for that antibiotic hold an
 intermediate call; each is R or S under r-or-s-wins. The floor: a dataset
-enters the second reading when each class keeps at least 25 genomes, each
+passes it (`enters` 1) when each class keeps at least 25 genomes, each
 counted once, among the cohort genomes (all of which the lineage split
 scores) less the list.
 
