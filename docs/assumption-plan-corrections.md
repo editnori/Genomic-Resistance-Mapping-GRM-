@@ -1011,3 +1011,15 @@ An eleventh came while the text was written. The project's wording rules put rec
 **Review.** An independent review read it before it was filed and showed the first draft could not run as written. In five of the six blocks some fits keep no score per genome, today's code does not build the first run's binary, and the record holds two measures of the six a count gives. The paragraphs Scores kept, Binary, Other measures and Block C9's picks give the lead's rulings on them.
 
 **Changed.** A re-check read this entry against the entry Pick rule. After it the lead changed, at 19:24Z, Same build, Block C7's binaries, Other measures, Pick and Review, and added On a difference, Genome files, Then, Block C2, Block C7's check and Mirror. No reviewer has read Block C2 or Block C7's check.
+
+## Label text
+
+**Plan.** Row A16 of the plan's inventory cites the site's label text at `web/src/views/MethodsView.tsx:202-204` and calls it "silent on S with I and I with R".
+
+**Now.** Pull request #186, merged on 26 Nov 2026, moved that text to the Data page, at `web/src/views/DataView.tsx:254-256`. It also added one sentence: "A pair called susceptible and intermediate is labeled susceptible, and a pair called intermediate and resistant is labeled resistant." That is what the rule `r-or-s-wins` does, at `src/curate.rs:83-89`. The row's own code lines (`:34-36`, `:568`, `:227`) fit `src/curate.rs` as it stood before commit `429965e6` of 21 Nov 2026. Today lines 34 to 36 only end the list of call types.
+
+**Unchanged.** The row's rule and its counts stand as written. So does its mark in the column Defended, none: the site's sentence states the rule and gives no reason for it. The entry Label rule gives the ruling on those pairs.
+
+**Served.** The sentence is in the repository. The served site shows it from its next release.
+
+**Written.** This entry was written at 03:14Z on 26 Nov 2026.
