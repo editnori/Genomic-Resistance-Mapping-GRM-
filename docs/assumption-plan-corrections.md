@@ -849,7 +849,7 @@ An eleventh came while the text was written. The project's wording rules put rec
 
 **Size.** A candidate must also be better on more than half of the datasets that enter the count over all its block's datasets, in each of the two readings. Better is the block's own count: more than 0.02 in lineage balanced accuracy, at 12 decimals. A dataset enters as that count enters it, and the entry M run fixes how a dataset of M enters the second reading.
 
-**Floor's effect.** A dataset of M that the floor of the entry M run leaves out of the second reading leaves that reading's count, which can move the size rule either way in that reading. The first reading takes every dataset, so no candidate passes that fails there. The floor is counted before any score is read.
+**Floor's effect.** A dataset of M that the entry M run leaves out of the second reading, under its floor or for a short list, leaves that reading's count. That can move the size rule either way in that reading. The first reading takes every dataset, so no candidate passes that fails there. The run counts both the floor and the lists before it reads any score.
 
 **Learners.** The size rule holds for each learner the candidate touches. A candidate that touches all five needs it for at least 3 learners, the same in both readings, that carry the change on that count.
 
@@ -936,7 +936,7 @@ An eleventh came while the text was written. The project's wording rules put rec
 
 **Own rules.** Blocks C1 and D0 do not read by conditions 1 to 5, and C1 scores cohorts smaller than the floor below by design. Each fixes, in an entry of its own before its datasets of M run, how the second reading meets its rule.
 
-**Lineage curve.** Its second reading fits nothing. It follows the page's own method, with those genomes left out of the resistant genomes it reads. It keeps the page's own floors: no curve and no share over fewer than 5 resistant genomes.
+**Lineage curve.** Its second reading fits nothing. It follows the page's own method, with those genomes left out of the resistant genomes it reads. It keeps the page's own floors: no curve and no share over fewer than 5 resistant genomes. The lead makes it only for a report that lists at least 5 resistant genomes. A report that lists none reads the same both ways. One that lists 1 to 4 keeps its one reading, and its page says how far each figure can move.
 
 **Arms.** Each block runs on M every arm its first run fitted, with the default and the twin, at the first run's seeds and arguments. An arm withdrawn before the first run stays withdrawn, with its pairs at p = 1.
 
@@ -1017,6 +1017,8 @@ An eleventh came while the text was written. The project's wording rules put rec
 **Changed.** A re-check read this entry against the entry Pick rule. After it the lead changed, at 19:24Z, Same build, Block C7's binaries, Other measures, Pick and Review, and added On a difference, Genome files, Then, Block C2, Block C7's check and Mirror. No reviewer has read Block C2 or Block C7's check.
 
 **Changed again.** After the independent review of block C3's code for this run, the lead changed Code and List at 07:57Z on 26 Nov 2026 and added Small lists and Packs. At 09:19Z, after the code was changed for that review, the lead added Count rows. At 11:04Z on 26 Nov 2026, after the re-check of the code, the lead changed Small lists and removed Count rows. No dataset of M had been fitted.
+
+**Changed after the re-check.** At 12:37Z on 26 Nov 2026 the lead added to Lineage curve its rule for a report that lists fewer than 5 resistant genomes, the rule of Small lists. The lead also named the short list in Floor's effect of the entry Pick rule. No reviewer had read either change then. No dataset of M had been fitted, and the curve had no second reading.
 
 ## Label text
 
