@@ -318,6 +318,10 @@ jobs:
           - suite: tests/c7_outside
             top: .
             venv: scripts/c7-outside/requirements.txt
+          # SYNTHETIC reports, lab records, label tables, drug names and genome tables built in the test; it runs scripts/matched-accuracy/stage1.py, reads no score and fits nothing (docs/matched-accuracy.md).
+          # test_reference.py also reads reference/matched-accuracy and the committed sums list reference/lineage-control/rev14-274-20261112.reports.sha256; test_faults.py reads scripts/matched-accuracy/planted_faults.py and the file it plants in.
+          - suite: tests/matched_accuracy
+            top: .
     env:
       SUITE: ${{ matrix.suite }}
       TOP: ${{ matrix.top }}
