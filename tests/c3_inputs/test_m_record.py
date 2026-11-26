@@ -6,7 +6,9 @@ The record stands in one of three states, by the tables it holds (m_page.py's st
   the run has not happened;
 - floor: the floor's two tables too; input-arms.md holds the left-out table as `m_page.py print` gives it and names
   `reference/input-arms-m/m-left-out.tsv`, and no count table stands on any page;
-- count: all 7 tables; the result page holds every table as print gives it, and every file equals its SHA256SUMS line.
+- count: all 7 tables; input-arms.md still holds the left-out table, the result page holds the blocks
+  `m_page.py page` gives, each whole and in its order, no page holds the header of a table that stays in the record,
+  and every file equals its SHA256SUMS line.
 
 The committed tree is checked in the state its record gives. The other states are proven on copies of the tree's
 pages, with a record that starts as the committed one before the run and SYNTHETIC tables written by m_reading.py's
@@ -61,19 +63,28 @@ def check_tree(root, lists=None):
             raise Off(f"{ARMS} does not say the run has not happened")
         return state
     try:
-        printed = m_page.tables(record, m_set)
+        m_page.tables(record, m_set)
     except m_page.Stop as e:
         raise Off(f"m_page: stopped: {e}") from None
+    ok, line = m_page.onpage(record, root / ARMS, m_set)
+    if not ok:
+        raise Off(line)
+    if LEFT_PATH not in arms:
+        raise Off(f"{ARMS} does not name {LEFT_PATH}")
     if state == "floor":
-        ok, line = m_page.onpage(record, root / ARMS, m_set)
-        if not ok:
-            raise Off(line)
-        if LEFT_PATH not in arms:
-            raise Off(f"{ARMS} does not name {LEFT_PATH}")
         return state
-    for name, lines in printed.items():
+    heads = m_page.record_headers()
+    for name, text in pages.items():
+        if set(text.split("\n")) & set(heads):
+            raise Off(f"{name} holds a table that stays in the record")
+    last = -1
+    for name, lines in m_page.page(record, m_set).items():
         if m_page.run_length(result, lines) != len(lines):
-            raise Off(f"{RESULT} lacks the table {name} as print gives it")
+            raise Off(f"{RESULT} lacks the block {name} as page gives it")
+        at = result.split("\n").index(lines[0])
+        if at < last:
+            raise Off(f"{RESULT} holds the block {name} before the one page gives ahead of it")
+        last = at
     listed = {}
     for line in (record / "SHA256SUMS").read_text(encoding="utf-8").splitlines():
         digest, _, name = line.partition("  ")
@@ -166,17 +177,29 @@ class Copy(unittest.TestCase):
         return tables
 
     def to_count(self, which="seven"):
-        """The floor, then record through the copy's CLI and every printed table put at the result page's end."""
+        """The floor, then record through the copy's CLI and what its page command prints put at the result page's
+        end. Returns page's blocks."""
         self.to_floor(which)
         self.assertEqual(self.cli("record", BUILT[which], self.record),
                          (0, "record: 5 tables copied; SHA256SUMS lists 8 files\n"))
+        rc, out = self.cli("page", self.record)
+        self.assertEqual(rc, 0)
+        blocks = m_page.page(self.record, m_tables.M_SET)
+        self.assertEqual(out, "\n\n".join("\n".join(lines) for lines in blocks.values()) + "\n")
+        path = self.page(RESULT)
+        path.write_text(path.read_text(encoding="utf-8").rstrip("\n") + "\n\n## M, SYNTHETIC\n\n" + out,
+                        encoding="utf-8")
+        return blocks
+
+    def printed(self):
         rc, out = self.cli("print", self.record)
         self.assertEqual(rc, 0)
-        tables = printed_tables(out)
-        path = self.page(RESULT)
-        path.write_text(path.read_text(encoding="utf-8").rstrip("\n") + "\n\n## M, SYNTHETIC\n\n"
-                        + "\n\n".join("\n".join(lines) for lines in tables.values()) + "\n", encoding="utf-8")
-        return tables
+        return printed_tables(out)
+
+    def fresh(self):
+        """A new copy inside one test, for a rule tried several ways."""
+        self.tearDown()
+        self.setUp()
 
     def off(self, pattern):
         with self.assertRaisesRegex(Off, pattern):
@@ -263,25 +286,50 @@ class FloorTaken(Copy):
 
 
 class CountTaken(Copy):
-    def test_count_passes_with_every_printed_table_on_the_result_page(self):
-        tables = self.to_count()
+    def test_count_passes_with_the_blocks_of_page_on_the_result_page(self):
+        blocks = self.to_count()
         self.assertEqual(m_page.state(self.record), "count")
         self.assertEqual(check_tree(self.root, self.lists), "count")
-        self.assertEqual(tables, m_page.tables(self.record, m_tables.M_SET))
-        self.assertEqual(len(tables), 8)
+        self.assertEqual(tuple(blocks), ("both", "species", "count-all", "count-m", "files"))
+        self.assertEqual(len(self.printed()), 8)
 
-    def test_count_refuses_a_result_page_without_one_table(self):
-        tables = self.to_count()
-        self.change(RESULT, "\n\n" + "\n".join(tables["size"]), "")
-        self.off(f"^{RESULT} lacks the table size as print gives it$")
+    def test_count_refuses_a_result_page_without_one_block(self):
+        for name in ("both", "species", "count-all", "count-m", "files"):
+            with self.subTest(name=name):
+                self.fresh()
+                blocks = self.to_count()
+                self.change(RESULT, "\n".join(blocks[name]), "")
+                self.off(f"^{RESULT} lacks the block {name} as page gives it$")
 
     def test_count_refuses_a_result_page_with_a_row_changed(self):
-        tables = self.to_count()
-        row = tables["datasets"][-1]
+        blocks = self.to_count()
+        row = blocks["count-m"][-1]
         cells = row.split(" | ")
-        cells[4] = "0.999" if cells[4] != "0.999" else "0.998"
+        cells[6] = "0.999" if cells[6] != "0.999" else "0.998"
         self.change(RESULT, row, " | ".join(cells))
-        self.off(f"^{RESULT} lacks the table datasets as print gives it$")
+        self.off(f"^{RESULT} lacks the block count-m as page gives it$")
+
+    def test_count_refuses_the_blocks_in_another_order(self):
+        blocks = self.to_count()
+        first, second = ("\n".join(blocks[name]) for name in ("count-all", "count-m"))
+        self.change(RESULT, first + "\n\n" + second, second + "\n\n" + first)
+        self.off(f"^{RESULT} holds the block count-m before the one page gives ahead of it$")
+
+    def test_count_refuses_a_table_that_stays_in_the_record_on_any_page(self):
+        for name in ("count", "beside", "conditions", "size", "datasets"):
+            for page in (RESULT, ARMS):
+                with self.subTest(name=name, page=page):
+                    self.fresh()
+                    self.to_count()
+                    path = self.page(page)
+                    path.write_text(path.read_text(encoding="utf-8") + "\n" + "\n".join(self.printed()[name]) + "\n",
+                                    encoding="utf-8")
+                    self.off(f"^{page} holds a table that stays in the record$")
+
+    def test_count_refuses_a_left_out_table_changed_on_the_design_page(self):
+        self.to_count()
+        self.change(ARMS, "| left out, under the floor | 30 R, 40 S |", "| left out, under the floor | 31 R, 40 S |")
+        self.off("lacks the left-out table's row of Synth d with drug 10$")
 
     def test_count_refuses_a_file_unlike_its_sha256sums_line(self):
         self.to_count()

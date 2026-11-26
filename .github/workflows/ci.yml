@@ -284,11 +284,11 @@ jobs:
           # SYNTHETIC results, inputs files, reports, dataset rows, readings and run copies built in the test; it runs score.py, lists.py, expect.py,
           # page_tables.py and run_checks.py under scripts/c3-inputs and fits nothing. test_page_faults.py reads scripts/c3-inputs/page_faults.py and the files it plants in.
           # test_lists.py also reads the committed lists scripts/c9-pick/l.tsv, reference/amrfinderplus-comparison/datasets.tsv and scripts/c3-inputs/lists.tsv.
-          # The test_m_*.py modules, 189 of the suite's 341 tests, run m_list.py, m_checks.py, second.py, m_reading.py, pack.py, cost.py and m_page.py and the shell
+          # The test_m_*.py modules, 195 of the suite's 347 tests, run m_list.py, m_checks.py, second.py, m_reading.py, pack.py, cost.py and m_page.py and the shell
           # functions of run_m.sh on SYNTHETIC files, and read the committed reference/input-arms, reference/input-arms-m, scripts/c3-inputs/lists.tsv, run_species.sh,
           # docs/input-arms.md, docs/input-arms-result.md and docs/assumption-plan-corrections.md. test_m_record.py checks docs/input-arms.md and
           # docs/input-arms-result.md against reference/input-arms-m in the state the record is in, and the other two states on SYNTHETIC copies of the tree.
-          # test_m_faults.py reads scripts/c3-inputs/m_faults.py, its 163 faults and the files they plant in. The test of the changed commit's diff needs both commits and this
+          # test_m_faults.py reads scripts/c3-inputs/m_faults.py, its 170 faults and the files they plant in. The test of the changed commit's diff needs both commits and this
           # checkout holds one, so it skips here; run_m.sh makes the same check on the box before any build.
           - suite: tests/c3_inputs
             top: .

@@ -23,4 +23,4 @@ This directory holds the tables of plan block C3's run on its 35 datasets of M (
 | `m-datasets.tsv` | `m_page.py record` | per reading, dataset, split, pair and learner; the second reading only for a dataset in it |
 | `SHA256SUMS` | `m_page.py floor`, then `record` again | the sha256 of every file here but itself and this README |
 
-`m_page.py print` prints the page's tables from these files alone. `tests/c3_inputs/test_m_record.py` checks this directory against `docs/input-arms.md` and `docs/input-arms-result.md` in each of its three states: before the run, after the floor and after the count.
+`m_page.py print` prints every table from these files alone, and `m_page.py page` the four tables the result page takes; the others stay here. `tests/c3_inputs/test_m_record.py` checks this directory against `docs/input-arms.md` and `docs/input-arms-result.md` in each of its three states: before the run, after the floor and after the count.

@@ -258,6 +258,50 @@ class Print(Made):
         self.assertEqual(out, "[left-out]\n" + "\n".join(LEFT_OUT) + "\n\n[species]\n" + "\n".join(SPECIES)
                          + "\n\n[count]\n" + NOT_TAKEN + "\n\n")
 
+    def test_page_gives_the_result_pages_five_blocks_from_the_record(self):
+        tables, record = self.made()
+        printed, blocks = m_page.tables(record, M_SET), m_page.page(record, M_SET)
+        self.assertEqual(tuple(blocks), ("both", "species", "count-all", "count-m", "files"))
+        self.assertEqual(m_page.ON_PAGE, tuple(blocks))
+        self.assertEqual(blocks["both"], [
+            "**Both readings.** Per arm, conditions 1 to 5 of ruling 15 on the count over all datasets.", ""]
+            + printed["both"][2:])
+        self.assertEqual(len(blocks["both"]), 2 + 2 + 20)
+        self.assertEqual(blocks["species"], [
+            READS + " The design page, `docs/input-arms.md`, names each dataset left out.", ""] + SPECIES)
+        rows = [r for r in mr.score.read_tsv(tables / "m-count.tsv")
+                if r["split"] == "lineage" and r["measure"] == "balanced_accuracy"]
+        pd = page_tables
+        for name, count, line in (
+                ("count-all", "all datasets",
+                 "**All datasets.** The first run's datasets and M's, on the lineage split and balanced accuracy."),
+                ("count-m", "M", "**M alone.** The datasets of M, on the lineage split and balanced accuracy. "
+                                 "This count decides nothing.")):
+            want = page_tables.table(
+                ["Reading", "Arm", "Learner", "Better", "Worse", "Same", "Median", "Interval", "Sign p", "Holm p",
+                 "Constant"],
+                [[r["m_reading"], pd.pair_words(r["pair"]), f"`{r['learner']}`", pd.of(r["better"], r["entered"]),
+                  pd.of(r["worse"], r["entered"]), pd.of(r["same"], r["entered"]), pd.d3(r["median_difference"]),
+                  pd.interval(r["interval_lo"], r["interval_hi"]), pd.pval(r["sign_p"]), pd.pval(r["holm_p"]),
+                  r["constant"]] for r in rows if r["count"] == count])
+            # 6 arm rows by 5 learners in each of the 2 readings, under the header and rule rows.
+            self.assertEqual(len(want), 2 + 60)
+            self.assertEqual(blocks[name], [line, ""] + want)
+        self.assertNotEqual(blocks["count-all"][2:], blocks["count-m"][2:])
+        self.assertEqual(blocks["files"], [
+            "**Files.** The record, `reference/input-arms-m/`, holds every other table: each count on every measure "
+            "and split (`m-count.tsv`), each count's conditions (`m-conditions.tsv`), the size table (`m-size.tsv`) "
+            "and each dataset's figures (`m-datasets.tsv`). `scripts/c3-inputs/m_page.py print` prints them."])
+        rc, out = self.run_main("page", record)
+        self.assertEqual((rc, out), (0, "\n\n".join("\n".join(lines) for lines in blocks.values()) + "\n"))
+
+    def test_page_stops_before_the_count(self):
+        _, record = self.made("floor")
+        self.assertEqual(self.run_main("page", record), (
+            1, "m_page: stopped: the count has not been taken, and the result page takes its tables after it\n"))
+        _, record = self.made("none")
+        self.assertEqual(self.run_main("page", record), (1, "m_page: stopped: m-floor.tsv is missing from the record\n"))
+
     def test_print_stops_on_a_record_with_no_table_of_m(self):
         _, record = self.made("none")
         rc, out = self.run_main("print", record)
@@ -634,7 +678,21 @@ class States(Made):
         m_page.record_count(tables, record, M_SET)
         self.assertEqual(m_page.state(record), "count")
         self.assertEqual([line.split(" | ")[0] for line in m_page.count_headers()],
-                         ["| Count", "| Count", "| Count", "| Arm", "| Reading", "| Species"])
+                         ["| Count", "| Count", "| Count", "| Arm", "| Reading", "| Species", "| Reading"])
+
+    def test_five_tables_stay_in_the_record_and_no_block_of_the_page_holds_their_header(self):
+        _, record = self.made()
+        printed, blocks = m_page.tables(record, M_SET), m_page.page(record, M_SET)
+        heads = m_page.record_headers()
+        self.assertEqual(heads, [printed[name][2] for name in ("count", "beside", "conditions", "size",
+                                                               "datasets")])
+        self.assertEqual(len(set(heads)), 5)
+        self.assertLess(set(heads), set(m_page.count_headers()))
+        on = {line for lines in blocks.values() for line in lines}
+        self.assertEqual(on & set(heads), set())
+        # Each table row of a block is a header of the count, so no block stands on a page before the count.
+        self.assertEqual({lines[2] for name, lines in blocks.items() if name not in ("species", "files")}
+                         - set(m_page.count_headers()), set())
 
 
 if __name__ == "__main__":

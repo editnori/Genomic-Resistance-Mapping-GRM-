@@ -6,9 +6,9 @@ The run on the datasets of M's own rules: the list and the floor
 (m_list.py), the three checks (m_checks.py), the second reading
 (second.py), the small lists, the three counts and the page tables
 (m_reading.py), the pack (pack.py), the cost (cost.py), the run script
-(run_m.sh), the record and its page tables (m_page.py, faults G1 to G45)
-and the test that ties the record to its pages (test_m_record.py, faults
-G46 to G50). Copies this checkout's scripts/, tests/, reference/ and docs/
+(run_m.sh), the record and its page tables (m_page.py, faults G1 to G45
+and G51 to G54) and the test that ties the record to its pages
+(test_m_record.py, faults G46 to G50 and G55 to G57). Copies this checkout's scripts/, tests/, reference/ and docs/
 to <out dir>/tree, a plain copy, so it runs the same in a copy with no git
 history. One fault at a time, it changes one piece of text there, runs the
 one test named for it, and puts the text back.
@@ -686,8 +686,8 @@ FAULTS = [
      '        if "datasets of M" not in result:',
      f"{T}record.BeforeTheRun.test_none_refuses_pages_that_no_longer_say_m_waits"),
     ("G47", "page record test", "the state floor passing a page that names the file alone", RECORD_TEST,
-     "        if not ok:\n            raise Off(line)",
-     "        if not ok and LEFT_PATH not in arms:\n            raise Off(line)",
+     "    if not ok:\n        raise Off(line)",
+     "    if not ok and LEFT_PATH not in arms:\n        raise Off(line)",
      f"{T}record.FloorTaken.test_floor_refuses_a_page_with_a_row_changed"),
     ("G48", "page record test", "a count table passed on a page in the state floor", RECORD_TEST,
      '    if state in ("none", "floor"):',
@@ -701,6 +701,34 @@ FAULTS = [
      "        if hashlib.sha256((record / name).read_bytes()).hexdigest() != listed[name]:",
      "        if not listed[name]:",
      f"{T}record.CountTaken.test_count_checks_each_sum_itself_as_well"),
+    ("G51", "page print", "the result page's count over all datasets taken from the first run's count", PAGE,
+     'print_count(count_t, "all datasets"),',
+     'print_count(count_t, "first run"),',
+     f"{T}page.Print.test_page_gives_the_result_pages_five_blocks_from_the_record"),
+    ("G52", "page print", "the result page's count on M alone taken from the count over all datasets", PAGE,
+     'print_count(count_t, "M"),',
+     'print_count(count_t, "all datasets"),',
+     f"{T}page.Print.test_page_gives_the_result_pages_five_blocks_from_the_record"),
+    ("G53", "page print", "page giving a block before the count", PAGE,
+     "        raise Stop(PAGE_BEFORE)\n",
+     '        return {"species": print_species(t["m-floor.tsv"])}\n',
+     f"{T}page.Print.test_page_stops_before_the_count"),
+    ("G54", "page print", "the size table left out of the tables that stay in the record", PAGE,
+     "(COUNT_HEADER, BESIDE_HEADER, CONDITIONS_HEADER, SIZE_HEADER, DATASETS_HEADER)]",
+     "(COUNT_HEADER, BESIDE_HEADER, CONDITIONS_HEADER, DATASETS_HEADER)]",
+     f"{T}page.States.test_five_tables_stay_in_the_record_and_no_block_of_the_page_holds_their_header"),
+    ("G55", "page record test", "the state count passing a page that holds a table of the record", RECORD_TEST,
+     "    heads = m_page.record_headers()",
+     "    heads = []",
+     f"{T}record.CountTaken.test_count_refuses_a_table_that_stays_in_the_record_on_any_page"),
+    ("G56", "page record test", "the state count passing the result page's blocks in another order", RECORD_TEST,
+     "        if at < last:",
+     "        if at < -1:",
+     f"{T}record.CountTaken.test_count_refuses_the_blocks_in_another_order"),
+    ("G57", "page record test", "the state count not checking the left-out table on the design page", RECORD_TEST,
+     "    ok, line = m_page.onpage(record, root / ARMS, m_set)\n",
+     '    ok, line = m_page.onpage(record, root / ARMS, m_set)\n    ok = ok or state == "count"\n',
+     f"{T}record.CountTaken.test_count_refuses_a_left_out_table_changed_on_the_design_page"),
 ]
 
 

@@ -3,6 +3,7 @@
   python3 -I m_page.py floor <tables dir> <record dir>
   python3 -I m_page.py record <tables dir> <record dir>
   python3 -I m_page.py print <record dir>
+  python3 -I m_page.py page <record dir>
   python3 -I m_page.py onpage <record dir> <page file>
 
 <tables dir> is where m_reading.py wrote its tables on the count machine.
@@ -28,11 +29,18 @@ the size table and the datasets, in page_tables.py's number forms. With
 the floor's two tables alone it prints the first two and says the count
 has not been taken.
 
+page prints what the result page takes after the count, ready to stand on
+it, in the page's order: conditions 1 to 5 in both readings, the datasets
+read by species, the count over all datasets, the count on M alone and one
+line that names the record's other files. Every other table stays in the
+record, where print gives it, and none of those goes on a page. It stops
+before the count.
+
 onpage exits 0 only when <page file> holds the left-out table as print
 gives it, line after line. Otherwise it exits 1 with a line that names the
 first row missing and no figure.
 
-record, print and onpage stop on any gate, naming the file and the row and
+record, print, page and onpage stop on any gate, naming the file and the row and
 no figure:
 
 - a file missing, a file not on the record's list, a column list that is
@@ -482,14 +490,17 @@ def reads_line(floor):
             "list).")
 
 
-def print_count(count):
-    """The count rows on the primary measure, lineage split, for each of the three counts in each reading."""
+def print_count(count, only=None):
+    """The count rows on the primary measure, lineage split, for each of the three counts in each reading; with
+    `only`, that count's rows alone, less the column that names the count."""
     rows = [[COUNT_WORDS[r["count"]], r[READ], pair_words(r["pair"]), f"`{r['learner']}`",
              of(r["better"], r["entered"]), of(r["worse"], r["entered"]), of(r["same"], r["entered"]),
              d3(r["median_difference"]), interval(r["interval_lo"], r["interval_hi"]), pval(r["sign_p"]),
              pval(r["holm_p"]), r["constant"]]
             for _, r in count.rows if r["split"] == "lineage" and r["measure"] == PRIMARY]
-    return table(COUNT_HEADER, rows)
+    if only is None:
+        return table(COUNT_HEADER, rows)
+    return table(COUNT_HEADER[1:], [row[1:] for row in rows if row[0] == COUNT_WORDS[only]])
 
 
 def print_beside(count):
@@ -566,10 +577,43 @@ def tables(record, m_set):
     return out
 
 
+# The result page's own blocks, in the page's order: the answer, the datasets read, the count that decides, the count
+# on M alone and the record's other files. Every other table stays in the record, where print gives it.
+ON_PAGE = ("both", "species", "count-all", "count-m", "files")
+PAGE_BEFORE = "the count has not been taken, and the result page takes its tables after it"
+LEFT_AT = "The design page, `docs/input-arms.md`, names each dataset left out."
+BOTH_LINE = "**Both readings.** Per arm, conditions 1 to 5 of ruling 15 on the count over all datasets."
+ALL_LINE = "**All datasets.** The first run's datasets and M's, on the lineage split and balanced accuracy."
+M_LINE = "**M alone.** The datasets of M, on the lineage split and balanced accuracy. This count decides nothing."
+FILES_LINE = ("**Files.** The record, `reference/input-arms-m/`, holds every other table: each count on every measure "
+              "and split (`m-count.tsv`), each count's conditions (`m-conditions.tsv`), "
+              "the size table (`m-size.tsv`) and "
+              "each dataset's figures (`m-datasets.tsv`). `scripts/c3-inputs/m_page.py print` prints them.")
+
+
+def page(record, m_set):
+    """{name: lines} of the result page's blocks, in ON_PAGE's order, from the record alone, after every gate. It
+    stops before the count."""
+    t = gate(record, m_set)
+    if "m-count.tsv" not in t:
+        raise Stop(PAGE_BEFORE)
+    floor_t, count_t = t["m-floor.tsv"], t["m-count.tsv"]
+    return {"both": [BOTH_LINE, ""] + print_both(t["m-both.tsv"]),
+            "species": [f"{reads_line(floor_t)} {LEFT_AT}", ""] + print_species(floor_t),
+            "count-all": [ALL_LINE, ""] + print_count(count_t, "all datasets"),
+            "count-m": [M_LINE, ""] + print_count(count_t, "M"),
+            "files": [FILES_LINE]}
+
+
+def record_headers():
+    """The header lines of the five tables that stay in the record: none stands on a page in any state."""
+    return [table(h, [])[0] for h in (COUNT_HEADER, BESIDE_HEADER, CONDITIONS_HEADER, SIZE_HEADER, DATASETS_HEADER)]
+
+
 def count_headers():
-    """The header lines of the tables print gives only after the count: none stands on a page before it."""
+    """The header lines of the tables print and page give only after the count: none stands on a page before it."""
     return [table(h, [])[0] for h in (COUNT_HEADER, BESIDE_HEADER, CONDITIONS_HEADER, BOTH_HEADER, SIZE_HEADER,
-                                      DATASETS_HEADER)]
+                                      DATASETS_HEADER, COUNT_HEADER[1:])]
 
 
 def run_length(text, lines):
@@ -620,6 +664,9 @@ def main(argv, lists=HERE / "lists.tsv"):
                 print("\n".join(lines))
                 print()
             return 0
+        if len(argv) == 2 and argv[0] == "page":
+            print("\n\n".join("\n".join(lines) for lines in page(argv[1], m_datasets(lists)).values()))
+            return 0
         if len(argv) == 3 and argv[0] == "onpage":
             ok, line = onpage(argv[1], argv[2], m_datasets(lists))
             print(line)
@@ -627,7 +674,7 @@ def main(argv, lists=HERE / "lists.tsv"):
     except Stop as e:
         print(f"m_page: stopped: {e}")
         return 1
-    print("\n".join(__doc__.strip().splitlines()[2:6]), file=sys.stderr)
+    print("\n".join(__doc__.strip().splitlines()[2:7]), file=sys.stderr)
     return 2
 
 
