@@ -1023,3 +1023,15 @@ An eleventh came while the text was written. The project's wording rules put rec
 **Served.** The sentence is in the repository. The served site shows it from its next release.
 
 **Written.** This entry was written at 03:14Z on 26 Nov 2026.
+
+## Rebuilt counts
+
+**Plan.** The paragraph All data counts "41,627 of 80,967 genomes with a scorable label" and says "The release's cap of 2,000 leaves out 57,206." Row A16 of the inventory counts "1,320 of 1,064,823 pairs".
+
+**Found.** The plan took three of these counts from the rebuilt revision 14 table, not from the release's own: 80,967, 57,206 and 1,064,823. The release's index counts 1,063,628 pairs at the same step of its own table. For genomes, 80,967 less 57,206 leaves 23,761 analyzed on the rebuilt table, and the index counts 23,757 at that step. The rebuilt table ran no species check, so 79 more genomes pass in it (the entry MIC checks, under Breakpoints).
+
+**Where.** `docs/release-summary.md` sets both sides out under Curation path, in the part Differences. `reference/release-summary/rebuilt-table-20261121/` holds the rebuilt table's counts.
+
+**Holds.** Read the three counts as the rebuilt table's. Training labels come from that table alone (the row Labels of the plan), so no rule of the plan moves. No committed file gives the release's own count of the genomes its cap picks among.
+
+**Written.** This entry was written at 04:54Z on 26 Nov 2026.
