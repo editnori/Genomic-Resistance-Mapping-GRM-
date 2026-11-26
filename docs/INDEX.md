@@ -6,7 +6,7 @@ Every document under `docs/`, grouped by purpose. For the headline Revision 14 n
 
 | Document | Summary |
 | --- | --- |
-| [release-summary.md](release-summary.md) | Main Revision 12 and 14 figures: per-learner medians with species bootstrap intervals, random-to-lineage drops, error-screen counts, FDA 2009 guidance wording, and known-gene rule bands. |
+| [release-summary.md](release-summary.md) | Main Revision 12 and 14 figures: per-learner medians with species bootstrap intervals, random-to-lineage drops, error-screen counts, FDA 2009 guidance wording, known-gene rule bands, and the path from lab records to datasets (revision 14). |
 | [study-split.md](study-split.md) | Retrospective split by study (BioProject) inside BV-BRC across 70 datasets in 9 species, compared with random and matched random folds. |
 | [time-split.md](time-split.md) | Retrospective first-public-day split inside BV-BRC across 24 datasets in 4 species, compared with size-matched random draws and study splits. |
 | [outside-study-results.md](outside-study-results.md) | Retrospective test of frozen models on newly deposited BV-BRC studies (7,258 primary genomes and 3,155 same-study genomes), including Revision 14 reading. |
