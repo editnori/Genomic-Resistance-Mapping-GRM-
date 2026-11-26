@@ -24,6 +24,16 @@ solution, where the last finite iterate stands. A fold ended at a cap or with no
 report is marked for that arm. The count over every report decides; a second count without the arm's marked reports
 is written beside it and decides nothing. A held-out score that is not finite stops the read.
 
+R30 (26 Nov 2026) adds four rules. A score column with one value over a fold's fitting genomes is set aside, with a
+coefficient of exactly 0, and score columns the same on every fitting genome are fitted as one column whose
+coefficient they share in even parts; both are read on the stored values with ==. Of the maximum-likelihood fits,
+that is the one whose five score coefficients have the least sum of squares, with the intercept free. Such a fold is
+not marked; the record counts it. Any other fold whose first Newton step has no finite solution is not scored, and
+gate 5 stops the read. A report is flagged when some learner gives every genome of a stored fold of two or more
+genomes one score, and an arm is kept only if the rule keeps it over every report and over the reports not flagged.
+Gate 1 holds the read to the freeze's 268 reports, and a report with one fold or a genome with no fold number stops
+the read by name.
+
 `read` runs the learner overlap's checks through learner_overlap.read_reports, which drops every key named `id`
 as a file is parsed, then gates 1 to 6, and writes reading.json: per report, counts only. `write` runs gates 7 and
 8 and writes datasets.tsv, pooled.tsv, rule.tsv, transitions.tsv, gates.txt and SHA256SUMS. `print` prints the
@@ -59,8 +69,12 @@ ALPHA_FLOOR = 1e-20             # its backtracking search halves the step down t
 L_CAP, L_TOL, L_STEP = 100, 1e-10, 1e-8   # the logistic fit: at most L_CAP Newton steps, to a gradient and a step under these
 PIVOT = 1e-13                   # a Newton system with a pivot under this has no finite solution
 ENDS = {"weighted": ("converged", "cap"), "logistic": ("converged", "cap", "no_finite_step")}
-COUNTS_OF_RULE = ("all", "without_marked")
+NO_FIRST_STEP = "no_finite_first_step"   # a logistic fold whose first Newton step has no finite solution: not scored,
+                                         # and gate 5 stops the read (R30 item 1)
+COUNTS_OF_RULE = ("all", "without_marked", "without_one_score_fold")
 BESIDE = "decides nothing"
+FLAG_FOLD = 2                   # a report is flagged when a learner gives every genome of a fold this size or more one score
+FROZEN_REPORTS = 268            # gate 1: the freeze's reports; the command line gives no way to change it
 VME_RULE = ("the species-clustered interval of the median change in the very major error rate does not lie wholly "
             "above 0")
 SUM_TOL = 1e-12                 # a fold's weights sum to 1 within this
@@ -76,10 +90,11 @@ DATASET_COLUMNS = (["species", "antibiotic", "genomes", "resistant", "susceptibl
                     "mean_miss_by_all5"]
                    + [f"{f}_{c}" for f in FORMS for c in COUNTS + ("log_loss",)]
                    + [f"{a}_{t}" for a in ARMS for t in TRANSITIONS]
-                   + [f"{a}_folds_{e}" for a in ARMS for e in ENDS[a]] + [f"{a}_marked" for a in ARMS])
+                   + [f"{a}_folds_{e}" for a in ARMS for e in ENDS[a]] + ["logistic_folds_aside_or_shared"]
+                   + [f"{a}_marked" for a in ARMS] + ["one_score_fold"])
 POOLED_COLUMNS = ["scope", "species", "arm", "measure", "datasets", "median", "lo", "hi", "better", "worse", "same"]
 RULE_COLUMNS = ["arm", "count", "decides", "datasets", "species", "median_gain", "gain_lo", "gain_hi", "vme_median", "vme_lo", "vme_hi",
-                "gain_at_least_margin", "reading"]
+                "gain_at_least_margin", "outcome", "reading"]
 TRANSITION_COLUMNS = ["scope", "species", "arm", "datasets", "resistant", "mean_miss", "mean_miss_by_1to4",
                       "mean_miss_by_all5", "susceptible", "mean_wrong"] + list(TRANSITIONS)
 
@@ -230,13 +245,59 @@ def solve(H, g):
     return d
 
 
+def column_sets(groups):
+    """The score columns over the fitting genomes, read on the stored values with == and no tolerance: those with one
+    value on every fitting genome, set aside, and the rest as sets of columns the same on every fitting genome, in
+    order of their first column. A set of one is a column fitted as it is. Returns (aside, sets)."""
+    cols = range(len(FIVE))
+    aside = [j for j in cols if all(s[j] == groups[0][0][j] for s, _, _ in groups)]
+    sets = []
+    for j in cols:
+        if j in aside or any(j in st for st in sets):
+            continue
+        sets.append([j] + [m for m in cols if m > j and m not in aside and all(s[m] == s[j] for s, _, _ in groups)])
+    return aside, sets
+
+
+def spread(coef, sets):
+    """The intercept and five score coefficients from a fit on the columns left: a column set aside gets exactly 0.0,
+    and each set of columns the same on every fitting genome shares its one coefficient in even parts."""
+    beta = [coef[0]] + [0.0] * len(FIVE)
+    for c, st in zip(coef[1:], sets):
+        for j in st:
+            beta[1 + j] = c / len(st)
+    return beta
+
+
+def failed_step(step):
+    """How a fit ends at a step with no finite solution: at a later step the last finite iterate stands (R19 item 4);
+    at the first there is none but zero, so the fold gets its own end, is not scored, and stops the read (R30)."""
+    return NO_FIRST_STEP if step == 0 else "no_finite_step"
+
+
 def fit_logistic(groups):
-    """An intercept and five coefficients by maximum likelihood (plain log loss, no penalty): Newton's method with
+    """An intercept and five coefficients by maximum likelihood (plain log loss, no penalty), under R30: a score
+    column with one value over the fitting genomes is set aside with a coefficient of exactly 0.0, and columns the
+    same on every fitting genome are fitted as one column whose coefficient they share in even parts. Of the
+    maximum-likelihood fits that is the one whose five score coefficients have the least sum of squares. On fitting
+    genomes with neither case the fit is newton() on the five columns, as it was before R30. Returns (beta, steps,
+    end)."""
+    aside, sets = column_sets(groups)
+    if not aside and all(len(st) == 1 for st in sets):
+        return newton(groups, len(FIVE))
+    keep = [st[0] for st in sets]
+    coef, steps, end = newton([(tuple(s[j] for j in keep), t, k) for s, t, k in groups], len(keep))
+    return spread(coef, sets), steps, end
+
+
+def newton(groups, width):
+    """An intercept and `width` coefficients by maximum likelihood (plain log loss, no penalty): Newton's method with
     step halving, from zero. It ends at the first of: convergence, when the mean gradient is under L_TOL and the last
     step under L_STEP times (1 + the largest coefficient) ("converged"); L_CAP Newton steps ("cap"); a step with no
-    finite solution, where the last finite iterate stands ("no_finite_step"). Returns (beta, steps, end)."""
+    finite solution, where the last finite iterate stands ("no_finite_step"), or, at the first step, NO_FIRST_STEP.
+    Under a step of 1e-12 the search takes the step whatever the loss. Returns (beta, steps, end)."""
     n = sum(k for _, _, k in groups)
-    size = 1 + len(FIVE)
+    size = 1 + width
     beta = [0.0] * size
     nll = logistic_nll(beta, groups)
     for step in range(L_CAP):
@@ -256,7 +317,7 @@ def fit_logistic(groups):
                 H[j][i] = H[i][j]
         d = solve(H, grad)
         if d is None or not finite(*d):
-            return beta, step, "no_finite_step"
+            return beta, step, failed_step(step)
         t_ = 1.0
         while True:
             trial = [b - t_ * v for b, v in zip(beta, d)]
@@ -265,7 +326,7 @@ def fit_logistic(groups):
                 break
             t_ /= 2
         if not finite(nt, *trial):
-            return beta, step, "no_finite_step"
+            return beta, step, failed_step(step)
         moved = max(abs(t_ * v) for v in d)
         beta, nll = trial, nt
         if max(abs(v) for v in grad) <= L_TOL and moved <= L_STEP * (1.0 + max(abs(b) for b in beta)):
@@ -285,10 +346,24 @@ def training_genomes(folds, f):
     return [i for i, g in enumerate(folds) if g != f]
 
 
+def scored(end):
+    """A fold's genomes are scored unless its first Newton step had no finite solution (R30): no fold is scored from
+    coefficients that are all 0 because a step failed."""
+    return end != NO_FIRST_STEP
+
+
+def handed(groups):
+    """The genomes inside the groups a fit is handed: each group counts its genomes."""
+    return sum(k for _, _, k in groups)
+
+
 def crossfit(arm, S, y, folds):
     """Each fold's genomes scored by the arm fitted on the other folds' genomes. Returns the scores and, per fold, its
-    record: the genomes trained on and held out, how many are both, the fit's steps and how it ended, how many
-    held-out scores are not finite, and for the weighted mean the smallest weight and the weights' sum."""
+    record: the genomes on the fold's training list (`listed`), the genomes inside the groups its fit was handed
+    (`trained`), the genomes held out, how many are both listed and held out, the fit's steps and how it ended, how
+    many held-out scores are not finite, for the weighted mean the smallest weight and the weights' sum, and for the
+    logistic combiner the score columns set aside and the columns shared. A logistic fold whose first Newton step had
+    no finite solution is not scored: its genomes keep no score."""
     fit, score = fit_and_score(arm)
     out = [None] * len(y)
     records = []
@@ -297,24 +372,65 @@ def crossfit(arm, S, y, folds):
         test = [i for i, g in enumerate(folds) if g == f]
         groups = groups_of(S, y, train)
         model, steps, end = fit(groups)
-        for i in test:
-            out[i] = score(model, S[i])
-        rec = {"fold": f, "trained": len(train), "tested": len(test), "shared": len(set(train) & set(test)),
-               "steps": steps, "end": end, "not_finite": sum(1 for i in test if not finite(out[i]))}
+        if scored(end):
+            for i in test:
+                out[i] = score(model, S[i])
+        rec = {"fold": f, "listed": len(train), "trained": handed(groups), "tested": len(test),
+               "shared": len(set(train) & set(test)), "steps": steps, "end": end,
+               "not_finite": sum(1 for i in test if out[i] is not None and not finite(out[i]))}
         if arm == "weighted":
             rec["weight_min"], rec["weight_sum"] = min(model), math.fsum(model)
+        else:
+            aside, sets = column_sets(groups)
+            rec["columns_aside"], rec["columns_shared"] = len(aside), sum(len(st) for st in sets if len(st) > 1)
         records.append(rec)
     return out, records
 
 
 def marked(recs):
-    """A report is marked for an arm when a fold fit of that arm ended at its cap or with no finite step."""
+    """A report is marked for an arm when a fold fit of that arm ended at its cap or with no finite step. A column set
+    aside or shared does not mark it: that fold has a maximum-likelihood answer (R30)."""
     return any(r["end"] != "converged" for r in recs)
 
 
+def aside_or_shared(rec):
+    """A logistic fold fit with a score column set aside or shared."""
+    return rec.get("columns_aside", 0) > 0 or rec.get("columns_shared", 0) > 0
+
+
 def fold_ok(rec, genomes):
-    """Gate 2 on one fold's fit: no held-out genome among the training genomes, and the two add up to the report."""
-    return rec["shared"] == 0 and rec["trained"] + rec["tested"] == genomes
+    """Gate 2 on one fold's fit: the genomes inside the groups its fit was handed add up to its training list, no
+    held-out genome is on that list, and the list and the held-out genomes add up to the report."""
+    return rec["trained"] == rec["listed"] and rec["shared"] == 0 and rec["listed"] + rec["tested"] == genomes
+
+
+def one_score_fold(S, folds):
+    """The report's flag (R30 item 3): some learner's stored scores are one value, by ==, over every genome of some
+    stored fold of FLAG_FOLD or more genomes."""
+    by = collections.defaultdict(list)
+    for s, f in zip(S, folds):
+        by[f].append(s)
+    return any(len(ss) >= FLAG_FOLD and any(all(s[j] == ss[0][j] for s in ss) for j in range(len(FIVE)))
+               for ss in by.values())
+
+
+def fold_number(g):
+    """A genome's stored fold is a whole number."""
+    return isinstance(g, int) and not isinstance(g, bool)
+
+
+def enough_folds(folds):
+    """Two folds or more: each fold then has other folds' genomes to fit on."""
+    return len(set(folds)) >= 2
+
+
+def fold_stop(folds):
+    """Why a report's stored folds cannot be cross-fitted, or None: a genome with no fold number, or one fold only."""
+    if not all(fold_number(g) for g in folds):
+        return "a genome with no fold number"
+    if not enough_folds(folds):
+        return "one fold, so no fold has other folds' genomes to fit on"
+    return None
 
 
 # ---- counts --------------------------------------------------------------------------------------------------------
@@ -361,20 +477,26 @@ def report_counts(labels, S, folds):
     calls = {"mean": mean_calls}
     gate = {"leaky": 0, "bound_called": 0, "bound_missed": 0, "bad_weights": 0, "uncovered": 0, "not_finite": 0,
             "ends": {a: {e: 0 for e in ENDS[a]} for a in ARMS}, "fits": {a: 0 for a in ARMS},
-            "marked": {a: 0 for a in ARMS}}
+            "marked": {a: 0 for a in ARMS}, "no_first_step": 0, "aside_or_shared": 0}
     row = {"genomes": n, "resistant": sum(labels), "susceptible": n - sum(labels),
            "mean_miss_by_1to4": sum(1 for t, m, k in zip(labels, mean_calls, called_by) if t and not m and k > 0),
-           "mean_miss_by_all5": sum(1 for t, m, k in zip(labels, mean_calls, called_by) if t and not m and k == 0)}
+           "mean_miss_by_all5": sum(1 for t, m, k in zip(labels, mean_calls, called_by) if t and not m and k == 0),
+           "one_score_fold": one_score_fold(S, folds)}
     for arm in ARMS:
         p, recs = crossfit(arm, S, labels, folds)
         probs[arm], calls[arm] = p, [None if x is None else is_call(x) for x in p]
         for r in recs:
             gate["fits"][arm] += 1
             gate["leaky"] += not fold_ok(r, n)
-            gate["ends"][arm][r["end"]] += 1
+            if arm == "logistic" and r["end"] == NO_FIRST_STEP:
+                gate["no_first_step"] += 1
+            else:
+                gate["ends"][arm][r["end"]] += 1
             gate["not_finite"] += r["not_finite"]
             if arm == "weighted":
                 gate["bad_weights"] += r["weight_min"] < 0 or abs(r["weight_sum"] - 1.0) > SUM_TOL
+            else:
+                gate["aside_or_shared"] += aside_or_shared(r)
         row[f"{arm}_folds"] = recs
         row[f"{arm}_marked"] = marked(recs)
         gate["marked"][arm] += row[f"{arm}_marked"]
@@ -483,8 +605,21 @@ def incumbent_agrees(row, vote):
             and int(vote["mean_miss_by_all5"]) == row["mean_miss_by_all5"])
 
 
-def read(directory, first_record, second_record, expect=lo.EXPECT_FILES):
-    """The learner overlap's checks, then gates 1 to 6; return the reading or raise Stop."""
+def ends_pass(not_finite, no_first_step, fits):
+    """Gate 5: fold fits were made, no held-out score is not finite, and no logistic fold fit's first Newton step had
+    no finite solution (R30)."""
+    return not_finite == 0 and no_first_step == 0 and fits > 0
+
+
+def held_to(read_count, expected):
+    """Gate 1's count: the reports read are the ones it expects, the freeze's 268 on the command line."""
+    return read_count == expected
+
+
+def read(directory, first_record, second_record, expect=lo.EXPECT_FILES, reports=None):
+    """The learner overlap's checks, then gates 1 to 6; return the reading or raise Stop. Gate 1 holds the read to
+    `reports` reports, FROZEN_REPORTS when None; only a test passes its own count."""
+    expected = FROZEN_REPORTS if reports is None else reports
     first = lo.read_reports(directory, expect)            # raises Stop on any of the learner overlap's checks
     wanted = d1_reports(first_record)
     used = {(d["species"], d["antibiotic"]) for d in first["datasets"]
@@ -499,12 +634,16 @@ def read(directory, first_record, second_record, expect=lo.EXPECT_FILES):
         if key not in wanted or key not in used:
             continue
         split = lo.lineage_splits(report)[0]
+        why = fold_stop(split["test_fold"])
+        if why:
+            raise Stop("\n".join(first["checks"] + [f"stop folds: {key[0]} with {key[1]}: {why}: STOP"]))
         entries = {lr["learner"]: lr["scores"] for lr in lo.learner_entries(split)}
         labels = [s.get("resistant") for s in report.get("samples") or []]
         S = [tuple(entries[n][i] for n in FIVE) for i in range(len(labels))]
         row, gate = report_counts(labels, S, split["test_fold"])
         del report, entries, S
-        for k in ("leaky", "bound_called", "bound_missed", "bad_weights", "uncovered", "not_finite"):
+        for k in ("leaky", "bound_called", "bound_missed", "bad_weights", "uncovered", "not_finite", "no_first_step",
+                  "aside_or_shared"):
             total[k] += gate[k]
         fits.update(gate["fits"])
         marks.update(gate["marked"])
@@ -515,11 +654,11 @@ def read(directory, first_record, second_record, expect=lo.EXPECT_FILES):
     keys = {(r["species"], r["antibiotic"]) for r in rows}
     lines = [
         f"gate 1 reports: {first['found']} files, the learner overlap's checks passed, {len(rows)} reports read, "
-        f"{len(wanted)} pooled in the first record, {len(wanted ^ keys)} in one and not the other: "
-        + ("pass" if same_reports(wanted, keys) and rows else "STOP"),
-        f"gate 2 cross-fitting: {sum(fits.values())} fold fits, {total['leaky']} whose training and held-out genomes "
-        f"overlap or do not add up to the report: "
-        + ("pass" if total["leaky"] == 0 and sum(fits.values()) > 0 else "STOP"),
+        f"{expected} expected, {len(wanted)} pooled in the first record, {len(wanted ^ keys)} in one and not the "
+        f"other: " + ("pass" if same_reports(wanted, keys) and rows and held_to(len(rows), expected) else "STOP"),
+        f"gate 2 cross-fitting: {sum(fits.values())} fold fits, {total['leaky']} whose fit was handed another count "
+        f"of genomes than its training list, or whose training and held-out genomes overlap or do not add up to the "
+        f"report: " + ("pass" if total["leaky"] == 0 and sum(fits.values()) > 0 else "STOP"),
         f"gate 3 incumbent: {len(rows)} reports, {len(differ)} whose mean-of-five counts differ from vote.tsv: "
         + ("pass" if not differ else "STOP"),
         f"gate 4 convex bound: {total['bound_called']} genomes all five miss that the weighted mean calls, "
@@ -528,10 +667,11 @@ def read(directory, first_record, second_record, expect=lo.EXPECT_FILES):
         + ("pass" if total["bound_called"] == total["bound_missed"] == total["bad_weights"] == 0 else "STOP"),
         f"gate 5 fit ends: {fits['weighted']} weighted fits, {ends['weighted', 'converged']} converged, "
         f"{ends['weighted', 'cap']} at the cap; {fits['logistic']} logistic fits, {ends['logistic', 'converged']} "
-        f"converged, {ends['logistic', 'cap']} at the cap, {ends['logistic', 'no_finite_step']} at a step with no "
-        f"finite solution; {marks['weighted']} reports marked for the weighted arm, {marks['logistic']} for the "
-        f"logistic arm; {total['not_finite']} held-out scores not finite: "
-        + ("pass" if total["not_finite"] == 0 and sum(fits.values()) > 0 else "STOP"),
+        f"converged, {ends['logistic', 'cap']} at the cap, {ends['logistic', 'no_finite_step']} at a later step with "
+        f"no finite solution, {total['no_first_step']} whose first Newton step has no finite solution, "
+        f"{total['aside_or_shared']} with a score column set aside or shared; {marks['weighted']} reports marked for "
+        f"the weighted arm, {marks['logistic']} for the logistic arm; {total['not_finite']} held-out scores not "
+        f"finite: " + ("pass" if ends_pass(total["not_finite"], total["no_first_step"], sum(fits.values())) else "STOP"),
         f"gate 6 cutoff: every form called at {CUTOFF}; {total['uncovered']} form and report pairs with a genome "
         f"given no call: " + ("pass" if total["uncovered"] == 0 and CUTOFF == 0.5 else "STOP"),
     ]
@@ -539,6 +679,7 @@ def read(directory, first_record, second_record, expect=lo.EXPECT_FILES):
     if any("STOP" in line for line in lines):
         raise Stop("\n".join(first["checks"] + lines))
     return {"cutoff": CUTOFF, "forms": list(FORMS), "five": list(FIVE), "clip": CLIP, "margin": MARGIN,
+            "counts_of_rule": list(COUNTS_OF_RULE), "flag_fold": FLAG_FOLD,
             "first_checks": first["checks"], "checks": lines,
             "datasets": sorted(rows, key=lambda r: (r["species"], r["antibiotic"]))}
 
@@ -615,6 +756,8 @@ def dataset_row(r):
         for e in ENDS[a]:
             out[f"{a}_folds_{e}"] = sum(1 for x in r[f"{a}_folds"] if x["end"] == e)
         out[f"{a}_marked"] = "yes" if r[f"{a}_marked"] else "no"
+    out["logistic_folds_aside_or_shared"] = sum(1 for x in r["logistic_folds"] if aside_or_shared(x))
+    out["one_score_fold"] = "yes" if r["one_score_fold"] else "no"
     return out
 
 
@@ -637,18 +780,32 @@ def unmarked(rows, arm):
     return [r for r in rows if r[f"{arm}_marked"] != "yes"]
 
 
+def unflagged(rows):
+    """The reports where no learner gives every genome of a fold one score."""
+    return [r for r in rows if r["one_score_fold"] != "yes"]
+
+
 def rule_counts(rows, arm):
-    """The count over every report, which decides, and the count without the arm's marked reports, which stands
-    beside it and decides nothing."""
-    return [("all", rows, True), ("without_marked", unmarked(rows, arm), False)]
+    """The count over every report and the count without the flagged reports, which both decide (R30 item 3), and
+    the count without the arm's marked reports, which stands beside them and decides nothing."""
+    return [("all", rows, True), ("without_marked", unmarked(rows, arm), False),
+            ("without_one_score_fold", unflagged(rows), True)]
+
+
+def arm_reading(outcomes):
+    """The arm's reading from the outcomes of the counts that decide: kept only if the rule keeps it over each."""
+    return "kept" if outcomes and all(o == "kept" for o in outcomes) else "no difference shown"
 
 
 def rule_rows(rows):
+    """Per arm, a row for each count: its own outcome, and the arm's reading on the counts that decide."""
     out = []
     for arm in ARMS:
-        for count, kept, decides in rule_counts(rows, arm):
-            r = rule(kept, arm)
-            r.update(count=count, decides="yes" if decides else "no", reading=r["reading"] if decides else BESIDE)
+        found = [(count, decides, rule(kept, arm)) for count, kept, decides in rule_counts(rows, arm)]
+        reading = arm_reading([r["reading"] for _, decides, r in found if decides])
+        for count, decides, r in found:
+            r.update(count=count, decides="yes" if decides else "no", outcome=r["reading"],
+                     reading=reading if decides else BESIDE)
             out.append(dict(r, **{k: cell(r[k]) for k in ("median_gain", "gain_lo", "gain_hi", "vme_median",
                                                           "vme_lo", "vme_hi")}))
     return out
@@ -705,11 +862,19 @@ def write_reading(reading, out, ids):
             shutil.rmtree(tmp)
 
 
+def same_rules(reading):
+    """The reading was made under this script's rules: its cutoff, forms, five learners and clip, the rule's three
+    counts and the flag's fold size, and a flag on every report."""
+    return ((reading.get("cutoff"), reading.get("forms"), reading.get("five"), reading.get("clip"),
+             reading.get("counts_of_rule"), reading.get("flag_fold"))
+            == (CUTOFF, list(FORMS), list(FIVE), CLIP, list(COUNTS_OF_RULE), FLAG_FOLD)
+            and all(isinstance(d.get("one_score_fold"), bool) for d in reading.get("datasets") or []))
+
+
 def write_record(reading_dir, reports_dir, out):
     with open(os.path.join(reading_dir, READING), encoding="utf-8") as f:
         reading = json.load(f)
-    if (reading.get("cutoff"), reading.get("forms"), reading.get("five"), reading.get("clip")) != (
-            CUTOFF, list(FORMS), list(FIVE), CLIP):
+    if not same_rules(reading):
         raise Stop("the reading was made under other rules")
     rows = [dataset_row(r) for r in reading["datasets"]]
     bad = sum(1 for r in rows if not arithmetic_holds(r))
@@ -739,7 +904,7 @@ def write_record(reading_dir, reports_dir, out):
         with open(os.path.join(tmp, "gates.txt"), "w", encoding="utf-8") as f:
             f.write("\n".join(reading["first_checks"] + reading["checks"] + [line7, line8]) + "\n")
             f.write(f"rule: the very major error rate is not higher on that interval: {VME_RULE}\n")
-            f.write("".join(f"reading {r['arm']}: {r['reading']}\n" for r in rules if r["decides"] == "yes"))
+            f.write("".join(f"reading {r['arm']}: {r['reading']}\n" for r in rules if r["count"] == "all"))
         with open(os.path.join(tmp, "SHA256SUMS"), "w", encoding="utf-8") as f:
             for name in RECORD_FILES:
                 f.write(f"{lo.sha256(os.path.join(tmp, name))}  {name}\n")
@@ -771,13 +936,13 @@ def tables(record):
     c = lo.count
     return {
         "rule": ["| Arm | Count | Reports | Species | Median gain in balanced accuracy | Its interval | Median change "
-                 "in the very major error rate | Its interval | Reports gaining 0.02 or more | Reading |",
-                 "|---|---|---:|---:|---:|---|---:|---|---:|---|"]
+                 "in the very major error rate | Its interval | Reports gaining 0.02 or more | Outcome | Reading |",
+                 "|---|---|---:|---:|---:|---|---:|---|---:|---|---|"]
         + [f"| {r['arm']} | {r['count'].replace('_', ' ')} | {c(r['datasets'])} | {c(r['species'])} "
            f"| {dec(r['median_gain'], 4)} "
            f"| {dec(r['gain_lo'], 4)} to {dec(r['gain_hi'], 4)} | {dec(r['vme_median'], 4)} "
-           f"| {dec(r['vme_lo'], 4)} to {dec(r['vme_hi'], 4)} | {c(r['gain_at_least_margin'])} | {r['reading']} |"
-           for r in rules],
+           f"| {dec(r['vme_lo'], 4)} to {dec(r['vme_hi'], 4)} | {c(r['gain_at_least_margin'])} | {r['outcome']} "
+           f"| {r['reading']} |" for r in rules],
         "measures": ["| Arm | Measure | Reports | Median difference | Its interval | Better | Worse | Same |",
                      "|---|---|---:|---:|---|---:|---:|---:|"]
         + [f"| {p['arm']} | {p['measure']} | {c(p['datasets'])} | {dec(p['median'], 4)} | {dec(p['lo'], 4)} to "
@@ -808,14 +973,20 @@ def plan():
             "weighted_fit": {"cap": W_CAP, "start": "equal weights", "ends": list(ENDS["weighted"]),
                              "step_floor": ALPHA_FLOOR, "weights_sum_within": SUM_TOL},
             "logistic_fit": {"cap": L_CAP, "gradient": L_TOL, "step": L_STEP, "pivot": PIVOT, "penalty": None,
-                             "ends": list(ENDS["logistic"])},
+                             "start": "zero", "ends": list(ENDS["logistic"]), "stops_the_read": NO_FIRST_STEP,
+                             "one_score_column": "set aside, coefficient 0.0",
+                             "columns_the_same": "fitted as one column, its coefficient shared in even parts"},
             "marked": "a report, for an arm, when a fold fit of that arm ended at its cap or with no finite step",
-            "counts": {"all": "decides", "without_marked": BESIDE}, "vme_rule": VME_RULE,
+            "reports": FROZEN_REPORTS, "flag_fold": FLAG_FOLD,
+            "counts": {"all": "decides", "without_marked": BESIDE, "without_one_score_fold": "decides"},
+            "vme_rule": VME_RULE,
             "measures": list(MEASURES), "lower_better": list(LOWER_BETTER), "datasets_columns": DATASET_COLUMNS,
             "pooled_columns": POOLED_COLUMNS, "rule_columns": RULE_COLUMNS, "transition_columns": TRANSITION_COLUMNS}
 
 
-def main(argv=None):
+def main(argv=None, reports=None):
+    """The command line. `reports` is gate 1's count for a test's own SYNTHETIC set; no option sets it, so the
+    command line always holds the read to FROZEN_REPORTS."""
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("plan")
@@ -837,7 +1008,7 @@ def main(argv=None):
             print(json.dumps(plan(), indent=1))
         elif args.cmd == "read":
             lo.fresh_out(args.out)
-            reading = read(args.reports, args.first, args.second, args.expect)
+            reading = read(args.reports, args.first, args.second, args.expect, reports)
             write_reading(reading, args.out, ids_of(args.reports))
             print("\n".join(reading["first_checks"] + reading["checks"]))
             print(f"read: {len(reading['datasets'])} reports; wrote {READING}")

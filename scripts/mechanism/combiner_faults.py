@@ -1,5 +1,5 @@
-"""combiner_faults.py: the faults of the combiner reading's script (combiner.py, C1 to C38), each planted in turn, and
-the SYNTHETIC test that must catch it.
+"""combiner_faults.py: the faults of the combiner reading's script (combiner.py, C1 to C60), each planted in turn, and
+the SYNTHETIC test that must catch it. C39 to C60 are the rules of ruling R30.
 
     python3 -I scripts/mechanism/combiner_faults.py [--out faults.tsv]
 
@@ -85,7 +85,8 @@ def weighted_cap_converged(groups, _orig=cb.fit_weighted):
 
 def second_count_decides(rows, arm):
     # fault C36: the count without the marked reports decides, and the count over all stands beside it
-    return [("all", cb.unmarked(rows, arm), True), ("without_marked", rows, False)]
+    return [("all", cb.unmarked(rows, arm), True), ("without_marked", rows, False),
+            ("without_one_score_fold", cb.unflagged(rows), True)]
 
 
 def vme_of_susceptible(c, name, _orig=cb.measure):
@@ -125,6 +126,73 @@ def per_genome(labels, S, folds, _orig=cb.report_counts):
     # fault C24: each genome's call kept in the reading
     row, gate = _orig(labels, S, folds)
     return dict(row, calls=[int(t) for t in labels]), gate
+
+
+def no_aside(groups, _orig=cb.column_sets):
+    # fault C39: a score column with one value over the fitting genomes fitted as a column of its own
+    aside, sets = _orig(groups)
+    return [], sorted(sets + [[j] for j in aside])
+
+
+def no_sets(groups, _orig=cb.column_sets):
+    # fault C40: score columns the same on every fitting genome fitted apart
+    aside, sets = _orig(groups)
+    return aside, [[j] for st in sets for j in st]
+
+
+def first_takes_all(coef, sets):
+    # fault C41: the coefficient of a set of columns the same given whole to its first column
+    beta = [coef[0]] + [0.0] * len(cb.FIVE)
+    for c, st in zip(coef[1:], sets):
+        beta[1 + st[0]] = c
+    return beta
+
+
+def near_sets(groups):
+    # fault C42: "the same" and "one value" read with a tolerance, not with ==
+    def close(a, b):
+        return math.isclose(a, b, rel_tol=1e-9, abs_tol=1e-12)
+
+    cols = range(len(cb.FIVE))
+    aside = [j for j in cols if all(close(s[j], groups[0][0][j]) for s, _, _ in groups)]
+    sets = []
+    for j in cols:
+        if j in aside or any(j in st for st in sets):
+            continue
+        sets.append([j] + [m for m in cols if m > j and m not in aside and all(close(s[m], s[j]) for s, _, _ in groups)])
+    return aside, sets
+
+
+def ridged(H, g, _orig=cb.solve):
+    # fault C43: 1e-12 added to the diagonal of every Newton system, so no fit is the one before R30
+    return _orig([[v + (1e-12 if i == j else 0.0) for j, v in enumerate(row)] for i, row in enumerate(H)], g)
+
+
+def marked_by_columns(recs):
+    # fault C47: a fold with a score column set aside or shared marks its report
+    return any(r["end"] != "converged" or cb.aside_or_shared(r) for r in recs)
+
+
+def old_fold_ok(rec, genomes):
+    # fault C49: gate 2 reads the fold's training list only, not what its fit was handed
+    return rec["shared"] == 0 and rec["listed"] + rec["tested"] == genomes
+
+
+def third_count_beside(rows, arm):
+    # fault C51: the count without the flagged reports stands beside the count over all and decides nothing
+    return [("all", rows, True), ("without_marked", cb.unmarked(rows, arm), False),
+            ("without_one_score_fold", cb.unflagged(rows), False)]
+
+
+def whole_report_flag(S, folds):
+    # fault C52: a report flagged only when a learner gives every genome of the report one score
+    return any(all(s[j] == S[0][j] for s in S) for j in range(len(cb.FIVE)))
+
+
+def old_rules(reading):
+    # fault C55: write checks the cutoff, forms, five learners and clip only, not the counts of the rule or the flags
+    return ((reading.get("cutoff"), reading.get("forms"), reading.get("five"), reading.get("clip"))
+            == (cb.CUTOFF, list(cb.FORMS), list(cb.FIVE), cb.CLIP))
 
 
 def plain_load(path):
@@ -227,6 +295,73 @@ FAULTS = [
     ("C38", "the record's rule for the very major error rate in other words than R19's",
      T + "Rule.test_the_record_says_the_vme_rule_in_r19s_words",
      lambda: mock.patch.object(cb, "VME_RULE", "the very major error rate is not higher")),
+    ("C39", "a score column with one value over the fitting genomes fitted as a column of its own",
+     T + "Fits.test_a_one_score_column_is_set_aside",
+     lambda: mock.patch.object(cb, "column_sets", no_aside)),
+    ("C40", "score columns the same on every fitting genome fitted apart",
+     T + "Fits.test_columns_the_same_are_fitted_as_one",
+     lambda: mock.patch.object(cb, "column_sets", no_sets)),
+    ("C41", "a shared coefficient given whole to the first column of its set",
+     T + "Fits.test_a_held_out_genome_is_scored_from_both_columns",
+     lambda: mock.patch.object(cb, "spread", first_takes_all)),
+    ("C42", "the same and one value read with a tolerance, not exactly",
+     T + "Fits.test_the_same_and_one_score_are_read_without_tolerance",
+     lambda: mock.patch.object(cb, "column_sets", near_sets)),
+    ("C43", "1e-12 added to the diagonal of every Newton system",
+     T + "Fits.test_a_fit_on_neither_case_is_the_fit_before_r30",
+     lambda: mock.patch.object(cb, "solve", ridged)),
+    ("C44", "a first Newton step with no finite solution ended as a later one is",
+     T + "Gates.test_gate_5_stops_on_a_first_step_with_no_finite_solution",
+     lambda: mock.patch.object(cb, "failed_step", lambda step: "no_finite_step")),
+    ("C45", "a fold whose first Newton step had no finite solution scored from its coefficients at 0",
+     T + "Fits.test_a_first_step_with_no_finite_solution_is_not_scored",
+     lambda: mock.patch.object(cb, "scored", lambda end: True)),
+    ("C46", "gate 5 blind to a first Newton step with no finite solution",
+     T + "Gates.test_gate_5_stops_on_a_first_step_with_no_finite_solution",
+     lambda: mock.patch.object(cb, "ends_pass", lambda not_finite, no_first_step, fits: not_finite == 0 and fits > 0)),
+    ("C47", "a fold with a score column set aside or shared marks its report",
+     T + "Gates.test_the_reviewers_two_reports_pass_gate_5",
+     lambda: mock.patch.object(cb, "marked", marked_by_columns)),
+    ("C48", "a fold with a score column shared not counted with those set aside",
+     T + "Gates.test_the_reviewers_two_reports_pass_gate_5",
+     lambda: mock.patch.object(cb, "aside_or_shared", lambda rec: rec.get("columns_aside", 0) > 0)),
+    ("C49", "gate 2 blind to a fit handed another count of genomes than its training list",
+     T + "Gates.test_gate_2_stops_a_fit_handed_every_genome",
+     lambda: mock.patch.object(cb, "fold_ok", old_fold_ok)),
+    ("C50", "the training count taken as the groups a fit is handed, not the genomes inside them",
+     T + "Crossfit.test_each_fold_is_fitted_on_the_other_folds",
+     lambda: mock.patch.object(cb, "handed", len)),
+    ("C51", "the count without the flagged reports deciding nothing",
+     T + "Rule.test_the_third_count_decides",
+     lambda: mock.patch.object(cb, "rule_counts", third_count_beside)),
+    ("C52", "a report flagged only when a learner gives the whole report one score",
+     T + "Counts.test_a_report_is_flagged_by_one_fold",
+     lambda: mock.patch.object(cb, "one_score_fold", whole_report_flag)),
+    ("C53", "a fold of one genome flagging its report",
+     T + "Counts.test_a_report_is_flagged_by_one_fold",
+     lambda: mock.patch.object(cb, "FLAG_FOLD", 1)),
+    ("C54", "the flagged reports kept in the third count",
+     T + "Rule.test_the_third_count_decides",
+     lambda: mock.patch.object(cb, "unflagged", lambda rows: rows)),
+    ("C55", "write blind to a reading made under other counts of the rule or without its flags",
+     T + "Gates.test_write_stops_on_a_reading_made_under_other_rules",
+     lambda: mock.patch.object(cb, "same_rules", old_rules)),
+    ("C56", "an arm kept when either count that decides keeps it",
+     T + "Rule.test_the_third_count_decides",
+     lambda: mock.patch.object(cb, "arm_reading", lambda outcomes: "kept" if "kept" in outcomes
+                               else "no difference shown")),
+    ("C57", "gate 1 blind to the count of reports it expects",
+     T + "Gates.test_gate_1_holds_the_read_to_its_count",
+     lambda: mock.patch.object(cb, "held_to", lambda read_count, expected: True)),
+    ("C58", "the command line holding the read to 267 reports, not the freeze's 268",
+     T + "Gates.test_the_command_line_holds_the_read_to_268",
+     lambda: mock.patch.object(cb, "FROZEN_REPORTS", 267)),
+    ("C59", "a genome with no fold number let through",
+     T + "Gates.test_a_genome_with_no_fold_number_stops_the_read",
+     lambda: mock.patch.object(cb, "fold_number", lambda g: True)),
+    ("C60", "a report with one fold let through",
+     T + "Gates.test_a_report_with_one_fold_stops_the_read",
+     lambda: mock.patch.object(cb, "enough_folds", lambda folds: True)),
 ]
 
 

@@ -11,6 +11,7 @@ import io
 import json
 import math
 import os
+import random
 import tempfile
 import unittest
 from unittest import mock
@@ -68,6 +69,98 @@ ANTI = [((1.0, 0.2, 0.2, 0.2, 0.2), 0, 2), ((0.0, 0.8, 0.8, 0.8, 0.8), 2, 0)]
 LEAN_A, LEAN_B = (0.1, 0.1, 0.9, 0.1, 0.1), (0.9, 0.9, 0.1, 0.9, 0.9)
 LEAN = [(LEAN_A, 5, 1), (LEAN_B, 1, 3)]
 
+# gbt is 1 - rf on every genome, in values a float holds exactly, and no column has one value or is another's copy:
+# the intercept, rf and gbt are tied, so the first Newton step has no finite solution. Per copy 13 resistant of 24.
+Q, T3 = 0.25, 0.75
+AFFINE = [((Q, Q, Q, T3, Q), 1, 4), ((Q, Q, T3, Q, Q), 9, 1), ((T3, Q, Q, T3, Q), 1, 2), ((Q, T3, Q, T3, Q), 1, 2),
+          ((Q, Q, Q, T3, T3), 1, 2)]
+
+# 2 resistant of 15 per copy: 10 resistant genomes in five copies, the least a report may hold.
+TEN = [(LOW, 1, 4), (one(2), 1, 1)] + [(one(j), 0, 2) for j in (0, 1, 3, 4)]
+
+# Eight groups, made up from seeded draws, whose fit from zero takes a fifth Newton step that raises the loss at 1,
+# 1/2 and 1/4 of its length: the search halves it to 1/32, and the fit converges in 11 steps at a loss of 0.125.
+STEEP = [((0.01, 0.5, 0.01, 0.5, 0.05), False, 1), ((0.1, 0.25, 0.95, 0.1, 0.75), True, 50),
+         ((0.1, 0.5, 0.99, 0.5, 0.99), False, 10), ((0.25, 0.25, 0.75, 0.99, 0.9), False, 10),
+         ((0.25, 0.25, 0.9, 0.9, 0.95), True, 1), ((0.75, 0.9, 0.9, 0.1, 0.5), True, 10),
+         ((0.95, 0.5, 0.5, 0.99, 0.25), True, 3), ((0.99, 0.1, 0.95, 0.75, 0.5), False, 50)]
+
+# What fit_logistic returned at 7897a215, before R30, on fitting genomes with neither a one-score column nor two
+# columns the same: float.hex of the intercept and five coefficients, the steps and the end. Folds 0 to 4 of
+# made_up(400, 7); SEPARABLE's ten genomes; LED's 27 genomes with a cap of 2 Newton steps.
+BEFORE_R30 = {
+    0: (["-0x1.fc72552b76d5ep+4", "0x1.ae93e30627613p+3", "0x1.cb0e987efffcep+2", "0x1.5054a4ff892e3p+4",
+         "0x1.5e3f7fd60e8a0p+4", "0x1.a6e4b4929fad8p+2"], 12, "converged"),
+    1: (["-0x1.3cb759b041aaap+5", "0x1.1d5b4024f9119p+4", "0x1.0d44a5c4779c8p+3", "0x1.4e27ce6b5e71cp+4",
+         "0x1.e7c6c143c23edp+4", "0x1.299b49dc60a06p+3"], 13, "converged"),
+    2: (["-0x1.1788a4ef7704ep+6", "0x1.a05b70031b0a6p+4", "0x1.39780d9590260p+4", "0x1.4fda92fab290fp+5",
+         "0x1.9cc6c548204f3p+5", "0x1.1a38d2c02bab8p+4"], 14, "converged"),
+    3: (["-0x1.38b97d931e628p+5", "0x1.19b38f83d3d91p+4", "0x1.80fbc4892bc2cp+2", "0x1.d261a93ed1c1ap+4",
+         "0x1.cffb8d5e552b6p+4", "0x1.4a138eba13d1cp+2"], 13, "converged"),
+    4: (["-0x1.3d69eeb00f6f7p+5", "0x1.387fc0a7b0983p+4", "0x1.550b391618af2p+3", "0x1.c4565c70a205ep+4",
+         "0x1.6b264365b675fp+4", "0x1.4f715ce695672p+2"], 13, "converged"),
+    "separable": (["-0x1.b33f0e9691511p+4", "0x1.b33f0e9691514p+5", "-0x1.9658efef6617ap-48",
+                   "-0x1.e39e9037c4ccep-48", "-0x1.23cf9d58102c0p-47", "-0x1.ba76b5eb86585p-47"], 26,
+                  "no_finite_step"),
+    "cap": (["-0x1.b8bc2720f717fp+1", "0x1.23cbf67f99b05p+0", "0x1.23cbf67f99b07p+0", "0x1.716c26a96aeeep+2",
+             "0x1.23cbf67f99b04p+0", "0x1.23cbf67f99b01p+0"], 2, "cap"),
+}
+
+
+def made_up(n, seed, strength=(220, 160, 280, 250, 120)):
+    """A SYNTHETIC report from seeded integer draws: about 35 in 100 genomes resistant, five scores in thousandths
+    that lean with the label and share a draw, folds by genome order. No two columns are the same and none has one
+    value."""
+    rng = random.Random(seed)
+    S, y, folds = [], [], []
+    for i in range(n):
+        t = rng.random() < 0.35
+        shared = rng.randrange(-150, 151)
+        S.append(tuple(min(999, max(1, 460 + (a if t else -a) + shared + rng.randrange(-300, 301))) / 1000
+                       for a in strength))
+        y.append(t)
+        folds.append(i % 5)
+    return S, y, folds
+
+
+def reviewers_report(n, seed, prev=0.35, strength=(1.6, 1.2, 2.0, 1.8, 1.0), shared=0.8):
+    """The review's SYNTHETIC maker of finding 1 (synth.continuous, review of 25 Nov), as it was written: five
+    learners, each a noisy sigmoid of the label with a shared noise term."""
+    def sig(z):
+        return 1.0 / (1.0 + math.exp(-z)) if z >= 0 else math.exp(z) / (1.0 + math.exp(z))
+
+    rng = random.Random(seed)
+    S, y, folds = [], [], []
+    for i in range(n):
+        t = rng.random() < prev
+        common_ = rng.gauss(0, shared)
+        S.append(tuple(sig(a * (1 if t else -1) + common_ + rng.gauss(0, 1.0) - 0.3) for a in strength))
+        y.append(t)
+        folds.append(i % 5)
+    order = list(range(n))
+    rng.shuffle(order)
+    return [S[i] for i in order], [y[i] for i in order], [folds[k] for k in range(n)]
+
+
+def with_column(S, j, value):
+    """Learner j's score replaced on every genome by value(s), the genome's five scores."""
+    return [tuple(value(s) if k == j else x for k, x in enumerate(s)) for s in S]
+
+
+def fitting(S, y, folds, f):
+    return cb.groups_of(S, y, cb.training_genomes(folds, f))
+
+
+def gradient(beta, groups):
+    """The mean gradient of the logistic loss in all six numbers, at beta."""
+    n = sum(k for _, _, k in groups)
+    g = [0.0] * 6
+    for s, t, k in groups:
+        r = k * (cb.logistic_score(beta, s) - (1.0 if t else 0.0))
+        for i, x in enumerate((1.0,) + s):
+            g[i] += r * x
+    return [v / n for v in g]
+
 
 def designed(species, antibiotic, groups, tag, copies=5):
     labels, scores, folds = [], [], []
@@ -80,6 +173,15 @@ def designed(species, antibiotic, groups, tag, copies=5):
     r = Report(species, antibiotic, sum(labels), len(labels) - sum(labels), tag=tag)
     r.labels, r.catalog, r.folds = labels, list(labels), folds
     r.scores = {n: [s[k] for s in scores] for k, n in enumerate(FIVE)}
+    r.random = dict(r.scores)
+    return r
+
+
+def from_arrays(species, antibiotic, S, y, folds, tag):
+    """A SYNTHETIC report from a score tuple, label and fold per genome."""
+    r = Report(species, antibiotic, sum(y), len(y) - sum(y), tag=tag)
+    r.labels, r.catalog, r.folds = list(y), list(y), list(folds)
+    r.scores = {n: [s[k] for s in S] for k, n in enumerate(FIVE)}
     r.random = dict(r.scores)
     return r
 
@@ -104,10 +206,10 @@ def mixed_set():
         designed(SPECIES[6], "drug a", LED, tag=7)]
 
 
-def run(module, *argv):
+def run(module, *argv, **kw):
     buf = io.StringIO()
     with contextlib.redirect_stdout(buf):
-        rc = module.main([str(x) for x in argv])
+        rc = module.main([str(x) for x in argv], **kw)
     return rc, buf.getvalue()
 
 
@@ -153,13 +255,16 @@ class Case(unittest.TestCase):
             self.assertEqual(rc, 0, out)
         return d
 
-    def read(self, reports=None, before=None, expect=None):
+    def read(self, reports=None, before=None, expect=None, count=None):
+        """The read on SYNTHETIC reports; gate 1 is handed the test's own count, the number of reports unless
+        `count` says otherwise, since the command line holds a read to the freeze's 268."""
         reports = kept_set() if reports is None else reports
         d = self.records(reports)
         if before:
             before(d)
         return d, run(cb, "read", d, "--first", self.first, "--second", self.second, "--out", self.reading,
-                      "--expect", len(reports) if expect is None else expect)
+                      "--expect", len(reports) if expect is None else expect,
+                      reports=len(reports) if count is None else count)
 
     def read_write(self, reports=None):
         d, (rc, out) = self.read(reports)
@@ -178,6 +283,25 @@ class Case(unittest.TestCase):
         change(reading)
         with open(path, "w", encoding="utf-8") as f:
             json.dump(reading, f)
+
+    def edit_reports(self, d, change):
+        """Change the lineage split of every SYNTHETIC report file after the records are built."""
+        for name in os.listdir(d):
+            path = os.path.join(d, name)
+            with open(path, encoding="utf-8") as f:
+                doc = json.load(f)
+            for split in doc["splits"]:
+                if split["scheme"] == "lineage":
+                    change(doc, split)
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(doc, f)
+
+    def read_safely(self, reports, before=None):
+        """The read, with any crash turned into a failure: a stop must be the read's own named line."""
+        try:
+            return self.read(reports, before=before)[1]
+        except Exception as e:      # noqa: BLE001 - a crash is the fault this test is meant to catch
+            self.fail(f"the read crashed with {type(e).__name__} in place of its own stop line")
 
 
 class Forms(unittest.TestCase):
@@ -199,6 +323,7 @@ class Forms(unittest.TestCase):
 
     def test_log_loss_is_clipped(self):
         # a score of 1.0 on a susceptible genome costs -log(1e-4), not an infinite loss
+        self.assertEqual((cb.clipped(1.0), cb.clipped(0.0)), (1.0 - 1e-4, 1e-4))
         got = cb.log_loss([True, False], [1.0, 1.0])
         self.assertAlmostEqual(got, (-math.log(1 - 1e-4) - math.log(1e-4)) / 2, places=12)
         self.assertAlmostEqual(cb.log_loss([True], [0.0]), -math.log(1e-4), places=12)
@@ -234,6 +359,10 @@ class Forms(unittest.TestCase):
         w, lg = plan["weighted_fit"], plan["logistic_fit"]
         self.assertEqual((w["cap"], w["start"], w["step_floor"]), (5000, "equal weights", 1e-20))
         self.assertEqual((lg["cap"], lg["penalty"]), (100, None))
+        # R30: the logistic fit's stop values, the end that stops the read, the 268 and the flag's fold size
+        self.assertEqual((lg["gradient"], lg["step"], lg["pivot"], lg["start"], lg["stops_the_read"]),
+                         (1e-10, 1e-8, 1e-13, "zero", "no_finite_first_step"))
+        self.assertEqual((plan["reports"], plan["flag_fold"]), (268, 2))
 
 
 class Fits(unittest.TestCase):
@@ -307,14 +436,157 @@ class Fits(unittest.TestCase):
         self.assertFalse(cb.lower(0.3, 0.3))
         self.assertTrue(cb.lower(0.29, 0.3))
 
+    def test_a_fit_on_neither_case_is_the_fit_before_r30(self):
+        # no column with one value and no two columns the same: bit for bit what 7897a215 returned, in all three ends
+        S, y, folds = made_up(400, 7)
+        cases = {f: fitting(S, y, folds, f) for f in range(5)}
+        cases["separable"] = cb.groups_of(*as_arrays(SEPARABLE, copies=1)[:2], range(10))
+        for name, groups in cases.items():
+            self.assertEqual(cb.column_sets(groups), ([], [[j] for j in range(5)]), name)
+            beta, steps, end = cb.fit_logistic(groups)
+            self.assertEqual(([b.hex() for b in beta], steps, end), BEFORE_R30[name], name)
+        with mock.patch.object(cb, "L_CAP", 2):
+            beta, steps, end = cb.fit_logistic(cb.groups_of(*as_arrays(LED, copies=1)[:2], range(27)))
+        self.assertEqual(([b.hex() for b in beta], steps, end), BEFORE_R30["cap"])
+
+    def test_a_one_score_column_is_set_aside(self):
+        # lasso at 0.3 on every genome (the review's finding 1): its coefficient is exactly 0.0, and the fit is a
+        # maximum-likelihood fit of all six numbers. With rf's copy as gbt too, both rules apply in one fold
+        S, y, folds = made_up(400, 7)
+        one_value = with_column(S, 4, lambda s: 0.3)
+        for S2, sets in ((one_value, [[0], [1], [2], [3]]), (with_column(one_value, 3, lambda s: s[2]),
+                                                             [[0], [1], [2, 3]])):
+            for f in range(5):
+                groups = fitting(S2, y, folds, f)
+                self.assertEqual(cb.column_sets(groups), ([4], sets))
+                beta, steps, end = cb.fit_logistic(groups)
+                self.assertEqual(end, "converged")
+                self.assertEqual(beta[5], 0.0)
+                self.assertLess(max(abs(v) for v in gradient(beta, groups)), 1e-9)
+                self.assertTrue(all(b != 0.0 for b in beta[:5]))
+
+    def test_columns_the_same_are_fitted_as_one(self):
+        # gbt a copy of rf on every genome: one column fitted, its coefficient in two even parts, and a
+        # maximum-likelihood fit of all six numbers
+        S, y, folds = made_up(400, 7)
+        S2 = with_column(S, 3, lambda s: s[2])
+        for f in range(5):
+            groups = fitting(S2, y, folds, f)
+            self.assertEqual(cb.column_sets(groups), ([], [[0], [1], [2, 3], [4]]))
+            beta, steps, end = cb.fit_logistic(groups)
+            self.assertEqual(end, "converged")
+            self.assertEqual(beta[3], beta[4])
+            self.assertNotEqual(beta[3], 0.0)
+            self.assertLess(max(abs(v) for v in gradient(beta, groups)), 1e-9)
+
+    def test_a_held_out_genome_is_scored_from_both_columns(self):
+        # gbt equals rf on every genome but fold 0's: fold 0's fit sees them the same, and a held-out genome whose two
+        # scores differ is scored from both, each with half the coefficient the one column was fitted with. That
+        # coefficient is the fit's on the four other columns: the fit with gbt at one value gives it
+        S, y, folds = made_up(400, 7)
+        S2 = [tuple((x if g == 0 else s[2]) if j == 3 else x for j, x in enumerate(s)) for s, g in zip(S, folds)]
+        groups = fitting(S2, y, folds, 0)
+        beta, _, end = cb.fit_logistic(groups)
+        whole, _, _ = cb.fit_logistic([(tuple(0.5 if j == 3 else x for j, x in enumerate(s)), t, k)
+                                       for s, t, k in groups])
+        self.assertEqual(end, "converged")
+        self.assertEqual((beta[3], beta[4]), (whole[3] / 2, whole[3] / 2))
+        self.assertEqual(whole[4], 0.0)
+        probs, recs = cb.crossfit("logistic", S2, y, folds)
+        self.assertEqual((recs[0]["columns_aside"], recs[0]["columns_shared"]), (0, 2))
+        held = [i for i, g in enumerate(folds) if g == 0 and S2[i][2] != S2[i][3]]
+        self.assertGreater(len(held), 70)
+        for i in held:
+            s = S2[i]
+            self.assertEqual(probs[i], cb.logistic_score(beta, s))
+            self.assertAlmostEqual(probs[i], cb.logistic_score(whole[:3] + [whole[3], 0.0, whole[5]],
+                                                               s[:2] + ((s[2] + s[3]) / 2, 0.0, s[4])), places=12)
+            self.assertNotEqual(probs[i], cb.logistic_score(whole, s))      # not from rf alone
+
+    def test_swapping_two_columns_the_same_moves_no_held_out_score(self):
+        # rf and gbt the same on fold 0's fitting genomes and apart on fold 0's: swapping the two learners leaves
+        # every held-out score of fold 0 the same to the bit. Ordering all five another way solves the Newton system
+        # in another order, and its rounding moves no score by 1e-11 or more
+        S, y, folds = made_up(400, 7)
+        S2 = [tuple((x if g == 0 else s[2]) if j == 3 else x for j, x in enumerate(s)) for s, g in zip(S, folds)]
+        before, _ = cb.crossfit("logistic", S2, y, folds)
+        swapped, _ = cb.crossfit("logistic", [(s[0], s[1], s[3], s[2], s[4]) for s in S2], y, folds)
+        self.assertEqual([p for p, g in zip(swapped, folds) if g == 0], [p for p, g in zip(before, folds) if g == 0])
+        order = (4, 3, 0, 2, 1)
+        moved, recs = cb.crossfit("logistic", [tuple(s[j] for j in order) for s in S2], y, folds)
+        self.assertEqual((recs[0]["columns_shared"], recs[0]["end"]), (2, "converged"))
+        for a, b, g in zip(moved, before, folds):
+            if g == 0:
+                self.assertLess(abs(a - b), 1e-11)
+
+    def test_the_same_and_one_score_are_read_without_tolerance(self):
+        # a copy of rf one float step apart on one fitting genome is not the same column, and lasso at 0.3 but one
+        # float step apart on one fitting genome does not have one value: neither is set aside or shared, and the
+        # fit on five columns, close to tied, has no finite first step
+        S, y, folds = made_up(400, 7)
+        i0 = folds.index(1)
+        for j, S2 in ((3, with_column(S, 3, lambda s: s[2])), (4, with_column(S, 4, lambda s: 0.3))):
+            S2[i0] = tuple(math.nextafter(x, 1.0) if k == j else x for k, x in enumerate(S2[i0]))
+            groups = fitting(S2, y, folds, 0)
+            self.assertEqual(cb.column_sets(groups), ([], [[k] for k in range(5)]))
+            self.assertEqual(cb.fit_logistic(groups)[1:], (0, cb.NO_FIRST_STEP))
+            _, recs = cb.crossfit("logistic", S2, y, folds)
+            self.assertEqual((recs[0]["columns_aside"], recs[0]["columns_shared"], recs[0]["end"]),
+                             (0, 0, cb.NO_FIRST_STEP))
+
+    def test_a_first_step_with_no_finite_solution_is_not_scored(self):
+        # gbt is 1 - rf: no column is set aside or shared, the first Newton step has no finite solution, and no
+        # held-out genome is scored, so none scores 0.5 from coefficients left at 0
+        S, y, folds = as_arrays(AFFINE)
+        beta, steps, end = cb.fit_logistic(cb.groups_of(S, y, range(24)))
+        self.assertEqual((beta, steps, end), ([0.0] * 6, 0, cb.NO_FIRST_STEP))
+        probs, recs = cb.crossfit("logistic", S, y, folds)
+        self.assertEqual([(r["end"], r["columns_aside"], r["columns_shared"]) for r in recs],
+                         [(cb.NO_FIRST_STEP, 0, 0)] * 5)
+        self.assertEqual(probs, [None] * 120)
+        # a later step with no finite solution still lets the last finite iterate stand (R19 item 4)
+        S, y, folds = as_arrays(SEPARABLE)
+        probs, recs = cb.crossfit("logistic", S, y, folds)
+        self.assertEqual({r["end"] for r in recs}, {"no_finite_step"})
+        self.assertNotIn(None, probs)
+
+    def test_the_step_search_halves_under_a_quarter(self):
+        # STEEP's fifth Newton step raises the loss at 1, 1/2 and 1/4 of its length: the search goes on halving to a
+        # lower loss, and the fit converges at a loss of 0.125, from log 2 at zero. A search that stops at 1/2 takes
+        # that step at 1/4 whatever the loss, and its fit ends with no finite step at a loss over 30,000, calling 20
+        # susceptible genomes resistant that this fit does not
+        groups = sorted(STEEP)
+        beta, steps, end = cb.fit_logistic(groups)
+        self.assertEqual((steps, end), (11, "converged"))
+        self.assertAlmostEqual(cb.logistic_nll(beta, groups), 0.125073, places=6)
+        self.assertEqual([cb.is_call(cb.logistic_score(beta, s)) for s, _, _ in groups],
+                         [False, True, False, False, False, True, True, False])
+
+    def test_the_newton_system_is_pivoted(self):
+        # scm's scores are tiny but not one value, 1e-8 to 4e-8: the system's pivot on scm's own row is under 1e-13
+        # while its column holds larger entries. With pivoting the fit converges in 9 steps; without, its first step
+        # has no finite solution
+        S, y = [], []
+        for i in range(60):
+            t = i % 3 == 0
+            S.append(((1 + i % 4) * 1e-8,) + tuple(min(95, max(5, (65 if t else 35) + (i * m) % 61 - 30)) / 100
+                                                     for m in (7, 11, 13, 17)))
+            y.append(t)
+        groups = cb.groups_of(S, y, range(60))
+        self.assertEqual(cb.column_sets(groups), ([], [[k] for k in range(5)]))
+        self.assertEqual(cb.fit_logistic(groups)[1:], (9, "converged"))
+
 
 class Crossfit(Case):
     def test_each_fold_is_fitted_on_the_other_folds(self):
+        # the training count is the genomes inside the groups the fit is handed (12 groups of 108 genomes), beside
+        # the fold's training list
         S, y, folds = as_arrays(LED)
         for arm in cb.ARMS:
             _, recs = cb.crossfit(arm, S, y, folds)
-            self.assertEqual([(r["fold"], r["trained"], r["tested"], r["shared"]) for r in recs],
-                             [(f, 108, 27, 0) for f in range(5)])
+            self.assertEqual([(r["fold"], r["listed"], r["trained"], r["tested"], r["shared"]) for r in recs],
+                             [(f, 108, 108, 27, 0) for f in range(5)])
+        self.assertEqual(len(fitting(S, y, folds, 0)), 12)
         # what the fit receives, not only the fold record: flip every label of one fold, and that fold's held-out
         # scores do not move by one bit, while the other folds' do
         for arm in cb.ARMS:
@@ -330,8 +602,9 @@ class Crossfit(Case):
     def test_gate_2_counts_no_shared_genome_on_the_standard_read(self):
         _, (rc, out) = self.read()
         self.assertEqual(rc, 0, out)
-        self.assertEqual(gate_line(out, 2), "gate 2 cross-fitting: 60 fold fits, 0 whose training and held-out genomes "
-                                            "overlap or do not add up to the report: pass")
+        self.assertEqual(gate_line(out, 2), "gate 2 cross-fitting: 60 fold fits, 0 whose fit was handed another "
+                                            "count of genomes than its training list, or whose training and held-out "
+                                            "genomes overlap or do not add up to the report: pass")
 
 
 class Counts(Case):
@@ -387,9 +660,23 @@ class Counts(Case):
         self.assertEqual(rc, 0, out)
         for arm in cb.ARMS:
             self.assertIn(f"| {arm} | all | 6 | 6 | 0.2830 | 0.2830 to 0.2830 | -0.6429 | -0.6429 to -0.6429 | 6 "
-                          "| kept |", out)
+                          "| kept | kept |", out)
             self.assertIn(f"| {arm} | without marked | 6 | 6 | 0.2830 | 0.2830 to 0.2830 | -0.6429 | -0.6429 to "
-                          "-0.6429 | 6 | decides nothing |", out)
+                          "-0.6429 | 6 | kept | decides nothing |", out)
+            self.assertIn(f"| {arm} | without one score fold | 6 | 6 | 0.2830 | 0.2830 to 0.2830 | -0.6429 | -0.6429 "
+                          "to -0.6429 | 6 | kept | kept |", out)
+
+    def test_a_report_is_flagged_by_one_fold(self):
+        # flagged when some learner gives every genome of some fold of 2 or more genomes one score, read with ==
+        S, y, folds = made_up(40, 3)
+        self.assertFalse(cb.one_score_fold(S, folds))
+        in_fold_0 = [tuple(0.3 if (j == 4 and g == 0) else x for j, x in enumerate(s)) for s, g in zip(S, folds)]
+        self.assertTrue(cb.one_score_fold(in_fold_0, folds))
+        in_fold_0[0] = tuple(math.nextafter(x, 1.0) if j == 4 else x for j, x in enumerate(in_fold_0[0]))
+        self.assertFalse(cb.one_score_fold(in_fold_0, folds))
+        # a fold of one genome: one score by itself, not a flag
+        self.assertFalse(cb.one_score_fold(S, [9 if i == 0 else g for i, g in enumerate(folds)]))
+        self.assertTrue(cb.one_score_fold(with_column(S, 1, lambda s: 0.6), folds))
 
 
 class Rule(Case):
@@ -440,13 +727,15 @@ class Rule(Case):
         self.read_write(kept_set() + [designed(SPECIES[6], "drug c", SEPARABLE, tag=7)])
         rules = {(r["arm"], r["count"]): r for r in lo.read_tsv(os.path.join(self.record, "rule.tsv"))}
         self.assertEqual(list(rules), [(a, k) for a in cb.ARMS for k in cb.COUNTS_OF_RULE])
-        got = {key: (r["decides"], r["datasets"], r["species"], r["median_gain"], r["reading"])
+        got = {key: (r["decides"], r["datasets"], r["species"], r["median_gain"], r["outcome"], r["reading"])
                for key, r in rules.items()}
         self.assertEqual(got, {
-            ("weighted", "all"): ("yes", "7", "7", "0.282967032967", "kept"),
-            ("weighted", "without_marked"): ("no", "7", "7", "0.282967032967", "decides nothing"),
-            ("logistic", "all"): ("yes", "7", "7", "0.282967032967", "kept"),
-            ("logistic", "without_marked"): ("no", "6", "6", "0.282967032967", "decides nothing")})
+            ("weighted", "all"): ("yes", "7", "7", "0.282967032967", "kept", "kept"),
+            ("weighted", "without_marked"): ("no", "7", "7", "0.282967032967", "kept", "decides nothing"),
+            ("weighted", "without_one_score_fold"): ("yes", "7", "7", "0.282967032967", "kept", "kept"),
+            ("logistic", "all"): ("yes", "7", "7", "0.282967032967", "kept", "kept"),
+            ("logistic", "without_marked"): ("no", "6", "6", "0.282967032967", "kept", "decides nothing"),
+            ("logistic", "without_one_score_fold"): ("yes", "7", "7", "0.282967032967", "kept", "kept")})
         r = self.rows()[(SPECIES[6], "drug c")]
         self.assertEqual([r[k] for k in ("weighted_marked", "logistic_marked", "logistic_folds_no_finite_step")],
                          ["no", "yes", "5"])
@@ -455,6 +744,29 @@ class Rule(Case):
         with open(os.path.join(self.record, "gates.txt"), encoding="utf-8") as f:
             self.assertEqual([x for x in f.read().split("\n") if x.startswith("reading ")],
                              ["reading weighted: kept", "reading logistic: kept"])
+
+    def test_the_third_count_decides(self):
+        # the six rf-led reports, one with lasso at 0.2 on every genome of fold 0: its calls do not move, and it is
+        # flagged. Over all 6 the rule keeps each arm; without the flagged report 5 species are left, too few for an
+        # interval, so the third count's outcome is no difference shown, and so is each arm's reading
+        reports = kept_set()
+        flat = reports[0]
+        flat.scores["lasso"] = [0.2 if g == 0 else x for x, g in zip(flat.scores["lasso"], flat.folds)]
+        flat.random = dict(flat.scores)
+        self.read_write(reports)
+        rows = self.rows()
+        self.assertEqual([rows[(sp, "drug a")]["one_score_fold"] for sp in SPECIES[:6]], ["yes"] + ["no"] * 5)
+        self.assertEqual([rows[(SPECIES[0], "drug a")][f"{a}_{k}"] for a in cb.ARMS for k in cb.COUNTS],
+                         ["45", "25", "5", "60", "135"] * 2)
+        rules = {(r["arm"], r["count"]): r for r in lo.read_tsv(os.path.join(self.record, "rule.tsv"))}
+        for arm in cb.ARMS:
+            got = [(rules[arm, k]["datasets"], rules[arm, k]["species"], rules[arm, k]["outcome"],
+                    rules[arm, k]["reading"]) for k in cb.COUNTS_OF_RULE]
+            self.assertEqual(got, [("6", "6", "kept", "no difference shown"), ("6", "6", "kept", "decides nothing"),
+                                   ("5", "5", "no difference shown", "no difference shown")])
+        with open(os.path.join(self.record, "gates.txt"), encoding="utf-8") as f:
+            self.assertEqual([x for x in f.read().split("\n") if x.startswith("reading ")],
+                             ["reading weighted: no difference shown", "reading logistic: no difference shown"])
 
     def test_the_record_says_the_vme_rule_in_r19s_words(self):
         self.read_write()
@@ -496,6 +808,17 @@ class Pooled(unittest.TestCase):
         self.assertEqual([cb.side(d, "vme") for d in (0.02, -0.0199, -0.02)], ["worse", "same", "better"])
         self.assertEqual(cb.side(-0.02, "log_loss"), "better")
 
+    def test_a_change_is_rounded_to_12_decimals_before_the_margin(self):
+        # 4 resistant and 25 susceptible genomes; the arm clears 3 susceptible genomes, the incumbent 2. The balanced
+        # accuracies are 0.06 and 0.04, a gain of exactly 0.02, which a float subtraction gives as
+        # 0.019999999999999997: rounded to 12 decimals each of the 7 reports gains 0.02, at the margin
+        rows = [dataset_like(SPECIES[i], (0, 4, 23, 2), (0, 4, 22, 3)) for i in range(7)]
+        self.assertLess(cb.measure(cb.form_counts(rows[0], "weighted"), "balanced_accuracy")
+                        - cb.measure(cb.form_counts(rows[0], "mean"), "balanced_accuracy"), 0.02)
+        p = cb.pooled_row(rows, "weighted", "balanced_accuracy", "all")
+        self.assertEqual((p["median"], p["better"], p["same"]), (0.02, 7, 0))
+        self.assertEqual(cb.rule(rows, "weighted")["gain_at_least_margin"], 7)
+
 
 class Gates(Case):
     def test_the_standard_read_passes_every_gate(self):
@@ -511,16 +834,77 @@ class Gates(Case):
         def drop_one(d):
             os.remove(os.path.join(d, sorted(os.listdir(d))[0]))
 
-        _, (rc, out) = self.read(before=drop_one, expect=5)
+        # 5 reports read and 5 expected: only the set differs from the first record's
+        _, (rc, out) = self.read(before=drop_one, expect=5, count=5)
         self.assertEqual(rc, 1, out)
-        self.assertTrue(gate_line(out, 1).endswith(": STOP"), out)
+        self.assertIn("5 reports read, 5 expected, 6 pooled in the first record, 1 in one and not the other: STOP",
+                      gate_line(out, 1))
         self.assertFalse(os.path.exists(self.reading))
+
+    def test_gate_1_holds_the_read_to_its_count(self):
+        # the six reports are the first record's pooled rows, one for one, but the read expects 7
+        _, (rc, out) = self.read(count=7)
+        self.assertEqual(rc, 1, out)
+        self.assertIn("6 reports read, 7 expected, 6 pooled in the first record, 0 in one and not the other: STOP",
+                      gate_line(out, 1))
+        self.assertFalse(os.path.exists(self.reading))
+
+    def test_the_command_line_holds_the_read_to_268(self):
+        # the command line has no option for the count: the six SYNTHETIC reports stop at gate 1, where 268 are
+        # expected, and an option that tries to set it is refused
+        d = self.records(kept_set())
+        argv = ("read", d, "--first", self.first, "--second", self.second, "--out", self.reading, "--expect", 6)
+        rc, out = run(cb, *argv)
+        self.assertEqual(rc, 1, out)
+        self.assertIn("6 reports read, 268 expected,", gate_line(out, 1))
+        self.assertTrue(gate_line(out, 1).endswith(": STOP"), out)
+        with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+            run(cb, *argv, "--reports", 6)
+        self.assertFalse(os.path.exists(self.reading))
+
+    def test_gate_1_reads_a_report_with_exactly_10_resistant(self):
+        # a report of 10 resistant genomes is pooled by the learner overlap, so the read takes it
+        reports = kept_set() + [designed(SPECIES[6], "drug e", TEN, tag=7)]
+        self.read_write(reports)
+        self.assertEqual(self.rows()[(SPECIES[6], "drug e")]["resistant"], "10")
 
     def test_gate_2_stops_a_fit_on_its_own_genomes(self):
         with mock.patch.object(cb, "training_genomes", lambda folds, f: list(range(len(folds)))):
             _, (rc, out) = self.read()
         self.assertEqual(rc, 1, out)
         self.assertTrue(gate_line(out, 2).endswith(": STOP"), out)
+
+    def test_gate_2_stops_a_fit_handed_every_genome(self):
+        # the review's fault R1, in memory: the fold's training list is the other folds, but its fit is handed every
+        # genome of the report, 135 in place of 108
+        orig = cb.groups_of
+        with mock.patch.object(cb, "groups_of", lambda S, y, keep: orig(S, y, range(len(y)))):
+            _, (rc, out) = self.read()
+        self.assertEqual(rc, 1, out)
+        self.assertIn("gate 2 cross-fitting: 60 fold fits, 60 whose fit was handed another count of genomes than its "
+                      "training list", gate_line(out, 2))
+        self.assertTrue(gate_line(out, 2).endswith(": STOP"), out)
+
+    def test_a_genome_with_no_fold_number_stops_the_read(self):
+        def no_fold(d):
+            self.edit_reports(d, lambda doc, split: split["test_fold"].__setitem__(3, None)
+                              if doc["species"] == SPECIES[2] else None)
+
+        rc, out = self.read_safely(kept_set(), before=no_fold)
+        self.assertEqual(rc, 1, out)
+        self.assertIn(f"stop folds: {SPECIES[2]} with drug a: a genome with no fold number: STOP", out)
+        self.assertFalse(os.path.exists(self.reading))
+
+    def test_a_report_with_one_fold_stops_the_read(self):
+        def one_fold(d):
+            self.edit_reports(d, lambda doc, split: split.update(test_fold=[0] * len(split["test_fold"]))
+                              if doc["species"] == SPECIES[4] else None)
+
+        rc, out = self.read_safely(kept_set(), before=one_fold)
+        self.assertEqual(rc, 1, out)
+        self.assertIn(f"stop folds: {SPECIES[4]} with drug a: one fold, so no fold has other folds' genomes to fit on: "
+                      "STOP", out)
+        self.assertFalse(os.path.exists(self.reading))
 
     def test_gate_3_stops_on_an_incumbent_that_differs_from_vote_tsv(self):
         # each of the four counts gate 3 compares, one more in vote.tsv, on a fresh set of records each time
@@ -551,9 +935,10 @@ class Gates(Case):
         _, (rc, out) = self.read(reports)
         self.assertEqual(rc, 0, out)
         self.assertEqual(gate_line(out, 5), "gate 5 fit ends: 35 weighted fits, 35 converged, 0 at the cap; 35 logistic "
-                                            "fits, 30 converged, 0 at the cap, 5 at a step with no finite solution; 0 "
-                                            "reports marked for the weighted arm, 1 for the logistic arm; 0 held-out "
-                                            "scores not finite: pass")
+                                            "fits, 30 converged, 0 at the cap, 5 at a later step with no finite "
+                                            "solution, 0 whose first Newton step has no finite solution, 0 with a "
+                                            "score column set aside or shared; 0 reports marked for the weighted arm, "
+                                            "1 for the logistic arm; 0 held-out scores not finite: pass")
 
     def test_gate_5_counts_and_marks_a_fold_at_the_cap(self):
         # one weighted step and two Newton steps: all 30 folds of each arm end at the cap, all 6 reports are marked
@@ -561,14 +946,72 @@ class Gates(Case):
         with mock.patch.object(cb, "W_CAP", 1), mock.patch.object(cb, "L_CAP", 2):
             _, out = self.read_write()
         self.assertEqual(gate_line(out, 5), "gate 5 fit ends: 30 weighted fits, 0 converged, 30 at the cap; 30 logistic "
-                                            "fits, 0 converged, 30 at the cap, 0 at a step with no finite solution; 6 "
-                                            "reports marked for the weighted arm, 6 for the logistic arm; 0 held-out "
-                                            "scores not finite: pass")
+                                            "fits, 0 converged, 30 at the cap, 0 at a later step with no finite "
+                                            "solution, 0 whose first Newton step has no finite solution, 0 with a "
+                                            "score column set aside or shared; 6 reports marked for the weighted arm, "
+                                            "6 for the logistic arm; 0 held-out scores not finite: pass")
         for r in self.rows().values():
             self.assertEqual([r[k] for k in ("weighted_folds_cap", "logistic_folds_cap", "weighted_marked",
                                              "logistic_marked")], ["5", "5", "yes", "yes"])
         rules = lo.read_tsv(os.path.join(self.record, "rule.tsv"))
-        self.assertEqual([(r["count"], r["datasets"]) for r in rules], [("all", "6"), ("without_marked", "0")] * 2)
+        self.assertEqual([(r["count"], r["datasets"]) for r in rules],
+                         [("all", "6"), ("without_marked", "0"), ("without_one_score_fold", "6")] * 2)
+
+    def test_gate_5_stops_on_a_first_step_with_no_finite_solution(self):
+        # AFFINE's five logistic folds have no finite first step: gate 5 counts them and stops, and the genomes of
+        # those folds have no call, so gate 6 stops too
+        reports = kept_set() + [designed(SPECIES[6], "drug d", AFFINE, tag=7)]
+        _, (rc, out) = self.read(reports)
+        self.assertEqual(rc, 1, out)
+        self.assertEqual(gate_line(out, 5), "gate 5 fit ends: 35 weighted fits, 35 converged, 0 at the cap; 35 logistic "
+                                            "fits, 30 converged, 0 at the cap, 0 at a later step with no finite "
+                                            "solution, 5 whose first Newton step has no finite solution, 0 with a "
+                                            "score column set aside or shared; 0 reports marked for the weighted arm, "
+                                            "1 for the logistic arm; 0 held-out scores not finite: STOP")
+        self.assertTrue(gate_line(out, 6).endswith("1 form and report pairs with a genome given no call: STOP"), out)
+        self.assertFalse(os.path.exists(self.reading))
+
+    def test_the_reviewers_two_reports_pass_gate_5(self):
+        # the review's finding 1: gbt a copy of rf, and lasso at 0.3, on 600 genomes, 206 resistant. Every logistic
+        # fold converges with a column shared or set aside; none is marked; no held-out score is 0.5
+        S, y, folds = reviewers_report(600, 31)
+        self.assertEqual((len(y), sum(y)), (600, 206))
+        copy, one_value = with_column(S, 3, lambda s: s[2]), with_column(S, 4, lambda s: 0.3)
+        for S2 in (copy, one_value):
+            probs, recs = cb.crossfit("logistic", S2, y, folds)
+            self.assertEqual({r["end"] for r in recs}, {"converged"})
+            self.assertEqual(sum(1 for p in probs if p == 0.5), 0)
+        reports = [from_arrays(SPECIES[0], "drug f", copy, y, folds, tag=1),
+                   from_arrays(SPECIES[1], "drug f", one_value, y, folds, tag=2)]
+        _, out = self.read_write(reports)
+        self.assertEqual(gate_line(out, 5), "gate 5 fit ends: 10 weighted fits, 10 converged, 0 at the cap; 10 logistic "
+                                            "fits, 10 converged, 0 at the cap, 0 at a later step with no finite "
+                                            "solution, 0 whose first Newton step has no finite solution, 10 with a "
+                                            "score column set aside or shared; 0 reports marked for the weighted arm, "
+                                            "0 for the logistic arm; 0 held-out scores not finite: pass")
+        for key in ((SPECIES[0], "drug f"), (SPECIES[1], "drug f")):
+            r = self.rows()[key]
+            self.assertEqual([r[k] for k in ("logistic_folds_converged", "logistic_folds_aside_or_shared",
+                                             "logistic_marked")], ["5", "5", "no"])
+        with open(os.path.join(self.reading, cb.READING), encoding="utf-8") as f:
+            folds_read = {d["species"]: d["logistic_folds"] for d in json.load(f)["datasets"]}
+        self.assertEqual({(r["columns_aside"], r["columns_shared"]) for r in folds_read[SPECIES[0]]}, {(0, 2)})
+        self.assertEqual({(r["columns_aside"], r["columns_shared"]) for r in folds_read[SPECIES[1]]}, {(1, 0)})
+
+    def test_write_stops_on_a_reading_made_under_other_rules(self):
+        # a reading whose cutoff, whose counts of the rule, or whose report flags are not this script's: write stops
+        # and writes nothing
+        for change in (lambda reading: reading.update(cutoff=0.4),
+                       lambda reading: reading.update(counts_of_rule=["all", "without_marked"]),
+                       lambda reading: reading["datasets"][0].pop("one_score_fold")):
+            d, (rc, out) = self.read()
+            self.assertEqual(rc, 0, out)
+            self.tamper(change)
+            rc, out = run(cb, "write", self.reading, "--reports", d, "--out", self.record)
+            self.assertEqual((rc, out), (1, "the reading was made under other rules\n"))
+            self.assertFalse(os.path.exists(self.record))
+            self.tearDown()
+            self.setUp()
 
     def test_gate_5_stops_on_a_held_out_score_that_is_not_finite(self):
         with mock.patch.object(cb, "logistic_score", lambda beta, s: math.nan):
@@ -668,7 +1111,8 @@ class Ids(Case):
             self.assertEqual(set(r) - {"species", "antibiotic", "genomes", "resistant", "susceptible",
                                        "mean_miss_by_1to4", "mean_miss_by_all5", "mean", "weighted", "logistic",
                                        "weighted_folds", "logistic_folds", "weighted_transitions",
-                                       "logistic_transitions", "weighted_marked", "logistic_marked"}, set())
+                                       "logistic_transitions", "weighted_marked", "logistic_marked",
+                                       "one_score_fold"}, set())
 
 
 if __name__ == "__main__":

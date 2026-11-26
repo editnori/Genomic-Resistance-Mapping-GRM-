@@ -4,6 +4,8 @@ This test file reads the page and the script's own constants, gates and fault li
 nothing and reads no genome.
 """
 
+import hashlib
+import math
 import re
 import unittest
 
@@ -12,10 +14,18 @@ from tests.mechanism import common
 cb = common.load("combiner")
 cm = common.load("common")
 faults = common.load("combiner_faults")
+lo = common.load("learner_overlap")
 
 PAGE = common.ROOT / "docs" / "combiner-result.md"
 SCRIPT = common.KIT / "combiner.py"
 RECORD = common.ROOT / "reference" / "combiner"
+VOTE_POOLED = common.ROOT / "reference" / "learner-overlap" / "second-pass" / "vote-pooled.tsv"
+# FREEZE-COMBINE's first prediction and its third as restated on 25 Nov 2026, word for word, before any reading
+FIRST_PREDICTION = ("The weighted mean beats the equal mean by the 0.02 margin on **fewer than 1 in 5** of the reports, "
+                    "and not on the pooled median. About 1 in 4 that the pooled median gain clears 0.02 for either arm.")
+THIRD_PREDICTION = ("Of the **8,067** resistant genomes the equal mean still misses, the better of the two arms "
+                    "recovers **under a third**, and it does not do so without giving back susceptible genomes among "
+                    "the 8,896 the equal mean already calls resistant.")
 SECTIONS = ["Plan", "Reading", "Limits", "Method"]
 FIXED = ("A lineage split is a retrospective split inside one database, never external validation.",
          "\"No difference shown\" is never written as \"equal\".",
@@ -30,6 +40,13 @@ COMMANDS = ("python3 -I scripts/mechanism/combiner.py read REPORTS --first refer
 def sections(text):
     parts = re.split(r"^## (.+)$", text, flags=re.M)
     return dict(zip(parts[1::2], parts[2::2]))
+
+
+def power(x):
+    """A power of ten as the page writes it, 1e-10 for 1e-10."""
+    e = round(math.log10(x))
+    assert float(f"1e{e}") == x, x
+    return f"1e{e}"
 
 
 def ordinal(n):
@@ -54,7 +71,8 @@ class Page(unittest.TestCase):
             self.assertIn(words, self.sections["Limits"])
 
     def test_no_difference_shown_is_never_written_as_equal(self):
-        rest = self.text.replace("\"equal\"", "")
+        # the freeze's predictions are quoted word for word, and only there does "the equal mean" stand
+        rest = "\n".join(line for line in self.text.replace("\"equal\"", "").split("\n") if not line.startswith("> "))
         self.assertEqual(re.findall(r"\bequal\b(?! weights)", rest, flags=re.I), [])
         self.assertIn("no difference shown", self.sections["Plan"])
 
@@ -79,6 +97,65 @@ class Page(unittest.TestCase):
         self.assertIn(f"A fit ended at its cap depends on the cap: {cb.W_CAP:,} steps for the weighted mean and "
                       f"{cb.L_CAP} Newton steps for the logistic combiner.", limits)
         self.assertIn(f"That means, as R19 confirmed: {cb.VME_RULE}.", plan)
+
+    def test_the_plan_states_r30s_rules(self):
+        plan = self.sections["Plan"]
+        for words in ("gets a coefficient of exactly 0 and is left out of that fold's fit",
+                      "are fitted as one column and share its coefficient in even parts",
+                      "Both rules read the stored scores as they are, with no tolerance, and both can apply in one fold",
+                      "the least sum of squares of the five coefficients", "does not depend on the learners' order",
+                      "On a fold with neither case, the fit is the one before 26 Nov, to the bit",
+                      "A fold with either case is not marked",
+                      "that fold is not scored, and the read stops at gate 5",
+                      "No fold is scored from coefficients left at 0",
+                      "an arm is kept only if the rule keeps it in both",
+                      f"gives every genome of a fold of {cb.FLAG_FOLD} or more genomes one score",
+                      "The record gives each count's own outcome and the arm's reading",
+                      f"Gate 1 stops the read unless it reads exactly those {cb.FROZEN_REPORTS} reports",
+                      "A report with one fold, or a genome with no fold number, stops the read"):
+            self.assertIn(words, plan)
+        self.assertEqual(cb.COUNTS_OF_RULE, ("all", "without_marked", "without_one_score_fold"))
+        self.assertEqual(cb.plan()["counts"], {"all": "decides", "without_marked": "decides nothing",
+                                               "without_one_score_fold": "decides"})
+
+    def test_the_plan_names_the_logistic_stop_values(self):
+        plan = self.sections["Plan"]
+        script = SCRIPT.read_text(encoding="utf-8")
+        whatever = re.findall(r"or t_ < (1e-\d+):", script)
+        self.assertEqual(len(whatever), 1)
+        for words in ("starts with the intercept and the five coefficients at 0",
+                      f"no entry of the mean gradient is above {power(cb.L_TOL)}",
+                      f"by more than {power(cb.L_STEP)} × (1 + the largest of the six in size)",
+                      f"a pivot under {power(cb.PIVOT)} has no finite solution",
+                      f"once the step is under {whatever[0]} of its full length, it takes it whatever the loss",
+                      f"{cb.L_CAP} Newton steps"):
+            self.assertIn(words, plan)
+        self.assertEqual(cb.plan()["logistic_fit"]["start"], "zero")
+
+    def test_the_plan_names_the_intervals_seed(self):
+        plan = self.sections["Plan"]
+        script = SCRIPT.read_text(encoding="utf-8")
+        self.assertEqual(script.count('interval(dict(by), f"combiner|{arm}|{name}")'), 1)
+        name = "combiner|weighted|balanced_accuracy"
+        self.assertEqual(cm.seed_of(name), int(hashlib.sha256(name.encode("utf-8")).hexdigest(), 16))
+        self.assertIn("seeded by the sha256 of the row's own name read as one whole number", plan)
+        self.assertIn(f"`{name}`", plan)
+
+    def test_the_predictions_are_quoted_as_written(self):
+        # each figure the record holds is checked against it: the 8,067 resistant genomes the mean misses that 1 to
+        # 4 of the five call, and the 8,896 susceptible genomes it calls resistant, over the 268 reports
+        plan = self.sections["Plan"]
+        self.assertIn("> " + FIRST_PREDICTION + "\n", plan)
+        self.assertIn("> " + THIRD_PREDICTION + "\n", plan)
+        pooled = [r for r in lo.read_tsv(str(VOTE_POOLED)) if r["scope"] == "all"]
+        self.assertEqual(len(pooled), 1)
+        r = pooled[0]
+        self.assertEqual((f"{int(r['mean_miss_by_1to4']):,}", f"{int(r['mean_wrong']):,}", int(r["datasets"])),
+                         ("8,067", "8,896", cb.FROZEN_REPORTS))
+        self.assertEqual(f"{cb.MARGIN}", "0.02")
+        self.assertIn(f"The 8,067 of {int(r['resistant']):,} resistant genomes are those the mean misses and 1 to 4 of "
+                      f"the five call. The 8,896 of {int(r['susceptible']):,} susceptible genomes are those it calls "
+                      f"resistant. Both are over {r['datasets']} reports", plan)
 
     def test_the_reading_waits_for_its_record(self):
         if not RECORD.exists():
