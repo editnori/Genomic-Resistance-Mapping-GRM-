@@ -10,7 +10,7 @@ This directory holds the tables of plan block C3's run on its 35 datasets of M (
 
 ## After the run
 
-`scripts/c3-inputs/m_page.py` copies here the 7 tables `m_reading.py` writes on the count machine, as they are, and writes nothing else here.
+`scripts/c3-inputs/m_page.py` copies here the 7 tables `m_reading.py` writes on the count machine, as they are, writes `SHA256SUMS` beside them, and writes nothing else here.
 
 | File | Copied by | Holds |
 |---|---|---|
@@ -23,4 +23,4 @@ This directory holds the tables of plan block C3's run on its 35 datasets of M (
 | `m-datasets.tsv` | `m_page.py record` | per reading, dataset, split, pair and learner; the second reading only for a dataset in it |
 | `SHA256SUMS` | `m_page.py floor`, then `record` again | the sha256 of every file here but itself and this README |
 
-`m_page.py print` prints every table from these files alone, and `m_page.py page` the four tables the result page takes; the others stay here. `tests/c3_inputs/test_m_record.py` checks this directory against `docs/input-arms.md` and `docs/input-arms-result.md` in each of its three states: before the run, after the floor and after the count.
+`m_page.py print` prints every table from these files alone, and `m_page.py page` the 6 tables the result page takes; the others stay here. `tests/c3_inputs/test_m_record.py` checks this directory against `docs/input-arms.md` and `docs/input-arms-result.md` in each of its three states: before the run, after the floor and after the count.
