@@ -649,6 +649,90 @@ const GUIDANCE = (() => {
 const GUIDANCE_MISSING = manifest.evaluation_revision === undefined
   ? 'this tree\'s index.json has no evaluation_revision, so no reference/release-summary/*/guidance.json, each for one revision, can match it'
   : 'no reference/release-summary/*/guidance.json has this tree\'s revision ' + manifest.evaluation_revision + ', generation time ' + manifest.generated_at + ' and ' + manifest.datasets.length + ' datasets';
+// The curation path summary (reference/release-summary/<release>/path.json,
+// written by scripts/release-summary/path.py) when its revision, dataset count,
+// species count, and lab record count match this tree. Synthetic trees match
+// none and skip the reference-file check by name.
+const PATH_REF = (() => {
+  const dir = path.join(__dirname, '../../reference/release-summary');
+  const names = fs.existsSync(dir) ? fs.readdirSync(dir).sort() : [];
+  for (const name of names) {
+    const file = path.join(dir, name, 'path.json');
+    if (!fs.existsSync(file)) continue;
+    const p = JSON.parse(fs.readFileSync(file));
+    if (p.revision === manifest.evaluation_revision && p.datasets === manifest.datasets.length && p.species_rows === manifest.species.length && p.funnel?.records === manifest.funnel?.records) return { release: name, data: p };
+  }
+  return null;
+})();
+const PATH_MISSING = manifest.evaluation_revision === undefined
+  ? 'this tree\'s index.json has no evaluation_revision, so no reference/release-summary/*/path.json can match it'
+  : 'no reference/release-summary/*/path.json matches this tree\'s revision ' + manifest.evaluation_revision + ', ' + manifest.datasets.length + ' datasets, and ' + manifest.funnel?.records + ' records';
+
+/** Data view curation path (#m-path): 8 steps in code order matching index.json
+ *  (and path.json on a matching release), with the any-label sum kept off #m-path
+ *  and no rebuilt-copy counts (80,967 / 57,206) shown on the page. */
+async function curationPathCheck(page, tag) {
+  const got = await page.evaluate(() => {
+    const pathEl = document.getElementById('m-path');
+    const rows = [...(pathEl?.querySelectorAll('tbody tr[data-path-step]') ?? [])].map(tr => ({
+      key: tr.getAttribute('data-path-step'),
+      countAttr: Number(tr.getAttribute('data-path-count')),
+      value: tr.querySelector('[data-path-value]')?.textContent?.trim() ?? null,
+      leftOut: tr.querySelector('[data-path-left-out]')?.textContent?.replace(/\s+/g, ' ').trim() ?? '',
+    }));
+    const view = document.querySelector('[data-view-scroll]');
+    return {
+      rows,
+      pathText: pathEl?.textContent?.replace(/\s+/g, ' ') ?? '',
+      pageText: view?.textContent?.replace(/\s+/g, ' ') ?? '',
+    };
+  });
+  const f = manifest.funnel;
+  const wantKeys = ['records', 'genomes_with_a_record', 'genomes_passing', 'pairs', 'pairs_reported', 'datasets_curated', 'genomes_analyzed', 'datasets_reported'];
+  const wantCounts = [
+    f.records,
+    f.genomes_with_records,
+    f.genomes_passing_qc,
+    f.pairs,
+    f.pairs_reported,
+    manifest.species.reduce((a, s) => a + s.datasets_curated, 0),
+    manifest.species.reduce((a, s) => a + s.genomes_analyzed, 0),
+    manifest.species.reduce((a, s) => a + s.datasets_reported, 0),
+  ];
+  const sameOrder = got.rows.length === 8 && got.rows.every((r, i) => r.key === wantKeys[i] && r.countAttr === wantCounts[i] && toCount(r.value) === wantCounts[i]);
+  check(tag + ' data curation path shows 8 steps in code order matching index.json', sameOrder, { got: got.rows.map(r => [r.key, r.value]), want: wantKeys.map((k, i) => [k, wantCounts[i]]) });
+  const anyLabelSum = manifest.species.reduce((a, s) => a + s.genomes_labeled, 0);
+  const anyLabelDistinct = !wantCounts.includes(anyLabelSum);
+  const anyLabelFormatted = anyLabelSum.toLocaleString('en-US');
+  check(tag + ' data curation path keeps any-label total off the path and omits rebuilt-copy counts', (!anyLabelDistinct || !got.pathText.includes(anyLabelFormatted)) && !got.pageText.includes('80,967') && !got.pageText.includes('57,206'), { anyLabelSum, anyLabelDistinct, inPath: got.pathText.includes(anyLabelFormatted) });
+  const refName = tag + ' data curation path matches reference path.json';
+  if (PATH_REF === null) { skipped.push({ check: refName, reason: PATH_MISSING }); return; }
+  const p = PATH_REF.data;
+  const refCounts = [
+    p.funnel.records,
+    p.funnel.genomes_with_a_record,
+    p.funnel.genomes_passing,
+    p.funnel.pairs,
+    p.funnel.pair_kinds.reported_resistant_or_susceptible,
+    p.species.datasets_curated,
+    p.species.genomes_analyzed,
+    p.species.datasets_with_report,
+  ];
+  const fmt = n => n.toLocaleString('en-US');
+  const leftOutOk = got.rows.length === 8
+    && got.rows[2].leftOut.includes(fmt(p.funnel.genomes_failing_a_check.total))
+    && got.rows[2].leftOut.includes(fmt(p.funnel.genomes_without_metadata))
+    && got.rows[3].leftOut.includes(fmt(p.funnel.records_dropped_by_name.total))
+    && got.rows[3].leftOut.includes(fmt(p.funnel.records_no_call_no_mic))
+    && got.rows[4].leftOut.includes(fmt(p.funnel.pair_kinds.label_from_mic))
+    && got.rows[4].leftOut.includes(fmt(p.funnel.pair_kinds.no_label))
+    && got.rows[4].leftOut.includes(fmt(p.funnel.pair_kinds.intermediate_only))
+    && got.rows[4].leftOut.includes(fmt(p.funnel.pair_kinds.conflict))
+    && got.rows[6].leftOut.includes(fmt(p.species.genomes_analyzed_highest))
+    && got.rows[6].leftOut.includes(fmt(p.species.species_at_highest) + ' of ' + fmt(p.species_rows))
+    && got.rows[7].leftOut.includes(fmt(p.species.datasets_curated - p.species.datasets_with_report) + ' of ' + fmt(p.species.datasets_curated));
+  check(refName, got.rows.every((r, i) => toCount(r.value) === refCounts[i]) && leftOutOk, { release: PATH_REF.release, got: got.rows.map(r => [r.key, r.value]), refCounts, leftOutOk });
+}
 /** One row of the release summary as the page counts it: datasets with both
  *  rates, those that meet the wording, and the M. tuberculosis datasets
  *  among those. */
@@ -1563,6 +1647,7 @@ async function interactions(page, tag, width) {
   await controlCheck(page, tag + ' data');
   const tracks = await page.evaluate(() => [...document.querySelectorAll('#m-funnel td span.relative')].map(e => getComputedStyle(e).backgroundColor).filter(c => c !== 'rgba(0, 0, 0, 0)').length);
   check(tag + ' funnel bars sit on tracks', tracks >= 10, tracks);
+  await curationPathCheck(page, tag);
   await scrollTo(page, '#m-funnel'); await shot(page, tag + '-definitions');
   check(tag + ' top bar stays in view after scrolling Data', await page.evaluate(() => document.querySelector('header').getBoundingClientRect().top >= -1 && document.scrollingElement.scrollTop === 0), null);
   await page.goto(BASE + '/methods#m-funnel');
