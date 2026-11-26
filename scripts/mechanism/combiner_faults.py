@@ -1,5 +1,5 @@
-"""combiner_faults.py: the faults of the combiner reading's script (combiner.py, C1 to C60), each planted in turn, and
-the SYNTHETIC test that must catch it. C39 to C60 are the rules of ruling R30.
+"""combiner_faults.py: the faults of the combiner reading's script (combiner.py, C1 to C74), each planted in turn, and
+the SYNTHETIC test that must catch it. C39 to C60 are the rules of ruling R30, and C61 to C74 those of ruling R37.
 
     python3 -I scripts/mechanism/combiner_faults.py [--out faults.tsv]
 
@@ -12,6 +12,7 @@ Python 3.12, standard library only; run with -I.
 
 import argparse
 import fractions
+import hashlib
 import json
 import math
 import os
@@ -86,7 +87,7 @@ def weighted_cap_converged(groups, _orig=cb.fit_weighted):
 def second_count_decides(rows, arm):
     # fault C36: the count without the marked reports decides, and the count over all stands beside it
     return [("all", cb.unmarked(rows, arm), True), ("without_marked", rows, False),
-            ("without_one_score_fold", cb.unflagged(rows), True)]
+            ("without_flagged", cb.unflagged(rows, arm), True)]
 
 
 def vme_of_susceptible(c, name, _orig=cb.measure):
@@ -181,7 +182,7 @@ def old_fold_ok(rec, genomes):
 def third_count_beside(rows, arm):
     # fault C51: the count without the flagged reports stands beside the count over all and decides nothing
     return [("all", rows, True), ("without_marked", cb.unmarked(rows, arm), False),
-            ("without_one_score_fold", cb.unflagged(rows), False)]
+            ("without_flagged", cb.unflagged(rows, arm), False)]
 
 
 def whole_report_flag(S, folds):
@@ -193,6 +194,42 @@ def old_rules(reading):
     # fault C55: write checks the cutoff, forms, five learners and clip only, not the counts of the rule or the flags
     return ((reading.get("cutoff"), reading.get("forms"), reading.get("five"), reading.get("clip"))
             == (cb.CUTOFF, list(cb.FORMS), list(cb.FIVE), cb.CLIP))
+
+
+def under_0_or_at_0(beta):
+    # fault C62: a coefficient of exactly 0, as a column set aside has, counted as under 0
+    return sum(1 for b in beta[1:] if b <= 0.0)
+
+
+def under_0_with_tolerance(beta):
+    # fault C63: a coefficient counted as under 0 only below -1e-9
+    return sum(1 for b in beta[1:] if b < -1e-9)
+
+
+def intercept_counted(beta):
+    # fault C64: the intercept counted among the five coefficients
+    return sum(1 for b in beta if b < 0.0)
+
+
+def first_fold_only(recs):
+    # fault C65: the second condition read on the first fold fit only
+    return cb.under_0(recs[0])
+
+
+def coefficients_not_folds(recs):
+    # fault C69: the record counts the coefficients under 0, not the fold fits that give one
+    return sum(r.get("coefficients_under_0", 0) for r in recs)
+
+
+def either_as_both(rows):
+    # fault C70: a report with either condition counted as one with both
+    return (sum(1 for r in rows if r["one_score_fold"]), sum(1 for r in rows if r["coefficient_under_0"]),
+            sum(1 for r in rows if r["one_score_fold"] or r["coefficient_under_0"]))
+
+
+def later_steps_named(gate):
+    # fault C73: gate 5 also names a report whose logistic fold fit met no finite solution at a later step
+    return gate["no_first_step"] > 0 or gate["ends"]["logistic"]["no_finite_step"] > 0
 
 
 def plain_load(path):
@@ -342,7 +379,7 @@ FAULTS = [
      lambda: mock.patch.object(cb, "FLAG_FOLD", 1)),
     ("C54", "the flagged reports kept in the third count",
      T + "Rule.test_the_third_count_decides",
-     lambda: mock.patch.object(cb, "unflagged", lambda rows: rows)),
+     lambda: mock.patch.object(cb, "unflagged", lambda rows, arm: rows)),
     ("C55", "write blind to a reading made under other counts of the rule or without its flags",
      T + "Gates.test_write_stops_on_a_reading_made_under_other_rules",
      lambda: mock.patch.object(cb, "same_rules", old_rules)),
@@ -362,6 +399,48 @@ FAULTS = [
     ("C60", "a report with one fold let through",
      T + "Gates.test_a_report_with_one_fold_stops_the_read",
      lambda: mock.patch.object(cb, "enough_folds", lambda folds: True)),
+    ("C61", "no report flagged for a logistic fold fit that gives a learner a coefficient under 0",
+     T + "Flags.test_one_fold_fit_under_0_flags_the_logistic_arm_only",
+     lambda: mock.patch.object(cb, "coefficient_under_0", lambda recs: False)),
+    ("C62", "a coefficient of exactly 0, as a column set aside has, counted as under 0",
+     T + "Flags.test_a_column_set_aside_at_0_does_not_flag",
+     lambda: mock.patch.object(cb, "negatives", under_0_or_at_0)),
+    ("C63", "a coefficient counted as under 0 only below -1e-9",
+     T + "Flags.test_a_coefficient_under_0_is_read_with_no_tolerance",
+     lambda: mock.patch.object(cb, "negatives", under_0_with_tolerance)),
+    ("C64", "the intercept counted among the five coefficients",
+     T + "Flags.test_a_report_with_every_coefficient_at_least_0_is_not_flagged",
+     lambda: mock.patch.object(cb, "negatives", intercept_counted)),
+    ("C65", "the second condition read on the first fold fit only",
+     T + "Flags.test_one_fold_fit_under_0_flags_the_logistic_arm_only",
+     lambda: mock.patch.object(cb, "coefficient_under_0", first_fold_only)),
+    ("C66", "the logistic arm's third count leaving out R30's flagged reports only",
+     T + "Flags.test_one_fold_fit_under_0_flags_the_logistic_arm_only",
+     lambda: mock.patch.object(cb, "FLAGS", {"weighted": ("one_score_fold",), "logistic": ("one_score_fold",)})),
+    ("C67", "the weighted arm's third count also leaving out the reports flagged for a coefficient under 0",
+     T + "Flags.test_one_fold_fit_under_0_flags_the_logistic_arm_only",
+     lambda: mock.patch.object(cb, "FLAGS", {a: ("one_score_fold", "coefficient_under_0") for a in cb.ARMS})),
+    ("C68", "a count of 5 species given an interval",
+     T + "Flags.test_a_logistic_third_count_under_6_species_shows_no_difference",
+     lambda: mock.patch.object(common, "MIN_SPECIES", 5)),
+    ("C69", "the record counting the coefficients under 0, not the fold fits behind the flag",
+     T + "Flags.test_the_record_counts_the_fold_fits_behind_the_flag",
+     lambda: mock.patch.object(cb, "under_0_folds", coefficients_not_folds)),
+    ("C70", "a report with either condition counted as one with both",
+     T + "Flags.test_the_read_prints_how_many_reports_each_condition_flags",
+     lambda: mock.patch.object(cb, "flag_counts", either_as_both)),
+    ("C71", "write blind to a reading made without the second condition",
+     T + "Flags.test_write_stops_on_a_reading_made_without_the_second_condition",
+     lambda: mock.patch.object(cb, "second_condition_written", lambda reading: True)),
+    ("C72", "gate 5 naming no report whose first Newton step has no finite solution",
+     T + "Flags.test_gate_5_names_each_report_with_no_finite_first_step",
+     lambda: mock.patch.object(cb, "first_step_named", lambda gate: False)),
+    ("C73", "gate 5 also naming a report whose later Newton step has no finite solution",
+     T + "Flags.test_gate_5_names_each_report_with_no_finite_first_step",
+     lambda: mock.patch.object(cb, "first_step_named", later_steps_named)),
+    ("C74", "the reading's sha256 worked without its last line break",
+     T + "Flags.test_read_and_write_print_the_readings_sha256",
+     lambda: mock.patch.object(cb, "reading_sha256", lambda raw: hashlib.sha256(raw.rstrip(b"\n")).hexdigest())),
 ]
 
 

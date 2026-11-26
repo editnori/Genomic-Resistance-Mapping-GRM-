@@ -30,7 +30,7 @@ SECTIONS = ["Plan", "Reading", "Limits", "Method"]
 FIXED = ("A lineage split is a retrospective split inside one database, never external validation.",
          "\"No difference shown\" is never written as \"equal\".",
          "The error levels serve as an adapted research screen and are never an applicable FDA validation criterion.",
-         "Coverage is the share of genomes answered, not accuracy.")
+         "Coverage is the share of genomes answered and is never accuracy.")
 COMMANDS = ("python3 -I scripts/mechanism/combiner.py read REPORTS --first reference/learner-overlap "
             "--second reference/learner-overlap/second-pass --out READING",
             "python3 -I scripts/mechanism/combiner.py write READING --reports REPORTS --out OUT",
@@ -94,16 +94,22 @@ class Page(unittest.TestCase):
                       "where the last finite iterate stands", "A held-out score that is not finite stops the read.",
                       "a second count without the arm's marked reports is written, and it decides nothing"):
             self.assertIn(words, plan)
-        self.assertIn(f"A fit ended at its cap depends on the cap: {cb.W_CAP:,} steps for the weighted mean and "
-                      f"{cb.L_CAP} Newton steps for the logistic combiner.", limits)
-        self.assertIn(f"That means, as R19 confirmed: {cb.VME_RULE}.", plan)
+        # R37: a fit at its cap had stalled at its best fit, in place of "depends on the cap"
+        self.assertIn(f"a logistic fit ended at its cap of {cb.L_CAP} Newton steps had stalled at its best fit, and 0 "
+                      "of 4,000 calls differed from a second fit's.", limits)
+        self.assertIn(f"A fold at either cap, {cb.W_CAP:,} steps for the weighted mean, still marks its report, and the "
+                      "count without marked reports decides nothing.", limits)
+        self.assertNotIn("depends on the cap", self.text)
+        self.assertIn(f"R19 confirmed the wording: {cb.VME_RULE}.", plan)
 
     def test_the_plan_states_r30s_rules(self):
         plan = self.sections["Plan"]
         for words in ("gets a coefficient of exactly 0 and is left out of that fold's fit",
                       "are fitted as one column and share its coefficient in even parts",
                       "Both rules read the stored scores as they are, with no tolerance, and both can apply in one fold",
-                      "the least sum of squares of the five coefficients", "does not depend on the learners' order",
+                      "the least sum of squares of the five coefficients",
+                      "its calls and coefficients do not depend on the learners' order",
+                      "moved 7 of 700 ends between the cap and converged",
                       "On a fold with neither case, the fit is the one before 26 Nov, to the bit",
                       "A fold with either case is not marked",
                       "that fold is not scored, and the read stops at gate 5",
@@ -114,9 +120,52 @@ class Page(unittest.TestCase):
                       f"Gate 1 stops the read unless it reads exactly those {cb.FROZEN_REPORTS} reports",
                       "A report with one fold, or a genome with no fold number, stops the read"):
             self.assertIn(words, plan)
-        self.assertEqual(cb.COUNTS_OF_RULE, ("all", "without_marked", "without_one_score_fold"))
+        self.assertEqual(cb.COUNTS_OF_RULE, ("all", "without_marked", "without_flagged"))
         self.assertEqual(cb.plan()["counts"], {"all": "decides", "without_marked": "decides nothing",
-                                               "without_one_score_fold": "decides"})
+                                               "without_flagged": "decides"})
+
+    def test_the_plan_states_r37s_rules(self):
+        plan, limits = self.sections["Plan"], self.sections["Limits"]
+        rows = re.findall(r"^\| (One score|Coefficient under 0) \((R\d+)\) \| (.+) \| (both|logistic only) \|$", plan,
+                          flags=re.M)
+        self.assertEqual([(name, ruling, arms) for name, ruling, _, arms in rows],
+                         [("One score", "R30", "both"), ("Coefficient under 0", "R37", "logistic only")])
+        self.assertEqual(cb.FLAGS, {"weighted": ("one_score_fold",),
+                                    "logistic": ("one_score_fold", "coefficient_under_0")})
+        self.assertEqual(cb.plan()["flags"], {a: list(cb.FLAGS[a]) for a in cb.ARMS})
+        self.assertIn("a coefficient under 0; a coefficient of exactly 0 does not flag", rows[1][2])
+        for words in ("the count without the arm's flagged reports decide",
+                      f"A count of under {cm.MIN_SPECIES} species has no interval, so it keeps nothing, and the arm's "
+                      "reading is no difference shown, whatever the other count gives.",
+                      "each read on the stored values with no tolerance",
+                      "A fit gains from it only by giving that learner a coefficient under 0",
+                      "The weighted mean's weights are never under 0."):
+            self.assertIn(words, plan)
+        # R37's cost and limit
+        for words in ("A coefficient under 0 also arises when two learners score nearly alike",
+                      "the arm can then read no difference shown for want of reports",
+                      "R37 accepts that cost.",
+                      "A learner whose score falls as its training share rises could carry the held-out share with a "
+                      "coefficient above 0, which the second condition does not flag. The five learners have not been "
+                      "checked for that."):
+            self.assertIn(words, limits)
+
+    def test_write_trusts_the_read(self):
+        method = self.sections["Method"]
+        self.assertIn("Write does not fit again, so write trusts the read's flags and marks. The read prints the sha256 "
+                      "of the reading it wrote, and write prints the sha256 of the reading it read", method)
+        self.assertIn("a line, `flags:`, with how many reports each condition flags and how many have both, and no "
+                      "score", method)
+        script = SCRIPT.read_text(encoding="utf-8")
+        for printed in ('wrote {READING}, sha256 {written}"', 'print(f"write: read {READING}, sha256 {digest}")',
+                        'f"flags: {len(rows)} reports; '):
+            self.assertEqual(script.count(printed), 1, printed)
+
+    def test_the_page_keeps_its_size(self):
+        # R37: 30 list items or fewer and 12 headers or fewer
+        lines = self.text.split("\n")
+        self.assertLessEqual(sum(1 for line in lines if re.match(r"^\s*(- |\d+\. )", line)), 30)
+        self.assertLessEqual(sum(1 for line in lines if line.startswith("#")), 12)
 
     def test_the_plan_names_the_logistic_stop_values(self):
         plan = self.sections["Plan"]
