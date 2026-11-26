@@ -13,7 +13,7 @@ times writes those times as one table, <times table>: per species of M, each
 step of its first-run box's logs/timing.tsv in whole seconds, rounded half
 up, with the sha256 of that timing.tsv, which must be the one the copy's
 SHA256SUMS gives it (<copies dir>/<species slug>/). The committed table is
-reference/input-arms/first-run-times.tsv, which measured reads by default.
+reference/input-arms-m/first-run-times.tsv, which measured reads by default.
 
 measured costs each species of M on one box of its own, so a box's wall
 seconds are its xlarge-seconds:
@@ -150,7 +150,7 @@ def model(lists, builds, tables_reused=False):
 
 # ---------- measured ----------
 
-TIMES = REPO / "reference" / "input-arms" / "first-run-times.tsv"
+TIMES = REPO / "reference" / "input-arms-m" / "first-run-times.tsv"
 TIMES_COLUMNS = ["species_slug", "step", "seconds", "source_sha256"]
 STUDY_ARMS = ("k31", "unitigs", "k31-counts", "k31-aa", "program", "k31-program")
 LEFT_OUT = ("m_list", "Same counts", "score.py", "second.py", "the pack", "the git archive copies",

@@ -3,7 +3,7 @@
 model reads the committed lists.tsv, page-builds.tsv and the entry C3 arms'
 cost model (docs/assumption-plan-corrections.md). measured runs on
 SYNTHETIC step tables and copies: made-up timing tables, one per species of
-M. Page reads the committed reference/input-arms/first-run-times.tsv and
+M. Page reads the committed reference/input-arms-m/first-run-times.tsv and
 holds docs/input-arms.md's Cost to what cost.py prints from it.
 """
 

@@ -163,6 +163,15 @@ Before it counts, `m_reading.py check` must give back from the record every row 
 
 **Withheld rows.** A count row of the second reading gives no figures where exactly one dataset's value in it is on no page and that dataset is counted and not shown; its `figures` column says so, and its counts of datasets stay. The record's datasets and the shown datasets of M are on a page on balanced accuracy and recall; on the other four measures no dataset of M is.
 
+**Still narrowed.** A count over datasets can still narrow a dataset that is counted and not shown, in four ways:
+
+- in a row with 2 or more such datasets, the better, worse and same counts can put all of them on one side of 0.02;
+- a median or an interval end can fall on one of their values, with no way to tell whose;
+- another row's Holm p can give back a withheld row's sign p, and with it the side of 0.02 its dataset falls on;
+- a condition met or not met in `m-conditions.tsv` and `m-both.tsv` reads over the family of 30 rows.
+
+Each gives a side of 0.02 or a value whose dataset is not named, never one dataset's figure. Withholding them would withhold the counts the entry M run reads.
+
 **Tables.** `m_reading.py count` writes five tables, each of counts per dataset and no genome:
 
 - `m-count.tsv` and `m-conditions.tsv`: each count and reading;
@@ -176,7 +185,7 @@ Before it counts, `m_reading.py check` must give back from the record every row 
 
 **Ids.** An id is read after "_" or "." and inside a longer run of points and digits, and each log is copied with every such id written as `[genome id]`. The tar holds the checked files alone, in name order, with no user, group or time stamp. Only the count tables and the page tables leave the count machine.
 
-**Cost.** `cost.py measured` estimates the run, before it starts, from the first run's own step times in `reference/input-arms/first-run-times.tsv`: 592 steps of the 9 species, in whole seconds, each row naming its box's `logs/timing.tsv` by sha256. C3's budget is 45 xlarge-hours.
+**Cost.** `cost.py measured` estimates the run, before it starts, from the first run's own step times in `reference/input-arms-m/first-run-times.tsv`: 592 steps of the 9 species, in whole seconds, each row naming its box's `logs/timing.tsv` by sha256. C3's budget is 45 xlarge-hours.
 
 - With the program's tables reused on the 8 species with a dataset of M in set A, whose first-run boxes hold them: 12.32 xlarge-hours, 197.1 core-hours, $2.46. *Mycobacterium tuberculosis* has no dataset of M in A and needs no table.
 - With the program run again on those 8: 17.02 xlarge-hours, 272.3 core-hours, $3.40.

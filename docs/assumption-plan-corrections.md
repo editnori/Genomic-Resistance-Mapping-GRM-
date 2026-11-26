@@ -990,6 +990,8 @@ An eleventh came while the text was written. The project's wording rules put rec
 
 **Small lists.** In a dataset that lists 1 genome, the first reading less the second gives back that genome's class, its calls and its scores. So a dataset's second-reading figures go on a page only where each class lists no genome or at least 5. Otherwise the page gives its first reading and its listed counts by class, and says its second reading is counted and not shown. That reading still enters every count over datasets. Five is a convention for a smallest cell; it does not prove that no genome's call can be worked out.
 
+**Count rows.** A count row of the second reading in which exactly one dataset's value is on no page gives its counts of datasets and no figure. A count over datasets can still narrow a dataset that is counted and not shown to one side of 0.02, or hold its value with no way to tell whose. It gives no one dataset's figure.
+
 **Packs.** Each species' machine packs its results with no list and no genome's score file. The packs go unopened to the one machine that takes the block's counts over all its species. Only the count tables and the page tables leave that machine.
 
 **First run.** The count over all datasets does not score the first run again. It takes the first run's rows from the block's committed record of one row per dataset. That record is its `page-datasets.tsv` under `reference/`, held to the sha256 in the block's `SHA256SUMS`. It holds balanced accuracy and recall for each pair and learner, and block C5's also holds log loss.
@@ -1016,7 +1018,7 @@ An eleventh came while the text was written. The project's wording rules put rec
 
 **Changed.** A re-check read this entry against the entry Pick rule. After it the lead changed, at 19:24Z, Same build, Block C7's binaries, Other measures, Pick and Review, and added On a difference, Genome files, Then, Block C2, Block C7's check and Mirror. No reviewer has read Block C2 or Block C7's check.
 
-**Changed again.** After the independent review of block C3's code for this run, the lead changed Code and List at 07:57Z on 26 Nov 2026 and added Small lists and Packs. No dataset of M had been fitted.
+**Changed again.** After the independent review of block C3's code for this run, the lead changed Code and List at 07:57Z on 26 Nov 2026 and added Small lists and Packs. At 09:19Z, after the code was changed for that review, the lead added Count rows. No dataset of M had been fitted.
 
 ## Label text
 
