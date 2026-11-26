@@ -140,20 +140,51 @@ export const DotStrip = ({
   ];
   const placed = placeLabels(specs, width, LABEL_ROWS);
 
-  // Named marks alternate above and below the midline, nearest first; one
-  // that would leave the band or the frame is left to its tooltip.
+  // Named marks take the nearest clear slot inside the band that stays inside
+  // the frame and overlaps neither any swarm mark nor an earlier direct label;
+  // one with no clear slot is left to its tooltip.
+  const directBoxes: { left: number; right: number; top: number; bottom: number }[] = [];
+  const labelH = 30;
+  const labelClear = (left: number, right: number, top: number, bottom: number): boolean => {
+    if (left < 2 || right > width - 2 || top < TOP + 2 || bottom > base - 4) return false;
+    if (marks.some((mm) => mm.x + R + 4 > left && mm.x - R - 4 < right && mm.y + R + 4 > top && mm.y - R - 4 < bottom)) return false;
+    if (directBoxes.some((b) => left < b.right + 6 && right > b.left - 6 && top < b.bottom + 4 && bottom > b.top - 4)) return false;
+    return true;
+  };
   const labels = named.slice(0, width < 640 ? 2 : 3).flatMap((n, k) => {
     const m = marks.find((mm) => mm.key === n.id);
     if (m === undefined) return [];
-    const above = k % 2 === 0;
-    const depth = Math.floor(k / 2) * 34;
-    const ly = above ? mid - 14 - depth : mid + 24 + depth;
-    if ((above ? mid - ly : ly - mid) + 18 > bandHalf) return [];
-    const anchor: "start" | "end" = m.x > width / 2 ? "end" : "start";
-    const lx = anchor === "end" ? m.x - 8 : m.x + 8;
     const w = Math.max(...n.lines.map(labelWidth));
-    if (anchor === "end" ? lx - w < 0 : lx + w > width) return [];
-    return [{ key: n.id, x: m.x, y: m.y, lx, ly: above ? ly - 15 : ly, lines: n.lines, anchor }];
+    const preferAbove = k % 2 === 0;
+    const preferAnchor: "start" | "end" = m.x > width / 2 ? "end" : "start";
+    const anchors: readonly ("start" | "end")[] = preferAnchor === "end" ? ["end", "start"] : ["start", "end"];
+    const offsets = [8, 16, 28, 44];
+    const ySlots: number[] = [];
+    for (let yTop = TOP + 2; yTop <= base - labelH - 4; yTop += 8) ySlots.push(yTop);
+    const tail = base - labelH - 4;
+    if (tail >= TOP + 2 && (ySlots.length === 0 || tail - ySlots[ySlots.length - 1]! > 2)) ySlots.push(tail);
+    let best: { lx: number; ly: number; anchor: "start" | "end"; left: number; right: number; top: number; bottom: number; score: number } | null = null;
+    for (const anchor of anchors) {
+      for (const dx of offsets) {
+        const lx = anchor === "end" ? m.x - dx : m.x + dx;
+        const left = anchor === "end" ? lx - w : lx;
+        const right = left + w;
+        if (left < 2 || right > width - 2) continue;
+        for (const top of ySlots) {
+          const bottom = top + labelH;
+          if (!labelClear(left, right, top, bottom)) continue;
+          const cy = (top + bottom) / 2;
+          const isAbove = cy <= mid;
+          const sidePenalty = isAbove === preferAbove ? 0 : 18;
+          const anchorPenalty = anchor === preferAnchor ? 0 : 40;
+          const score = Math.abs(cy - m.y) + dx * 0.6 + sidePenalty + anchorPenalty;
+          if (best === null || score < best.score) best = { lx, ly: top + 12, anchor, left, right, top, bottom, score };
+        }
+      }
+    }
+    if (best === null) return [];
+    directBoxes.push({ left: best.left, right: best.right, top: best.top, bottom: best.bottom });
+    return [{ key: n.id, x: m.x, y: m.y, lx: best.lx, ly: best.ly, lines: n.lines, anchor: best.anchor }];
   });
 
   return (

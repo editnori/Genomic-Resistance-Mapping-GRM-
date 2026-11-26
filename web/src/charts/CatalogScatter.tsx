@@ -9,7 +9,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import type { CatalogRow } from "../data/schema";
 import { datasetTitle, int, pct } from "../data/format";
 import { CATALOG_CUTOFF, catalogDiff, catalogSummary, uniformCall, type UniformCall } from "../data/derive/overview";
-import { AxisX, AxisY, HALO, LABEL_CLASS, linear, MarkListbox, RefLineH, ticks, useSvgId, useWidth, type ListMark } from "./kit";
+import { AxisX, AxisY, LABEL_CLASS, labelWidth, linear, MarkListbox, RefLineH, ticks, useSvgId, useWidth, type ListMark } from "./kit";
 
 const R = 4;
 
@@ -61,16 +61,46 @@ export const CatalogScatter = ({ rows, height, onOpen }: { rows: readonly Catalo
   const compared = rows.filter((r) => catalogDiff(r) !== null);
   const all = compared.flatMap((r) => [r.catalog!.balanced_accuracy, r.best_lineage!]);
   const lo = Math.max(0, Math.floor(Math.min(0.5, ...all) * 10) / 10);
-  // The axis title, and the legend when it sits below, reserve their actual
-  // height; beside the plot the legend takes width instead.
-  const side = Math.max(160, Math.min(wide ? Math.min(560, avail - LEGEND_W - 40) : avail, height === undefined ? 520 : height - footerHeight));
-  const pad = { l: 46, r: 10, t: 22, b: 34 };
-  const width = side;
-  const plotH = side - pad.t - pad.b;
-  const x = linear([lo, 1], [pad.l, width - pad.r]);
+  // Keep the plot box strictly square (plot width === plot height) at every
+  // viewport because both axes share one scale and the 45-degree diagonal is
+  // the comparison. Header rows sit above the plot box and never squash it.
+  const { ahead, within, behind } = summary.regions;
+  const cut = Math.round(CATALOG_CUTOFF * 100);
+  const aheadText = `${int(ahead)} ahead by more than ${cut}`;
+  const withinText = `${int(within)} within ${cut} points`;
+  const behindText = `${int(behind)} behind by more than ${cut}`;
+  const padL = 40;
+  const padR = 18;
+  const padB = 30;
+  const wAhead = labelWidth(aheadText);
+  const wWithin = labelWidth(withinText);
+  const wBehind = labelWidth(behindText);
+  const maxSvgW = Math.max(160, wide ? Math.min(560, avail - LEGEND_W - 40) : avail);
+  const maxPlotW = Math.max(80, Math.min(maxSvgW - padL - padR, height === undefined ? 464 : Infinity));
+  let chosen: { plot: number; width: number; headX: number; oneRow: boolean; twoRow: boolean; padT: number } | null = null;
+  for (const rowsCount of [1, 2, 3] as const) {
+    const padT = 20 + rowsCount * 16 + 8;
+    const maxPlotH = height === undefined ? maxPlotW : Math.max(80, height - footerHeight - padT - padB);
+    const plot = Math.max(80, Math.min(maxPlotW, maxPlotH));
+    const w = plot + padL + padR;
+    const headX = w < 300 ? 2 : padL;
+    const headSpan = Math.max(0, w - padR - headX);
+    const oneRow = wAhead + wWithin + wBehind + 24 <= headSpan;
+    const twoRow = !oneRow && wAhead + wWithin + 10 <= headSpan;
+    const needed = oneRow ? 1 : twoRow ? 2 : 3;
+    if (needed <= rowsCount && (chosen === null || plot > chosen.plot)) {
+      chosen = { plot, width: w, headX, oneRow: rowsCount === 1, twoRow: rowsCount === 2, padT };
+    }
+  }
+  const { plot, width, headX, oneRow: oneRowRegions, twoRow: twoRowRegions, padT } = chosen!;
+  const pad = { l: padL, r: padR, t: padT, b: padB };
+  const plotH = plot;
+  const svgHeight = pad.t + plotH + pad.b;
+  const yTitle = labelWidth("Known-gene rule, balanced accuracy (%)") <= width - headX - 2 ? "Known-gene rule, balanced accuracy (%)" : "Known-gene rule (%)";
+  const x = linear([lo, 1], [pad.l, pad.l + plot]);
   const y = linear([lo, 1], [pad.t + plotH, pad.t]);
   const clip = useSvgId("catalog-plot");
-  const values = ticks(lo, 1, side < 320 ? 3 : 6);
+  const values = ticks(lo, 1, plot < 260 ? 3 : 6);
   const band = `M${x(lo)},${y(lo - CATALOG_CUTOFF)} L${x(1)},${y(1 - CATALOG_CUTOFF)} L${x(1)},${y(1 + CATALOG_CUTOFF)} L${x(lo)},${y(lo + CATALOG_CUTOFF)} Z`;
   const marks: (ListMark & { call: UniformCall | null })[] = compared
     .map((r) => {
@@ -99,7 +129,6 @@ export const CatalogScatter = ({ rows, height, onOpen }: { rows: readonly Catalo
       };
     })
     .sort((a, b) => a.x - b.x || a.y - b.y);
-  const { ahead, within, behind } = summary.regions;
   const axisTitle = (
     <p className="pt-1 text-center text-tiny text-muted-text" style={{ width }}>
       Best learner with lineages held out, balanced accuracy (%). Higher is better on both axes.
@@ -143,32 +172,60 @@ export const CatalogScatter = ({ rows, height, onOpen }: { rows: readonly Catalo
           onOpen={onOpen === undefined ? undefined : (i) => onOpen(marks[i]!.key)}
           after={wide ? <div ref={footerRef}>{axisTitle}</div> : undefined}
         >
-          <svg aria-hidden="true" width={width} height={side} className="block overflow-visible">
+          <svg aria-hidden="true" width={width} height={svgHeight} className="block overflow-visible">
             <defs>
               <clipPath id={clip}>
                 <rect x={pad.l} y={pad.t} width={width - pad.l - pad.r} height={plotH} />
               </clipPath>
             </defs>
+            <text x={headX} y={13} className="fill-[rgb(var(--muted-text))] text-[12px]">
+              {yTitle}
+            </text>
+            {oneRowRegions ? (
+              <>
+                <text x={headX} y={31} className={`${LABEL_CLASS} font-medium`}>
+                  {aheadText}
+                </text>
+                <text x={headX + wAhead + 12} y={31} className={`${LABEL_CLASS} font-medium`}>
+                  {withinText}
+                </text>
+                <text x={width - pad.r} y={31} textAnchor="end" className={`${LABEL_CLASS} font-medium`}>
+                  {behindText}
+                </text>
+              </>
+            ) : twoRowRegions ? (
+              <>
+                <text x={headX} y={31} className={`${LABEL_CLASS} font-medium`}>
+                  {aheadText}
+                </text>
+                <text x={width - pad.r} y={31} textAnchor="end" className={`${LABEL_CLASS} font-medium`}>
+                  {withinText}
+                </text>
+                <text x={headX} y={47} className={`${LABEL_CLASS} font-medium`}>
+                  {behindText}
+                </text>
+              </>
+            ) : (
+              <>
+                <text x={headX} y={31} className={`${LABEL_CLASS} font-medium`}>
+                  {aheadText}
+                </text>
+                <text x={headX} y={47} className={`${LABEL_CLASS} font-medium`}>
+                  {withinText}
+                </text>
+                <text x={headX} y={63} className={`${LABEL_CLASS} font-medium`}>
+                  {behindText}
+                </text>
+              </>
+            )}
             <AxisY y={y} x0={pad.l} x1={width - pad.r} values={values} format={(v) => `${Math.round(v * 100)}`} />
             <AxisX x={x} y={pad.t + plotH} height={0} values={values} format={(v) => `${Math.round(v * 100)}`} />
             <path d={band} fill="rgb(var(--ink) / 0.06)" clipPath={`url(#${clip})`} />
             <line x1={x(lo)} y1={y(lo)} x2={x(1)} y2={y(1)} stroke="var(--chart-axis)" clipPath={`url(#${clip})`} />
-            <text transform={`translate(12 ${pad.t + plotH / 2}) rotate(-90)`} textAnchor="middle" className="fill-[rgb(var(--muted-text))] text-[12px]">
-              Known-gene rule, balanced accuracy (%)
-            </text>
             {marks.map((m) => (
               <g key={m.key} data-dataset={m.key}><CatalogMark call={m.call} x={m.x} y={m.y} /></g>
             ))}
             {lo < 0.5 ? <RefLineH y={y(0.5)} x0={pad.l} x1={width - pad.r} /> : null}
-            <text x={pad.l + 6} y={pad.t + 14} className={`${LABEL_CLASS} font-medium`} {...HALO}>
-              {`${int(ahead)} ahead by more than ${Math.round(CATALOG_CUTOFF * 100)}`}
-            </text>
-            <text x={width - pad.r} y={pad.t - 8} textAnchor="end" className={`${LABEL_CLASS} font-medium`} {...HALO}>
-              {`${int(within)} within ${Math.round(CATALOG_CUTOFF * 100)} points`}
-            </text>
-            <text x={width - pad.r - 6} y={pad.t + plotH - 10} textAnchor="end" className={`${LABEL_CLASS} font-medium`} {...HALO}>
-              {`${int(behind)} behind by more than ${Math.round(CATALOG_CUTOFF * 100)}`}
-            </text>
           </svg>
         </MarkListbox>
       </div>

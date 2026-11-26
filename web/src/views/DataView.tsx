@@ -262,7 +262,7 @@ const LabelsSection = ({ manifest }: { manifest: Manifest }) => {
       <Detail>
         Every learner trains and is scored on genomes with a reported resistant (R) or susceptible (S) lab call for the drug and no conflicting call, and the known-gene rules, panels, and MIC
         regression are scored on the same genomes. A genome and antibiotic pair with both an R and an S call is a conflict and gets no label; a pair with only intermediate calls is never
-        an R or S label.
+        an R or S label. A pair called susceptible and intermediate is labeled susceptible, and a pair called intermediate and resistant is labeled resistant.
       </Detail>
       <ClindamycinMethods manifest={manifest} />
       <Detail>

@@ -383,7 +383,7 @@ const STUDY_STEPS: readonly { title: string; text: string; section: string; to: 
   {
     title: "Collect genomes and lab results",
     text: "Genomes and their lab results come from BV-BRC, a public database. For each genome, a lab grew the bacterium next to one antibiotic and reported it resistant (R) if it kept growing or susceptible (S) if the drug stopped it.",
-    section: "Data, Curation funnel and inclusion",
+    section: "Data, Curation funnel",
     to: "m-funnel",
     inData: true,
   },
