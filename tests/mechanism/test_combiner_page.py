@@ -47,6 +47,11 @@ class Page(unittest.TestCase):
     def test_the_fixed_words_stand_in_the_limits(self):
         for words in FIXED:
             self.assertIn(words, self.sections["Limits"])
+        # FREEZE-COMBINE's caveat, which the page must state in its own words
+        for words in ("not one fixed model's outputs across folds", "a reweighting of the release's own per-fold "
+                      "predictions, not as a model that could be shipped unchanged", "would need a refit of the base "
+                      "learners inside one fold structure and the maintainer's word under R4"):
+            self.assertIn(words, self.sections["Limits"])
 
     def test_no_difference_shown_is_never_written_as_equal(self):
         rest = self.text.replace("\"equal\"", "")

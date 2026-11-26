@@ -1,6 +1,6 @@
 # Combiner result
 
-Can a combination of the five learners call the resistant genomes their mean misses? On the learner overlap's page (`docs/learner-overlap-result.md`), the second pass counts the resistant genomes the five learners' mean misses at the release's 0.5 cutoff, split by how many of the five miss each one. This page asks whether a weighted mean of the five, or a logistic combiner on their five scores, recovers some of the misses that only some of the five make, without calling more susceptible genomes resistant than it gains.
+Can a combination of the five learners call the resistant genomes their mean misses? On the learner overlap's page (`docs/learner-overlap-result.md`), the second pass counts the resistant genomes the five learners' mean misses at the release's 0.5 cutoff, split by how many of the five miss each one. This page asks whether a weighted mean of the five, or a logistic combiner on their five scores, beats that mean on the same split without raising the very major error rate, and how many of the misses that only some of the five make it recovers.
 
 It reads the stored held-out scores of the release's lineage split and fits only the two combiners, on the genomes of the other folds. It trains no learner and scores no genome with a learner again.
 
@@ -20,7 +20,7 @@ This plan follows FREEZE-COMBINE and was committed with its script and tests, be
 - **Measures.** Per report and form: the counts at the cutoff, the balanced accuracy, recall, specificity and very major error rate worked from them, and the mean log loss. The very major error rate is the resistant genomes called susceptible over the resistant genomes, as the release's `vme`.
 - **Decision.** An arm is kept only if the median over the reports of its balanced accuracy less the incumbent's is 0.02 or more, the species-clustered interval of that median lies wholly above 0, and the very major error rate is not higher on that interval. That means, as R19 confirmed: the species-clustered interval of the median change in the very major error rate does not lie wholly above 0. Otherwise the reading is no difference shown.
 - **Interval.** 4,000 resamples of species, the median of each resample's reports, and the 101st and 3,900th of the sorted medians. Each row's resamples are drawn from a generator seeded by the sha256 of the row's own name. A set of under 6 species gets no interval.
-- **Predictions, counted and not judged.** The reports where each arm gains 0.02 or more, and the counts better, worse and the same at that margin. Of the resistant genomes the incumbent misses, how many each arm calls, split into those 1 to 4 of the five call and those none of the five calls. The weighted mean cannot call a genome none of the five calls, since its score lies within the five. Of the susceptible genomes the incumbent calls resistant, how many each arm does not, and how many susceptible genomes each arm newly calls resistant.
+- **Predictions, counted and not judged.** The reports where each arm gains 0.02 or more, and the counts better, worse and the same at that margin. Of the resistant genomes the incumbent misses, how many each arm calls, split into those 1 to 4 of the five call and those none of the five calls. The weighted mean cannot call a genome none of the five calls, since its score lies within the five. The logistic combiner has an intercept and no such bound: it can call a genome none of the five calls only by moving what amounts to its operating point, which shows up as susceptible genomes called resistant. Of the susceptible genomes the incumbent calls resistant, how many each arm does not, and how many susceptible genomes each arm newly calls resistant.
 - **Beside.** Recall, specificity and log loss stand beside the decision and change nothing. The page gives the reports pooled and by species, and a gain on one species changes nothing.
 
 ## Reading
@@ -30,6 +30,8 @@ Not read yet.
 ## Limits
 
 **Words.** A lineage split is a retrospective split inside one database, never external validation. "No difference shown" is never written as "equal". The error levels serve as an adapted research screen and are never an applicable FDA validation criterion. Coverage is the share of genomes answered, not accuracy.
+
+**Per-fold inputs.** Each fold's stored scores come from base learners trained on that fold's own training genomes, so the five inputs are not one fixed model's outputs across folds. Each combiner is read as a reweighting of the release's own per-fold predictions, not as a model that could be shipped unchanged. The base learners are never refitted here. If an arm is kept, shipping it would need a refit of the base learners inside one fold structure and the maintainer's word under R4, a separate decision.
 
 **One draw.** The read uses the release's own lineage folds, the only folds whose per-genome held-out scores are stored. The learner overlap's page counted these scores, labels and folds before this plan was written.
 

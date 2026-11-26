@@ -229,6 +229,11 @@ class Forms(unittest.TestCase):
         self.assertEqual((plan["cutoff"], plan["clip"], plan["margin"]), (0.5, 1e-4, 0.02))
         self.assertEqual((plan["resamples"], plan["interval_values"], plan["min_species"]), (4000, [101, 3900], 6))
         self.assertEqual(plan["incumbent"], "math.fsum(five scores) >= 2.5")
+        # R19's stop rule: a full backtracking search, down to a step of 1e-20, from the equal weights, capped at 5,000
+        # steps; Newton's method with no penalty, capped at 100 steps
+        w, lg = plan["weighted_fit"], plan["logistic_fit"]
+        self.assertEqual((w["cap"], w["start"], w["step_floor"]), (5000, "equal weights", 1e-20))
+        self.assertEqual((lg["cap"], lg["penalty"]), (100, None))
 
 
 class Fits(unittest.TestCase):
@@ -298,6 +303,9 @@ class Fits(unittest.TestCase):
         self.assertAlmostEqual(cb.weighted_loss_grad([0.2] * 5, groups)[0], -math.log(0.64), places=12)
         self.assertAlmostEqual(cb.weighted_loss_grad([1.0, 0, 0, 0, 0], groups)[0], -math.log(cb.CLIP), places=12)
         self.assertLess(cb.weighted_loss_grad(cb.fit_weighted(groups)[0], groups)[0], -math.log(0.64))
+        # only a strictly lower loss is taken: a point of the same loss ends the search
+        self.assertFalse(cb.lower(0.3, 0.3))
+        self.assertTrue(cb.lower(0.29, 0.3))
 
 
 class Crossfit(Case):
@@ -307,6 +315,17 @@ class Crossfit(Case):
             _, recs = cb.crossfit(arm, S, y, folds)
             self.assertEqual([(r["fold"], r["trained"], r["tested"], r["shared"]) for r in recs],
                              [(f, 108, 27, 0) for f in range(5)])
+        # what the fit receives, not only the fold record: flip every label of one fold, and that fold's held-out
+        # scores do not move by one bit, while the other folds' do
+        for arm in cb.ARMS:
+            before, _ = cb.crossfit(arm, S, y, folds)
+            for f in range(5):
+                flipped = [(not t) if g == f else t for t, g in zip(y, folds)]
+                after, _ = cb.crossfit(arm, S, flipped, folds)
+                self.assertEqual([p for p, g in zip(after, folds) if g == f],
+                                 [p for p, g in zip(before, folds) if g == f], (arm, f))
+                self.assertNotEqual([p for p, g in zip(after, folds) if g != f],
+                                    [p for p, g in zip(before, folds) if g != f], (arm, f))
 
     def test_gate_2_counts_no_shared_genome_on_the_standard_read(self):
         _, (rc, out) = self.read()
@@ -317,7 +336,12 @@ class Crossfit(Case):
 
 class Counts(Case):
     def test_the_rf_led_report(self):
-        self.read_write()
+        # each genome's catalogue call is the opposite of its label: no count below moves, since no catalogue call
+        # enters a fit or a count
+        reports = kept_set()
+        for rep in reports:
+            rep.catalog = [not t for t in rep.labels]
+        self.read_write(reports)
         r = self.rows()[(SPECIES[0], "drug a")]
         self.assertEqual({k: r[k] for k in ("genomes", "resistant", "susceptible", "mean_miss_by_1to4",
                                             "mean_miss_by_all5")},
@@ -331,6 +355,14 @@ class Counts(Case):
             self.assertEqual(r[f"{arm}_marked"], "no")
         # weighted: 6 genomes at -log 0.2 and 21 at -log 0.8 per copy of 27
         self.assertAlmostEqual(float(r["weighted_log_loss"]), (6 * math.log(5) + 21 * math.log(1.25)) / 27, places=10)
+        # transitions.tsv over all six reports: 420 resistant, all missed by the incumbent, 390 by 1 to 4 of the five
+        # and 30 by all five; 390 susceptible, none called by the incumbent; each arm recovers 270 and newly calls 30
+        cols = ("datasets", "resistant", "mean_miss", "mean_miss_by_1to4", "mean_miss_by_all5", "susceptible",
+                "mean_wrong") + cb.TRANSITIONS
+        got = {t["arm"]: [t[k] for k in cols] for t in lo.read_tsv(os.path.join(self.record, "transitions.tsv"))
+               if t["scope"] == "all"}
+        want = ["6", "420", "420", "390", "30", "390", "0", "270", "0", "0", "0", "30"]
+        self.assertEqual(got, {arm: want for arm in cb.ARMS})
 
     def test_the_symmetric_report(self):
         self.read_write(mixed_set())
@@ -373,6 +405,13 @@ class Rule(Case):
     def test_a_higher_vme_blocks_the_arm(self):
         self.assertFalse(cb.keep(0.03, 0.01, 0.001))
         self.assertTrue(cb.keep(0.03, 0.01, 0.0))
+        # the rule reads the lower end of the interval: in 4 species the arm gains 0.3 and its very major error rate
+        # falls by 0.1, in 3 it gains 0.2 and the rate rises by 0.1. The interval of the change runs from -0.1 to 0.1,
+        # so it does not lie wholly above 0, and the arm is kept
+        rows = ([dataset_like(SPECIES[i], (5, 5, 5, 5), (6, 4, 0, 10)) for i in range(4)]
+                + [dataset_like(SPECIES[i], (5, 5, 5, 5), (4, 6, 0, 10)) for i in range(4, 7)])
+        got = cb.rule(rows, "weighted")
+        self.assertEqual((got["median_gain"], got["vme_lo"], got["vme_hi"], got["reading"]), (0.3, -0.1, 0.1, "kept"))
 
     def test_kept_and_no_difference_shown(self):
         # six reports gaining 103/364 in balanced accuracy each, the very major error rate down by 9/14 each
@@ -484,17 +523,21 @@ class Gates(Case):
         self.assertTrue(gate_line(out, 2).endswith(": STOP"), out)
 
     def test_gate_3_stops_on_an_incumbent_that_differs_from_vote_tsv(self):
-        def one_more_miss(d):
-            path = os.path.join(self.second, "vote.tsv")
-            with open(path, encoding="utf-8") as f:
-                head = f.readline().rstrip("\n").split("\t")
-            rows = lo.read_tsv(path)
-            rows[0]["mean_miss"] = str(int(rows[0]["mean_miss"]) + 1)
-            lo.write_tsv(path, head, rows)
+        # each of the four counts gate 3 compares, one more in vote.tsv, on a fresh set of records each time
+        for column in ("mean_miss", "mean_wrong", "mean_miss_by_1to4", "mean_miss_by_all5"):
+            def one_more(d, column=column):
+                path = os.path.join(self.second, "vote.tsv")
+                with open(path, encoding="utf-8") as f:
+                    head = f.readline().rstrip("\n").split("\t")
+                rows = lo.read_tsv(path)
+                rows[0][column] = str(int(rows[0][column]) + 1)
+                lo.write_tsv(path, head, rows)
 
-        _, (rc, out) = self.read(before=one_more_miss)
-        self.assertEqual(rc, 1, out)
-        self.assertTrue(gate_line(out, 3).endswith(": STOP"), out)
+            _, (rc, out) = self.read(before=one_more)
+            self.assertEqual(rc, 1, (column, out))
+            self.assertTrue(gate_line(out, 3).endswith(": STOP"), (column, out))
+            self.tearDown()
+            self.setUp()
 
     def test_gate_4_stops_on_weights_off_the_simplex(self):
         with mock.patch.object(cb, "fit_weighted", lambda groups: ([0.3] * 5, 1, "converged")):
