@@ -222,7 +222,7 @@ Before it counts, `m_reading.py check` must give back from the record every row 
 - *Enterococcus faecium*'s study fits are counted: plus 0.007;
 - whole seconds: less 0.002.
 
-**Tests.** `tests/c3_inputs/test_m_*.py` holds 240 tests of this run, on SYNTHETIC fits, score files, reports, lists, species directories, tables, logs and timing copies, and on the committed `lists.tsv`, `page-binaries.tsv`, `page-datasets.tsv`, `page-count.tsv`, `page-conditions.tsv`, `first-run-times.tsv`, `reference/input-arms-m`, C3 arms entry and every page under `docs/`. `scripts/c3-inputs/m_faults.py` plants 263 faults, at least one for each new rule, one at a time in a copy of the tree, and runs the test of each fault's rule, which must fail.
+**Tests.** `tests/c3_inputs/test_m_*.py` holds 240 tests of this run, on SYNTHETIC fits, score files, reports, lists, species directories, tables, logs and timing copies, and on the committed `lists.tsv`, `page-binaries.tsv`, `page-datasets.tsv`, `page-count.tsv`, `page-conditions.tsv`, `first-run-times.tsv`, `reference/input-arms-m`, C3 arms entry and every page under `docs/`. `scripts/c3-inputs/m_faults.py` plants 264 faults, at least one for each new rule, one at a time in a copy of the tree, and runs the test of each fault's rule, which must fail.
 
 ## What it does not do
 

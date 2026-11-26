@@ -9,7 +9,7 @@ The run on the datasets of M's own rules: the list and the floor
 (run_m.sh), the record and the two pages written from it (m_page.py,
 faults G1 to G27, G29 to G45, G51 to G54, G63 to G89 and G99 to G145) and
 the test that ties the record to the pages (test_m_record.py, faults G46
-to G48, G50, G55, G57, G90, G94, G95, G97, G98 and G146 to G162). G28,
+to G48, G50, G55, G57, G90, G94, G95, G97, G98 and G146 to G163). G28,
 G49, G56, G58 to G62, G91 to G93 and G96 planted in code that ruling R47
 took out; their numbers are not used again. Copies this checkout's
 scripts/, tests/, reference/ and docs/ to <out dir>/tree, a plain copy, so
@@ -1117,8 +1117,12 @@ FAULTS = [
      "        pass\n",
      f"{T}record.CountTaken.test_count_refuses_a_row_of_a_table_that_stays_in_the_record_on_any_page"),
     ("G162", "page record test", "the cells read on the design and result pages alone", RECORD_TEST,
+     'for p in sorted((root / "docs").rglob("*.md")) if',
+     'for p in sorted((root / "docs").rglob("input-arms*.md")) if',
+     f"{T}record.FloorTaken.test_floor_reads_each_line_of_another_page_as_cells"),
+    ("G163", "page record test", "the cells read on the pages at the top of docs/ alone", RECORD_TEST,
+     'for p in sorted((root / "docs").rglob("*.md")) if',
      'for p in sorted((root / "docs").glob("*.md")) if',
-     'for p in sorted((root / "docs").glob("input-arms*.md")) if',
      f"{T}record.FloorTaken.test_floor_reads_each_line_of_another_page_as_cells"),
 ]
 

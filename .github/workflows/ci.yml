@@ -288,7 +288,7 @@ jobs:
           # functions of run_m.sh on SYNTHETIC files, and read the committed reference/input-arms, reference/input-arms-m, scripts/c3-inputs/lists.tsv, run_species.sh
           # and every page under docs/. test_m_record.py checks every page under docs/ against reference/input-arms-m in the state the record is in, the two pages
           # m_page.py writes byte for byte and every other page as cells, and the other two states on SYNTHETIC copies of the tree.
-          # test_m_faults.py reads scripts/c3-inputs/m_faults.py, its 263 faults and the files they plant in. The test of the changed commit's diff needs both commits and this
+          # test_m_faults.py reads scripts/c3-inputs/m_faults.py, its 264 faults and the files they plant in. The test of the changed commit's diff needs both commits and this
           # checkout holds one, so it skips here; run_m.sh makes the same check on the box before any build.
           - suite: tests/c3_inputs
             top: .

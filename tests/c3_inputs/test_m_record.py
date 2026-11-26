@@ -10,10 +10,11 @@ whole from it, and this test compares each with its bytes:
 - count: all 7 tables; both written pages are the bytes `m_page.py left` and `m_page.py page` give; the result page
   names the count page; and every file equals its SHA256SUMS line, which SHA256SUMS lists once each.
 
-Every other page under docs/ is read line by line as cells: the line stripped, one outer pipe on each side dropped
-when there, the rest split on pipes and each cell stripped. No line of 2 or more cells may be the header of a table of
-this run, in any state; after the floor, nor a row of the left-out or species table; after the count, nor a row of any
-table print gives, nor of any count in the page's forms on any split and measure, which hold the written pages' rows.
+Every other page under docs/, in its subdirectories too, is read line by line as cells: the line stripped, one
+outer pipe on each side dropped when there, the rest split on pipes and each cell stripped. No line of 2 or more
+cells may be the header of a table of this run, in any state; after the floor, nor a row of the left-out or species
+table; after the count, nor a row of any table print gives, nor of any count in the page's forms on any split and
+measure, which hold the written pages' rows.
 No check reads Markdown.
 
 The committed tree is checked in the state its record gives. The other states are proven on copies of the tree's
@@ -37,6 +38,8 @@ m_page = m_tables.m_page
 RECORD = Path("reference") / "input-arms-m"
 ARMS = "docs/input-arms.md"
 RESULT = "docs/input-arms-result.md"
+# A made-up page two directories below docs/, which the record test reads as it reads a page at the top.
+BELOW = "docs/made-up/below/page.md"
 LEFT, COUNT = m_page.LEFT_PAGE, m_page.COUNT_PAGE
 # The written pages each state may hold, which the record gives, and the command that gives each.
 WRITTEN = {"none": (), "floor": (LEFT,), "count": (LEFT, COUNT)}
@@ -93,7 +96,7 @@ def check_tree(root, lists=None):
         if (root / name).exists() and name not in WRITTEN[state]:
             raise Off(f"{name} exists, and the record in the state {state} cannot give it")
     pages = {p.relative_to(root).as_posix(): p.read_text(encoding="utf-8")
-             for p in sorted((root / "docs").glob("*.md")) if p.relative_to(root).as_posix() not in GIVES}
+             for p in sorted((root / "docs").rglob("*.md")) if p.relative_to(root).as_posix() not in GIVES}
     arms, result = pages[ARMS], pages[RESULT]
     if state == "none":
         have = sorted(p.name for p in record.iterdir())
@@ -147,9 +150,11 @@ def lay_out(root, source):
     """A copy at <root>: <source>'s pages but the two written ones, its record's README.md and first-run-times.tsv
     alone, its m_page.py and pack.py, and a SYNTHETIC lists.tsv, whose path it returns."""
     (root / "docs").mkdir(parents=True)
-    for p in (Path(source) / "docs").glob("*.md"):
-        if f"docs/{p.name}" not in GIVES:
-            shutil.copy(p, root / "docs" / p.name)
+    for p in (Path(source) / "docs").rglob("*.md"):
+        name = p.relative_to(source).as_posix()
+        if name not in GIVES:
+            (root / name).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy(p, root / name)
     record = root / RECORD
     record.mkdir(parents=True)
     for name in ("README.md", "first-run-times.tsv"):
@@ -275,14 +280,15 @@ class Committed(unittest.TestCase):
         heads = {tuple(h) for h in m_page.headers()}
         self.assertEqual(len(heads), 11)
         seen = 0
-        for p in sorted((common.ROOT / "docs").glob("*.md")):
-            if f"docs/{p.name}" in GIVES:
+        for p in sorted((common.ROOT / "docs").rglob("*.md")):
+            name = p.relative_to(common.ROOT).as_posix()
+            if name in GIVES:
                 continue
             lines = p.read_text(encoding="utf-8").split("\n")
             for n, line in enumerate(lines[1:], 2):
                 if line.startswith("|") and all(RULE.fullmatch(c) for c in cells(line)):
                     seen += 1
-                    self.assertNotIn(cells(lines[n - 2]), heads, f"{p.name} line {n - 1}")
+                    self.assertNotIn(cells(lines[n - 2]), heads, f"{name} line {n - 1}")
         self.assertGreater(seen, 0)
 
 
@@ -291,7 +297,7 @@ class BeforeTheRun(Copy):
 
     def setUp(self):
         super().setUp()
-        for p in (self.root / "docs").glob("*.md"):
+        for p in (self.root / "docs").rglob("*.md"):
             p.unlink()
         self.page(ARMS).write_text("# SYNTHETIC\n\n**Not run.** The run has not happened.\n", encoding="utf-8")
         self.page(RESULT).write_text("# SYNTHETIC\n\n**Labels.** The 6 datasets of M wait for a rule.\n",
@@ -328,6 +334,15 @@ class BeforeTheRun(Copy):
                     n = self.add(RESULT, [line, "|---|---|"])
                     self.off(f"^{RESULT} line {n} holds the cells of a header of this run's tables$")
                     self.page(RESULT).write_text(kept, encoding="utf-8")
+        # The same on a page two directories below docs/.
+        self.page(BELOW).parent.mkdir(parents=True)
+        self.page(BELOW).write_text("# SYNTHETIC\n", encoding="utf-8")
+        for h in m_page.headers():
+            with self.subTest(header=h[:2], name=BELOW):
+                n = self.add(BELOW, ["| " + " | ".join(h) + " |", "|---|---|"])
+                self.off(f"^{BELOW} line {n} holds the cells of a header of this run's tables$")
+                self.page(BELOW).write_text("# SYNTHETIC\n", encoding="utf-8")
+        self.assertEqual(check_tree(self.root, self.lists), "none")
         self.assertEqual(check_tree(self.root, self.lists), "none")
 
 
@@ -381,8 +396,11 @@ class FloorTaken(Copy):
 
     def test_floor_reads_each_line_of_another_page_as_cells(self):
         # A row of the left-out table in each form a copy may give it, on each page but the written ones.
+        # One of them stands two directories below docs/, where a page is read as well.
         left = self.to_floor().decode("utf-8").split("\n")
-        for name in (ARMS, RESULT, "docs/ci.md"):
+        self.page(BELOW).parent.mkdir(parents=True)
+        self.page(BELOW).write_text("# SYNTHETIC\n", encoding="utf-8")
+        for name in (ARMS, RESULT, "docs/ci.md", BELOW):
             for line in forms(left[8]):
                 with self.subTest(name=name, line=line):
                     path = self.page(name)
@@ -514,12 +532,17 @@ class CountTaken(Copy):
         lines = [line for line in page + left if line.startswith("|")]
         self.assertEqual(len(lines), 363 + 8 * 2 + 3 + 2)
         self.assertLessEqual(table_cells(lines), heads | rows)
-        for line in (page[-4], left[-2]):
-            path = self.page(RESULT)
-            kept = path.read_text(encoding="utf-8")
-            n = self.add(RESULT, [line])
-            self.off(f"^{RESULT} line {n} holds the cells of a row of this run's tables$")
-            path.write_text(kept, encoding="utf-8")
+        self.page(BELOW).parent.mkdir(parents=True)
+        self.page(BELOW).write_text("# SYNTHETIC\n", encoding="utf-8")
+        for name in (RESULT, BELOW):
+            for line in (page[-4], left[-2]):
+                with self.subTest(name=name, line=line[:30]):
+                    path = self.page(name)
+                    kept = path.read_text(encoding="utf-8")
+                    n = self.add(name, [line])
+                    self.off(f"^{name} line {n} holds the cells of a row of this run's tables$")
+                    path.write_text(kept, encoding="utf-8")
+        self.assertEqual(check_tree(self.root, self.lists), "count")
 
     def test_count_refuses_a_left_out_table_changed_on_the_design_page(self):
         self.to_count()
