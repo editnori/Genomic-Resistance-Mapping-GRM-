@@ -849,7 +849,7 @@ An eleventh came while the text was written. The project's wording rules put rec
 
 **Size.** A candidate must also be better on more than half of the datasets that enter the count over all its block's datasets, in each of the two readings. Better is the block's own count: more than 0.02 in lineage balanced accuracy, at 12 decimals. A dataset enters as that count enters it, and the entry M run fixes how a dataset of M enters the second reading.
 
-**Floor's effect.** A dataset of M that the floor of the entry M run leaves out of the second reading leaves that reading's count, which can move the size rule either way in that reading. The first reading takes every dataset, so no candidate passes that fails there. The floor is counted before any score is read.
+**Floor's effect.** A dataset of M that the entry M run leaves out of the second reading, under its floor or for a short list, leaves that reading's count. That can move the size rule either way in that reading. The first reading takes every dataset, so no candidate passes that fails there. The run counts both the floor and the lists before it reads any score.
 
 **Learners.** The size rule holds for each learner the candidate touches. A candidate that touches all five needs it for at least 3 learners, the same in both readings, that carry the change on that count.
 
@@ -936,13 +936,17 @@ An eleventh came while the text was written. The project's wording rules put rec
 
 **Own rules.** Blocks C1 and D0 do not read by conditions 1 to 5, and C1 scores cohorts smaller than the floor below by design. Each fixes, in an entry of its own before its datasets of M run, how the second reading meets its rule.
 
-**Lineage curve.** Its second reading fits nothing. It follows the page's own method, with those genomes left out of the resistant genomes it reads. It keeps the page's own floors: no curve and no share over fewer than 5 resistant genomes.
+**Lineage curve.** Its second reading fits nothing. It follows the page's own method, with those genomes left out of the resistant genomes it reads. It keeps the page's own floors: no curve and no share over fewer than 5 resistant genomes. The lead makes it only for a report that lists at least 5 resistant genomes. A report that lists none reads the same both ways. One that lists 1 to 4 keeps its one reading.
+
+**Curve limit.** For a report that lists 1 to 4, the page gives the listed count and the limit it sets. Each count of resistant genomes, in all or in one lineage group, can fall by at most the listed count, and so can the count with no graded variant. The graded variants are not counted again.
+
+**Curve sentences.** A sentence on such a report stays only if it is true at every count inside that limit, and so in both readings. This rule is the curve's own. The curve counts genomes and scores none, so the limit is true whatever the second reading is. Left out, below, stands for every dataset a model scores.
 
 **Arms.** Each block runs on M every arm its first run fitted, with the default and the twin, at the first run's seeds and arguments. An arm withdrawn before the first run stays withdrawn, with its pairs at p = 1.
 
 **Arms by block.** Block C4's list names no arm for its datasets of M, so they take the arms of its first-run datasets. Block C7's default and twin come from block C3's run, as on its first run. Each block's datasets of M in set S run the study split. That includes block C7's, whose list gives them none today.
 
-**Code.** The run on M changes code in each block, and each change is reviewed before it runs. Today the run scripts of blocks C2, C3, C4, C5, C7 and C9 refuse a dataset of M. So do the six blocks' page-table gates and block C7's `score.py --count`. Each comes to admit the datasets of M. Block C7's list changes to give its datasets of M in set S the study split, and block C4's list to give its datasets of M their arms.
+**Code.** The run on M changes code in each block, and each change is reviewed before it runs. Today the run scripts of blocks C2, C3, C4, C5, C7 and C9 refuse a dataset of M. So do the six blocks' page-table gates and block C7's `score.py --count`. Each comes to admit the datasets of M, or gives way to a new script that does. For block C3 the driver `run_m.sh` and the table script `m_reading.py` admit them, and `run_species.sh` and `page_tables.py` stay as the first run left them, because blocks C4 and C7 read them. Block C7's list changes to give its datasets of M in set S the study split, and block C4's list to give its datasets of M their arms.
 
 **Changed scripts.** The run scripts change to build `grm` as Binary says and to keep each genome's score as Scores says. The scorers change to take the second reading and the three counts, and the page tables change to show them.
 
@@ -978,7 +982,7 @@ An eleventh came while the text was written. The project's wording rules put rec
 
 **Block C9's picks.** The default's pick reads the random split over every genome. The inner pick reads the inner folds of each outer fold's training genomes. In a dataset of M, both read genomes with an intermediate call. Both picks stand as fitted, and only the outer scoring leaves those genomes out. A pick is part of the fit, and the second reading refits nothing. So it does not show whether either pick would differ without those genomes.
 
-**Floor.** A dataset enters the second reading when each class keeps at least 25 genomes, each counted once, among the genomes its lineage split scores. That count is made from the label table before any score is read. It holds for every arm, every draw, the twin and both splits. Under 25, the dataset is not scored in that reading, and the page names it with its counts by class before any score is read.
+**Floor.** A dataset passes the floor when each class keeps at least 25 genomes, each counted once, among the genomes its lineage split scores. Small lists, below, says what else the second reading needs. That count is made from the label table before any score is read. It holds for every arm, every draw, the twin and both splits. Under 25, the dataset is not scored in that reading, and the page names it with its counts by class before any score is read.
 
 **Study split.** On the study split, a dataset that enters the second reading keeps that split's own refusal rule, as on its first run.
 
@@ -986,7 +990,13 @@ An eleventh came while the text was written. The project's wording rules put rec
 
 **Left out.** A dataset left out of the second reading leaves that reading's count, which then has fewer datasets than the first. A claim on that dataset cannot hold both ways, so it does not stand, and its page shows its figures one way only.
 
-**List.** The scorer builds the list of those genomes on the run's machine. It reads them from the rebuilt revision 14 table that the run scripts pin as `curated.tar`, sha256 `d77e2c6f75f8d986268d0c075cb2ea364fba9972fa22a55139495ac0eb376d97`. If that table does not hold each record's call, the run names the file that does, with its sha256, before the list is built. The list and the scores of each genome stay on that machine. A page gives counts per dataset and no row per genome.
+**List.** The scorer builds the list of those genomes on the run's machine. The rebuilt revision 14 table that the run scripts pin as `curated.tar`, sha256 `d77e2c6f75f8d986268d0c075cb2ea364fba9972fa22a55139495ac0eb376d97`, holds each pair's consolidated call and no record's call. So the run reads each record's call from the 1,285,111 lab records that table was rebuilt from, sha256 `d231fa768a31fc4ce4c8a6bb7024d05d632621846070688adb892fbfe340fd78`, and names that file with its sha256 before the list is built. The list and each genome's score file stay on the machine that fitted them. A page gives counts per dataset and no row per genome.
+
+**Small lists.** A dataset of M enters the second reading only when it passes the floor and each class lists no genome or at least 5. Every other one is left out of it and read once, in the first, and the page names it with its reason before any score is read. Five is a convention for a smallest cell and proves nothing: a class of 5 genomes all called alike still shows each one's call.
+
+**Cause of the rule.** In a dataset that lists 1 genome, the first reading less the second gives back that genome's calls, and a table that counts a dataset but hides its figures can be worked back.
+
+**Packs.** Each species' machine packs its results with no list and no genome's score file. The packs go unopened to the one machine that takes the block's counts over all its species. Only the count tables and the page tables leave that machine.
 
 **First run.** The count over all datasets does not score the first run again. It takes the first run's rows from the block's committed record of one row per dataset. That record is its `page-datasets.tsv` under `reference/`, held to the sha256 in the block's `SHA256SUMS`. It holds balanced accuracy and recall for each pair and learner, and block C5's also holds log loss.
 
@@ -1011,6 +1021,12 @@ An eleventh came while the text was written. The project's wording rules put rec
 **Review.** An independent review read it before it was filed and showed the first draft could not run as written. In five of the six blocks some fits keep no score per genome, today's code does not build the first run's binary, and the record holds two measures of the six a count gives. The paragraphs Scores kept, Binary, Other measures and Block C9's picks give the lead's rulings on them.
 
 **Changed.** A re-check read this entry against the entry Pick rule. After it the lead changed, at 19:24Z, Same build, Block C7's binaries, Other measures, Pick and Review, and added On a difference, Genome files, Then, Block C2, Block C7's check and Mirror. No reviewer has read Block C2 or Block C7's check.
+
+**Changed again.** After the independent review of block C3's code for this run, the lead changed Code and List at 07:57Z on 26 Nov 2026 and added Small lists and Packs. At 09:19Z, after the code was changed for that review, the lead added Count rows. At 11:04Z on 26 Nov 2026, after the re-check of the code, the lead changed Small lists and removed Count rows. No dataset of M had been fitted.
+
+**Changed after the re-check.** At 12:37Z on 26 Nov 2026 the lead added to Lineage curve its rule for a report that lists fewer than 5 resistant genomes, the rule of Small lists. The lead also named the short list in Floor's effect of the entry Pick rule. No reviewer had read either change then. No dataset of M had been fitted, and the curve had no second reading.
+
+**Changed after the second re-check.** A second re-check read those changes and gave 9 findings, none to fix before the run. At 13:54Z on 26 Nov 2026 the lead answered 5 of them, all on words. Floor says a dataset passes the floor, where it said enters the second reading. Small lists says what a class of 5 still shows and that the page names each dataset left out. Two new paragraphs, Curve limit and Curve sentences, give the curve's limit and the rule for a sentence. No reviewer had read these words then, and no dataset of M had been fitted.
 
 ## Label text
 
