@@ -408,6 +408,21 @@ class Lists(Case):
                               "three_species__drug.txt\n")
         self.assertFalse(out.exists())
 
+    def test_a_list_dir_with_no_list_file_stops(self):
+        # No list file, and then a file of another kind alone: a second reading with nothing listed is the first
+        # reading again, so both would read as made.
+        design_dir, results, list_dir = self.two_datasets({})
+        for name in (None, "one_species__drug.tsv"):
+            with self.subTest(file=name):
+                if name:
+                    (Path(list_dir) / name).write_text(self.a[0][0] + "\n", encoding="utf-8")
+                self.assertEqual([p.name for p in Path(list_dir).glob("*.txt")], [])
+                code, text, err, out = self.run_it(design_dir, results, list_dir)
+                self.assertEqual((code, text), (1, ""))
+                self.assertEqual(err, "stagger_analyze: stopped: the list dir holds no list file, so no second "
+                                      "reading can be made from it\n")
+                self.assertFalse(out.exists())
+
     def test_it_prints_the_files_and_the_datasets_they_name(self):
         # Two list files naming 3 genomes and none: 2 files, 2 datasets, and no count of genomes.
         listed = [self.a[0][0], self.a[1][0], self.a[12][0]]

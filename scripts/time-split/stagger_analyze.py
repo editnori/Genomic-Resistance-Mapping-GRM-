@@ -15,8 +15,9 @@ the rule of 14 Nov. A dataset with several pairs at one horizon gives their mean
 learner and for a contrast, descriptive only under 12 datasets or 3 species.
 
 With --listed (one file a dataset of M, <dataset>.txt, one genome id a line, as m_list.py writes them) each
-contrast is read twice, by R33 points 8 to 10. It stops, writing nothing, unless each list file names a dataset of
-the design (R38), and it prints how many list files it read and how many datasets they name, and no genome count.
+contrast is read twice, by R33 points 8 to 10. It stops, writing nothing, unless the list dir holds a list file
+and each list file names a dataset of the design (R38), and it prints how many list files it read and how many
+datasets they name, and no genome count.
 The second reading takes the listed genomes out of a pair's test genomes for both fits, with no refit. A pair stays
 only when its test set lists no genome or at least 5 of each class, and each class keeps the test minimum once they
 are out. lacking.tsv names each dataset the second reading lacks at a horizon, with its reason. A pair left out for
@@ -482,6 +483,7 @@ def build(design_dir, results, listed_dir=None):
     lists = read_lists(listed_dir) if listed_dir is not None else None
     named = {x["id"] for x in design["datasets"]}
     if lists is not None:
+        need(lists, "the list dir holds no list file, so no second reading can be made from it")
         strays = sorted(name + ".txt" for name in lists if name not in named)
         need(not strays, f"{len(strays)} of {len(lists)} list files name no dataset of the design: "
                          f"{', '.join(strays)}")

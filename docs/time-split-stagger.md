@@ -89,7 +89,7 @@ The plan gives one verdict from one reading. The second reading, and the rule th
 - A pair enters the second reading only when its test set lists no genome, or at least 5 of each class, and each class keeps the test minimum once they are out.
 - A dataset with no such pair at a horizon is left out of the second reading there and named with its reason. A pair left out gives no figure.
 - A verdict stands only when both readings give it.
-- The lists stay on the computer that makes the run, and the analysis stops unless each list names a dataset of the design.
+- The lists stay on the computer that makes the run. The analysis stops when it is given no list, or a list that names no dataset of the design.
 
 Example, at a test minimum of 15: a test set of 20 resistant and 20 susceptible genomes that lists 5 of each is read again on 15 and 15. One that lists 3 resistant genomes and no susceptible one leaves the second reading.
 
@@ -98,7 +98,7 @@ Example, at a test minimum of 15: a test set of 20 resistant and 20 susceptible 
 - Before any fit, the design at the single share 60%, with the 14 Nov rules, gives the cut day of each of the 14 Nov split's 24 datasets. The check stops unless its table holds those 24, each once.
 - No path of the sealed later records is opened.
 - Before any reading, the four checks of 14 Nov: each result names its fold file's sha256, both fits of a pair scored the same genomes with the same labels, training counts match the design, and recall worked out again matches the evaluator's.
-- 86 planted faults, one a rule, each with the test that fails with it.
+- 87 planted faults, one a rule, each with the test that fails with it.
 
 ## Limits
 
