@@ -4,10 +4,12 @@
 
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
+import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fixtureFile } from "../dev/fixtures/files";
 import { parseManifest } from "../data/validate";
 import type { Navigator } from "../app/router";
+import { classDropRows, MicPlateStrip, WholePartsBar } from "../charts/amr";
 import { bottomLineLead, TAKEAWAYS_ANCHOR, takeawayCards } from "./Takeaways";
 import { OverviewView } from "./OverviewView";
 
@@ -55,13 +57,33 @@ describe("Takeaways and new Overview sections", () => {
       "#inputs",
     ]);
     expect(takeaways.querySelector('[data-primer-figure="scope"]')).not.toBeNull();
+    expect(takeaways.querySelectorAll('[data-amr-primitive="bolster-strip"] li')).toHaveLength(4);
+    const learnerDumbbells = [...host.querySelectorAll('#learners [data-amr-primitive="split-dumbbell"] li[data-dumbbell-row]')];
+    expect(learnerDumbbells).toHaveLength(6);
+    expect(learnerDumbbells.every((li) => (li.querySelector("[data-dumbbell-delta]")?.getAttribute("data-dumbbell-delta") ?? "").length > 0)).toBe(true);
+    for (const sel of ["#bars", "#catalog", "#other-database"]) {
+      const bar = host.querySelector(`${sel} [data-amr-primitive="whole-parts-bar"]`)!;
+      expect(bar).not.toBeNull();
+      const whole = Number(bar.querySelector("[data-whole-count]")?.getAttribute("data-whole-count"));
+      const parts = [...bar.querySelectorAll("[data-part-count]")].map((e) => Number(e.getAttribute("data-part-count")));
+      expect(parts.length).toBeLessThanOrEqual(4);
+      expect(parts.reduce((a, b) => a + b, 0)).toBe(whole);
+    }
+    const micPlate = host.querySelector('#mic [data-amr-primitive="mic-plate"]')!;
+    expect(micPlate.getAttribute("data-plate-mode")).toBe("agreement");
+    expect(micPlate.textContent).toContain("±1 doubling well");
+    await act(async () => click(primer.querySelector("button[aria-expanded]")!));
+    const primerPlate = primer.querySelector('[data-amr-primitive="mic-plate"]')!;
+    expect(primerPlate.getAttribute("data-plate-mode")).toBe("cutoff");
+    expect(primerPlate.textContent).toContain("drawing, not data");
+    expect(primerPlate.textContent).not.toContain("±1 doubling well");
 
     // Clicking a chapter link moves focus to that section's heading.
     await act(async () => click(takeaways.querySelector('a[href="#outside"]')!));
     expect(document.activeElement).toBe(host.querySelector("#outside-title"));
 
-    // Clicking the start-to-finish guide button opens the 4-part plain-English summary.
-    const guideBtn = [...takeaways.querySelectorAll("button[aria-expanded]")].find((b) => b.textContent?.includes("start-to-finish guide"))!;
+    // Clicking the guide button opens the 4-part walkthrough.
+    const guideBtn = [...takeaways.querySelectorAll("button[aria-expanded]")].find((b) => b.textContent === "Read the guide")!;
     expect(guideBtn.getAttribute("aria-expanded")).toBe("false");
     expect(takeaways.querySelector("[data-start-to-finish]")).toBeNull();
     await act(async () => click(guideBtn));
@@ -75,6 +97,9 @@ describe("Takeaways and new Overview sections", () => {
     expect(text).toContain("growth-based susceptibility test systems");
     expect(text).toContain("12 of 25");
     expect(text).toContain("3 of 4 species where it can be read");
+    expect(text).toContain("6 of 8 species (SCM)");
+    expect(text).toContain("5 of 5 learners worse");
+    expect(text).toContain("the best learner with lineages held out is shown to meet both on");
   });
 
   it("derives the bottom-line lead and MIC card dynamically with or without baselines", () => {
@@ -88,6 +113,46 @@ describe("Takeaways and new Overview sections", () => {
       const withBase = takeawayCards(base, new Map([[micRow.id, { constant: 0.75, model: micRow.mic_essential_agreement!, confirmed: true }]]));
       expect(withBase[5]!.body).toContain("constant training-fold median MIC");
     }
+
+    // classDropRows takes the median of each dataset's own drop, not the difference of two medians.
+    const synth = [
+      { ...base.datasets[0]!, id: "c1", antibiotic: "ciprofloxacin", best_random: 0.9, best_lineage: 0.89 },
+      { ...base.datasets[0]!, id: "c2", antibiotic: "ciprofloxacin", best_random: 0.8, best_lineage: 0.78 },
+      { ...base.datasets[0]!, id: "c3", antibiotic: "ciprofloxacin", best_random: 0.95, best_lineage: 0.7 },
+    ];
+    const dropRows = classDropRows(synth, 3);
+    expect(dropRows).toHaveLength(1);
+    expect(dropRows[0]!.before).toBeCloseTo(0.9, 6);
+    expect(dropRows[0]!.after).toBeCloseTo(0.78, 6);
+    expect(dropRows[0]!.delta).toBeCloseTo(-0.02, 6);
+
+    // WholePartsBar enforces <= 4 parts and exact sum equality with total.
+    expect(() =>
+      renderToStaticMarkup(
+        createElement(WholePartsBar, {
+          wholeLabel: "Bad total",
+          total: 10,
+          parts: [
+            { key: "a", label: "A", count: 4, tone: "ink" },
+            { key: "b", label: "B", count: 5, tone: "neutral" },
+          ],
+        }),
+      ),
+    ).toThrow(/must equal total/);
+    expect(() =>
+      renderToStaticMarkup(
+        createElement(WholePartsBar, {
+          wholeLabel: "Too many",
+          total: 5,
+          parts: [1, 2, 3, 4, 5].map((n) => ({ key: `p${n}`, label: `P${n}`, count: 1, tone: "neutral" as const })),
+        }),
+      ),
+    ).toThrow(/at most 4 parts/);
+
+    // MicPlateStrip prints unrounded cohort breakpoints and separates cutoff from agreement mode.
+    const plateHtml = renderToStaticMarkup(createElement(MicPlateStrip, { mode: "agreement", rAbove: -1, cutoffLabel: "Cohort breakpoint" }));
+    expect(plateHtml).toContain("Cohort breakpoint &gt; 0.5 mg/L");
+    expect(plateHtml).toContain("±1 doubling well (agrees)");
   });
 
   it("renders Holding out whole studies and Another public database with expandable detail tables", async () => {

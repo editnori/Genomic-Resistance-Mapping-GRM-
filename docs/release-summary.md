@@ -1,8 +1,8 @@
 # Release summary: the main numbers of a GRM release
 
-Four scripts in `scripts/release-summary/` compute the main numbers of a GRM release from two of its public files: `index.json` and the directory `intervals/`. A fifth reads the same files by the acceptance wording of FDA's 2009 guidance for susceptibility test systems. A sixth script puts two releases side by side. Nothing is fitted and no genome is read.
+Four scripts in `scripts/release-summary/` compute the main numbers of a GRM release from two of its public files: `index.json` and the directory `intervals/`. A fifth reads the same files by the acceptance wording of FDA's 2009 guidance for susceptibility test systems. A sixth script puts two releases side by side. A seventh reads, from `index.json` alone, how many lab records, genomes, genome-and-drug pairs and datasets each step of curation keeps. Nothing is fitted and no genome is read.
 
-The outputs for revisions 12 and 14 are committed under `reference/release-summary/`. The README there names each release asset and the sha256 of each input and output.
+The outputs for revisions 12 and 14 are committed under `reference/release-summary/`, and the seventh script's output for revision 14 only. The README there names each release asset and the sha256 of each input and output.
 
 These are retrospective analyses with internal cross-validation on one public database. Each release has 274 datasets in 23 species. A dataset is one species and one drug.
 
@@ -59,6 +59,8 @@ The file also counts the labels GRM inferred from a MIC (a minimum inhibitory co
 The block `labels_from_mic_excluded` gives four counts: the datasets whose index entry holds the field, the datasets without it, the datasets where the value is above zero, and the total of such labels. The last two are over the datasets that hold the field, and they are null when none does. A dataset without the field is counted as without it and never as zero.
 
 **`guidance.json`** comes from `python3 -I scripts/release-summary/guidance.py INDEX.json INTERVALS_DIR`. It reads the release's error rates by the acceptance wording of FDA's 2009 guidance, beside the release's own screen. The section "The guidance's wording" below says what it holds.
+
+**`path.json`** comes from `python3 -I scripts/release-summary/path.py INDEX.json INTERVALS_DIR`. It reads the index alone and takes the second argument so that every script has the same command line. It gives the counts of the index's `funnel` block under plain keys, sums over the index's species rows and dataset rows, and two checks: genomes with a record equal those that pass the quality checks, plus those without metadata, plus those that fail a check; and the five kinds of genome-and-drug pair add up to the pairs. A failed check stops the script with exit status 1 and names both sides, and so does a value that is not a count. An index with no `funnel` block gives null for that block, never zeros. The section "Curation path" below gives the counts.
 
 **`compare.py`** takes two outputs: `python3 -I scripts/release-summary/compare.py A/uncertainty.json B/uncertainty.json` prints the numbers of two `uncertainty.json` files side by side, one line per statistic. It recomputes nothing.
 
@@ -236,6 +238,78 @@ The *M. tuberculosis* datasets are outside the guidance, because they test anti-
 
 The best learner's random-split count carries its choice. The best learner is chosen by its random-split score, and balanced accuracy is one minus the mean of VME and ME. The choice therefore favors low errors on the same folds, and the best learner's random-split count is biased upward, as its median is.
 
+## Curation path
+
+A release's `index.json` counts, in its `funnel` block and its species rows, how many lab records, genomes, genome-and-drug pairs and datasets each step of curation keeps, and how many most steps leave out. The lab records are those of BV-BRC, the Bacterial and Viral Bioinformatics Resource Center.
+
+`path.json` gives these counts for revision 14. Revision 12 has no committed `path.json`. `tests/release_summary/test_document.py` rebuilds every row of this table from `reference/release-summary/rev14-274-20261112/path.json`. The steps are in the code's order.
+
+| Step | Count | Left out |
+| --- | --- | --- |
+| Lab records | 1,285,111 | |
+| Genomes those records cover | 123,503 | |
+| Genomes that pass quality checks | 118,992 | 4,491 genomes fail a check and 20 have no metadata |
+| Genome-and-drug pairs on those genomes | 1,063,628 | 9,756 records on any genome name a drug class, no antibiotic or an unresolved name; the other records on the 4,511 genomes that did not pass are skipped with no count; 42,695 records on passing genomes have no call and no MIC |
+| Pairs with a reported resistant or susceptible call | 611,826 | 295,219 pairs have a label worked out from a MIC, 137,151 have no label, 15,609 are intermediate only and 3,823 conflict |
+| Datasets curated | 277 | species and drug combinations with under 25 resistant or under 25 susceptible genomes; the index does not count them |
+| Genomes analyzed | 23,757 | passing genomes with no unconflicted reported resistant or susceptible call on a drug of one of their species' datasets, then genomes past the cap of 2,000 a species; the index counts neither |
+| Datasets with a report | 274 | 3 of 277 datasets have one class under 25 among the genomes kept |
+
+The rows are stages in four units: lab records, genomes, genome-and-drug pairs and datasets. Within one unit each later count nests inside the earlier one. Where a step's left-out counts share its unit, they add up to the difference from the step before it in that unit.
+
+The path starts from every antimicrobial resistance record of the download, 1,285,111 lab records (`src/curate.rs:576-579`). Those records name 123,503 genomes, each counted once (`src/curate.rs:598-604`).
+
+The quality checks then judge each genome in a fixed order. A genome with no metadata leaves first, 20 genomes (`src/curate.rs:606-609`). The species check runs next, before the other checks (`src/curate.rs:610-617`), and then come the species name (`src/curate.rs:618-625`) and the checks of `src/curate.rs:545-565`. The index writes the reasons of the 4,491 genomes that fail a check as `BV-BRC quality: Poor` 3,164, `CheckM completeness low` 633, `CheckM contamination high` 599, `species check: sequence is another species` 80, `genome length off species median` 14 and `no species` 1. 118,992 genomes pass (`src/curate.rs:636`).
+
+Three filters run on the records before they join into pairs. The name check runs first, on every record of every genome (`src/curate.rs:652-668`), so records dropped by name are counted on every genome, whether it passes or not. 9,756 records leave there: 8,709 name a drug class, 652 name something that is no antibiotic and 395 carry a name that is not resolved.
+
+A record on a genome that did not pass is then skipped with no count (`src/curate.rs:670-672`). Records with no call and no MIC are counted on passing genomes only, 42,695 records (`src/curate.rs:673-677`).
+
+The records left, each naming an antibiotic on a passing genome with a call or a MIC, join into one pair for each genome and drug, 1,063,628 pairs (`src/curate.rs:679-680`).
+
+Each pair then falls in one of five kinds (`src/curate.rs:753-792`). 611,826 have a reported resistant or susceptible call, 295,219 have a label worked out from a MIC, 137,151 have no label, 15,609 are intermediate only and 3,823 conflict. The five add up to the 1,063,628 pairs.
+
+A species and drug make a dataset when at least 25 of its genomes have an unconflicted reported resistant call and 25 a susceptible one, 277 datasets (`src/curate.rs:802-813`). This rule of 25 and 25 runs before the cap.
+
+The cap then keeps at most 2,000 genomes a species (`src/main.rs:39-40`). It picks among the genomes with an unconflicted reported resistant or susceptible call on the drug of one of their species' datasets (`src/curate.rs:904-921`, `src/curate.rs:942-962`). The index has no count of the genomes the cap picks among.
+
+The genomes analyzed are those of each species' genome matrix, 23,757 genomes in all (`src/report.rs:783-787`, `src/report.rs:995`). The highest count of any species is 2,000, and 8 of the 23 species sit at it.
+
+The rule of 25 and 25 runs again on the genomes kept (`src/analysis.rs:1884-1899`, `src/analysis.rs:958-962`). 274 of the 277 datasets have a report, and the other 3 have one class under 25 genomes (`README.md:54`).
+
+The species rows also count 113,547 genomes with a label of any kind on any drug, intermediate calls and labels worked out from a MIC included (`src/report.rs:984-995`). That count is no step of the path.
+
+Each count of genomes here describes what laboratories deposited in BV-BRC. None of them says how common resistance is.
+
+The table has no row for 80,967 genomes. A committed page counts 80,967 genomes with a scorable label and says the release's cap of 2,000 leaves out 57,206 (`docs/assumption-plan.md:7`). The index has no key for either count, and every row of the table comes from the index.
+
+**Differences.** Three counts of committed pages differ from the index's. Two were counted on a rebuilt copy of the release's table. The third is not traced.
+
+The table revision 14 was curated from was not found. The copy was rebuilt on 21 Nov 2026 from a new download, cut to 1,285,111 lab records, the count the index gives (`docs/assumption-plan-later-records.md:9`). Its counts are in `reference/release-summary/rebuilt-table-20261121/`. Three of them differ from the index's before the pairs, and with them the count of genomes that pass.
+
+| Count | Index | Copy |
+| --- | --- | --- |
+| Genomes that fail the species check | 80 | none: the copy ran no species check |
+| Genomes that fail on length | 14 | 15 |
+| Records with a name not resolved | 395 | 433: the copy had GRM's own list of drug names alone |
+
+With no species check, the index's 80 genomes go on to the other checks (`src/curate.rs:610-617`). The counts fit 79 of them passing and 1 failing on length, and no committed file names the genomes. Another reading fits too: all 80 pass, and one other genome fails on length because a median or a length moved between the two downloads of the genome metadata (`src/curate.rs:583-596`). Either way 119,071 genomes pass in the copy, 79 more than the index's 118,992 (`docs/assumption-plan-corrections.md:53`).
+
+- **Pairs.** `docs/assumption-plan.md:40` counts 1,064,823 pairs; the index counts 1,063,628. The first is the copy's count, 1,195 pairs more.
+- **Genomes.** `docs/assumption-plan.md:7` gives 80,967 genomes less the 57,206 the cap leaves out, which is 23,761; the index counts 23,757 genomes analyzed. 80,967 and 57,206 are the copy's, so 23,761 is too. So is that line's 41,627, and its 94 datasets were counted on the copy.
+
+The 4 genomes are in two species under the cap. *Acinetobacter baumannii* has 1,705 genomes in the copy and 1,702 in the release, and *Enterobacter cloacae* has 271 and 270 (`cap-species.tsv`, `reference/input-arms/page-builds.tsv`). A run of 30 Oct 2026 with the October species check took the same 3 and 1 from those two species (`docs/species-check.md:403`).
+
+A species at the cap stays at 2,000. In 4 of them the copy's 2,000 differ from the release's, by 4, 68, 2 and 1 genomes, and that line names no species (`docs/cap-arms.md:29`).
+
+No committed file gives the release's own count of the genomes the cap picks among. If the species check took those 4, as on the run of 30 Oct, it takes at least 4 genomes from the 80,967 and at most its 80. The other list of drug names and the newer download of genome metadata can move the count too, and no file counts by how much.
+
+**Not traced.** `docs/species-check.md:100` counts 96 failures among 35,231 genomes the species check judged; the index counts 80 genomes that fail the species check. Neither side is asserted.
+
+One lead, and no more: beside the 79 failures of the October file, now lost, that page counts 1 more in *Klebsiella pneumoniae* and 16 more in *Salmonella enterica* (`docs/species-check.md:105`, `:108`, `:110`). 79 and 1 make 80, and 16 more make 96. The index does not record which file the release read.
+
+A genome the species check never judged passes that step, since only a genome on the check's list of failures leaves (`src/curate.rs:610-617`). The check judged every genome in the reports, 23,757, and none of them fails (`docs/species-check.md:114`).
+
 ## Limits
 
 - **The species intervals are rough.** The species bootstrap has 23 clusters, and some species hold many datasets. A percentile interval from so few clusters is approximate. Read it to one decimal of a point at most.
@@ -269,6 +343,7 @@ python3 -I scripts/release-summary/summary.py      "$R/index.json" "$R/intervals
 python3 -I scripts/release-summary/catalog.py      "$R/index.json" "$R/intervals" > "$OUT/catalog.json"
 python3 -I scripts/release-summary/index_counts.py "$R/index.json" "$R/intervals" > "$OUT/index-counts.json"
 python3 -I scripts/release-summary/guidance.py     "$R/index.json" "$R/intervals" > "$OUT/guidance.json"
+python3 -I scripts/release-summary/path.py         "$R/index.json" "$R/intervals" > "$OUT/path.json"
 python3 -I scripts/release-summary/compare.py A/uncertainty.json B/uncertainty.json
 ```
 

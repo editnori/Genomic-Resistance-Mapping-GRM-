@@ -6,7 +6,7 @@ Every document under `docs/`, grouped by purpose. For the headline Revision 14 n
 
 | Document | Summary |
 | --- | --- |
-| [release-summary.md](release-summary.md) | Main Revision 12 and 14 figures: per-learner medians with species bootstrap intervals, random-to-lineage drops, error-screen counts, FDA 2009 guidance wording, and known-gene rule bands. |
+| [release-summary.md](release-summary.md) | Main Revision 12 and 14 figures: per-learner medians with species bootstrap intervals, random-to-lineage drops, error-screen counts, FDA 2009 guidance wording, known-gene rule bands, and the path from lab records to datasets (revision 14). |
 | [study-split.md](study-split.md) | Retrospective split by study (BioProject) inside BV-BRC across 70 datasets in 9 species, compared with random and matched random folds. |
 | [time-split.md](time-split.md) | Retrospective first-public-day split inside BV-BRC across 24 datasets in 4 species, compared with size-matched random draws and study splits. |
 | [outside-study-results.md](outside-study-results.md) | Retrospective test of frozen models on newly deposited BV-BRC studies (7,258 primary genomes and 3,155 same-study genomes), including Revision 14 reading. |
@@ -21,7 +21,7 @@ Every document under `docs/`, grouped by purpose. For the headline Revision 14 n
 | --- | --- |
 | [assumption-plan.md](assumption-plan.md) | Fixed plan, written on 21 November 2026 before any fit, for testing each assumption a GRM result depends on: one diagnostic, nine comparisons (cutoff, cap, inputs, screen, settings, labels and MIC, outside learners, stability, pick), and a later-records test. |
 | [assumption-plan-later-records.md](assumption-plan-later-records.md) | Counts behind the plan's later-records test: 252,148 BV-BRC lab records set aside on 21 November 2026, counted with no fit. |
-| [assumption-plan-corrections.md](assumption-plan-corrections.md) | Dated corrections to the fixed plan: the study-split row, the release's missing fold models, the design of the MIC comparison, four changes to its checks, and the readings of D0's causes. |
+| [assumption-plan-corrections.md](assumption-plan-corrections.md) | Dated corrections to the fixed plan: the study-split row, the release's missing fold models, the design of the MIC comparison, four changes to its checks, the readings of D0's causes, and the lead's rulings on the label rule, condition 6, the rule for the one release change and the run on the datasets of M; where the site's label text now sits; and which of the plan's counts are the rebuilt table's. |
 | [assumption-refit.md](assumption-refit.md) | Refit of the release's rule with fold models saved, its check against the release, and the plan's D0 and C8 readers run on it, one species a box. |
 | [refit-result.md](refit-result.md) | Result of the plan's D0 and C8 on the refit of 238 datasets in 23 species, read once by rules fixed before any count: Absent holds 107 of 177 miss pairs, so C3 runs first; the median overlap of chosen features across lineage folds is 0.050 to 0.183 per learner. |
 | [cohort-draw.md](cohort-draw.md) | Experimental small cohorts drawn from large datasets (`grm learn --exp-cohort`, off by default), and the scripts that draw, run and score one species. |
@@ -37,6 +37,7 @@ Every document under `docs/`, grouped by purpose. For the headline Revision 14 n
 | [mic-plan.md](mic-plan.md) | Experimental MIC models on a fold plan (`grm learn --exp-mic`, off by default), and the scripts that run and score one species. |
 | [mic-comparison.md](mic-comparison.md) | MIC comparison of plan block C6 part B: the released MIC model, an ordered model and the training median on lineage and study folds, 100 and 28 datasets in 12 species, read by rules fixed before any score. |
 | [outside-learners.md](outside-learners.md) | Outside learners for plan block C7: XGBoost 3.0.5 and LightGBM 4.6.0 on the 4,000 rows `grm export` screens, read against GRM's boosted trees, and a scikit-learn 1.7.2 elastic net on unitigs, read against GRM's lasso; the pins, the folds, the scorer, the datasets, the pilot on Klebsiella aerogenes and the planted faults. |
+| [outside-learners-result.md](outside-learners-result.md) | Plan block C7 read once on the first run's 233 datasets in 23 species: XGBoost 3.0.5 and LightGBM 4.6.0 against GRM's boosted trees and a scikit-learn 1.7.2 elastic net against GRM's lasso, condition by condition, with the twin, the counts beside and every species and antibiotic; LightGBM and the elastic net meet conditions 1 to 5 and XGBoost meets 1 to 4, and the release keeps its learners until the maintainer rules. |
 | [served-pick.md](served-pick.md) | Experimental pick of the served learner inside each outer training fold (`grm learn --exp-pick`, off by default) for plan block C9, and the scripts that list, run and score one species. |
 | [served-pick-result.md](served-pick-result.md) | Plan block C9 read once on the first run's 233 datasets in 23 species: the learner picked inside each outer training fold against the release's pick, condition by condition, with the twin, the three answers beside and every species and antibiotic; the release's pick does not change. |
 | [mechanism-split.md](mechanism-split.md) | Plan blocks M1 and M2 on the AMRFinderPlus program's tables, fitting nothing: each learner's recall on resistant genomes whose catalogue calls are point mutations, acquired genes, both or neither, and the mix of catalogue calls over collection years with one vote per BioProject; M3 not built; M4, the lineage curve for Mycobacterium tuberculosis, read once in `lineage-curve-result.md`; the scripts that run one species and combine them. |
@@ -56,7 +57,7 @@ Every document under `docs/`, grouped by purpose. For the headline Revision 14 n
 | [amrfinderplus-comparison.md](amrfinderplus-comparison.md) | Full AMRFinderPlus 4.2.7 program compared with GRM's known-gene rule and five learners across 235 datasets in 21 species. |
 | [tbprofiler-comparison.md](tbprofiler-comparison.md) | TBProfiler 6.6.3 run on 2,000 *Mycobacterium tuberculosis* assemblies across 16 named endpoints (14 graded) against GRM's learners and known-gene rule. |
 | [baselines.md](baselines.md) | No-genome baselines (`grm baselines`): constant training-fold MIC and lineage-identity baseline. |
-| [input-configuration.md](input-configuration.md) | Default input settings, feature families, label rules, and the planned input comparison. |
+| [input-configuration.md](input-configuration.md) | Default input settings, feature families, label rules, and the input comparison, since run on four species. |
 | [input-comparison-runner.md](input-comparison-runner.md) | Runner, pairing rules, and second reading for the 4-species input comparison (H-1). |
 | [tie-rule.md](tie-rule.md) | Decision tree tie-breaking evaluation record. |
 | [hyperopt-selection.md](hyperopt-selection.md) | Hyperparameter tuning evaluation and why fixed defaults remain in place. |

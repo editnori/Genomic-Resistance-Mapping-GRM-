@@ -19,6 +19,7 @@ import type { SplitSummary } from "../data/derive/overview";
 import { barsLead, catalogLead, cohortLead, coverageNote, learnersLead, lineageLead, micLead, signP, wordingNote } from "./findings";
 import { armById } from "../data/derive/inputs";
 import { OverviewView } from "./OverviewView";
+import { DataView } from "./DataView";
 import { MethodsView } from "./MethodsView";
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
@@ -199,7 +200,7 @@ const fakeNav = () => {
     route: { view: "overview", species: null, dataset: null },
     go: (next) => {
       calls.go.push(next);
-      window.history.pushState({}, "", next.view === "methods" ? "/methods" : next.view === "datasets" ? "/datasets" : `/species/${next.species ?? ""}`);
+      window.history.pushState({}, "", next.view === "methods" ? "/methods" : next.view === "data" ? "/corpus" : next.view === "datasets" ? "/datasets" : `/species/${next.species ?? ""}`);
     },
     openDataset: (id) => calls.open.push(id),
     closeDataset: () => {},
@@ -235,18 +236,18 @@ describe("What GRM found", () => {
     expect([...host.querySelectorAll("h2")].map((h) => h.textContent)).toEqual([
       "At a glance",
       "How to read this report",
-      "1 Genomes and lab calls",
-      "2 Scores on unseen lineages",
-      "3 The five learners compared",
-      "4 Error rates against the bars",
-      "5 Known-gene rules against learners",
-      "6 Simulated PCR panel",
-      "7 Predicting the drug level that stops growth (MIC)",
-      "8 Newly deposited genomes",
-      "9 Holding out whole studies",
-      "10 Another public database",
-      "11 Further stress tests and tool comparisons",
-      "12 Input settings against the default",
+      "1 Cohort",
+      "2 Lineage drop",
+      "3 Learners",
+      "4 Error screen",
+      "5 Known-gene rules",
+      "6 Simulated PCR panels",
+      "7 MIC",
+      "8 New studies",
+      "9 Study splits",
+      "10 NCBI database",
+      "11 Other comparisons",
+      "12 Input settings",
       "13 Limits",
     ]);
     const scope = host.querySelector<HTMLAnchorElement>('header a[href="#limits"]');
@@ -273,15 +274,15 @@ describe("What GRM found", () => {
     const corpus = host.querySelector("#corpus")!;
     const links = [...corpus.querySelectorAll<HTMLAnchorElement>("a")].map((a) => [a.textContent?.replace("→", "").trim(), a.getAttribute("href")]);
     expect(links).toEqual([
-      ["See pair curation", "/methods#m-funnel"],
-      ["See QC outcomes", "/methods#m-funnel"],
+      ["See pair curation", "/corpus#m-funnel"],
+      ["See QC outcomes", "/corpus#m-funnel"],
       ["Browse all report datasets", "/datasets"],
     ]);
-    await act(async () => click(corpus.querySelector('a[href="/methods#m-funnel"]')!));
+    await act(async () => click(corpus.querySelector('a[href="/corpus#m-funnel"]')!));
     // A router that keeps hashes takes it with the path; this one does not,
     // so the link writes it onto the entry the router pushed.
-    expect(calls.go).toEqual([{ view: "methods", species: null, hash: "m-funnel" }]);
-    expect(`${window.location.pathname}${window.location.hash}`).toBe("/methods#m-funnel");
+    expect(calls.go).toEqual([{ view: "data", species: null, hash: "m-funnel" }]);
+    expect(`${window.location.pathname}${window.location.hash}`).toBe("/corpus#m-funnel");
     await act(async () => click(corpus.querySelector('a[href="/datasets"]')!));
     expect(calls.go[1]).toEqual({ view: "datasets", species: null });
   });
@@ -315,6 +316,7 @@ describe("What GRM found", () => {
     const { nav, calls } = fakeNav();
     const host = await mount({ ...base, datasets: rows }, nav);
     const lineage = host.querySelector("#lineage")!;
+    await act(async () => click(control(lineage, "Show datasets without a lineage split")));
     expect(lineage.textContent).toContain(
       "Three datasets have no score with lineages held out and are left out of these medians: two because a held-out test group (fold) would hold only resistant or only susceptible genomes and one because there are too few lineages.",
     );
@@ -347,16 +349,23 @@ describe("What GRM found", () => {
   it("counts the best learner's datasets against the bars in three outcomes that add up", async () => {
     const host = await mount(base, fakeNav().nav);
     const bars = host.querySelector("#bars")!;
-    const tiles = [...bars.querySelectorAll("ol li")];
-    expect(tiles.map((li) => li.lastElementChild?.textContent).slice(1)).toEqual(["Shown to meet both bars", "Shown to miss at least one bar", "Too few genomes to tell"]);
-    expect(tiles[0]?.lastElementChild?.textContent).toMatch(/^Datasets? tested with lineages held out$/);
-    const counts = tiles.map((li) => Number((li.firstElementChild?.textContent ?? "").replace(/,/g, "")));
+    const bar = bars.querySelector('[data-amr-primitive="whole-parts-bar"]')!;
+    const total = Number((bar.querySelector("span.tabular-nums")?.textContent ?? "").replace(/,/g, ""));
+    const partNums = [...bar.querySelectorAll(".mt-2\\.5 > div")].map((div) =>
+      Number((div.querySelector(".tabular-nums span:first-child")?.textContent ?? "").replace(/,/g, "")),
+    );
+    const counts = [total, ...partNums];
+    expect(bar.textContent).toContain("Datasets tested with lineages held out");
+    expect(bar.textContent).toContain("Shown to meet both");
+    expect(bar.textContent).toContain("Shown to miss at least one");
+    expect(bar.textContent).toContain("Too few genomes to tell");
     expect(counts).toHaveLength(4);
     expect(counts[0]).toBeGreaterThan(0);
     expect((counts[1] ?? 0) + (counts[2] ?? 0) + (counts[3] ?? 0)).toBe(counts[0]);
-    // The reading is stated beside the counts, with its limit.
-    expect(bars.textContent).toContain("The interval is exact (Clopper-Pearson)");
-    expect(bars.textContent).toContain("so the true interval is likely wider.");
+    // The reading is stated beside the counts, with its limit one click away.
+    expect(bars.textContent).toContain("exact 95% interval (Clopper-Pearson)");
+    await act(async () => click(control(bars, "Show random split, sample floor, and rule counts")));
+    expect(bars.textContent).toContain("The interval treats each genome as an independent draw, which related genomes are not, so the true interval is likely wider.");
     await act(async () => click(control(bars, "Show each learner against the bars")));
     const each = framed(bars, "Each learner against the bars");
     expect([...each.querySelectorAll('th[scope="rowgroup"]')].map((th) => th.textContent)).toEqual(["Lineages held out", "Random split"]);
@@ -403,6 +412,7 @@ describe("What GRM found", () => {
   it("reads the outside-study test with its limits, each population apart", async () => {
     const host = await mount(base, fakeNav().nav);
     const outside = host.querySelector("#outside")!;
+    await act(async () => click(control(outside, "Show study details and all learner counts")));
     const text = outside.textContent ?? "";
     expect(outside.querySelector("h2 + p")?.textContent).toBe(
       "Each report's final model was run, unchanged, on genomes newly added to the same public database. On 7,258 genomes from studies the cohorts do not hold, the set covering machine's sensitivity and specificity both hold on 32 of 81 datasets. On 3,155 new genomes from studies the cohorts already hold, they hold on 36 of 49.",
@@ -457,6 +467,7 @@ describe("What GRM found", () => {
   it("reads the input comparison in a reader's words, with its limits and the default's repeat runs apart", async () => {
     const host = await mount(base, fakeNav().nav);
     const inputs = host.querySelector("#inputs")!;
+    await act(async () => click(control(inputs, "Show detailed reading and caveats")));
     const text = inputs.textContent ?? "";
     expect(inputs.querySelector("h2 + p")?.textContent).toBe(
       "Eleven input settings were each changed once and scored against the default on 4 species, by log loss with whole lineages held out. By the plan's tests, no change beat the default across the 4 species. At most 1,000 genomes per species scored worse on 25 of 33 datasets, by a median of 0.0329 in log loss, more than the plan's 0.02 margin; 1,000 screened features scored worse on 37 of 49, by a median of 0.0082, less than the margin.",
@@ -560,39 +571,46 @@ describe("What GRM found", () => {
   });
 });
 
-describe("Data & Methods", () => {
-  const html = renderToStaticMarkup(createElement(MethodsView, { manifest: base }));
-  const el = document.createElement("div");
-  el.innerHTML = html;
+describe("Data and Methods", () => {
+  const methodsHtml = renderToStaticMarkup(createElement(MethodsView, { manifest: base }));
+  const methodsEl = document.createElement("div");
+  methodsEl.innerHTML = methodsHtml;
+  const dataHtml = renderToStaticMarkup(createElement(DataView, { manifest: base }));
+  const dataEl = document.createElement("div");
+  dataEl.innerHTML = dataHtml;
 
-  it("is four linear sections, with no pills, nested disclosures, or data browser", () => {
-    expect([...el.querySelectorAll("h2")].map((h) => h.textContent)).toEqual(["1 Labels and inclusion", "2 Models and evaluation", "3 How to read scores", "4 Scope, limitations and audit"]);
-    expect(el.querySelector("[aria-pressed]")).toBeNull();
-    expect(el.querySelector("[aria-expanded]")).toBeNull();
-    expect(el.querySelector('input[type="search"]')).toBeNull();
-    expect(el.querySelector('[aria-label="Antibiotic names"], [aria-label="Breakpoints"]')).toBeNull();
-    expect(html).not.toContain("SigDrug");
-    expect(html).not.toContain("Antibiotic name resolution");
+  it("separates Data and Methods into clean linear sections, with no pills, nested disclosures, or data browser", () => {
+    expect([...dataEl.querySelectorAll("h2")].map((h) => h.textContent)).toEqual(["1 Curation funnel", "2 Isolate sources", "3 Species coverage", "4 Labels and inclusion"]);
+    expect([...methodsEl.querySelectorAll("h2")].map((h) => h.textContent)).toEqual(["1 Models and evaluation", "2 How to read scores", "3 Scope, limitations and audit"]);
+    for (const el of [dataEl, methodsEl]) {
+      expect(el.querySelector("[aria-pressed]")).toBeNull();
+      expect(el.querySelector("[aria-expanded]")).toBeNull();
+      expect(el.querySelector('input[type="search"]')).toBeNull();
+      expect(el.querySelector('[aria-label="Antibiotic names"], [aria-label="Breakpoints"]')).toBeNull();
+    }
+    expect(methodsHtml + dataHtml).not.toContain("SigDrug");
+    expect(methodsHtml + dataHtml).not.toContain("Antibiotic name resolution");
   });
 
   it("keeps the anchors other views link to", () => {
-    for (const id of ["m-funnel", "m-audit", "m-limits", "m-labels", "m-models", "m-scores"]) expect(el.querySelector(`#${id}`)).not.toBeNull();
-    expect(el.querySelector("#m-funnel h3")?.getAttribute("tabindex")).toBe("-1");
+    for (const id of ["m-funnel", "m-sources", "m-species", "m-labels"]) expect(dataEl.querySelector(`#${id}`)).not.toBeNull();
+    for (const id of ["m-audit", "m-limits", "m-models", "m-scores"]) expect(methodsEl.querySelector(`#${id}`)).not.toBeNull();
+    expect(dataEl.querySelector("#m-funnel h2")?.getAttribute("tabindex")).toBe("-1");
   });
 
   it("words the scores with their called denominators, both kinds of no-call, and the pre-revision-7 behavior", () => {
-    const text = el.textContent ?? "";
+    const text = methodsEl.textContent ?? "";
     expect(text).toContain("over the resistant isolates called");
     expect(text).toContain("A probe assay gives no call for an isolate whose genome carries none of its probe k-mers.");
     const seven = document.createElement("div");
     seven.innerHTML = renderToStaticMarkup(createElement(MethodsView, { manifest: { ...base, evaluation_revision: 7 } }));
     expect(seven.textContent).toContain("Reports computed under earlier revisions scored those isolates 0.5");
     expect(text).toContain("It does not run the AMRFinderPlus program or test the point mutations");
-    expect(text).toContain("not CLSI or EUCAST breakpoints");
+    expect(dataEl.textContent ?? "").toContain("not CLSI or EUCAST breakpoints");
   });
 
   it("leaves learner settings to the dataset reports", () => {
-    const text = el.textContent ?? "";
+    const text = methodsEl.textContent ?? "";
     expect(text).not.toContain("200 randomized trees");
     expect(text).not.toContain("early stopping");
     expect(text).toContain("Each dataset's report gives its learner settings");
@@ -600,11 +618,11 @@ describe("Data & Methods", () => {
 
   it("lands a link on its section and moves focus to the section's heading", async () => {
     vi.stubGlobal("fetch", async (path: string) => new Response(JSON.stringify(fixtureFile(path))));
-    window.history.replaceState(null, "", "/methods#m-funnel");
+    window.history.replaceState(null, "", "/corpus#m-funnel");
     const host = document.createElement("div");
     document.body.append(host);
     root = createRoot(host);
-    await act(async () => root!.render(createElement(MethodsView, { manifest: base })));
-    expect(document.activeElement?.textContent).toBe("Curation funnel");
+    await act(async () => root!.render(createElement(DataView, { manifest: base })));
+    expect(document.activeElement?.textContent).toBe("1 Curation funnel");
   });
 });

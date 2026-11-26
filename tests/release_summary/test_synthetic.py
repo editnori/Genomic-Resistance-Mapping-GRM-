@@ -2,8 +2,9 @@
 
 The release is built here, in a temporary folder: 3 species (alpha with 5 datasets, beta with 5, gamma with 2), 12
 datasets, both splits, the five learners, a known-gene rule on 8 datasets, one learner row with genomes in null-fit
-folds, and labels inferred from a MIC on 4 datasets. Each expected value below is worked out by hand from the tables in
-this file; the comment beside it shows how.
+folds, and labels inferred from a MIC on 4 datasets. Its index also holds a funnel block and 4 species rows, one of
+them a species whose one curated dataset has no report. Each expected value below is worked out by hand from the
+tables in this file; the comment beside it shows how.
 """
 
 import json
@@ -29,6 +30,20 @@ N_SUSCEPTIBLE = 200
 # labels_from_mic_excluded of each dataset's index entry: above zero on drug1, drug4, drug9 and drug11, 3 + 7 + 1 + 12 = 23
 MIC_EXCLUDED = [0, 3, 0, 0, 7, 0, 0, 0, 0, 1, 0, 12]
 ABSENT = object()  # in a mic list: the index entry has no labels_from_mic_excluded
+
+# The index's funnel block, with the keys src/curate.rs:474-506 writes. 120 genomes with a record = 100 passing + 5
+# without metadata + 15 failing (7 + 2 + 6); 600 pairs = 400 + 120 + 50 + 20 + 10. The last two keys are not read.
+FUNNEL = {
+    "records": 1000, "records_class_label": 30, "records_not_antibiotic": 20, "records_unresolved_name": 10,
+    "records_no_measure": 40, "genomes_with_records": 120, "genomes_without_metadata": 5,
+    "genomes_failed_qc": {"BV-BRC quality: Poor": 7, "no species": 2, "species check: sequence is another species": 6},
+    "genomes_passing_qc": 100, "pairs": 600, "pairs_conflict": 10, "pairs_intermediate_only": 20,
+    "pairs_reported": 400, "pairs_labeled_from_mic": 120, "pairs_unlabeled": 50, "pairs_intermediate_mixed": 0,
+    "pairs_call_against_mic": 3,
+}
+# The index's species rows: slug, datasets_curated, datasets_reported, genomes_labeled, genomes_analyzed. One alpha
+# dataset falls short on the genomes kept, and delta's one curated dataset has no report and no genome matrix.
+SPECIES_ROWS = [("alpha", 6, 5, 900, 400), ("beta", 5, 5, 700, 400), ("gamma", 2, 2, 300, 250), ("delta", 1, 0, 40, 0)]
 
 # The known-gene rule: balanced accuracy, sensitivity, specificity. The values sit on the band edges.
 CATALOG = {
@@ -69,10 +84,11 @@ def learner_values(i):
     return v
 
 
-def build(folder, revision, flag=None, scored_on=None, mic=MIC_EXCLUDED):
+def build(folder, revision, flag=None, scored_on=None, mic=MIC_EXCLUDED, funnel=FUNNEL):
     """Write index.json and intervals/ for the synthetic release into folder.
 
-    mic gives each dataset's labels_from_mic_excluded, or ABSENT to leave the field out of its index entry.
+    mic gives each dataset's labels_from_mic_excluded, or ABSENT to leave the field out of its index entry. funnel is
+    the index's funnel block, or None to leave the block out.
 
     One learner row has genomes in null-fit folds: lasso, lineage split, gamma__drug10, with 4 resistant and 6
     susceptible. flag says whether its index entry carries null_fits_scored: true; by default it does from revision
@@ -135,7 +151,13 @@ def build(folder, revision, flag=None, scored_on=None, mic=MIC_EXCLUDED):
         intervals = {"dataset": ident, "evaluation_revision": revision, "method": "clopper-pearson",
                      "splits": [{"scheme": s, "learners": rows} for s, rows in splits.items()]}
         (folder / "intervals" / f"{ident}.json").write_text(json.dumps(intervals))
-    index = {"evaluation_revision": revision, "generated_at": "2026-01-01T00:00:00Z", "datasets": datasets}
+    species = [{"species": slug.title(), "slug": slug, "datasets_curated": curated, "datasets_reported": reported,
+                "genomes_labeled": labeled, "genomes_analyzed": analyzed, "lineages": None, "lineage_threshold": None}
+               for slug, curated, reported, labeled, analyzed in SPECIES_ROWS]
+    index = {"evaluation_revision": revision, "generated_at": "2026-01-01T00:00:00Z", "species": species,
+             "datasets": datasets}
+    if funnel is not None:
+        index["funnel"] = funnel
     (folder / "index.json").write_text(json.dumps(index))
     return folder
 
@@ -322,7 +344,7 @@ class Synthetic(unittest.TestCase):
     def test_unknown_revision_is_refused(self):
         with tempfile.TemporaryDirectory() as tmp:
             folder = build(pathlib.Path(tmp) / "rev13", 13)
-            for script in ("uncertainty.py", "summary.py", "catalog.py", "index_counts.py"):
+            for script in ("uncertainty.py", "summary.py", "catalog.py", "index_counts.py", "path.py"):
                 p = run(script, folder / "index.json", folder / "intervals", check=False)
                 self.assertEqual(p.returncode, 1, script)
                 self.assertEqual(p.stdout, "", script)
@@ -342,6 +364,102 @@ class Synthetic(unittest.TestCase):
             b.write_text(json.dumps(self.unc))
             lines = run("compare.py", a, b).stdout.splitlines()
         self.assertEqual(lines[0], "revisions 12 and 14; datasets 12 and 12; reps 50 and 4000")
+
+    def path_on(self, change):
+        """path.py on the revision 14 index after change(index), with the release's own intervals directory."""
+        index = json.loads((self.rev14 / "index.json").read_text())
+        change(index)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = pathlib.Path(tmp) / "index.json"
+            path.write_text(json.dumps(index))
+            return run("path.py", path, self.rev14 / "intervals", check=False)
+
+    def test_path_sums(self):
+        expected = {
+            "datasets": 12, "species_rows": 4,
+            "funnel": {
+                "records": 1000,
+                "records_dropped_by_name": {"drug_class": 30, "not_an_antibiotic": 20, "name_not_resolved": 10,
+                                            "total": 60},  # 30 + 20 + 10
+                "records_no_call_no_mic": 40,
+                "genomes_with_a_record": 120,
+                "genomes_without_metadata": 5,
+                "genomes_failing_a_check": {"reasons": FUNNEL["genomes_failed_qc"], "total": 15},  # 7 + 2 + 6
+                "genomes_passing": 100,
+                "pairs": 600,
+                "pair_kinds": {"reported_resistant_or_susceptible": 400, "label_from_mic": 120, "no_label": 50,
+                               "intermediate_only": 20, "conflict": 10},
+            },
+            # curated 6 + 5 + 2 + 1, reported 5 + 5 + 2 + 0, labeled 900 + 700 + 300 + 40, analyzed 400 + 400 + 250 + 0;
+            # alpha and beta sit at the highest, 400
+            "species": {"datasets_curated": 14, "datasets_with_report": 12, "genomes_with_any_label": 1940,
+                        "genomes_analyzed": 1050, "genomes_analyzed_highest": 400, "species_at_highest": 2},
+            # n: 11 datasets of 200 + 200 and gamma__drug11 of 245 + 200; n_resistant: 11 x 200 + 245
+            "dataset_rows": {"n": 4845, "n_resistant": 2445},
+            "checks": {"genomes": {"with_a_record": 120, "passing_plus_without_metadata_plus_failing": 120},
+                       "pairs": {"pairs": 600, "sum_of_five_kinds": 600}},
+        }
+        for folder, revision in ((self.rev12, 12), (self.rev14, 14)):
+            with self.subTest(revision=revision):
+                out = run_json("path.py", folder)
+                self.assertEqual(out, {"revision": revision, **expected})
+                self.assertEqual(list(out), ["revision", "datasets", "species_rows", "funnel", "species", "dataset_rows",
+                                             "checks"])
+
+    def test_path_check_fails_on_a_wrong_count(self):
+        genomes = "the genomes check fails: with_a_record is {} and passing_plus_without_metadata_plus_failing is {}"
+        pairs = "the pairs check fails: pairs is {} and sum_of_five_kinds is {}"
+        plants = [
+            ({"genomes_passing_qc": 101}, genomes.format(120, 121)),
+            ({"genomes_without_metadata": 4}, genomes.format(120, 119)),
+            ({"genomes_with_records": 119}, genomes.format(119, 120)),
+            ({"genomes_failed_qc": {**FUNNEL["genomes_failed_qc"], "no species": 3}}, genomes.format(120, 121)),
+            ({"pairs_conflict": 11}, pairs.format(600, 601)),
+            ({"pairs_labeled_from_mic": 119}, pairs.format(600, 599)),
+            ({"pairs": 599}, pairs.format(599, 600)),
+            # a pair the label rule sets aside for an intermediate call is none of the five kinds
+            ({"pairs": 605, "pairs_intermediate_mixed": 5}, pairs.format(605, 600)),
+        ]
+        for plant, message in plants:
+            with self.subTest(plant=plant):
+                p = self.path_on(lambda index: index["funnel"].update(plant))
+                self.assertEqual((p.returncode, p.stdout), (1, ""))
+                self.assertIn(message, p.stderr)
+
+    def test_path_without_funnel_is_null(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = run_json("path.py", build(pathlib.Path(tmp) / "nofunnel", 14, funnel=None))
+        # no block is null, never zeros, and the checks need the block
+        self.assertIsNone(out["funnel"])
+        self.assertIsNone(out["checks"])
+        self.assertEqual(list(out), ["revision", "datasets", "species_rows", "funnel", "species", "dataset_rows", "checks"])
+        # the block changes no other count of the file
+        full = run_json("path.py", self.rev14)
+        self.assertEqual({k: v for k, v in out.items() if k not in ("funnel", "checks")},
+                         {k: v for k, v in full.items() if k not in ("funnel", "checks")})
+
+    def test_path_refuses_a_value_that_is_not_a_count(self):
+        for value in (None, -1, True, 1.5, "3"):
+            cases = [
+                (lambda index: index["funnel"].update(records=value), f"funnel has records {value!r}"),
+                (lambda index: index["funnel"]["genomes_failed_qc"].update({"no species": value}),
+                 f"funnel genomes_failed_qc has no species {value!r}"),
+                (lambda index: index["species"][2].update(genomes_analyzed=value),
+                 f"species row gamma has genomes_analyzed {value!r}"),
+                (lambda index: index["datasets"][4].update(n=value), f"dataset alpha__drug4 has n {value!r}"),
+            ]
+            for change, message in cases:
+                with self.subTest(value=value, message=message[:30]):
+                    p = self.path_on(change)
+                    self.assertEqual((p.returncode, p.stdout), (1, ""))
+                    self.assertIn(f"{message}, which is not a count", p.stderr)
+        # a key the funnel block lacks is no count either, and the reasons must be a block of counts
+        p = self.path_on(lambda index: index["funnel"].pop("pairs_unlabeled"))
+        self.assertEqual((p.returncode, p.stdout), (1, ""))
+        self.assertIn("funnel has pairs_unlabeled None, which is not a count", p.stderr)
+        p = self.path_on(lambda index: index["funnel"].update(genomes_failed_qc=[7, 2, 6]))
+        self.assertEqual((p.returncode, p.stdout), (1, ""))
+        self.assertIn("funnel has genomes_failed_qc [7, 2, 6], which is not a block of counts", p.stderr)
 
 
 if __name__ == "__main__":

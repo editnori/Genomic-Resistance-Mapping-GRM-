@@ -1,0 +1,59 @@
+{
+ "revision": 14,
+ "datasets": 274,
+ "species_rows": 23,
+ "funnel": {
+  "records": 1285111,
+  "records_dropped_by_name": {
+   "drug_class": 8709,
+   "not_an_antibiotic": 652,
+   "name_not_resolved": 395,
+   "total": 9756
+  },
+  "records_no_call_no_mic": 42695,
+  "genomes_with_a_record": 123503,
+  "genomes_without_metadata": 20,
+  "genomes_failing_a_check": {
+   "reasons": {
+    "BV-BRC quality: Poor": 3164,
+    "CheckM completeness low": 633,
+    "CheckM contamination high": 599,
+    "genome length off species median": 14,
+    "no species": 1,
+    "species check: sequence is another species": 80
+   },
+   "total": 4491
+  },
+  "genomes_passing": 118992,
+  "pairs": 1063628,
+  "pair_kinds": {
+   "reported_resistant_or_susceptible": 611826,
+   "label_from_mic": 295219,
+   "no_label": 137151,
+   "intermediate_only": 15609,
+   "conflict": 3823
+  }
+ },
+ "species": {
+  "datasets_curated": 277,
+  "datasets_with_report": 274,
+  "genomes_with_any_label": 113547,
+  "genomes_analyzed": 23757,
+  "genomes_analyzed_highest": 2000,
+  "species_at_highest": 8
+ },
+ "dataset_rows": {
+  "n": 217514,
+  "n_resistant": 94095
+ },
+ "checks": {
+  "genomes": {
+   "with_a_record": 123503,
+   "passing_plus_without_metadata_plus_failing": 123503
+  },
+  "pairs": {
+   "pairs": 1063628,
+   "sum_of_five_kinds": 1063628
+  }
+ }
+}

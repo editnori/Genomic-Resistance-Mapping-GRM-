@@ -1,0 +1,145 @@
+file	decides	split	pair	score_pair	against	learner	measure	orientation	withdrawn	datasets	entered	not_scored	constant	unconverged	better	worse	same	median_difference	species	interval_lo	interval_hi	sign_p	holm_p	meets_1	meets_2
+count.tsv	1	lineage	xgboost-gbt	xgboost-k31	k31-at-arm-seeds	gbt	balanced_accuracy	higher	0	233	232	1	0	0	58	17	157	0.003427859392	23	0.000532481363	0.004858301938	1.091164e-06	3.273492e-06	1	1
+count.tsv	1	lineage	xgboost-gbt	xgboost-k31	k31-at-arm-seeds	gbt	recall	higher	0	233	232	1	0	0	63	32	137	0.001923133712	23	0.0	0.0048	0.000962173889			
+count.tsv	1	lineage	xgboost-gbt	xgboost-k31	k31-at-arm-seeds	gbt	specificity	higher	0	233	232	1	0	0	47	37	148	0.0	23	0.0	0.002110465505	0.163067085596			
+count.tsv	1	lineage	xgboost-gbt	xgboost-k31	k31-at-arm-seeds	gbt	vme	lower	0	233	232	1	0	0	63	32	137	-0.001923133712	23	-0.004772479241	0.0	0.000962173889			
+count.tsv	1	lineage	xgboost-gbt	xgboost-k31	k31-at-arm-seeds	gbt	me	lower	0	233	232	1	0	0	47	37	148	0.0	23	-0.002150537635	0.0	0.163067085596			
+count.tsv	1	lineage	xgboost-gbt	xgboost-k31	k31-at-arm-seeds	gbt	log_loss	lower	0	233	232	1	0	0	53	32	147	-0.003255487318	23	-0.005265356561	-0.001187911466	0.014728180893			
+count.tsv	1	lineage	lightgbm-gbt	lightgbm-k31	k31-at-arm-seeds	gbt	balanced_accuracy	higher	0	233	232	1	0	0	62	14	156	0.002797504681	23	0.000649568649	0.004408785066	1.1618e-08	5.8091e-08	1	1
+count.tsv	1	lineage	lightgbm-gbt	lightgbm-k31	k31-at-arm-seeds	gbt	recall	higher	0	233	232	1	0	0	66	31	135	0.000978535354	23	0.0	0.004694835681	0.000245078974			
+count.tsv	1	lineage	lightgbm-gbt	lightgbm-k31	k31-at-arm-seeds	gbt	specificity	higher	0	233	232	1	0	0	46	37	149	0.000887573964	23	0.0	0.002739726028	0.189999698206			
+count.tsv	1	lineage	lightgbm-gbt	lightgbm-k31	k31-at-arm-seeds	gbt	vme	lower	0	233	232	1	0	0	66	31	135	-0.000978535354	23	-0.004694835681	0.0	0.000245078974			
+count.tsv	1	lineage	lightgbm-gbt	lightgbm-k31	k31-at-arm-seeds	gbt	me	lower	0	233	232	1	0	0	46	37	149	-0.000887573964	23	-0.002739726028	0.0	0.189999698206			
+count.tsv	1	lineage	lightgbm-gbt	lightgbm-k31	k31-at-arm-seeds	gbt	log_loss	lower	0	233	232	1	0	0	52	39	141	-0.001662516677	23	-0.003823386616	0.000583406591	0.104087211191			
+count.tsv	1	lineage	elasticnet-lasso	elasticnet-k31	k31-at-arm-seeds	lasso	balanced_accuracy	higher	0	233	232	1	41	46	71	19	142	0.005821692573	23	0.003285538039	0.009387267452	1.5636e-08	6.2544e-08	1	1
+count.tsv	1	lineage	elasticnet-lasso	elasticnet-k31	k31-at-arm-seeds	lasso	recall	higher	0	233	232	1	41	46	68	48	116	0.001763854135	23	0.0	0.00653907496	0.038631132305			
+count.tsv	1	lineage	elasticnet-lasso	elasticnet-k31	k31-at-arm-seeds	lasso	specificity	higher	0	233	232	1	41	46	71	27	134	0.002749073727	23	0.0	0.009508716323	5.056376e-06			
+count.tsv	1	lineage	elasticnet-lasso	elasticnet-k31	k31-at-arm-seeds	lasso	vme	lower	0	233	232	1	41	46	68	48	116	-0.001763854135	23	-0.00653907496	0.0	0.038631132305			
+count.tsv	1	lineage	elasticnet-lasso	elasticnet-k31	k31-at-arm-seeds	lasso	me	lower	0	233	232	1	41	46	71	27	134	-0.002749073727	23	-0.010101010101	0.0	5.056376e-06			
+count.tsv	1	lineage	elasticnet-lasso	elasticnet-k31	k31-at-arm-seeds	lasso	log_loss	lower	0	233	232	1	41	46	121	21	90	-0.022640723296	23	-0.03748859261	-0.012702528998	0.0			
+count.tsv	1	lineage	twin-gbt	twin-k31	k31	gbt	balanced_accuracy	higher	0	233	232	1	0	0	40	33	159	0.0	23	-0.000251538427	0.001154401154	0.241394278422	0.242960217283	0	0
+count.tsv	1	lineage	twin-gbt	twin-k31	k31	gbt	recall	higher	0	233	232	1	0	0	53	47	132	0.0	23	-0.00036231884	0.0	0.308649706795			
+count.tsv	1	lineage	twin-gbt	twin-k31	k31	gbt	specificity	higher	0	233	232	1	0	0	37	38	157	0.0	23	0.0	0.001019099368	0.591223074725			
+count.tsv	1	lineage	twin-gbt	twin-k31	k31	gbt	vme	lower	0	233	232	1	0	0	53	47	132	0.0	23	0.0	0.00045475216	0.308649706795			
+count.tsv	1	lineage	twin-gbt	twin-k31	k31	gbt	me	lower	0	233	232	1	0	0	37	38	157	0.0	23	-0.001064962726	0.0	0.591223074725			
+count.tsv	1	lineage	twin-gbt	twin-k31	k31	gbt	log_loss	lower	0	233	232	1	0	0	36	48	148	0.001102288878	23	-0.000818944319	0.00346686334	0.922171768143			
+count.tsv	1	lineage	twin-lasso	twin-k31	k31	lasso	balanced_accuracy	higher	0	233	232	1	0	0	28	19	185	0.0	23	-0.000995807128	0.000188964475	0.121480108642	0.242960217283	0	0
+count.tsv	1	lineage	twin-lasso	twin-k31	k31	lasso	recall	higher	0	233	232	1	0	0	41	32	159	0.0	23	0.0	0.000957414215	0.174590919085			
+count.tsv	1	lineage	twin-lasso	twin-k31	k31	lasso	specificity	higher	0	233	232	1	0	0	33	31	168	0.0	23	-0.002592525473	0.0	0.450326623126			
+count.tsv	1	lineage	twin-lasso	twin-k31	k31	lasso	vme	lower	0	233	232	1	0	0	41	32	159	0.0	23	-0.000577375259	0.0	0.174590919085			
+count.tsv	1	lineage	twin-lasso	twin-k31	k31	lasso	me	lower	0	233	232	1	0	0	33	31	168	0.0	23	0.0	0.002592525473	0.450326623126			
+count.tsv	1	lineage	twin-lasso	twin-k31	k31	lasso	log_loss	lower	0	233	232	1	0	0	52	54	126	0.000126354141	23	-0.001901850203	0.005517119533	0.614540504531			
+count.tsv	1	study	xgboost-gbt	xgboost-k31	k31-at-arm-seeds	gbt	balanced_accuracy	higher	0	55	55	0	0	0	11	15	29	-0.002221445687	8	-0.02037037037	0.001622146206	0.836530208588			
+count.tsv	1	study	xgboost-gbt	xgboost-k31	k31-at-arm-seeds	gbt	recall	higher	0	55	55	0	0	0	15	16	24	0.0	8	-0.022605363986	0.005318103085	0.639949934091			
+count.tsv	1	study	xgboost-gbt	xgboost-k31	k31-at-arm-seeds	gbt	specificity	higher	0	55	55	0	0	0	12	17	26	-0.004381161008	8	-0.018518518519	0.0	0.867534551769			
+count.tsv	1	study	xgboost-gbt	xgboost-k31	k31-at-arm-seeds	gbt	vme	lower	0	55	55	0	0	0	15	16	24	0.0	8	-0.00487804878	0.022988505748	0.639949934091			
+count.tsv	1	study	xgboost-gbt	xgboost-k31	k31-at-arm-seeds	gbt	me	lower	0	55	55	0	0	0	12	17	26	0.004381161008	8	0.0	0.018518518519	0.867534551769			
+count.tsv	1	study	xgboost-gbt	xgboost-k31	k31-at-arm-seeds	gbt	log_loss	lower	0	55	55	0	0	0	14	23	18	0.009640831347	8	0.00316266145	0.033950908938	0.950564125204			
+count.tsv	1	study	lightgbm-gbt	lightgbm-k31	k31-at-arm-seeds	gbt	balanced_accuracy	higher	0	55	55	0	0	0	7	13	35	0.001183139883	8	-0.011770594966	0.006692519665	0.94234085083			
+count.tsv	1	study	lightgbm-gbt	lightgbm-k31	k31-at-arm-seeds	gbt	recall	higher	0	55	55	0	0	0	14	16	25	0.0	8	-0.003759398497	0.008888888889	0.707667644136			
+count.tsv	1	study	lightgbm-gbt	lightgbm-k31	k31-at-arm-seeds	gbt	specificity	higher	0	55	55	0	0	0	12	15	28	0.0	8	-0.01652892562	0.0	0.778965830803			
+count.tsv	1	study	lightgbm-gbt	lightgbm-k31	k31-at-arm-seeds	gbt	vme	lower	0	55	55	0	0	0	14	16	25	0.0	8	-0.008888888889	0.00168119362	0.707667644136			
+count.tsv	1	study	lightgbm-gbt	lightgbm-k31	k31-at-arm-seeds	gbt	me	lower	0	55	55	0	0	0	12	15	28	0.0	8	0.0	0.01652892562	0.778965830803			
+count.tsv	1	study	lightgbm-gbt	lightgbm-k31	k31-at-arm-seeds	gbt	log_loss	lower	0	55	55	0	0	0	16	19	20	0.010253349133	8	0.00331904483	0.028535040119	0.750220083399			
+count.tsv	1	study	elasticnet-lasso	elasticnet-k31	k31-at-arm-seeds	lasso	balanced_accuracy	higher	0	55	55	0	1	3	14	7	34	0.003623188405	8	-8.8104532e-05	0.006991311376	0.094623565674			
+count.tsv	1	study	elasticnet-lasso	elasticnet-k31	k31-at-arm-seeds	lasso	recall	higher	0	55	55	0	1	3	10	14	31	0.0	8	-0.006553079948	0.002257336343	0.84627187252			
+count.tsv	1	study	elasticnet-lasso	elasticnet-k31	k31-at-arm-seeds	lasso	specificity	higher	0	55	55	0	1	3	17	8	30	0.007058823529	8	0.004382661406	0.010676156584	0.053876072168			
+count.tsv	1	study	elasticnet-lasso	elasticnet-k31	k31-at-arm-seeds	lasso	vme	lower	0	55	55	0	1	3	10	14	31	0.0	8	0.0	0.006764912067	0.84627187252			
+count.tsv	1	study	elasticnet-lasso	elasticnet-k31	k31-at-arm-seeds	lasso	me	lower	0	55	55	0	1	3	17	8	30	-0.007058823529	8	-0.010940319189	-0.004081632653	0.053876072168			
+count.tsv	1	study	elasticnet-lasso	elasticnet-k31	k31-at-arm-seeds	lasso	log_loss	lower	0	55	55	0	1	3	19	13	23	-0.009312816769	8	-0.012835577633	0.003815215777	0.188542793738			
+count-no-constant.tsv	0	lineage	xgboost-gbt	xgboost-k31	k31-at-arm-seeds	gbt	balanced_accuracy	higher	0	233	232	1	0	0	58	17	157	0.003427859392	23	0.000532481363	0.004858301938	1.091164e-06	3.273492e-06		
+count-no-constant.tsv	0	lineage	xgboost-gbt	xgboost-k31	k31-at-arm-seeds	gbt	recall	higher	0	233	232	1	0	0	63	32	137	0.001923133712	23	0.0	0.0048	0.000962173889			
+count-no-constant.tsv	0	lineage	xgboost-gbt	xgboost-k31	k31-at-arm-seeds	gbt	specificity	higher	0	233	232	1	0	0	47	37	148	0.0	23	0.0	0.002110465505	0.163067085596			
+count-no-constant.tsv	0	lineage	xgboost-gbt	xgboost-k31	k31-at-arm-seeds	gbt	vme	lower	0	233	232	1	0	0	63	32	137	-0.001923133712	23	-0.004772479241	0.0	0.000962173889			
+count-no-constant.tsv	0	lineage	xgboost-gbt	xgboost-k31	k31-at-arm-seeds	gbt	me	lower	0	233	232	1	0	0	47	37	148	0.0	23	-0.002150537635	0.0	0.163067085596			
+count-no-constant.tsv	0	lineage	xgboost-gbt	xgboost-k31	k31-at-arm-seeds	gbt	log_loss	lower	0	233	232	1	0	0	53	32	147	-0.003255487318	23	-0.005265356561	-0.001187911466	0.014728180893			
+count-no-constant.tsv	0	lineage	lightgbm-gbt	lightgbm-k31	k31-at-arm-seeds	gbt	balanced_accuracy	higher	0	233	232	1	0	0	62	14	156	0.002797504681	23	0.000649568649	0.004408785066	1.1618e-08	4.6473e-08		
+count-no-constant.tsv	0	lineage	lightgbm-gbt	lightgbm-k31	k31-at-arm-seeds	gbt	recall	higher	0	233	232	1	0	0	66	31	135	0.000978535354	23	0.0	0.004694835681	0.000245078974			
+count-no-constant.tsv	0	lineage	lightgbm-gbt	lightgbm-k31	k31-at-arm-seeds	gbt	specificity	higher	0	233	232	1	0	0	46	37	149	0.000887573964	23	0.0	0.002739726028	0.189999698206			
+count-no-constant.tsv	0	lineage	lightgbm-gbt	lightgbm-k31	k31-at-arm-seeds	gbt	vme	lower	0	233	232	1	0	0	66	31	135	-0.000978535354	23	-0.004694835681	0.0	0.000245078974			
+count-no-constant.tsv	0	lineage	lightgbm-gbt	lightgbm-k31	k31-at-arm-seeds	gbt	me	lower	0	233	232	1	0	0	46	37	149	-0.000887573964	23	-0.002739726028	0.0	0.189999698206			
+count-no-constant.tsv	0	lineage	lightgbm-gbt	lightgbm-k31	k31-at-arm-seeds	gbt	log_loss	lower	0	233	232	1	0	0	52	39	141	-0.001662516677	23	-0.003823386616	0.000583406591	0.104087211191			
+count-no-constant.tsv	0	lineage	elasticnet-lasso	elasticnet-k31	k31-at-arm-seeds	lasso	balanced_accuracy	higher	0	233	191	42	0	37	55	8	128	0.005656457906	22	0.003285538039	0.008620689655	4.88e-10	2.44e-09		
+count-no-constant.tsv	0	lineage	elasticnet-lasso	elasticnet-k31	k31-at-arm-seeds	lasso	recall	higher	0	233	191	42	0	37	55	29	107	0.003875968993	22	0.0	0.009057971015	0.003018978816			
+count-no-constant.tsv	0	lineage	elasticnet-lasso	elasticnet-k31	k31-at-arm-seeds	lasso	specificity	higher	0	233	191	42	0	37	51	17	123	0.002049180327	22	0.0	0.006653359947	2.2267244e-05			
+count-no-constant.tsv	0	lineage	elasticnet-lasso	elasticnet-k31	k31-at-arm-seeds	lasso	vme	lower	0	233	191	42	0	37	55	29	107	-0.003875968993	22	-0.009057971015	0.0	0.003018978816			
+count-no-constant.tsv	0	lineage	elasticnet-lasso	elasticnet-k31	k31-at-arm-seeds	lasso	me	lower	0	233	191	42	0	37	51	17	123	-0.002049180327	22	-0.007246376811	0.0	2.2267244e-05			
+count-no-constant.tsv	0	lineage	elasticnet-lasso	elasticnet-k31	k31-at-arm-seeds	lasso	log_loss	lower	0	233	191	42	0	37	97	14	80	-0.021096696816	22	-0.032265369008	-0.011240211194	0.0			
+count-no-constant.tsv	0	lineage	twin-gbt	twin-k31	k31	gbt	balanced_accuracy	higher	0	233	232	1	0	0	40	33	159	0.0	23	-0.000251538427	0.001154401154	0.241394278422	0.242960217283		
+count-no-constant.tsv	0	lineage	twin-gbt	twin-k31	k31	gbt	recall	higher	0	233	232	1	0	0	53	47	132	0.0	23	-0.00036231884	0.0	0.308649706795			
+count-no-constant.tsv	0	lineage	twin-gbt	twin-k31	k31	gbt	specificity	higher	0	233	232	1	0	0	37	38	157	0.0	23	0.0	0.001019099368	0.591223074725			
+count-no-constant.tsv	0	lineage	twin-gbt	twin-k31	k31	gbt	vme	lower	0	233	232	1	0	0	53	47	132	0.0	23	0.0	0.00045475216	0.308649706795			
+count-no-constant.tsv	0	lineage	twin-gbt	twin-k31	k31	gbt	me	lower	0	233	232	1	0	0	37	38	157	0.0	23	-0.001064962726	0.0	0.591223074725			
+count-no-constant.tsv	0	lineage	twin-gbt	twin-k31	k31	gbt	log_loss	lower	0	233	232	1	0	0	36	48	148	0.001102288878	23	-0.000818944319	0.00346686334	0.922171768143			
+count-no-constant.tsv	0	lineage	twin-lasso	twin-k31	k31	lasso	balanced_accuracy	higher	0	233	232	1	0	0	28	19	185	0.0	23	-0.000995807128	0.000188964475	0.121480108642	0.242960217283		
+count-no-constant.tsv	0	lineage	twin-lasso	twin-k31	k31	lasso	recall	higher	0	233	232	1	0	0	41	32	159	0.0	23	0.0	0.000957414215	0.174590919085			
+count-no-constant.tsv	0	lineage	twin-lasso	twin-k31	k31	lasso	specificity	higher	0	233	232	1	0	0	33	31	168	0.0	23	-0.002592525473	0.0	0.450326623126			
+count-no-constant.tsv	0	lineage	twin-lasso	twin-k31	k31	lasso	vme	lower	0	233	232	1	0	0	41	32	159	0.0	23	-0.000577375259	0.0	0.174590919085			
+count-no-constant.tsv	0	lineage	twin-lasso	twin-k31	k31	lasso	me	lower	0	233	232	1	0	0	33	31	168	0.0	23	0.0	0.002592525473	0.450326623126			
+count-no-constant.tsv	0	lineage	twin-lasso	twin-k31	k31	lasso	log_loss	lower	0	233	232	1	0	0	52	54	126	0.000126354141	23	-0.001901850203	0.005517119533	0.614540504531			
+count-no-constant.tsv	0	study	xgboost-gbt	xgboost-k31	k31-at-arm-seeds	gbt	balanced_accuracy	higher	0	55	55	0	0	0	11	15	29	-0.002221445687	8	-0.02037037037	0.001622146206	0.836530208588			
+count-no-constant.tsv	0	study	xgboost-gbt	xgboost-k31	k31-at-arm-seeds	gbt	recall	higher	0	55	55	0	0	0	15	16	24	0.0	8	-0.022605363986	0.005318103085	0.639949934091			
+count-no-constant.tsv	0	study	xgboost-gbt	xgboost-k31	k31-at-arm-seeds	gbt	specificity	higher	0	55	55	0	0	0	12	17	26	-0.004381161008	8	-0.018518518519	0.0	0.867534551769			
+count-no-constant.tsv	0	study	xgboost-gbt	xgboost-k31	k31-at-arm-seeds	gbt	vme	lower	0	55	55	0	0	0	15	16	24	0.0	8	-0.00487804878	0.022988505748	0.639949934091			
+count-no-constant.tsv	0	study	xgboost-gbt	xgboost-k31	k31-at-arm-seeds	gbt	me	lower	0	55	55	0	0	0	12	17	26	0.004381161008	8	0.0	0.018518518519	0.867534551769			
+count-no-constant.tsv	0	study	xgboost-gbt	xgboost-k31	k31-at-arm-seeds	gbt	log_loss	lower	0	55	55	0	0	0	14	23	18	0.009640831347	8	0.00316266145	0.033950908938	0.950564125204			
+count-no-constant.tsv	0	study	lightgbm-gbt	lightgbm-k31	k31-at-arm-seeds	gbt	balanced_accuracy	higher	0	55	55	0	0	0	7	13	35	0.001183139883	8	-0.011770594966	0.006692519665	0.94234085083			
+count-no-constant.tsv	0	study	lightgbm-gbt	lightgbm-k31	k31-at-arm-seeds	gbt	recall	higher	0	55	55	0	0	0	14	16	25	0.0	8	-0.003759398497	0.008888888889	0.707667644136			
+count-no-constant.tsv	0	study	lightgbm-gbt	lightgbm-k31	k31-at-arm-seeds	gbt	specificity	higher	0	55	55	0	0	0	12	15	28	0.0	8	-0.01652892562	0.0	0.778965830803			
+count-no-constant.tsv	0	study	lightgbm-gbt	lightgbm-k31	k31-at-arm-seeds	gbt	vme	lower	0	55	55	0	0	0	14	16	25	0.0	8	-0.008888888889	0.00168119362	0.707667644136			
+count-no-constant.tsv	0	study	lightgbm-gbt	lightgbm-k31	k31-at-arm-seeds	gbt	me	lower	0	55	55	0	0	0	12	15	28	0.0	8	0.0	0.01652892562	0.778965830803			
+count-no-constant.tsv	0	study	lightgbm-gbt	lightgbm-k31	k31-at-arm-seeds	gbt	log_loss	lower	0	55	55	0	0	0	16	19	20	0.010253349133	8	0.00331904483	0.028535040119	0.750220083399			
+count-no-constant.tsv	0	study	elasticnet-lasso	elasticnet-k31	k31-at-arm-seeds	lasso	balanced_accuracy	higher	0	55	54	1	0	3	14	7	33	0.003970903223	8	0.001017024339	0.006991311376	0.094623565674			
+count-no-constant.tsv	0	study	elasticnet-lasso	elasticnet-k31	k31-at-arm-seeds	lasso	recall	higher	0	55	54	1	0	3	9	14	31	-0.001587301587	8	-0.017241379311	0.002257336343	0.894980192184			
+count-no-constant.tsv	0	study	elasticnet-lasso	elasticnet-k31	k31-at-arm-seeds	lasso	specificity	higher	0	55	54	1	0	3	17	7	30	0.007075511056	8	0.005479452055	0.011204481793	0.03195732832			
+count-no-constant.tsv	0	study	elasticnet-lasso	elasticnet-k31	k31-at-arm-seeds	lasso	vme	lower	0	55	54	1	0	3	9	14	31	0.001587301587	8	0.0	0.017241379311	0.894980192184			
+count-no-constant.tsv	0	study	elasticnet-lasso	elasticnet-k31	k31-at-arm-seeds	lasso	me	lower	0	55	54	1	0	3	17	7	30	-0.007075511056	8	-0.011204481793	-0.005479452055	0.03195732832			
+count-no-constant.tsv	0	study	elasticnet-lasso	elasticnet-k31	k31-at-arm-seeds	lasso	log_loss	lower	0	55	54	1	0	3	19	12	23	-0.00971601454	8	-0.013339121691	0.003752014675	0.14052075753			
+count-no-unconverged.tsv	0	lineage	xgboost-gbt	xgboost-k31	k31-at-arm-seeds	gbt	balanced_accuracy	higher	0	233	232	1	0	0	58	17	157	0.003427859392	23	0.000532481363	0.004858301938	1.091164e-06	3.273492e-06		
+count-no-unconverged.tsv	0	lineage	xgboost-gbt	xgboost-k31	k31-at-arm-seeds	gbt	recall	higher	0	233	232	1	0	0	63	32	137	0.001923133712	23	0.0	0.0048	0.000962173889			
+count-no-unconverged.tsv	0	lineage	xgboost-gbt	xgboost-k31	k31-at-arm-seeds	gbt	specificity	higher	0	233	232	1	0	0	47	37	148	0.0	23	0.0	0.002110465505	0.163067085596			
+count-no-unconverged.tsv	0	lineage	xgboost-gbt	xgboost-k31	k31-at-arm-seeds	gbt	vme	lower	0	233	232	1	0	0	63	32	137	-0.001923133712	23	-0.004772479241	0.0	0.000962173889			
+count-no-unconverged.tsv	0	lineage	xgboost-gbt	xgboost-k31	k31-at-arm-seeds	gbt	me	lower	0	233	232	1	0	0	47	37	148	0.0	23	-0.002150537635	0.0	0.163067085596			
+count-no-unconverged.tsv	0	lineage	xgboost-gbt	xgboost-k31	k31-at-arm-seeds	gbt	log_loss	lower	0	233	232	1	0	0	53	32	147	-0.003255487318	23	-0.005265356561	-0.001187911466	0.014728180893			
+count-no-unconverged.tsv	0	lineage	lightgbm-gbt	lightgbm-k31	k31-at-arm-seeds	gbt	balanced_accuracy	higher	0	233	232	1	0	0	62	14	156	0.002797504681	23	0.000649568649	0.004408785066	1.1618e-08	5.8091e-08		
+count-no-unconverged.tsv	0	lineage	lightgbm-gbt	lightgbm-k31	k31-at-arm-seeds	gbt	recall	higher	0	233	232	1	0	0	66	31	135	0.000978535354	23	0.0	0.004694835681	0.000245078974			
+count-no-unconverged.tsv	0	lineage	lightgbm-gbt	lightgbm-k31	k31-at-arm-seeds	gbt	specificity	higher	0	233	232	1	0	0	46	37	149	0.000887573964	23	0.0	0.002739726028	0.189999698206			
+count-no-unconverged.tsv	0	lineage	lightgbm-gbt	lightgbm-k31	k31-at-arm-seeds	gbt	vme	lower	0	233	232	1	0	0	66	31	135	-0.000978535354	23	-0.004694835681	0.0	0.000245078974			
+count-no-unconverged.tsv	0	lineage	lightgbm-gbt	lightgbm-k31	k31-at-arm-seeds	gbt	me	lower	0	233	232	1	0	0	46	37	149	-0.000887573964	23	-0.002739726028	0.0	0.189999698206			
+count-no-unconverged.tsv	0	lineage	lightgbm-gbt	lightgbm-k31	k31-at-arm-seeds	gbt	log_loss	lower	0	233	232	1	0	0	52	39	141	-0.001662516677	23	-0.003823386616	0.000583406591	0.104087211191			
+count-no-unconverged.tsv	0	lineage	elasticnet-lasso	elasticnet-k31	k31-at-arm-seeds	lasso	balanced_accuracy	higher	0	233	186	47	32	0	54	14	118	0.00473913124	23	0.002976190476	0.008094230167	5.54863e-07	2.219451e-06		
+count-no-unconverged.tsv	0	lineage	elasticnet-lasso	elasticnet-k31	k31-at-arm-seeds	lasso	recall	higher	0	233	186	47	32	0	52	37	97	0.001763854135	23	0.0	0.005952380953	0.068683985678			
+count-no-unconverged.tsv	0	lineage	elasticnet-lasso	elasticnet-k31	k31-at-arm-seeds	lasso	specificity	higher	0	233	186	47	32	0	55	21	110	0.001835508149	23	0.0	0.008547008547	6.0314558e-05			
+count-no-unconverged.tsv	0	lineage	elasticnet-lasso	elasticnet-k31	k31-at-arm-seeds	lasso	vme	lower	0	233	186	47	32	0	52	37	97	-0.001763854135	23	-0.005952380953	0.0	0.068683985678			
+count-no-unconverged.tsv	0	lineage	elasticnet-lasso	elasticnet-k31	k31-at-arm-seeds	lasso	me	lower	0	233	186	47	32	0	55	21	110	-0.001835508149	23	-0.008547008547	0.0	6.0314558e-05			
+count-no-unconverged.tsv	0	lineage	elasticnet-lasso	elasticnet-k31	k31-at-arm-seeds	lasso	log_loss	lower	0	233	186	47	32	0	98	17	71	-0.023581532148	23	-0.039119433433	-0.012702528998	0.0			
+count-no-unconverged.tsv	0	lineage	twin-gbt	twin-k31	k31	gbt	balanced_accuracy	higher	0	233	232	1	0	0	40	33	159	0.0	23	-0.000251538427	0.001154401154	0.241394278422	0.242960217283		
+count-no-unconverged.tsv	0	lineage	twin-gbt	twin-k31	k31	gbt	recall	higher	0	233	232	1	0	0	53	47	132	0.0	23	-0.00036231884	0.0	0.308649706795			
+count-no-unconverged.tsv	0	lineage	twin-gbt	twin-k31	k31	gbt	specificity	higher	0	233	232	1	0	0	37	38	157	0.0	23	0.0	0.001019099368	0.591223074725			
+count-no-unconverged.tsv	0	lineage	twin-gbt	twin-k31	k31	gbt	vme	lower	0	233	232	1	0	0	53	47	132	0.0	23	0.0	0.00045475216	0.308649706795			
+count-no-unconverged.tsv	0	lineage	twin-gbt	twin-k31	k31	gbt	me	lower	0	233	232	1	0	0	37	38	157	0.0	23	-0.001064962726	0.0	0.591223074725			
+count-no-unconverged.tsv	0	lineage	twin-gbt	twin-k31	k31	gbt	log_loss	lower	0	233	232	1	0	0	36	48	148	0.001102288878	23	-0.000818944319	0.00346686334	0.922171768143			
+count-no-unconverged.tsv	0	lineage	twin-lasso	twin-k31	k31	lasso	balanced_accuracy	higher	0	233	232	1	0	0	28	19	185	0.0	23	-0.000995807128	0.000188964475	0.121480108642	0.242960217283		
+count-no-unconverged.tsv	0	lineage	twin-lasso	twin-k31	k31	lasso	recall	higher	0	233	232	1	0	0	41	32	159	0.0	23	0.0	0.000957414215	0.174590919085			
+count-no-unconverged.tsv	0	lineage	twin-lasso	twin-k31	k31	lasso	specificity	higher	0	233	232	1	0	0	33	31	168	0.0	23	-0.002592525473	0.0	0.450326623126			
+count-no-unconverged.tsv	0	lineage	twin-lasso	twin-k31	k31	lasso	vme	lower	0	233	232	1	0	0	41	32	159	0.0	23	-0.000577375259	0.0	0.174590919085			
+count-no-unconverged.tsv	0	lineage	twin-lasso	twin-k31	k31	lasso	me	lower	0	233	232	1	0	0	33	31	168	0.0	23	0.0	0.002592525473	0.450326623126			
+count-no-unconverged.tsv	0	lineage	twin-lasso	twin-k31	k31	lasso	log_loss	lower	0	233	232	1	0	0	52	54	126	0.000126354141	23	-0.001901850203	0.005517119533	0.614540504531			
+count-no-unconverged.tsv	0	study	xgboost-gbt	xgboost-k31	k31-at-arm-seeds	gbt	balanced_accuracy	higher	0	55	55	0	0	0	11	15	29	-0.002221445687	8	-0.02037037037	0.001622146206	0.836530208588			
+count-no-unconverged.tsv	0	study	xgboost-gbt	xgboost-k31	k31-at-arm-seeds	gbt	recall	higher	0	55	55	0	0	0	15	16	24	0.0	8	-0.022605363986	0.005318103085	0.639949934091			
+count-no-unconverged.tsv	0	study	xgboost-gbt	xgboost-k31	k31-at-arm-seeds	gbt	specificity	higher	0	55	55	0	0	0	12	17	26	-0.004381161008	8	-0.018518518519	0.0	0.867534551769			
+count-no-unconverged.tsv	0	study	xgboost-gbt	xgboost-k31	k31-at-arm-seeds	gbt	vme	lower	0	55	55	0	0	0	15	16	24	0.0	8	-0.00487804878	0.022988505748	0.639949934091			
+count-no-unconverged.tsv	0	study	xgboost-gbt	xgboost-k31	k31-at-arm-seeds	gbt	me	lower	0	55	55	0	0	0	12	17	26	0.004381161008	8	0.0	0.018518518519	0.867534551769			
+count-no-unconverged.tsv	0	study	xgboost-gbt	xgboost-k31	k31-at-arm-seeds	gbt	log_loss	lower	0	55	55	0	0	0	14	23	18	0.009640831347	8	0.00316266145	0.033950908938	0.950564125204			
+count-no-unconverged.tsv	0	study	lightgbm-gbt	lightgbm-k31	k31-at-arm-seeds	gbt	balanced_accuracy	higher	0	55	55	0	0	0	7	13	35	0.001183139883	8	-0.011770594966	0.006692519665	0.94234085083			
+count-no-unconverged.tsv	0	study	lightgbm-gbt	lightgbm-k31	k31-at-arm-seeds	gbt	recall	higher	0	55	55	0	0	0	14	16	25	0.0	8	-0.003759398497	0.008888888889	0.707667644136			
+count-no-unconverged.tsv	0	study	lightgbm-gbt	lightgbm-k31	k31-at-arm-seeds	gbt	specificity	higher	0	55	55	0	0	0	12	15	28	0.0	8	-0.01652892562	0.0	0.778965830803			
+count-no-unconverged.tsv	0	study	lightgbm-gbt	lightgbm-k31	k31-at-arm-seeds	gbt	vme	lower	0	55	55	0	0	0	14	16	25	0.0	8	-0.008888888889	0.00168119362	0.707667644136			
+count-no-unconverged.tsv	0	study	lightgbm-gbt	lightgbm-k31	k31-at-arm-seeds	gbt	me	lower	0	55	55	0	0	0	12	15	28	0.0	8	0.0	0.01652892562	0.778965830803			
+count-no-unconverged.tsv	0	study	lightgbm-gbt	lightgbm-k31	k31-at-arm-seeds	gbt	log_loss	lower	0	55	55	0	0	0	16	19	20	0.010253349133	8	0.00331904483	0.028535040119	0.750220083399			
+count-no-unconverged.tsv	0	study	elasticnet-lasso	elasticnet-k31	k31-at-arm-seeds	lasso	balanced_accuracy	higher	0	55	52	3	1	0	13	6	33	0.003513078138	7	-0.001393124886	0.006507703881	0.083534240723			
+count-no-unconverged.tsv	0	study	elasticnet-lasso	elasticnet-k31	k31-at-arm-seeds	lasso	recall	higher	0	55	52	3	1	0	10	13	29	-0.001587301587	7	-0.006553079948	0.0	0.797563552856			
+count-no-unconverged.tsv	0	study	elasticnet-lasso	elasticnet-k31	k31-at-arm-seeds	lasso	specificity	higher	0	55	52	3	1	0	15	8	29	0.005884380116	7	0.0	0.009470309697	0.105019807816			
+count-no-unconverged.tsv	0	study	elasticnet-lasso	elasticnet-k31	k31-at-arm-seeds	lasso	vme	lower	0	55	52	3	1	0	10	13	29	0.001587301587	7	0.0	0.006553079948	0.797563552856			
+count-no-unconverged.tsv	0	study	elasticnet-lasso	elasticnet-k31	k31-at-arm-seeds	lasso	me	lower	0	55	52	3	1	0	15	8	29	-0.005884380116	7	-0.008961266698	0.0	0.105019807816			
+count-no-unconverged.tsv	0	study	elasticnet-lasso	elasticnet-k31	k31-at-arm-seeds	lasso	log_loss	lower	0	55	52	3	1	0	19	11	22	-0.00971601454	7	-0.013885514804	0.003752014675	0.100244211033			

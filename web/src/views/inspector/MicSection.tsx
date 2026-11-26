@@ -4,6 +4,7 @@ import { researchFor, type GuardPart, type MicResearchState } from "../../data/r
 import { int, mgL, pct, plural } from "../../data/format";
 import { BARS } from "../../data/metrics";
 import { MicHeatmap } from "../../charts/MicHeatmap";
+import { MicPlateStrip } from "../../charts/amr";
 import { verdictWords, PanelState, ScrollFrame, Section } from "../../ui/primitives";
 import { leadOver, leadWords, type Agreement, type Baselines, type MicBaseline } from "../../data/baselines";
 
@@ -48,6 +49,12 @@ export const MicSection = ({ r, research, baselines }: { r: DatasetReport; resea
   const constant = baselines?.mic ?? null;
   const withMic = r.samples.filter((s) => s.mic !== null);
   const exact = withMic.filter((s) => s.mic?.censor === "Exact").length;
+  const distinctFoldCuts = mic?.fold_breakpoints
+    ? [...new Set(mic.fold_breakpoints.flatMap((b) => (b === null ? [] : [b.r_above])))]
+    : [];
+  const foldsDiffer = distinctFoldCuts.length > 1;
+  const plateCut = foldsDiffer ? null : (distinctFoldCuts[0] ?? mic?.breakpoint?.r_above ?? r.breakpoint?.r_above ?? null);
+  const plateCutoffLabel = distinctFoldCuts.length === 1 ? "Fold threshold" : "Cohort breakpoint";
   return (
     <Section
       id="ds-mic"
@@ -66,42 +73,45 @@ export const MicSection = ({ r, research, baselines }: { r: DatasetReport; resea
           message={`MIC regression needs at least 100 isolates with an MIC, 50 of them exact. This dataset has ${int(withMic.length)} with an MIC, ${int(exact)} exact.`}
         />
       ) : (
-        // grid-cols-1 keeps the narrow layout's one column at the dialog's width:
-        // the heatmap sizes itself from its frame, and an auto column would grow
-        // to the heatmap's own width and keep it there.
-        <div className="grid grid-cols-1 gap-x-10 gap-y-6 lg:grid-cols-[minmax(0,auto)_minmax(0,1fr)]">
-          <MicHeatmap
-            confusion={mic.confusion}
-            band={constant?.median == null ? undefined : { model: constant.model.essential_agreement, constant: constant.median.essential_agreement, n: constant.n_exact }}
-          />
-          <div className="space-y-3 text-body text-ink">
-            {constant === null ? null : <MicConstant b={constant} />}
-            <p>
-              Counting censored values too, {pct(mic.essential_agreement_all)} of {int(mic.n)} isolates agree: a value reported as at most X agrees when the prediction is at most one step above X, and a value above X agrees when the prediction is at least X.
-            </p>
-            {mic.categorical !== null && mic.fold_breakpoints !== undefined ? (
+        <div className="space-y-6">
+          <MicPlateStrip mode="agreement" rAbove={plateCut} cutoffLabel={plateCutoffLabel} label="Essential agreement on a broth dilution plate (±1 doubling well)" />
+          {/* grid-cols-1 keeps the narrow layout's one column at the dialog's width:
+              the heatmap sizes itself from its frame, and an auto column would grow
+              to the heatmap's own width and keep it there. */}
+          <div className="grid grid-cols-1 gap-x-10 gap-y-6 lg:grid-cols-[minmax(0,auto)_minmax(0,1fr)]">
+            <MicHeatmap
+              confusion={mic.confusion}
+              band={constant?.median == null ? undefined : { model: constant.model.essential_agreement, constant: constant.median.essential_agreement, n: constant.n_exact }}
+            />
+            <div className="space-y-3 text-body text-ink">
+              {constant === null ? null : <MicConstant b={constant} />}
               <p>
-                Calling resistance from the predicted MIC at each training fold&apos;s own threshold (resistant above{" "}
-                {[...new Set(mic.fold_breakpoints.flatMap((b) => (b === null ? [] : [b.r_above])))]
-                  .sort((a, b) => a - b)
-                  .map(mgL)
-                  .join(" or ")}{" "}
-                mg/L, fitted on that fold&apos;s training isolates) and scoring the calls against the reported resistant and susceptible labels gives{" "}
-                {verdictWords(mic.categorical.vme, BARS.vme)} and {verdictWords(mic.categorical.me, BARS.me)} over {int(mic.categorical.n)} isolates with an MIC.
+                Counting censored values too, {pct(mic.essential_agreement_all)} of {int(mic.n)} isolates agree: a value reported as at most X agrees when the prediction is at most one step above X, and a value above X agrees when the prediction is at least X.
               </p>
-            ) : mic.categorical !== null && mic.breakpoint !== null ? (
-              <p>
-                This report predates training-fold thresholds: its categorical errors{" "}
-                {verdictWords(mic.categorical.vme, BARS.vme)} and {verdictWords(mic.categorical.me, BARS.me)} used the cohort breakpoint (resistant above{" "}
-                {mgL(mic.breakpoint.r_above)} mg/L), which was fitted on all isolates including the ones scored.
+              {mic.categorical !== null && mic.fold_breakpoints !== undefined ? (
+                <p>
+                  Calling resistance from the predicted MIC at each training fold&apos;s own threshold (resistant above{" "}
+                  {[...new Set(mic.fold_breakpoints.flatMap((b) => (b === null ? [] : [b.r_above])))]
+                    .sort((a, b) => a - b)
+                    .map(mgL)
+                    .join(" or ")}{" "}
+                  mg/L, fitted on that fold&apos;s training isolates) and scoring the calls against the reported resistant and susceptible labels gives{" "}
+                  {verdictWords(mic.categorical.vme, BARS.vme)} and {verdictWords(mic.categorical.me, BARS.me)} over {int(mic.categorical.n)} isolates with an MIC.
+                </p>
+              ) : mic.categorical !== null && mic.breakpoint !== null ? (
+                <p>
+                  This report predates training-fold thresholds: its categorical errors{" "}
+                  {verdictWords(mic.categorical.vme, BARS.vme)} and {verdictWords(mic.categorical.me, BARS.me)} used the cohort breakpoint (resistant above{" "}
+                  {mgL(mic.breakpoint.r_above)} mg/L), which was fitted on all isolates including the ones scored.
+                </p>
+              ) : mic.fold_breakpoints !== undefined ? (
+                <p>No categorical calls: at least one training fold had too few isolates to fit a threshold, and the pipeline does not score a subset.</p>
+              ) : null}
+              <p className="type-note">
+                Censored gradient-boosted regression on log2 dilution steps, predicted out of fold on its own stratified random folds, which differ from the random split&apos;s and hold no lineage out.
+                {mic.categorical === null ? "" : " The VME and ME limits are a screen adapted from FDA's 2009 guidance for growth-based susceptibility test systems."}
               </p>
-            ) : mic.fold_breakpoints !== undefined ? (
-              <p>No categorical calls: at least one training fold had too few isolates to fit a threshold, and the pipeline does not score a subset.</p>
-            ) : null}
-            <p className="type-note">
-              Censored gradient-boosted regression on log2 dilution steps, predicted out of fold on its own stratified random folds, which differ from the random split&apos;s and hold no lineage out.
-              {mic.categorical === null ? "" : " The VME and ME limits are a screen adapted from FDA's 2009 guidance for growth-based susceptibility test systems."}
-            </p>
+            </div>
           </div>
         </div>
       )}

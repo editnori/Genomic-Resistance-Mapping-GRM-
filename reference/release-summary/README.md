@@ -2,6 +2,10 @@
 
 These files are the outputs of the scripts in `scripts/release-summary/` on two public GRM releases. `docs/release-summary.md` says what each output holds and how each number is made. They were computed on 2026-11-13 at the commit that added them. The two `index-counts.json` files were computed again on 2026-11-15, when `index_counts.py` began to count the index's labels inferred from a MIC; every count they held before is unchanged.
 
+`rev14-274-20261112/path.json` was computed on 2026-11-26 from the revision 14 `index.json` alone. It is committed for revision 14 only, so `rev12-274-20261105/` has no `path.json`.
+
+`rebuilt-table-20261121/` holds two files of counts that no script here makes. The section "Rebuilt table" below says where they come from.
+
 ## Inputs
 
 Each release is one archive. The scripts read two things from it: `index.json` and the directory `intervals/`, one file per dataset.
@@ -34,9 +38,10 @@ python3 -I scripts/release-summary/summary.py      "$R/index.json" "$R/intervals
 python3 -I scripts/release-summary/catalog.py      "$R/index.json" "$R/intervals" > "$OUT/catalog.json"
 python3 -I scripts/release-summary/index_counts.py "$R/index.json" "$R/intervals" > "$OUT/index-counts.json"
 python3 -I scripts/release-summary/guidance.py     "$R/index.json" "$R/intervals" > "$OUT/guidance.json"
+python3 -I scripts/release-summary/path.py         "$R/index.json" "$R/intervals" > "$OUT/path.json"
 ```
 
-`uncertainty.py` uses its default of 4000 bootstrap repetitions and seed 20261111; both are in its output. To put the two releases side by side:
+`path.py` reads `index.json` only; it takes the second argument so that every script has the same command line. `uncertainty.py` uses its default of 4000 bootstrap repetitions and seed 20261111; both are in its output. To put the two releases side by side:
 
 ```sh
 python3 -I scripts/release-summary/compare.py \
@@ -59,7 +64,21 @@ f0c0e4e99759b1a7b0b846e23948369adacb21d06b56f63233f1202c14bee55e  rev12-274-2026
 2d74fab696e2c7a5bb0814ac86082116d2c787f0440cdf5ba872b302532da6bd  rev14-274-20261112/catalog.json
 307935431d2ecdf66274a65e1778ee59cfde9143e028a42f9b0c3898dd13f828  rev14-274-20261112/index-counts.json
 abce2c7c4c5bf940606e747543eded4771a939715a4fdfd7f0bdc9190b6ce14f  rev14-274-20261112/guidance.json
+93eed49c15770c06528fdcd515415bff0fc74d8042bf4caecc3de9f5eed664ca  rev14-274-20261112/path.json
+58a96bed047e4540d92c8bb7d09d467ad8797b29f08dc01cdaaa75568a87e052  rebuilt-table-20261121/funnel.json
+e8d3c20f13c0b2c660c2e61a4cfb31289da90ec7abd92ba19595b202a3c61a53  rebuilt-table-20261121/cap-species.tsv
 ```
+
+## Rebuilt table
+
+The table revision 14 was curated from was not found. On 21 Nov 2026 it was rebuilt from a new download of BV-BRC's lab records: the 1,285,111 records inserted before 2026-11-05T19:10:00, the same number the release's index counts (`docs/assumption-plan-later-records.md`, "File"). `rebuilt-table-20261121/` holds two files of counts made on that copy. Neither holds a genome id.
+
+- `funnel.json` is the `funnel.json` that `grm curate` wrote for the copy at main `77341aa`, byte for byte.
+- `cap-species.tsv` has one row for each of the 23 species with a dataset, then a row for the 7 species with more than 4,096 such genomes and a row for all 23. It counts the genomes the cap picks among, and how many a cap of 2,000, 4,000, 4,096 or none keeps and leaves out. The counts come from the selections `grm curate` wrote at each cap with `--min-class 25`, at main `934292c`. `src/` is the same at both commits.
+
+The copy differs from the release's table in three ways. It was curated with no species check, so its funnel counts no genome as failing that check. Its drug names were resolved with GRM's own list alone, without the reviewed vocabulary the release used. Its genome metadata was downloaded again on 21 Nov 2026, and the length check takes each species' median from that file (`src/curate.rs:583-596`).
+
+The download is not in the repository, so these two files cannot be made again from it. `docs/release-summary.md` reads them under "Curation path" to give the cause of two counts on `docs/assumption-plan.md` that differ from the index.
 
 ## Against the earlier runs
 
@@ -76,3 +95,5 @@ The same scripts ran from outside the repository before they moved here. `docs/r
 On 2026-11-15 both `index-counts.json` files gained one block, `labels_from_mic_excluded`, read from the same `index.json`. Rebuilt from the same inputs, the other four outputs of each release are byte-identical, and the two `index-counts.json` files differ from the files they replace only by that block.
 
 `guidance.json` is new. No earlier run computed it.
+
+`path.json` is new. No earlier run computed it.

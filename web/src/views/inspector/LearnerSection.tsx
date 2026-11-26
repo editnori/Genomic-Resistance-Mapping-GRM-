@@ -5,7 +5,8 @@ import { BARS } from "../../data/metrics";
 import { bestLearner, countsNoCalls, learnerOf, NO_BEST_LEARNER, nullFolds, outscoringPartial, scoresNullFits, splitAbsence, splitOf, uncalledOf } from "../../data/derive/dataset";
 import { linear, useWidth } from "../../charts/kit";
 import { LearnerStripRow, StripAxis } from "../../charts/LearnerStrip";
-import { BarPill, Dot, LegendItem, ScrollFrame, Section, Segmented } from "../../ui/primitives";
+import { AmrPeerStrip, ErrorLimitGauge } from "../../charts/amr";
+import { BarPill, Disclosure, Dot, LegendItem, ScrollFrame, Section, Segmented } from "../../ui/primitives";
 
 import type { Resource } from "../../data/load";
 import { intervalKey, type RateInterval, type RowIntervals } from "../../data/intervals";
@@ -94,12 +95,15 @@ export const LearnerSection = ({
   research,
   intervals,
   baselines = null,
+  peerContext,
 }: {
   r: DatasetReport;
   research?: Resource<Research>;
   intervals?: RowIntervals;
   /** The baselines file as pinned to this report (baselinesFor), or null. */
   baselines?: Baselines | null;
+  /** Peer lineage accuracies in the same drug class for inline context. */
+  peerContext?: { poolName: string; peers: readonly number[] };
 }) => {
   const [scheme, setScheme] = useState<Scheme>("random");
   const frame = useRef<HTMLDivElement | null>(null);
@@ -139,7 +143,7 @@ export const LearnerSection = ({
   });
   // Dots, not bars, so the axis may start above zero.
   const lo = Math.max(0, Math.floor((Math.min(...all) - 0.02) * 20) / 20);
-  const x = linear([lo, 1], [8, stripWidth - 8]);
+  const x = linear([lo, 1], [14, stripWidth - 16]);
   const bestLineage = best === undefined ? undefined : learnerOf(r, "lineage", best.learner);
 
   // Reports with no-call counts (revisions 7 to 13) get the share each row
@@ -184,6 +188,10 @@ export const LearnerSection = ({
   const lineageBase = lineageOf(baselines, "lineage");
   const baselineText = lineageBaselineText(randomBase, lineageBase);
 
+  const bestLineageBa = baOf(bestLineage);
+  const bestForErrors = best === undefined ? undefined : errorsOf(best.learner);
+  const bestCi = best === undefined ? undefined : ciOf(best.learner);
+
   return (
     <Section
       id="ds-learners"
@@ -204,6 +212,23 @@ export const LearnerSection = ({
         ) : undefined
       }
     >
+      {peerContext !== undefined && bestLineageBa !== null ? (
+        <div className="mb-4">
+          <AmrPeerStrip label="Lineage accuracy" value={bestLineageBa} peers={peerContext.peers} poolName={peerContext.poolName} />
+        </div>
+      ) : null}
+      {bestForErrors?.metrics != null ? (
+        <div className="mb-5">
+          <ErrorLimitGauge
+            splitLabel={scheme === "random" ? "random split" : "lineages held out"}
+            vme={{ rate: bestForErrors.metrics.vme, low: bestCi?.vme?.lo ?? null, high: bestCi?.vme?.hi ?? null }}
+            me={{ rate: bestForErrors.metrics.me, low: bestCi?.me?.lo ?? null, high: bestCi?.me?.hi ?? null }}
+          />
+          <p className="type-note mt-2">
+            The limits under VME and ME are a screen adapted from FDA&apos;s 2009 guidance for growth-based susceptibility test systems.
+          </p>
+        </div>
+      ) : null}
       <div className="mb-3 flex flex-wrap gap-x-5 gap-y-1">
         <LegendItem swatch={<Dot color="var(--chart-mark)" />} name="Random split, pooled" />
         {lineage !== undefined ? <LegendItem swatch={<Dot color="var(--chart-mark)" ring />} name="Lineages held out, pooled" /> : null}
@@ -320,26 +345,39 @@ export const LearnerSection = ({
         </table>
       </ScrollFrame>
       </div>
-      <p className="type-note mt-3">
-        The genomes are cut into {random?.folds ?? 5} parts (folds), and each part is held out once while the model trains on the rest. Balanced accuracy pools those held-out
-        predictions; faint dots are the single folds. AUROC is how well the scores rank resistant isolates above susceptible ones, from 0.5 for chance to 1 for a perfect ranking.
-        {" "}The limits under VME and ME are a screen adapted from FDA&apos;s 2009 guidance for growth-based susceptibility test systems.
-        {lineage !== undefined
-          ? ` With lineages held out, each of the ${lineage.n_groups} lineages goes whole to one fold.`
-          : ` No lineage-held-out result: ${splitAbsence(r, "lineage") ?? ""}`}
-        {anyUncalled
-          ? " A fold where boosting kept no tree, or the lasso kept no weight, gets no call: every rate covers the isolates called, and Called gives their share."
-          : ""}
-        {anyWithoutCall ? " A learner that calls no isolate on a split has no rate there and shows No call." : ""}
-        {anyInterval
-          ? " Under VME and ME, the 95% Clopper-Pearson interval from this report's own counts: VME over the resistant isolates the row called, ME over the susceptible ones; a range's tooltip gives its counts. It treats the isolates as independent and reflects which ones happened to be sampled, not calibration or clinical performance."
-          : ""}
-        {anyNullFold
-          ? prevalenceScored
-            ? " A fold where boosting kept no tree, or the lasso kept no weight, predicts its training isolates' resistant share for each isolate it holds, and the 0.5 cutoff calls that score like any other; Null folds counts those folds, and every rate includes them."
-            : " This report scored a fold where boosting kept no tree, or the lasso kept no weight, at 0.5, which the 0.5 cutoff calls resistant; Null folds counts those folds, and every rate includes them."
-          : ""}
-      </p>
+      {anyUncalled || anyWithoutCall || anyInterval || anyNullFold ? (
+        <p className="type-note mt-2">
+          {anyUncalled
+            ? "A fold where boosting kept no tree, or the lasso kept no weight, gets no call: every rate covers the isolates called, and Called gives their share. "
+            : ""}
+          {anyWithoutCall ? "A learner that calls no isolate on a split has no rate there and shows No call. " : ""}
+          {anyInterval
+            ? "Under VME and ME, the 95% Clopper-Pearson interval from this report's own counts: VME over the resistant isolates the row called, ME over the susceptible ones; a range's tooltip gives its counts. It treats the isolates as independent and reflects which ones happened to be sampled, not calibration or clinical performance. "
+            : ""}
+          {anyNullFold
+            ? prevalenceScored
+              ? "A fold where boosting kept no tree, or the lasso kept no weight, predicts its training isolates' resistant share for each isolate it holds, and the 0.5 cutoff calls that score like any other; Null folds counts those folds, and every rate includes them."
+              : "This report scored a fold where boosting kept no tree, or the lasso kept no weight, at 0.5, which the 0.5 cutoff calls resistant; Null folds counts those folds, and every rate includes them."
+            : ""}
+        </p>
+      ) : null}
+      {lineage === undefined ? (
+        <p className="type-note mt-2">No lineage-held-out result: {splitAbsence(r, "lineage") ?? ""}</p>
+      ) : null}
+      {bestForErrors?.metrics == null ? (
+        <p className="type-note mt-2">
+          The limits under VME and ME are a screen adapted from FDA&apos;s 2009 guidance for growth-based susceptibility test systems.
+        </p>
+      ) : null}
+      <div className="mt-2">
+        <Disclosure label="How folds and AUROC are computed" ruled={false}>
+          <p className="type-note">
+            The genomes are cut into {random?.folds ?? 5} parts (folds), and each part is held out once while the model trains on the rest. Balanced accuracy pools those held-out
+            predictions; faint dots are the single folds. AUROC is how well the scores rank resistant isolates above susceptible ones, from 0.5 for chance to 1 for a perfect ranking.
+            {lineage !== undefined ? ` With lineages held out, each of the ${lineage.n_groups} lineages goes whole to one fold.` : ""}
+          </p>
+        </Disclosure>
+      </div>
       {baselineText === "" ? null : (
         <p className="type-note mt-1.5" data-baseline="lineage-note">
           {baselineText}

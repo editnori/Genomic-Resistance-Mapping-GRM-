@@ -14,8 +14,8 @@
 // resting pointer in a native tooltip.
 
 import { Fragment, useMemo, useState, type ReactNode } from "react";
-import { Search } from "lucide-react";
-import type { CatalogRow, Learner, LearnerLite, Manifest } from "../data/schema";
+import { ChevronDown, Search } from "lucide-react";
+import type { CatalogRow, Learner, LearnerLite, Manifest, Scheme } from "../data/schema";
 import { capitalize, hasEverydayName, int, LEARNER_LABEL, LEARNER_NAME, pct, speciesName, speciesOption, speciesShort } from "../data/format";
 import { applyAxes, countBy, memberTest, rowsWithout, type Axis } from "../data/facets";
 import { BARS, BARS_SOURCE, verdictOf } from "../data/metrics";
@@ -28,7 +28,7 @@ import { ViewHeader } from "../ui/ViewHeader";
 import { Dropdown } from "../ui/Dropdown";
 import { DataTable, type Column, type SortState } from "../ui/DataTable";
 import { FilterRail, FiltersButton, railGrid, RailCheck, RailChecks, RailControl, RailField, RailGroup, useRailState } from "../ui/FilterRail";
-import { BarValue, FOCUS_RING, GhostButton, MeetsMark, VIEW_SHELL } from "../ui/primitives";
+import { BarValue, FOCUS_RING, GhostButton, MeetsMark, Segmented, VIEW_SHELL } from "../ui/primitives";
 import { useMicBaselines } from "../data/load";
 import { micConstants, type MicConstant } from "../data/baselines";
 import { useClipped } from "../ui/useClipped";
@@ -47,7 +47,7 @@ const MIN_N = [
 
 const BEST_LEARNERS: Learner[] = ["scm", "cart", "rf", "gbt", "lasso"];
 
-const bestLite = (r: CatalogRow): LearnerLite | null => r.learners.find((l) => l.learner === r.best_learner)?.random ?? null;
+const bestLite = (r: CatalogRow, split: Scheme = "random"): LearnerLite | null => r.learners.find((l) => l.learner === r.best_learner)?.[split] ?? null;
 const bestName = (r: CatalogRow): string => (r.best_learner === null ? NO_BEST_LEARNER : LEARNER_LABEL[r.best_learner]);
 const gap = (r: CatalogRow): number | null => (r.best_random === null || r.best_lineage === null ? null : r.best_random - r.best_lineage);
 
@@ -86,7 +86,7 @@ const ARRIVAL: Filters = { species: new Set(), classes: new Set(), minN: "0", le
 
 const ARRIVAL_SORT: SortState = { id: "dataset", dir: "asc" };
 
-const axesFor = (f: Filters, q: string): Axis<CatalogRow>[] => [
+const axesFor = (f: Filters, q: string, split: Scheme = "random"): Axis<CatalogRow>[] => [
   // The search lives above the table, but the counts still see it.
   { id: "search", test: q === "" ? null : (r) => searchText(r).includes(q) },
   { id: "species", test: memberTest(f.species, (r) => r.species) },
@@ -94,8 +94,8 @@ const axesFor = (f: Filters, q: string): Axis<CatalogRow>[] => [
   { id: "minN", test: f.minN === "0" ? null : (r) => r.n >= Number(f.minN) },
   { id: "learner", test: memberTest(f.learners, (r) => r.best_learner ?? "none") },
   { id: "mic", test: f.mic ? (r) => r.mic_essential_agreement !== null : null },
-  { id: "vme", test: f.vme ? (r) => meets(bestLite(r)?.vme, BARS.vme) : null },
-  { id: "me", test: f.me ? (r) => meets(bestLite(r)?.me, BARS.me) : null },
+  { id: "vme", test: f.vme ? (r) => meets(bestLite(r, split)?.vme, BARS.vme) : null },
+  { id: "me", test: f.me ? (r) => meets(bestLite(r, split)?.me, BARS.me) : null },
 ];
 
 /** A checkbox counts with only its own axis lifted, so its number is the
@@ -259,7 +259,9 @@ const MicCell = ({ r, constant }: { r: CatalogRow; constant: MicConstant | undef
   );
 };
 
-export const datasetColumns = (markProvisional: boolean, current: number | undefined, constants?: ReadonlyMap<string, MicConstant>): Column<CatalogRow>[] => [
+export const datasetColumns = (markProvisional: boolean, current: number | undefined, constants?: ReadonlyMap<string, MicConstant>, split: Scheme = "random"): Column<CatalogRow>[] => {
+  const splitWords = split === "lineage" ? "with whole lineages held out" : "on the random split";
+  return [
   {
     id: "dataset",
     header: "Dataset",
@@ -364,12 +366,12 @@ export const datasetColumns = (markProvisional: boolean, current: number | undef
     header: "VME",
     unit: "≤1.5%",
     width: DATASET_WIDTHS.vme,
-    tip: [{ term: "Very major error (VME)", text: `The share of resistant isolates the best learner calls susceptible, on the random split. ${BARS_SOURCE}` }],
+    tip: [{ term: "Very major error (VME)", text: `The share of resistant isolates the best learner calls susceptible, ${splitWords}. ${BARS_SOURCE}` }],
     align: "right",
-    sortValue: (r) => bestLite(r)?.vme ?? null,
+    sortValue: (r) => bestLite(r, split)?.vme ?? null,
     firstDir: "asc",
     status: (r) => {
-      const v = bestLite(r)?.vme;
+      const v = bestLite(r, split)?.vme;
       return v === null || v === undefined ? null : { value: v, bar: BARS.vme };
     },
     cell: () => <Muted>–</Muted>,
@@ -379,12 +381,12 @@ export const datasetColumns = (markProvisional: boolean, current: number | undef
     header: "ME",
     unit: "≤3%",
     width: DATASET_WIDTHS.me,
-    tip: [{ term: "Major error (ME)", text: `The share of susceptible isolates the best learner calls resistant, on the random split. ${BARS_SOURCE}` }],
+    tip: [{ term: "Major error (ME)", text: `The share of susceptible isolates the best learner calls resistant, ${splitWords}. ${BARS_SOURCE}` }],
     align: "right",
-    sortValue: (r) => bestLite(r)?.me ?? null,
+    sortValue: (r) => bestLite(r, split)?.me ?? null,
     firstDir: "asc",
     status: (r) => {
-      const v = bestLite(r)?.me;
+      const v = bestLite(r, split)?.me;
       return v === null || v === undefined ? null : { value: v, bar: BARS.me };
     },
     cell: () => <Muted>–</Muted>,
@@ -446,17 +448,35 @@ export const datasetColumns = (markProvisional: boolean, current: number | undef
     cell: (r) => <RuleCell rules={r.scm_rules} />,
   },
 ];
+};
 
-/** What the main columns measure, in plain words, once under the view's
- *  header, so the rail and the table below shift together; each header's
- *  hint carries the detail. */
-const ReadingNote = () => (
-  <p className="type-note mt-4 max-w-[72ch]">
-    GRM trains several kinds of model (learners) on each dataset, and each row shows the one that scores best. Random and Lineage are its balanced accuracy: the average of the
-    share of resistant and the share of susceptible genomes it calls right, where 50% is a coin toss. Random tests it on genomes picked at random, most with close relatives in
-    training. Lineage tests it on whole lineages, groups of close relatives it never saw. VME is resistant genomes called susceptible; ME is the reverse.
-  </p>
-);
+/** Compact expandable column guide, keeping the search row and dataset table
+ *  immediately at the top of the viewport while keeping every plain definition
+ *  one click away. */
+const ReadingNote = () => {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mt-3">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        className={`ui-control-target ui-target-24 inline-flex items-center gap-1.5 rounded-sm py-1 text-control font-medium text-blue transition-colors duration-fast ease-out hover:text-ink ${FOCUS_RING}`}
+      >
+        {open ? "Hide column guide" : "Column guide"}
+        <ChevronDown size={14} strokeWidth={1.75} aria-hidden="true" className={`transition-transform duration-fast ease-out ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open ? (
+        <p className="type-note mt-2 max-w-[72ch]">
+          Each row shows the best random-split learner. Random and Lineage are its balanced accuracy: the average of the share of resistant and the share of susceptible genomes it
+          calls right, where 50% is a coin toss. Random tests it on genomes picked at random, most with close relatives in training; Lineage tests it on whole lineages of close
+          relatives it never saw. VME is resistant genomes called susceptible (≤1.5%); ME is susceptible genomes called resistant (≤3%), limits adapted from FDA&apos;s 2009 guidance
+          for growth-based susceptibility test systems as a research screen.
+        </p>
+      ) : null}
+    </div>
+  );
+};
 
 /** What the table's marks mean, printed once over it. Each mark is shown
  *  as it appears in the cells, then said in words. The drug-class key
@@ -486,6 +506,9 @@ export const DatasetsView = ({ manifest, nav }: { manifest: Manifest; nav: Navig
   const [query, setQuery] = useKeptState("datasets.query", "");
   const [sort, setSort] = useKeptState<SortState>("datasets.sort", ARRIVAL_SORT);
   const [all, setAll] = useKeptState("datasets.all", false);
+  // Open every visit on the random split so VME and ME headers never silently
+  // carry another split across navigation.
+  const [split, setSplit] = useState<Scheme>("random");
   const rows = manifest.datasets;
   const audit = manifestAudit(manifest);
   // Optional: with no baselines files the MIC column shows the model alone.
@@ -493,7 +516,7 @@ export const DatasetsView = ({ manifest, nav }: { manifest: Manifest; nav: Navig
   const constants = useMemo(() => (files.status === "ready" ? micConstants(rows, files.data, manifest.evaluation_revision) : undefined), [files, rows, manifest.evaluation_revision]);
 
   const q = query.trim().toLowerCase();
-  const axes = axesFor(f, q);
+  const axes = axesFor(f, q, split);
   const shown = applyAxes(rows, axes);
   const shownCount = Math.round(useCountUp(shown.length));
   const countText = (n: number) => (n === rows.length ? `${int(rows.length)} datasets` : `${int(n)} of ${int(rows.length)} datasets`);
@@ -558,8 +581,8 @@ export const DatasetsView = ({ manifest, nav }: { manifest: Manifest; nav: Navig
         </RailControl>
       </RailGroup>
       <RailChecks label="Meets the bar" active={f.vme || f.me}>
-        <RailCheck label="VME ≤1.5%" checked={f.vme} onChange={(vme) => setF({ ...f, vme })} count={checkCount(rows, axes, "vme", (r) => meets(bestLite(r)?.vme, BARS.vme))} />
-        <RailCheck label="ME ≤3%" checked={f.me} onChange={(me) => setF({ ...f, me })} count={checkCount(rows, axes, "me", (r) => meets(bestLite(r)?.me, BARS.me))} />
+        <RailCheck label="VME ≤1.5%" checked={f.vme} onChange={(vme) => setF({ ...f, vme })} count={checkCount(rows, axes, "vme", (r) => meets(bestLite(r, split)?.vme, BARS.vme))} />
+        <RailCheck label="ME ≤3%" checked={f.me} onChange={(me) => setF({ ...f, me })} count={checkCount(rows, axes, "me", (r) => meets(bestLite(r, split)?.me, BARS.me))} />
       </RailChecks>
     </FilterRail>
   );
@@ -591,6 +614,18 @@ export const DatasetsView = ({ manifest, nav }: { manifest: Manifest; nav: Navig
               />
             </label>
             <FiltersButton rail={rail} activeCount={active} />
+            <div className="flex items-center gap-2">
+              <span className="text-tiny font-medium text-muted-text">VME &amp; ME</span>
+              <Segmented<Scheme>
+                ariaLabel="Error rate split"
+                options={[
+                  { id: "random", label: "Random split" },
+                  { id: "lineage", label: "Lineage split" },
+                ]}
+                value={split}
+                onSelect={setSplit}
+              />
+            </div>
             <span aria-hidden="true" className="text-control tabular-nums text-muted-text">
               {countText(shownCount)}
             </span>
@@ -605,7 +640,7 @@ export const DatasetsView = ({ manifest, nav }: { manifest: Manifest; nav: Navig
             <DataTable
               label="Datasets"
               rows={shown}
-              columns={datasetColumns(audit.invalid > 0 && audit.invalid < audit.total, manifest.evaluation_revision, constants)}
+              columns={datasetColumns(audit.invalid > 0 && audit.invalid < audit.total, manifest.evaluation_revision, constants, split)}
               rowKey={(r) => r.id}
               onOpen={(r) => nav.openDataset(r.id)}
               initialSort={sort}

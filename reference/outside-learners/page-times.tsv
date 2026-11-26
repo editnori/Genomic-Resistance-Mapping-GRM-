@@ -1,0 +1,4 @@
+arm	withdrawn	reports	fits	wall_s_sum	wall_s_median	cpu_s_sum	cpu_s_median
+xgboost	0	754	754	8799.714	8.009	8715.4	7.99
+lightgbm	0	754	754	5047.74	4.8775	5005.77	4.815
+elasticnet	0	754	754	5419925.1	5210.252	5416010.21	5208.695

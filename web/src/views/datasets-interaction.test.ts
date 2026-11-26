@@ -124,6 +124,22 @@ describe("dataset filters", () => {
     act(() => vme.click());
     expect(vme.checked).toBe(true);
     expect(live()).toBe(`${promised} of ${manifest.datasets.length} datasets`);
+
+    // Switching the error-rate split to Lineage updates the VME/ME cells and
+    // bar filter counts from the release reports' lineage-split rates.
+    const group = host.querySelector<HTMLElement>("[role='group'][aria-label='Error rate split']")!;
+    const [randomBtn, lineageBtn] = [...group.querySelectorAll<HTMLButtonElement>("button")];
+    expect(randomBtn!.getAttribute("aria-pressed")).toBe("true");
+    expect(lineageBtn!.getAttribute("aria-pressed")).toBe("false");
+    act(() => lineageBtn!.click());
+    expect(lineageBtn!.getAttribute("aria-pressed")).toBe("true");
+    const lineagePromised = Number(vme.closest("label")!.lastElementChild!.textContent!.replace(/,/g, ""));
+    const expectedLineage = manifest.datasets.filter((d) => {
+      const lite = d.learners.find((l) => l.learner === d.best_learner)?.lineage;
+      return lite?.vme !== null && lite?.vme !== undefined && lite.vme <= 0.015;
+    }).length;
+    expect(lineagePromised).toBe(expectedLineage);
+    expect(live()).toBe(expectedLineage === manifest.datasets.length ? `${manifest.datasets.length} datasets` : `${expectedLineage} of ${manifest.datasets.length} datasets`);
   });
 });
 
@@ -392,6 +408,9 @@ describe("returning to the catalog", () => {
     const isolates = [...table().querySelectorAll("th")].find((th) => th.textContent!.startsWith("Isolates"))!;
     act(() => isolates.querySelector("button")!.click());
     const shown = live();
+    const lineageBtn = host.querySelectorAll<HTMLButtonElement>("[role='group'][aria-label='Error rate split'] button")[1]!;
+    act(() => lineageBtn.click());
+    expect(lineageBtn.getAttribute("aria-pressed")).toBe("true");
 
     const writes = vi.spyOn(window.history, "replaceState");
     act(() => {
@@ -400,7 +419,8 @@ describe("returning to the catalog", () => {
     const left = writes.mock.calls.at(-1)![0] as { views: Record<string, unknown> };
     expect(left.views["datasets.query"]).toBe("a");
 
-    // Back: the catalog is drawn anew from the entry it left.
+    // Back: the catalog is drawn anew from the entry it left, while error-rate
+    // split always opens on Random split.
     act(() => root.unmount());
     window.history.replaceState(left, "", "/datasets");
     root = createRoot(host);
@@ -408,6 +428,7 @@ describe("returning to the catalog", () => {
     expect(host.querySelector<HTMLInputElement>("input[type='search']")!.value).toBe("a");
     expect(rail().querySelectorAll<HTMLInputElement>("input[type='checkbox']")[2]!.checked).toBe(true);
     expect([...table().querySelectorAll("th")].find((th) => th.getAttribute("aria-sort") !== null)!.textContent).toContain("Isolates");
+    expect(host.querySelectorAll<HTMLButtonElement>("[role='group'][aria-label='Error rate split'] button")[0]!.getAttribute("aria-pressed")).toBe("true");
     expect(live()).toBe(shown);
   });
 });

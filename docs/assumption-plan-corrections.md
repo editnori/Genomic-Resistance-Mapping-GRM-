@@ -1,6 +1,6 @@
 # Assumption plan: corrections
 
-The plan in `docs/assumption-plan.md` is fixed, and its text does not change. This page lists what was found wrong in it after it was fixed, what a later design added to it, and what holds instead. Each entry gives its date. The first two were written on 22 Nov 2026, before any fit.
+The plan in `docs/assumption-plan.md` is fixed, and its text does not change. This page lists what was found wrong in it after it was fixed, what a later design or a ruling added to it, what a ruling settled where it left a rule open, and what holds instead. Each entry gives its date. The first two were written on 22 Nov 2026, before any fit.
 
 ## Study split
 
@@ -737,3 +737,309 @@ An eleventh came while the text was written. The project's wording rules put rec
 **Written.** This entry was written at 10:49Z on 23 Nov 2026, during the review. No comparison result had been read.
 
 **After the review.** The lead ruled two points at 12:19Z on 23 Nov 2026, with no C2 score read. H-1's ruling on a refused repeat holds for C2: a dataset whose lineage draws are refused past both replacements leaves the lineage count of every arm and the twin alike, the result page names it with its reason, and its study rows are scored as before. Every arm is scored on the default's test folds, so such a dataset has no lineage test for any arm, and leaving it out favours none. The 19 fitted datasets that add 1 to 19 labelled genomes stay in `cap-all`'s count of 116: the count was fixed with no threshold before the cohorts were listed, and a threshold set now would be chosen with the lists in hand. The result page gives the count over the other 97 datasets beside it, deciding nothing.
+
+## Label rule
+
+**Plan.** The plan marks 36 of its 274 datasets M: "M marks a dataset holding a pair with S and I or with I and R". S is a susceptible call, I an intermediate one and R a resistant one. Its Labels paragraph says: "The 36 wait for the maintainer's rule." Step 1 of its Order says: "The M datasets wait for the maintainer's label rule."
+
+**Pages.** Sentences like these two, that datasets of M wait for the label rule or for the maintainer's label rule, stand on 16 method and result pages, each for its own datasets in M.
+
+**Ruled.** On 24 Nov 2026 the maintainer left the plan's open rules to the lead. The lead ruled the label rule that day, with no dataset of M fitted for any block. The release's rule stays. It is `r-or-s-wins` in `docs/input-configuration.md`: S with I is S, I with R is R, R with S has no label.
+
+**Holds.** The 36 datasets of M are open for fits under `r-or-s-wins`. Each claim on them has two readings: one on every scored genome, and one without the genomes whose records for that antibiotic hold an intermediate call, with no refit. A claim on a dataset of M stands only if it holds both ways.
+
+**Merged pages.** These readings bind work started after 17:36Z on 24 Nov 2026, and no merged result changes. The mechanism split read its datasets of M on 23 Nov 2026 from the release's reports with one reading, and its lines on them stand apart in `docs/mechanism-split-result.md` as written.
+
+**Lineage curve.** Its reading started after that time, by a method fixed on 23 Nov 2026. `docs/lineage-curve-result.md` reads clofazimine and isoniazid of *Mycobacterium tuberculosis*, both in M, with the release's labels alone. Its rows for them owe the second reading, which has not been made. Until it is, the page's sentences that name clofazimine or isoniazid are shown one way only.
+
+**Later records.** Block T1's Datasets row says the label rule picked applies to the later-records test too, so that test uses `r-or-s-wins`. Its claims on datasets of M take the two readings as well.
+
+**Why.** `intermediate-aside` leaves out the borderline genomes, so the task would read easier than it is in practice. `most-resistant` changes labels outside M as well: by the plan, 33 of the 238 hold a pair with R and S. `intermediate-class` makes the task three classes. Every merged result uses `r-or-s-wins`.
+
+**Counts with M.** The lead ruled three more points at 17:09Z on 25 Nov 2026, with no dataset of M fitted for any block.
+
+- The plan's sentence "Each result names the rules it does not depend on" binds on M too. A result on a dataset of M names them, says so when it depends on all four, and gives both readings.
+- A block's first-run verdict stands. No arm that missed conditions 1 to 5 on the first run comes to meet them by a later count.
+- Block C1 reads its own rule. No lower line was a candidate on its 89 datasets, so the count over its 108 makes none.
+- For a candidate of the entry Condition 6 the rule runs one way. The release changes to it only if conditions 1 to 5 also hold on the count over all of its block's datasets, M included, read both ways.
+
+**Three counts.** When a block's datasets of M have run, its result page gives three counts: the first run's as it stands, the count over M alone, and the count over all its datasets. The block's rules and arguments stay unchanged. A design entry's "taken once" means the first run's count.
+
+**Code.** Blocks C2, C3, C4, C5, C7 and C9 refuse or drop a dataset of M in their code today, and none of their scorers takes the second reading. So the code changes for this run, and by step 3 of the plan's Order each change is reviewed before it runs.
+
+**Not fixed.** Three choices are not fixed yet: whether arms that are not candidates run on M, which sets condition 2's Holm family on the count over all datasets; whether the two readings share that family; and how a dataset enters the second reading when taking out the genomes with an intermediate call leaves a class too small to score.
+
+**Fixed before the run.** The design entry of the run on M fixes those three, written and reviewed before any dataset of M is fitted.
+
+**Since fixed.** The entry M run below fixes the three. It also gives the count over all datasets only the measures the first run's record holds, and lets the second reading's count have fewer datasets than the first. The lead added this paragraph at 19:24Z on 25 Nov 2026.
+
+**Not run.** No block of the plan has fitted a dataset of M. Until one has, a page's sentence that its datasets of M wait for the label rule means: the lead has made the rule, and the run has not started.
+
+**Read again.** Three sentences say a line is read again when the label rule is made: two in `docs/refit-result.md` and one in this page's Refit reading. That reading is D0's, over the 10 MISS datasets in M. It needs their refit, which has not started.
+
+**Written.** This entry was written at 16:49Z on 25 Nov 2026. No dataset of M had been fitted, then or at either change below. The maintainer can overrule it.
+
+**Changed.** After its independent review the lead added, at 17:12Z, the plan's words on M, the paragraphs Pages, Counts with M, Three counts and Read again, and the last sentence of Later records, and moved the count over M from Not run to Three counts.
+
+**Changed again.** After a second review the lead added, at 17:39Z, Merged pages, Lineage curve, Code and Not fixed, and changed Counts with M and Three counts.
+
+## Condition 6
+
+**Pages.** The plan's sixth condition for a release change is: "The maintainer rules the change." The result pages of blocks C2, C3, C4, C5, C7 and C9 each leave it to the maintainer.
+
+**Ruled on 24 Nov 2026.** The lead ruled condition 6 for the comparison blocks then read, under the maintainer's word of that day.
+
+- Blocks C2, C4, C5 and C9: no arm meets conditions 1 and 2, so there is no change to rule on, and the release keeps its rule.
+- Block C3: the AMRFinderPlus program's calls alone meet conditions 1 to 5 with `cart`, `rf`, `gbt` and `lasso` (`docs/input-arms-result.md`). That arm becomes a candidate for the one release change below. The release does not change now.
+
+**Beside those verdicts.** C2's `cap-4000` was withdrawn before any fit and has no reading. C4's `cmh-16000` meets conditions 1 and 2 on `gbt` and `lasso`, 2 of the 3 learners it touches, and the conditions ask all three. C3's verdict is read by C3's ruling 15, fixed before any C3 score was read. No arm meets the stricter reading beside it, which decides nothing.
+
+**Ruled on 25 Nov 2026.** The lead ruled condition 6 for block C7's three arms at 14:51Z, after the one reading of block C7 (`docs/outside-learners-result.md`) and before its independent review ended.
+
+- `xgboost`, XGBoost 3.0.5, is not a candidate. It meets conditions 1 to 4 and not 5: its study median is -0.002 on 55 study datasets, against a lineage median of 0.003. The release changes only when all six hold.
+- `lightgbm`, LightGBM 4.6.0, and `elasticnet`, the scikit-learn 1.7.2 elastic net, meet conditions 1 to 5 and become candidates for the one release change. The release does not change now.
+
+**C7's review.** It ended after the ruling. It traced the figures of the page's changed lines and of the pull request's text to the record, 1,537 with a program of its own and the other 5 by hand, and found 0 mismatch.
+
+**Its findings.** It made 12 findings, and none changes a verdict. Commit 96860bbc answers six of them, on the page, in its tests and in the workflow's comment. The other six concern the pull request's text, a commit message or working files outside the repository, or leave the page as it stands.
+
+**One release change.** The release changes at most once, after the block that follows C7. The plan does not hold that block: a later design adds it. Its plan is written and reviewed, and its entry stands on this page, before the lead reads its first number.
+
+**The pick.** The plan holds no pick among arms that each met conditions 1 to 5, and no limit of one release change. The ruling of 24 Nov adds both, after blocks C2, C3, C4, C5 and C9 were read. The lead makes the pick among today's release, C3's candidate, C7's two candidates and that later block's candidates, by the plan's rules on held-out scores, and writes it down before the later-records test.
+
+**The pick's rule.** It is not written yet. "By the plan's rules on held-out scores" does not say how the pick chooses among candidates that each meet conditions 1 to 5, and the count over M alone has no part in it so far.
+
+**Its timing.** The lead writes the rule on this page, with a review of its own, before any dataset of M is fitted and before reading the later block's first number. The first-run results of blocks C3 and C7 will be known when it is written.
+
+**Since written.** The entry Pick rule below writes it. For block C7 the pick no longer waits as Before the pick asked, and Beside C7's candidates and Costs no longer weigh in it. The lead added this paragraph at 19:24Z on 25 Nov 2026.
+
+**Before the pick.** Each candidate's block first takes its count over all its datasets, M included, as the entry Label rule gives it. A candidate that does not meet conditions 1 to 5 there, read both ways, is not picked.
+
+**Later-records test.** Block T1's Scored row stands as the plan wrote it: "Once, after every block is ruled: the release's rule and each arm that met conditions 1 to 5, on the same genomes and measure". Today those arms are C3's candidate and C7's two.
+
+**A narrower ruling, taken back.** The ruling of 24 Nov named only the picked release and today's release for that scoring. That would have left out an arm that met conditions 1 to 5 and was not picked. The lead ruled at 16:47Z on 25 Nov 2026 that the plan's row holds, since the plan was written before any result.
+
+**Added to T1.** The test also scores the picked release when it is not one of those arms. It scores a candidate of the later block only if that block's design entry, written before the lead reads its first number, says so and gives the candidate's rule. The test's page reports an arm it cannot score as not scored, with its reason. The later records decide no pick.
+
+**Beside C7's candidates.** The pick weighs these, from `reference/outside-learners/`. The lineage medians are 0.003 for `lightgbm` and 0.006 for `elasticnet`, both inside the plan's band for "same" (0.02). By more than that band, `lightgbm` is better on 62 of 232 lineage datasets and worse on 14, and `elasticnet` better on 71 and worse on 19.
+
+**Twin.** The plan reads every count against the twin, the default fitted again with only the fold seeds changed. On the same 232 datasets `twin-gbt` is better on 40 and worse on 33, and `twin-lasso` better on 28 and worse on 19.
+
+**Costs.** On the study split `lightgbm`'s log loss is worse, by a median of 0.010. `elasticnet` kept no weight in 221 of 3,490 lineage folds, and its median fit took 5210.252 wall seconds against 4.878 for `lightgbm`. Either arm adds a library to the release. The lead rules on adding a dependency at the pick.
+
+**Holds.** These rulings change nothing in the release and no sentence on the site. The site's sentences on the study split change only with the one release change. A study split stays a retrospective split inside one database, never external validation.
+
+**Written.** This entry was written at 16:49Z on 25 Nov 2026, after the readings of blocks C2, C3, C4, C5, C7 and C9 and with no later record read. The maintainer can overrule each ruling in it.
+
+**Changed.** After its independent review the lead changed, at 17:12Z, the paragraphs Ruled on 24 Nov 2026, Ruled on 25 Nov 2026, C7's review, One release change, The pick, Added to T1 and Holds, and added Beside those verdicts, Before the pick and Twin.
+
+**Changed again.** After a second review the lead added, at 17:39Z, The pick's rule, Its timing and the last sentence of Holds, and split C7's review in two.
+
+## Pick rule
+
+**Owed.** The entry Condition 6 says the pick's rule is not written. This entry writes it, with no dataset of M fitted for any block, no number of the later block read and no later record read.
+
+**Known.** The lead wrote it knowing the first run of blocks C3 and C7. For the AMRFinderPlus program's calls alone, `rf` is better on 121 of 203 datasets, `gbt` on 105, `lasso` on 102, `cart` on 85 and `scm` on 70 (`docs/input-arms-result.md`). `lightgbm` is better on 62 of 232 and `elasticnet` on 71 (`docs/outside-learners-result.md`).
+
+**Also seen.** The lead had also seen exploratory offline figures for arms of the later block, from runs on an earlier revision of the data. They decide nothing here.
+
+**Eligible.** A plan block's candidate is eligible when it met conditions 1 to 5 on its first run and meets them on the count over all its block's datasets, M included, read both ways, as the entry Label rule gives it. A learner carries the change when it meets conditions 1 and 2, as block C3's ruling 15 reads them.
+
+**Later block.** A candidate of the later block is eligible only when it meets conditions 1 to 5 against the release's rule, with its own twin and Holm's family, on the count over all its datasets, M included, read both ways, and passes the size rule. The rule of its own design entry decides whether its block keeps it at its reading, and kept is not eligible. Its design entry gives the twin, the family and the release's figure it is scored against, before its first number is read.
+
+**Size.** A candidate must also be better on more than half of the datasets that enter the count over all its block's datasets, in each of the two readings. Better is the block's own count: more than 0.02 in lineage balanced accuracy, at 12 decimals. A dataset enters as that count enters it, and the entry M run fixes how a dataset of M enters the second reading.
+
+**Floor's effect.** A dataset of M that the floor of the entry M run leaves out of the second reading leaves that reading's count, which can move the size rule either way in that reading. The first reading takes every dataset, so no candidate passes that fails there. The floor is counted before any score is read.
+
+**Learners.** The size rule holds for each learner the candidate touches. A candidate that touches all five needs it for at least 3 learners, the same in both readings, that carry the change on that count.
+
+**Why.** When more than half the datasets are better, the median difference lies above the plan's band for "same", since the median then falls among the better datasets. The converse fails for an even count: the median can lie above the band with exactly half better. The plan's conditions pass a median inside the band: C7's medians are 0.003 and 0.006.
+
+**Band.** The pick does not change the release to a candidate unless the learners it needs clear the band. A candidate that touches all five enters with all five, so its other learners can sit inside the band. On the first run, `cart` and `scm` of C3's candidate have medians of 0.009 and 0.005.
+
+**Point.** The rule reads the count, which sits at the median's point. Read at the species interval, wholly above 0.02, C3's candidate would fail on its first run: that interval starts at 0.013 for `gbt` and 0.011 for `lasso`. The count is not read against the twin. On C3's first run the twin is better on 18 to 40 of 232 datasets, by learner.
+
+**C7's candidates.** Neither can pass. With every one of the 35 datasets of M better, `lightgbm` would be better on 97 of 267 and `elasticnet` on 106 of 267, each under half. So neither is picked.
+
+**C7's count over M.** The pick no longer waits for block C7's count over M, which the paragraph Before the pick asked, and the paragraphs Beside C7's candidates and Costs no longer weigh in it. Block C7 still takes that count under the entry M run, as the budget allows. Both candidates stay arms of the later-records test, as block T1's Scored row has them.
+
+**C3's candidate.** On the first run it passes with `rf`, `gbt` and `lasso`. `lasso` passes at 102 of 203, the smallest count over half, so at 101 the candidate would fail. The count over all its datasets decides, in both readings. `rf` stays over half whatever M gives, at 121 of at most 236.
+
+**Two learners.** `cart` cannot pass whatever M gives: with all 33 datasets of M in set A better, it reaches 118 of 236, which is half. `scm` reaches 103 at most. So the candidate passes only if `gbt` and `lasso` both pass. With all 33 entering, `gbt` needs 14 of them better and `lasso` 17. No block has fitted them.
+
+**M alone.** When a block's datasets of M have run, its page shows its count over M alone, and that count decides nothing. The plan holds no rule for it.
+
+**Order.** The lead picks one candidate at most.
+
+- A plan block's candidate that passes goes before any candidate of the later block, however large that candidate's gain.
+- Between two plan-block candidates, the one better on the larger share of its entering datasets goes first, with the share as the paragraph Share gives it.
+- With equal shares, the one with more entering datasets goes first. With those equal too, neither is picked, and no candidate of the later block is named in their place.
+- Among the later block's candidates, the order is the order of picking that its design entry fixes before its first number. An order of running is not one. With two or more eligible and no order fixed there, none of them is picked.
+
+**Share.** The share is read in the reading where it is smaller. For a candidate that touches all five learners it is the third largest share among the learners that carry the change and pass the size rule. For any other candidate it is the smallest share among its learners.
+
+**Plan blocks first.** The plan fixed the rule of its comparison blocks before any result, with a twin and a study split beside each count. The later block was designed after blocks C2, C3, C4, C5 and C9 were read, and after offline figures for its own arms were seen.
+
+**No finding.** The order goes by size alone. It does not show that one candidate is better than another, since no block scored two candidates against each other.
+
+**As run.** A picked arm enters the release as its block ran it: every learner it touched, on the datasets of its set in the plan's Set table. No learner or dataset is taken out by its result. Datasets outside its set keep the release's rule, and the release still serves one learner per dataset by its own rule.
+
+**Program.** A program-call arm enters only with the program's version pinned, and the maintainer rules how GRM may name its calls, as block C3's Release row says.
+
+**Decline.** The lead may decline the candidate the rule names, with the reason written on this page before the later-records test. A declined candidate leaves the release on its rule, and the rule then names no other candidate. Three grounds count.
+
+- The candidate adds a library or an outside program to the release.
+- It cannot serve some datasets or species.
+- For a learner that carries the change, median recall is worse by more than 0.02, or its species interval for recall lies wholly on the worse side, on the count over all datasets in either reading.
+
+**Lead's choice.** The first two grounds hold today for every known candidate. C3's candidate adds AMRFinderPlus 4.2.7 and has no organism option for *Mycobacterium tuberculosis* or *Staphylococcus haemolyticus*, and each of C7's two adds a library. So a decline on those grounds is the lead's choice and no finding.
+
+**Third ground.** For a plan block's candidate it reads recall alone. The count over all datasets gives balanced accuracy and recall, and log loss for block C5, as the entry M run's Other measures says. The very major error rate mirrors recall in its counts, median and sign test. Specificity, the major error rate and log loss stand on a block's page for its first run and for M alone, and decide nothing in the pick for a plan block's candidate.
+
+**Later block's ground.** A later-block candidate's count over all its datasets is fitted new and gives every measure. So for it the third ground also reads specificity, the major error rate and log loss, by the same bound. The two kinds of candidate then meet different grounds, since a guard is kept only where its figure exists.
+
+**Known of them.** On the first run each of the four learners that carry C3's candidate has its median on the better side for all three. For `cart`, `rf`, `gbt` and `lasso` the medians are 0.002, 0.023, 0.010 and 0.012 in recall, 0.008, 0.009, 0.010 and 0.014 in specificity, and -0.054, -0.039, -0.017 and -0.024 in log loss, where lower is better (`reference/input-arms/page-count.tsv`).
+
+**One way.** The lead may not pick a candidate the rule does not name. When the rule names none, the release keeps its rule, and the page gives that as the pick's result.
+
+**Not read.** Conditions 1 to 5 and the size rule read each learner apart. The release serves one learner per dataset, and no block scored the served call under a candidate. The pick says so beside its result.
+
+**Timing.** The pick waits for block C3's count over all its datasets, for the later block's reading and for every block of the plan to be ruled, block C6 part A included. A block ruled as not run, with its reason, is ruled. The pick comes before the later-records test, and the later records decide no pick.
+
+**No count.** Block C3's count over all its datasets may never be taken: a check of the entry M run can fail with no way on, or the budget can end. The lead then rules it not taken, with its reason, on this page. The pick then names no candidate, and the release keeps its rule. A count ruled not taken does not move a later-block candidate ahead of the plan block's.
+
+**Written.** This entry was written at 18:54Z on 25 Nov 2026. The maintainer can overrule it.
+
+**Review.** An independent review read it before it was filed and moved three rules. The first draft let a later-block candidate in on its own design's rule, left open what follows a decline, and did not wait for block C6 part A. The review of the entry M run then showed that the first run's record holds no specificity, and no log loss outside block C5. The third ground came to read recall alone for a plan block's candidate.
+
+**Changed.** A re-check read this entry against the entry M run. After it the lead changed, at 19:24Z, Known of them, which had counted three learners that carry C3's candidate where four do, and C7's count over M, Order, Third ground and Review. The lead added Floor's effect, Share, Later block's ground and No count. No reviewer has read No count, Share or Order's new sentence on a tie.
+
+## M run
+
+**Owed.** The entry Label rule left three choices to this entry: which arms run on M, how condition 2's Holm family is taken, and how a dataset enters the second reading. This entry fixes them, with no dataset of M fitted for any block.
+
+**Known.** The lead wrote it knowing the first runs of blocks C1, C2, C3, C4, C5, C7, C9 and D0, and no count that takes in a dataset of M. Running every arm moves the Holm p of block C3's candidate little. On `cart` it is 0.00213 on the first run, against 0.0023 from the published sign p values had the 20 pairs of the other four arms stood at p = 1. Both are under 0.05, so the choice moves no first-run verdict.
+
+**Promised.** Four result pages, those of blocks C3, C4, C5 and C9, say of their datasets of M: "The count over them is taken when that rule lets them run, with these rules, this scorer and these arguments unchanged." `docs/cohort-result.md` says the like of block C1's count over its 108 datasets. The pages of blocks C2 and C7 say only that their datasets of M wait for the label rule.
+
+**Scorer.** The scorer does not stay unchanged, against those pages' words. As the entry Label rule's Code says, no block's scorer takes the second reading today. The rules and arguments stay unchanged.
+
+**Blocks.** Each of these blocks takes its count over its datasets of M: C1 on 19, C2 on 23, C3 on 35 with 33 of them in set A, C4 on 35, C5 on 14, C7 on 35 and C9 on 35. D0 refits its 10 MISS datasets in M and reads its line again, both ways.
+
+**Not here.** The 32 MIC datasets that `docs/mic-comparison.md` marks M are not in this entry. Nor are the two reports in M that `docs/catalogue-size-result.md` leaves out of its correlations. Each gets an entry of its own before it is read.
+
+**Order.** Block C3 runs first. Of the candidates known today, only its candidate can still pass the size rule of the entry Pick rule. D0's 10 datasets and the lineage curve's second reading come next. The other blocks follow as the budget allows.
+
+**Block C7 and the pick.** The entry Pick rule, filed with this one, takes back the merged paragraph Before the pick for block C7, since neither of C7's candidates can pass its size rule. Block C7 still takes its count over M under this entry.
+
+**Not run yet.** Until a block's datasets of M have run, its page says they have not run, and its first-run count stands alone. No claim is then made on all its datasets.
+
+**Own rules.** Blocks C1 and D0 do not read by conditions 1 to 5, and C1 scores cohorts smaller than the floor below by design. Each fixes, in an entry of its own before its datasets of M run, how the second reading meets its rule.
+
+**Lineage curve.** Its second reading fits nothing. It follows the page's own method, with those genomes left out of the resistant genomes it reads. It keeps the page's own floors: no curve and no share over fewer than 5 resistant genomes.
+
+**Arms.** Each block runs on M every arm its first run fitted, with the default and the twin, at the first run's seeds and arguments. An arm withdrawn before the first run stays withdrawn, with its pairs at p = 1.
+
+**Arms by block.** Block C4's list names no arm for its datasets of M, so they take the arms of its first-run datasets. Block C7's default and twin come from block C3's run, as on its first run. Each block's datasets of M in set S run the study split. That includes block C7's, whose list gives them none today.
+
+**Code.** The run on M changes code in each block, and each change is reviewed before it runs. Today the run scripts of blocks C2, C3, C4, C5, C7 and C9 refuse a dataset of M. So do the six blocks' page-table gates and block C7's `score.py --count`. Each comes to admit the datasets of M. Block C7's list changes to give its datasets of M in set S the study split, and block C4's list to give its datasets of M their arms.
+
+**Changed scripts.** The run scripts change to build `grm` as Binary says and to keep each genome's score as Scores says. The scorers change to take the second reading and the three counts, and the page tables change to show them.
+
+**Scores.** The second reading needs each genome's held-out score from each fit. Block C2's `grm arm` writes a prediction per genome. Block C7's outside arms hold each genome's score in memory and write none. The default's and the twin's `grm learn` reports hold each genome's score, but each fit's report replaces the last. The arms of blocks C3, C4 and C5, and block C9's inner pick, write counts per fold only: `grm` writes no report for them.
+
+**Scores kept.** `grm` changes so those fits also write each held-out genome's score on the run's machine, with no change to any fit. The run scripts keep each report of the default and the twin, and block C7's outside arms write theirs. The second reading stays in the scorer.
+
+**Two ways not taken.** One has `grm` read the list below and count the second reading itself, which puts a second scorer inside the fitting program. The other reads one way every arm whose scores are not kept today. Its claims on M would then not stand, so block C3's candidate could never become eligible.
+
+**Binary.** Each block's fits on M run on one `grm`: the block's first-run commit with that one change, as one reviewed commit on a branch of this repository. Block C2's `grm` needs no change. Block C9's first run used two binaries, from `0fd05e9` for 22 species and from `dd17f98` for *Klebsiella pneumoniae*, and each species keeps its own.
+
+**Same build.** Before any dataset of M runs, the build of the first-run commit itself must give the code sha256 the first run recorded. For blocks C2, C3, C4 and C5 that is `page-binaries.tsv` under `reference/`. Block C9's record keeps only the first 12 hex digits, in `reference/served-pick/checks.txt`, and the build's code sha256 must begin with them.
+
+**Same results.** The changed binary then fits the first-run datasets of one species. From those fits the first run's scorer must give back that species' rows of the block's committed record, at 12 decimals, for every pair, learner and split. The species is the one with the fewest first-run datasets among those that hold a dataset of M and a first-run dataset on the block's list, the first by name on a tie. A binary that ran one species is checked on that species.
+
+**Same counts.** For every fit with a kept score, each fold's counts taken again from the genomes' scores must equal the counts the fit wrote. On a difference in any of these three checks, the block's run on M does not start.
+
+**On a difference.** The run scripts of blocks C2, C3, C4, C5 and C9 pin rustc 1.98.1 by name, `Cargo.lock` through `--locked` and the target CPU through `.cargo/config.toml`. Nothing pins the system C compiler and linker that the `ring` crate builds with.
+
+**Genome files.** Blocks C2, C3, C5 and C9 fetch their genomes from BV-BRC again, where a file can differ in bytes from the release's. So a difference can come from the machine or the genome files and not from the change.
+
+**Then.** The run names what differs, and the lead rules on this page before another build, machine or genome set is used.
+
+**Block C2.** Its `grm` has no change. Same build is its binary's check, and Same results runs on that binary as a check of the machine and the genome files. Its fits write a prediction per genome and no counts per fold, so Same counts has nothing to compare there. Its study fits are `grm learn` fits for every arm, and the run scripts keep each of their reports too.
+
+**Block C7's binaries.** Block C7 uses block C3's binary, as on its first run. Its export binary is built from `da70f4b`, the commit its first run's `DONE` lines name. That run recorded the export binary's sha256 and no code sha256, so the run holds `src/`, `Cargo.toml`, `Cargo.lock` and `.cargo/config.toml` equal to that commit's.
+
+**Block C7's check.** Same results holds for block C7 too: its changed scripts fit the outside arms on its check species' first-run datasets.
+
+**Families.** Condition 2's Holm family is the block's own. Each count takes it apart: the first run's as read, the count over M alone and the count over all datasets. Each reading takes it apart too. A claim on all datasets needs conditions 1 to 5 in both readings. Both must hold, so no correction runs across the two. The count over M alone decides nothing, as the entry Pick rule says.
+
+**Second reading.** In a dataset of M, the genomes whose records for that antibiotic hold an intermediate call leave the scoring of every arm, the default and the twin, in every draw and on both splits. No model is refitted. A dataset outside M holds no genome with an intermediate call beside a susceptible or resistant call. A genome whose only call is intermediate has no label under `r-or-s-wins` and is never scored. So a dataset outside M has the same rows in both readings.
+
+**Block C9's picks.** The default's pick reads the random split over every genome. The inner pick reads the inner folds of each outer fold's training genomes. In a dataset of M, both read genomes with an intermediate call. Both picks stand as fitted, and only the outer scoring leaves those genomes out. A pick is part of the fit, and the second reading refits nothing. So it does not show whether either pick would differ without those genomes.
+
+**Floor.** A dataset enters the second reading when each class keeps at least 25 genomes, each counted once, among the genomes its lineage split scores. That count is made from the label table before any score is read. It holds for every arm, every draw, the twin and both splits. Under 25, the dataset is not scored in that reading, and the page names it with its counts by class before any score is read.
+
+**Study split.** On the study split, a dataset that enters the second reading keeps that split's own refusal rule, as on its first run.
+
+**Floor's source.** The 25 is the release's class minimum for a dataset (`--min-class`, `docs/input-configuration.md`), which there counts genomes with an unconflicted reported call. The plan's inventory lists it as undefended (A1 and A2).
+
+**Left out.** A dataset left out of the second reading leaves that reading's count, which then has fewer datasets than the first. A claim on that dataset cannot hold both ways, so it does not stand, and its page shows its figures one way only.
+
+**List.** The scorer builds the list of those genomes on the run's machine. It reads them from the rebuilt revision 14 table that the run scripts pin as `curated.tar`, sha256 `d77e2c6f75f8d986268d0c075cb2ea364fba9972fa22a55139495ac0eb376d97`. If that table does not hold each record's call, the run names the file that does, with its sha256, before the list is built. The list and the scores of each genome stay on that machine. A page gives counts per dataset and no row per genome.
+
+**First run.** The count over all datasets does not score the first run again. It takes the first run's rows from the block's committed record of one row per dataset. That record is its `page-datasets.tsv` under `reference/`, held to the sha256 in the block's `SHA256SUMS`. It holds balanced accuracy and recall for each pair and learner, and block C5's also holds log loss.
+
+**Check.** From those rows the scorer must first give every row of the first run's published count on those measures, and conditions 1 to 5 as read from them. It stops on any difference.
+
+**Other measures.** The record holds no specificity, no major error rate and no log loss outside block C5. So the count over all datasets gives balanced accuracy and recall, and log loss for block C5. A block's page gives the other measures for its first run and for M alone.
+
+**Mirror.** The very major error rate mirrors recall in its counts, median and sign test on every published row, so it is not given apart. Only its species interval differs, since each measure draws its own resamples. It lies wholly on the worse side on exactly the rows where recall's does.
+
+**Not from the tables.** The lead did not take the other measures from the first run's tables, since each block's first run was read once. Specificity worked out from the record's two measures gives back the published counts. It misses the published median in the twelfth decimal on 14 of block C3's 55 rows and 4 of block C7's 8, so the record does not give it exactly.
+
+**Pick.** The entry Pick rule's third ground for a decline reads recall alone for a plan block's candidate, for this reason.
+
+**Once.** For each block the scripts and their tests are committed and reviewed before a dataset of M is scored. The counts over M and over all datasets are then read once, both readings together, with no other option, subset or measure.
+
+**Not taken.** Running only the candidates on M would have saved fits. The lead weighed it and did not take it. The pages of blocks C1, C3, C4, C5 and C9 promise the count with rules and arguments unchanged. Blocks C4, C5 and C9 have no candidate, so their counts would never be taken. The pages of blocks C2 and C7 promise no count over M; they run under this entry as the budget allows.
+
+**Cost.** It is not measured yet, and no estimate is given here. M holds 35 of the 268 datasets with a lineage figure, in 9 species. Before a block's run starts, its cost is estimated in the plan's units from its first run's measured times, and the page that reports the run gives that estimate beside the measured cost.
+
+**Written.** This entry was written at 18:54Z on 25 Nov 2026. The maintainer can overrule it.
+
+**Review.** An independent review read it before it was filed and showed the first draft could not run as written. In five of the six blocks some fits keep no score per genome, today's code does not build the first run's binary, and the record holds two measures of the six a count gives. The paragraphs Scores kept, Binary, Other measures and Block C9's picks give the lead's rulings on them.
+
+**Changed.** A re-check read this entry against the entry Pick rule. After it the lead changed, at 19:24Z, Same build, Block C7's binaries, Other measures, Pick and Review, and added On a difference, Genome files, Then, Block C2, Block C7's check and Mirror. No reviewer has read Block C2 or Block C7's check.
+
+## Label text
+
+**Plan.** Row A16 of the plan's inventory cites the site's label text at `web/src/views/MethodsView.tsx:202-204` and calls it "silent on S with I and I with R".
+
+**Now.** Pull request #186, merged on 26 Nov 2026, moved that text to the Data page, at `web/src/views/DataView.tsx:254-256` as that file stood at the merge. Two later pull requests of the same day, #187 and #191, moved it down the file, and it stays in the section Labels and inclusion.
+
+**Added.** Pull request #186 also added one sentence: "A pair called susceptible and intermediate is labeled susceptible, and a pair called intermediate and resistant is labeled resistant." That is what the rule `r-or-s-wins` does, at `src/curate.rs:83-89`. The row's own code lines (`:34-36`, `:568`, `:227`) fit `src/curate.rs` as it stood before commit `429965e6` of 21 Nov 2026. Today lines 34 to 36 only end the list of call types.
+
+**Unchanged.** The row's rule and its counts stand as written. So does its mark in the column Defended, none: the site's sentence states the rule and gives no reason for it. The entry Label rule gives the ruling on those pairs.
+
+**Served.** The sentence is in the repository. The served site shows it from its next release.
+
+**Written.** This entry was written at 03:14Z on 26 Nov 2026.
+
+**Changed.** At 06:26Z on 26 Nov 2026, after pull requests #187 and #191 had merged, the lead changed Now and split Added off from it.
+
+## Rebuilt counts
+
+**Plan.** The paragraph All data says "At 4,096, 41,627 of 80,967 genomes with a scorable label are left out, and 94 of the 274 datasets lose at least one. The release's cap of 2,000 leaves out 57,206." Row A16 of the inventory counts "1,320 of 1,064,823 pairs".
+
+**Found.** The plan took six of these counts from the rebuilt revision 14 table, not from the release's own. `cap-species.tsv` gives three: 80,967 genomes the cap picks among, 57,206 left out at 2,000 and 41,627 left out at 4,096. `funnel.json` gives the 1,064,823 pairs. The 94 datasets were counted on the same selections and the 1,320 pairs on the same table, and neither file holds them.
+
+**Release.** The release's index counts 1,063,628 pairs at the same step of its own table. For genomes, 80,967 less 57,206 leaves 23,761 analyzed on the rebuilt table, and the index counts 23,757 at that step. The rebuilt table ran no species check and counts one more length failure, so 79 more genomes pass in it (the entry MIC checks, under Breakpoints).
+
+**Where.** `docs/release-summary.md` sets both sides out under Curation path, in the part Differences. `reference/release-summary/rebuilt-table-20261121/` holds the rebuilt table's counts.
+
+**Holds.** Read the six counts as the rebuilt table's. Training labels come from that table alone (the row Labels of the plan), so no rule of the plan moves. No committed file gives the release's own count of the genomes its cap picks among.
+
+**Written.** This entry was written at 04:54Z on 26 Nov 2026.
+
+**Changed.** After its independent review the lead changed, at 06:52Z on 26 Nov 2026, Plan, Found and Holds, which had named three counts where six are the rebuilt table's, and added Release.

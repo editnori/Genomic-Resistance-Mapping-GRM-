@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { fixtureFile } from "../dev/fixtures/files";
 import { parseManifest } from "../data/validate";
+import { DataView } from "./DataView";
 import { MethodsView } from "./MethodsView";
 
 const manifest = parseManifest(fixtureFile("/data/index.json"));
@@ -53,8 +54,13 @@ describe("methods in plain words", () => {
       "Count the errors against limits",
       "Read what the numbers support",
     ]);
-    expect(steps.map((li) => li.querySelector("a")?.getAttribute("href"))).toEqual(["#m-labels", "#m-models", "#m-models", "#m-scores", "#m-scores", "#m-limits"]);
-    for (const step of steps) expect(el.querySelector(step.querySelector("a")!.getAttribute("href")!)).not.toBeNull();
+    expect(steps.map((li) => li.querySelector("a")?.getAttribute("href"))).toEqual(["/corpus#m-funnel", "#m-models", "#m-models", "#m-scores", "#m-scores", "#m-limits"]);
+    expect(steps[0]!.querySelector("a")?.textContent).toBe("More in Data, Curation funnel");
+    const dataEl = document.createElement("div");
+    dataEl.innerHTML = renderToStaticMarkup(createElement(DataView, { manifest }));
+    const dataTarget = steps[0]!.querySelector("a")!.getAttribute("href")!.split("#")[1]!;
+    expect(dataEl.querySelector(`#${dataTarget}`)).not.toBeNull();
+    for (const step of steps.slice(1)) expect(el.querySelector(step.querySelector("a")!.getAttribute("href")!)).not.toBeNull();
     expect(steps[4]!.textContent).toContain("a VME of at most 1.5% and an ME of at most 3%");
   });
 

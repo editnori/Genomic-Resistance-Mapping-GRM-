@@ -269,8 +269,19 @@ async function referenceChecks(page, tag, finding, panelSeen = [], panelPaged = 
   await page.locator(first).first().waitFor({ state: 'attached', timeout: STATE_MS }).catch(() => {});
   const geometry = await page.evaluate(sel => {
     const svg = document.querySelector(sel);
-    if (svg === null) return { drawn: false, width: 0, height: 0, refs: [], ids: [], text: '' };
-    return { drawn: true, width: svg.getBoundingClientRect().width, height: svg.getBoundingClientRect().height, refs: [...svg.querySelectorAll('line[aria-hidden="true"]')].map(l => ({ x: Number(l.getAttribute('x1')), y: Number(l.getAttribute('y1')) })), ids: [...svg.querySelectorAll('[data-dataset]')].map(e => e.getAttribute('data-dataset')), text: svg.textContent };
+    if (svg === null) return { drawn: false, width: 0, height: 0, plotTop: null, plotWidth: null, plotHeight: null, refs: [], ids: [], text: '' };
+    const clipRect = svg.querySelector('clipPath rect');
+    return {
+      drawn: true,
+      width: svg.getBoundingClientRect().width,
+      height: svg.getBoundingClientRect().height,
+      plotTop: clipRect ? Number(clipRect.getAttribute('y')) : null,
+      plotWidth: clipRect ? Number(clipRect.getAttribute('width')) : null,
+      plotHeight: clipRect ? Number(clipRect.getAttribute('height')) : null,
+      refs: [...svg.querySelectorAll('line[aria-hidden="true"]')].map(l => ({ x: Number(l.getAttribute('x1')), y: Number(l.getAttribute('y1')) })),
+      ids: [...svg.querySelectorAll('[data-dataset]')].map(e => e.getAttribute('data-dataset')),
+      text: svg.textContent,
+    };
   }, first);
   const close = (actual, want) => Math.abs(actual - want) <= 1.5;
   let wanted = [];
@@ -297,7 +308,11 @@ async function referenceChecks(page, tag, finding, panelSeen = [], panelPaged = 
     });
     const panel = counts.reduce((a, c) => a + c.caught, 0) / counts.reduce((a, c) => a + c.called, 0);
     const model = counts.reduce((a, c) => a + c.modelCaught, 0) / counts.reduce((a, c) => a + c.modelResistant, 0);
-    const start = Math.min(220, Math.round(geometry.width * 0.5)) + 10;
+    const everyday = { 'Mycobacterium tuberculosis': 'TB', 'Neisseria gonorrhoeae': 'Gonorrhea', 'Salmonella enterica': 'Salmonella', 'Staphylococcus aureus': 'Staph', 'Streptococcus pneumoniae': 'Pneumococcus' };
+    const shortSp = sp => { const parts = sp.split(' '); return parts.length > 1 ? parts[0].charAt(0) + '.\u00a0' + parts.slice(1).join(' ') : sp; };
+    const rowTitle = p => { const d = byId.get(p.dataset) ?? p; return (everyday[d.species] ?? shortSp(d.species)) + ' vs\u00a0' + d.antibiotic; };
+    const maxRowLabelW = Math.max(220, ...expected.panels.map(p => Math.ceil(rowTitle(p).length * 7.1) + 6 + 4));
+    const start = Math.min(maxRowLabelW, Math.floor(geometry.width * 0.5)) + 10;
     wanted = [panel, model].map(v => start + v * (geometry.width - 20 - start));
     // Pooled reference lines span every row on every page; a page draws
     // only lead-panel datasets, and the pages together are checked in present().
@@ -312,11 +327,14 @@ async function referenceChecks(page, tag, finding, panelSeen = [], panelPaged = 
     // (lo < 0.5); at lo = 0.5 the axis floor is 50% and no line is drawn.
     // A missing line counts only from a figure that drew: a box, and one
     // mark per dataset with a catalog score and a lineage score.
-    const at50 = geometry.refs.filter(r => close(r.y, 22 + (1 - 0.5) / (1 - lo) * (geometry.height - 56)));
+    const plotTop = geometry.plotTop ?? 22;
+    const plotHeight = geometry.plotHeight ?? (geometry.height - 56);
+    const at50 = geometry.refs.filter(r => close(r.y, plotTop + (1 - 0.5) / (1 - lo) * plotHeight));
     const drawn = geometry.width > 0 && geometry.height > 0 && geometry.ids.length === expected.catalog.length;
     // RefLineH is the figure's only aria-hidden line, so with no 50% line
     // there is no reference line at all.
     check(tag + ' catalog 50% reference', drawn && (lo < 0.5 ? at50.length > 0 : geometry.refs.length === 0), { lo, drawn, marks: geometry.ids.length, refs: geometry.refs });
+    check(tag + ' catalog plot box is square', drawn && geometry.plotWidth !== null && geometry.plotHeight !== null && Math.abs(geometry.plotWidth - geometry.plotHeight) <= 0.5, { plotWidth: geometry.plotWidth, plotHeight: geometry.plotHeight });
     check(tag + ' catalog region counts', geometry.text.includes(expected.stats.catalogAhead + ' ahead by more than 2') && geometry.text.includes(expected.stats.catalogWithin + ' within 2 points') && geometry.text.includes(expected.stats.catalogBehind + ' behind by more than 2'), geometry.text);
   } else check(tag + ' finding ' + finding + ' reference positions', geometry.drawn && wanted.length === geometry.refs.length && wanted.every((x, i) => close(geometry.refs[i].x, x)), { wanted, actual: geometry.refs, drawn: geometry.drawn });
 }
@@ -469,6 +487,134 @@ async function reachCheck(page, tag) {
   check(tag + ' nothing reaches past the page edge', over.length === 0, over);
 }
 
+/** Chart text geometry check across any view or live Present slide: no two
+ *  SVG text boxes overlap (oriented bounding boxes via getBBox + getScreenCTM
+ *  so parallel rotated labels do not false-positive), no SVG text overlaps a
+ *  data mark, no SVG text clips outside its SVG or overflow-hidden table cell,
+ *  and no HTML chart header overflows or collides with its sibling.
+ *
+ *  What this check cannot see:
+ *  - Only `<circle>` and `<rect>` elements 4 to 14 px wide and tall count as
+ *    data marks; text overlapping a bar, line, path, or heat-map cell passes.
+ *  - Text boxes are compared only within the same `<svg>`; text from two
+ *    different SVGs is never compared against each other.
+ *  - No hosted CI job runs `browser-check.cjs`; outside this machine its first
+ *    run is release staging. */
+async function chartOverlapCheck(page, tag, rootSelector = null) {
+  await settle(page);
+  const res = await page.evaluate(rootSel => {
+    const rectHit = (a, b, tol = 1) => a.left < b.right - tol && b.left < a.right - tol && a.top < b.bottom - tol && b.top < a.bottom - tol;
+    const polyFromRect = (r, tol = 0) => [
+      { x: r.left + tol, y: r.top + tol },
+      { x: r.right - tol, y: r.top + tol },
+      { x: r.right - tol, y: r.bottom - tol },
+      { x: r.left + tol, y: r.bottom - tol },
+    ];
+    const obbOfSvg = (el, tol = 1) => {
+      try {
+        const bb = el.getBBox();
+        const m = el.getScreenCTM();
+        if (!m || bb.width <= 0 || bb.height <= 0) return null;
+        const dx = Math.min(tol, bb.width * 0.25), dy = Math.min(tol, bb.height * 0.25);
+        const x0 = bb.x + dx, x1 = bb.x + bb.width - dx, y0 = bb.y + dy, y1 = bb.y + bb.height - dy;
+        const pt = (x, y) => ({ x: m.a * x + m.c * y + m.e, y: m.b * x + m.d * y + m.f });
+        return [pt(x0, y0), pt(x1, y0), pt(x1, y1), pt(x0, y1)];
+      } catch {
+        return null;
+      }
+    };
+    const satOverlap = (p1, p2) => {
+      if (!p1 || !p2) return false;
+      for (const poly of [p1, p2]) {
+        for (let i = 0; i < poly.length; i++) {
+          const a = poly[i], b = poly[(i + 1) % poly.length];
+          const nx = -(b.y - a.y), ny = b.x - a.x;
+          let min1 = Infinity, max1 = -Infinity, min2 = Infinity, max2 = -Infinity;
+          for (const p of p1) { const v = nx * p.x + ny * p.y; if (v < min1) min1 = v; if (v > max1) max1 = v; }
+          for (const p of p2) { const v = nx * p.x + ny * p.y; if (v < min2) min2 = v; if (v > max2) max2 = v; }
+          if (max1 <= min2 || max2 <= min1) return false;
+        }
+      }
+      return true;
+    };
+    const root = (rootSel && document.querySelector(rootSel))
+      || document.querySelector('dialog[open]')
+      || document.querySelector('[data-view-scroll]')
+      || document.body;
+    const rootRect = root.getBoundingClientRect();
+    const textVsText = [], textVsMark = [], clipped = [], html = [];
+    const svgs = [...root.querySelectorAll('svg')].filter(svg => {
+      if (svg.closest('[inert], .sr-only, [data-slide-measure]')) return false;
+      const cs = getComputedStyle(svg);
+      if (cs.visibility === 'hidden' || cs.display === 'none') return false;
+      const r = svg.getBoundingClientRect();
+      return r.width > 24 && r.height >= 16;
+    });
+    for (const svg of svgs) {
+      const svgRect = svg.getBoundingClientRect();
+      const where = svg.closest('section[id]')?.id
+        || svg.closest('[data-outside-plot]')?.getAttribute('data-outside-plot')
+        || svg.closest('[role="region"]')?.getAttribute('aria-label')
+        || 'svg';
+      const texts = [...svg.querySelectorAll('text')]
+        .filter(t => t.textContent && t.textContent.trim() !== '' && getComputedStyle(t).visibility !== 'hidden')
+        .map(t => ({ text: t.textContent.trim().slice(0, 48), rect: t.getBoundingClientRect(), obb: obbOfSvg(t, 1.0), rawObb: obbOfSvg(t, 0) }))
+        .filter(x => x.rect.width > 0 && x.rect.height > 0 && x.obb !== null);
+      for (let i = 0; i < texts.length; i++) {
+        for (let j = i + 1; j < texts.length; j++) {
+          if (rectHit(texts[i].rect, texts[j].rect, 0.5) && satOverlap(texts[i].obb, texts[j].obb)) textVsText.push({ where, a: texts[i].text, b: texts[j].text });
+        }
+      }
+      const marks = [...svg.querySelectorAll('circle, rect')]
+        .filter(m => { if (m.closest('defs, clipPath, pattern')) return false; const r = m.getBoundingClientRect(); return r.width >= 4 && r.width <= 14 && r.height >= 4 && r.height <= 14; })
+        .map(m => { const r = m.getBoundingClientRect(); return { rect: r, poly: polyFromRect(r, 0.5) }; });
+      for (const t of texts) {
+        let hits = 0;
+        for (const m of marks) if (rectHit(t.rect, m.rect, 0.5) && satOverlap(t.obb, m.poly)) hits++;
+        if (hits > 0) textVsMark.push({ where, text: t.text, marksHit: hits });
+      }
+      const clipCell = svg.closest('td.overflow-hidden, th.overflow-hidden');
+      const clipRect = clipCell ? clipCell.getBoundingClientRect() : null;
+      const inScroller = Boolean(svg.closest('[data-scroll-frame], .overflow-x-auto, [role="region"]'));
+      for (const t of texts) {
+        const xs = t.rawObb.map(p => p.x), ys = t.rawObb.map(p => p.y);
+        const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+        const svgOut = Math.max(svgRect.left - minX, maxX - svgRect.right, svgRect.top - minY, maxY - svgRect.bottom);
+        const clipOut = clipRect ? Math.max(clipRect.left - minX, maxX - clipRect.right) : 0;
+        const vpOut = inScroller ? 0 : Math.max(rootRect.left - minX, maxX - rootRect.right);
+        if (svgOut > 2 || clipOut > 2 || vpOut > 2) clipped.push({ where, text: t.text, svgOut: Math.round(svgOut), clipOut: Math.round(clipOut), vpOut: Math.round(vpOut) });
+      }
+    }
+    const outsidePlots = [...root.querySelectorAll('[data-outside-plot]')].filter(el => !el.closest('[data-slide-measure]'));
+    for (let i = 0; i < outsidePlots.length; i++) {
+      const p = outsidePlots[i], pr = p.getBoundingClientRect(), cnt = p.querySelector('[data-outside-counts]');
+      if (cnt) {
+        const cr = cnt.getBoundingClientRect(), svg = p.querySelector('svg'), sr = svg ? svg.getBoundingClientRect() : pr;
+        if (cr.right > Math.max(pr.right, sr.right) + 2 || cnt.scrollWidth > cnt.clientWidth + 2) html.push({ kind: 'outside-counts', text: cnt.textContent.trim() });
+      }
+      for (let j = i + 1; j < outsidePlots.length; j++) if (rectHit(pr, outsidePlots[j].getBoundingClientRect(), 1)) html.push({ kind: 'outside-plot-overlap', a: p.getAttribute('data-outside-plot'), b: outsidePlots[j].getAttribute('data-outside-plot') });
+    }
+    const structRoot = root.querySelector('[data-block-layout]');
+    if (structRoot) {
+      for (const grp of structRoot.querySelectorAll('div[aria-hidden="true"].pointer-events-none.absolute.tabular-nums')) {
+        for (const cell of grp.children) if (cell.scrollWidth > cell.clientWidth + 2 || cell.scrollHeight > cell.clientHeight + 2) html.push({ kind: 'structure-col-header', text: cell.textContent.trim() });
+      }
+      const axisCol = structRoot.querySelector('div[aria-hidden="true"].relative.min-w-\\[7rem\\]');
+      if (axisCol) {
+        const spans = [...axisCol.querySelectorAll(':scope > span.absolute')].map(s => ({ text: s.textContent.trim(), rect: s.getBoundingClientRect() })).filter(x => x.rect.width > 0 && x.rect.height > 0);
+        for (let i = 0; i < spans.length; i++) for (let j = i + 1; j < spans.length; j++) if (rectHit(spans[i].rect, spans[j].rect, 1)) html.push({ kind: 'structure-axis', a: spans[i].text, b: spans[j].text });
+      }
+    }
+    return { textVsText, textVsMark, clipped, html };
+  }, rootSelector);
+  check(tag + ' chart text has no overlap, mark collision or clipping', res.textVsText.length === 0 && res.textVsMark.length === 0 && res.clipped.length === 0 && res.html.length === 0, {
+    textVsText: res.textVsText.slice(0, 4),
+    textVsMark: res.textVsMark.slice(0, 4),
+    clipped: res.clipped.slice(0, 4),
+    html: res.html.slice(0, 4),
+  });
+}
+
 /** Every view opens with a visible 32px title and one quiet status line
  *  that carries the audit chip and the report's date. */
 async function headerCheck(page, tag, title) {
@@ -503,6 +649,107 @@ const GUIDANCE = (() => {
 const GUIDANCE_MISSING = manifest.evaluation_revision === undefined
   ? 'this tree\'s index.json has no evaluation_revision, so no reference/release-summary/*/guidance.json, each for one revision, can match it'
   : 'no reference/release-summary/*/guidance.json has this tree\'s revision ' + manifest.evaluation_revision + ', generation time ' + manifest.generated_at + ' and ' + manifest.datasets.length + ' datasets';
+// The curation path summary (reference/release-summary/<release>/path.json,
+// written by scripts/release-summary/path.py) when its revision, dataset count,
+// species count, and lab record count match this tree. Synthetic trees match
+// none and skip the reference-file check by name.
+const PATH_REF = (() => {
+  const dir = path.join(__dirname, '../../reference/release-summary');
+  const names = fs.existsSync(dir) ? fs.readdirSync(dir).sort() : [];
+  for (const name of names) {
+    const file = path.join(dir, name, 'path.json');
+    if (!fs.existsSync(file)) continue;
+    const p = JSON.parse(fs.readFileSync(file));
+    if (p.revision === manifest.evaluation_revision && p.datasets === manifest.datasets.length && p.species_rows === manifest.species.length && p.funnel?.records === manifest.funnel?.records) return { release: name, data: p };
+  }
+  return null;
+})();
+const PATH_MISSING = manifest.evaluation_revision === undefined
+  ? 'this tree\'s index.json has no evaluation_revision, so no reference/release-summary/*/path.json can match it'
+  : 'no reference/release-summary/*/path.json matches this tree\'s revision ' + manifest.evaluation_revision + ', ' + manifest.datasets.length + ' datasets, and ' + manifest.funnel?.records + ' records';
+
+/** Data view curation path (#m-path): 8 steps in code order matching index.json
+ *  (and path.json on a matching release), with the any-label sum kept off #m-path
+ *  and no rebuilt-copy counts (80,967 / 57,206) shown on the page. */
+async function curationPathCheck(page, tag) {
+  const got = await page.evaluate(() => {
+    const pathEl = document.getElementById('m-path');
+    const rows = [...(pathEl?.querySelectorAll('tbody tr[data-path-step]') ?? [])].map(tr => ({
+      key: tr.getAttribute('data-path-step'),
+      countAttr: Number(tr.getAttribute('data-path-count')),
+      value: tr.querySelector('[data-path-value]')?.textContent?.trim() ?? null,
+      leftOut: tr.querySelector('[data-path-left-out]')?.textContent?.replace(/\s+/g, ' ').trim() ?? '',
+    }));
+    const view = document.querySelector('[data-view-scroll]');
+    const ruleRows = [...document.querySelectorAll('#m-label-rule tbody tr[data-label-rule-row]')].map(tr => ({
+      key: tr.getAttribute('data-label-rule-row'),
+      cells: [...tr.children].map(c => c.textContent.replace(/\s+/g, ' ').trim()),
+    }));
+    return {
+      rows,
+      ruleRows,
+      pathText: pathEl?.textContent?.replace(/\s+/g, ' ') ?? '',
+      pageText: view?.textContent?.replace(/\s+/g, ' ') ?? '',
+    };
+  });
+  const wantRuleKeys = ['s', 'r', 's-i', 'i-r', 'i', 'conflict', 'mic-only'];
+  check(
+    tag + ' data labels section shows 7-row label rule table',
+    got.ruleRows.length === 7
+      && got.ruleRows.every((r, i) => r.key === wantRuleKeys[i] && r.cells.length === 3)
+      && got.ruleRows[2].cells[1] === 'Susceptible (S)'
+      && got.ruleRows[3].cells[1] === 'Resistant (R)'
+      && got.ruleRows[5].cells[1] === 'Conflict; no label'
+      && got.ruleRows[6].cells[1] === 'Inferred R or S from its MIC, else none'
+      && got.ruleRows[6].cells[2] === 'No (curated records only)',
+    got.ruleRows,
+  );
+  const f = manifest.funnel;
+  const wantKeys = ['records', 'genomes_with_a_record', 'genomes_passing', 'pairs', 'pairs_reported', 'datasets_curated', 'genomes_analyzed', 'datasets_reported'];
+  const wantCounts = [
+    f.records,
+    f.genomes_with_records,
+    f.genomes_passing_qc,
+    f.pairs,
+    f.pairs_reported,
+    manifest.species.reduce((a, s) => a + s.datasets_curated, 0),
+    manifest.species.reduce((a, s) => a + s.genomes_analyzed, 0),
+    manifest.species.reduce((a, s) => a + s.datasets_reported, 0),
+  ];
+  const sameOrder = got.rows.length === 8 && got.rows.every((r, i) => r.key === wantKeys[i] && r.countAttr === wantCounts[i] && toCount(r.value) === wantCounts[i]);
+  check(tag + ' data curation path shows 8 steps in code order matching index.json', sameOrder, { got: got.rows.map(r => [r.key, r.value]), want: wantKeys.map((k, i) => [k, wantCounts[i]]) });
+  const anyLabelSum = manifest.species.reduce((a, s) => a + s.genomes_labeled, 0);
+  const anyLabelDistinct = !wantCounts.includes(anyLabelSum);
+  const anyLabelFormatted = anyLabelSum.toLocaleString('en-US');
+  check(tag + ' data curation path keeps any-label total off the path and omits rebuilt-copy counts', (!anyLabelDistinct || !got.pathText.includes(anyLabelFormatted)) && !got.pageText.includes('80,967') && !got.pageText.includes('57,206'), { anyLabelSum, anyLabelDistinct, inPath: got.pathText.includes(anyLabelFormatted) });
+  const refName = tag + ' data curation path matches reference path.json';
+  if (PATH_REF === null) { skipped.push({ check: refName, reason: PATH_MISSING }); return; }
+  const p = PATH_REF.data;
+  const refCounts = [
+    p.funnel.records,
+    p.funnel.genomes_with_a_record,
+    p.funnel.genomes_passing,
+    p.funnel.pairs,
+    p.funnel.pair_kinds.reported_resistant_or_susceptible,
+    p.species.datasets_curated,
+    p.species.genomes_analyzed,
+    p.species.datasets_with_report,
+  ];
+  const fmt = n => n.toLocaleString('en-US');
+  const leftOutOk = got.rows.length === 8
+    && got.rows[2].leftOut.includes(fmt(p.funnel.genomes_failing_a_check.total))
+    && got.rows[2].leftOut.includes(fmt(p.funnel.genomes_without_metadata))
+    && got.rows[3].leftOut.includes(fmt(p.funnel.records_dropped_by_name.total))
+    && got.rows[3].leftOut.includes(fmt(p.funnel.records_no_call_no_mic))
+    && got.rows[4].leftOut.includes(fmt(p.funnel.pair_kinds.label_from_mic))
+    && got.rows[4].leftOut.includes(fmt(p.funnel.pair_kinds.no_label))
+    && got.rows[4].leftOut.includes(fmt(p.funnel.pair_kinds.intermediate_only))
+    && got.rows[4].leftOut.includes(fmt(p.funnel.pair_kinds.conflict))
+    && got.rows[6].leftOut.includes(fmt(p.species.genomes_analyzed_highest))
+    && got.rows[6].leftOut.includes(fmt(p.species.species_at_highest) + ' of ' + fmt(p.species_rows))
+    && got.rows[7].leftOut.includes(fmt(p.species.datasets_curated - p.species.datasets_with_report) + ' of ' + fmt(p.species.datasets_curated));
+  check(refName, got.rows.every((r, i) => toCount(r.value) === refCounts[i]) && leftOutOk, { release: PATH_REF.release, got: got.rows.map(r => [r.key, r.value]), refCounts, leftOutOk });
+}
 /** One row of the release summary as the page counts it: datasets with both
  *  rates, those that meet the wording, and the M. tuberculosis datasets
  *  among those. */
@@ -736,7 +983,7 @@ async function chrome(page, tag, width) {
   check(tag + ' bezel frame and rounded canvas', c.bezel !== c.paper && c.pad >= 4 && c.pad <= 8 && c.radius >= 14, c);
   check(tag + ' brand mark and wordmark', c.mark === 7 && (width >= 640 ? c.word === 'Genomic Resistance MappingGRM' || c.word?.startsWith('Genomic Resistance Mapping') : true) && c.upper === 'uppercase', { mark: c.mark, word: c.word, upper: c.upper });
   if (c.views.length > 0) {
-    check(tag + ' view nav: four views in one outlined group, one current view with a fill', JSON.stringify(c.views) === JSON.stringify(['Overview', 'Datasets', 'Species', 'Data & Methods']) && c.current.length === 1 && c.current[0] !== 'rgba(0, 0, 0, 0)' && c.group === 'solid', c);
+    check(tag + ' view nav: five views in one outlined group, one current view with a fill', JSON.stringify(c.views) === JSON.stringify(['Overview', 'Datasets', 'Species', 'Data', 'Methods']) && c.current.length === 1 && c.current[0] !== 'rgba(0, 0, 0, 0)' && c.group === 'solid', c);
   } else check(tag + ' compact view selector below the fit', c.compact && width < 1280, { compact: c.compact, width });
   check(tag + ' Present and the theme toggle are outlined, squared, 32px controls with one visible icon', c.present !== null && c.present.border === 'solid' && c.present.h >= 31.5 && c.present.r < c.present.h / 2 - 1 && c.toggle !== null && c.toggle.border === 'solid' && c.toggle.h >= 31.5 && c.toggle.r < c.toggle.w / 2 - 1 && c.toggle.icons.filter(o => o === '1').length === 1, { present: c.present, toggle: c.toggle });
   check(tag + ' dashed rule under the top bar', c.rule === 'dashed', c.rule);
@@ -1082,10 +1329,10 @@ async function interactions(page, tag, width) {
   await chrome(page, tag, width);
   await page.locator('header a[href="/"]').focus();
   const focus = [];
-  for (let i = 0; i < 7; i++) { focus.push(await activeName(page)); await page.keyboard.press('Tab'); }
+  for (let i = 0; i < 8; i++) { focus.push(await activeName(page)); await page.keyboard.press('Tab'); }
   const brandName = width >= 640 ? 'Genomic Resistance MappingGRM' : 'Genomic Resistance MappingGRM';
   const theme = tag.includes('dark') ? 'Switch to light theme' : 'Switch to dark theme';
-  const wanted = width >= 1280 ? [brandName, 'Overview', 'Datasets', 'Species', 'Data & Methods', 'Present', theme] : [brandName, 'View: Datasets', 'Present', theme];
+  const wanted = width >= 1280 ? [brandName, 'Overview', 'Datasets', 'Species', 'Data', 'Methods', 'Present', theme] : [brandName, 'View: Datasets', 'Present', theme];
   check(tag + ' top bar keyboard order', JSON.stringify(focus.slice(0, wanted.length)) === JSON.stringify(wanted), focus);
   if (width >= 1280) check(tag + ' current view marked', await page.locator('nav[aria-label="Views"] [aria-current="page"]').textContent() === 'Datasets', null);
   await headerCheck(page, tag + ' datasets', 'Datasets');
@@ -1213,7 +1460,12 @@ async function interactions(page, tag, width) {
   check(tag + ' sticky dataset column', Math.abs(left - shifted) <= 1.5, { left, shifted });
   await shot(page, tag + '-dataset-status');
   await table.evaluate(e => e.scrollLeft = 0);
-  await page.getByRole('button', { name: 'Random', exact: true }).focus();
+  const splitGroup = page.getByRole('group', { name: 'Error rate split' });
+  await splitGroup.getByRole('button', { name: 'Lineage split', exact: true }).click();
+  check(tag + ' error-rate split toggle switches to Lineage split', await splitGroup.getByRole('button', { name: 'Lineage split', exact: true }).getAttribute('aria-pressed') === 'true', null);
+  await splitGroup.getByRole('button', { name: 'Random split', exact: true }).click();
+  check(tag + ' error-rate split toggle switches back to Random split', await splitGroup.getByRole('button', { name: 'Random split', exact: true }).getAttribute('aria-pressed') === 'true', null);
+  await table.getByRole('button', { name: 'Random', exact: true }).focus();
   await page.keyboard.press('Enter');
   check(tag + ' keyboard sorting', await table.locator('th[aria-sort="descending"]').textContent() === 'Random', null);
   const rows = table.locator('[data-row-open]');
@@ -1405,9 +1657,22 @@ async function interactions(page, tag, width) {
   await page.getByRole('region', { name: 'Panel results' }).waitFor();
   check(tag + ' legacy tests redirect', new URL(page.url()).pathname === '/' && new URL(page.url()).hash === '#panels', page.url());
   await shot(page, tag + '-panel-evidence');
+  await page.goto(BASE + '/corpus');
+  await page.getByRole('heading', { name: /Curation funnel/ }).waitFor();
+  await headerCheck(page, tag + ' data', 'Data');
+  await edgeCheck(page, tag + ' data', '[data-view-scroll] h1');
+  await controlCheck(page, tag + ' data');
+  const tracks = await page.evaluate(() => [...document.querySelectorAll('#m-funnel td span.relative')].map(e => getComputedStyle(e).backgroundColor).filter(c => c !== 'rgba(0, 0, 0, 0)').length);
+  check(tag + ' funnel bars sit on tracks', tracks >= 10, tracks);
+  await curationPathCheck(page, tag);
+  await scrollTo(page, '#m-funnel'); await shot(page, tag + '-definitions');
+  check(tag + ' top bar stays in view after scrolling Data', await page.evaluate(() => document.querySelector('header').getBoundingClientRect().top >= -1 && document.scrollingElement.scrollTop === 0), null);
+  await page.goto(BASE + '/methods#m-funnel');
+  await page.getByRole('heading', { name: /Curation funnel/ }).waitFor();
+  check(tag + ' legacy /methods#m-funnel redirects to /corpus#m-funnel', new URL(page.url()).pathname === '/corpus' && new URL(page.url()).hash === '#m-funnel', page.url());
   await page.goto(BASE + '/methods');
   await page.getByRole('heading', { name: /Models and evaluation/ }).waitFor();
-  await headerCheck(page, tag + ' methods', 'Data & Methods');
+  await headerCheck(page, tag + ' methods', 'Methods');
   await edgeCheck(page, tag + ' methods', '[data-view-scroll] h1');
   {
     const name = tag + ' methods count by the guidance\'s wording matches the release summary';
@@ -1420,9 +1685,6 @@ async function interactions(page, tag, width) {
     }
   }
   await controlCheck(page, tag + ' methods');
-  const tracks = await page.evaluate(() => [...document.querySelectorAll('#m-funnel td span.relative')].map(e => getComputedStyle(e).backgroundColor).filter(c => c !== 'rgba(0, 0, 0, 0)').length);
-  check(tag + ' funnel bars sit on tracks', tracks >= 10, tracks);
-  await scrollTo(page, '#m-funnel'); await shot(page, tag + '-definitions');
   check(tag + ' top bar stays in view after scrolling Methods', await page.evaluate(() => document.querySelector('header').getBoundingClientRect().top >= -1 && document.scrollingElement.scrollTop === 0), null);
   // Assays the report could not score: one entry each in Methods, or no such
   // part when there are none. An entry's lines are its name, its datasets
@@ -1459,9 +1721,20 @@ async function interactions(page, tag, width) {
   for (const id of ['learners', 'bars', 'catalog']) { await scrollTo(page, '#' + id); await shot(page, tag + '-overview-' + id + '-open'); }
   // The bar counts are the page's own reading of the index: the three
   // outcomes add up to the datasets counted.
-  const barTiles = await page.evaluate(() => [...document.querySelectorAll('#bars ol li')].map(li => ({ value: Number(li.firstElementChild.textContent.replace(/,/g, '')), unit: li.lastElementChild.textContent })));
-  // A tree with no dataset to count draws no tiles.
-  check(tag + ' overview bar outcomes add up', expected.stats.barsCounted === 0 ? barTiles.length === 0 : barTiles.length === 4 && barTiles[0].value === expected.stats.barsCounted && barTiles[1].value + barTiles[2].value + barTiles[3].value === barTiles[0].value, { barTiles, counted: expected.stats.barsCounted });
+  const readBar = (selector) => page.evaluate((sel) => {
+    const root = document.querySelector(sel + ' [data-amr-primitive="whole-parts-bar"]');
+    if (!root) return null;
+    const whole = Number(root.querySelector('[data-whole-count]')?.getAttribute('data-whole-count'));
+    const parts = [...root.querySelectorAll('[data-part-count]')].map(e => Number(e.getAttribute('data-part-count')));
+    return { whole, parts };
+  }, selector);
+  const barCounts = await readBar('#bars');
+  // A tree with no dataset to count draws no bar.
+  check(tag + ' overview bar outcomes add up', expected.stats.barsCounted === 0 ? barCounts === null : barCounts !== null && barCounts.whole === expected.stats.barsCounted && barCounts.parts.length === 3 && barCounts.parts.reduce((a, b) => a + b, 0) === barCounts.whole, { barCounts, counted: expected.stats.barsCounted });
+  const catalogBar = await readBar('#catalog');
+  check(tag + ' overview catalog bar outcomes add up', expected.catalog.length === 0 ? catalogBar === null : catalogBar !== null && catalogBar.whole === expected.catalog.length && catalogBar.parts.length === 3 && catalogBar.parts.reduce((a, b) => a + b, 0) === catalogBar.whole, { catalogBar, expected: expected.catalog.length });
+  const otherDbBar = await readBar('#other-database');
+  check(tag + ' overview NCBI bar outcomes add up', otherDbBar !== null && otherDbBar.whole === 8 && otherDbBar.parts.length === 2 && otherDbBar.parts.reduce((a, b) => a + b, 0) === otherDbBar.whole, { otherDbBar });
   await wordingCheck(page, tag);
   // Takeaways and primer are sections of their own above the thirteen numbered
   // ones, each under the same hairline.
@@ -1495,6 +1768,7 @@ async function interactions(page, tag, width) {
   await page.goto(BASE + '/datasets?dataset=' + micId);
   const heat = page.getByRole('region', { name: 'Measured and predicted MIC' }); await heat.waitFor();
   await scrollTo(page, '#ds-mic'); await shot(page, tag + '-mic-heatmap');
+  await chartOverlapCheck(page, tag + ' mic inspector');
   const cells = await heat.locator('svg g>rect').evaluateAll(es => es.map(e => ({ width: Number(e.getAttribute('width')), count: Number(e.nextElementSibling.textContent) })));
   check(tag + ' MIC cells and counts', cells.every(c => c.width >= 22) && JSON.stringify(cells.map(c => c.count)) === JSON.stringify(micReport.mic.confusion.map(c => c[2])), cells);
   const probeRow = manifest.panels.find(p => p.no_call !== undefined && (p.no_call.resistant + p.no_call.susceptible) > 0);
@@ -1607,7 +1881,7 @@ async function present(page, tag, width, height) {
     await goSlide(page, dialog, slide);
     const title = await dialog.locator('main h2').first().textContent();
     titles.push(title);
-    if ((title ?? '').startsWith('Newly deposited genomes')) {
+    if ((title ?? '').startsWith('New studies')) {
       const plots = await page.evaluate(outsidePlots);
       check(tag + ' slide ' + (slide + 1) + ' outside plots: no two axis labels touching', plots.length >= 2 && plots.every(p => p.touching.length === 0), plots);
     }
@@ -1679,7 +1953,8 @@ async function present(page, tag, width, height) {
       check(tag + ' slide ' + (slide + 1) + ' caption page: the title and the whole caption, no figure', pageAt !== null && pageAt[1] === pageAt[2] && prev !== null && Number(prev[1]) === Number(pageAt[1]) - 1 && pageKinds[slide - 1] === 'figure' && slideName(before) === slideName(labels[slide] ?? '') && m.title === titles[slide - 1] && m.captionWhole && m.captionHeard && want !== null && m.captionText === want && (seen === null || seen === m.captionText) && m.svgs === 0 && m.marks === 0, { label: labels[slide], before, beforeKind: pageKinds[slide - 1] ?? null, title: m.title, titleBefore: titles[slide - 1], captionWhole: m.captionWhole, captionHeard: m.captionHeard, caption: m.caption, sameAsCopy: m.captionText === want, sameAsOnePage: seen === null ? 'no one-page view yet' : seen === m.captionText, svgs: m.svgs, marks: m.marks });
     }
     check(tag + ' slide ' + (slide + 1) + ' labels inside', m.textOutside.length === 0, m.textOutside);
-    const finding = title.includes('unseen lineages') ? 1 : title.includes('Known-gene rules') ? 2 : title.includes('PCR panel') ? 3 : title.includes('(MIC)') ? 4 : 0;
+    if (pageKind !== 'caption' && m.svgs > 0) await chartOverlapCheck(page, tag + ' slide ' + (slide + 1), LIVE_SLIDE);
+    const finding = title === 'Lineage drop' ? 1 : title.includes('Known-gene rules') ? 2 : title.includes('PCR panel') ? 3 : title === 'MIC' ? 4 : 0;
     // A paged panel figure draws its share of the rows on each page; the
     // pages together must draw every lead-panel dataset once.
     const paged = /\((\d+) of (\d+)\)/.exec(labels[slide] ?? '');
@@ -1689,19 +1964,19 @@ async function present(page, tag, width, height) {
     // A caption page draws no figure; its figure page is checked instead.
     if (finding > 0 && pageKind !== 'caption') check(tag + ' slide ' + (slide + 1) + ' all dataset marks', m.marks === count, { actual: m.marks, expected: count, title, page: paged?.[0] ?? null });
     if (pageKind !== 'caption') await referenceChecks(page, tag, finding, panelSeen, paged !== null);
-    if (title === 'Genomes and lab calls') {
+    if (title === 'Cohort') {
       const stats = await page.evaluate(() => [...document.querySelectorAll('dialog.presentation-dialog main ol li')].filter(li => li.closest('[data-slide-measure]') === null).map(li => { const v = li.firstElementChild; const r = v.getBoundingClientRect(); return { text: v.textContent, left: r.left, right: r.right, top: r.top, bottom: r.bottom, cellRight: li.getBoundingClientRect().right, scroll: v.scrollWidth, client: v.clientWidth }; }));
       const apart = stats.every((a, i) => stats.every((b, j) => i === j || a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top));
       check(tag + ' corpus counts do not overlap', stats.length === 4 && apart && stats.every(s => s.right <= s.cellRight + 1 && s.scroll <= s.client + 1), stats);
     }
-    if (title === 'Newly deposited genomes') {
+    if (title === 'New studies') {
       // Both populations on one slide, or one on each page of two, never
       // pooled: each plot draws one population's rows on one measure.
       const plots = await page.evaluate(() => [...document.querySelectorAll('dialog.presentation-dialog main section [role="listbox"]')].map(l => l.querySelectorAll('[data-outside]').length));
       const shown = paged === null ? outsideExpected : [outsideExpected[Number(paged[1]) - 1]];
       check(tag + ' slide ' + (slide + 1) + ' outside marks by population', JSON.stringify(plots) === JSON.stringify(shown.flatMap(p => [p.read, p.read])), { plots, page: paged?.[0] ?? null });
     }
-    if (title === 'Input settings against the default') {
+    if (title === 'Input settings') {
       // The rows in order, a share on each page; the pages together show
       // every row once, and no internal name.
       const shownRows = await page.evaluate(() => [...document.querySelectorAll('dialog.presentation-dialog main section tr[data-input]')].map(tr => tr.getAttribute('data-input')));
@@ -1869,7 +2144,7 @@ const OUTSIDE_SHORT_MIN = 106;
 
 async function shortSlides(browser) {
   const SHORT = [1280, 560];
-  const TITLES = ['Newly deposited genomes', 'Input settings against the default'];
+  const TITLES = ['New studies', 'Input settings'];
   const context = await browser.newContext({ viewport: { width: SHORT[0], height: SHORT[1] }, colorScheme: 'light', reducedMotion: 'reduce' });
   const page = await context.newPage();
   page.on('pageerror', error => errors.push({ width: SHORT[0], height: SHORT[1], message: error.message }));
@@ -2275,14 +2550,16 @@ async function baselineChecks(browser) {
         await present(page, tag, width, height);
         if (PART === 'present' || width === 1024) { await context.close(); continue; }
         if (width === 1280) { await interactions(page, tag, width); await widestIntervalFit(page, tag); await stripFit(page, tag); await panelFit(page, tag, width); await context.close(); continue; }
-        for (const [route, title, key] of [['/', 'What GRM found', 'overview'], ['/datasets', 'Datasets', 'datasets'], ['/species/' + speciesSlug, speciesName, 'species'], ['/methods', 'Data & Methods', 'methods']]) {
+        for (const [route, title, key] of [['/', 'What GRM found', 'overview'], ['/datasets', 'Datasets', 'datasets'], ['/species/' + speciesSlug, speciesName, 'species'], ['/corpus', 'Data', 'data'], ['/methods', 'Methods', 'methods']]) {
           await page.goto(BASE + route);
           await page.getByRole('heading', { name: title, exact: true }).first().waitFor();
           if (route.startsWith('/species')) await page.getByRole('grid', { name: /lineage block/ }).first().waitFor();
+          if (route === '/corpus') await page.getByRole('heading', { name: /Curation funnel/ }).waitFor();
           if (route === '/methods') await page.getByRole('heading', { name: /Models and evaluation/ }).waitFor();
           await shot(page, tag + '-' + key);
           if (key === 'overview') await primerCheck(page, tag);
           await reachCheck(page, tag + ' ' + key);
+          await chartOverlapCheck(page, tag + ' ' + key);
           check(tag + ' ' + key + ' document has no horizontal overflow', await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), await page.evaluate(() => ({ width: innerWidth, scroll: document.documentElement.scrollWidth })));
           await tallShot(page, tag + '-' + key + '-full', width, height);
           check(tag + ' ' + key + ' page overflow', await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), await page.evaluate(() => ({ width: innerWidth, scroll: document.documentElement.scrollWidth })));
@@ -2293,6 +2570,7 @@ async function baselineChecks(browser) {
         await page.goto(BASE + '/datasets?dataset=' + inspectId);
         await page.locator('#ds-learners').waitFor();
         await shot(page, tag + '-inspector');
+        await chartOverlapCheck(page, tag + ' inspector');
         await intervalCheck(page, tag);
         await interactions(page, tag, width);
         if (width >= 1280) { await widestIntervalFit(page, tag); await stripFit(page, tag); }

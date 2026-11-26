@@ -36,34 +36,39 @@ const withRouter = (): (() => Navigator) => {
 
 describe("routes", () => {
   it("write a section hash after the place and keep the app's own paths apart from data files", () => {
-    expect(routeHref({ view: "methods", species: null, dataset: null }, "m-funnel")).toBe("/methods#m-funnel");
+    expect(routeHref({ view: "data", species: null, dataset: null }, "m-funnel")).toBe("/corpus#m-funnel");
+    expect(routeHref({ view: "methods", species: null, dataset: null }, "m-audit")).toBe("/methods#m-audit");
     expect(routeHref({ view: "datasets", species: null, dataset: "a b" }, "#x")).toBe("/datasets?dataset=a%20b#x");
     expect(routeHref({ view: "overview", species: null, dataset: null })).toBe("/");
     expect(LIMITS_HREF).toBe("/#limits");
-    for (const p of ["/", "/datasets", "/species", "/species/escherichia_coli", "/methods", "/tests"]) expect(isAppPath(p)).toBe(true);
+    for (const p of ["/", "/datasets", "/species", "/species/escherichia_coli", "/corpus", "/methods", "/tests"]) expect(isAppPath(p)).toBe(true);
     for (const p of ["/data/index.json", "/assets/index.js", "/favicon.svg", "/datasets/extra"]) expect(isAppPath(p)).toBe(false);
   });
 
   it("keep the section hash while the inspector opens over a view and closes again", () => {
-    window.history.replaceState(null, "", "/methods#m-labels");
+    window.history.replaceState(null, "", "/corpus#m-labels");
     const nav = withRouter();
     act(() => nav().openDataset("ecoli__amikacin"));
-    expect(here()).toBe("/methods?dataset=ecoli__amikacin#m-labels");
-    expect(nav().route).toEqual({ view: "methods", species: null, dataset: "ecoli__amikacin" });
+    expect(here()).toBe("/corpus?dataset=ecoli__amikacin#m-labels");
+    expect(nav().route).toEqual({ view: "data", species: null, dataset: "ecoli__amikacin" });
     expect((window.history.state as { inspector?: boolean }).inspector).toBe(true);
 
     // An inspector reached by a link (no entry of its own) closes in place.
-    window.history.replaceState(null, "", "/methods?dataset=ecoli__amikacin#m-labels");
+    window.history.replaceState(null, "", "/corpus?dataset=ecoli__amikacin#m-labels");
     act(() => nav().closeDataset());
-    expect(here()).toBe("/methods#m-labels");
+    expect(here()).toBe("/corpus#m-labels");
   });
 
-  it("go to a place and a section in it", () => {
+  it("go to a place and a section in it, and move legacy /methods data hashes to /corpus", () => {
     window.history.replaceState(null, "", "/");
     const nav = withRouter();
-    act(() => nav().go({ view: "methods", hash: "m-funnel" }));
-    expect(here()).toBe("/methods#m-funnel");
-    expect(nav().route.view).toBe("methods");
+    act(() => nav().go({ view: "data", hash: "m-funnel" }));
+    expect(here()).toBe("/corpus#m-funnel");
+    expect(nav().route.view).toBe("data");
+    act(() => {
+      navigate("/methods#m-sources");
+    });
+    expect(here()).toBe("/corpus#m-sources");
   });
 });
 
