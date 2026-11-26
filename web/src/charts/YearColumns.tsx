@@ -18,12 +18,13 @@ export const YearColumns = ({ years }: { years: readonly [string, number][] }) =
   const count = new Map(numeric);
   const max = Math.max(...numeric.map(([, n]) => n));
   const height = 200;
-  const pad = { l: 48, r: 8, t: 8, b: 26 };
+  const pad = { l: 48, r: 22, t: 8, b: 26 };
   const slots = last - first + 1;
   const step = (width - pad.l - pad.r) / slots;
   const barW = Math.max(1, Math.min(24, step - 2));
   const y = linear([0, max], [height - pad.b, pad.t]);
-  const decade = slots > 40 ? 20 : slots > 15 ? 10 : 2;
+  const minStep = Math.ceil(48 / Math.max(step, 1));
+  const decade = ([1, 2, 5, 10, 20, 50] as const).find((d) => d >= minStep) ?? 50;
   const labelYears = Array.from({ length: slots }, (_, i) => first + i).filter((yr) => yr % decade === 0);
   // One mark per year with genomes, at its column's top, in year order.
   const marks: ListMark[] = Array.from({ length: slots }, (_, i) => first + i).flatMap((yr) => {

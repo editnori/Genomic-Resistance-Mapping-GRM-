@@ -139,7 +139,7 @@ export const LearnerSection = ({
   });
   // Dots, not bars, so the axis may start above zero.
   const lo = Math.max(0, Math.floor((Math.min(...all) - 0.02) * 20) / 20);
-  const x = linear([lo, 1], [8, stripWidth - 8]);
+  const x = linear([lo, 1], [14, stripWidth - 16]);
   const bestLineage = best === undefined ? undefined : learnerOf(r, "lineage", best.learner);
 
   // Reports with no-call counts (revisions 7 to 13) get the share each row
