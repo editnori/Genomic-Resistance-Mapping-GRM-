@@ -18,16 +18,19 @@ result and no score. Every dataset of M on lists.tsv must be there once,
 and no first-run dataset. It writes to <out dir>:
 
 - m-floor.tsv: every dataset of M with its counts by class in both
-  readings, and whether its second reading is shown, counted and not
-  shown, or under the floor;
-- m-left-out.tsv: each dataset of M left out of the second reading, named in
-  full, with its counts by class.
+  readings, and its second reading in one of three states: in it, left out
+  under the floor, or left out for a short list;
+- m-left-out.tsv: each dataset of M left out of the second reading, for
+  either reason, named in full, with its reason and its counts by class.
 
 count runs check, then holds <out dir>'s m-floor.tsv and m-left-out.tsv to
 the ones floor writes from the same folders, byte for byte, before it reads
 any score. Then it reads each species folder of the run on M, as the run's
 pack holds it: score/datasets.tsv (score.py, the first reading) and
-score/second/datasets.tsv (second.py, the second reading). It takes three
+score/second/datasets.tsv (second.py, the second reading). The second
+reading's file must hold every dataset of M that floor.tsv enters, and the
+rows of each dataset left out for a short list are dropped there, before
+any count, table or line reads them. It takes three
 counts in each reading, each its own call of score.py's count, so that
 condition 2's Holm family of 30 is taken apart for each count and each
 reading and nothing is corrected across them:
@@ -40,30 +43,25 @@ reading and nothing is corrected across them:
   recall only, the measures the record holds.
 
 No count leaves out the constant-model datasets: the entry M run reads the
-counts once, with no other subset. A dataset of M under the floor of 25 a
-class is not in the second reading's counts. Every other dataset of M is in
-every count of both readings (ruling R27).
+counts once, with no other subset. Every dataset of M is in every count of
+the first reading.
 
-Small lists (the entry M run, Small lists). In a dataset that lists 1
-genome, the first reading less the second gives back that genome's class,
-its calls and its scores. So a dataset's second-reading figures are written
-to a page table only where each class lists no genome or at least
-SMALLEST_LISTED (floor.tsv's listed counts by class). Every other dataset of
-M that enters the second reading is counted and not shown: m-datasets.tsv
-gives its first reading, its listed counts by class and that it is counted
-and not shown, and no table gives its second-reading figures. A count row
-of the second reading in which that dataset's figure would be the only one
-on no page (the record's and the shown datasets' are on the page) gives its
-datasets and its counts entered, and no better, worse, same, median,
-interval or p value, so its figure cannot be taken back out by
-subtraction; m-count.tsv and m-size.tsv say so in a column `figures`. The
-count itself and its conditions are taken on every row.
+Small lists (the entry M run, Small lists; ruling R31). A dataset of M
+enters the second reading only when floor.tsv says it passes the floor
+(`enters` 1) and each class lists no genome or at least SMALLEST_LISTED
+(floor.tsv's listed counts by class). Every other dataset of M is left out
+of the second reading and read once, in the first: under the floor, or for
+a short list when it passes the floor and a class lists 1 to 4. In a
+dataset that lists 1 genome, the first reading less the second gives back
+that genome's class, its calls and its scores; and a table that counts a
+dataset while it hides its figures can be worked back. So no count, table
+or line holds any figure of the second reading of a dataset left out.
 
 The tables, written to <out dir>, hold counts per dataset at most and no
 genome:
 
 - m-count.tsv and m-conditions.tsv: each count and reading, in score.py's
-  columns; m-count.tsv adds `datasets_not_shown` and `figures`;
+  columns;
 - m-both.tsv: per arm, conditions 1 to 5 of ruling 15 on the count over all
   datasets in each reading, and whether they are met in both;
 - m-size.tsv: per reading, arm (the twin's too) and learner, the datasets entered, better,
@@ -72,7 +70,8 @@ genome:
   rule's size rule reads; it decides no pick;
 - m-datasets.tsv: per reading, dataset of M, split, pair and learner, as
   page_tables.py's page-datasets.tsv, with the listed counts by class and
-  the second reading's state; a second-reading row only for a dataset shown.
+  the second reading's state; a second-reading row only for a dataset in
+  that reading.
 
 It prints the row counts only.
 """
@@ -89,12 +88,13 @@ READ = "m_reading"
 COUNTS = ("first run", "M", "all datasets")
 RECORD_MEASURES = ("balanced_accuracy", "recall")
 DECIDING = "ruling 15"
-# A dataset's second-reading figures go in a page table only where each class lists no genome or at least this many
-# (floor.tsv's listed counts by class). Five is a convention for a smallest cell (the entry M run, Small lists).
+# A dataset that passes the floor enters the second reading only where each class lists no genome or at least this
+# many (floor.tsv's listed counts by class). Five is a convention for a smallest cell (the entry M run, Small lists).
 SMALLEST_LISTED = 5
-SHOWN, NOT_SHOWN, UNDER_FLOOR = "shown", "counted and not shown", "under the floor"
-# The cells of a count row that a dataset's figure moves: withheld where that figure is the only one on no page.
-WITHHELD = ("better", "worse", "same", "median_difference", "interval_lo", "interval_hi", "sign_p", "holm_p")
+# A dataset's second reading: in it, left out under the floor, or left out for a short list. A left-out dataset's
+# state is its reason in m-left-out.tsv.
+IN, UNDER_FLOOR, SHORT_LIST = "in", "under the floor", "short list"
+STATES = (IN, UNDER_FLOOR, SHORT_LIST)
 
 
 class Stop(Exception):
@@ -229,7 +229,9 @@ def floor_tables(folders, lists_rows):
 
 
 def species_rows(folders, lists_rows):
-    """({reading: M dataset rows}, floor rows), each dataset of M on lists.tsv there once."""
+    """({reading: M dataset rows}, floor rows), each dataset of M on lists.tsv there once. The second reading's file
+    must name every dataset floor.tsv enters and no other; the rows of a dataset left out for a short list are dropped
+    here, so no count, table or line reads them."""
     out, floor = {k: [] for k in READINGS}, []
     for top, f_rows in floor_tables(folders, lists_rows):
         first = read_tsv(top / "score" / "datasets.tsv")
@@ -239,23 +241,24 @@ def species_rows(folders, lists_rows):
         enters = {r["dataset"] for r in f_rows if r["enters"] == "1"}
         if {r["dataset"] for r in second} != enters:
             raise Stop(f"{top.name}: the second reading's datasets are not those floor.tsv enters")
+        kept = {r["dataset"] for r in f_rows if second_state(r) == IN}
         out["first"] += first
-        out["second"] += second
+        out["second"] += [r for r in second if r["dataset"] in kept]
         floor += f_rows
     return out, floor
 
 
-def shown(row):
-    """True when a dataset's second-reading figures may go in a page table: each class lists no genome or at least
-    SMALLEST_LISTED, by floor.tsv's listed counts by class."""
-    return all(int(row[c]) == 0 or int(row[c]) >= SMALLEST_LISTED for c in ("listed_resistant", "listed_susceptible"))
+def short_list(row):
+    """True when a class lists 1 to SMALLEST_LISTED - 1 genomes, by floor.tsv's listed counts by class."""
+    return any(0 < int(row[c]) < SMALLEST_LISTED for c in ("listed_resistant", "listed_susceptible"))
 
 
 def second_state(row):
-    """A floor row's second reading: shown, counted and not shown, or under the floor."""
+    """A floor row's second reading: in it, left out under the floor, or left out for a short list. The floor is read
+    first: a dataset under it has no second-reading row, whatever it lists."""
     if row["enters"] != "1":
         return UNDER_FLOOR
-    return SHOWN if shown(row) else NOT_SHOWN
+    return SHORT_LIST if short_list(row) else IN
 
 
 def counts(record, m_rows):
@@ -291,7 +294,8 @@ def both_rows(taken):
 
 
 def left_out_rows(floor):
-    return [{c: r[c] for c in LEFT_OUT_COLUMNS} for r in floor if r["enters"] != "1"]
+    """m-left-out.tsv: each dataset of M left out of the second reading, for either reason, with its reason."""
+    return [dict(r, reason=second_state(r)) for r in floor if second_state(r) != IN]
 
 
 def floor_rows(floor):
@@ -300,11 +304,11 @@ def floor_rows(floor):
 
 def m_dataset_rows(m_rows, floor):
     """page-datasets.tsv's rows for the datasets of M in each reading, with the listed counts by class and the second
-    reading's state. A second-reading row only for a dataset whose second reading is shown."""
+    reading's state. The first reading gives every dataset of M; the second only those species_rows kept in it."""
     by = {r["dataset"]: r for r in floor}
     out = []
     for reading in READINGS:
-        rows = [r for r in m_rows[reading] if reading == "first" or second_state(by[r["dataset"]]) == SHOWN]
+        rows = m_rows[reading]
         slugs = sorted({r["species_slug"] for r in rows})
         data = type("Data", (), {"species": slugs,
                                  "score": {s: {"datasets.tsv": [r for r in rows if r["species_slug"] == s]}
@@ -316,48 +320,8 @@ def m_dataset_rows(m_rows, floor):
     return out
 
 
-def entered(rows):
-    """{(split, pair, learner, measure): the datasets score.py's count enters}, by its own rule: the arm's row and the
-    default's both scored, with both values."""
-    cell = {(r["dataset"], r["split"], r["arm"], r["learner"]): r for r in rows}
-    out = {}
-    for (d, split, arm, learner), a in cell.items():
-        b = cell.get((d, split, DEFAULT, learner))
-        if arm == DEFAULT or b is None or not int(a["scored"]) or not int(b["scored"]):
-            continue
-        for m in SCORE.MEASURES:
-            if a.get(m) not in (None, "") and b.get(m) not in (None, ""):
-                out.setdefault((split, f"{arm}-{DEFAULT}", learner, m), set()).add(d)
-    return out
-
-
-def not_shown(record, m_rows, floor):
-    """{(count, split, pair, learner, measure): (datasets counted and not shown, figures)} for the second reading.
-    A row's figures are withheld where exactly one dataset's value in it is on no page and that dataset is counted
-    and not shown: the record's datasets and the shown datasets of M are on the page on balanced accuracy and
-    recall."""
-    hidden = {r["dataset"] for r in floor if second_state(r) == NOT_SHOWN}
-    on_page = {r["dataset"] for r in record} | {r["dataset"] for r in floor if second_state(r) == SHOWN}
-    out = {}
-    for name, rows in (("M", m_rows["second"]), ("all datasets", record + m_rows["second"])):
-        for key, ds in entered(rows).items():
-            off = ds - on_page if key[3] in RECORD_MEASURES else ds
-            one = len(off) == 1 and off <= hidden
-            out[(name,) + key] = (len(ds & hidden), NOT_SHOWN if one else SHOWN)
-    return out
-
-
-def count_rows(taken, hide):
-    out = []
-    for (c, g), (rows, _) in taken.items():
-        for r in rows:
-            n, figures = hide.get((c, r["split"], r["pair"], r["learner"], r["measure"]), (0, SHOWN)) \
-                if g == "second" else (0, SHOWN)
-            row = dict(r, count=c, datasets_not_shown=n, figures=figures, **{READ: g})
-            if figures != SHOWN:
-                row.update({k: None for k in WITHHELD})
-            out.append(row)
-    return out
+def count_rows(taken):
+    return [dict(r, count=c, **{READ: g}) for (c, g), (rows, _) in taken.items() for r in rows]
 
 
 def size_rows(counted):
@@ -368,15 +332,15 @@ def size_rows(counted):
             if r["split"] == "lineage" and r["measure"] == PRIMARY:
                 out.append({READ: reading, "arm": r["pair"][: -len(f"-{DEFAULT}")], "learner": r["learner"],
                             "datasets": r["datasets"], "entered": r["entered"], "better": r["better"],
-                            "worse": r["worse"], "same": r["same"], "figures": r["figures"]})
+                            "worse": r["worse"], "same": r["same"]})
     return out
 
 
-COUNT_COLUMNS = ["count", READ] + SCORE.COUNT_COLUMNS + ["datasets_not_shown", "figures"]
+COUNT_COLUMNS = ["count", READ] + SCORE.COUNT_COLUMNS
 CONDITION_COLUMNS = ["count", READ] + SCORE.CONDITION_COLUMNS
 BOTH_COLUMNS = ["arm", "condition", "reads", "met_first", "met_second", "met_both"]
-SIZE_COLUMNS = [READ, "arm", "learner", "datasets", "entered", "better", "worse", "same", "figures"]
-LEFT_OUT_COLUMNS = ["dataset", "species", "antibiotic", "cohort", "resistant", "susceptible", "listed",
+SIZE_COLUMNS = [READ, "arm", "learner", "datasets", "entered", "better", "worse", "same"]
+LEFT_OUT_COLUMNS = ["dataset", "species", "antibiotic", "reason", "cohort", "resistant", "susceptible", "listed",
                     "listed_resistant", "listed_susceptible", "second_resistant", "second_susceptible", "floor"]
 FLOOR_PAGE_COLUMNS = LIST.FLOOR_COLUMNS + ["second_reading"]
 M_DATASET_COLUMNS = [READ] + PAGE.DATASET_TABLE_COLUMNS + ["listed_resistant", "listed_susceptible", "second_reading"]
@@ -403,10 +367,10 @@ def same_floor(out, floor):
                 raise Stop(f"{name} differs from the one the floor form writes from these species folders")
 
 
-def write(out, taken, floor, m_rows, record):
+def write(out, taken, floor, m_rows):
     out = Path(out)
     out.mkdir(parents=True, exist_ok=True)
-    counted = count_rows(taken, not_shown(record, m_rows, floor))
+    counted = count_rows(taken)
     write_tsv(out / "m-count.tsv", counted, COUNT_COLUMNS)
     write_tsv(out / "m-conditions.tsv", [dict(r, count=c, **{READ: g}) for (c, g), (_, rows) in taken.items()
                                          for r in rows], CONDITION_COLUMNS)
@@ -417,7 +381,11 @@ def write(out, taken, floor, m_rows, record):
 
 
 def states(floor):
-    return "; ".join(f"{sum(1 for r in floor if second_state(r) == s)} {s}" for s in (SHOWN, NOT_SHOWN, UNDER_FLOOR))
+    """The three states' counts, as both forms print them."""
+    n = dict.fromkeys(STATES, 0)
+    for r in floor:
+        n[second_state(r)] += 1
+    return f"{n[IN]} in; {n[UNDER_FLOOR]} left out under the floor; {n[SHORT_LIST]} left out for a short list"
 
 
 def floor_form(out, folders, lists_rows):
@@ -435,11 +403,9 @@ def count_form(record, out, folders, lists_rows):
     yield "floor: m-floor.tsv and m-left-out.tsv are the floor form's"
     m_rows, floor = species_rows(folders, lists_rows)
     taken = counts(record, m_rows)
-    counted = write(out, taken, floor, m_rows, record)
-    withheld = sum(1 for r in counted if r["figures"] != SHOWN)
+    write(out, taken, floor, m_rows)
     yield (f"count: datasets of M {len(floor)}; second reading: {states(floor)}; "
-           + "; ".join(f"{c}, {g} reading: {len(rows)} count rows" for (c, g), (rows, _) in taken.items())
-           + f"; count rows counted and not shown: {withheld}")
+           + "; ".join(f"{c}, {g} reading: {len(rows)} count rows" for (c, g), (rows, _) in taken.items()))
 
 
 def main(argv):

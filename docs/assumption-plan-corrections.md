@@ -988,9 +988,7 @@ An eleventh came while the text was written. The project's wording rules put rec
 
 **List.** The scorer builds the list of those genomes on the run's machine. The rebuilt revision 14 table that the run scripts pin as `curated.tar`, sha256 `d77e2c6f75f8d986268d0c075cb2ea364fba9972fa22a55139495ac0eb376d97`, holds each pair's consolidated call and no record's call. So the run reads each record's call from the 1,285,111 lab records that table was rebuilt from, sha256 `d231fa768a31fc4ce4c8a6bb7024d05d632621846070688adb892fbfe340fd78`, and names that file with its sha256 before the list is built. The list and each genome's score file stay on the machine that fitted them. A page gives counts per dataset and no row per genome.
 
-**Small lists.** In a dataset that lists 1 genome, the first reading less the second gives back that genome's class, its calls and its scores. So a dataset's second-reading figures go on a page only where each class lists no genome or at least 5. Otherwise the page gives its first reading and its listed counts by class, and says its second reading is counted and not shown. That reading still enters every count over datasets. Five is a convention for a smallest cell; it does not prove that no genome's call can be worked out.
-
-**Count rows.** A count row of the second reading in which exactly one dataset's value is on no page gives its counts of datasets and no figure. A count over datasets can still narrow a dataset that is counted and not shown to one side of 0.02, or hold its value with no way to tell whose. It gives no one dataset's figure.
+**Small lists.** A dataset of M enters the second reading only when it passes the floor and each class lists no genome or at least 5. Every other one is left out of it and read once, in the first. In a dataset that lists 1 genome, the first reading less the second gives back that genome's calls, and a table that counts a dataset but hides its figures can be worked back. Five is a convention for a smallest cell, not a proof.
 
 **Packs.** Each species' machine packs its results with no list and no genome's score file. The packs go unopened to the one machine that takes the block's counts over all its species. Only the count tables and the page tables leave that machine.
 
@@ -1018,7 +1016,7 @@ An eleventh came while the text was written. The project's wording rules put rec
 
 **Changed.** A re-check read this entry against the entry Pick rule. After it the lead changed, at 19:24Z, Same build, Block C7's binaries, Other measures, Pick and Review, and added On a difference, Genome files, Then, Block C2, Block C7's check and Mirror. No reviewer has read Block C2 or Block C7's check.
 
-**Changed again.** After the independent review of block C3's code for this run, the lead changed Code and List at 07:57Z on 26 Nov 2026 and added Small lists and Packs. At 09:19Z, after the code was changed for that review, the lead added Count rows. No dataset of M had been fitted.
+**Changed again.** After the independent review of block C3's code for this run, the lead changed Code and List at 07:57Z on 26 Nov 2026 and added Small lists and Packs. At 09:19Z, after the code was changed for that review, the lead added Count rows. At 11:04Z on 26 Nov 2026, after the re-check of the code, the lead changed Small lists and removed Count rows. No dataset of M had been fitted.
 
 ## Label text
 

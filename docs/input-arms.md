@@ -93,7 +93,7 @@ The pilot of all five arms ran the same draw at seed 42, with no twin, `GRAPH` c
 
 ## Tests and planted faults
 
-`input_arms` holds 14 SYNTHETIC tests, `input_build` 8, `learn::eval` one on the screen count and `src/main.rs` 2 on the flags. `tests/c3_inputs` holds 273 tests: 152 SYNTHETIC ones, 71 of the scorer, the refusal record, the lists, the expected results and the run script's rules and 81 of the result page's table script, the run's checks and their fault runner (`docs/input-arms-result.md`, Method); and 121 of the run on the datasets of M (below). `scripts/c3-inputs/planted_faults.py` plants each fault below in a copy of the tree and runs the test meant to catch it, which must fail.
+`input_arms` holds 14 SYNTHETIC tests, `input_build` 8, `learn::eval` one on the screen count and `src/main.rs` 2 on the flags. `tests/c3_inputs` holds 279 tests: 152 SYNTHETIC ones, 71 of the scorer, the refusal record, the lists, the expected results and the run script's rules and 81 of the result page's table script, the run's checks and their fault runner (`docs/input-arms-result.md`, Method); and 127 of the run on the datasets of M (below). `scripts/c3-inputs/planted_faults.py` plants each fault below in a copy of the tree and runs the test meant to catch it, which must fail.
 
 | Fault | Caught by |
 |---|---|
@@ -145,7 +145,9 @@ On a difference in any of the three the run names what differs, writes `OUT/FAIL
 
 **Floor.** `results/m/floor.tsv` gives each dataset's cohort, its listed genomes and the genomes left for the second reading, each by class, and whether the dataset enters that reading: 25 genomes of each class at least, the release's class minimum.
 
-**Floor form.** `m_reading.py floor` writes `m-floor.tsv` and `m-left-out.tsv` from the species' `floor.tsv` files alone, before any score is read. `m-left-out.tsv` names each dataset left out of the second reading in full, with its counts by class. `m_reading.py count` stops unless both files are, byte for byte, the ones the floor form writes from the same species' files.
+**Floor form.** `m_reading.py floor` writes `m-floor.tsv` and `m-left-out.tsv` from the species' `floor.tsv` files alone, before any score is read. `m-floor.tsv` gives each dataset's second reading as in it, left out under the floor, or left out for a short list (Small lists, below). `m_reading.py count` stops unless both files are, byte for byte, the ones the floor form writes from the same species' files.
+
+**Left-out table.** `m-left-out.tsv` names each dataset left out of the second reading, for either reason, in full, with the reason and its counts by class. It goes on the page as `reference/input-arms-m/m-left-out.tsv` before any score is read.
 
 **Second reading.** `second.py` reads every result again with no refit. Each dataset's listed genomes leave every outer test fold of every arm, the default and the twin, at every seed and on both splits. A fold that holds a listed genome gets each learner's calls taken again from the scores; a fold that holds none keeps its counts; the training counts stay as fitted. An arm's study fit refused for no candidate is the constant model on the default's study folds less the list (ruling 16), and a split that could not be drawn stays unscored. Before it reads, every result's counts must come back from its scores, every listed genome must be in each lineage fit's cohort, and the genomes each lineage fit keeps must give `floor.tsv`'s counts. A dataset under the floor is not scored in this reading. It writes `score/second/` in `score.py`'s columns.
 
@@ -155,29 +157,20 @@ On a difference in any of the three the run names what differs, writes `OUT/FAIL
 - M alone: the datasets of M on the six measures; it decides nothing (the entry Pick rule);
 - all datasets: the record's rows and those of M, on balanced accuracy and recall.
 
-Before it counts, `m_reading.py check` must give back from the record every row of the first run's published count on those two measures, 110 rows, and its 55 condition rows (`page-count.tsv` and `page-conditions.tsv`, each equal to its sha256 in `SHA256SUMS`); it stops on any difference. No count leaves out the constant-model datasets, since the counts are read once with no other subset. A dataset under the floor is not in the second reading's counts.
+Before it counts, `m_reading.py check` must give back from the record every row of the first run's published count on those two measures, 110 rows, and its 55 condition rows (`page-count.tsv` and `page-conditions.tsv`, each equal to its sha256 in `SHA256SUMS`); it stops on any difference. No count leaves out the constant-model datasets, since the counts are read once with no other subset. A dataset left out of the second reading, for either reason, is not in that reading's counts.
 
-**Small lists.** In a dataset that lists 1 genome, the first reading less the second gives back that genome's class, calls and scores. So a dataset's second-reading figures go in a table only where each class lists no genome or at least 5 (`SMALLEST_LISTED`, read from `floor.tsv`'s listed counts by class). Five is a convention for a smallest cell; it does not prove that no genome's call can be worked out.
+**Small lists.** A dataset enters the second reading only when it passes the floor and each class lists no genome or at least 5 (`SMALLEST_LISTED`, read from `floor.tsv`'s listed counts by class). Every other dataset that passes the floor is left out of it for a short list and read once, in the first. Five is a convention for a smallest cell; it does not prove that no genome's call can be worked out.
 
-**Not shown.** Every other dataset that enters the second reading is counted and not shown. It enters every count over datasets, and its rows in `m-datasets.tsv` give its first reading, its listed counts by class and that state, with no second-reading row.
+**Dropped rows.** `second.py` still writes the rows of a dataset left out for a short list. `m_reading.py count` stops without them, then drops them before any count, table or line reads them.
 
-**Withheld rows.** A count row of the second reading gives no figures where exactly one dataset's value in it is on no page and that dataset is counted and not shown; its `figures` column says so, and its counts of datasets stay. The record's datasets and the shown datasets of M are on a page on balanced accuracy and recall; on the other four measures no dataset of M is.
-
-**Still narrowed.** A count over datasets can still narrow a dataset that is counted and not shown, in four ways:
-
-- in a row with 2 or more such datasets, the better, worse and same counts can put all of them on one side of 0.02;
-- a median or an interval end can fall on one of their values, with no way to tell whose;
-- another row's Holm p can give back a withheld row's sign p, and with it the side of 0.02 its dataset falls on;
-- a condition met or not met in `m-conditions.tsv` and `m-both.tsv` reads over the family of 30 rows.
-
-Each gives a side of 0.02 or a value whose dataset is not named, never one dataset's figure. Withholding them would withhold the counts the entry M run reads.
+**Cause.** In a dataset that lists 1 genome, the first reading less the second gives back that genome's class, calls and scores. A table that counts a dataset and hides its figures can be worked back: the re-check of this code, on made-up species directories, named 44 hidden figures from the medians and interval ends shown, and 42 of the 44 were true. Leaving the dataset out ends that, since no table then holds any figure of its second reading.
 
 **Tables.** `m_reading.py count` writes five tables, each of counts per dataset and no genome:
 
 - `m-count.tsv` and `m-conditions.tsv`: each count and reading;
 - `m-both.tsv`: per arm, conditions 1 to 5 of ruling 15 on the count over all datasets in each reading, and whether both readings meet each, as a claim on all datasets needs;
 - `m-size.tsv`: per reading, arm (the twin too) and learner, the datasets entered, better, worse and the same, the counts the Pick rule's size rule reads; it decides no pick;
-- `m-datasets.tsv`: per reading, dataset, split, pair and learner, with each dataset's listed counts by class and its second reading's state.
+- `m-datasets.tsv`: per reading, dataset, split, pair and learner, with each dataset's listed counts by class and its second reading's state; the second reading gives only the datasets in it.
 
 **Pack.** Only `OUT/pack.tar` and `OUT/DONE` leave the box. `pack.py` packs every file under OUT but `work/` and `flags/`: the result files (counts per fold), the build records, `floor.tsv`, the checks, both readings' tables and the logs. The pack holds both readings, as the count needs them. So it goes unopened to the one machine that takes the count over all 9 species, and to no other; it is no page file.
 
@@ -203,7 +196,7 @@ Each gives a side of 0.02 or a value whose dataset is not named, never one datas
 - *Enterococcus faecium*'s study fits are counted: plus 0.007;
 - whole seconds: less 0.002.
 
-**Tests.** `tests/c3_inputs/test_m_*.py` holds 121 tests of this run, on SYNTHETIC fits, score files, reports, lists, species directories, logs and timing copies, and on the committed `lists.tsv`, `page-binaries.tsv`, `page-datasets.tsv`, `page-count.tsv`, `page-conditions.tsv`, `first-run-times.tsv`, C3 arms entry and this page's Cost. `scripts/c3-inputs/m_faults.py` plants 97 faults, at least one for each new rule, in a copy of the tree and runs the test meant to catch each.
+**Tests.** `tests/c3_inputs/test_m_*.py` holds 127 tests of this run, on SYNTHETIC fits, score files, reports, lists, species directories, logs and timing copies, and on the committed `lists.tsv`, `page-binaries.tsv`, `page-datasets.tsv`, `page-count.tsv`, `page-conditions.tsv`, `first-run-times.tsv`, C3 arms entry and this page's Cost. `scripts/c3-inputs/m_faults.py` plants 113 faults, at least one for each new rule, in a copy of the tree and runs the test meant to catch each.
 
 ## What it does not do
 
