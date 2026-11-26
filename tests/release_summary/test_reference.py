@@ -5,7 +5,8 @@ datasets, that its counts partition as they must, and that the README lists the 
 read the same rows as uncertainty.json, sort them into the same screen classes, and count the no-call rows that
 index-counts.json finds. index-counts.json must count the labels inferred from a MIC over the datasets that hold the
 field, and count a dataset without it apart. path.json, committed for revision 14 only, must pass its own two checks
-and give the same count as the other outputs wherever both hold one."""
+and give the same count as the other outputs wherever both hold one. The two files of the rebuilt table's counts must
+add up, cover the release's records and hold a row for each species and none for a genome."""
 
 import hashlib
 import json
@@ -18,6 +19,10 @@ REFERENCE = ROOT / "reference" / "release-summary"
 RELEASES = {"rev12-274-20261105": 12, "rev14-274-20261112": 14}
 OUTPUTS = ["uncertainty.json", "summary.json", "catalog.json", "index-counts.json", "guidance.json"]
 PATH_RELEASE = "rev14-274-20261112"  # the one release with a path.json
+COPY = "rebuilt-table-20261121"  # counts of the table rebuilt on 21 Nov 2026; no script here makes them
+COPY_FILES = ["funnel.json", "cap-species.tsv"]
+CAP_COLUMNS = ["species", "genomes_passing_qc_with_a_target", "eligible_genomes", "datasets", "datasets_in_274"] + [
+    f"{side}_cap_{cap}" for cap in ("2000", "4000", "4096", "all") for side in ("selected", "left_out")]
 LEARNERS = ["scm", "cart", "rf", "gbt", "lasso"]
 
 
@@ -248,10 +253,54 @@ class Reference(unittest.TestCase):
     def test_readme_lists_the_sha256_of_each_output(self):
         readme = (REFERENCE / "README.md").read_text(encoding="utf-8")
         listed = dict((path, digest) for digest, path in re.findall(r"^([0-9a-f]{64})  (\S+)$", readme, re.M))
-        expected = sorted(f"{release}/{name}" for release in RELEASES for name in outputs(release))
+        expected = sorted([f"{release}/{name}" for release in RELEASES for name in outputs(release)]
+                          + [f"{COPY}/{name}" for name in COPY_FILES])
         self.assertEqual(sorted(listed), expected)
         for path, digest in listed.items():
             self.assertEqual(hashlib.sha256((REFERENCE / path).read_bytes()).hexdigest(), digest, path)
+
+    def test_rebuilt_table_counts_add_up(self):
+        folder = REFERENCE / COPY
+        self.assertEqual(sorted(p.name for p in folder.iterdir()), sorted(COPY_FILES))
+        f = json.loads((folder / "funnel.json").read_text(encoding="utf-8"))
+        index, species_sums = load(PATH_RELEASE, "path.json")["funnel"], load(PATH_RELEASE, "path.json")["species"]
+        # genomes with a record pass, have no metadata or fail a check; the five kinds of pair add up to the pairs
+        self.assertEqual(f["genomes_with_records"],
+                         f["genomes_passing_qc"] + f["genomes_without_metadata"] + sum(f["genomes_failed_qc"].values()))
+        kinds = ("conflict", "intermediate_only", "reported", "labeled_from_mic", "unlabeled")
+        self.assertEqual(f["pairs"], sum(f[f"pairs_{kind}"] for kind in kinds))
+        # the copy is cut to the release's records, and it ran no species check
+        self.assertEqual((f["records"], f["genomes_with_records"], f["genomes_without_metadata"]),
+                         (index["records"], index["genomes_with_a_record"], index["genomes_without_metadata"]))
+        self.assertEqual([why for why in f["genomes_failed_qc"] if "species check" in why], [])
+        # cap-species.tsv: a row for each species, then the two rows of sums
+        lines = (folder / "cap-species.tsv").read_text(encoding="utf-8").split("\n")
+        self.assertEqual((lines[0].split("\t"), lines[-1]), (CAP_COLUMNS, ""))
+        rows = [line.split("\t") for line in lines[1:-1]]
+        table = {row[0]: dict(zip(CAP_COLUMNS[1:], map(int, row[1:]))) for row in rows}
+        species, sums = [row[0] for row in rows[:-2]], [row[0] for row in rows[-2:]]
+        self.assertEqual((len(species), len(set(species)), sums), (23, 23, ["the 7 species over 4096", "all"]))
+        for name in species:
+            # a species name is two words of letters, so no row is a genome's
+            self.assertRegex(name, r"^[A-Z][a-z]+ [a-z]+$")
+        over = [name for name in species if table[name]["eligible_genomes"] > 4096]
+        self.assertEqual(len(over), 7)
+        for column in CAP_COLUMNS[1:]:
+            self.assertEqual(table["all"][column], sum(table[name][column] for name in species), column)
+            self.assertEqual(table[sums[0]][column], sum(table[name][column] for name in over), column)
+        for name, row in table.items():
+            with self.subTest(row=name):
+                for cap in ("2000", "4000", "4096", "all"):
+                    self.assertEqual(row[f"selected_cap_{cap}"] + row[f"left_out_cap_{cap}"], row["eligible_genomes"], cap)
+                self.assertLessEqual(row["eligible_genomes"], row["genomes_passing_qc_with_a_target"])
+                self.assertLessEqual(row["datasets_in_274"], row["datasets"])
+        for name in species:
+            for cap in (2000, 4000, 4096):
+                self.assertEqual(table[name][f"selected_cap_{cap}"], min(cap, table[name]["eligible_genomes"]), (name, cap))
+        # the copy curates the release's datasets, and its genomes with a target are among those that pass
+        self.assertEqual((table["all"]["datasets"], table["all"]["datasets_in_274"]),
+                         (species_sums["datasets_curated"], species_sums["datasets_with_report"]))
+        self.assertLessEqual(table["all"]["genomes_passing_qc_with_a_target"], f["genomes_passing_qc"])
 
 
 if __name__ == "__main__":

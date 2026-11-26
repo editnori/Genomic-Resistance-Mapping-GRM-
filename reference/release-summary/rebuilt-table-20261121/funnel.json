@@ -1,0 +1,23 @@
+{
+  "records": 1285111,
+  "records_class_label": 8709,
+  "records_not_antibiotic": 652,
+  "records_unresolved_name": 433,
+  "records_no_measure": 42695,
+  "genomes_with_records": 123503,
+  "genomes_without_metadata": 20,
+  "genomes_failed_qc": {
+    "BV-BRC quality: Poor": 3164,
+    "CheckM completeness low": 633,
+    "CheckM contamination high": 599,
+    "genome length off species median": 15,
+    "no species": 1
+  },
+  "genomes_passing_qc": 119071,
+  "pairs": 1064823,
+  "pairs_conflict": 3823,
+  "pairs_intermediate_only": 15662,
+  "pairs_reported": 612989,
+  "pairs_labeled_from_mic": 295222,
+  "pairs_unlabeled": 137127
+}
