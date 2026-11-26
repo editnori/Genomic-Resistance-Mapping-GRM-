@@ -17,7 +17,8 @@ faults = common.load("m_faults")
 ROOT = common.ROOT
 # The new rules of the run on the datasets of M, each with a fault.
 RULES = ("list", "floor", "check species", "Same build", "Same results", "Same counts", "second reading",
-         "first run", "Holm", "counts", "small lists", "tables", "pack", "cost", "run script")
+         "first run", "Holm", "counts", "small lists", "tables", "pack", "cost", "run script", "page floor",
+         "page record", "page print", "page left out", "page onpage", "page gates", "page record test")
 
 
 def tests_of(module):
@@ -58,7 +59,8 @@ class MFaults(unittest.TestCase):
         self.assertEqual(len(names), len(set(names)))
         self.assertEqual({f[1] for f in faults.FAULTS}, set(RULES))
         self.assertEqual({f[3] for f in faults.FAULTS},
-                         {faults.LIST, faults.CHECKS, faults.SECOND, faults.READING, faults.PACK, faults.COST, faults.RUN})
+                         {faults.LIST, faults.CHECKS, faults.SECOND, faults.READING, faults.PACK, faults.COST, faults.RUN,
+                          faults.PAGE, faults.RECORD_TEST})
 
     def test_no_test_name_of_the_run_on_m_holds_another(self):
         # unittest -k matches a substring of the test's id: a runner selecting one test must run that one alone.

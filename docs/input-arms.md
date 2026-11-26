@@ -93,7 +93,7 @@ The pilot of all five arms ran the same draw at seed 42, with no twin, `GRAPH` c
 
 ## Tests and planted faults
 
-`input_arms` holds 14 SYNTHETIC tests, `input_build` 8, `learn::eval` one on the screen count and `src/main.rs` 2 on the flags. `tests/c3_inputs` holds 279 tests: 152 SYNTHETIC ones, 71 of the scorer, the refusal record, the lists, the expected results and the run script's rules and 81 of the result page's table script, the run's checks and their fault runner (`docs/input-arms-result.md`, Method); and 127 of the run on the datasets of M (below). `scripts/c3-inputs/planted_faults.py` plants each fault below in a copy of the tree and runs the test meant to catch it, which must fail.
+`input_arms` holds 14 SYNTHETIC tests, `input_build` 8, `learn::eval` one on the screen count and `src/main.rs` 2 on the flags. `tests/c3_inputs` holds 341 tests: 152 SYNTHETIC ones, 71 of the scorer, the refusal record, the lists, the expected results and the run script's rules and 81 of the result page's table script, the run's checks and their fault runner (`docs/input-arms-result.md`, Method); and 189 of the run on the datasets of M (below). `scripts/c3-inputs/planted_faults.py` plants each fault below in a copy of the tree and runs the test meant to catch it, which must fail.
 
 | Fault | Caught by |
 |---|---|
@@ -174,6 +174,8 @@ Before it counts, `m_reading.py check` must give back from the record every row 
 - `m-size.tsv`: per reading, arm (the twin too) and learner, the datasets entered, better, worse and the same, the counts the Pick rule's size rule reads; it decides no pick;
 - `m-datasets.tsv`: per reading, dataset, split, pair and learner, with each dataset's listed counts by class and its second reading's state; the second reading gives only the datasets in it.
 
+**Page tables.** `scripts/c3-inputs/m_page.py` keeps the record and prints the page's tables. `floor` copies `m-floor.tsv` and `m-left-out.tsv` into `reference/input-arms-m` before any score is read, and `record` the other 5 tables after the count. `print` gives each table in `page_tables.py`'s number forms; a dataset left out reads its reason in place of its second reading's figures. `onpage` checks the left-out table's rows on a page. Each stops on a file missing or changed, a count over the datasets read, or a genome id's shape.
+
 **Pack.** Only `OUT/pack.tar` and `OUT/DONE` leave the box. `pack.py` packs every file under OUT but `work/` and `flags/`: the result files (counts per fold), the build records, `floor.tsv`, the checks, both readings' tables and the logs. The pack holds both readings, as the count needs them. So it goes unopened to the one machine that takes the count over all 9 species, and to no other; it is no page file.
 
 **Pack check.** `pack.py check` refuses the pack, naming the path and why with no genome id, when it would carry a link, a score file (by its name or its format), a study fit's fold result, a report or a list of samples, a list file of genomes, a compressed file, a file that is not UTF-8 text or holds a NUL byte, or a genome id of the species in a path or a file.
@@ -198,7 +200,7 @@ Before it counts, `m_reading.py check` must give back from the record every row 
 - *Enterococcus faecium*'s study fits are counted: plus 0.007;
 - whole seconds: less 0.002.
 
-**Tests.** `tests/c3_inputs/test_m_*.py` holds 127 tests of this run, on SYNTHETIC fits, score files, reports, lists, species directories, logs and timing copies, and on the committed `lists.tsv`, `page-binaries.tsv`, `page-datasets.tsv`, `page-count.tsv`, `page-conditions.tsv`, `first-run-times.tsv`, C3 arms entry and this page's Cost. `scripts/c3-inputs/m_faults.py` plants 113 faults, at least one for each new rule, in a copy of the tree and runs the test meant to catch each.
+**Tests.** `tests/c3_inputs/test_m_*.py` holds 189 tests of this run, on SYNTHETIC fits, score files, reports, lists, species directories, tables, logs and timing copies, and on the committed `lists.tsv`, `page-binaries.tsv`, `page-datasets.tsv`, `page-count.tsv`, `page-conditions.tsv`, `first-run-times.tsv`, `reference/input-arms-m`, C3 arms entry, this page and `docs/input-arms-result.md`. `scripts/c3-inputs/m_faults.py` plants 163 faults, at least one for each new rule, in a copy of the tree and runs the test meant to catch each.
 
 ## What it does not do
 
