@@ -217,14 +217,14 @@ class Document(unittest.TestCase):
         reasons = sorted(failing["reasons"].items(), key=lambda r: (-r[1], r[0]))
         listed = ", ".join(f"`{why}` {n(c)}" for why, c in reasons[:-1]) + f" and `{reasons[-1][0]}` {n(reasons[-1][1])}"
         sentences = [
-            f"every antimicrobial resistance record of the download, {n(f['records'])} (`src/curate.rs:576-579`).",
-            f"each genome a record names, counted once, {n(f['genomes_with_a_record'])} (`src/curate.rs:598-604`).",
-            f"a genome with no metadata leaves first, {n(f['genomes_without_metadata'])} of them (`src/curate.rs:606-609`).",
+            f"every antimicrobial resistance record of the download, {n(f['records'])} lab records (`src/curate.rs:576-579`).",
+            f"Those records name {n(f['genomes_with_a_record'])} genomes, each counted once (`src/curate.rs:598-604`).",
+            f"A genome with no metadata leaves first, {n(f['genomes_without_metadata'])} genomes (`src/curate.rs:606-609`).",
             f"The index writes the reasons of the {n(failing['total'])} genomes that fail a check as {listed}. "
             f"{n(f['genomes_passing'])} genomes pass (`src/curate.rs:636`).",
             f"{n(d['total'])} records leave there: {n(d['drug_class'])} name a drug class, {n(d['not_an_antibiotic'])} name "
             f"something that is no antibiotic and {n(d['name_not_resolved'])} carry a name that is not resolved.",
-            f"Records with no call and no MIC are counted on passing genomes only, {n(f['records_no_call_no_mic'])} of them "
+            f"Records with no call and no MIC are counted on passing genomes only, {n(f['records_no_call_no_mic'])} records "
             f"(`src/curate.rs:673-677`). The other records of passing genomes join into one pair for each genome and drug, "
             f"{n(f['pairs'])} pairs (`src/curate.rs:679-680`).",
             f"{n(k['reported_resistant_or_susceptible'])} have a reported resistant or susceptible call, "
@@ -234,8 +234,8 @@ class Document(unittest.TestCase):
             f"at least {MIN_CLASS} of its genomes have an unconflicted reported resistant call and {MIN_CLASS} a susceptible "
             f"one, {n(s['datasets_curated'])} datasets (`src/curate.rs:802-813`). This rule of {MIN_CLASS} and {MIN_CLASS} "
             f"runs before the cap.",
-            f"the cap keeps at most {n(CAP)} genomes a species (`src/main.rs:39-40`).",
-            f"The genomes analyzed are those of each species' genome matrix, {n(s['genomes_analyzed'])} in all "
+            f"The cap then keeps at most {n(CAP)} genomes a species (`src/main.rs:39-40`).",
+            f"The genomes analyzed are those of each species' genome matrix, {n(s['genomes_analyzed'])} genomes in all "
             f"(`src/report.rs:783-787`, `src/report.rs:995`). The highest count of any species is "
             f"{n(s['genomes_analyzed_highest'])}, and {s['species_at_highest']} of the {p['species_rows']} species sit at it.",
             f"{n(s['datasets_with_report'])} of the {n(s['datasets_curated'])} datasets have a report, and the other "

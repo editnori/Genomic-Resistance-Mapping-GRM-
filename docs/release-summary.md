@@ -253,16 +253,25 @@ A release's `index.json` counts, in its `funnel` block and its species rows, how
 | Genomes analyzed | 23,757 | genomes past the cap of 2,000 a species; the index does not count them |
 | Datasets with a report | 274 | 3 of 277 datasets have one class under 25 among the genomes kept |
 
-Each count, what it takes in, and the code that makes it:
+The rows are stages in four units: lab records, genomes, genome-and-drug pairs and datasets. Within one unit each later count nests inside the earlier one. Where a step's left-out counts share its unit, they add up to the difference from the step before it in that unit.
 
-- **Lab records**: every antimicrobial resistance record of the download, 1,285,111 (`src/curate.rs:576-579`).
-- **Genomes those records cover**: each genome a record names, counted once, 123,503 (`src/curate.rs:598-604`).
-- **Genomes that pass quality checks**: a genome with no metadata leaves first, 20 of them (`src/curate.rs:606-609`). The species check runs next, before the other checks (`src/curate.rs:610-617`). Then come the species name (`src/curate.rs:618-625`) and the checks of `src/curate.rs:545-565`. The index writes the reasons of the 4,491 genomes that fail a check as `BV-BRC quality: Poor` 3,164, `CheckM completeness low` 633, `CheckM contamination high` 599, `species check: sequence is another species` 80, `genome length off species median` 14 and `no species` 1. 118,992 genomes pass (`src/curate.rs:636`).
-- **Genome-and-drug pairs on those genomes**: the name check runs first, on every record of every genome (`src/curate.rs:652-668`). 9,756 records leave there: 8,709 name a drug class, 652 name something that is no antibiotic and 395 carry a name that is not resolved. Records dropped by name are therefore counted on every genome, whether it passes or not. A record on a genome that did not pass is then skipped with no count (`src/curate.rs:670-672`). Records with no call and no MIC are counted on passing genomes only, 42,695 of them (`src/curate.rs:673-677`). The other records of passing genomes join into one pair for each genome and drug, 1,063,628 pairs (`src/curate.rs:679-680`).
-- **Pairs with a reported resistant or susceptible call**: each pair falls in one kind (`src/curate.rs:753-792`). 611,826 have a reported resistant or susceptible call, 295,219 have a label worked out from a MIC, 137,151 have no label, 15,609 are intermediate only and 3,823 conflict. The five add up to the 1,063,628 pairs.
-- **Datasets curated**: a species and drug make a dataset when at least 25 of its genomes have an unconflicted reported resistant call and 25 a susceptible one, 277 datasets (`src/curate.rs:802-813`). This rule of 25 and 25 runs before the cap.
-- **Genomes analyzed**: the cap keeps at most 2,000 genomes a species (`src/main.rs:39-40`). It picks among the genomes with an unconflicted reported resistant or susceptible call on the drug of one of their species' datasets (`src/curate.rs:904-921`, `src/curate.rs:942-962`). The index has no count of the genomes the cap picks among. The genomes analyzed are those of each species' genome matrix, 23,757 in all (`src/report.rs:783-787`, `src/report.rs:995`). The highest count of any species is 2,000, and 8 of the 23 species sit at it.
-- **Datasets with a report**: the rule of 25 and 25 runs again on the genomes kept (`src/analysis.rs:1884-1899`, `src/analysis.rs:958-962`). 274 of the 277 datasets have a report, and the other 3 have one class under 25 genomes (`README.md:54`).
+The path starts from every antimicrobial resistance record of the download, 1,285,111 lab records (`src/curate.rs:576-579`). Those records name 123,503 genomes, each counted once (`src/curate.rs:598-604`).
+
+The quality checks then judge each genome in a fixed order. A genome with no metadata leaves first, 20 genomes (`src/curate.rs:606-609`). The species check runs next, before the other checks (`src/curate.rs:610-617`), and then come the species name (`src/curate.rs:618-625`) and the checks of `src/curate.rs:545-565`. The index writes the reasons of the 4,491 genomes that fail a check as `BV-BRC quality: Poor` 3,164, `CheckM completeness low` 633, `CheckM contamination high` 599, `species check: sequence is another species` 80, `genome length off species median` 14 and `no species` 1. 118,992 genomes pass (`src/curate.rs:636`).
+
+Three filters run on the records before they join into pairs. The name check runs first, on every record of every genome (`src/curate.rs:652-668`), so records dropped by name are counted on every genome, whether it passes or not. 9,756 records leave there: 8,709 name a drug class, 652 name something that is no antibiotic and 395 carry a name that is not resolved.
+
+A record on a genome that did not pass is then skipped with no count (`src/curate.rs:670-672`). Records with no call and no MIC are counted on passing genomes only, 42,695 records (`src/curate.rs:673-677`). The other records of passing genomes join into one pair for each genome and drug, 1,063,628 pairs (`src/curate.rs:679-680`).
+
+Each pair then falls in one of five kinds (`src/curate.rs:753-792`). 611,826 have a reported resistant or susceptible call, 295,219 have a label worked out from a MIC, 137,151 have no label, 15,609 are intermediate only and 3,823 conflict. The five add up to the 1,063,628 pairs.
+
+A species and drug make a dataset when at least 25 of its genomes have an unconflicted reported resistant call and 25 a susceptible one, 277 datasets (`src/curate.rs:802-813`). This rule of 25 and 25 runs before the cap.
+
+The cap then keeps at most 2,000 genomes a species (`src/main.rs:39-40`). It picks among the genomes with an unconflicted reported resistant or susceptible call on the drug of one of their species' datasets (`src/curate.rs:904-921`, `src/curate.rs:942-962`). The index has no count of the genomes the cap picks among.
+
+The genomes analyzed are those of each species' genome matrix, 23,757 genomes in all (`src/report.rs:783-787`, `src/report.rs:995`). The highest count of any species is 2,000, and 8 of the 23 species sit at it.
+
+The rule of 25 and 25 runs again on the genomes kept (`src/analysis.rs:1884-1899`, `src/analysis.rs:958-962`). 274 of the 277 datasets have a report, and the other 3 have one class under 25 genomes (`README.md:54`).
 
 The species rows also count 113,547 genomes with a label of any kind on any drug, intermediate calls and labels worked out from a MIC included (`src/report.rs:984-995`). That count is no step of the path.
 
