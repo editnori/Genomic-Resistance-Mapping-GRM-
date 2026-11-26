@@ -19,6 +19,7 @@ import type { SplitSummary } from "../data/derive/overview";
 import { barsLead, catalogLead, cohortLead, coverageNote, learnersLead, lineageLead, micLead, signP, wordingNote } from "./findings";
 import { armById } from "../data/derive/inputs";
 import { OverviewView } from "./OverviewView";
+import { DataView } from "./DataView";
 import { MethodsView } from "./MethodsView";
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
@@ -199,7 +200,7 @@ const fakeNav = () => {
     route: { view: "overview", species: null, dataset: null },
     go: (next) => {
       calls.go.push(next);
-      window.history.pushState({}, "", next.view === "methods" ? "/methods" : next.view === "datasets" ? "/datasets" : `/species/${next.species ?? ""}`);
+      window.history.pushState({}, "", next.view === "methods" ? "/methods" : next.view === "data" ? "/corpus" : next.view === "datasets" ? "/datasets" : `/species/${next.species ?? ""}`);
     },
     openDataset: (id) => calls.open.push(id),
     closeDataset: () => {},
@@ -273,15 +274,15 @@ describe("What GRM found", () => {
     const corpus = host.querySelector("#corpus")!;
     const links = [...corpus.querySelectorAll<HTMLAnchorElement>("a")].map((a) => [a.textContent?.replace("→", "").trim(), a.getAttribute("href")]);
     expect(links).toEqual([
-      ["See pair curation", "/methods#m-funnel"],
-      ["See QC outcomes", "/methods#m-funnel"],
+      ["See pair curation", "/corpus#m-funnel"],
+      ["See QC outcomes", "/corpus#m-funnel"],
       ["Browse all report datasets", "/datasets"],
     ]);
-    await act(async () => click(corpus.querySelector('a[href="/methods#m-funnel"]')!));
+    await act(async () => click(corpus.querySelector('a[href="/corpus#m-funnel"]')!));
     // A router that keeps hashes takes it with the path; this one does not,
     // so the link writes it onto the entry the router pushed.
-    expect(calls.go).toEqual([{ view: "methods", species: null, hash: "m-funnel" }]);
-    expect(`${window.location.pathname}${window.location.hash}`).toBe("/methods#m-funnel");
+    expect(calls.go).toEqual([{ view: "data", species: null, hash: "m-funnel" }]);
+    expect(`${window.location.pathname}${window.location.hash}`).toBe("/corpus#m-funnel");
     await act(async () => click(corpus.querySelector('a[href="/datasets"]')!));
     expect(calls.go[1]).toEqual({ view: "datasets", species: null });
   });
@@ -560,39 +561,46 @@ describe("What GRM found", () => {
   });
 });
 
-describe("Data & Methods", () => {
-  const html = renderToStaticMarkup(createElement(MethodsView, { manifest: base }));
-  const el = document.createElement("div");
-  el.innerHTML = html;
+describe("Data and Methods", () => {
+  const methodsHtml = renderToStaticMarkup(createElement(MethodsView, { manifest: base }));
+  const methodsEl = document.createElement("div");
+  methodsEl.innerHTML = methodsHtml;
+  const dataHtml = renderToStaticMarkup(createElement(DataView, { manifest: base }));
+  const dataEl = document.createElement("div");
+  dataEl.innerHTML = dataHtml;
 
-  it("is four linear sections, with no pills, nested disclosures, or data browser", () => {
-    expect([...el.querySelectorAll("h2")].map((h) => h.textContent)).toEqual(["1 Labels and inclusion", "2 Models and evaluation", "3 How to read scores", "4 Scope, limitations and audit"]);
-    expect(el.querySelector("[aria-pressed]")).toBeNull();
-    expect(el.querySelector("[aria-expanded]")).toBeNull();
-    expect(el.querySelector('input[type="search"]')).toBeNull();
-    expect(el.querySelector('[aria-label="Antibiotic names"], [aria-label="Breakpoints"]')).toBeNull();
-    expect(html).not.toContain("SigDrug");
-    expect(html).not.toContain("Antibiotic name resolution");
+  it("separates Data and Methods into clean linear sections, with no pills, nested disclosures, or data browser", () => {
+    expect([...dataEl.querySelectorAll("h2")].map((h) => h.textContent)).toEqual(["1 Curation funnel", "2 Isolate sources", "3 Species coverage", "4 Labels and inclusion"]);
+    expect([...methodsEl.querySelectorAll("h2")].map((h) => h.textContent)).toEqual(["1 Models and evaluation", "2 How to read scores", "3 Scope, limitations and audit"]);
+    for (const el of [dataEl, methodsEl]) {
+      expect(el.querySelector("[aria-pressed]")).toBeNull();
+      expect(el.querySelector("[aria-expanded]")).toBeNull();
+      expect(el.querySelector('input[type="search"]')).toBeNull();
+      expect(el.querySelector('[aria-label="Antibiotic names"], [aria-label="Breakpoints"]')).toBeNull();
+    }
+    expect(methodsHtml + dataHtml).not.toContain("SigDrug");
+    expect(methodsHtml + dataHtml).not.toContain("Antibiotic name resolution");
   });
 
   it("keeps the anchors other views link to", () => {
-    for (const id of ["m-funnel", "m-audit", "m-limits", "m-labels", "m-models", "m-scores"]) expect(el.querySelector(`#${id}`)).not.toBeNull();
-    expect(el.querySelector("#m-funnel h3")?.getAttribute("tabindex")).toBe("-1");
+    for (const id of ["m-funnel", "m-sources", "m-species", "m-labels"]) expect(dataEl.querySelector(`#${id}`)).not.toBeNull();
+    for (const id of ["m-audit", "m-limits", "m-models", "m-scores"]) expect(methodsEl.querySelector(`#${id}`)).not.toBeNull();
+    expect(dataEl.querySelector("#m-funnel h2")?.getAttribute("tabindex")).toBe("-1");
   });
 
   it("words the scores with their called denominators, both kinds of no-call, and the pre-revision-7 behavior", () => {
-    const text = el.textContent ?? "";
+    const text = methodsEl.textContent ?? "";
     expect(text).toContain("over the resistant isolates called");
     expect(text).toContain("A probe assay gives no call for an isolate whose genome carries none of its probe k-mers.");
     const seven = document.createElement("div");
     seven.innerHTML = renderToStaticMarkup(createElement(MethodsView, { manifest: { ...base, evaluation_revision: 7 } }));
     expect(seven.textContent).toContain("Reports computed under earlier revisions scored those isolates 0.5");
     expect(text).toContain("It does not run the AMRFinderPlus program or test the point mutations");
-    expect(text).toContain("not CLSI or EUCAST breakpoints");
+    expect(dataEl.textContent ?? "").toContain("not CLSI or EUCAST breakpoints");
   });
 
   it("leaves learner settings to the dataset reports", () => {
-    const text = el.textContent ?? "";
+    const text = methodsEl.textContent ?? "";
     expect(text).not.toContain("200 randomized trees");
     expect(text).not.toContain("early stopping");
     expect(text).toContain("Each dataset's report gives its learner settings");
@@ -600,11 +608,11 @@ describe("Data & Methods", () => {
 
   it("lands a link on its section and moves focus to the section's heading", async () => {
     vi.stubGlobal("fetch", async (path: string) => new Response(JSON.stringify(fixtureFile(path))));
-    window.history.replaceState(null, "", "/methods#m-funnel");
+    window.history.replaceState(null, "", "/corpus#m-funnel");
     const host = document.createElement("div");
     document.body.append(host);
     root = createRoot(host);
-    await act(async () => root!.render(createElement(MethodsView, { manifest: base })));
-    expect(document.activeElement?.textContent).toBe("Curation funnel");
+    await act(async () => root!.render(createElement(DataView, { manifest: base })));
+    expect(document.activeElement?.textContent).toBe("1 Curation funnel");
   });
 });

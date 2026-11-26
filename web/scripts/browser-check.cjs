@@ -882,7 +882,7 @@ async function chrome(page, tag, width) {
   check(tag + ' bezel frame and rounded canvas', c.bezel !== c.paper && c.pad >= 4 && c.pad <= 8 && c.radius >= 14, c);
   check(tag + ' brand mark and wordmark', c.mark === 7 && (width >= 640 ? c.word === 'Genomic Resistance MappingGRM' || c.word?.startsWith('Genomic Resistance Mapping') : true) && c.upper === 'uppercase', { mark: c.mark, word: c.word, upper: c.upper });
   if (c.views.length > 0) {
-    check(tag + ' view nav: four views in one outlined group, one current view with a fill', JSON.stringify(c.views) === JSON.stringify(['Overview', 'Datasets', 'Species', 'Data & Methods']) && c.current.length === 1 && c.current[0] !== 'rgba(0, 0, 0, 0)' && c.group === 'solid', c);
+    check(tag + ' view nav: five views in one outlined group, one current view with a fill', JSON.stringify(c.views) === JSON.stringify(['Overview', 'Datasets', 'Species', 'Data', 'Methods']) && c.current.length === 1 && c.current[0] !== 'rgba(0, 0, 0, 0)' && c.group === 'solid', c);
   } else check(tag + ' compact view selector below the fit', c.compact && width < 1280, { compact: c.compact, width });
   check(tag + ' Present and the theme toggle are outlined, squared, 32px controls with one visible icon', c.present !== null && c.present.border === 'solid' && c.present.h >= 31.5 && c.present.r < c.present.h / 2 - 1 && c.toggle !== null && c.toggle.border === 'solid' && c.toggle.h >= 31.5 && c.toggle.r < c.toggle.w / 2 - 1 && c.toggle.icons.filter(o => o === '1').length === 1, { present: c.present, toggle: c.toggle });
   check(tag + ' dashed rule under the top bar', c.rule === 'dashed', c.rule);
@@ -1228,10 +1228,10 @@ async function interactions(page, tag, width) {
   await chrome(page, tag, width);
   await page.locator('header a[href="/"]').focus();
   const focus = [];
-  for (let i = 0; i < 7; i++) { focus.push(await activeName(page)); await page.keyboard.press('Tab'); }
+  for (let i = 0; i < 8; i++) { focus.push(await activeName(page)); await page.keyboard.press('Tab'); }
   const brandName = width >= 640 ? 'Genomic Resistance MappingGRM' : 'Genomic Resistance MappingGRM';
   const theme = tag.includes('dark') ? 'Switch to light theme' : 'Switch to dark theme';
-  const wanted = width >= 1280 ? [brandName, 'Overview', 'Datasets', 'Species', 'Data & Methods', 'Present', theme] : [brandName, 'View: Datasets', 'Present', theme];
+  const wanted = width >= 1280 ? [brandName, 'Overview', 'Datasets', 'Species', 'Data', 'Methods', 'Present', theme] : [brandName, 'View: Datasets', 'Present', theme];
   check(tag + ' top bar keyboard order', JSON.stringify(focus.slice(0, wanted.length)) === JSON.stringify(wanted), focus);
   if (width >= 1280) check(tag + ' current view marked', await page.locator('nav[aria-label="Views"] [aria-current="page"]').textContent() === 'Datasets', null);
   await headerCheck(page, tag + ' datasets', 'Datasets');
@@ -1359,7 +1359,12 @@ async function interactions(page, tag, width) {
   check(tag + ' sticky dataset column', Math.abs(left - shifted) <= 1.5, { left, shifted });
   await shot(page, tag + '-dataset-status');
   await table.evaluate(e => e.scrollLeft = 0);
-  await page.getByRole('button', { name: 'Random', exact: true }).focus();
+  const splitGroup = page.getByRole('group', { name: 'Error rate split' });
+  await splitGroup.getByRole('button', { name: 'Lineage split', exact: true }).click();
+  check(tag + ' error-rate split toggle switches to Lineage split', await splitGroup.getByRole('button', { name: 'Lineage split', exact: true }).getAttribute('aria-pressed') === 'true', null);
+  await splitGroup.getByRole('button', { name: 'Random split', exact: true }).click();
+  check(tag + ' error-rate split toggle switches back to Random split', await splitGroup.getByRole('button', { name: 'Random split', exact: true }).getAttribute('aria-pressed') === 'true', null);
+  await table.getByRole('button', { name: 'Random', exact: true }).focus();
   await page.keyboard.press('Enter');
   check(tag + ' keyboard sorting', await table.locator('th[aria-sort="descending"]').textContent() === 'Random', null);
   const rows = table.locator('[data-row-open]');
@@ -1551,9 +1556,21 @@ async function interactions(page, tag, width) {
   await page.getByRole('region', { name: 'Panel results' }).waitFor();
   check(tag + ' legacy tests redirect', new URL(page.url()).pathname === '/' && new URL(page.url()).hash === '#panels', page.url());
   await shot(page, tag + '-panel-evidence');
+  await page.goto(BASE + '/corpus');
+  await page.getByRole('heading', { name: /Curation funnel/ }).waitFor();
+  await headerCheck(page, tag + ' data', 'Data');
+  await edgeCheck(page, tag + ' data', '[data-view-scroll] h1');
+  await controlCheck(page, tag + ' data');
+  const tracks = await page.evaluate(() => [...document.querySelectorAll('#m-funnel td span.relative')].map(e => getComputedStyle(e).backgroundColor).filter(c => c !== 'rgba(0, 0, 0, 0)').length);
+  check(tag + ' funnel bars sit on tracks', tracks >= 10, tracks);
+  await scrollTo(page, '#m-funnel'); await shot(page, tag + '-definitions');
+  check(tag + ' top bar stays in view after scrolling Data', await page.evaluate(() => document.querySelector('header').getBoundingClientRect().top >= -1 && document.scrollingElement.scrollTop === 0), null);
+  await page.goto(BASE + '/methods#m-funnel');
+  await page.getByRole('heading', { name: /Curation funnel/ }).waitFor();
+  check(tag + ' legacy /methods#m-funnel redirects to /corpus#m-funnel', new URL(page.url()).pathname === '/corpus' && new URL(page.url()).hash === '#m-funnel', page.url());
   await page.goto(BASE + '/methods');
   await page.getByRole('heading', { name: /Models and evaluation/ }).waitFor();
-  await headerCheck(page, tag + ' methods', 'Data & Methods');
+  await headerCheck(page, tag + ' methods', 'Methods');
   await edgeCheck(page, tag + ' methods', '[data-view-scroll] h1');
   {
     const name = tag + ' methods count by the guidance\'s wording matches the release summary';
@@ -1566,9 +1583,6 @@ async function interactions(page, tag, width) {
     }
   }
   await controlCheck(page, tag + ' methods');
-  const tracks = await page.evaluate(() => [...document.querySelectorAll('#m-funnel td span.relative')].map(e => getComputedStyle(e).backgroundColor).filter(c => c !== 'rgba(0, 0, 0, 0)').length);
-  check(tag + ' funnel bars sit on tracks', tracks >= 10, tracks);
-  await scrollTo(page, '#m-funnel'); await shot(page, tag + '-definitions');
   check(tag + ' top bar stays in view after scrolling Methods', await page.evaluate(() => document.querySelector('header').getBoundingClientRect().top >= -1 && document.scrollingElement.scrollTop === 0), null);
   // Assays the report could not score: one entry each in Methods, or no such
   // part when there are none. An entry's lines are its name, its datasets
@@ -2423,10 +2437,11 @@ async function baselineChecks(browser) {
         await present(page, tag, width, height);
         if (PART === 'present' || width === 1024) { await context.close(); continue; }
         if (width === 1280) { await interactions(page, tag, width); await widestIntervalFit(page, tag); await stripFit(page, tag); await panelFit(page, tag, width); await context.close(); continue; }
-        for (const [route, title, key] of [['/', 'What GRM found', 'overview'], ['/datasets', 'Datasets', 'datasets'], ['/species/' + speciesSlug, speciesName, 'species'], ['/methods', 'Data & Methods', 'methods']]) {
+        for (const [route, title, key] of [['/', 'What GRM found', 'overview'], ['/datasets', 'Datasets', 'datasets'], ['/species/' + speciesSlug, speciesName, 'species'], ['/corpus', 'Data', 'data'], ['/methods', 'Methods', 'methods']]) {
           await page.goto(BASE + route);
           await page.getByRole('heading', { name: title, exact: true }).first().waitFor();
           if (route.startsWith('/species')) await page.getByRole('grid', { name: /lineage block/ }).first().waitFor();
+          if (route === '/corpus') await page.getByRole('heading', { name: /Curation funnel/ }).waitFor();
           if (route === '/methods') await page.getByRole('heading', { name: /Models and evaluation/ }).waitFor();
           await shot(page, tag + '-' + key);
           if (key === 'overview') await primerCheck(page, tag);

@@ -11,7 +11,8 @@ export const VIEWS = [
   { id: "overview", label: "Overview", path: "/" },
   { id: "datasets", label: "Datasets", path: "/datasets" },
   { id: "species", label: "Species", path: "/species" },
-  { id: "methods", label: "Data & Methods", path: "/methods" },
+  { id: "data", label: "Data", path: "/corpus" },
+  { id: "methods", label: "Methods", path: "/methods" },
 ] as const;
 
 /** The Overview section the status line's audit words link to. */
@@ -22,17 +23,21 @@ export const LIMITS_HREF = `/#${LIMITS_ID}`;
  *  now the panel block's evidence on Overview. */
 const MOVED: Record<string, { path: string; hash: string }> = { "/tests": { path: "/", hash: "#panels" } };
 
+/** Section anchors that moved from /methods onto the Data view (/corpus). */
+const DATA_HASHES = new Set(["#m-funnel", "#m-pairs", "#m-genomes", "#m-records", "#m-sources", "#m-species", "#m-labels"]);
+
 /** Where a moved path now lives, keeping its query (an open dataset); null
  *  for a path that did not move. */
-export const movedHref = (pathname: string, search: string): string | null => {
+export const movedHref = (pathname: string, search: string, hash = ""): string | null => {
   const first = pathname.split("/").filter((p) => p !== "")[0];
+  if (first === "methods" && DATA_HASHES.has(hash)) return `/corpus${search}${hash}`;
   const to = first === undefined ? undefined : MOVED[`/${first}`];
   return to === undefined ? null : `${to.path}${search}${to.hash}`;
 };
 
 /** Replaces a moved path before the first render, so Back skips it. */
 export const redirectMovedPath = (): void => {
-  const href = movedHref(window.location.pathname, window.location.search);
+  const href = movedHref(window.location.pathname, window.location.search, window.location.hash);
   if (href !== null) window.history.replaceState(null, "", href);
 };
 
@@ -201,7 +206,7 @@ export const useLocationKey = (): string => useSyncExternalStore(subscribe, snap
 export const navigate = (href: string): boolean => {
   const url = new URL(href, window.location.href);
   if (url.origin !== window.location.origin || !isAppPath(url.pathname)) return false;
-  const target = movedHref(url.pathname, url.search) ?? `${url.pathname}${url.search}${url.hash}`;
+  const target = movedHref(url.pathname, url.search, url.hash) ?? `${url.pathname}${url.search}${url.hash}`;
   if (target === `${window.location.pathname}${window.location.search}${window.location.hash}`) {
     changed("replace");
     return true;
