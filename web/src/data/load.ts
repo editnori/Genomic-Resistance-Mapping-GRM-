@@ -101,19 +101,28 @@ async function fetchRaw(path: string): Promise<{ ok: true; raw: unknown } | { ok
   }
 }
 
-async function fetchBytes(path: string): Promise<{ ok: true; bytes: ArrayBuffer } | { ok: false; error: LoadError }> {
+export async function fetchBytes(path: string): Promise<{ ok: true; bytes: ArrayBuffer } | { ok: false; error: LoadError }> {
   let response: Response;
   try {
     response = await fetch(path, { headers: { Accept: "application/json" } });
   } catch (e) {
     return { ok: false, error: { kind: "network", path, message: e instanceof Error ? e.message : String(e) } };
   }
-  if (response.status === 404) return { ok: false, error: { kind: "missing", path } };
-  if (!response.ok) return { ok: false, error: { kind: "http", path, status: response.status } };
+  if (response.status === 404) {
+    void response.body?.cancel().catch(() => undefined);
+    return { ok: false, error: { kind: "missing", path } };
+  }
+  if (!response.ok) {
+    void response.body?.cancel().catch(() => undefined);
+    return { ok: false, error: { kind: "http", path, status: response.status } };
+  }
   const type = response.headers.get("Content-Type") ?? "";
   // A server that falls back to index.html for unknown paths answers 200
   // with HTML; that is a missing file, not a parse failure.
-  if (type.includes("text/html")) return { ok: false, error: { kind: "missing", path } };
+  if (type.includes("text/html")) {
+    void response.body?.cancel().catch(() => undefined);
+    return { ok: false, error: { kind: "missing", path } };
+  }
   try {
     return { ok: true, bytes: await response.arrayBuffer() };
   } catch (e) {
