@@ -264,9 +264,16 @@ class SpecTests(unittest.TestCase):
             self.assertEqual(left["roots"]["partial"]["bytes"], round(7 * per + 10 * per * 0.10))
             self.assertEqual(left["kset_bytes"], round(7 * per + 10 * per * 0.10 + 20 * per * 0.05
                                                        + left["work_files_bytes"]))
-            # On the box the smaller of the given and the measured free disk counts.
-            self.assertLessEqual(r.disk_check(["g"], free=10 ** 18)["free_bytes"],
-                                 shutil.disk_usage(Path(tmp) / "work").free)
+            # On the box the smaller of the given and the measured free disk counts. The measured figure is a stand-in
+            # read once: two reads of a real disk differ while another job writes to it.
+            real = run.shutil.disk_usage
+            with mock.patch.object(run.shutil, "disk_usage",
+                                   side_effect=lambda path: real(path)._replace(free=10 ** 9)) as read:
+                self.assertEqual(r.disk_check(["g"], free=10 ** 18)["free_bytes"], 10 ** 9)
+                self.assertEqual(r.disk_check(["g"], free=10 ** 6)["free_bytes"], 10 ** 6)
+                self.assertEqual([c.args for c in read.call_args_list], [(Path(tmp) / "work",)] * 2)
+                self.assertEqual(r.disk_check(["g"], free=10 ** 6, measure=False)["free_bytes"], 10 ** 6)
+                self.assertEqual(read.call_count, 2)
             # The species' own counted ksets in RAW set the per-genome size when there are any.
             ksets = Path(tmp) / "raw" / "species" / SPEC["species"] / "ksets"
             ksets.mkdir(parents=True)
