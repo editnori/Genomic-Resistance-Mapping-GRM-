@@ -219,7 +219,7 @@ describe("the deck pages a slide by slidePlan", () => {
     expect(beats()).toBe(0);
     // The next slide follows on.
     await go(MIC_AT + 2);
-    expect(status()).toContain(`Slide ${MIC_AT + 2} of ${DECK + 1}: Newly deposited genomes`);
+    expect(status()).toContain(`Slide ${MIC_AT + 2} of ${DECK + 1}: New studies`);
   });
 
   it("keeps the slide whole when the four fit with the slack to spare, and splits it one pixel later", async () => {
@@ -355,9 +355,9 @@ describe("the deck plans a slide again when its copy changes after mount", () =>
     // On the next slide: the MIC slide's new page moves it one number on, and
     // the reader with it.
     await go(MIC_AT + 1);
-    expect(status()).toContain(`Slide ${MIC_AT + 1} of ${DECK}: Newly deposited genomes`);
+    expect(status()).toContain(`Slide ${MIC_AT + 1} of ${DECK}: New studies`);
     Object.assign(fit, MIC_390);
     await touchMicCopy();
-    expect(status()).toContain(`Slide ${MIC_AT + 2} of ${DECK + 1}: Newly deposited genomes`);
+    expect(status()).toContain(`Slide ${MIC_AT + 2} of ${DECK + 1}: New studies`);
   });
 });

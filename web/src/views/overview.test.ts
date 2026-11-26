@@ -236,18 +236,18 @@ describe("What GRM found", () => {
     expect([...host.querySelectorAll("h2")].map((h) => h.textContent)).toEqual([
       "At a glance",
       "How to read this report",
-      "1 Genomes and lab calls",
-      "2 Scores on unseen lineages",
-      "3 The five learners compared",
-      "4 Error rates against the bars",
-      "5 Known-gene rules against learners",
-      "6 Simulated PCR panel",
-      "7 Predicting the drug level that stops growth (MIC)",
-      "8 Newly deposited genomes",
-      "9 Holding out whole studies",
-      "10 Another public database",
-      "11 Further stress tests and tool comparisons",
-      "12 Input settings against the default",
+      "1 Cohort",
+      "2 Lineage drop",
+      "3 Learners",
+      "4 Error screen",
+      "5 Known-gene rules",
+      "6 Simulated PCR panels",
+      "7 MIC",
+      "8 New studies",
+      "9 Study splits",
+      "10 NCBI database",
+      "11 Other comparisons",
+      "12 Input settings",
       "13 Limits",
     ]);
     const scope = host.querySelector<HTMLAnchorElement>('header a[href="#limits"]');
@@ -316,6 +316,7 @@ describe("What GRM found", () => {
     const { nav, calls } = fakeNav();
     const host = await mount({ ...base, datasets: rows }, nav);
     const lineage = host.querySelector("#lineage")!;
+    await act(async () => click(control(lineage, "Show datasets without a lineage split")));
     expect(lineage.textContent).toContain(
       "Three datasets have no score with lineages held out and are left out of these medians: two because a held-out test group (fold) would hold only resistant or only susceptible genomes and one because there are too few lineages.",
     );
@@ -348,16 +349,23 @@ describe("What GRM found", () => {
   it("counts the best learner's datasets against the bars in three outcomes that add up", async () => {
     const host = await mount(base, fakeNav().nav);
     const bars = host.querySelector("#bars")!;
-    const tiles = [...bars.querySelectorAll("ol li")];
-    expect(tiles.map((li) => li.lastElementChild?.textContent).slice(1)).toEqual(["Shown to meet both bars", "Shown to miss at least one bar", "Too few genomes to tell"]);
-    expect(tiles[0]?.lastElementChild?.textContent).toMatch(/^Datasets? tested with lineages held out$/);
-    const counts = tiles.map((li) => Number((li.firstElementChild?.textContent ?? "").replace(/,/g, "")));
+    const bar = bars.querySelector('[data-amr-primitive="whole-parts-bar"]')!;
+    const total = Number((bar.querySelector("span.tabular-nums")?.textContent ?? "").replace(/,/g, ""));
+    const partNums = [...bar.querySelectorAll(".mt-2\\.5 > div")].map((div) =>
+      Number((div.querySelector(".tabular-nums span:first-child")?.textContent ?? "").replace(/,/g, "")),
+    );
+    const counts = [total, ...partNums];
+    expect(bar.textContent).toContain("Datasets tested with lineages held out");
+    expect(bar.textContent).toContain("Shown to meet both");
+    expect(bar.textContent).toContain("Shown to miss at least one");
+    expect(bar.textContent).toContain("Too few genomes to tell");
     expect(counts).toHaveLength(4);
     expect(counts[0]).toBeGreaterThan(0);
     expect((counts[1] ?? 0) + (counts[2] ?? 0) + (counts[3] ?? 0)).toBe(counts[0]);
-    // The reading is stated beside the counts, with its limit.
-    expect(bars.textContent).toContain("The interval is exact (Clopper-Pearson)");
-    expect(bars.textContent).toContain("so the true interval is likely wider.");
+    // The reading is stated beside the counts, with its limit one click away.
+    expect(bars.textContent).toContain("exact 95% interval (Clopper-Pearson)");
+    await act(async () => click(control(bars, "Show random split, sample floor, and rule counts")));
+    expect(bars.textContent).toContain("The interval treats each genome as an independent draw, which related genomes are not, so the true interval is likely wider.");
     await act(async () => click(control(bars, "Show each learner against the bars")));
     const each = framed(bars, "Each learner against the bars");
     expect([...each.querySelectorAll('th[scope="rowgroup"]')].map((th) => th.textContent)).toEqual(["Lineages held out", "Random split"]);
@@ -404,6 +412,7 @@ describe("What GRM found", () => {
   it("reads the outside-study test with its limits, each population apart", async () => {
     const host = await mount(base, fakeNav().nav);
     const outside = host.querySelector("#outside")!;
+    await act(async () => click(control(outside, "Show study details and all learner counts")));
     const text = outside.textContent ?? "";
     expect(outside.querySelector("h2 + p")?.textContent).toBe(
       "Each report's final model was run, unchanged, on genomes newly added to the same public database. On 7,258 genomes from studies the cohorts do not hold, the set covering machine's sensitivity and specificity both hold on 32 of 81 datasets. On 3,155 new genomes from studies the cohorts already hold, they hold on 36 of 49.",
@@ -458,6 +467,7 @@ describe("What GRM found", () => {
   it("reads the input comparison in a reader's words, with its limits and the default's repeat runs apart", async () => {
     const host = await mount(base, fakeNav().nav);
     const inputs = host.querySelector("#inputs")!;
+    await act(async () => click(control(inputs, "Show detailed reading and caveats")));
     const text = inputs.textContent ?? "";
     expect(inputs.querySelector("h2 + p")?.textContent).toBe(
       "Eleven input settings were each changed once and scored against the default on 4 species, by log loss with whole lineages held out. By the plan's tests, no change beat the default across the 4 species. At most 1,000 genomes per species scored worse on 25 of 33 datasets, by a median of 0.0329 in log loss, more than the plan's 0.02 margin; 1,000 screened features scored worse on 37 of 49, by a median of 0.0082, less than the margin.",

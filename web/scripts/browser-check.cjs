@@ -1619,9 +1619,20 @@ async function interactions(page, tag, width) {
   for (const id of ['learners', 'bars', 'catalog']) { await scrollTo(page, '#' + id); await shot(page, tag + '-overview-' + id + '-open'); }
   // The bar counts are the page's own reading of the index: the three
   // outcomes add up to the datasets counted.
-  const barTiles = await page.evaluate(() => [...document.querySelectorAll('#bars ol li')].map(li => ({ value: Number(li.firstElementChild.textContent.replace(/,/g, '')), unit: li.lastElementChild.textContent })));
-  // A tree with no dataset to count draws no tiles.
-  check(tag + ' overview bar outcomes add up', expected.stats.barsCounted === 0 ? barTiles.length === 0 : barTiles.length === 4 && barTiles[0].value === expected.stats.barsCounted && barTiles[1].value + barTiles[2].value + barTiles[3].value === barTiles[0].value, { barTiles, counted: expected.stats.barsCounted });
+  const readBar = (selector) => page.evaluate((sel) => {
+    const root = document.querySelector(sel + ' [data-amr-primitive="whole-parts-bar"]');
+    if (!root) return null;
+    const whole = Number(root.querySelector('[data-whole-count]')?.getAttribute('data-whole-count'));
+    const parts = [...root.querySelectorAll('[data-part-count]')].map(e => Number(e.getAttribute('data-part-count')));
+    return { whole, parts };
+  }, selector);
+  const barCounts = await readBar('#bars');
+  // A tree with no dataset to count draws no bar.
+  check(tag + ' overview bar outcomes add up', expected.stats.barsCounted === 0 ? barCounts === null : barCounts !== null && barCounts.whole === expected.stats.barsCounted && barCounts.parts.length === 3 && barCounts.parts.reduce((a, b) => a + b, 0) === barCounts.whole, { barCounts, counted: expected.stats.barsCounted });
+  const catalogBar = await readBar('#catalog');
+  check(tag + ' overview catalog bar outcomes add up', expected.catalog.length === 0 ? catalogBar === null : catalogBar !== null && catalogBar.whole === expected.catalog.length && catalogBar.parts.length === 3 && catalogBar.parts.reduce((a, b) => a + b, 0) === catalogBar.whole, { catalogBar, expected: expected.catalog.length });
+  const otherDbBar = await readBar('#other-database');
+  check(tag + ' overview NCBI bar outcomes add up', otherDbBar !== null && otherDbBar.whole === 8 && otherDbBar.parts.length === 2 && otherDbBar.parts.reduce((a, b) => a + b, 0) === otherDbBar.whole, { otherDbBar });
   await wordingCheck(page, tag);
   // Takeaways and primer are sections of their own above the thirteen numbered
   // ones, each under the same hairline.
@@ -1768,7 +1779,7 @@ async function present(page, tag, width, height) {
     await goSlide(page, dialog, slide);
     const title = await dialog.locator('main h2').first().textContent();
     titles.push(title);
-    if ((title ?? '').startsWith('Newly deposited genomes')) {
+    if ((title ?? '').startsWith('New studies')) {
       const plots = await page.evaluate(outsidePlots);
       check(tag + ' slide ' + (slide + 1) + ' outside plots: no two axis labels touching', plots.length >= 2 && plots.every(p => p.touching.length === 0), plots);
     }
@@ -1841,7 +1852,7 @@ async function present(page, tag, width, height) {
     }
     check(tag + ' slide ' + (slide + 1) + ' labels inside', m.textOutside.length === 0, m.textOutside);
     if (pageKind !== 'caption' && m.svgs > 0) await chartOverlapCheck(page, tag + ' slide ' + (slide + 1), LIVE_SLIDE);
-    const finding = title.includes('unseen lineages') ? 1 : title.includes('Known-gene rules') ? 2 : title.includes('PCR panel') ? 3 : title.includes('(MIC)') ? 4 : 0;
+    const finding = title === 'Lineage drop' ? 1 : title.includes('Known-gene rules') ? 2 : title.includes('PCR panel') ? 3 : title === 'MIC' ? 4 : 0;
     // A paged panel figure draws its share of the rows on each page; the
     // pages together must draw every lead-panel dataset once.
     const paged = /\((\d+) of (\d+)\)/.exec(labels[slide] ?? '');
@@ -1851,19 +1862,19 @@ async function present(page, tag, width, height) {
     // A caption page draws no figure; its figure page is checked instead.
     if (finding > 0 && pageKind !== 'caption') check(tag + ' slide ' + (slide + 1) + ' all dataset marks', m.marks === count, { actual: m.marks, expected: count, title, page: paged?.[0] ?? null });
     if (pageKind !== 'caption') await referenceChecks(page, tag, finding, panelSeen, paged !== null);
-    if (title === 'Genomes and lab calls') {
+    if (title === 'Cohort') {
       const stats = await page.evaluate(() => [...document.querySelectorAll('dialog.presentation-dialog main ol li')].filter(li => li.closest('[data-slide-measure]') === null).map(li => { const v = li.firstElementChild; const r = v.getBoundingClientRect(); return { text: v.textContent, left: r.left, right: r.right, top: r.top, bottom: r.bottom, cellRight: li.getBoundingClientRect().right, scroll: v.scrollWidth, client: v.clientWidth }; }));
       const apart = stats.every((a, i) => stats.every((b, j) => i === j || a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top));
       check(tag + ' corpus counts do not overlap', stats.length === 4 && apart && stats.every(s => s.right <= s.cellRight + 1 && s.scroll <= s.client + 1), stats);
     }
-    if (title === 'Newly deposited genomes') {
+    if (title === 'New studies') {
       // Both populations on one slide, or one on each page of two, never
       // pooled: each plot draws one population's rows on one measure.
       const plots = await page.evaluate(() => [...document.querySelectorAll('dialog.presentation-dialog main section [role="listbox"]')].map(l => l.querySelectorAll('[data-outside]').length));
       const shown = paged === null ? outsideExpected : [outsideExpected[Number(paged[1]) - 1]];
       check(tag + ' slide ' + (slide + 1) + ' outside marks by population', JSON.stringify(plots) === JSON.stringify(shown.flatMap(p => [p.read, p.read])), { plots, page: paged?.[0] ?? null });
     }
-    if (title === 'Input settings against the default') {
+    if (title === 'Input settings') {
       // The rows in order, a share on each page; the pages together show
       // every row once, and no internal name.
       const shownRows = await page.evaluate(() => [...document.querySelectorAll('dialog.presentation-dialog main section tr[data-input]')].map(tr => tr.getAttribute('data-input')));
@@ -2031,7 +2042,7 @@ const OUTSIDE_SHORT_MIN = 106;
 
 async function shortSlides(browser) {
   const SHORT = [1280, 560];
-  const TITLES = ['Newly deposited genomes', 'Input settings against the default'];
+  const TITLES = ['New studies', 'Input settings'];
   const context = await browser.newContext({ viewport: { width: SHORT[0], height: SHORT[1] }, colorScheme: 'light', reducedMotion: 'reduce' });
   const page = await context.newPage();
   page.on('pageerror', error => errors.push({ width: SHORT[0], height: SHORT[1], message: error.message }));

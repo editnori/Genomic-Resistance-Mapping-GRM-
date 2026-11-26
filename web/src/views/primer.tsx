@@ -14,6 +14,7 @@ import { BARS, barLabel } from "../data/metrics";
 import { routeHref, type Navigator } from "../app/router";
 import { FOCUS_RING } from "../ui/primitives";
 import { AUDIT_SCOPE } from "../ui/EvaluationNotice";
+import { MicPlateStrip } from "../charts/amr";
 import { inApp, LINK, showSection } from "./findings";
 
 /** The report the primer reads from: the best random-split learner's scores
@@ -311,7 +312,13 @@ export const primerSteps = (m: Manifest, ex: PrimerExample | null = primerExampl
           )}
         </>
       ),
-      figure: ex === null ? null : <CompositionFigure row={ex.row} />,
+      figure:
+        ex === null ? null : (
+          <div className="space-y-5">
+            <MicPlateStrip mode="cutoff" compact label="How a lab calls R or S on a broth plate (drawing, not data)" />
+            <CompositionFigure row={ex.row} />
+          </div>
+        ),
       caption: "R and S are the calls the lab reported to BV-BRC. Every score in this report is agreement with those calls.",
     },
     {
