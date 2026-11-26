@@ -14,7 +14,7 @@
 // resting pointer in a native tooltip.
 
 import { Fragment, useMemo, useState, type ReactNode } from "react";
-import { Search } from "lucide-react";
+import { ChevronDown, Search } from "lucide-react";
 import type { CatalogRow, Learner, LearnerLite, Manifest, Scheme } from "../data/schema";
 import { capitalize, hasEverydayName, int, LEARNER_LABEL, LEARNER_NAME, pct, speciesName, speciesOption, speciesShort } from "../data/format";
 import { applyAxes, countBy, memberTest, rowsWithout, type Axis } from "../data/facets";
@@ -450,16 +450,31 @@ export const datasetColumns = (markProvisional: boolean, current: number | undef
 ];
 };
 
-/** What the main columns measure, in plain words, once under the view's
- *  header, so the rail and the table below shift together; each header's
- *  hint carries the detail. */
-const ReadingNote = () => (
-  <p className="type-note mt-4 max-w-[72ch]">
-    GRM trains several kinds of model (learners) on each dataset, and each row shows the one that scores best. Random and Lineage are its balanced accuracy: the average of the
-    share of resistant and the share of susceptible genomes it calls right, where 50% is a coin toss. Random tests it on genomes picked at random, most with close relatives in
-    training. Lineage tests it on whole lineages, groups of close relatives it never saw. VME is resistant genomes called susceptible; ME is the reverse.
-  </p>
-);
+/** Compact expandable column guide, keeping the search row and dataset table
+ *  immediately at the top of the viewport while keeping every plain definition
+ *  one click away. */
+const ReadingNote = () => {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mt-3">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        className={`ui-control-target ui-target-24 inline-flex items-center gap-1.5 rounded-sm py-1 text-control font-medium text-blue transition-colors duration-fast ease-out hover:text-ink ${FOCUS_RING}`}
+      >
+        {open ? "Hide column guide" : "Column guide"}
+        <ChevronDown size={14} strokeWidth={1.75} aria-hidden="true" className={`transition-transform duration-fast ease-out ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open ? (
+        <p className="type-note mt-2 max-w-[72ch]">
+          Each row shows the best random-split learner. Random and Lineage are balanced accuracy (50% is chance): Random hides a random fifth of genomes, while Lineage hides whole
+          families of close relatives. VME is resistant isolates called susceptible (limit ≤1.5%); ME is susceptible isolates called resistant (limit ≤3%).
+        </p>
+      ) : null}
+    </div>
+  );
+};
 
 /** What the table's marks mean, printed once over it. Each mark is shown
  *  as it appears in the cells, then said in words. The drug-class key

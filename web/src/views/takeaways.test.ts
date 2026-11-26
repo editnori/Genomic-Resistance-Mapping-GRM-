@@ -55,6 +55,12 @@ describe("Takeaways and new Overview sections", () => {
       "#inputs",
     ]);
     expect(takeaways.querySelector('[data-primer-figure="scope"]')).not.toBeNull();
+    expect(takeaways.querySelectorAll('[data-amr-primitive="bolster-strip"] li')).toHaveLength(4);
+    expect(host.querySelectorAll('#learners [data-amr-primitive="split-dumbbell"] li')).toHaveLength(6);
+    expect(host.querySelector('#bars [data-amr-primitive="whole-parts-bar"]')).not.toBeNull();
+    expect(host.querySelector('#catalog [data-amr-primitive="whole-parts-bar"]')).not.toBeNull();
+    expect(host.querySelector('#other-database [data-amr-primitive="whole-parts-bar"]')).not.toBeNull();
+    expect(host.querySelector('#mic [data-amr-primitive="mic-plate"]')).not.toBeNull();
 
     // Clicking a chapter link moves focus to that section's heading.
     await act(async () => click(takeaways.querySelector('a[href="#outside"]')!));

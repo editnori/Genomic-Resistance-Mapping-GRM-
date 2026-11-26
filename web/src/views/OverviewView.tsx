@@ -26,7 +26,7 @@ export const LIMITS_ANCHOR = "limits";
 
 /** What the site is and the question it answers, above every chart. */
 const OVERVIEW_PURPOSE =
-  "A lab can grow a bacterium next to an antibiotic and report it resistant, if the drug does not stop it growing, or susceptible, if it does. GRM (Genomic Resistance Mapping) asks how well the bacterium's genome, its full DNA sequence, predicts that lab result. It trains learners on public genomes that have a reported result, then scores them on genomes they did not train on.";
+  "GRM (Genomic Resistance Mapping) tests bacteria grown against an antibiotic in a lab, then asks how well the bacterium's genome, its full DNA sequence, predicts that lab result.";
 
 /** Supporting evidence under one explicit control, open on arrival from a
  *  link that names it. */
@@ -60,6 +60,10 @@ const More = ({ label, open: initial, first = true, children }: { label: string;
  *  strip. */
 const ReportSection = ({ n, finding, open }: { n: number; finding: Finding; open: boolean }) => {
   const figure = typeof finding.figure === "function" ? finding.figure({}) : finding.figure;
+  const extras: readonly FindingMore[] = [
+    ...(finding.notesFold === undefined ? [] : [finding.notesFold]),
+    ...(finding.more === undefined ? [] : Array.isArray(finding.more) ? finding.more : [finding.more]),
+  ];
   return (
     <section id={finding.id} aria-labelledby={`${finding.id}-title`} className="scroll-mt-6 border-t border-hair pt-7">
       <SectionHeading id={finding.id} n={n}>
@@ -71,8 +75,8 @@ const ReportSection = ({ n, finding, open }: { n: number; finding: Finding; open
         <p className={`prose-measure text-note text-muted-text ${figure === null || figure === undefined ? "" : "mt-3"}`}>{finding.caption}</p>
         {finding.note}
       </div>
-      {(finding.more === undefined ? [] : Array.isArray(finding.more) ? finding.more : [finding.more]).map((m: FindingMore, i: number) => (
-        <More key={m.label} label={m.label} open={open && i === 0} first={i === 0}>
+      {extras.map((m: FindingMore, i: number) => (
+        <More key={m.label} label={m.label} open={open && m === (Array.isArray(finding.more) ? finding.more[0] : finding.more)} first={i === 0}>
           {m.body}
         </More>
       ))}

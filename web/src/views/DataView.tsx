@@ -4,7 +4,7 @@
 // species coverage, then the label and inclusion rules. Every count comes
 // from the manifest or the corpus file at render time.
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type MouseEvent, type ReactNode } from "react";
 import type { Corpus, Manifest } from "../data/schema";
 import { int, pct } from "../data/format";
 import { loadErrorText, useCorpus } from "../data/load";
@@ -14,6 +14,7 @@ import { PanelState, ScrollFrame, VIEW_SHELL } from "../ui/primitives";
 import { ViewHeader } from "../ui/ViewHeader";
 import { ReportStatus } from "../app/ReportStatus";
 import { YearColumns } from "../charts/YearColumns";
+import { BolsterStatStrip, type BolsterStat } from "../charts/amr";
 import { minimumSentence, SectionHeading, selectionCap, showSection, SpeciesCounts, STATUS_LINK } from "./findings";
 import { ClindamycinMethods } from "./inspector/ClindamycinNote";
 
@@ -33,13 +34,22 @@ const DataSection = ({ id, n, title, children }: { id: string; n: number; title:
   </section>
 );
 
-/** A count's length on a track of the whole: blue for what was kept, grey
- *  for what was set aside. */
-const Bar = ({ value, max, tone = "kept" }: { value: number; max: number; tone?: "kept" | "dropped" }) => (
+/** A count's length on a track of the whole: blue for what was kept, hatched
+ *  blue for a distinct kind kept in records but excluded from model training,
+ *  and grey for what was set aside. */
+const Bar = ({ value, max, tone = "kept" }: { value: number; max: number; tone?: "kept" | "dropped" | "excluded" }) => (
   <span className="relative block h-2.5 w-full min-w-[6rem] overflow-hidden rounded-sm bg-surface-subtle" aria-hidden="true">
     <span
-      className={`absolute inset-y-0 left-0 rounded-r-sm ${tone === "kept" ? "bg-[color:var(--series-s)]" : "bg-[color:var(--series-neutral)]"}`}
-      style={{ width: `${max === 0 ? 0 : Math.max(0.5, (value / max) * 100)}%` }}
+      className={`absolute inset-y-0 left-0 rounded-r-sm ${tone === "kept" ? "bg-[color:var(--series-s)]" : tone === "dropped" ? "bg-[color:var(--series-neutral)]" : ""}`}
+      style={{
+        width: `${max === 0 ? 0 : Math.max(0.5, (value / max) * 100)}%`,
+        ...(tone === "excluded"
+          ? {
+              backgroundImage: "repeating-linear-gradient(135deg, var(--series-s) 0 3px, rgb(var(--paper-pure)) 3px 6px)",
+              borderRight: "1px solid var(--series-s)",
+            }
+          : {}),
+      }}
     />
   </span>
 );
@@ -47,7 +57,7 @@ const Bar = ({ value, max, tone = "kept" }: { value: number; max: number; tone?:
 interface Stage {
   label: string;
   count: number;
-  tone: "kept" | "dropped";
+  tone: "kept" | "dropped" | "excluded";
   note?: string;
 }
 
@@ -109,8 +119,7 @@ const FunnelSection = ({ manifest }: { manifest: Manifest }) => {
   return (
     <DataSection id={DATA_ANCHORS.funnel} n={1} title="Curation funnel">
       <P>
-        These tables follow the public records down to the genomes and antibiotics the models use. In the first two tables, the top row goes on to the models, with a blue
-        bar on wider screens. Every other row is set aside, and its label says why. QC (quality control) checks each genome&apos;s assembled DNA, and each reason a genome failed has its own row.
+        The top row in each table goes on to the models (blue bar); hatched bars mark MIC-inferred labels kept in records but excluded from training, and grey rows are set aside.
       </P>
       <div className="grid grid-cols-1 gap-x-12 gap-y-6 xl:grid-cols-2">
         <div id="m-pairs" className="xl:col-span-2">
@@ -123,7 +132,7 @@ const FunnelSection = ({ manifest }: { manifest: Manifest }) => {
               {
                 label: "Labeled from MIC at the inferred breakpoint",
                 count: f.pairs_labeled_from_mic,
-                tone: "dropped",
+                tone: "excluded",
                 note: "An MIC but no reported call. Kept in the curated records; no model trains or is scored on these labels.",
               },
               { label: "Conflicting calls (both resistant and susceptible)", count: f.pairs_conflict, tone: "dropped" },
@@ -318,6 +327,19 @@ export const DataView = ({ manifest, nav }: { manifest: Manifest; nav?: Navigato
   useEffect(() => {
     if (hash !== "") showSection(hash);
   }, [hash]);
+  const analyzed = manifest.species.reduce((a, s) => a + s.genomes_analyzed, 0);
+  const activeSpecies = manifest.species.filter((s) => s.genomes_analyzed > 0).length;
+  const f = manifest.funnel;
+  const jump = (id: string) => (e: MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    showSection(id, true);
+  };
+  const summaryStats: BolsterStat[] = [
+    { key: "records", label: "Public records", value: int(f.records), sub: "BV-BRC lab records", href: `#${DATA_ANCHORS.funnel}`, onJump: jump(DATA_ANCHORS.funnel) },
+    { key: "pairs", label: "Reported pairs", value: int(f.pairs_reported), sub: `of ${int(f.pairs)} genome-drug pairs`, href: "#m-pairs", onJump: jump("m-pairs") },
+    { key: "genomes", label: "Genomes analyzed", value: int(analyzed), sub: `selected from ${int(f.genomes_passing_qc)} QC-passing`, href: `#${DATA_ANCHORS.species}`, onJump: jump(DATA_ANCHORS.species) },
+    { key: "datasets", label: "Datasets", value: int(manifest.datasets.length), sub: `across ${int(activeSpecies)} species`, href: `#${DATA_ANCHORS.species}`, onJump: jump(DATA_ANCHORS.species) },
+  ];
   return (
     <div className={`${VIEW_SHELL} pb-16 pt-8`}>
       <ViewHeader
@@ -325,6 +347,9 @@ export const DataView = ({ manifest, nav }: { manifest: Manifest; nav?: Navigato
         purpose="Where GRM's genomes and lab calls come from, what passes curation, and which records are set aside."
         status={<ReportStatus manifest={manifest} />}
       />
+      <div className="mt-6">
+        <BolsterStatStrip stats={summaryStats} ariaLabel="Corpus totals" />
+      </div>
       <DataMap />
       <div className="mt-12 space-y-12">
         <FunnelSection manifest={manifest} />

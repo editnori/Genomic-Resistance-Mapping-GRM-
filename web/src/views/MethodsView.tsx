@@ -308,7 +308,7 @@ const Scope = ({ manifest }: { manifest: Manifest }) => {
           studies they already hold. The two groups are scored apart. The batch&apos;s details and label totals were read before the test&apos;s rules were frozen, and the genomes
           come from the same database, so it is a retrospective test and not external validation.
         </P>
-        <DocNote href={`${routeHref({ view: "overview", species: null, dataset: null })}#outside`} section="Newly deposited genomes" plan="docs/outside-study-test.md" results="docs/outside-study-results.md" />
+        <DocNote href={`${routeHref({ view: "overview", species: null, dataset: null })}#outside`} section="New studies" plan="docs/outside-study-test.md" results="docs/outside-study-results.md" />
       </Part>
       <Part id="m-inputs" title="Input settings against the default">
         <P>
@@ -317,7 +317,7 @@ const Scope = ({ manifest }: { manifest: Manifest }) => {
           worse. It does not show that the default is the best setting. The same counts by learner, with the resistant genomes found, are an exploratory reading: it was designed
           after the results had been read, and it decides nothing.
         </P>
-        <DocNote href={`${routeHref({ view: "overview", species: null, dataset: null })}#inputs`} section="Input settings against the default" plan="docs/input-comparison-runner.md" />
+        <DocNote href={`${routeHref({ view: "overview", species: null, dataset: null })}#inputs`} section="Input settings" plan="docs/input-comparison-runner.md" />
       </Part>
       <Part title="Learner cross-check">
         <P>

@@ -243,7 +243,7 @@ describe("the primer in Present", () => {
       expect(dialog.querySelectorAll("[data-beats] span").length === 0 || [...dialog.querySelectorAll("[data-beats] span")].every((t) => t.className.includes("bg-blue"))).toBe(true);
     }
     await key("ArrowRight");
-    expect(status()).toContain("Genomes and lab calls");
+    expect(status()).toContain("Cohort");
     await key("Home");
     expect(status()).toContain("Slide 1 of ");
   });
