@@ -681,12 +681,29 @@ async function curationPathCheck(page, tag) {
       leftOut: tr.querySelector('[data-path-left-out]')?.textContent?.replace(/\s+/g, ' ').trim() ?? '',
     }));
     const view = document.querySelector('[data-view-scroll]');
+    const ruleRows = [...document.querySelectorAll('#m-label-rule tbody tr[data-label-rule-row]')].map(tr => ({
+      key: tr.getAttribute('data-label-rule-row'),
+      cells: [...tr.children].map(c => c.textContent.replace(/\s+/g, ' ').trim()),
+    }));
     return {
       rows,
+      ruleRows,
       pathText: pathEl?.textContent?.replace(/\s+/g, ' ') ?? '',
       pageText: view?.textContent?.replace(/\s+/g, ' ') ?? '',
     };
   });
+  const wantRuleKeys = ['s', 'r', 's-i', 'i-r', 'i', 'conflict', 'mic-only'];
+  check(
+    tag + ' data labels section shows 7-row label rule table',
+    got.ruleRows.length === 7
+      && got.ruleRows.every((r, i) => r.key === wantRuleKeys[i] && r.cells.length === 3)
+      && got.ruleRows[2].cells[1] === 'Susceptible (S)'
+      && got.ruleRows[3].cells[1] === 'Resistant (R)'
+      && got.ruleRows[5].cells[1] === 'Conflict; no label'
+      && got.ruleRows[6].cells[1] === 'Inferred R or S from its MIC, else none'
+      && got.ruleRows[6].cells[2] === 'No (curated records only)',
+    got.ruleRows,
+  );
   const f = manifest.funnel;
   const wantKeys = ['records', 'genomes_with_a_record', 'genomes_passing', 'pairs', 'pairs_reported', 'datasets_curated', 'genomes_analyzed', 'datasets_reported'];
   const wantCounts = [
