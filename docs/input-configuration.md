@@ -1,6 +1,6 @@
 # Input configuration: today's values and what sets them
 
-A full-pipeline comparison over the input data was asked for: genome and cohort count, which genomes are included, k-mer length, feature families and the retained-feature budget. Each input now has a setting that reaches `grm`, and [input-comparison-runner.md](input-comparison-runner.md) runs the comparison main decided on 5 Nov 2026 (DECISIONS V-1). It has run on synthetic data only; real cohorts are H-1's. This page gives each input's default, the flag that sets it, and what records it.
+A full-pipeline comparison over the input data was asked for: genome and cohort count, which genomes are included, k-mer length, feature families and the retained-feature budget. Each input now has a setting that reaches `grm`, and [input-comparison-runner.md](input-comparison-runner.md) runs the comparison main decided on 5 Nov 2026 (DECISIONS V-1). It has since run on real data: H-1 ran it on public BV-BRC genomes of four species, 72 datasets with 11 arms and the two twins, and "H-1's reading" on that page gives the result. By the plan's tests no arm beats the default across the four species. This page gives each input's default, the flag that sets it, and what records it.
 
 | Input | Default | Flag | Recorded in | Arms (V-1) |
 |---|---|---|---|---|
