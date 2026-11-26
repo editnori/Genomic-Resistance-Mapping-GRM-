@@ -91,7 +91,7 @@ const bolsterStats = (m: Manifest, constants?: ReadonlyMap<string, MicConstant>)
     {
       key: "screen",
       label: "Adapted research error screen",
-      value: b.n === 0 ? "–" : `${int(b.meets)} of ${int(b.n)}`,
+      value: b.n === 0 ? "–" : `${int(b.meets)} of ${int(b.n)} meet both`,
       tone: b.n > 0 && b.meets === 0 ? "coral" : "ink",
       sub: b.n === 0 ? "No error rates yet" : `${int(b.misses)} miss ≥1 limit · ${int(b.open)} not decided`,
       href: "#bars",
@@ -100,8 +100,8 @@ const bolsterStats = (m: Manifest, constants?: ReadonlyMap<string, MicConstant>)
     {
       key: "study",
       label: "Study splits",
-      value: `${int(st.logLossWorse)} of 5 worse`,
-      tone: "coral",
+      value: `${int(st.logLossWorse)} of 5 learners worse`,
+      tone: st.logLossWorse > 0 ? "coral" : "ink",
       sub: `on log loss & specificity · ${int(st.datasets)} datasets in ${int(st.species)} species`,
       href: "#study-split",
       onJump: jump("study-split"),
@@ -164,7 +164,7 @@ export const takeawayCards = (m: Manifest, constants?: ReadonlyMap<string, MicCo
       body:
         b.n === 0
           ? "No dataset has both error rates with lineages held out yet."
-          : `Against VME ≤1.5% and ME ≤3.0% by exact 95% intervals, ${int(b.misses)} of ${int(b.n)} miss at least one limit and ${int(b.open)} are not decided; under the looser acceptance wording of FDA's 2009 guidance for growth-based susceptibility test systems (not an applicable criterion here), ${int(w.meets)} of ${int(w.n)} meet.`,
+          : `Against VME ≤1.5% and ME ≤3.0% by exact 95% intervals, the best learner with lineages held out is shown to meet both on ${int(b.meets)} of ${int(b.n)} datasets and shown to miss at least one on ${int(b.misses)} (${int(b.open)} not decided); under the looser acceptance wording of FDA's 2009 guidance for growth-based susceptibility test systems (not an applicable criterion here), ${int(w.meets)} of ${int(w.n)} meet.`,
       target: "bars",
       linkLabel: "Error screen details",
     },
@@ -193,7 +193,7 @@ export const takeawayCards = (m: Manifest, constants?: ReadonlyMap<string, MicCo
     {
       id: "other-db",
       kicker: "NCBI database",
-      stat: `${int(od.totals.scm.plan_meets)} of ${int(od.eightSpecies)} species`,
+      stat: `${int(od.totals.scm.plan_meets)} of ${int(od.eightSpecies)} species (SCM)`,
       body: `Scored unchanged on ${int(od.totalGenomes)} NCBI Pathogen Detection genomes outside BV-BRC's labelled set (not external validation), SCM meets the plan's rule in ${int(od.totals.scm.plan_meets)} of ${int(od.eightSpecies)} species (${int(od.totals.scm.holds)} of ${int(od.totals.scm.estimable)} datasets; E. coli pilot: SCM ${int(od.pilot.scm.holds)} of ${int(od.pilot.scm.estimable)}, CART ${int(od.pilot.cart.holds)} of ${int(od.pilot.cart.estimable)}), CART in ${int(od.totals.cart.plan_meets)} of ${int(od.eightSpecies)}, and lasso in ${int(od.totals.lasso.plan_meets)} of ${int(od.totals.lasso.assessable)} species where it can be read (${int(od.totals.lasso.holds)} of its ${int(od.totals.lasso.estimable)} datasets across the eight). The rule reads recall and log loss only, and S. enterica and C. coli share BioProjects with training.`,
       target: "other-database",
       linkLabel: "NCBI database test",

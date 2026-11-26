@@ -964,7 +964,7 @@ export const barsFinding = (m: Manifest, opts: FindingOptions): Finding => {
                 ) : null}
                 <p>
                   A learner that misses no resistant genome still needs at least {int(ZERO_MISS_FLOOR)} resistant genomes before its interval lies under the VME bar. {int(atFloor)} of{" "}
-                  {plural(rows.length, "dataset")} {atFloor === 1 ? "has" : "have"} that many. It treats each genome as an independent draw, which related genomes are not, so the true interval is likely wider.
+                  {plural(rows.length, "dataset")} {atFloor === 1 ? "has" : "have"} that many. The interval treats each genome as an independent draw, which related genomes are not, so the true interval is likely wider.
                 </p>
                 {rule.n > 0 ? (
                   <p>

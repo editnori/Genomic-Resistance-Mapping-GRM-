@@ -365,7 +365,7 @@ describe("What GRM found", () => {
     // The reading is stated beside the counts, with its limit one click away.
     expect(bars.textContent).toContain("exact 95% interval (Clopper-Pearson)");
     await act(async () => click(control(bars, "Show random split, sample floor, and rule counts")));
-    expect(bars.textContent).toContain("which related genomes are not, so the true interval is likely wider.");
+    expect(bars.textContent).toContain("The interval treats each genome as an independent draw, which related genomes are not, so the true interval is likely wider.");
     await act(async () => click(control(bars, "Show each learner against the bars")));
     const each = framed(bars, "Each learner against the bars");
     expect([...each.querySelectorAll('th[scope="rowgroup"]')].map((th) => th.textContent)).toEqual(["Lineages held out", "Random split"]);

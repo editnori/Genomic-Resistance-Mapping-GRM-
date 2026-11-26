@@ -97,6 +97,9 @@ describe("Takeaways and new Overview sections", () => {
     expect(text).toContain("growth-based susceptibility test systems");
     expect(text).toContain("12 of 25");
     expect(text).toContain("3 of 4 species where it can be read");
+    expect(text).toContain("6 of 8 species (SCM)");
+    expect(text).toContain("5 of 5 learners worse");
+    expect(text).toContain("the best learner with lineages held out is shown to meet both on");
   });
 
   it("derives the bottom-line lead and MIC card dynamically with or without baselines", () => {
