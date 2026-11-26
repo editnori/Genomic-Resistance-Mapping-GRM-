@@ -1,8 +1,10 @@
-"""The record and the page tables of plan block C3's run on its datasets of M (docs/input-arms.md, Page tables).
+"""The record of plan block C3's run on its datasets of M, and the two pages written whole from it
+(docs/input-arms-m-left-out.md and docs/input-arms-m-count.md).
 
   python3 -I m_page.py floor <tables dir> <record dir>
   python3 -I m_page.py record <tables dir> <record dir>
   python3 -I m_page.py print <record dir>
+  python3 -I m_page.py left <record dir>
   python3 -I m_page.py page <record dir>
   python3 -I m_page.py onpage <record dir> <page file>
 
@@ -21,42 +23,52 @@ exactly m_reading.py's 7 tables, its two floor tables are byte for byte the
 ones already in the record, and every gate passes on the 7. Then it copies
 the other 5 in and writes SHA256SUMS again.
 
-print prints each page table from <record dir> alone, as Markdown, each
-under its name: the datasets left out of the second reading, the datasets
-by species, the count rows (lineage balanced accuracy) and the rows beside
-them, conditions 1 to 5 by ruling 15, the conditions met in both readings,
-the size table and the datasets, in page_tables.py's number forms. With
-the floor's two tables alone it prints the first two and says the count
+print prints each table of the record from <record dir> alone, as Markdown,
+each under its name: the datasets left out of the second reading, the
+datasets by species, the count rows (lineage balanced accuracy) and the rows
+beside them, conditions 1 to 5 by ruling 15, the conditions met in both
+readings, the size table and the datasets, in page_tables.py's number forms.
+With the floor's two tables alone it prints the first two and says the count
 has not been taken.
 
-page prints what the result page takes after the count, ready to stand on
-it, in the page's order: the line on the datasets each reading reads, once,
-then 6 tables: conditions 1 to 5 in both readings, the datasets read by
-species, the count over all datasets on the lineage split and balanced
-accuracy, the same count on recall, the same count on the study split and
-balanced accuracy, and the count on M alone; then one line that names the
-record's other files. Every other table stays in the record, where print
-gives it, and none of those goes on a page. It stops before the count.
+left and page each write one page whole, as bytes on standard output, from
+the record alone; no hand edits either page. left gives
+docs/input-arms-m-left-out.md after the floor: a title, the line that says
+this script writes the page, the line on how many datasets of M each reading
+reads, and the left-out table, or its one line when no dataset of M is left
+out. page gives docs/input-arms-m-count.md after the count: a title, the same
+kind of line, the reads line once, 8 tables each under its run-in line, and
+the Files line. The 8 are: conditions 1 to 5 in both readings; the datasets
+read by species; the count over all datasets on the lineage split and
+balanced accuracy, with conditions 1 and 2 marked for each row; the same
+count on recall; the same count on the study split and balanced accuracy;
+and the count on M alone on the same three. page stops before the count.
 
-onpage exits 0 only when <page file> holds the left-out table as print
-gives it, line after line, as a block of its own: a blank line or the
-file's edge before its first line and after its last, and no line of it
-inside a fenced code block, an HTML comment or a <details> block.
-Otherwise it exits 1 with a line that names the first line missing, or
-the side that lacks its blank line, and no figure. A page that does not
-exist stops.
+onpage exits 0 only when the bytes of <page file> are the bytes left gives.
+Otherwise it exits 1 with one line that names the first line that differs,
+or says the page ends early or runs on, with no figure and no text of the
+page. The record's gates run first; a page that does not exist stops. No
+check here reads Markdown: each compares bytes.
 
-floor, record, print, page and onpage stop on any gate that applies,
-naming the file and the row and no value:
+floor, record, print, left, page and onpage stop on any gate that applies,
+naming the file and the line and no value:
 
 - a file missing, a file not on the record's list, a column list that is
   not m_reading.py's, or a file that differs from its SHA256SUMS line;
-- a met cell that is not 0, 1 or empty, or a count cell that is not a
-  whole number written in digits alone;
+- a met cell that is not 0, 1 or empty, a count cell that is not a whole
+  number written in 1 to 12 digits alone, or a figure that is not a number
+  as m_reading.py writes one, or empty;
+- a count, reading, split, pair, arm, learner, measure, orientation,
+  condition or state that is not on its list;
+- a row of m-count.tsv, m-conditions.tsv or m-size.tsv that the lists do not
+  give, or that stands twice, or a row the lists give that the table lacks;
+- a row of m-count.tsv whose better, worse and same do not sum to entered,
+  whose sign p or Holm p is outside 0 to 1, or whose interval has its low end
+  above its high end or one end alone;
 - a dataset of m-floor.tsv in none of the three states, or the datasets of
   m-floor.tsv not exactly those lists.tsv marks in_M, each once;
-- a row of m-floor.tsv whose cohort is not resistant plus susceptible,
-  whose listed genomes are not its listed resistant plus susceptible, whose
+- a row of m-floor.tsv whose cohort is not resistant plus susceptible, whose
+  listed genomes are not its listed resistant plus susceptible, whose
   second-reading counts are not the cohort's less the list, whose floor is
   not 25, whose enters is not 1 exactly when each class keeps 25, or whose
   state is not the one m_reading.py works out from enters and the listed
@@ -69,17 +81,23 @@ naming the file and the row and no value:
   is not in, or a dataset in the second reading whose rows in the two
   readings do not pair;
 - a second-reading row of m-count.tsv or m-size.tsv that counts more
-  datasets of M than m-floor.tsv gives the state in;
+  datasets of M than m-floor.tsv gives the state in, or a row of
+  m-size.tsv unlike its row of m-count.tsv;
 - a first-run row of m-count.tsv or m-conditions.tsv in the second reading
   unlike its row in the first, or with no row there;
 - a row of m-both.tsv whose Both is not met exactly when both readings
   are, or unlike the rows of m-conditions.tsv it comes from, or a row of
   those m-both.tsv lacks;
+- a row of m-conditions.tsv that counts the learners meeting condition 1,
+  condition 2 or both, or gives the larger of the twin's two counts, unlike
+  the count of the marks m-count.tsv's full figures give;
 - a token of pack.py's GENOME_ID shape with 2 or more digits before the
   point, anywhere in a table. This is a shape check; the exact check
   against the species' ids runs on the run's machine.
 
-Standard library only; it reads no score and no genome.
+An error no gate names stops with one line that gives its kind alone, so
+no command ends in a traceback. Standard library only; it reads no score
+and no genome.
 """
 
 import csv
@@ -106,6 +124,29 @@ DEFAULT, PRIMARY, DECIDING = "k31", "balanced_accuracy", "ruling 15"
 SHOWN_CONDITIONS = ("1 and 2", "3", "4", "5")
 # m_list.py's floor and m_reading.py's smallest list, written out: the test holds each to its script's own.
 FLOOR, SMALLEST_LISTED = 25, 5
+# The two pages left and page write, by their path in the tree.
+LEFT_PAGE, COUNT_PAGE = "docs/input-arms-m-left-out.md", "docs/input-arms-m-count.md"
+
+# score.py's lists and m_reading.py's measures for the counts over the first run's record, written out, since score.py
+# imports numpy: tests/c3_inputs/test_m_page.py holds each to its script's own.
+LEARNERS = ("scm", "cart", "rf", "gbt", "lasso")
+TWIN = "twin"
+FAMILY = ("unitigs", "k31-counts", "k31-aa", "program", "k31-program", TWIN)
+MEASURES = ("balanced_accuracy", "recall", "specificity", "vme", "me", "log_loss")
+LOWER_IS_BETTER = ("vme", "me", "log_loss")
+HOLM_ALPHA = 0.05
+SPLITS = ("lineage", "study")
+RECORD_MEASURES = ("balanced_accuracy", "recall")
+COUNT_MEASURES = {"first run": RECORD_MEASURES, "M": MEASURES, "all datasets": RECORD_MEASURES}
+CONDITIONS = {DECIDING: ("1 and 2", "3", "4", "5", "6"), "stricter": ("1", "2", "3", "4", "5", "6")}
+PAIRS = tuple(f"{arm}-{DEFAULT}" for arm in FAMILY)
+INNER = tuple(arm for arm in FAMILY if arm != TWIN)
+
+
+def arms_of(split):
+    """score.py's arms on a split: the twin on the lineage split alone."""
+    return FAMILY if split == "lineage" else INNER
+
 
 # m_reading.py's column lists, written out: tests/c3_inputs/test_m_page.py holds each to m_reading.py's own.
 COLUMNS = {
@@ -133,7 +174,8 @@ ARM_WORDS = {"k31": "K31, the default", "unitigs": "unitigs", "k31-counts": "K31
 MEASURE_WORDS = {"balanced_accuracy": "balanced accuracy", "recall": "recall", "specificity": "specificity",
                  "vme": "very major error rate", "me": "major error rate", "log_loss": "log loss"}
 COUNT_WORDS = {"first run": "the first run as read", "M": "M alone", "all datasets": "all datasets"}
-# The cells the gates read as a met (0, 1 or empty) or as a whole number, by table; learners may also be empty.
+# The cells the gates read as a met (0, 1 or empty), as a whole number or as a figure, by table; learners may also be
+# empty, and so may each figure.
 MET_CELLS = {"m-conditions.tsv": ("met",), "m-both.tsv": ("met_first", "met_second", "met_both")}
 FLOOR_COUNTS = ("cohort", "resistant", "susceptible", "listed", "listed_resistant", "listed_susceptible",
                 "second_resistant", "second_susceptible", "floor")
@@ -143,8 +185,26 @@ COUNT_CELLS = {"m-floor.tsv": FLOOR_COUNTS + ("enters",), "m-left-out.tsv": FLOO
                "m-conditions.tsv": ("learners",), "m-size.tsv": ("datasets", "entered", "better", "worse", "same"),
                "m-datasets.tsv": ("draws", "arm_draws_scored", "default_draws_scored", "constant_draws",
                                   "study_refused", "listed_resistant", "listed_susceptible")}
+FIGURE_CELLS = {"m-count.tsv": ("median_difference", "interval_lo", "interval_hi", "sign_p", "holm_p"),
+                "m-datasets.tsv": ("arm_value", "default_value", "difference", "arm_recall", "default_recall",
+                                   "recall_difference")}
 MAY_BE_EMPTY = {("m-conditions.tsv", "learners")}
-DIGITS = re.compile(r"[0-9]+")
+DIGITS = re.compile(r"[0-9]{1,12}")
+# A figure as C9's fmt writes a float rounded to 12 places: digits, a point and digits, and an exponent below 0.
+FIGURE = re.compile(r"-?[0-9]{1,12}(\.[0-9]{1,17})?(e-[0-9]{2,3})?")
+# Each name cell's list, by table.
+NAMES = {"m-count.tsv": {"count": COUNTS, READ: READINGS, "split": SPLITS, "pair": PAIRS, "learner": LEARNERS,
+                         "measure": MEASURES, "orientation": ("higher", "lower")},
+         "m-conditions.tsv": {"count": COUNTS, READ: READINGS, "arm": INNER, "reading": tuple(CONDITIONS),
+                              "condition": CONDITIONS["stricter"] + ("1 and 2",)},
+         "m-both.tsv": {"arm": INNER, "condition": SHOWN_CONDITIONS},
+         "m-size.tsv": {READ: READINGS, "arm": FAMILY, "learner": LEARNERS},
+         "m-datasets.tsv": {READ: READINGS, "split": SPLITS, "pair": PAIRS, "learner": LEARNERS,
+                            "second_reading": STATES}}
+# The cells that tell one row from another, in the tables whose rows the lists give.
+ROW_KEYS = {"m-count.tsv": ("count", READ, "split", "pair", "learner", "measure"),
+            "m-conditions.tsv": ("count", READ, "arm", "reading", "condition"),
+            "m-size.tsv": (READ, "arm", "learner")}
 
 
 class Stop(Exception):
@@ -172,6 +232,13 @@ def m_datasets(lists_path):
         return {r["dataset"] for r in csv.DictReader(handle, delimiter="\t") if r["in_M"] == "1"}
 
 
+def directory(path, what):
+    """Stop unless <path> is a directory."""
+    if not Path(path).is_dir():
+        raise Stop(f"{what} {path} is not a directory")
+    return Path(path)
+
+
 # ---------- reading and gates ----------
 
 class Table:
@@ -196,13 +263,13 @@ class Table:
             self.rows.append((i, dict(zip(self.header, cells))))
 
 
-def read_tables(directory, names):
-    """{name: Table} of these files of <directory>, opened by name alone: the directory is not listed."""
+def read_tables(directory_, names):
+    """{name: Table} of these files of <directory_>, opened by name alone: the directory is not listed."""
     out = {}
     for name in names:
-        path = Path(directory) / name
+        path = Path(directory_) / name
         if not path.is_file():
-            raise Stop(f"{name} is missing from {directory}")
+            raise Stop(f"{name} is missing from {directory_}")
         out[name] = Table(name, path.read_bytes())
     return out
 
@@ -223,7 +290,8 @@ def gate_ids(tables):
 
 
 def gate_cells(tables):
-    """Each met cell 0, 1 or empty, and each count cell a whole number in digits alone, before any cell is read."""
+    """Each met cell 0, 1 or empty, each count cell a whole number in 1 to 12 digits alone, and each figure a number as
+    m_reading.py writes one, or empty, before any cell is read."""
     for name, t in tables.items():
         for i, r in t.rows:
             for c in MET_CELLS.get(name, ()):
@@ -232,6 +300,61 @@ def gate_cells(tables):
             for c in COUNT_CELLS.get(name, ()):
                 if not DIGITS.fullmatch(r[c]) and not (r[c] == "" and (name, c) in MAY_BE_EMPTY):
                     raise Stop(f"{name} line {i}: its {c} is not a whole number")
+            for c in FIGURE_CELLS.get(name, ()):
+                if r[c] != "" and not FIGURE.fullmatch(r[c]):
+                    raise Stop(f"{name} line {i}: its {c} is not a number")
+
+
+def gate_names(tables):
+    """Each name cell on its list, before any row is looked up by it."""
+    for name, lists in NAMES.items():
+        for i, r in tables[name].rows:
+            for c, names in lists.items():
+                if r[c] not in names:
+                    raise Stop(f"{name} line {i}: its {c} is not on its list")
+
+
+def rows_given(name):
+    """The rows of m-count.tsv, m-conditions.tsv or m-size.tsv that the lists give, by ROW_KEYS' cells, in
+    m_reading.py's order."""
+    if name == "m-count.tsv":
+        return [(c, g, s, f"{arm}-{DEFAULT}", learner, m) for g in READINGS for c in COUNTS for s in SPLITS
+                for arm in arms_of(s) for learner in LEARNERS for m in COUNT_MEASURES[c]]
+    if name == "m-conditions.tsv":
+        return [(c, g, arm, reading, n) for g in READINGS for c in COUNTS for arm in INNER
+                for reading, ns in CONDITIONS.items() for n in ns]
+    return [(g, arm, learner) for g in READINGS for arm in FAMILY for learner in LEARNERS]
+
+
+def gate_rows(tables):
+    """m-count.tsv, m-conditions.tsv and m-size.tsv: each row the lists give once, and no other."""
+    for name, keys in ROW_KEYS.items():
+        given, seen = set(rows_given(name)), set()
+        for i, r in tables[name].rows:
+            key = tuple(r[c] for c in keys)
+            if key in seen:
+                raise Stop(f"{name} line {i}: its row stands a second time")
+            if key not in given:
+                raise Stop(f"{name} line {i}: its row is none the lists give")
+            seen.add(key)
+        for key in rows_given(name):
+            if key not in seen:
+                raise Stop(f"{name} lacks its row for {' '.join(key)}")
+
+
+def gate_count_rows(count):
+    """m-count.tsv: better, worse and same sum to entered; each p value lies in 0 to 1; an interval has both ends or
+    neither, its low end at or below its high end."""
+    for i, r in count.rows:
+        if int(r["better"]) + int(r["worse"]) + int(r["same"]) != int(r["entered"]):
+            raise Stop(f"m-count.tsv line {i}: its better, worse and same do not sum to entered")
+        for c in ("sign_p", "holm_p"):
+            if r[c] != "" and not 0 <= float(r[c]) <= 1:
+                raise Stop(f"m-count.tsv line {i}: its {c} is outside 0 to 1")
+        if (r["interval_lo"] == "") != (r["interval_hi"] == ""):
+            raise Stop(f"m-count.tsv line {i}: its interval has one end alone")
+        if r["interval_lo"] != "" and float(r["interval_lo"]) > float(r["interval_hi"]):
+            raise Stop(f"m-count.tsv line {i}: its interval's low end is above its high end")
 
 
 def floor_state(r):
@@ -363,29 +486,31 @@ def gate_counts(floor, count, size):
                        "datasets of M than m-floor.tsv gives the state in")
 
 
+def gate_size(count, size):
+    """m-size.tsv: each row the count over all datasets' row on the lineage split and the primary measure, cell for
+    cell, as m_reading.py copies it."""
+    at = {(r[READ], r["pair"], r["learner"]): r for _, r in count.rows
+          if (r["count"], r["split"], r["measure"]) == ("all datasets", "lineage", PRIMARY)}
+    for i, r in size.rows:
+        c = at[(r[READ], f"{r['arm']}-{DEFAULT}", r["learner"])]
+        if any(r[k] != c[k] for k in ("datasets", "entered", "better", "worse", "same")):
+            raise Stop(f"m-size.tsv line {i}: its row is not its row of m-count.tsv")
+
+
 def gate_first_run(tables):
     """m_reading.py counts the first run from one record in both readings, so each first-run row of m-count.tsv and
-    m-conditions.tsv in the second reading equals its row in the first, cell for cell but the reading's own."""
+    m-conditions.tsv in the second reading equals its row in the first, cell for cell but the reading's own. The
+    name and row gates run first, so each such row stands once in each reading."""
     for name, keys in (("m-count.tsv", ("split", "pair", "learner", "measure")),
                        ("m-conditions.tsv", ("arm", "reading", "condition"))):
         t = tables[name]
-        at = {g: {} for g in READINGS}
+        first = {tuple(r[c] for c in keys): r for _, r in t.rows if (r["count"], r[READ]) == ("first run", "first")}
         for i, r in t.rows:
-            if r["count"] != "first run":
+            if (r["count"], r[READ]) != ("first run", "second"):
                 continue
-            if r[READ] not in READINGS:
-                raise Stop(f"{name} line {i}: its reading is neither first nor second")
             key = tuple(r[c] for c in keys)
-            if key in at[r[READ]]:
-                raise Stop(f"{name} line {i}: the first run's row for {' '.join(key)} a second time")
-            at[r[READ]][key] = (i, r)
-        for g, other in (("second", "first"), ("first", "second")):
-            for key, (i, r) in at[g].items():
-                if key not in at[other]:
-                    raise Stop(f"{name} line {i}: the first run's row for {' '.join(key)} has no {other}-reading row")
-                if any(r[c] != at[other][key][1][c] for c in t.header if c != READ):
-                    raise Stop(f"{name} line {i}: the first run's row for {' '.join(key)} is not the same in both "
-                               "readings")
+            if any(r[c] != first[key][c] for c in t.header if c != READ):
+                raise Stop(f"{name} line {i}: the first run's row for {' '.join(key)} is not the same in both readings")
 
 
 def gate_both(conditions, both):
@@ -414,6 +539,31 @@ def gate_both(conditions, both):
             raise Stop(f"m-conditions.tsv line {i}: m-both.tsv lacks its row for {' '.join(key)}")
 
 
+def marks(r):
+    """(condition 1, condition 2) of one count row on the lineage split and the primary measure, each 1 or 0, from the
+    record's full figures by score.py's rule: 1 when the interval's low end is above 0, so the interval lies wholly
+    above 0; 2 when the Holm p is under HOLM_ALPHA and better beats worse."""
+    one = int(r["interval_lo"] != "" and float(r["interval_lo"]) > 0)
+    two = int(r["holm_p"] != "" and float(r["holm_p"]) < HOLM_ALPHA and int(r["better"]) > int(r["worse"]))
+    return one, two
+
+
+def gate_marks(count, conditions):
+    """Where m-conditions.tsv counts the learners that meet condition 1, condition 2 or both, or gives the larger of
+    the twin's two counts, that count is the count of the marks, for each count, reading and arm."""
+    at = {(r["count"], r[READ], r["pair"], r["learner"]): marks(r) for _, r in count.rows
+          if (r["split"], r["measure"]) == ("lineage", PRIMARY)}
+    for i, r in conditions.rows:
+        arm, twin = ([at[(r["count"], r[READ], f"{a}-{DEFAULT}", learner)] for learner in LEARNERS]
+                     for a in (r["arm"], TWIN))
+        want = {("stricter", "1"): sum(one for one, _ in arm), ("stricter", "2"): sum(two for _, two in arm),
+                (DECIDING, "1 and 2"): sum(one * two for one, two in arm),
+                (DECIDING, "3"): max(sum(one for one, _ in twin), sum(two for _, two in twin))
+                }.get((r["reading"], r["condition"]))
+        if want is not None and r["learners"] != str(want):
+            raise Stop(f"m-conditions.tsv line {i}: its learners is not the count of the marks m-count.tsv gives")
+
+
 def gate_tables(tables, m_set):
     """Every gate on the tables alone: the floor's two, and the count's five when they are there."""
     gate_columns(tables)
@@ -422,15 +572,20 @@ def gate_tables(tables, m_set):
     gate_floor(tables["m-floor.tsv"], m_set)
     gate_left_out(tables["m-floor.tsv"], tables["m-left-out.tsv"])
     if "m-count.tsv" in tables:
+        gate_names(tables)
+        gate_rows(tables)
+        gate_count_rows(tables["m-count.tsv"])
         gate_datasets(tables["m-floor.tsv"], tables["m-datasets.tsv"])
         gate_counts(tables["m-floor.tsv"], tables["m-count.tsv"], tables["m-size.tsv"])
+        gate_size(tables["m-count.tsv"], tables["m-size.tsv"])
         gate_first_run(tables)
         gate_both(tables["m-conditions.tsv"], tables["m-both.tsv"])
+        gate_marks(tables["m-count.tsv"], tables["m-conditions.tsv"])
 
 
 def state(record):
     """The record's state by the tables it holds: none, floor (the floor's two alone) or count."""
-    have = {p.name for p in Path(record).iterdir()}
+    have = {p.name for p in directory(record, "the record").iterdir()}
     if not have & set(TABLES):
         return "none"
     return "count" if have & set(COUNT_FILES) else "floor"
@@ -443,7 +598,7 @@ def sums_text(record):
 
 def gate_files(record):
     """The record holds its list's files for its state, nothing else, each as its SHA256SUMS line gives it."""
-    record = Path(record)
+    record = directory(record, "the record")
     for p in sorted(record.iterdir()):
         if p.name not in LISTED or not p.is_file():
             raise Stop(f"{p.name} is not on the record's list")
@@ -452,7 +607,11 @@ def gate_files(record):
         if not (record / name).is_file():
             raise Stop(f"{name} is missing from the record")
     listed = {}
-    for i, line in enumerate((record / SUMS).read_text(encoding="utf-8").splitlines(), 1):
+    try:
+        sums = (record / SUMS).read_text(encoding="utf-8").splitlines()
+    except UnicodeDecodeError:
+        raise Stop("SHA256SUMS: not UTF-8 text") from None
+    for i, line in enumerate(sums, 1):
         digest, _, name = line.partition("  ")
         if name in listed or name not in want or name in (SUMS, README):
             raise Stop(f"SHA256SUMS line {i}: {name} is no file of the record to sum")
@@ -479,7 +638,7 @@ def gate(record, m_set):
 
 def floor(tables_dir, record, m_set):
     """Copy the floor's two tables into a record that holds README.md and first-run-times.tsv alone."""
-    record = Path(record)
+    record = directory(record, "the record")
     for p in sorted(record.iterdir()):
         if p.name not in (README, TIMES):
             raise Stop(f"the record holds {p.name}: the floor's tables are copied once, into a record that holds "
@@ -498,7 +657,7 @@ def floor(tables_dir, record, m_set):
 
 def record_count(tables_dir, record, m_set):
     """After the count: the other 5 tables into a record that holds the floor's two, all 7 gated first."""
-    tables_dir, record = Path(tables_dir), Path(record)
+    tables_dir, record = directory(tables_dir, "the tables directory"), Path(record)
     have = sorted(p.name for p in tables_dir.iterdir())
     for name in have:
         if name not in TABLES:
@@ -561,13 +720,14 @@ def table(header, rows):
     return lines
 
 
-# ---------- the page's tables ----------
+# ---------- the tables ----------
 
 LEFT_OUT_HEADER = ["Species", "Antibiotic", "Second reading", "Cohort", "Listed", "Left after the list", "Floor"]
 SPECIES_HEADER = ["Species", "Datasets of M", "In the second reading", "Left out, under the floor",
                   "Left out, short list"]
 COUNT_HEADER = ["Count", "Reading", "Arm", "Learner", "Better", "Worse", "Same", "Median", "Interval", "Sign p",
                 "Holm p", "Constant"]
+MARKED_HEADER = COUNT_HEADER[1:] + ["Condition 1", "Condition 2"]
 BESIDE_HEADER = ["Count", "Reading", "Split", "Arm", "Learner", "Measure", "Better is", "Entered", "Better", "Worse",
                  "Same", "Median", "Interval"]
 OTHER_HEADER = ["Reading", "Arm", "Learner", "Better", "Worse", "Same", "Median", "Interval"]
@@ -579,6 +739,12 @@ DATASETS_HEADER = ["Species", "Antibiotic", "Arm", "Learner", "First reading: ar
                    "Second reading: difference"]
 
 
+def headers():
+    """The header of every table of this run, as cells: print's 8 tables, then those only the count page holds."""
+    return [LEFT_OUT_HEADER, SPECIES_HEADER, COUNT_HEADER, BESIDE_HEADER, CONDITIONS_HEADER, BOTH_HEADER, SIZE_HEADER,
+            DATASETS_HEADER, MARKED_HEADER, COUNT_HEADER[1:], OTHER_HEADER]
+
+
 def classes(r, s):
     return f"{count_words(r)} R, {count_words(s)} S"
 
@@ -588,7 +754,7 @@ def pair_words(pair):
 
 
 def left_out_order(left):
-    """The left-out table's rows in its order, by species, then antibiotic, then dataset; onpage names a row by it."""
+    """The left-out table's rows in its order, by species, then antibiotic, then dataset."""
     return sorted((r for _, r in left.rows), key=lambda r: (r["species"], r["antibiotic"], r["dataset"]))
 
 
@@ -620,7 +786,7 @@ def print_species(floor):
 
 
 def reads_line(floor):
-    """The line above each table that holds the second reading: how many of the datasets of M each reading reads."""
+    """The line on the datasets of M each reading reads."""
     n = len(floor.rows)
     k = {s: sum(1 for _, r in floor.rows if r["second_reading"] == s) for s in STATES}
     return (f"Datasets of M read: {of(n, n)} in the first reading, {of(k[IN], n)} in the second "
@@ -628,21 +794,31 @@ def reads_line(floor):
             "list).")
 
 
+def count_row(r):
+    """One count row on the primary measure in print's form."""
+    return [COUNT_WORDS[r["count"]], r[READ], pair_words(r["pair"]), f"`{r['learner']}`",
+            of(r["better"], r["entered"]), of(r["worse"], r["entered"]), of(r["same"], r["entered"]),
+            d3(r["median_difference"]), interval(r["interval_lo"], r["interval_hi"]), pval(r["sign_p"]),
+            pval(r["holm_p"]), r["constant"]]
+
+
 def print_count(count, only=None):
     """The count rows on the primary measure, lineage split, for each of the three counts in each reading; with
     `only`, that count's rows alone, less the column that names the count."""
-    rows = [[COUNT_WORDS[r["count"]], r[READ], pair_words(r["pair"]), f"`{r['learner']}`",
-             of(r["better"], r["entered"]), of(r["worse"], r["entered"]), of(r["same"], r["entered"]),
-             d3(r["median_difference"]), interval(r["interval_lo"], r["interval_hi"]), pval(r["sign_p"]),
-             pval(r["holm_p"]), r["constant"]]
-            for _, r in count.rows if r["split"] == "lineage" and r["measure"] == PRIMARY]
+    rows = [count_row(r) for _, r in count.rows if r["split"] == "lineage" and r["measure"] == PRIMARY]
     if only is None:
         return table(COUNT_HEADER, rows)
     return table(COUNT_HEADER[1:], [row[1:] for row in rows if row[0] == COUNT_WORDS[only]])
 
 
+def print_marked(count, only):
+    """print_count's rows of one count, each with its marks of conditions 1 and 2 after it."""
+    return table(MARKED_HEADER, [count_row(r)[1:] + [str(m) for m in marks(r)] for _, r in count.rows
+                                 if (r["count"], r["split"], r["measure"]) == (only, "lineage", PRIMARY)])
+
+
 def print_other(count, only, split, measure):
-    """One count's rows on one split and measure in the result page's own form: better, worse and the same of those
+    """One count's rows on one split and measure in the count page's own form: better, worse and the same of those
     entered, the median and its interval, with no p value."""
     rows = [[r[READ], pair_words(r["pair"]), f"`{r['learner']}`", of(r["better"], r["entered"]),
              of(r["worse"], r["entered"]), of(r["same"], r["entered"]), d3(r["median_difference"]),
@@ -708,7 +884,7 @@ NOT_TAKEN = "The count has not been taken: the record holds the floor's two tabl
 
 
 def tables(record, m_set):
-    """{name: lines} of the page's tables, from the record alone, after every gate."""
+    """{name: lines} of the record's tables, from the record alone, after every gate."""
     t = gate(record, m_set)
     floor_t = t["m-floor.tsv"]
     out = {"left-out": print_left_out(floor_t, t["m-left-out.tsv"]), "species": print_species(floor_t)}
@@ -725,21 +901,27 @@ def tables(record, m_set):
     return out
 
 
-# The result page's own blocks, in the page's order: the line on the datasets read, once; the answer; the datasets read
-# by species; the count that decides, on the lineage split and balanced accuracy, then on recall and on the study
-# split, which the Pick rule's conditions 4 and 5 and its third ground read; the count on M alone; and the record's
-# other files. Every other table stays in the record, where print gives it.
-ON_PAGE = ("reads", "both", "species", "count-all", "recall-all", "study-all", "count-m", "files")
-PAGE_BEFORE = "the count has not been taken, and the result page takes its tables after it"
-LEFT_AT = "The design page, `docs/input-arms.md`, names each dataset left out."
+# ---------- the two written pages ----------
+
+LEFT_TITLE = "# Left-out datasets of M"
+COUNT_TITLE = "# Count tables of M"
+WRITTEN = ("The script `scripts/c3-inputs/m_page.py {command}` writes this page whole from the record, "
+           "`reference/input-arms-m/`, and no one edits it by hand.")
+PAGE_BEFORE = "the count has not been taken, and the count page takes its tables after it"
+LEFT_AT = f"The left-out page, `{LEFT_PAGE}`, names each dataset left out."
 BOTH_LINE = "**Both readings.** Per arm, conditions 1 to 5 of ruling 15 on the count over all datasets."
 SPECIES_LINE = ("**Datasets read.** The datasets of M by species: in the second reading, left out under the floor, or "
                 "left out for a short list.")
-ALL_LINE = "**All datasets.** The first run's datasets and M's, on the lineage split and balanced accuracy."
+ALL_LINE = ("**All datasets.** The first run's datasets and M's, on the lineage split and balanced accuracy. "
+            "Condition 1 is 1 where the interval lies wholly above 0. Condition 2 is 1 where better beats worse and "
+            "the Holm p, the sign test's p after Holm's correction, is under 0.05. Each mark comes from the record's "
+            "full figures, not the 3 decimals shown.")
 RECALL_LINE = "**All datasets, recall.** The first run's datasets and M's, on the lineage split and recall."
 STUDY_LINE = ("**All datasets, study split.** The first run's datasets and M's, on the study split and balanced "
               "accuracy.")
 M_LINE = "**M alone.** The datasets of M, on the lineage split and balanced accuracy. This count decides nothing."
+M_RECALL_LINE = "**M alone, recall.** The datasets of M, on the lineage split and recall."
+M_STUDY_LINE = "**M alone, study split.** The datasets of M, on the study split and balanced accuracy."
 FILES_LINE = ("**Files.** The {tables} tables above, {rows} rows for the {species} species of M, come from the record, "
               "`reference/input-arms-m/`, which holds every other table: each count on every measure and split "
               "(`m-count.tsv`), each count's conditions (`m-conditions.tsv`), "
@@ -747,171 +929,110 @@ FILES_LINE = ("**Files.** The {tables} tables above, {rows} rows for the {specie
               "each dataset's figures (`m-datasets.tsv`). `scripts/c3-inputs/m_page.py print` prints them.")
 
 
-def page(record, m_set):
-    """{name: lines} of the result page's blocks, in ON_PAGE's order, from the record alone, after every gate. The
-    reads line stands once, above the first table; each table has its run-in line. It stops before the count."""
+def text(lines):
+    """A page's bytes: its lines, each ended by one newline, in UTF-8."""
+    return ("\n".join(lines) + "\n").encode("utf-8")
+
+
+def left_page(record, m_set):
+    """The bytes of docs/input-arms-m-left-out.md, from the record's two floor tables, after every gate."""
+    t = gate(record, m_set)
+    floor_t = t["m-floor.tsv"]
+    return text([LEFT_TITLE, "", WRITTEN.format(command="left"), "", reads_line(floor_t), ""]
+                + print_left_out(floor_t, t["m-left-out.tsv"]))
+
+
+def blocks(t):
+    """{name: lines} of the count page's 8 tables, in the page's order, each under its run-in line and a blank line.
+
+    The order: the conditions met in both readings; the datasets read by species; the count that decides, over all
+    datasets, on the lineage split and balanced accuracy with its marks of conditions 1 and 2, then on recall and on
+    the study split, which the Pick rule's conditions 4 and 5 and its third ground read; and the count on M alone on
+    the same three. Every other table stays in the record, where print gives it."""
+    floor_t, count_t = t["m-floor.tsv"], t["m-count.tsv"]
+    return {"both": [BOTH_LINE, ""] + print_both(t["m-both.tsv"]),
+            "species": [SPECIES_LINE, ""] + print_species(floor_t),
+            "count-all": [ALL_LINE, ""] + print_marked(count_t, "all datasets"),
+            "recall-all": [RECALL_LINE, ""] + print_other(count_t, "all datasets", "lineage", "recall"),
+            "study-all": [STUDY_LINE, ""] + print_other(count_t, "all datasets", "study", PRIMARY),
+            "count-m": [M_LINE, ""] + print_count(count_t, "M"),
+            "recall-m": [M_RECALL_LINE, ""] + print_other(count_t, "M", "lineage", "recall"),
+            "study-m": [M_STUDY_LINE, ""] + print_other(count_t, "M", "study", PRIMARY)}
+
+
+def count_page(record, m_set):
+    """The bytes of docs/input-arms-m-count.md, from the record alone, after every gate: the reads line once, then
+    the 8 tables, then the Files line. It stops before the count."""
     t = gate(record, m_set)
     if "m-count.tsv" not in t:
         raise Stop(PAGE_BEFORE)
-    floor_t, count_t = t["m-floor.tsv"], t["m-count.tsv"]
-    shown_ = {"both": [BOTH_LINE, ""] + print_both(t["m-both.tsv"]),
-              "species": [SPECIES_LINE, ""] + print_species(floor_t),
-              "count-all": [ALL_LINE, ""] + print_count(count_t, "all datasets"),
-              "recall-all": [RECALL_LINE, ""] + print_other(count_t, "all datasets", "lineage", "recall"),
-              "study-all": [STUDY_LINE, ""] + print_other(count_t, "all datasets", "study", PRIMARY),
-              "count-m": [M_LINE, ""] + print_count(count_t, "M")}
+    floor_t = t["m-floor.tsv"]
+    by_name = blocks(t)
     # Each table's lines are its run-in line, a blank line, its header and rule rows, then its rows.
-    rows = sum(len(lines) - 4 for lines in shown_.values())
+    rows = sum(len(lines) - 4 for lines in by_name.values())
     species = len({r["species"] for _, r in floor_t.rows})
-    return {"reads": [f"{reads_line(floor_t)} {LEFT_AT}"], **shown_,
-            "files": [FILES_LINE.format(tables=len(shown_), rows=count_words(rows), species=count_words(species))]}
+    lines = [COUNT_TITLE, "", WRITTEN.format(command="page"), "", f"{reads_line(floor_t)} {LEFT_AT}"]
+    for block in by_name.values():
+        lines += [""] + block
+    lines += ["", FILES_LINE.format(tables=len(by_name), rows=count_words(rows), species=count_words(species))]
+    return text(lines)
 
 
-def record_headers():
-    """The header lines of the five tables that stay in the record: none stands on a page in any state."""
-    return [table(h, [])[0] for h in (COUNT_HEADER, BESIDE_HEADER, CONDITIONS_HEADER, SIZE_HEADER, DATASETS_HEADER)]
+# ---------- the byte check ----------
+
+def lines_of(data):
+    """The lines of these bytes, each with its newline, split at the newline byte alone."""
+    parts = data.split(b"\n")
+    last = parts.pop()
+    return [part + b"\n" for part in parts] + ([last] if last else [])
 
 
-def count_headers():
-    """The header lines of the tables print and page give only after the count: none stands on a page before it."""
-    return [table(h, [])[0] for h in (COUNT_HEADER, BESIDE_HEADER, CONDITIONS_HEADER, BOTH_HEADER, SIZE_HEADER,
-                                      DATASETS_HEADER, COUNT_HEADER[1:], OTHER_HEADER)]
+def first_difference(want, have):
+    """None when <have> is the bytes <want>; else (line, how): the first line that differs, or the line where <have>
+    ends early or runs on."""
+    if have == want:
+        return None
+    w, h = lines_of(want), lines_of(have)
+    for n, (a, b) in enumerate(zip(w, h), 1):
+        if a != b:
+            return n, "differs"
+    if len(h) < len(w):
+        return len(h) + 1, "ends early"
+    return len(w) + 1, "runs on"
 
 
-# ---------- a block of a page ----------
-
-FENCE_OPEN = re.compile(r" {0,3}(`{3,}|~{3,})(.*)")
-FENCE_CLOSE = re.compile(r" {0,3}(`+|~+)[ \t]*")
-DETAILS_OPEN = re.compile(r"<details(?=[\s/>]|$)", re.IGNORECASE)
-DETAILS_CLOSE = re.compile(r"</details\s*>", re.IGNORECASE)
-
-
-def _code_span_end(line, i):
-    """The index just past the code span whose opening backticks start at i, or past those backticks alone when no
-    run of the same length closes them on the line."""
-    n = len(line[i:]) - len(line[i:].lstrip("`"))
-    j = i + n
-    while True:
-        j = line.find("`" * n, j)
-        if j < 0:
-            return i + n
-        end = len(line[j:]) - len(line[j:].lstrip("`")) + j
-        if end - j == n:
-            return end
-        j = end
+def difference_words(n, how, command):
+    """The words on a page's first difference from the bytes `m_page.py <command>` gives, with no text of the page."""
+    gives = f"the bytes `m_page.py {command}` gives"
+    return {"differs": f"line {n} differs from {gives}", "ends early": f"ends before line {n} of {gives}",
+            "runs on": f"runs on at line {n}, past the end of {gives}"}[how]
 
 
-def _html(line, comment, depth):
-    """(in a comment, <details> depth, whether the line holds a mark of either) after one line read left to right;
-    a mark inside a code span is text."""
-    i, marked = 0, False
-    while i < len(line):
-        if comment:
-            j = line.find("-->", i)
-            if j < 0:
-                return True, depth, True
-            comment, i, marked = False, j + 3, True
-            continue
-        if line[i] == "`":
-            i = _code_span_end(line, i)
-            continue
-        if line.startswith("<!--", i):
-            comment, i, marked = True, i + 4, True
-            continue
-        m = DETAILS_OPEN.match(line, i) or DETAILS_CLOSE.match(line, i)
-        if m:
-            depth = depth + 1 if m.re is DETAILS_OPEN else max(depth - 1, 0)
-            i, marked = m.end(), True
-            continue
-        i += 1
-    return comment, depth, marked
-
-
-def shown(page):
-    """For each line of a page, whether it stands as the page's own text: False inside a fenced code block, an HTML
-    comment or a <details> block, and on a line that opens or closes one."""
-    out = []
-    fence, comment, depth = None, False, 0
-    for line in page:
-        if fence:
-            m = FENCE_CLOSE.fullmatch(line)
-            if m and m.group(1)[0] == fence[0] and len(m.group(1)) >= len(fence):
-                fence = None
-            out.append(False)
-            continue
-        if not comment:
-            m = FENCE_OPEN.fullmatch(line)
-            if m and not (m.group(1)[0] == "`" and "`" in m.group(2)):
-                fence = m.group(1)
-                out.append(False)
-                continue
-        inside = comment or depth > 0
-        comment, depth, marked = _html(line, comment, depth)
-        out.append(not (inside or marked or comment or depth))
-    return out
-
-
-def find_block(text, lines):
-    """Where `lines` stand in `text` as page text: (k, at, why). k is how many of `lines`, from the first, stand one
-    after another at the best start, at that start's index; why is "" when all of them stand there as a block of
-    their own, with a blank line or the file's edge before and after, else "before" or "after", the side that lacks
-    it. A line inside a fenced code block, an HTML comment or a <details> block is not page text."""
-    page = text.split("\n")
-    show = shown(page)
-    best = (0, -1, "")
-    for start in range(len(page)):
-        k = 0
-        while k < len(lines) and start + k < len(page) and show[start + k] and page[start + k] == lines[k]:
-            k += 1
-        if k < len(lines):
-            if k > best[0]:
-                best = (k, start, "")
-            continue
-        if start > 0 and page[start - 1].strip():
-            why = "before"
-        elif start + k < len(page) and page[start + k].strip():
-            why = "after"
-        else:
-            return k, start, ""
-        if best[0] < k:
-            best = (k, start, why)
-    return best
-
-
-def page_text(page):
+def page_bytes(page):
     path = Path(page)
     if not path.exists():
         raise Stop(f"{page} does not exist")
     if not path.is_file():
         raise Stop(f"{page} is not a file")
-    try:
-        return path.read_text(encoding="utf-8")
-    except UnicodeDecodeError:
-        raise Stop(f"{page}: not UTF-8 text") from None
+    return path.read_bytes()
 
 
 def onpage(record, page, m_set):
-    """(True, line) when <page> holds the left-out table as print gives it, as a block of its own; else (False, a
-    line naming the first line missing, or the side that lacks its blank line, with no figure)."""
-    t = gate(record, m_set)
-    lines = print_left_out(t["m-floor.tsv"], t["m-left-out.tsv"])
-    k, _, why = find_block(page_text(page), lines)
-    if k == len(lines) and not why:
-        return True, f"onpage: {page} holds the left-out table as print gives it"
-    none_left = not t["m-left-out.tsv"].rows
-    if k == len(lines):
-        edge = "one line" if none_left else ("header row" if why == "before" else "last row")
-        return False, f"onpage: {page} lacks a blank line or the file's edge {why} the left-out table's {edge}"
-    if none_left:
-        what = "one line, that no dataset of M is left out"
-    elif k == 0:
-        what = "header row"
-    elif k == 1:
-        what = "rule row under its header"
-    else:
-        r = left_out_order(t["m-left-out.tsv"])[k - 2]
-        what = f"row of {r['species']} with {r['antibiotic']}"
-    return False, f"onpage: {page} lacks the left-out table's {what}"
+    """(True, line) when the bytes of <page> are the bytes left gives; else (False, a line naming the first line that
+    differs, or where the page ends early or runs on, with no figure and no text of the page)."""
+    want = left_page(record, m_set)
+    have = page_bytes(page)
+    diff = first_difference(want, have)
+    if diff is None:
+        return True, f"onpage: {page} is the bytes `m_page.py left` gives"
+    return False, f"onpage: {page} {difference_words(*diff, 'left')}"
+
+
+def emit(data):
+    """Write these bytes to standard output as they are."""
+    sys.stdout.flush()
+    sys.stdout.buffer.write(data)
+    sys.stdout.buffer.flush()
 
 
 def main(argv, lists=HERE / "lists.tsv"):
@@ -928,8 +1049,11 @@ def main(argv, lists=HERE / "lists.tsv"):
                 print("\n".join(lines))
                 print()
             return 0
+        if len(argv) == 2 and argv[0] == "left":
+            emit(left_page(argv[1], m_datasets(lists)))
+            return 0
         if len(argv) == 2 and argv[0] == "page":
-            print("\n\n".join("\n".join(lines) for lines in page(argv[1], m_datasets(lists)).values()))
+            emit(count_page(argv[1], m_datasets(lists)))
             return 0
         if len(argv) == 3 and argv[0] == "onpage":
             ok, line = onpage(argv[1], argv[2], m_datasets(lists))
@@ -938,7 +1062,10 @@ def main(argv, lists=HERE / "lists.tsv"):
     except Stop as e:
         print(f"m_page: stopped: {e}")
         return 1
-    print("\n".join(__doc__.strip().splitlines()[2:7]), file=sys.stderr)
+    except Exception as e:  # noqa: BLE001 - a fault no gate names stops with its kind alone, and no traceback.
+        print(f"m_page: stopped: m_page.py met a {type(e).__name__} that no gate names")
+        return 1
+    print("\n".join(__doc__.strip().splitlines()[3:9]), file=sys.stderr)
     return 2
 
 
