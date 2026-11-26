@@ -41,7 +41,16 @@ logistic arm when, in any fold, its logistic fit gives any of the five learners 
 stored value with < 0.0 and no tolerance. The logistic arm's third count leaves out a report with either condition,
 the weighted arm's a report with R30's only. The read prints how many reports each condition flags and how many have
 both, gate 5 names each report with a fold whose first Newton step has no finite solution, and the read and write
-each print the sha256 of the reading: write does not fit again, so it trusts the read's flags and marks.
+each print the sha256 of the reading.
+
+R43 (26 Nov 2026) reads the logistic arm as descriptive only. Its counts, medians and intervals are written as
+before, and its outcome and reading say "descriptive only" in each of its three counts, whatever its figures.
+CAN_BE_KEPT, one line, names the one arm the rule can keep, the weighted mean; no option and no environment setting
+changes it. Write stops on a reading made under other arms, and write and print stop on a rule row that gives the
+logistic arm any other outcome or reading. R37's flag, its column, the logistic third count and the flags line stay
+as counts, and decide nothing. Write does not fit again: it works each report's sign flag (R37's condition) and its
+logistic mark out again from the logistic fold records it parses, and stops on a difference with a line naming the
+report by species and antibiotic. It trusts the read's R30 flag and weighted mark.
 
 `read` runs the learner overlap's checks through learner_overlap.read_reports, which drops every key named `id`
 as a file is parsed, then gates 1 to 6, and writes reading.json: per report, counts only. `write` runs gates 7 and
@@ -72,6 +81,8 @@ FIVE = lo.FIVE
 VOTE_SUM = 2.5                  # the incumbent's call: math.fsum of the five scores, as overlap_second.py makes it
 FORMS = ("mean", "weighted", "logistic")
 ARMS = ("weighted", "logistic")
+CAN_BE_KEPT = ("weighted",)     # R43: the one arm the rule can keep; no option and no environment setting changes it
+DESCRIPTIVE = "descriptive only"   # R43: the outcome and the reading of an arm the rule cannot keep, in each count
 CLIP = 1e-4                     # log loss clips a score to [CLIP, 1 - CLIP] (src/cutoff.rs LOSS_CLIP)
 MARGIN = common.MARGIN          # 0.02
 W_CAP = 5000                    # the weighted fit: at most W_CAP projected gradient steps
@@ -740,7 +751,7 @@ def read(directory, first_record, second_record, expect=lo.EXPECT_FILES, reports
         raise Stop("\n".join(first["checks"] + lines))
     return {"cutoff": CUTOFF, "forms": list(FORMS), "five": list(FIVE), "clip": CLIP, "margin": MARGIN,
             "counts_of_rule": list(COUNTS_OF_RULE), "flag_fold": FLAG_FOLD,
-            "flags": {a: list(FLAGS[a]) for a in ARMS},
+            "flags": {a: list(FLAGS[a]) for a in ARMS}, "can_be_kept": list(CAN_BE_KEPT),
             "first_checks": first["checks"], "checks": lines,
             "datasets": sorted(rows, key=lambda r: (r["species"], r["antibiotic"]))}
 
@@ -861,8 +872,20 @@ def arm_reading(outcomes):
     return "kept" if outcomes and all(o == "kept" for o in outcomes) else "no difference shown"
 
 
+def can_be_kept(arm):
+    """R43: the rule can keep the weighted mean alone, as CAN_BE_KEPT names it."""
+    return arm in CAN_BE_KEPT
+
+
+def descriptive(r):
+    """A rule row of an arm the rule cannot keep (R43): its reports, species, medians and intervals as the rule gives
+    them, its outcome and its reading DESCRIPTIVE, and no count of it decides."""
+    return dict(r, decides="no", outcome=DESCRIPTIVE, reading=DESCRIPTIVE)
+
+
 def rule_rows(rows):
-    """Per arm, a row for each count: its own outcome, and the arm's reading on the counts that decide."""
+    """Per arm, a row for each count: its own outcome, and the arm's reading on the counts that decide. An arm the
+    rule cannot keep reads DESCRIPTIVE in each count, whatever its figures (R43)."""
     out = []
     for arm in ARMS:
         found = [(count, decides, rule(kept, arm)) for count, kept, decides in rule_counts(rows, arm)]
@@ -870,9 +893,22 @@ def rule_rows(rows):
         for count, decides, r in found:
             r.update(count=count, decides="yes" if decides else "no", outcome=r["reading"],
                      reading=reading if decides else BESIDE)
+            r = r if can_be_kept(arm) else descriptive(r)
             out.append(dict(r, **{k: cell(r[k]) for k in ("median_gain", "gain_lo", "gain_hi", "vme_median",
                                                           "vme_lo", "vme_hi")}))
     return out
+
+
+def not_descriptive(rules):
+    """The arms the rule cannot keep whose rule rows give an outcome or a reading other than DESCRIPTIVE (R43)."""
+    return sorted({r["arm"] for r in rules
+                   if not can_be_kept(r["arm"]) and (r["outcome"], r["reading"]) != (DESCRIPTIVE, DESCRIPTIVE)})
+
+
+def descriptive_stop(arms, where):
+    """The stop line for rule rows that give an arm the rule cannot keep another outcome or reading: no figure."""
+    return "\n".join(f"stop rule: the {arm} arm has an outcome or a reading other than {DESCRIPTIVE} in {where}: STOP"
+                     for arm in arms)
 
 
 def transition_rows(rows):
@@ -935,15 +971,42 @@ def second_condition_written(reading):
                     for d in reading.get("datasets") or []))
 
 
+def kept_arms_written(reading):
+    """The reading was made under R43: it names the arms the rule can keep as this script does, the weighted mean
+    alone."""
+    return reading.get("can_be_kept") == list(CAN_BE_KEPT)
+
+
 def same_rules(reading):
     """The reading was made under this script's rules: its cutoff, forms, five learners and clip, the rule's three
-    counts and the flag's fold size, R30's flag on every report, and R37's flags. Write does not fit again, so it
-    trusts the read's flags and marks."""
+    counts and the flag's fold size, R30's flag on every report, R37's flags, and R43's arms that can be kept."""
     return ((reading.get("cutoff"), reading.get("forms"), reading.get("five"), reading.get("clip"),
              reading.get("counts_of_rule"), reading.get("flag_fold"))
             == (CUTOFF, list(FORMS), list(FIVE), CLIP, list(COUNTS_OF_RULE), FLAG_FOLD)
             and all(isinstance(d.get("one_score_fold"), bool) for d in reading.get("datasets") or [])
-            and second_condition_written(reading))
+            and second_condition_written(reading) and kept_arms_written(reading))
+
+
+def worked_out(d):
+    """What of a report's sign flag and logistic mark, as the reading gives them, differs from what write works out
+    again from the report's logistic fold records (R43): none, one or both, by name."""
+    recs = d.get("logistic_folds") or []
+    given = (("its sign flag", d.get("coefficient_under_0"), coefficient_under_0(recs)),
+             ("its logistic mark", d.get("logistic_marked"), marked(recs)))
+    return [what for what, as_read, found in given if as_read is not found]
+
+
+def flags_stop(d, what):
+    """The stop line for a report whose sign flag or logistic mark differs from its logistic fold records: it names
+    the report by species and antibiotic, and gives no figure."""
+    verb = "differ" if len(what) > 1 else "differs"
+    return (f"stop flags: {d.get('species')} with {d.get('antibiotic')}: {' and '.join(what)} {verb} from its "
+            "logistic fold records: STOP")
+
+
+def flags_differ(reading):
+    """A stop line for each report whose sign flag or logistic mark differs from its logistic fold records."""
+    return [flags_stop(d, what) for d in reading.get("datasets") or [] for what in [worked_out(d)] if what]
 
 
 def reading_sha256(raw):
@@ -959,10 +1022,16 @@ def write_record(reading_dir, reports_dir, out):
     digest = reading_sha256(raw)
     if not same_rules(reading):
         raise Stop("the reading was made under other rules")
+    differ = flags_differ(reading)
+    if differ:
+        raise Stop("\n".join(differ))
     rows = [dataset_row(r) for r in reading["datasets"]]
     bad = sum(1 for r in rows if not arithmetic_holds(r))
     species = len({r["species"] for r in rows})
     pooled, rules, trans = pooled_rows(rows), rule_rows(rows), transition_rows(rows)
+    others = not_descriptive(rules)
+    if others:
+        raise Stop(descriptive_stop(others, "the rule rows"))
     lists = long_lists(reading)
     line7 = (f"gate 7 rows: {len(rows)} rows in datasets.tsv for {len(reading['datasets'])} reports, {len(pooled)} in "
              f"pooled.tsv for {1 + species} scopes, {lists} lists in the reading longer than {MAX_LIST}, {bad} reports "
@@ -1014,6 +1083,9 @@ def dec(x, places):
 
 def tables(record):
     rules = lo.read_tsv(os.path.join(record, "rule.tsv"))
+    others = not_descriptive(rules)
+    if others:
+        raise Stop(descriptive_stop(others, "rule.tsv"))
     pooled = lo.read_tsv(os.path.join(record, "pooled.tsv"))
     trans = lo.read_tsv(os.path.join(record, "transitions.tsv"))
     c = lo.count
@@ -1065,14 +1137,14 @@ def plan():
             "coefficient_under_0": "a logistic fold fit gives one of the five learners a coefficient under 0.0, read "
             "with no tolerance; the intercept is not one of the five",
             "counts": {"all": "decides", "without_marked": BESIDE, "without_flagged": "decides"},
+            "can_be_kept": list(CAN_BE_KEPT), "descriptive_only": [a for a in ARMS if not can_be_kept(a)],
             "vme_rule": VME_RULE,
             "measures": list(MEASURES), "lower_better": list(LOWER_BETTER), "datasets_columns": DATASET_COLUMNS,
             "pooled_columns": POOLED_COLUMNS, "rule_columns": RULE_COLUMNS, "transition_columns": TRANSITION_COLUMNS}
 
 
-def main(argv=None, reports=None):
-    """The command line. `reports` is gate 1's count for a test's own SYNTHETIC set; no option sets it, so the
-    command line always holds the read to FROZEN_REPORTS."""
+def parser():
+    """The command line's options. None sets gate 1's count or the arms the rule can keep."""
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("plan")
@@ -1088,7 +1160,13 @@ def main(argv=None, reports=None):
     w.add_argument("--out", required=True)
     p = sub.add_parser("print")
     p.add_argument("record")
-    args = ap.parse_args(argv)
+    return ap
+
+
+def main(argv=None, reports=None):
+    """The command line. `reports` is gate 1's count for a test's own SYNTHETIC set; no option sets it, so the
+    command line always holds the read to FROZEN_REPORTS."""
+    args = parser().parse_args(argv)
     try:
         if args.cmd == "plan":
             print(json.dumps(plan(), indent=1))

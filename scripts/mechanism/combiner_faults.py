@@ -1,5 +1,6 @@
-"""combiner_faults.py: the faults of the combiner reading's script (combiner.py, C1 to C74), each planted in turn, and
-the SYNTHETIC test that must catch it. C39 to C60 are the rules of ruling R30, and C61 to C74 those of ruling R37.
+"""combiner_faults.py: the faults of the combiner reading's script (combiner.py, C1 to C91), each planted in turn, and
+the SYNTHETIC test that must catch it. C39 to C60 are the rules of ruling R30, C61 to C74 those of ruling R37, and
+C75 to C91 those of ruling R43, the last four the third review's N11, N12, N15 and N16.
 
     python3 -I scripts/mechanism/combiner_faults.py [--out faults.tsv]
 
@@ -232,6 +233,92 @@ def later_steps_named(gate):
     return gate["no_first_step"] > 0 or gate["ends"]["logistic"]["no_finite_step"] > 0
 
 
+def outcome_from_the_rule(r):
+    # fault C75: the logistic arm's outcome in each count taken from the rule, as before R43
+    return dict(r, decides="no", reading=cb.DESCRIPTIVE)
+
+
+def reading_from_the_counts(r):
+    # fault C76: the logistic arm's reading taken from its counts that decide, as before R43
+    return dict(r, decides="no", outcome=cb.DESCRIPTIVE)
+
+
+def figures_dropped(r):
+    # fault C77: the logistic arm's reports, species, medians and intervals not written
+    return dict(r, decides="no", outcome=cb.DESCRIPTIVE, reading=cb.DESCRIPTIVE, datasets=0, species=0,
+                median_gain=None, gain_lo=None, gain_hi=None, vme_median=None, vme_lo=None, vme_hi=None,
+                gain_at_least_margin=0)
+
+
+def kept_by_the_environment(arm):
+    # fault C79: the arms the rule can keep read from an environment setting, the weighted mean when it is not set
+    return arm in os.environ.get("COMBINER_CAN_BE_KEPT", "weighted").split(",")
+
+
+def parser_with_arms(_orig=cb.parser):
+    # fault C80: read and write take an option that names the arms the rule can keep
+    ap = _orig()
+    commands = next(a for a in ap._actions if isinstance(a, argparse._SubParsersAction)).choices
+    for name in ("read", "write"):
+        commands[name].add_argument("--can-be-kept", default=",".join(cb.CAN_BE_KEPT))
+    return ap
+
+
+def write_unchecked(*args, _orig=cb.write_record):
+    # fault C81: write blind to a rule row that gives the logistic arm another outcome or reading
+    with mock.patch.object(cb, "not_descriptive", lambda rules: []):
+        return _orig(*args)
+
+
+def tables_unchecked(record, _orig=cb.tables):
+    # fault C82: print blind to a rule.tsv that gives the logistic arm another outcome or reading
+    with mock.patch.object(cb, "not_descriptive", lambda rules: []):
+        return _orig(record)
+
+
+def mark_only(d, _orig=cb.worked_out):
+    # fault C84: write works the logistic mark out again, and not the sign flag
+    return [what for what in _orig(d) if what != "its sign flag"]
+
+
+def sign_only(d, _orig=cb.worked_out):
+    # fault C85: write works the sign flag out again, and not the logistic mark
+    return [what for what in _orig(d) if what != "its logistic mark"]
+
+
+def species_only(d, what):
+    # fault C86: the stop line names the report by species only
+    verb = "differ" if len(what) > 1 else "differs"
+    return f"stop flags: {d.get('species')}: {' and '.join(what)} {verb} from its logistic fold records: STOP"
+
+
+def first_report_only(reading, _orig=cb.flags_differ):
+    # fault C87: write names only the first report whose flags differ
+    return _orig(reading)[:1]
+
+
+def sign_count_twice(rows, _orig=cb.flag_counts):
+    # fault C88, the review's N11: the flags line gives the sign's count where R30's belongs
+    one_score, under, both = _orig(rows)
+    return under, under, both
+
+
+def text_flag_taken(reading):
+    # fault C90, the review's N15: write takes a report's sign flag given as text
+    return (reading.get("flags") == {a: list(cb.FLAGS[a]) for a in cb.ARMS}
+            and all(isinstance(d.get("coefficient_under_0"), (bool, str))
+                    and all(type(r.get("coefficients_under_0")) is int for r in d.get("logistic_folds") or [])
+                    for d in reading.get("datasets") or []))
+
+
+def bool_count_taken(reading):
+    # fault C91, the review's N16: write takes a fold fit's count given as true or false
+    return (reading.get("flags") == {a: list(cb.FLAGS[a]) for a in cb.ARMS}
+            and all(isinstance(d.get("coefficient_under_0"), bool)
+                    and all(isinstance(r.get("coefficients_under_0"), int) for r in d.get("logistic_folds") or [])
+                    for d in reading.get("datasets") or []))
+
+
 def plain_load(path):
     # fault C26: a report parsed with every genome id kept
     with open(path, encoding="utf-8") as f:
@@ -421,7 +508,7 @@ FAULTS = [
      T + "Flags.test_one_fold_fit_under_0_flags_the_logistic_arm_only",
      lambda: mock.patch.object(cb, "FLAGS", {a: ("one_score_fold", "coefficient_under_0") for a in cb.ARMS})),
     ("C68", "a count of 5 species given an interval",
-     T + "Flags.test_a_logistic_third_count_under_6_species_shows_no_difference",
+     T + "Flags.test_a_logistic_third_count_under_6_species_gets_no_interval",
      lambda: mock.patch.object(common, "MIN_SPECIES", 5)),
     ("C69", "the record counting the coefficients under 0, not the fold fits behind the flag",
      T + "Flags.test_the_record_counts_the_fold_fits_behind_the_flag",
@@ -441,6 +528,57 @@ FAULTS = [
     ("C74", "the reading's sha256 worked without its last line break",
      T + "Flags.test_read_and_write_print_the_readings_sha256",
      lambda: mock.patch.object(cb, "reading_sha256", lambda raw: hashlib.sha256(raw.rstrip(b"\n")).hexdigest())),
+    ("C75", "the logistic arm's outcome in each count taken from the rule",
+     T + "Descriptive.test_the_logistic_arm_reads_descriptive_only_whatever_its_figures",
+     lambda: mock.patch.object(cb, "descriptive", outcome_from_the_rule)),
+    ("C76", "the logistic arm's reading taken from its counts that decide",
+     T + "Descriptive.test_the_logistic_arm_reads_descriptive_only_whatever_its_figures",
+     lambda: mock.patch.object(cb, "descriptive", reading_from_the_counts)),
+    ("C77", "the logistic arm's reports, species, medians and intervals not written",
+     T + "Descriptive.test_the_logistic_arm_is_descriptive_only_in_each_count",
+     lambda: mock.patch.object(cb, "descriptive", figures_dropped)),
+    ("C78", "both arms named as arms the rule can keep",
+     T + "Descriptive.test_one_line_names_the_arms_that_can_be_kept",
+     lambda: mock.patch.object(cb, "CAN_BE_KEPT", cb.ARMS)),
+    ("C79", "the arms the rule can keep read from an environment setting",
+     T + "Descriptive.test_no_option_or_environment_setting_changes_the_arms_that_can_be_kept",
+     lambda: mock.patch.object(cb, "can_be_kept", kept_by_the_environment)),
+    ("C80", "an option of read and write naming the arms the rule can keep",
+     T + "Descriptive.test_no_option_or_environment_setting_changes_the_arms_that_can_be_kept",
+     lambda: mock.patch.object(cb, "parser", parser_with_arms)),
+    ("C81", "write blind to a rule row that gives the logistic arm another outcome or reading",
+     T + "Descriptive.test_write_stops_on_a_rule_row_that_gives_the_logistic_arm_another_outcome",
+     lambda: mock.patch.object(cb, "write_record", write_unchecked)),
+    ("C82", "print blind to a rule.tsv that gives the logistic arm another outcome or reading",
+     T + "Descriptive.test_print_stops_on_a_record_that_gives_the_logistic_arm_another_outcome",
+     lambda: mock.patch.object(cb, "tables", tables_unchecked)),
+    ("C83", "write blind to a reading made under other arms that can be kept",
+     T + "Descriptive.test_write_stops_on_a_reading_made_under_other_arms",
+     lambda: mock.patch.object(cb, "kept_arms_written", lambda reading: True)),
+    ("C84", "write not working the sign flag out again from the fold records",
+     T + "Flags.test_write_works_the_sign_flag_out_again",
+     lambda: mock.patch.object(cb, "worked_out", mark_only)),
+    ("C85", "write not working the logistic mark out again from the fold records",
+     T + "Flags.test_write_works_the_logistic_mark_out_again",
+     lambda: mock.patch.object(cb, "worked_out", sign_only)),
+    ("C86", "write's stop line naming the report by species only",
+     T + "Flags.test_write_names_each_report_whose_flags_differ",
+     lambda: mock.patch.object(cb, "flags_stop", species_only)),
+    ("C87", "write naming only the first report whose flags differ",
+     T + "Flags.test_write_names_each_report_whose_flags_differ",
+     lambda: mock.patch.object(cb, "flags_differ", first_report_only)),
+    ("C88", "the flags line giving the sign's count where R30's belongs",
+     T + "Flags.test_the_flags_line_gives_each_conditions_own_count",
+     lambda: mock.patch.object(cb, "flag_counts", sign_count_twice)),
+    ("C89", "gate 5 naming a report only with 2 or more folds whose first Newton step has no finite solution",
+     T + "Flags.test_gate_5_names_a_report_with_exactly_1_fold_with_no_finite_first_step",
+     lambda: mock.patch.object(cb, "first_step_named", lambda gate: gate["no_first_step"] > 1)),
+    ("C90", "write taking a report's sign flag given as text",
+     T + "Flags.test_write_stops_on_a_sign_flag_given_as_text",
+     lambda: mock.patch.object(cb, "second_condition_written", text_flag_taken)),
+    ("C91", "write taking a fold fit's count given as true or false",
+     T + "Flags.test_write_stops_on_a_fold_count_given_as_true_or_false",
+     lambda: mock.patch.object(cb, "second_condition_written", bool_count_taken)),
 ]
 
 

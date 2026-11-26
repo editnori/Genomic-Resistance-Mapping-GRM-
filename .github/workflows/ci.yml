@@ -290,7 +290,7 @@ jobs:
           # test_lists.py also reads the committed lists scripts/c2-cap/lists.tsv and species.tsv.
           - suite: tests/c2_cap
             top: .
-          # SYNTHETIC reports, AMRFinderPlus tables, a database, a BV-BRC genome table and TBProfiler result files built in the test; it runs the scripts under scripts/mechanism, plants the 175 faults of its seven runners (scripts/mechanism/*_faults.py) in them in turn and fits no learner; the combiner's script fits its two combiners on SYNTHETIC scores.
+          # SYNTHETIC reports, AMRFinderPlus tables, a database, a BV-BRC genome table and TBProfiler result files built in the test; it runs the scripts under scripts/mechanism, plants the 192 faults of its seven runners (scripts/mechanism/*_faults.py) in them in turn and fits no learner; the combiner's script fits its two combiners on SYNTHETIC scores.
           - suite: tests/mechanism
             top: .
           # SYNTHETIC results, inputs files, reports, tables and folders built in the test; it runs score.py, lists.py, expect.py, cmh_plain.py and unflagged.py under scripts/c4-screen and fits nothing.

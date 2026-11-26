@@ -114,7 +114,7 @@ class Page(unittest.TestCase):
                       "A fold with either case is not marked",
                       "that fold is not scored, and the read stops at gate 5",
                       "No fold is scored from coefficients left at 0",
-                      "an arm is kept only if the rule keeps it in both",
+                      "the weighted mean is kept only if the rule keeps it in both",
                       f"gives every genome of a fold of {cb.FLAG_FOLD} or more genomes one score",
                       "The record gives each count's own outcome and the arm's reading",
                       f"Gate 1 stops the read unless it reads exactly those {cb.FROZEN_REPORTS} reports",
@@ -135,30 +135,64 @@ class Page(unittest.TestCase):
         self.assertEqual(cb.plan()["flags"], {a: list(cb.FLAGS[a]) for a in cb.ARMS})
         self.assertIn("a coefficient under 0; a coefficient of exactly 0 does not flag", rows[1][2])
         for words in ("the count without the arm's flagged reports decide",
-                      f"A count of under {cm.MIN_SPECIES} species has no interval, so it keeps nothing, and the arm's "
-                      "reading is no difference shown, whatever the other count gives.",
+                      f"A count of under {cm.MIN_SPECIES} species has no interval, so it keeps nothing, and the "
+                      "weighted mean's reading is no difference shown, whatever the other count gives.",
                       "each read on the stored values with no tolerance",
-                      "A fit gains from it only by giving that learner a coefficient under 0",
                       "The weighted mean's weights are never under 0."):
             self.assertIn(words, plan)
-        # R37's cost and limit
-        for words in ("A coefficient under 0 also arises when two learners score nearly alike",
-                      "the arm can then read no difference shown for want of reports",
-                      "R37 accepts that cost.",
-                      "A learner whose score falls as its training share rises could carry the held-out share with a "
-                      "coefficient above 0, which the second condition does not flag. The five learners have not been "
-                      "checked for that."):
-            self.assertIn(words, limits)
+        self.assertIn("A coefficient under 0 also arises when two learners score nearly alike, with no fold's share in "
+                      "either.", limits)
 
-    def test_write_trusts_the_read(self):
+    def test_the_plan_states_r43s_rules(self):
+        # R43: the logistic arm is descriptive only, and why, with the review's figures from made-up reports; the
+        # weighted mean is the one arm the rule can keep; the learners' code; the share's sign; and the incumbent
+        plan, limits = self.sections["Plan"], self.sections["Limits"]
+        self.assertEqual((cb.CAN_BE_KEPT, cb.DESCRIPTIVE), (("weighted",), "descriptive only"))
+        self.assertEqual((cb.plan()["can_be_kept"], cb.plan()["descriptive_only"]), (["weighted"], ["logistic"]))
+        for words in ("reads the logistic arm as descriptive only. Its three counts, medians and intervals are written "
+                      "as before, and its outcome and reading say \"descriptive only\" in each count, whatever its "
+                      "figures.",
+                      "R37's condition, its column, the logistic arm's third count and the `flags:` line stay as "
+                      "counts, and decide nothing.",
+                      "correlated at 0.8, and again at 0.95, R37's condition flagged 200 of 200 honest made-up reports",
+                      "kept in 0 of 8 made-up readings whose true gain was near 0.05",
+                      "got the logistic arm kept through the fold's share alone, and R37's condition flagged 0 of its "
+                      "20 reports",
+                      "The weighted mean is the one arm the rule can keep, under R30's condition as before. It has no "
+                      "intercept and no weight under 0.",
+                      "its median gain in balanced accuracy was -0.0096 over 20 reports",
+                      "Four of the five, the decision tree, the forest, the boosted trees and the lasso, fit with class "
+                      "weights that give each class half the total weight. The rule learner gives a 0 or 1 call.",
+                      "A fold whose fit is empty scores every genome at its training share, and R30's condition flags "
+                      "that fold. This is a reading of the code and no measurement.",
+                      "With every coefficient at 0 or above, the share moves a fold's calls nearly always the wrong "
+                      "way: on the reviewer's made-up reports, 3 of 248 fold fits moved them the right way.",
+                      "The logistic arm is descriptive only."):
+            self.assertIn(words, plan)
+        self.assertIn("A learner that carries the share lowers the incumbent, the mean with equal weights, so the "
+                      "weighted mean can gain beside it.", limits)
+        # "either arm" stands only in the freeze's prediction, quoted as written, and no line gives the logistic arm
+        # a rule of its own
+        rest = [line for line in self.text.split("\n") if not line.startswith("> ")]
+        self.assertEqual([line for line in rest if "either arm" in line or "an arm is kept" in line.lower()], [])
+        self.assertNotIn("the wrong way or nowhere", self.text)
+
+    def test_write_works_the_flags_out_again(self):
         method = self.sections["Method"]
-        self.assertIn("Write does not fit again, so write trusts the read's flags and marks. The read prints the sha256 "
-                      "of the reading it wrote, and write prints the sha256 of the reading it read", method)
-        self.assertIn("a line, `flags:`, with how many reports each condition flags and how many have both, and no "
-                      "score", method)
+        for words in ("Write does not fit again. It works each report's sign flag, R37's condition, and its logistic "
+                      "mark out again from the logistic fold records it parses, and stops on a difference with a line, "
+                      "`stop flags:`, that names the report by species and antibiotic and gives no figure. It trusts "
+                      "the read's R30 flag and weighted mark. The read prints the sha256 of the reading it wrote, and "
+                      "write prints the sha256 of the reading it read",
+                      "Write and print stop, with a line `stop rule:`, on a rule row that gives the logistic arm an "
+                      "outcome or a reading other than descriptive only.",
+                      "a line, `flags:`, with how many reports each condition flags and how many have both, and no "
+                      "score. Those counts decide nothing (R43)."):
+            self.assertIn(words, method)
         script = SCRIPT.read_text(encoding="utf-8")
         for printed in ('wrote {READING}, sha256 {written}"', 'print(f"write: read {READING}, sha256 {digest}")',
-                        'f"flags: {len(rows)} reports; '):
+                        'f"flags: {len(rows)} reports; ', 'f"stop flags: {d.get(\'species\')} with {d.get(\'antibiotic\')}: ',
+                        'f"stop rule: the {arm} arm has an outcome or a reading other than {DESCRIPTIVE} in {where}: STOP"'):
             self.assertEqual(script.count(printed), 1, printed)
 
     def test_the_page_keeps_its_size(self):
@@ -226,7 +260,7 @@ class Page(unittest.TestCase):
         rows = re.findall(r"^\| (C\d+)\. (.+) \| `([A-Za-z]+\.test_\w+)` \|$", method, flags=re.M)
         self.assertEqual(rows, [(fault, words[0].upper() + words[1:], test.rsplit(".", 2)[-2] + "." + test.rsplit(".", 1)[-1])
                                 for fault, words, test, _ in faults.FAULTS])
-        self.assertIn(f"All {len(faults.FAULTS)} were caught.", method)
+        self.assertIn(f"{len(faults.FAULTS)} of {len(faults.FAULTS)} faults failed their test.", method)
 
     def test_the_test_counts_are_the_suites(self):
         loader = unittest.TestLoader()

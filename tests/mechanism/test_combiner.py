@@ -5,6 +5,8 @@ below is worked by hand from the fixture's design: a report is a few groups of g
 scores, copied five times with one copy per stored outer fold, so every fold's fit sees the same shares.
 """
 
+import argparse
+import ast
 import contextlib
 import fractions
 import hashlib
@@ -14,6 +16,7 @@ import math
 import os
 import random
 import re
+import sys
 import tempfile
 import unittest
 from unittest import mock
@@ -733,16 +736,15 @@ class Counts(Case):
                          {"recovered_1to4": 1, "recovered_all5": 1, "lost": 1, "cleared": 1, "new_wrong": 1})
 
     def test_print_gives_the_rule_table(self):
+        # both arms on the same figures; the weighted mean read by the rule, the logistic arm descriptive only (R43)
         self.read_write()
         rc, out = run(cb, "print", self.record)
         self.assertEqual(rc, 0, out)
-        for arm in cb.ARMS:
-            self.assertIn(f"| {arm} | all | 6 | 6 | 0.2830 | 0.2830 to 0.2830 | -0.6429 | -0.6429 to -0.6429 | 6 "
-                          "| kept | kept |", out)
-            self.assertIn(f"| {arm} | without marked | 6 | 6 | 0.2830 | 0.2830 to 0.2830 | -0.6429 | -0.6429 to "
-                          "-0.6429 | 6 | kept | decides nothing |", out)
-            self.assertIn(f"| {arm} | without flagged | 6 | 6 | 0.2830 | 0.2830 to 0.2830 | -0.6429 | -0.6429 "
-                          "to -0.6429 | 6 | kept | kept |", out)
+        figures = "6 | 6 | 0.2830 | 0.2830 to 0.2830 | -0.6429 | -0.6429 to -0.6429 | 6"
+        for arm, read_as in (("weighted", ("kept | kept", "kept | decides nothing", "kept | kept")),
+                             ("logistic", ("descriptive only | descriptive only",) * 3)):
+            for count, words in zip(("all", "without marked", "without flagged"), read_as):
+                self.assertIn(f"| {arm} | {count} | {figures} | {words} |", out)
 
     def test_a_report_is_flagged_by_one_fold(self):
         # flagged when some learner gives every genome of some fold of 2 or more genomes one score, read with ==
@@ -788,23 +790,25 @@ class Rule(Case):
         self.assertEqual((got["median_gain"], got["vme_lo"], got["vme_hi"], got["reading"]), (0.3, -0.1, 0.1, "kept"))
 
     def test_kept_and_no_difference_shown(self):
-        # six reports gaining 103/364 in balanced accuracy each, the very major error rate down by 9/14 each
+        # six reports gaining 103/364 in balanced accuracy each, the very major error rate down by 9/14 each: the
+        # weighted mean is kept, and the logistic arm, on the same figures, is descriptive only (R43)
         self.read_write()
         rules = {r["arm"]: r for r in lo.read_tsv(os.path.join(self.record, "rule.tsv")) if r["count"] == "all"}
-        for arm in cb.ARMS:
+        for arm, reading in (("weighted", "kept"), ("logistic", "descriptive only")):
             self.assertEqual({k: rules[arm][k] for k in ("datasets", "species", "median_gain", "gain_lo", "gain_hi",
                                                          "vme_median", "vme_lo", "gain_at_least_margin", "reading")},
                              {"datasets": "6", "species": "6", "median_gain": "0.282967032967",
                               "gain_lo": "0.282967032967", "gain_hi": "0.282967032967", "vme_median": "-0.642857142857",
-                              "vme_lo": "-0.642857142857", "gain_at_least_margin": "6", "reading": "kept"})
+                              "vme_lo": "-0.642857142857", "gain_at_least_margin": "6", "reading": reading})
 
     def test_a_median_gain_of_0_is_no_difference_shown(self):
-        # six symmetric reports at a gain of 0 and one at 103/364: the median gain is 0
+        # six symmetric reports at a gain of 0 and one at 103/364: the median gain is 0, and the weighted mean shows
+        # no difference; the logistic arm, on the same figures, is descriptive only (R43)
         self.read_write(mixed_set())
         rules = {r["arm"]: r for r in lo.read_tsv(os.path.join(self.record, "rule.tsv")) if r["count"] == "all"}
-        for arm in cb.ARMS:
+        for arm, reading in (("weighted", "no difference shown"), ("logistic", "descriptive only")):
             self.assertEqual((rules[arm]["median_gain"], rules[arm]["gain_at_least_margin"], rules[arm]["reading"]),
-                             ("0.000000000000", "1", "no difference shown"))
+                             ("0.000000000000", "1", reading))
         self.assertEqual(len(lo.read_tsv(os.path.join(self.record, "pooled.tsv"))), (1 + 7) * 2 * 5)
 
     def test_the_second_count_leaves_out_the_marked_reports(self):
@@ -812,19 +816,21 @@ class Rule(Case):
         # the median gain is 103/364 (six at 103/364, one at 1/2, the arms calling SEPARABLE without error) and it
         # decides; the logistic arm's second count leaves the marked report out, 6 reports, and decides nothing. Each
         # SEPARABLE fold's last finite iterate gives rf, gbt, lasso and cart coefficients under 0, about -5e-15 (R37),
-        # so the logistic arm's third count leaves that report out too, and the weighted arm's does not
+        # so the logistic arm's third count leaves that report out too, and the weighted arm's does not. The logistic
+        # arm's counts are written as before, descriptive only, and none of them decides (R43)
         self.read_write(kept_set() + [designed(SPECIES[6], "drug c", SEPARABLE, tag=7)])
         rules = {(r["arm"], r["count"]): r for r in lo.read_tsv(os.path.join(self.record, "rule.tsv"))}
         self.assertEqual(list(rules), [(a, k) for a in cb.ARMS for k in cb.COUNTS_OF_RULE])
         got = {key: (r["decides"], r["datasets"], r["species"], r["median_gain"], r["outcome"], r["reading"])
                for key, r in rules.items()}
+        only = ("descriptive only", "descriptive only")
         self.assertEqual(got, {
             ("weighted", "all"): ("yes", "7", "7", "0.282967032967", "kept", "kept"),
             ("weighted", "without_marked"): ("no", "7", "7", "0.282967032967", "kept", "decides nothing"),
             ("weighted", "without_flagged"): ("yes", "7", "7", "0.282967032967", "kept", "kept"),
-            ("logistic", "all"): ("yes", "7", "7", "0.282967032967", "kept", "kept"),
-            ("logistic", "without_marked"): ("no", "6", "6", "0.282967032967", "kept", "decides nothing"),
-            ("logistic", "without_flagged"): ("yes", "6", "6", "0.282967032967", "kept", "kept")})
+            ("logistic", "all"): ("no", "7", "7", "0.282967032967") + only,
+            ("logistic", "without_marked"): ("no", "6", "6", "0.282967032967") + only,
+            ("logistic", "without_flagged"): ("no", "6", "6", "0.282967032967") + only})
         r = self.rows()[(SPECIES[6], "drug c")]
         self.assertEqual([r[k] for k in ("weighted_marked", "logistic_marked", "logistic_folds_no_finite_step",
                                          "one_score_fold", "coefficient_under_0",
@@ -833,12 +839,13 @@ class Rule(Case):
             self.assertEqual([r[f"{arm}_{k}"] for k in cb.COUNTS], ["15", "0", "0", "35", "50"])
         with open(os.path.join(self.record, "gates.txt"), encoding="utf-8") as f:
             self.assertEqual([x for x in f.read().split("\n") if x.startswith("reading ")],
-                             ["reading weighted: kept", "reading logistic: kept"])
+                             ["reading weighted: kept", "reading logistic: descriptive only"])
 
     def test_the_third_count_decides(self):
         # the six rf-led reports, one with lasso at 0.2 on every genome of fold 0: its calls do not move, and it is
-        # flagged. Over all 6 the rule keeps each arm; without the flagged report 5 species are left, too few for an
-        # interval, so the third count's outcome is no difference shown, and so is each arm's reading
+        # flagged. Over all 6 the rule keeps the weighted mean; without the flagged report 5 species are left, too few
+        # for an interval, so the third count's outcome is no difference shown, and so is the weighted mean's reading.
+        # The logistic arm's counts are the same, descriptive only (R43)
         reports = kept_set()
         flat = reports[0]
         flat.scores["lasso"] = [0.2 if g == 0 else x for x, g in zip(flat.scores["lasso"], flat.folds)]
@@ -849,27 +856,31 @@ class Rule(Case):
         self.assertEqual([rows[(SPECIES[0], "drug a")][f"{a}_{k}"] for a in cb.ARMS for k in cb.COUNTS],
                          ["45", "25", "5", "60", "135"] * 2)
         rules = {(r["arm"], r["count"]): r for r in lo.read_tsv(os.path.join(self.record, "rule.tsv"))}
-        for arm in cb.ARMS:
+        for arm, read_as in (("weighted", [("kept", "no difference shown"), ("kept", "decides nothing"),
+                                           ("no difference shown", "no difference shown")]),
+                             ("logistic", [("descriptive only", "descriptive only")] * 3)):
             got = [(rules[arm, k]["datasets"], rules[arm, k]["species"], rules[arm, k]["outcome"],
                     rules[arm, k]["reading"]) for k in cb.COUNTS_OF_RULE]
-            self.assertEqual(got, [("6", "6", "kept", "no difference shown"), ("6", "6", "kept", "decides nothing"),
-                                   ("5", "5", "no difference shown", "no difference shown")])
+            self.assertEqual(got, [n + words for n, words in zip((("6", "6"), ("6", "6"), ("5", "5")), read_as)])
         with open(os.path.join(self.record, "gates.txt"), encoding="utf-8") as f:
             self.assertEqual([x for x in f.read().split("\n") if x.startswith("reading ")],
-                             ["reading weighted: no difference shown", "reading logistic: no difference shown"])
+                             ["reading weighted: no difference shown", "reading logistic: descriptive only"])
 
     def test_the_count_that_decides_nothing_does_not_move_the_reading(self):
         # seven species with a report each, every arm gaining 0.4 in balanced accuracy, two reports marked for both
         # arms. Without them 5 species are left, too few for an interval, so that count's outcome is no difference
-        # shown; it decides nothing, and each arm's reading is kept
+        # shown; it decides nothing, and the weighted mean's reading is kept. The logistic arm is descriptive only
         rows = [dataset_like(SPECIES[i], (0, 10, 0, 10), (8, 2, 0, 10)) for i in range(7)]
         for i, r in enumerate(rows):
             r.update({f"{a}_marked": "yes" if i < 2 else "no" for a in cb.ARMS}, one_score_fold="no",
                      coefficient_under_0="no")
         got = [(r["arm"], r["count"], r["species"], r["outcome"], r["reading"]) for r in cb.rule_rows(rows)]
-        self.assertEqual(got, [(a, count, n, outcome, reading) for a in cb.ARMS for count, n, outcome, reading in (
-            ("all", 7, "kept", "kept"), ("without_marked", 5, "no difference shown", "decides nothing"),
-            ("without_flagged", 7, "kept", "kept"))])
+        only = ("descriptive only", "descriptive only")
+        self.assertEqual(got, [("weighted", "all", 7, "kept", "kept"),
+                               ("weighted", "without_marked", 5, "no difference shown", "decides nothing"),
+                               ("weighted", "without_flagged", 7, "kept", "kept"),
+                               ("logistic", "all", 7) + only, ("logistic", "without_marked", 5) + only,
+                               ("logistic", "without_flagged", 7) + only])
 
     def test_the_record_says_the_vme_rule_in_r19s_words(self):
         self.read_write()
@@ -928,7 +939,8 @@ class Flags(Case):
     def test_one_fold_fit_under_0_flags_the_logistic_arm_only(self):
         # odd_fold()'s report beside the six rf-led ones: fold 2's fit gives lasso a coefficient under 0, the other
         # four fits none. The report is flagged for the logistic arm, whose third count leaves it out, 6 reports;
-        # the weighted arm's third count keeps it, 7 reports, as its count over all does
+        # the weighted arm's third count keeps it, 7 reports, as its count over all does. The logistic counts are
+        # written, descriptive only (R43)
         S, y, folds = odd_fold()
         _, recs = cb.crossfit("logistic", S, y, folds)
         self.assertEqual([r["coefficients_under_0"] for r in recs], [0, 0, 1, 0, 0])
@@ -942,24 +954,26 @@ class Flags(Case):
         self.assertEqual({k: v for k, v in rules.items() if k[1] != "without_marked"}, {
             ("weighted", "all"): ("7", "7", "kept", "kept"),
             ("weighted", "without_flagged"): ("7", "7", "kept", "kept"),
-            ("logistic", "all"): ("7", "7", "kept", "kept"),
-            ("logistic", "without_flagged"): ("6", "6", "kept", "kept")})
+            ("logistic", "all"): ("7", "7", "descriptive only", "descriptive only"),
+            ("logistic", "without_flagged"): ("6", "6", "descriptive only", "descriptive only")})
 
-    def test_a_logistic_third_count_under_6_species_shows_no_difference(self):
-        # five rf-led reports and odd_fold()'s, six species: over all six the rule keeps both arms. The logistic
-        # third count leaves odd_fold()'s report out, 5 species, too few for an interval: its outcome and the
-        # logistic arm's reading are no difference shown. The weighted arm, with no report flagged for it, is kept
+    def test_a_logistic_third_count_under_6_species_gets_no_interval(self):
+        # five rf-led reports and odd_fold()'s, six species: each count over all has an interval, and the rule keeps
+        # the weighted mean. The logistic third count leaves odd_fold()'s report out, 5 species, too few for an
+        # interval: it is written with none, and, as every logistic count, reads descriptive only (R43)
         self.read_write(r37_set(kept_set()[:5], species=SPECIES[5]))
-        rules = {(r["arm"], r["count"]): (r["datasets"], r["species"], r["outcome"], r["reading"])
+        rules = {(r["arm"], r["count"]): (r["datasets"], r["species"], bool(r["gain_lo"] and r["gain_hi"]),
+                                          bool(r["vme_lo"] and r["vme_hi"]), r["outcome"], r["reading"])
                  for r in lo.read_tsv(os.path.join(self.record, "rule.tsv"))}
+        only = ("descriptive only", "descriptive only")
         self.assertEqual({k: v for k, v in rules.items() if k[1] != "without_marked"}, {
-            ("weighted", "all"): ("6", "6", "kept", "kept"),
-            ("weighted", "without_flagged"): ("6", "6", "kept", "kept"),
-            ("logistic", "all"): ("6", "6", "kept", "no difference shown"),
-            ("logistic", "without_flagged"): ("5", "5", "no difference shown", "no difference shown")})
+            ("weighted", "all"): ("6", "6", True, True, "kept", "kept"),
+            ("weighted", "without_flagged"): ("6", "6", True, True, "kept", "kept"),
+            ("logistic", "all"): ("6", "6", True, True) + only,
+            ("logistic", "without_flagged"): ("5", "5", False, False) + only})
         with open(os.path.join(self.record, "gates.txt"), encoding="utf-8") as f:
             self.assertEqual([x for x in f.read().split("\n") if x.startswith("reading ")],
-                             ["reading weighted: kept", "reading logistic: no difference shown"])
+                             ["reading weighted: kept", "reading logistic: descriptive only"])
 
     def test_the_record_counts_the_fold_fits_behind_the_flag(self):
         # gbt and lasso both low in odd_fold(): fold 2's fit gives each a coefficient under 0. The record counts the
@@ -973,7 +987,8 @@ class Flags(Case):
 
     def test_the_read_prints_how_many_reports_each_condition_flags(self):
         # one rf-led report with lasso at 0.2 on fold 0 (R30's condition), odd_fold()'s (R37's), and odd_fold()'s
-        # with gbt's group left out of fold 2, so gbt gives that fold one score (both)
+        # with gbt's group left out of fold 2, so gbt gives that fold one score (both). The line gives counts as
+        # coded, and since R43 the sign's count decides nothing: the logistic arm is descriptive only
         reports = kept_set()
         flat = reports[0]
         flat.scores["lasso"] = [0.2 if g == 0 else x for x, g in zip(flat.scores["lasso"], flat.folds)]
@@ -1037,6 +1052,284 @@ class Flags(Case):
         rc, out = run(cb, "write", self.reading, "--reports", d, "--out", os.path.join(self.top, "again"))
         self.assertEqual(rc, 0, out)
         self.assertIn(f"write: read {cb.READING}, sha256 {again}\n", out)
+
+    def test_write_works_the_sign_flag_out_again(self):
+        # R43: odd_fold()'s report, whose fold 2 fit gives lasso a coefficient under 0, with its sign flag changed to
+        # false, so that its logistic third count would hold 7 reports in place of 6; and an rf-led report, flagged
+        # by nothing, with one fold fit's count changed to 2 under 0. Write works the flag out again from the fold
+        # records, stops on the difference with a line that names the report and gives no figure, and writes nothing
+        for key, change in (((SPECIES[6], "drug g"), lambda d: d.update(coefficient_under_0=False)),
+                            ((SPECIES[1], "drug a"), lambda d: d["logistic_folds"][1].update(coefficients_under_0=2))):
+            d, (rc, out) = self.read(r37_set())
+            self.assertEqual(rc, 0, out)
+            self.tamper(lambda reading: change(next(x for x in reading["datasets"]
+                                                    if (x["species"], x["antibiotic"]) == key)))
+            rc, out = run(cb, "write", self.reading, "--reports", d, "--out", self.record)
+            self.assertEqual((rc, out), (1, f"stop flags: {key[0]} with {key[1]}: its sign flag differs from its "
+                                            "logistic fold records: STOP\n"))
+            self.assertFalse(os.path.exists(self.record))
+            self.tearDown()
+            self.setUp()
+
+    def test_write_works_the_logistic_mark_out_again(self):
+        # R43: an rf-led report whose five logistic fold fits converge, marked for the logistic arm; and one with a
+        # fold fit's end changed to the cap and the report left unmarked. Write stops on each and writes nothing
+        for change in (lambda d: d.update(logistic_marked=True),
+                       lambda d: d["logistic_folds"][3].update(end="cap")):
+            d, (rc, out) = self.read()
+            self.assertEqual(rc, 0, out)
+            self.tamper(lambda reading: change(next(x for x in reading["datasets"] if x["species"] == SPECIES[2])))
+            rc, out = run(cb, "write", self.reading, "--reports", d, "--out", self.record)
+            self.assertEqual((rc, out), (1, f"stop flags: {SPECIES[2]} with drug a: its logistic mark differs from its "
+                                            "logistic fold records: STOP\n"))
+            self.assertFalse(os.path.exists(self.record))
+            self.tearDown()
+            self.setUp()
+
+    def test_write_names_each_report_whose_flags_differ(self):
+        # three rf-led reports changed: one marked, one flagged, one both. Write names each by species and
+        # antibiotic, one line a report in the reading's order, with no figure
+        d, (rc, out) = self.read()
+        self.assertEqual(rc, 0, out)
+
+        def change(reading):
+            by = {x["species"]: x for x in reading["datasets"]}
+            by[SPECIES[1]].update(logistic_marked=True)
+            by[SPECIES[3]].update(coefficient_under_0=True)
+            by[SPECIES[4]].update(logistic_marked=True, coefficient_under_0=True)
+
+        self.tamper(change)
+        rc, out = run(cb, "write", self.reading, "--reports", d, "--out", self.record)
+        self.assertEqual((rc, out), (1, f"stop flags: {SPECIES[1]} with drug a: its logistic mark differs from its "
+                                        "logistic fold records: STOP\n"
+                                        f"stop flags: {SPECIES[3]} with drug a: its sign flag differs from its "
+                                        "logistic fold records: STOP\n"
+                                        f"stop flags: {SPECIES[4]} with drug a: its sign flag and its logistic mark "
+                                        "differ from its logistic fold records: STOP\n"))
+        self.assertIsNone(re.search(r"\d", out))
+        self.assertFalse(os.path.exists(self.record))
+
+    def test_the_flags_line_gives_each_conditions_own_count(self):
+        # R43 finding 4, reports whose two counts differ: one rf-led report with lasso at 0.2 on fold 0 (R30's
+        # condition), two odd_fold() reports (R37's), and one odd_fold() report with gbt's group left out of fold 2
+        # (both). R30's condition flags 2 reports, R37's 3, and 1 has both. The counts decide nothing: with every
+        # sign flag turned over, each rule row reads as before, and the weighted mean's rows are the same whole
+        reports = kept_set()
+        flat = reports[0]
+        flat.scores["lasso"] = [0.2 if g == 0 else x for x, g in zip(flat.scores["lasso"], flat.folds)]
+        flat.random = dict(flat.scores)
+        reports = r37_set(r37_set(r37_set(reports), species=SPECIES[5], drop=(3,)), species=SPECIES[4])
+        _, out = self.read_write(reports)
+        line = ("flags: 9 reports; 2 where a learner gives every genome of a fold one score, left out of both arms' "
+                "third counts; 3 where a logistic fold fit gives a learner a coefficient under 0, left out of the "
+                "logistic arm's; 1 with both")
+        self.assertEqual([x for x in out.split("\n") if x.startswith("flags:")], [line])
+        rows = list(self.rows().values())
+        turned = [dict(r, coefficient_under_0="no" if r["coefficient_under_0"] == "yes" else "yes") for r in rows]
+        self.assertEqual(sum(1 for r in rows if r["coefficient_under_0"] == "yes"), 3)
+
+        def read_as(rs):
+            return [(r["arm"], r["count"], r["decides"], r["outcome"], r["reading"]) for r in cb.rule_rows(rs)]
+
+        self.assertEqual(read_as(turned), read_as(rows))
+        self.assertEqual([r for r in cb.rule_rows(turned) if r["arm"] == "weighted"],
+                         [r for r in cb.rule_rows(rows) if r["arm"] == "weighted"])
+
+    def test_gate_5_names_a_report_with_exactly_1_fold_with_no_finite_first_step(self):
+        # R43 finding 5: AFFINE, but in fold 0 the group at (Q, Q, Q, T3, Q) is scored (Q, Q, Q, Q, Q), so gbt is not
+        # 1 - rf there. Fold 0's fit, on the other four folds, has no finite first step; every other fold's fit sees
+        # fold 0's genomes and converges. Gate 5 stops and names the report by species and antibiotic
+        S, y, folds = as_arrays(AFFINE)
+        S = [(Q, Q, Q, Q, Q) if g == 0 and s == (Q, Q, Q, T3, Q) else s for s, g in zip(S, folds)]
+        _, recs = cb.crossfit("logistic", S, y, folds)
+        self.assertEqual([r["end"] for r in recs], [cb.NO_FIRST_STEP] + ["converged"] * 4)
+        _, (rc, out) = self.read(kept_set() + [from_arrays(SPECIES[6], "drug d", S, y, folds, tag=7)])
+        self.assertEqual(rc, 1, out)
+        self.assertIn(", 1 whose first Newton step has no finite solution,", gate_line(out, 5))
+        self.assertTrue(gate_line(out, 5).endswith(": STOP"), out)
+        self.assertEqual([x for x in out.split("\n") if x.startswith("  gate 5 ")],
+                         [f"  gate 5 no finite first step: {SPECIES[6]} with drug d"])
+        self.assertFalse(os.path.exists(self.reading))
+
+    def test_write_stops_on_a_sign_flag_given_as_text(self):
+        # R43 finding 6: a report's sign flag given as the text "no" or "yes" in place of false or true
+        for value in ("no", "yes"):
+            d, (rc, out) = self.read()
+            self.assertEqual(rc, 0, out)
+            self.tamper(lambda reading: reading["datasets"][0].update(coefficient_under_0=value))
+            rc, out = run(cb, "write", self.reading, "--reports", d, "--out", self.record)
+            self.assertEqual((rc, out), (1, "the reading was made under other rules\n"), value)
+            self.assertFalse(os.path.exists(self.record))
+            self.tearDown()
+            self.setUp()
+
+    def test_write_stops_on_a_fold_count_given_as_true_or_false(self):
+        # R43 finding 7: a logistic fold fit's count of coefficients under 0 given as true or false; Python counts
+        # each as a whole number, but neither is a count
+        for value in (True, False):
+            d, (rc, out) = self.read()
+            self.assertEqual(rc, 0, out)
+            self.tamper(lambda reading: reading["datasets"][0]["logistic_folds"][0].update(coefficients_under_0=value))
+            rc, out = run(cb, "write", self.reading, "--reports", d, "--out", self.record)
+            self.assertEqual((rc, out), (1, "the reading was made under other rules\n"), value)
+            self.assertFalse(os.path.exists(self.record))
+            self.tearDown()
+            self.setUp()
+
+
+class Descriptive(Case):
+    """R43: the logistic arm is descriptive only, and the weighted mean is the one arm the rule can keep."""
+
+    def test_the_logistic_arm_is_descriptive_only_in_each_count(self):
+        # the six rf-led reports, where the rule keeps the weighted mean: rule.tsv gives the logistic arm the same
+        # figures, descriptive only in each count, and no count of it decides. gates.txt and print say the same, and
+        # "kept" stands on no logistic row
+        self.read_write()
+        rules = {(r["arm"], r["count"]): r for r in lo.read_tsv(os.path.join(self.record, "rule.tsv"))}
+        figures = ("datasets", "species", "median_gain", "gain_lo", "gain_hi", "vme_median", "vme_lo", "vme_hi",
+                   "gain_at_least_margin")
+        for count in cb.COUNTS_OF_RULE:
+            weighted, logistic = rules["weighted", count], rules["logistic", count]
+            self.assertEqual([logistic[k] for k in figures], [weighted[k] for k in figures])
+            self.assertEqual(weighted["outcome"], "kept")
+            self.assertEqual((logistic["decides"], logistic["outcome"], logistic["reading"]),
+                             ("no", "descriptive only", "descriptive only"))
+            self.assertNotIn("kept", "\t".join(logistic.values()))
+        with open(os.path.join(self.record, "gates.txt"), encoding="utf-8") as f:
+            self.assertEqual([x for x in f.read().split("\n") if x.startswith("reading ")],
+                             ["reading weighted: kept", "reading logistic: descriptive only"])
+        rc, out = run(cb, "print", self.record)
+        self.assertEqual(rc, 0, out)
+        printed = [x for x in out.split("\n") if x.startswith(("| logistic | all |", "| logistic | without "))]
+        self.assertEqual(len(printed), 3)
+        for x in printed:
+            self.assertTrue(x.endswith("| descriptive only | descriptive only |"), x)
+            self.assertNotIn("kept", x)
+
+    def test_the_logistic_arm_reads_descriptive_only_whatever_its_figures(self):
+        # rule rows alone, with nothing marked or flagged, on seven species with a report each: every arm gaining
+        # 0.4, which the rule keeps; every arm gaining 0; and five of the seven species, too few for an interval.
+        # The weighted mean reads as the rule gives it; the logistic arm is descriptive only, with the rule's figures
+        gain = [dataset_like(SPECIES[i], (0, 10, 0, 10), (8, 2, 0, 10)) for i in range(7)]
+        none = [dataset_like(SPECIES[i], (5, 5, 0, 10), (5, 5, 0, 10)) for i in range(7)]
+        decimals = ("median_gain", "gain_lo", "gain_hi", "vme_median", "vme_lo", "vme_hi")
+        for rows, weighted in ((gain, "kept"), (none, "no difference shown"), (gain[:5], "no difference shown")):
+            for r in rows:
+                r.update({f"{a}_marked": "no" for a in cb.ARMS}, one_score_fold="no", coefficient_under_0="no")
+            got = cb.rule_rows(rows)
+            self.assertEqual(len(got), 6)
+            for r in got:
+                own = cb.rule(rows, r["arm"])
+                self.assertEqual([r[k] for k in ("datasets", "species", "gain_at_least_margin")],
+                                 [own[k] for k in ("datasets", "species", "gain_at_least_margin")])
+                self.assertEqual([r[k] for k in decimals], [cb.cell(own[k]) for k in decimals])
+                if r["arm"] == "weighted":
+                    self.assertEqual((r["outcome"], r["reading"]),
+                                     (weighted, weighted if r["decides"] == "yes" else "decides nothing"))
+                else:
+                    self.assertEqual((r["decides"], r["outcome"], r["reading"]),
+                                     ("no", "descriptive only", "descriptive only"))
+
+    def test_one_line_names_the_arms_that_can_be_kept(self):
+        # one assignment in the script names the arms the rule can keep, on one line, and it names the weighted mean
+        # alone; the plan prints it
+        tree = ast.parse((c.KIT / "combiner.py").read_text(encoding="utf-8"))
+        named = [node for node in ast.walk(tree) if isinstance(node, (ast.Assign, ast.AnnAssign))
+                 and any(isinstance(t, ast.Name) and t.id == "CAN_BE_KEPT"
+                         for t in (node.targets if isinstance(node, ast.Assign) else [node.target]))]
+        self.assertEqual(len(named), 1)
+        self.assertEqual(named[0].lineno, named[0].end_lineno)
+        self.assertEqual(ast.literal_eval(named[0].value), ("weighted",))
+        self.assertEqual(cb.CAN_BE_KEPT, ("weighted",))
+        self.assertEqual([cb.can_be_kept(a) for a in cb.ARMS], [True, False])
+        self.assertEqual((cb.plan()["can_be_kept"], cb.plan()["descriptive_only"]), (["weighted"], ["logistic"]))
+
+    def test_no_option_or_environment_setting_changes_the_arms_that_can_be_kept(self):
+        # plan, read, write and print run with every lookup of the environment recorded, and the code that made it:
+        # the standard library makes some, and no script of scripts/mechanism makes one. Each command's options are
+        # these, and an option that names the arms is refused
+        def asker():
+            frame = sys._getframe(2)
+            while frame is not None and frame.f_code.co_filename == os.__file__:
+                frame = frame.f_back
+            return frame.f_code.co_filename if frame is not None else ""
+
+        class Recording(dict):
+            def __init__(self, base):
+                super().__init__(base)
+                self.asked = []
+
+            def __getitem__(self, key):
+                self.asked.append((key, asker()))
+                return super().__getitem__(key)
+
+            def get(self, key, default=None):
+                self.asked.append((key, asker()))
+                return super().get(key, default)
+
+            def __contains__(self, key):
+                self.asked.append((key, asker()))
+                return super().__contains__(key)
+
+        d = self.records(kept_set())
+        env = Recording(os.environ)
+        with mock.patch.object(os, "environ", env):
+            got = [run(cb, "plan"),
+                   run(cb, "read", d, "--first", self.first, "--second", self.second, "--out", self.reading,
+                       "--expect", 6, reports=6),
+                   run(cb, "write", self.reading, "--reports", d, "--out", self.record),
+                   run(cb, "print", self.record)]
+        self.assertEqual([rc for rc, _ in got], [0] * 4, got)
+        self.assertTrue(env.asked)
+        self.assertEqual([key for key, where in env.asked if where.startswith(str(c.KIT))], [])
+        commands = next(a for a in cb.parser()._actions if isinstance(a, argparse._SubParsersAction)).choices
+        self.assertEqual({name: sorted(o for a in p._actions for o in a.option_strings) for name, p in commands.items()},
+                         {"plan": ["--help", "-h"], "read": ["--expect", "--first", "--help", "--out", "--second", "-h"],
+                          "write": ["--help", "--out", "--reports", "-h"], "print": ["--help", "-h"]})
+        for option in ("--can-be-kept", "--arms", "--keep"):
+            with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+                run(cb, "write", self.reading, "--reports", d, "--out", os.path.join(self.top, "other"), option,
+                    "logistic")
+        self.assertFalse(os.path.exists(os.path.join(self.top, "other")))
+
+    def test_write_stops_on_a_reading_made_under_other_arms(self):
+        # a reading that names the logistic arm among the arms the rule can keep, names it alone, or names none:
+        # write stops and writes nothing
+        for change in (lambda reading: reading.update(can_be_kept=["weighted", "logistic"]),
+                       lambda reading: reading.update(can_be_kept=["logistic"]),
+                       lambda reading: reading.pop("can_be_kept")):
+            d, (rc, out) = self.read()
+            self.assertEqual(rc, 0, out)
+            self.tamper(change)
+            rc, out = run(cb, "write", self.reading, "--reports", d, "--out", self.record)
+            self.assertEqual((rc, out), (1, "the reading was made under other rules\n"))
+            self.assertFalse(os.path.exists(self.record))
+            self.tearDown()
+            self.setUp()
+
+    def test_write_stops_on_a_rule_row_that_gives_the_logistic_arm_another_outcome(self):
+        # rule rows made as before R43, where the logistic arm reads kept on the six rf-led reports: write stops with a
+        # line that gives no figure, and writes nothing
+        d, (rc, out) = self.read()
+        self.assertEqual(rc, 0, out)
+        with mock.patch.object(cb, "descriptive", lambda r: r):
+            rc, out = run(cb, "write", self.reading, "--reports", d, "--out", self.record)
+        self.assertEqual((rc, out), (1, "stop rule: the logistic arm has an outcome or a reading other than descriptive "
+                                        "only in the rule rows: STOP\n"))
+        self.assertFalse(os.path.exists(self.record))
+
+    def test_print_stops_on_a_record_that_gives_the_logistic_arm_another_outcome(self):
+        # rule.tsv changed by hand so that the logistic arm reads kept over all: print stops and prints no table
+        self.read_write()
+        path = os.path.join(self.record, "rule.tsv")
+        rows = lo.read_tsv(path)
+        for r in rows:
+            if (r["arm"], r["count"]) == ("logistic", "all"):
+                r.update(outcome="kept", reading="kept")
+        lo.write_tsv(path, cb.RULE_COLUMNS, rows)
+        rc, out = run(cb, "print", self.record)
+        self.assertEqual((rc, out), (1, "stop rule: the logistic arm has an outcome or a reading other than descriptive "
+                                        "only in rule.tsv: STOP\n"))
 
 
 class Pooled(unittest.TestCase):

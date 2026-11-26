@@ -2,7 +2,7 @@
 
 Can a combination of the five learners call the resistant genomes their mean misses? On the learner overlap's page (`docs/learner-overlap-result.md`), the second pass counts the resistant genomes the five learners' mean misses at the release's 0.5 cutoff, split by how many of the five miss each one.
 
-This page asks two things. Does a weighted mean of the five, or a logistic combiner on their five scores, beat that mean on the same split without raising the very major error rate? And how many of the misses that only some of the five make does it recover?
+This page asks two things. Does a weighted mean of the five beat that mean on the same split without raising the very major error rate? And how many of the misses that only some of the five make does it recover? A logistic combiner on their five scores is read beside it, as descriptive only.
 
 It reads the stored held-out scores of the release's lineage split and fits only the two combiners, on the genomes of the other folds. It trains no learner and scores no genome with a learner again.
 
@@ -56,8 +56,8 @@ The weighted mean starts from the equal weights and only ever lowers the loss, s
 
 ### Counts
 
-- **Three counts.** The count over every report and the count without the arm's flagged reports decide: an arm is kept only if the rule keeps it in both. Otherwise the reading is no difference shown.
-- **Few species.** A count of under 6 species has no interval, so it keeps nothing, and the arm's reading is no difference shown, whatever the other count gives.
+- **Three counts.** The count over every report and the count without the arm's flagged reports decide: the weighted mean is kept only if the rule keeps it in both. Otherwise its reading is no difference shown.
+- **Few species.** A count of under 6 species has no interval, so it keeps nothing, and the weighted mean's reading is no difference shown, whatever the other count gives.
 - **Second count.** Beside them, a second count without the arm's marked reports is written, and it decides nothing. The record gives each count's own outcome and the arm's reading.
 
 A report is flagged for an arm by either of two conditions, each read on the stored values with no tolerance:
@@ -69,13 +69,23 @@ A report is flagged for an arm by either of two conditions, each read on the sto
 
 **Training share.** The release scores a learner that selected nothing at its fold's training share of resistant genomes. That share falls as the held-out fold's own share rises, so it carries the held-out labels, upside down.
 
-**Sign.** A score that follows the training share points the wrong way for the held-out fold. A fit gains from it only by giving that learner a coefficient under 0; with every coefficient at 0 or above, the share moves the fold's calls the wrong way or nowhere. A learner that scores each genome within a hair of the share gives no fold one score, so R30's condition alone misses it. The weighted mean's weights are never under 0.
+**Sign.** A score that follows the training share points the wrong way for the held-out fold. With every coefficient at 0 or above, the share moves a fold's calls nearly always the wrong way: on the reviewer's made-up reports, 3 of 248 fold fits moved them the right way. A learner that scores each genome within a hair of the share gives no fold one score, so R30's condition alone misses it. The weighted mean's weights are never under 0.
+
+**Logistic arm.** R43, ruled on 26 Nov 2026 before any reading, reads the logistic arm as descriptive only. Its three counts, medians and intervals are written as before, and its outcome and reading say "descriptive only" in each count, whatever its figures. R37's condition, its column, the logistic arm's third count and the `flags:` line stay as counts, and decide nothing.
+
+**Cost.** With the five learners' scores correlated at 0.8, and again at 0.95, R37's condition flagged 200 of 200 honest made-up reports, where no learner carries a fold's share. The logistic arm was then kept in 0 of 8 made-up readings whose true gain was near 0.05. With R30's condition alone, it was kept in 8 of 8.
+
+**Break.** On the reviewer's made-up reports, a learner with real signal, whose score also falls as its training share rises, got the logistic arm kept through the fold's share alone, and R37's condition flagged 0 of its 20 reports. The same learners at each report's own share were not kept.
+
+**Weighted mean.** The weighted mean is the one arm the rule can keep, under R30's condition as before. It has no intercept and no weight under 0. With that falling learner, it was not kept: its median gain in balanced accuracy was -0.0096 over 20 reports.
+
+**Learners' code.** R43 reads the five learners' code for a score that falls as its training share rises. Four of the five, the decision tree, the forest, the boosted trees and the lasso, fit with class weights that give each class half the total weight. The rule learner gives a 0 or 1 call. A fold whose fit is empty scores every genome at its training share, and R30's condition flags that fold. This is a reading of the code and no measurement.
 
 ### Decision
 
 - **Measures.** Per report and form: the counts at the cutoff, the balanced accuracy, recall, specificity and very major error rate worked from them, and the mean log loss.
 - **Very major error rate.** The resistant genomes called susceptible over the resistant genomes, as the release's `vme`.
-- **Decision.** An arm is kept only if it passes the gain rule and the error rule below. Otherwise the reading is no difference shown.
+- **Decision.** The weighted mean is kept only if it passes the gain rule and the error rule below. Otherwise its reading is no difference shown. The logistic arm is descriptive only.
 - **Gain rule.** The median over the reports of the arm's balanced accuracy less the incumbent's is 0.02 or more, and the species-clustered interval of that median lies wholly above 0.
 - **Error rule.** The very major error rate is not higher on that interval. R19 confirmed the wording: the species-clustered interval of the median change in the very major error rate does not lie wholly above 0.
 - **Interval.** 4,000 resamples of species, the median of each resample's reports, and the 101st and 3,900th of the sorted medians. A set of under 6 species gets no interval.
@@ -110,15 +120,15 @@ Not read yet.
 
 **Words.** A lineage split is a retrospective split inside one database, never external validation. "No difference shown" is never written as "equal". The error levels serve as an adapted research screen and are never an applicable FDA validation criterion. Coverage is the share of genomes answered and is never accuracy.
 
-**Per-fold inputs.** Each fold's stored scores come from base learners trained on that fold's own training genomes, so the five inputs are not one fixed model's outputs across folds. Each combiner is read as a reweighting of the release's own per-fold predictions, not as a model that could be shipped unchanged. The base learners are never refitted here. If an arm is kept, shipping it would need a refit of the base learners inside one fold structure and the maintainer's word under R4.
+**Per-fold inputs.** Each fold's stored scores come from base learners trained on that fold's own training genomes, so the five inputs are not one fixed model's outputs across folds. Each combiner is read as a reweighting of the release's own per-fold predictions, not as a model that could be shipped unchanged. The base learners are never refitted here. If the weighted mean is kept, shipping it would need a refit of the base learners inside one fold structure and the maintainer's word under R4.
 
 **One draw.** The read uses the release's own lineage folds, the only folds whose per-genome held-out scores are stored. The learner overlap's page counted these scores, labels and folds before this plan was written.
 
 **Caps.** On the reviewer's made-up reports, a logistic fit ended at its cap of 100 Newton steps had stalled at its best fit, and 0 of 4,000 calls differed from a second fit's. A fold at either cap, 5,000 steps for the weighted mean, still marks its report, and the count without marked reports decides nothing.
 
-**Sign's cost.** A coefficient under 0 also arises when two learners score nearly alike, with no fold's share in either. Those reports leave the logistic arm's third count too, and the arm can then read no difference shown for want of reports. On held-out scores alone, a fit that counts a learner against itself cannot be told from one that reads the fold's share. R37 accepts that cost.
+**Free sign.** The stored scores come from one layer of folds. On them, a combiner with a free sign and an intercept cannot be told from one that reads the fold's share, so the logistic arm is read as descriptive only. A coefficient under 0 also arises when two learners score nearly alike, with no fold's share in either.
 
-**Sign's limit.** A learner whose score falls as its training share rises could carry the held-out share with a coefficient above 0, which the second condition does not flag. The five learners have not been checked for that.
+**Incumbent.** A learner that carries the share lowers the incumbent, the mean with equal weights, so the weighted mean can gain beside it. R43 takes this in words and sets no rule for it.
 
 **Rows.** The record bars a row per genome; a row per report is an aggregate and keeps its genome count. These are public bacterial genomes with public accession numbers, and the record holds no field about a patient.
 
@@ -147,13 +157,15 @@ Every key named `id` is dropped as a report is parsed. Gate 8 holds the reports'
 | 7. rows | the record holds a row per genome, or an arm's counts do not follow from the incumbent's and the transitions |
 | 8. ids | a written file holds a genome id, a token of an id's shape, or an `id` or `samples` key, or a decimal cell is 10 or more in size |
 
-Before gate 1, a report with one fold or a genome with no fold number stops the read with a line of its own, `stop folds:`, naming the report. Gate 5 names in the same way each report with a fold whose first Newton step has no finite solution. After the gates the read prints a line, `flags:`, with how many reports each condition flags and how many have both, and no score.
+Before gate 1, a report with one fold or a genome with no fold number stops the read with a line of its own, `stop folds:`, naming the report. Gate 5 names in the same way each report with a fold whose first Newton step has no finite solution. After the gates the read prints a line, `flags:`, with how many reports each condition flags and how many have both, and no score. Those counts decide nothing (R43).
 
-**Write.** Write does not fit again, so write trusts the read's flags and marks. The read prints the sha256 of the reading it wrote, and write prints the sha256 of the reading it read, so the two can be matched.
+**Write.** Write does not fit again. It works each report's sign flag, R37's condition, and its logistic mark out again from the logistic fold records it parses, and stops on a difference with a line, `stop flags:`, that names the report by species and antibiotic and gives no figure. It trusts the read's R30 flag and weighted mark. The read prints the sha256 of the reading it wrote, and write prints the sha256 of the reading it read, so the two can be matched.
 
-**Tests.** `tests/mechanism/test_combiner.py` holds 84 SYNTHETIC tests of the script. `tests/mechanism/test_combiner_faults.py` runs `scripts/mechanism/combiner_faults.py`, which plants each fault below in the script in turn and runs the test meant to catch it. `tests/mechanism/test_combiner_page.py` holds 17 tests of this page against the script.
+**Arms.** Write stops on a reading that names any arm but the weighted mean as one the rule can keep. Write and print stop, with a line `stop rule:`, on a rule row that gives the logistic arm an outcome or a reading other than descriptive only. No option and no environment setting changes the arms the rule can keep.
 
-| Fault planted | Test that catches it |
+**Tests.** `tests/mechanism/test_combiner.py` holds 98 SYNTHETIC tests of the script. `tests/mechanism/test_combiner_faults.py` runs `scripts/mechanism/combiner_faults.py`, which plants each fault below in the script in turn and runs the test named beside it. `tests/mechanism/test_combiner_page.py` holds 18 tests of this page against the script.
+
+| Fault planted | Test that fails with it |
 |---|---|
 | C1. Each fold's arm fitted on every genome, its own held-out genomes among them | `Crossfit.test_gate_2_counts_no_shared_genome_on_the_standard_read` |
 | C2. Gate 2 blind to a fit on its own held-out genomes | `Gates.test_gate_2_stops_a_fit_on_its_own_genomes` |
@@ -222,12 +234,29 @@ Before gate 1, a report with one fold or a genome with no fold number stops the 
 | C65. The second condition read on the first fold fit only | `Flags.test_one_fold_fit_under_0_flags_the_logistic_arm_only` |
 | C66. The logistic arm's third count leaving out R30's flagged reports only | `Flags.test_one_fold_fit_under_0_flags_the_logistic_arm_only` |
 | C67. The weighted arm's third count also leaving out the reports flagged for a coefficient under 0 | `Flags.test_one_fold_fit_under_0_flags_the_logistic_arm_only` |
-| C68. A count of 5 species given an interval | `Flags.test_a_logistic_third_count_under_6_species_shows_no_difference` |
+| C68. A count of 5 species given an interval | `Flags.test_a_logistic_third_count_under_6_species_gets_no_interval` |
 | C69. The record counting the coefficients under 0, not the fold fits behind the flag | `Flags.test_the_record_counts_the_fold_fits_behind_the_flag` |
 | C70. A report with either condition counted as one with both | `Flags.test_the_read_prints_how_many_reports_each_condition_flags` |
 | C71. Write blind to a reading made without the second condition | `Flags.test_write_stops_on_a_reading_made_without_the_second_condition` |
 | C72. Gate 5 naming no report whose first Newton step has no finite solution | `Flags.test_gate_5_names_each_report_with_no_finite_first_step` |
 | C73. Gate 5 also naming a report whose later Newton step has no finite solution | `Flags.test_gate_5_names_each_report_with_no_finite_first_step` |
 | C74. The reading's sha256 worked without its last line break | `Flags.test_read_and_write_print_the_readings_sha256` |
+| C75. The logistic arm's outcome in each count taken from the rule | `Descriptive.test_the_logistic_arm_reads_descriptive_only_whatever_its_figures` |
+| C76. The logistic arm's reading taken from its counts that decide | `Descriptive.test_the_logistic_arm_reads_descriptive_only_whatever_its_figures` |
+| C77. The logistic arm's reports, species, medians and intervals not written | `Descriptive.test_the_logistic_arm_is_descriptive_only_in_each_count` |
+| C78. Both arms named as arms the rule can keep | `Descriptive.test_one_line_names_the_arms_that_can_be_kept` |
+| C79. The arms the rule can keep read from an environment setting | `Descriptive.test_no_option_or_environment_setting_changes_the_arms_that_can_be_kept` |
+| C80. An option of read and write naming the arms the rule can keep | `Descriptive.test_no_option_or_environment_setting_changes_the_arms_that_can_be_kept` |
+| C81. Write blind to a rule row that gives the logistic arm another outcome or reading | `Descriptive.test_write_stops_on_a_rule_row_that_gives_the_logistic_arm_another_outcome` |
+| C82. Print blind to a rule.tsv that gives the logistic arm another outcome or reading | `Descriptive.test_print_stops_on_a_record_that_gives_the_logistic_arm_another_outcome` |
+| C83. Write blind to a reading made under other arms that can be kept | `Descriptive.test_write_stops_on_a_reading_made_under_other_arms` |
+| C84. Write not working the sign flag out again from the fold records | `Flags.test_write_works_the_sign_flag_out_again` |
+| C85. Write not working the logistic mark out again from the fold records | `Flags.test_write_works_the_logistic_mark_out_again` |
+| C86. Write's stop line naming the report by species only | `Flags.test_write_names_each_report_whose_flags_differ` |
+| C87. Write naming only the first report whose flags differ | `Flags.test_write_names_each_report_whose_flags_differ` |
+| C88. The flags line giving the sign's count where R30's belongs | `Flags.test_the_flags_line_gives_each_conditions_own_count` |
+| C89. Gate 5 naming a report only with 2 or more folds whose first Newton step has no finite solution | `Flags.test_gate_5_names_a_report_with_exactly_1_fold_with_no_finite_first_step` |
+| C90. Write taking a report's sign flag given as text | `Flags.test_write_stops_on_a_sign_flag_given_as_text` |
+| C91. Write taking a fold fit's count given as true or false | `Flags.test_write_stops_on_a_fold_count_given_as_true_or_false` |
 
-All 74 were caught. Each test passes as the script stands and fails with its fault planted.
+91 of 91 faults failed their test. Each test passes as the script stands and fails with its fault planted.
