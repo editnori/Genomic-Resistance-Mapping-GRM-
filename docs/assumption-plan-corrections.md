@@ -1016,7 +1016,9 @@ An eleventh came while the text was written. The project's wording rules put rec
 
 **Plan.** Row A16 of the plan's inventory cites the site's label text at `web/src/views/MethodsView.tsx:202-204` and calls it "silent on S with I and I with R".
 
-**Now.** Pull request #186, merged on 26 Nov 2026, moved that text to the Data page, at `web/src/views/DataView.tsx:254-256`. It also added one sentence: "A pair called susceptible and intermediate is labeled susceptible, and a pair called intermediate and resistant is labeled resistant." That is what the rule `r-or-s-wins` does, at `src/curate.rs:83-89`. The row's own code lines (`:34-36`, `:568`, `:227`) fit `src/curate.rs` as it stood before commit `429965e6` of 21 Nov 2026. Today lines 34 to 36 only end the list of call types.
+**Now.** Pull request #186, merged on 26 Nov 2026, moved that text to the Data page, at `web/src/views/DataView.tsx:254-256` as that file stood at the merge. Two later pull requests of the same day, #187 and #191, moved it down the file, and it stays in the section Labels and inclusion.
+
+**Added.** Pull request #186 also added one sentence: "A pair called susceptible and intermediate is labeled susceptible, and a pair called intermediate and resistant is labeled resistant." That is what the rule `r-or-s-wins` does, at `src/curate.rs:83-89`. The row's own code lines (`:34-36`, `:568`, `:227`) fit `src/curate.rs` as it stood before commit `429965e6` of 21 Nov 2026. Today lines 34 to 36 only end the list of call types.
 
 **Unchanged.** The row's rule and its counts stand as written. So does its mark in the column Defended, none: the site's sentence states the rule and gives no reason for it. The entry Label rule gives the ruling on those pairs.
 
