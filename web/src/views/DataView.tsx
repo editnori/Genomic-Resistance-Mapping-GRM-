@@ -511,7 +511,7 @@ const LABEL_RULES: readonly LabelRuleRow[] = [
   { key: "i-r", calls: "I and R", label: "Resistant (R)", used: "Yes", kept: true },
   { key: "i", calls: "I only", label: "Intermediate (I); no R or S label", used: "No", kept: false },
   { key: "conflict", calls: "R and S (with or without I)", label: "Conflict; no label", used: "No", kept: false },
-  { key: "mic-only", calls: "No reported call, MIC only", label: "Inferred R or S at empirical breakpoint, else none", used: "No (curated records only)", kept: false },
+  { key: "mic-only", calls: "No reported call, MIC only", label: "Inferred R or S from its MIC, else none", used: "No (curated records only)", kept: false },
 ];
 
 const LabelRuleTable = () => (
@@ -527,7 +527,7 @@ const LabelRuleTable = () => (
               Label
             </th>
             <th scope="col" className="py-2 pl-3 pr-0 text-left text-tiny font-medium text-blue">
-              Used by models
+              Usable by models
             </th>
           </tr>
         </thead>

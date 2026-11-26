@@ -157,9 +157,11 @@ describe("MIC-inferred labels", () => {
     expect(data).toContain("A pair called susceptible and intermediate is labeled susceptible, and a pair called intermediate and resistant is labeled resistant.");
     const ruleBlock = data.slice(data.indexOf('id="m-label-rule"'), data.indexOf("</table>", data.indexOf('id="m-label-rule"')) + 8);
     expect([...ruleBlock.matchAll(/data-label-rule-row="([^"]+)"/g)].map((m) => m[1])).toEqual(["s", "r", "s-i", "i-r", "i", "conflict", "mic-only"]);
+    expect(ruleBlock).toContain("Usable by models");
     expect(ruleBlock).toContain("S and I");
     expect(ruleBlock).toContain("I and R");
     expect(ruleBlock).toContain("R and S (with or without I)");
+    expect(ruleBlock).toContain("Inferred R or S from its MIC, else none");
     expect(ruleBlock).toContain("No (curated records only)");
     expect(methods).toContain("fitted on the MICs of genomes with a reported call; a genome whose label was inferred from its MIC is left out");
   });

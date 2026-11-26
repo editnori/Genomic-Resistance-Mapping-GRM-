@@ -700,6 +700,7 @@ async function curationPathCheck(page, tag) {
       && got.ruleRows[2].cells[1] === 'Susceptible (S)'
       && got.ruleRows[3].cells[1] === 'Resistant (R)'
       && got.ruleRows[5].cells[1] === 'Conflict; no label'
+      && got.ruleRows[6].cells[1] === 'Inferred R or S from its MIC, else none'
       && got.ruleRows[6].cells[2] === 'No (curated records only)',
     got.ruleRows,
   );
