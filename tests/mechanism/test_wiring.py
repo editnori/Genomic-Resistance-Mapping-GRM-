@@ -78,11 +78,12 @@ class Wiring(unittest.TestCase):
         loader = unittest.TestLoader()
         n = {name: loader.loadTestsFromName(f"tests.mechanism.test_{name}").countTestCases() for name in (
             "tb_curve", "page_tables", "page_faults", "curve_tables", "curve_faults", "learner_overlap", "overlap_second",
-            "overlap_faults", "year_mix", "year_faults", "catalogue_size", "catalogue_faults", "page", "lineage_page",
-            "learner_overlap_page", "year_page", "catalogue_page")}
+            "overlap_faults", "year_mix", "year_faults", "catalogue_size", "catalogue_faults", "combiner",
+            "combiner_faults", "page", "lineage_page", "learner_overlap_page", "year_page", "catalogue_page",
+            "combiner_page")}
         total = suite_count()
         synthetic = (total - n["page"] - n["lineage_page"] - n["learner_overlap_page"] - n["year_page"]
-                     - n["catalogue_page"])
+                     - n["catalogue_page"] - n["combiner_page"])
         parts = (f"`{SUITE}` has {total} tests: {synthetic} SYNTHETIC tests, {n['tb_curve']} of them on `tb_curve.py`, ",
                  f", {n['page_tables']} on the result page's table script and {n['page_faults']} on its planted faults, ",
                  f", {n['curve_tables']} on the lineage curve's table script and {n['curve_faults']} on its planted "
@@ -90,14 +91,17 @@ class Wiring(unittest.TestCase):
                  f", {n['learner_overlap']} on the learner overlap's table script (`docs/learner-overlap-result.md`), "
                  f"{n['overlap_second']} on its second pass and {n['overlap_faults']} on their planted faults, ",
                  f" on their planted faults, {n['year_mix']} on the mechanism year read's script "
-                 f"(`docs/mechanism-year-result.md`) and {n['year_faults']} on its planted faults, and ",
-                 f", and {n['catalogue_size']} on the catalogue size reading's script "
-                 f"(`docs/catalogue-size-result.md`) and {n['catalogue_faults']} on its planted faults; ",
+                 f"(`docs/mechanism-year-result.md`) and {n['year_faults']} on its planted faults, ",
+                 f", {n['catalogue_size']} on the catalogue size reading's script "
+                 f"(`docs/catalogue-size-result.md`) and {n['catalogue_faults']} on its planted faults, and ",
+                 f", and {n['combiner']} on the combiner reading's script (`docs/combiner-result.md`) and "
+                 f"{n['combiner_faults']} on its planted faults; ",
                  f"; {n['page']} of the result page against its record; ",
                  f"; {n['lineage_page']} of the lineage curve's page against its record; ",
                  f"; {n['learner_overlap_page']} of the learner overlap's page against its records; ",
-                 f" against its records; {n['year_page']} of the mechanism year page against its record; and ",
-                 f"; and {n['catalogue_page']} of the catalogue size page against its record.")
+                 f" against its records; {n['year_page']} of the mechanism year page against its record; ",
+                 f"; {n['catalogue_page']} of the catalogue size page against its record; and ",
+                 f"; and {n['combiner_page']} of the combiner page against its script.")
         for part in parts:
             self.assertIn(part, lines[0])
 
