@@ -9,7 +9,7 @@ import type { Manifest } from "../data/schema";
 import { PanelState, VIEW_SHELL } from "../ui/primitives";
 import { recordLaunch } from "../ui/launch";
 import { TopBar } from "./TopBar";
-import { findFocusToken, isAppPath, lastNavKind, navigate, useLocationKey, useRouter, viewScrollOwner, VIEWS, type FocusToken, type Navigator, type ViewId } from "./router";
+import { findFocusToken, flowPreviewHref, isAppPath, lastNavKind, navigate, parseFlowPreview, useLocationKey, useRouter, viewScrollOwner, VIEWS, type FocusToken, type Navigator, type ViewId } from "./router";
 import { OverviewView } from "../views/OverviewView";
 import { DatasetsView } from "../views/DatasetsView";
 import { SpeciesView } from "../views/SpeciesView";
@@ -18,6 +18,7 @@ import { MethodsView } from "../views/MethodsView";
 import { DatasetInspector } from "../views/inspector/DatasetInspector";
 
 const PresentMode = lazy(() => import("../present/PresentMode").then((m) => ({ default: m.PresentMode })));
+const FlowPreviewView = lazy(() => import("../views/FlowPreviewView").then((m) => ({ default: m.FlowPreviewView })));
 
 const ViewBody = ({ manifest, nav }: { manifest: Manifest; nav: Navigator }) => {
   switch (nav.route.view) {
@@ -148,6 +149,7 @@ export const App = () => {
   const at = useLocationKey();
   const manifest = useManifest();
   const [presenting, setPresenting] = useState(false);
+  const flowPreview = parseFlowPreview(new URL(at.slice(at.indexOf("|") + 1), "http://local").pathname);
   const step = useViewStep(nav.route.view);
   const ready = manifest.status === "ready";
 
@@ -228,8 +230,8 @@ export const App = () => {
     <div className="flex h-full min-h-0 flex-col bg-bezel p-1 md:p-2">
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[14px] bg-paper text-ink shadow-[var(--surface-shadow)] md:rounded-[18px]">
         <TopBar
-          active={nav.route.view}
-          loading={manifest.status === "loading"}
+          active={flowPreview !== null ? null : nav.route.view}
+          loading={flowPreview === null && manifest.status === "loading"}
           onNavigate={(view) => switchView(() => nav.go({ view, species: null }))}
           onPresent={() => setPresenting(true)}
           presentDisabled={manifest.status !== "ready"}
@@ -238,8 +240,22 @@ export const App = () => {
           {/* relative: a visually hidden label anywhere in the view is
               positioned inside this scroll owner, never against main, so it
               cannot make the document itself scroll. */}
-          <div key={nav.route.view} data-view-scroll className={`relative h-full overflow-y-auto overflow-x-hidden overscroll-contain ${step}`}>
-            {manifest.status === "ready" ? (
+          <div
+            key={flowPreview !== null ? "flow" : nav.route.view}
+            data-view-scroll
+            className={`relative h-full overflow-y-auto overflow-x-hidden overscroll-contain ${flowPreview !== null ? "" : step}`}
+          >
+            {flowPreview !== null ? (
+              <Suspense
+                fallback={
+                  <div className={`${VIEW_SHELL} py-10`}>
+                    <PanelState kind="loading" title="Loading flow preview" />
+                  </div>
+                }
+              >
+                <FlowPreviewView target={flowPreview} onSelect={(next) => navigate(flowPreviewHref(next))} />
+              </Suspense>
+            ) : manifest.status === "ready" ? (
               <ViewBody manifest={manifest.data} nav={nav} />
             ) : (
               <div className={`${VIEW_SHELL} py-10`}>

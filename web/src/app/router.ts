@@ -6,6 +6,7 @@
 // the scroll position, the control in focus), so Back returns them to it.
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type Dispatch, type SetStateAction } from "react";
+import { FLOW_SLUGS, type FlowSlug } from "../flow/slugs";
 
 export const VIEWS = [
   { id: "overview", label: "Overview", path: "/" },
@@ -70,8 +71,27 @@ export const routeHref = (r: Route, hash?: string): string => {
   return `${r.dataset === null ? path : `${path}?dataset=${encodeURIComponent(r.dataset)}`}${hashOf(hash)}`;
 };
 
+export const FLOW_PREVIEW_PATH = "/flow";
+export type FlowPreviewTarget = "all" | FlowSlug;
+
+const FLOW_SLUG_SET = new Set<string>(FLOW_SLUGS.map((entry) => entry.slug));
+
+/** Preview route for the five React flow diagrams: /flow (all five) or
+ *  /flow/<slug> (one diagram). Null for every other path. */
+export const parseFlowPreview = (pathname: string): FlowPreviewTarget | null => {
+  const parts = pathname.split("/").filter((p) => p !== "").map(decodeURIComponent);
+  if (parts[0] !== "flow") return null;
+  if (parts.length === 1) return "all";
+  if (parts.length === 2 && FLOW_SLUG_SET.has(parts[1]!)) return parts[1] as FlowSlug;
+  return null;
+};
+
+export const flowPreviewHref = (target: FlowPreviewTarget): string =>
+  target === "all" ? FLOW_PREVIEW_PATH : `${FLOW_PREVIEW_PATH}/${target}`;
+
 /** A path the app draws, as opposed to a data file or an asset. */
 export const isAppPath = (pathname: string): boolean => {
+  if (parseFlowPreview(pathname) !== null) return true;
   const first = pathname.split("/").filter((p) => p !== "")[0];
   if (first === undefined) return true;
   if (MOVED[`/${first}`] !== undefined) return true;

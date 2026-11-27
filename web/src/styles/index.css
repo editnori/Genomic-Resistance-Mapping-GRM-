@@ -72,6 +72,13 @@
   --class-quinolone: #e87ba4;
   --class-other: #8e8e93;
 
+  /* DNA base tiles for the flow method drawings (matches the site's identity palette). */
+  --base-a: #2a78d6;
+  --base-c: #eda100;
+  --base-g: #008300;
+  --base-t: #e87ba4;
+  --base-t-ink: #0b0b0b;
+
   --mark-a: #4b74e2;
   --mark-b: #3155b4;
   --mark-top: #ff8c66;
@@ -120,6 +127,12 @@
   --class-aminoglycoside: #c98500;
   --class-quinolone: #d55181;
   --class-other: #7a7a80;
+
+  --base-a: #3987e5;
+  --base-c: #c98500;
+  --base-g: #008300;
+  --base-t: #d55181;
+  --base-t-ink: #ffffff;
 
   --mark-a: #6a8df5;
   --mark-b: #3557c0;
@@ -1101,6 +1114,48 @@ dialog .scroll-frame {
 
   .grm-mark *,
   ::view-transition-old(grm-view) {
+    animation: none !important;
+  }
+}
+
+/* ---- Flow diagram animations & DNA helpers -------------------------------- */
+@keyframes flow-pulse {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+@keyframes flow-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.flow-pulse {
+  animation: flow-pulse 1.6s ease-in-out infinite;
+}
+
+.flow-in {
+  animation: flow-in 350ms var(--ease-out) both;
+}
+
+.flow-bar-hatch {
+  background: repeating-linear-gradient(135deg, rgb(var(--blue)) 0 3px, transparent 3px 6px);
+}
+
+.flow-strand-mask {
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flow-pulse,
+  .flow-in {
     animation: none !important;
   }
 }
