@@ -486,57 +486,6 @@ fn build(
     Ok(result)
 }
 
-/// One learner's out-of-inner-fold scores across the `k` inner folds of one
-/// outer training set `T_f`. Samples outside `T_f` hold `f64::NAN`.
-pub(crate) struct InnerLearnerOof {
-    pub(crate) learner: &'static str,
-    /// Out-of-inner-fold score per dataset sample (`0..x.cols`), `f64::NAN`
-    /// outside `T_f`. A null inner fit records that inner fold's training
-    /// prevalence and marks `is_null[i] = true`.
-    pub(crate) scores: Vec<f64>,
-    /// Whether sample `i`'s inner score came from a null inner fit.
-    pub(crate) is_null: Vec<bool>,
-    /// How many inner folds had a null fit before completion (or error).
-    pub(crate) null_fits: usize,
-    /// Error message when an inner fit failed; `None` when all `k` succeeded.
-    pub(crate) error: Option<String>,
-}
-
-/// Out-of-inner-fold predictions collected strictly inside one outer training
-/// fold `T_f` without reading any sample outside `T_f`.
-pub(crate) struct InnerOof {
-    /// Inner fold assignment in `0..k` for `i in T_f`, `usize::MAX` outside.
-    pub(crate) inner_fold: Vec<usize>,
-    /// Per inner fold `j in 0..k`, its training and test counts by class.
-    pub(crate) inner_folds: Vec<FoldCounts>,
-    /// Why the inner partition or candidate/tuning checks failed; `None` when
-    /// all learners were run.
-    pub(crate) reason: Option<String>,
-    /// Per learner in `LEARNERS` order (empty when `reason.is_some()`).
-    pub(crate) learners: Vec<InnerLearnerOof>,
-}
-
-/// The inner folds of outer fold `f` at evaluation seed `seed`: its training
-/// samples `train` in `k` folds grouped by `partition_groups` (or stratified
-/// when `None`), drawn at the fold's own seed (`ablate::plan::fold_seed`). A
-/// sample outside `train` gets no inner fold (`usize::MAX`).
-pub(crate) fn inner_partition_with(
-    y: &Bits,
-    train: &Bits,
-    partition_groups: Option<&[u32]>,
-    k: usize,
-    seed: u64,
-    f: usize,
-) -> Vec<usize> {
-    training_folds(
-        y,
-        train,
-        partition_groups,
-        k,
-        crate::ablate::plan::fold_seed(seed, f),
-    )
-}
-
 /// The inner folds of outer fold `f` at evaluation seed `seed`: its
 /// training samples `train` in `k` folds grouped by `lineage`, drawn at the
 /// fold's own seed (`ablate::plan::fold_seed`), the partition the release's
@@ -550,146 +499,13 @@ pub(crate) fn inner_partition(
     seed: u64,
     f: usize,
 ) -> Vec<usize> {
-    inner_partition_with(y, train, Some(lineage), k, seed, f)
-}
-
-/// Runs `k` group-separated inner folds strictly inside outer training set
-/// `train` (partitioned on `partition_groups`, tuned on `tuning`) and returns
-/// raw out-of-inner-fold scores and null-fit flags for every `i in train` and
-/// every learner in `LEARNERS`. Reads no sample outside `train`.
-#[allow(clippy::too_many_arguments)]
-pub(crate) fn collect_inner_oof(
-    dataset: &str,
-    scheme: &str,
-    x: &BitMatrix,
-    y: &Bits,
-    partition_groups: Option<&[u32]>,
-    tuning: Option<&[u32]>,
-    train: &Bits,
-    f: usize,
-    k: usize,
-    min_support: u32,
-    cfg: &EvalConfig,
-) -> InnerOof {
-    let inner_fold = inner_partition_with(y, train, partition_groups, k, cfg.seed, f);
-    collect_inner_oof_with_partition(
-        dataset,
-        scheme,
-        x,
+    training_folds(
         y,
-        inner_fold,
-        tuning,
         train,
-        f,
+        Some(lineage),
         k,
-        min_support,
-        cfg,
+        crate::ablate::plan::fold_seed(seed, f),
     )
-}
-
-#[allow(clippy::too_many_arguments)]
-fn collect_inner_oof_with_partition(
-    dataset: &str,
-    scheme: &str,
-    x: &BitMatrix,
-    y: &Bits,
-    inner_fold: Vec<usize>,
-    tuning: Option<&[u32]>,
-    train: &Bits,
-    f: usize,
-    k: usize,
-    min_support: u32,
-    cfg: &EvalConfig,
-) -> InnerOof {
-    let n = x.cols;
-    if let Err(e) = validate_folds(y, train, &inner_fold, k) {
-        return InnerOof {
-            inner_fold,
-            inner_folds: vec![],
-            reason: Some(format!("the inner folds: {e:#}")),
-            learners: vec![],
-        };
-    }
-    let mut inner_folds = Vec::with_capacity(k);
-    let mut parts = Vec::with_capacity(k);
-    for j in 0..k {
-        let fit = Bits::from_indices(n, train.iter_ones().filter(|&i| inner_fold[i] != j));
-        let score = Bits::from_indices(n, train.iter_ones().filter(|&i| inner_fold[i] == j));
-        inner_folds.push(counts(&fit, &score, y));
-        parts.push((fit, score));
-    }
-    for (j, (fit, _)) in parts.iter().enumerate() {
-        if !any_training_candidate(x, fit, min_support) {
-            return InnerOof {
-                inner_fold,
-                inner_folds,
-                reason: Some(format!("inner fit {j} has no candidate feature")),
-                learners: vec![],
-            };
-        }
-        if let Err(e) = check_tuning_seeded(scheme, fit, y, tuning, cfg, inner_seed(cfg.seed, f, j))
-        {
-            return InnerOof {
-                inner_fold,
-                inner_folds,
-                reason: Some(format!("inner fit {j}: {e:#}")),
-                learners: vec![],
-            };
-        }
-    }
-    let fitted: Vec<_> = parts
-        .iter()
-        .enumerate()
-        .map(|(j, (fit, _))| (j, training_candidates(x, fit, min_support).0))
-        .collect();
-    let mut learners = Vec::with_capacity(LEARNERS.len());
-    for &learner in LEARNERS.iter() {
-        let mut row = InnerLearnerOof {
-            learner,
-            scores: vec![f64::NAN; n],
-            is_null: vec![false; n],
-            null_fits: 0,
-            error: None,
-        };
-        for ((j, cx), (fit, score)) in fitted.iter().zip(&parts) {
-            let seed = inner_seed(cfg.seed, f, *j);
-            let context = LassoContext {
-                dataset,
-                scheme,
-                outer_fold: Some(f),
-            };
-            match fit_seeded(learner, cx, y, fit, tuning, cfg, seed, seed, context) {
-                Ok((scored, _model)) => match &scored.scores {
-                    Some(all) => {
-                        for i in score.iter_ones() {
-                            row.scores[i] = all[i];
-                        }
-                    }
-                    None => {
-                        row.null_fits += 1;
-                        let prev = train_prevalence(y, fit);
-                        for i in score.iter_ones() {
-                            row.scores[i] = prev;
-                            row.is_null[i] = true;
-                        }
-                    }
-                },
-                Err(e) => {
-                    row.error = Some(format!("inner fit {j}: {e:#}"));
-                    row.scores.fill(f64::NAN);
-                    row.is_null.fill(false);
-                    break;
-                }
-            }
-        }
-        learners.push(row);
-    }
-    InnerOof {
-        inner_fold,
-        inner_folds,
-        reason: None,
-        learners,
-    }
 }
 
 /// The inner pick of outer fold `f`, whose training samples are `train`.
@@ -721,53 +537,86 @@ fn inner_fold_pick(
         return out;
     }
     out.status = "no pick".into();
-    let inner_fold = inner_partition(y, train, lineage, k, cfg.seed, f);
-    let oof = collect_inner_oof_with_partition(
-        dataset,
-        scheme,
-        x,
-        y,
-        inner_fold,
-        tuning,
-        train,
-        f,
-        k,
-        min_support,
-        cfg,
-    );
-    out.inner_folds = oof.inner_folds;
-    if let Some(reason) = oof.reason {
-        out.reason = Some(reason);
+    let n = x.cols;
+    let inner = inner_partition(y, train, lineage, k, cfg.seed, f);
+    if let Err(e) = validate_folds(y, train, &inner, k) {
+        out.reason = Some(format!("the inner folds: {e:#}"));
         return out;
     }
-    for oof_row in oof.learners {
+    let mut parts = Vec::with_capacity(k);
+    for j in 0..k {
+        let fit = Bits::from_indices(n, train.iter_ones().filter(|&i| inner[i] != j));
+        let score = Bits::from_indices(n, train.iter_ones().filter(|&i| inner[i] == j));
+        out.inner_folds.push(counts(&fit, &score, y));
+        parts.push((fit, score));
+    }
+    for (j, (fit, _)) in parts.iter().enumerate() {
+        if !any_training_candidate(x, fit, min_support) {
+            out.reason = Some(format!("inner fit {j} has no candidate feature"));
+            return out;
+        }
+        if let Err(e) = check_tuning_seeded(scheme, fit, y, tuning, cfg, inner_seed(cfg.seed, f, j))
+        {
+            out.reason = Some(format!("inner fit {j}: {e:#}"));
+            return out;
+        }
+    }
+    let fitted: Vec<_> = parts
+        .iter()
+        .enumerate()
+        .map(|(j, (fit, _))| (j, training_candidates(x, fit, min_support).0))
+        .collect();
+    for &learner in LEARNERS.iter() {
         let mut row = InnerLearner {
-            learner: oof_row.learner.to_string(),
+            learner: learner.to_string(),
             folds: vec![],
             tp: 0,
             fp: 0,
             tn: 0,
             fn_: 0,
             balanced_accuracy: None,
-            null_fits: oof_row.null_fits,
-            error: oof_row.error,
+            null_fits: 0,
+            error: None,
         };
-        if row.error.is_none() {
-            for j in 0..k {
-                let members: Vec<usize> = train
-                    .iter_ones()
-                    .filter(|&i| oof.inner_fold[i] == j)
-                    .collect();
-                let t: Vec<bool> = members.iter().map(|&i| y.contains(i)).collect();
-                let s: Vec<f64> = members.iter().map(|&i| oof_row.scores[i]).collect();
-                let c = calls(&t, &s);
-                row.tp += c.tp;
-                row.fp += c.fp;
-                row.tn += c.tn;
-                row.fn_ += c.fn_;
-                row.folds.push(c);
+        for ((j, cx), (fit, score)) in fitted.iter().zip(&parts) {
+            let seed = inner_seed(cfg.seed, f, *j);
+            let context = LassoContext {
+                dataset,
+                scheme,
+                outer_fold: Some(f),
+            };
+            match fit_seeded(learner, cx, y, fit, tuning, cfg, seed, seed, context) {
+                Ok((scored, _model)) => {
+                    let members: Vec<usize> = score.iter_ones().collect();
+                    let t: Vec<bool> = members.iter().map(|&i| y.contains(i)).collect();
+                    let s: Vec<f64> = match &scored.scores {
+                        Some(all) => members.iter().map(|&i| all[i]).collect(),
+                        None => {
+                            row.null_fits += 1;
+                            vec![train_prevalence(y, fit); members.len()]
+                        }
+                    };
+                    let c = calls(&t, &s);
+                    row.tp += c.tp;
+                    row.fp += c.fp;
+                    row.tn += c.tn;
+                    row.fn_ += c.fn_;
+                    row.folds.push(c);
+                }
+                Err(e) => {
+                    row.error = Some(format!("inner fit {j}: {e:#}"));
+                    row.folds.clear();
+                    break;
+                }
             }
+        }
+        if row.error.is_none() {
             row.balanced_accuracy = balanced(row.tp, row.fp, row.tn, row.fn_);
+        } else {
+            row.tp = 0;
+            row.fp = 0;
+            row.tn = 0;
+            row.fn_ = 0;
         }
         out.learners.push(row);
     }

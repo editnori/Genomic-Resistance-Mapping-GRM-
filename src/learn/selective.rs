@@ -33,9 +33,15 @@
 //! Emitted JSON holds aggregate counts, thresholds, rates, intervals, and
 //! metadata only: zero genome IDs and zero per-genome predictions.
 
-use super::eval::{EvalConfig, LEARNERS, LearnerResult, Role, SplitResult, tuning_groups};
-use super::fold_masks;
-use super::inner_pick::{InnerOof, collect_inner_oof};
+use super::eval::{
+    EvalConfig, LEARNERS, LassoContext, LearnerResult, Role, SplitResult, check_tuning_seeded,
+    fit_seeded, tuning_groups,
+};
+use super::inner_pick::{inner_partition, inner_seed};
+use super::{
+    any_training_candidate, fold_masks, train_prevalence, training_candidates, training_folds,
+    validate_folds,
+};
 use crate::bits::{BitMatrix, Bits};
 use crate::cluster;
 use crate::fnv::Fnv;
@@ -1515,6 +1521,158 @@ fn calibrate_fold(
         thresholds,
         conformal,
         joint_model,
+    }
+}
+
+/// One learner's out-of-inner-fold scores across the `k` inner folds of one
+/// outer training set `T_f`. Samples outside `T_f` hold `f64::NAN`.
+#[derive(Clone, Debug)]
+pub struct InnerLearnerOof {
+    /// Release learner name (`scm`, `cart`, `rf`, `gbt`, or `lasso`).
+    pub learner: &'static str,
+    /// Out-of-inner-fold score per dataset sample (`0..x.cols`), `f64::NAN`
+    /// outside `T_f`. A null inner fit records that inner fold's training
+    /// prevalence and marks `is_null[i] = true`.
+    pub scores: Vec<f64>,
+    /// Whether sample `i`'s inner score came from a null inner fit.
+    pub is_null: Vec<bool>,
+    /// How many inner folds had a null fit before completion (or error).
+    pub null_fits: usize,
+    /// Error message when an inner fit failed; `None` when all `k` succeeded.
+    pub error: Option<String>,
+}
+
+/// Out-of-inner-fold predictions collected strictly inside one outer training
+/// fold `T_f` without reading any sample outside `T_f`.
+#[derive(Clone, Debug)]
+pub struct InnerOof {
+    /// Inner fold assignment in `0..k` for `i in T_f`, `usize::MAX` outside.
+    pub inner_fold: Vec<usize>,
+    /// Why the inner partition or candidate/tuning checks failed; `None` when
+    /// all learners were run.
+    pub reason: Option<String>,
+    /// Per learner in `LEARNERS` order (empty when `reason.is_some()`).
+    pub learners: Vec<InnerLearnerOof>,
+}
+
+/// Draws `k` group-separated inner folds strictly inside outer training set
+/// `train` (reusing `inner_pick::inner_partition` when grouped, or stratified
+/// `training_folds` when `partition_groups` is `None`).
+pub fn inner_partition_with(
+    y: &Bits,
+    train: &Bits,
+    partition_groups: Option<&[u32]>,
+    k: usize,
+    seed: u64,
+    f: usize,
+) -> Vec<usize> {
+    match partition_groups {
+        Some(groups) => inner_partition(y, train, groups, k, seed, f),
+        None => training_folds(y, train, None, k, crate::ablate::plan::fold_seed(seed, f)),
+    }
+}
+
+/// Runs `k` group-separated inner folds strictly inside outer training set
+/// `train` (partitioned on `partition_groups`, tuned on `tuning`) and returns
+/// raw out-of-inner-fold scores and null-fit flags for every `i in train` and
+/// every learner in `LEARNERS`. Reads no sample outside `train`.
+#[allow(clippy::too_many_arguments)]
+pub fn collect_inner_oof(
+    dataset: &str,
+    scheme: &str,
+    x: &BitMatrix,
+    y: &Bits,
+    partition_groups: Option<&[u32]>,
+    tuning: Option<&[u32]>,
+    train: &Bits,
+    f: usize,
+    k: usize,
+    min_support: u32,
+    cfg: &EvalConfig,
+) -> InnerOof {
+    let n = x.cols;
+    let inner_fold = inner_partition_with(y, train, partition_groups, k, cfg.seed, f);
+    if let Err(e) = validate_folds(y, train, &inner_fold, k) {
+        return InnerOof {
+            inner_fold,
+            reason: Some(format!("the inner folds: {e:#}")),
+            learners: vec![],
+        };
+    }
+    let mut parts = Vec::with_capacity(k);
+    for j in 0..k {
+        let fit = Bits::from_indices(n, train.iter_ones().filter(|&i| inner_fold[i] != j));
+        let score = Bits::from_indices(n, train.iter_ones().filter(|&i| inner_fold[i] == j));
+        parts.push((fit, score));
+    }
+    for (j, (fit, _)) in parts.iter().enumerate() {
+        if !any_training_candidate(x, fit, min_support) {
+            return InnerOof {
+                inner_fold,
+                reason: Some(format!("inner fit {j} has no candidate feature")),
+                learners: vec![],
+            };
+        }
+        if let Err(e) = check_tuning_seeded(scheme, fit, y, tuning, cfg, inner_seed(cfg.seed, f, j))
+        {
+            return InnerOof {
+                inner_fold,
+                reason: Some(format!("inner fit {j}: {e:#}")),
+                learners: vec![],
+            };
+        }
+    }
+    let fitted: Vec<_> = parts
+        .iter()
+        .enumerate()
+        .map(|(j, (fit, _))| (j, training_candidates(x, fit, min_support).0))
+        .collect();
+    let mut learners = Vec::with_capacity(LEARNERS.len());
+    for &learner in LEARNERS.iter() {
+        let mut row = InnerLearnerOof {
+            learner,
+            scores: vec![f64::NAN; n],
+            is_null: vec![false; n],
+            null_fits: 0,
+            error: None,
+        };
+        for ((j, cx), (fit, score)) in fitted.iter().zip(&parts) {
+            let seed = inner_seed(cfg.seed, f, *j);
+            let context = LassoContext {
+                dataset,
+                scheme,
+                outer_fold: Some(f),
+            };
+            match fit_seeded(learner, cx, y, fit, tuning, cfg, seed, seed, context) {
+                Ok((scored, _model)) => match &scored.scores {
+                    Some(all) => {
+                        for i in score.iter_ones() {
+                            row.scores[i] = all[i];
+                        }
+                    }
+                    None => {
+                        row.null_fits += 1;
+                        let prev = train_prevalence(y, fit);
+                        for i in score.iter_ones() {
+                            row.scores[i] = prev;
+                            row.is_null[i] = true;
+                        }
+                    }
+                },
+                Err(e) => {
+                    row.error = Some(format!("inner fit {j}: {e:#}"));
+                    row.scores.fill(f64::NAN);
+                    row.is_null.fill(false);
+                    break;
+                }
+            }
+        }
+        learners.push(row);
+    }
+    InnerOof {
+        inner_fold,
+        reason: None,
+        learners,
     }
 }
 
