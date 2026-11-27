@@ -122,6 +122,17 @@ class Ppm(unittest.TestCase):
         self.assertEqual(stage2.ppm(0.5), 500000)
         self.assertEqual(stage2.ppm(0.375), 375000)
 
+    def test_each_bound_of_a_row_is_rounded_from_its_exact_double_not_from_the_double_times_a_million(self):
+        # Each double times a million lands on a half and rounds to 500002; the exact doubles lie below and above
+        # those halves, so they round to 500001 and 500003.
+        lower, upper = 0.5000015, 0.5000025
+        self.assertEqual((round(lower * stage2.PPM), round(upper * stage2.PPM)), (500002, 500002))
+        self.assertLess(F(lower), F(1000003, 2000000))
+        self.assertGreater(F(upper), F(1000005, 2000000))
+        row = stage2.bounds_row("A", "primary", "primary", {"interval": (lower, upper), "species": 6})
+        self.assertEqual((row["lower_ppm"], row["upper_ppm"]), (500001, 500003))
+        self.assertEqual(row["chance"], "above")
+
 
 class Interval(unittest.TestCase):
     def values(self, n, seed=7):

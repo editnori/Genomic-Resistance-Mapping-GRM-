@@ -8,7 +8,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from tests.matched_accuracy import stage2_common as c
+from tests.matched_accuracy import made_up2, stage2_common as c
 from tests.matched_accuracy.stage2_common import stage1, stage2
 
 NUMBERS = {
@@ -141,6 +141,64 @@ class Scan(c.Case, unittest.TestCase):
         with mock.patch.object(stage2, "CALLS", {True: "resistant", False: "susceptible" + "."}):
             made = self.run_stage2()
         self.assert_stops_after_the_line(made, "cells.tsv holds a decimal point")
+
+
+def left_out_and_unlisted(release):
+    """A `before`: the designed release gains a report of a ninth species that holds none of the five learners, so
+    stage 1 leaves it out, and a genome-table row of a made-up genome that no report holds."""
+    rows = [{"id": made_up2.made_up.gid("ch", n), "resistant": n % 2 == 0, "fold": n % 5, "lineage": 30 + n,
+             "mlst": "ST-1", "from_mic": False} for n in range(1, 8)]
+    release["reports"].append(made_up2.made_up.report("synthia_chi__drug_a", "Synthia chi", "synthia_chi", "drug_a",
+                                                        rows, None, learners=()))
+    release["hc20"].append({"genome_id": made_up2.made_up.gid("hz", 1), "genome_name": "made-up", "mlst": "made-up",
+                            "cgmlst_hc20": "hc-1"})
+
+
+class Inputs(c.Case, unittest.TestCase):
+    """inputs.tsv on the designed release with a report left out and a genome-table row no report holds: each row
+    gives its own file's sha256 and count, and the scan reads the ids of the report left out and of the table."""
+
+    def test_each_input_row_gives_its_own_files_sha256_and_count(self):
+        made = self.run_stage2(before=left_out_and_unlisted)
+        self.assert_passes(made)
+        rows = {r["input"]: r for r in made.table("inputs.tsv")}
+        reports = sorted((made.top / "reports").glob("*.json"))
+        self.assertEqual(len(reports), 11)
+        self.assertEqual((rows["reports"]["sha256"], rows["reports"]["count"]),
+                         (c.sha((made.top / "reports.sha256").read_bytes()), "11"))
+        self.assertTrue(rows["reports"]["note"].endswith("listed in a row list: 10"), rows["reports"]["note"])
+        lines = {}
+        for reading in stage2.READINGS:
+            row, data = rows[f"row list, reading {reading}"], made.row_list(reading).read_bytes()
+            lines[reading] = str(len(data.decode("utf-8").splitlines()))
+            self.assertEqual((row["sha256"], row["count"]), (c.sha(data), lines[reading]), reading)
+        self.assertNotEqual(rows["row list, reading A"]["sha256"], rows["row list, reading B"]["sha256"])
+        self.assertEqual(lines["A"], "82")
+        table = (made.top / "genomes.jsonl").read_bytes()
+        held = len(table.decode("utf-8").splitlines())
+        self.assertEqual(held, len(made.release["hc20"]))
+        self.assertEqual((rows["genome table, 5 Nov"]["sha256"], rows["genome table, 5 Nov"]["count"]),
+                         (c.sha(table), str(held)))
+        self.assertTrue(rows["genome table, 5 Nov"]["note"].endswith("listed genomes it lacks: 1"),
+                        rows["genome table, 5 Nov"]["note"])
+
+    def test_an_id_of_the_report_left_out_or_of_the_genome_table_alone_is_a_hit(self):
+        for planted in (made_up2.made_up.gid("ch", 1), made_up2.made_up.gid("hz", 1)):
+            with self.subTest(planted=planted):
+                real = stage2.export_files
+
+                def leaky(checked, result, planted=planted):
+                    out = real(checked, result)
+                    out["measure.tsv"] += planted.encode("utf-8") + b"\n"
+                    return out
+                with mock.patch.object(stage2, "export_files", side_effect=leaky):
+                    made = self.run_stage2(before=left_out_and_unlisted)
+                listed = {line.split("\t")[1] for reading in stage2.READINGS
+                          for line in made.row_list(reading).read_text(encoding="utf-8").splitlines()}
+                self.assertNotIn(planted, listed)
+                self.assertEqual(made.code, 1, made.lines)
+                self.assertEqual(made.lines, [stage2.OPENED, "measure.tsv 1"])
+                self.assertFalse(made.wrote_export())
 
 
 class FailedWrite(c.Case, unittest.TestCase):

@@ -7,7 +7,7 @@ import json
 import unittest
 from unittest import mock
 
-from tests.matched_accuracy import stage2_common as c
+from tests.matched_accuracy import made_up2, stage2_common as c
 from tests.matched_accuracy.stage2_common import stage2
 
 OTHER = "0" * 64
@@ -61,6 +61,22 @@ class Sums(c.Case, unittest.TestCase):
             run.rewrite_sums()
         self.assert_stops(self.run_stage2(after=after),
                           "synthia_kappa__drug_z.json gives the id synthia_kappa__drug_a, not its file name")
+
+    def test_a_report_left_out_whose_id_is_not_its_file_name_stops(self):
+        # A made-up report of a ninth species holds none of the five learners, so stage 1 leaves it out. After stage
+        # 1 ran, its file takes another name, with its line of the sums list.
+        def before(release):
+            rows = [{"id": made_up2.made_up.gid("ch", n), "resistant": n % 2 == 0, "fold": n % 5, "lineage": 30 + n,
+                     "mlst": "ST-1", "from_mic": False} for n in range(1, 8)]
+            release["reports"].append(made_up2.made_up.report("synthia_chi__drug_a", "Synthia chi", "synthia_chi",
+                                                              "drug_a", rows, None, learners=()))
+
+        def after(run):
+            old = run.report("synthia_chi__drug_a")
+            old.rename(old.with_name("synthia_chi__drug_z.json"))
+            run.rewrite_sums()
+        self.assert_stops(self.run_stage2(before=before, after=after),
+                          "synthia_chi__drug_z.json gives the id synthia_chi__drug_a, not its file name")
 
     def test_a_missing_row_list_stops(self):
         def argv(a):
@@ -272,6 +288,25 @@ class Setup(c.Case, unittest.TestCase):
                                               "earlier run"])
         self.assertFalse(run.wrote_export())
 
+    def test_an_output_directory_holding_an_export_or_stage_1s_local_directory_stops(self):
+        for name in ("export", "local"):
+            with self.subTest(name=name):
+                def after(run, name=name):
+                    (run.out / name).mkdir(parents=True)
+                run = self.run_stage2(after=after)
+                self.assertEqual(run.code, 1, run.lines)
+                self.assertEqual(run.lines, [c.STOP + "the output directory already holds export, local or the line "
+                                                      "of an earlier run"])
+                self.assertEqual(sorted(p.name for p in run.out.iterdir()), [name])
+                self.assertEqual(list((run.out / name).iterdir()), [])
+
+    def test_a_missing_genome_table_stops_in_one_line_today(self):
+        # Today the missing table stops in one line before the line. The Python error comes only with the stop cut.
+        def argv(a):
+            i = a.index("--hc20")
+            return a[:i + 1] + [a[i + 1] + "-gone"] + a[i + 2:]
+        self.assert_stops(self.run_stage2(argv=argv), "the genome table, 5 Nov, is missing")
+
     def test_a_committed_count_table_without_stage_1s_columns_stops(self):
         def after(run):
             text = run.counts().read_text()
@@ -295,6 +330,32 @@ def fit_sizes(learner, value):
         split = next(s for s in doc["splits"] if s["scheme"] == "lineage")
         next(e for e in split["learners"] if e["learner"] == learner)["fold_complexity"] = value
     return change
+
+
+def listed_indices(run, dataset):
+    """The report indices of a dataset's rows listed in either row list, in the order of the report."""
+    genomes = {line.split("\t")[1] for reading in ("A", "B")
+               for line in run.row_list(reading).read_text(encoding="utf-8").splitlines()
+               if line.split("\t")[0] == dataset}
+    doc = json.loads(run.report(dataset).read_bytes())
+    return [i for i, s in enumerate(doc["samples"]) if s["id"] in genomes]
+
+
+def calls_at(dataset, value, pick):
+    """An `after` that sets the catalogue call of the listed rows pick(indices) gives, and keeps the indices on the
+    run as run.listed."""
+    def after(run):
+        run.listed = listed_indices(run, dataset)
+
+        def change(doc):
+            for i in pick(run.listed):
+                doc["samples"][i]["catalog_resistant"] = value
+        run.rewrite_report(dataset, change)
+    return after
+
+
+# Values a fit size by fold may not take, each not a finite number: one for each learner and fold in turn.
+NOT_FINITE = (None, float("nan"), "3", True, float("inf"), 10 ** 400, [3.0])
 
 
 class Values(c.Case, unittest.TestCase):
@@ -321,6 +382,33 @@ class Values(c.Case, unittest.TestCase):
             with self.subTest(value=value):
                 self.assert_stops(self.run_stage2(after=kappa(fit_sizes("gbt", value))), "synthia_kappa__drug_a: the "
                                   "fit size by fold (fold_complexity) of gbt is not a list of 5 finite numbers")
+
+    def test_a_bad_catalogue_call_on_any_listed_row_stops_and_each_is_counted(self):
+        # Kappa's listed rows, by their place among the listed rows: the first, one in the middle and the last,
+        # each alone, then every listed row at once.
+        d = "synthia_kappa__drug_a"
+        for where, pick in (("first", lambda ix: ix[:1]), ("middle", lambda ix: ix[len(ix) // 2:len(ix) // 2 + 1]),
+                            ("last", lambda ix: ix[-1:]), ("every", lambda ix: ix)):
+            with self.subTest(row=where):
+                run = self.run_stage2(after=calls_at(d, "yes", pick))
+                self.assertEqual(len(run.listed), 9)
+                n = len(pick(run.listed))
+                self.assert_stops(run, f"{d}: listed rows whose catalog_resistant is not true, false or null: {n}")
+
+    def test_a_bad_fit_size_in_any_of_the_five_learners_at_any_fold_stops_and_names_the_learner(self):
+        # In tau's report, each of the five learners at each of the 5 folds, the first and the last included.
+        d = "synthia_tau__drug_a"
+        for j, learner in enumerate(stage2.FIVE):
+            for fold in range(5):
+                value = NOT_FINITE[(j + fold) % len(NOT_FINITE)]
+                with self.subTest(learner=learner, fold=fold, value=repr(value)[:12]):
+                    def change(doc, learner=learner, fold=fold, value=value):
+                        split = next(s for s in doc["splits"] if s["scheme"] == "lineage")
+                        entry = next(e for e in split["learners"] if e["learner"] == learner)
+                        entry["fold_complexity"][fold] = value
+                    run = self.run_stage2(after=lambda r, change=change: r.rewrite_report(d, change))
+                    self.assert_stops(run, f"{d}: the fit size by fold (fold_complexity) of {learner} is not a list "
+                                           f"of 5 finite numbers")
 
     def test_fit_sizes_of_five_integers_and_a_null_fit_pass(self):
         self.assert_passes(self.run_stage2(after=kappa(fit_sizes("lasso", [3, 0, 3, 3, 3]))))

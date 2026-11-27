@@ -164,6 +164,42 @@ class LineWrite(c.Case, unittest.TestCase):
         self.assertFalse((run.out / stage2.OPENED_FILE).exists())
         self.assertFalse(run.wrote_export())
 
+    def test_a_line_write_that_fails_after_its_file_is_made_leaves_it_empty_and_a_rerun_there_stops_today(self):
+        # Today's behaviour (finding 5 of the re-check waits until after the one reading): the file is made, its
+        # write meets a made-up full disk, the run stops in one line, and the empty file stays behind.
+        real_open, real_fdopen, line_fds = os.open, os.fdopen, set()
+
+        def opening(path, *a, **kw):
+            fd = real_open(path, *a, **kw)
+            if Path(path).name == stage2.OPENED_FILE:
+                line_fds.add(fd)
+            return fd
+
+        def full(fd, *a, **kw):
+            f = real_fdopen(fd, *a, **kw)
+            if fd in line_fds:
+                def write(text):
+                    raise OSError(28, "made-up full disk")
+                f.write = write
+            return f
+        with mock.patch.object(stage2.os, "open", side_effect=opening), \
+                mock.patch.object(stage2.os, "fdopen", side_effect=full):
+            run = self.run_stage2()
+        self.assertEqual(len(line_fds), 1)
+        self.assertEqual(run.code, 1, run.lines)
+        self.assertEqual(run.lines, [c.STOP + "the line could not be written (OSError)"])
+        self.assertEqual(sorted(p.name for p in run.out.iterdir()), [stage2.OPENED_FILE])
+        self.assertEqual((run.out / stage2.OPENED_FILE).read_bytes(), b"")
+        own, inner = made_up2.stage2_pins(run.top, run.stage1_out)
+        printed = io.StringIO()
+        with contextlib.redirect_stdout(printed):
+            again = made_up2.stage2_run(stage2, run.argv, own, inner)
+        self.assertEqual((again, printed.getvalue().splitlines()),
+                         (1, [c.STOP + "the output directory already holds export, local or the line of an earlier "
+                                       "run"]))
+        self.assertEqual((run.out / stage2.OPENED_FILE).read_bytes(), b"")
+        self.assertFalse(run.wrote_export())
+
 
 class Gate(unittest.TestCase):
     """The second loader takes the line's token alone, and its file must hold the line."""

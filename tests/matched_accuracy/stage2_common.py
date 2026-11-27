@@ -28,6 +28,51 @@ def sha(data):
     return hashlib.sha256(data).hexdigest()
 
 
+def read_tsv(path):
+    return list(csv.DictReader(io.StringIO(pathlib.Path(path).read_text(encoding="utf-8")), delimiter="\t"))
+
+
+# The counts of a row of stage 2's typing.tsv, by its match, beside the column of stage 1's typing table that gives
+# the same count: the narrower match is stage 1's step, and the wider matches run on that step's surviving rows.
+TYPING_TWINS = {
+    "narrower": {"rows": "rows", "groups": "groups", "pairs": "pairs", "datasets": "datasets", "species": "species"},
+    "primary": {"rows": "rows", "groups": "primary_groups", "pairs": "primary_pairs", "datasets": "datasets",
+                "species": "species"},
+    "mlst": {"rows": "rows", "groups": "mlst_groups", "pairs": "mlst_pairs", "datasets": "datasets",
+             "species": "species"},
+}
+
+
+def typing_differences(run):
+    """[(reading, step, match, level, name, column, stage 2's count, stage 1's)] for every count of the run's
+    typing.tsv that differs from stage 1's typing table for the same release. The lost columns of the wider
+    primary match are checked against stage 1's count table less its typing table. A name stage 2 leaves out must
+    have no row in stage 1's typing table. An empty list: every count agrees."""
+    theirs = {(r["level"], r["name"], r["reading"], r["step"]): r for r in read_tsv(run.typing_table())}
+    whole = {(r["level"], r["name"], r["reading"]): r for r in read_tsv(run.counts())}
+    out, seen = [], set()
+    for row in run.table("typing.tsv"):
+        k = (row["level"], row["name"], row["reading"], row["step"])
+        where = (row["reading"], row["step"], row["match"], row["level"], row["name"])
+        seen.add(k)
+        if k not in theirs:
+            out.append(where + ("every column", "a row", "no row"))
+            continue
+        t = theirs[k]
+        twins = TYPING_TWINS["narrower" if row["match"] == row["step"] else row["match"]]
+        want = {column: t[twin] for column, twin in twins.items()}
+        if row["match"] == "primary":
+            w = whole[k[:3]]
+            want["lost_rows"] = t["rows_lost_from_primary"]
+            want.update({f"lost_{c}": str(int(w[c]) - int(t[twin])) for c, twin in twins.items() if c != "rows"})
+        else:
+            want.update({c: "" for c in stage2.LOST})
+        out += [where + (c, row[c], v) for c, v in want.items() if row[c] != v]
+    out += [(k[2], k[3], "-", k[0], k[1], "rows", "no row", t["rows"]) for k, t in theirs.items()
+            if k not in seen and t["rows"] != "0"]
+    return out
+
+
 class Run:
     """One run of stage 1, then stage2.main, on a release written in a new temporary directory.
 
@@ -161,4 +206,6 @@ class Case:
         self.assertFalse(run.wrote_export(), run.lines)
 
     def assert_passes(self, run):
+        """Exit 0, and every count of typing.tsv equal to stage 1's typing table for the same release."""
         self.assertEqual(run.code, 0, run.lines)
+        self.assertEqual(typing_differences(run), [])

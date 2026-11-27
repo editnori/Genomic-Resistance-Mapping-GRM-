@@ -1,8 +1,8 @@
 """The designed release of made_up2.py, 8 made-up species, through stage 1 and stage 2, against figures worked by
 hand: one exact tie, one fold with a null fit, one dataset under 10 pairs, one report without a catalogue rule
-and one row lacking an MLST type. Then two releases of one species for the typing reads, the designed release
+and one row lacking an MLST type. Then four releases of one species for the typing reads, the designed release
 with a ninth species and a report left out for the wholes, and its first 5 species, which give an estimate and
-no interval.
+no interval. On each run every count of typing.tsv is compared with stage 1's typing table for the release.
 
 Every value here is made up: the species, the rows and their scores (made_up2.designed())."""
 
@@ -192,6 +192,11 @@ class Designed(unittest.TestCase):
         # Reading A's lower bound, 572917 parts per million, is above one half.
         self.assertEqual(got[("A", "primary", "primary")][:3], (572917, 796875, "above"))
 
+    def test_every_typing_count_is_stage_1s_typing_table(self):
+        self.assertEqual(c.typing_differences(self.made), [])
+        # 2 readings, 19 names and 5 rows of typing.tsv each, all compared.
+        self.assertEqual(len(self.made.table("typing.tsv")), 2 * 19 * 5)
+
 
 def typing_row(made, step, match, level="overall"):
     return next(r for r in made.table("typing.tsv") if (r["reading"], r["step"], r["match"], r["level"]) ==
@@ -202,8 +207,9 @@ COLUMNS = ("estimate_ppm", "rows", "groups", "pairs", "datasets", "species") + c
 
 
 class TypingRows(unittest.TestCase):
-    """Two made-up releases of one species: a group with MLST, no HC20 and both outcomes, and MLST values with
-    blanks around them."""
+    """Four made-up releases of one species: a group with MLST, no HC20 and both outcomes; MLST values with blanks
+    around them; rows lacking MLST that hold both outcomes; and an MLST group that its HC20 values split into a
+    group with one outcome."""
 
     def test_a_group_with_mlst_no_hc20_and_both_outcomes_leaves_the_mlst_and_hc20_read(self):
         plan = [[made_up2.dataset("drug_a", [
@@ -222,6 +228,48 @@ class TypingRows(unittest.TestCase):
         # Its wider primary match runs on the same 4 rows and loses the other 4 rows, 1 group and 4 pairs.
         self.assertEqual([typing_row(made, "mlst_hc20", "primary")[k] for k in COLUMNS],
                          ["1000000", "4", "1", "4", "1", "1", "4", "1", "4", "0", "0"])
+        self.assertEqual(c.typing_differences(made), [])
+
+    def test_rows_lacking_mlst_that_hold_both_outcomes_leave_both_typing_reads(self):
+        # One group: R 0.9 and S 0.4 of ST-1, and R 0.3 and S 0.6 lacking MLST. The primary match holds all 4 rows,
+        # 2 wins over 4 pairs. Both typing reads keep the 2 rows of ST-1 alone: R 0.9 beats S 0.4, 1 over 1 pair.
+        # Kept, the rows lacking MLST would form a second group, R 0.3 against S 0.6, of value 0.
+        plan = [[made_up2.dataset("drug_a", [
+            made_up2.group(0, 10, [made_up2.R(0.9), made_up2.S(0.4), made_up2.R(0.3, mlst=None),
+                                   made_up2.S(0.6, mlst=None)]),
+        ])]]
+        made = c.Run(plan)
+        self.addCleanup(made.close)
+        self.assertEqual(made.code, 0, made.lines)
+        self.assertEqual(made.measure("A", "overall", "all")["estimate_ppm"], "500000")
+        for step in ("mlst", "mlst_hc20"):
+            with self.subTest(step=step):
+                self.assertEqual([typing_row(made, step, step)[k] for k in COLUMNS],
+                                 ["1000000", "2", "1", "1", "1", "1", "", "", "", "", ""])
+                self.assertEqual([typing_row(made, step, "primary")[k] for k in COLUMNS],
+                                 ["1000000", "2", "1", "1", "1", "1", "2", "0", "3", "0", "0"])
+        self.assertEqual(c.typing_differences(made), [])
+
+    def test_an_mlst_group_that_hc20_splits_into_a_group_with_one_outcome_leaves_the_mlst_and_hc20_read(self):
+        # One group of ST-1: R 0.9, S 0.5 and S 0.1 in HC20 group hc-1, and R 0.2 in hc-2. The MLST read holds all 4
+        # rows, 3 wins over 4 pairs. The MLST and HC20 read leaves out hc-2, a group with one outcome: R 0.9 beats
+        # both S rows, 1 over 2 pairs, and its wider matches run on those 3 rows.
+        plan = [[made_up2.dataset("drug_a", [
+            made_up2.group(0, 10, [made_up2.R(0.9), made_up2.R(0.2, hc20="hc-2"), made_up2.S(0.5),
+                                   made_up2.S(0.1)]),
+        ])]]
+        made = c.Run(plan)
+        self.addCleanup(made.close)
+        self.assertEqual(made.code, 0, made.lines)
+        self.assertEqual([typing_row(made, "mlst", "mlst")[k] for k in COLUMNS],
+                         ["750000", "4", "1", "4", "1", "1", "", "", "", "", ""])
+        self.assertEqual([typing_row(made, "mlst_hc20", "mlst_hc20")[k] for k in COLUMNS],
+                         ["1000000", "3", "1", "2", "1", "1", "", "", "", "", ""])
+        self.assertEqual([typing_row(made, "mlst_hc20", "mlst")[k] for k in COLUMNS],
+                         ["1000000", "3", "1", "2", "1", "1", "", "", "", "", ""])
+        self.assertEqual([typing_row(made, "mlst_hc20", "primary")[k] for k in COLUMNS],
+                         ["1000000", "3", "1", "2", "1", "1", "1", "0", "2", "0", "0"])
+        self.assertEqual(c.typing_differences(made), [])
 
     def test_an_mlst_value_with_blanks_around_it_is_read_trimmed_and_blanks_alone_lack_a_value(self):
         plan = [[made_up2.dataset("drug_a", [
@@ -234,6 +282,7 @@ class TypingRows(unittest.TestCase):
         # " ST-2 " joins ST-2: R 0.9 beats S 0.5 and R 0.4 does not, 1/2 over 2 pairs; the S row of blanks leaves.
         self.assertEqual([typing_row(made, "mlst", "mlst")[k] for k in COLUMNS[:6]], ["500000", "3", "1", "2", "1", "1"])
         self.assertEqual(made.measure("A", "overall", "all")["estimate_ppm"], "750000")
+        self.assertEqual(c.typing_differences(made), [])
 
 
 class Wholes(unittest.TestCase):
@@ -267,6 +316,7 @@ class Wholes(unittest.TestCase):
         self.assertEqual(rows["species of the reports that enter"]["count"], "9")
         # 8 species enter the measure; the ninth enters with no eligible row.
         self.assertEqual(made.measure("A", "overall", "all")["species"], "8")
+        self.assertEqual(c.typing_differences(made), [])
 
 
 class FiveSpecies(unittest.TestCase):
@@ -293,6 +343,9 @@ class FiveSpecies(unittest.TestCase):
         for r in self.made.table("interval.tsv"):
             self.assertEqual((r["lower_ppm"], r["upper_ppm"], r["chance"], r["species"], r["draws"]),
                              ("", "", "", "5", "0"))
+
+    def test_every_typing_count_is_stage_1s_typing_table(self):
+        self.assertEqual(c.typing_differences(self.made), [])
 
 
 if __name__ == "__main__":
