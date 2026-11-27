@@ -324,6 +324,9 @@ jobs:
           # test_reference.py also reads reference/matched-accuracy; it and test_scan.py read the committed sums list reference/lineage-control/rev14-274-20261112.reports.sha256; test_stage2_reference.py and test_page.py read stage 1's committed export reference/matched-accuracy/stage1-rev14-274-20261112; test_faults.py and test_stage2_faults.py read scripts/matched-accuracy/planted_faults.py and stage2_faults.py and the file each plants in.
           - suite: tests/matched_accuracy
             top: .
+          # SYNTHETIC exports, fold files, protein variants and foundation manifests built in the test; runs scripts/point-mutations/ (exposure_audit.py, features.py, compare.py), planted-fault leakage checks and hygiene scans (docs/point-mutation-plan.md).
+          - suite: tests/point_mutations
+            top: .
     env:
       SUITE: ${{ matrix.suite }}
       TOP: ${{ matrix.top }}
