@@ -10,7 +10,8 @@ from tests.matched_accuracy.test_faults import test_ids
 
 # The rules of stage 2, each with at least one fault.
 RULES = ("row mean", "tie", "weights", "interval", "chance", "the line", "ten pairs", "export", "typing", "counts",
-         "groups", "row list", "rows", "learners", "null fits", "values", "report id", "genome table", "wholes")
+         "groups", "row list", "rows", "learners", "null fits", "values", "report id", "genome table", "wholes",
+         "output directory", "inputs", "scan")
 # The faults the brief and the lead's amendments of 27 Nov ask for, by what each plants.
 ASKED = {
     "S01": "sum", "S02": "math.fsum", "S03": "tie counted 1", "S04": "tie counted 0",
