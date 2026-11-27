@@ -24,7 +24,8 @@ Steps.
    lineage cluster and each copy group in one fold. A report whose lineage
    split holds none of scm, cart, rf, gbt and lasso is counted and left out.
 2. Check the lab records: 1,285,111 lines, each inserted before
-   2026-11-05T19:10:00 (its first 19 characters, as text). The 252,148
+   2026-11-05T19:10:00 (the first 19 characters of each text of its
+   insertion time, a real date and time, compared as text). The 252,148
    records dropped at the cut are a recorded figure, never measured here.
 3. Check each row's lab call against the label table, for rows with
    from_mic false. Rows with from_mic true are counted apart.
@@ -39,12 +40,14 @@ Steps.
    alone under <out>/export/, after a scan for every genome id and
    BioProject accession the run read, with a positive control.
 
-Every check that fails prints one line and exits 1, writing nothing.
+Every check that fails prints one line and exits 1, writing nothing; a scan
+hit prints one line a file.
 Python 3.12, standard library only; run with -I.
 """
 
 import argparse
 import collections
+import datetime
 import fractions
 import gzip
 import hashlib
@@ -56,7 +59,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 SEAL = "2026-11-05T19:10:00"
-STAMP = re.compile(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d")
+STAMP = re.compile(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d", re.ASCII)
 SHA = re.compile(r"[0-9a-f]{64}")
 RECORDS_SHA256 = "d231fa768a31fc4ce4c8a6bb7024d05d632621846070688adb892fbfe340fd78"
 RECORDS_LINES = 1285111
@@ -138,11 +141,21 @@ def parse_call(text):
     return "R" if t in R_WORDS else "S" if t in S_WORDS else "I" if t in I_WORDS else None
 
 
-def stamp_head(v):
-    """The first 19 characters of an insertion time, or None when they are not a time to the second."""
+def stamp_heads(v):
+    """The first 19 characters of each text of an insertion time, a list giving each of its texts apart, or None
+    when the value is blank or a text of it is not a real date and time to the second in ASCII digits."""
+    if isinstance(v, list):
+        heads = [stamp_heads(x) for x in v]
+        return None if not heads or None in heads else [h for hs in heads for h in hs]
     t = value_text(v)
     head = t[:19] if t else ""
-    return head if STAMP.fullmatch(head) else None
+    if not STAMP.fullmatch(head):
+        return None
+    try:
+        datetime.datetime.strptime(head, "%Y-%m-%dT%H:%M:%S")
+    except ValueError:
+        return None
+    return [head]
 
 
 def jsonl(path, what):
@@ -218,8 +231,11 @@ def check_sums(args):
 
 def load_report(path):
     """The report's named keys alone. Of each learner of the lineage split: its name and its count of scores."""
-    with open(path, encoding="utf-8") as f:
-        doc = json.load(f)
+    try:
+        with open(path, encoding="utf-8") as f:
+            doc = json.load(f)
+    except ValueError:
+        raise Stop(f"{Path(path).name} is not a JSON report") from None
     try:
         return project(doc)
     finally:
@@ -316,6 +332,8 @@ def load_reports(files):
             check_report(rep)
             entering.append(rep)
         else:
+            if not all(s is not None and isinstance(s["id"], str) and s["id"].strip() for s in rep["samples"]):
+                raise Stop(f"{rep['id']}: a genome row of a report left out lacks a text id")
             left_out.append(rep)
     return entering, left_out
 
@@ -324,8 +342,16 @@ def load_reports(files):
 
 def drug_names(path):
     """raw name -> (kind, canonical), as m_list.py reads curated/drug_names.json."""
-    with open(path, encoding="utf-8") as f:
-        names = json.load(f)["names"]
+    try:
+        with open(path, encoding="utf-8") as f:
+            doc = json.load(f)
+    except ValueError:
+        raise Stop("the drug names file is not JSON") from None
+    names = doc.get("names") if isinstance(doc, dict) else None
+    if not isinstance(names, list) or not all(
+            isinstance(n, dict) and isinstance(n.get("raw"), str) and isinstance(n.get("kind"), str)
+            and (n.get("canonical") is None or isinstance(n.get("canonical"), str)) for n in names):
+        raise Stop("the drug names file is not a list of names, each with a raw text, a kind and a canonical name")
     return {n["raw"]: (n["kind"], n["canonical"]) for n in names}
 
 
@@ -338,10 +364,10 @@ def read_records(path, resolve, wanted):
     pairs, ids, n = {}, set(), 0
     for rec in jsonl(path, "the lab records"):
         n += 1
-        head = stamp_head(rec.get("date_inserted"))
-        if head is None:
+        heads = stamp_heads(rec.get("date_inserted"))
+        if heads is None:
             raise Stop("a lab record's date_inserted is blank or not a time to the second")
-        if head >= SEAL:
+        if max(heads) >= SEAL:
             raise Stop(f"a lab record was inserted at or after {SEAL}")
         raw = value_text(rec.get("antibiotic"))
         if raw is None:
@@ -375,7 +401,10 @@ def read_labels(path, wanted):
         genome = value_text(p.get("genome_id"))
         if genome is not None:
             ids.add(genome)
-        key = (genome, p.get("antibiotic"))
+        antibiotic = p.get("antibiotic")
+        if antibiotic is not None and not isinstance(antibiotic, str):
+            raise Stop("a row of the label table names an antibiotic that is not text")
+        key = (genome, antibiotic)
         if key not in wanted:
             continue
         if key in table:
@@ -413,8 +442,8 @@ def read_genomes(path, wanted):
         genome = value_text(row.get("genome_id"))
         if genome is None:
             raise Stop("a row of the genome table, second copy, has no genome_id")
-        head = stamp_head(row.get("date_inserted"))
-        if head is None or head >= SEAL:
+        heads = stamp_heads(row.get("date_inserted"))
+        if heads is None or max(heads) >= SEAL:
             raise Stop(f"a row of the genome table, second copy, is not inserted before {SEAL}")
         parts = bioproject_parts(row.get("bioproject_accession"))
         ids.add(genome)
@@ -745,24 +774,51 @@ def scan(files, ids, accessions):
 
 
 def write(out, lists, files):
-    out.mkdir(parents=True, exist_ok=True)
-    local = out / "local"
-    local.mkdir(mode=0o700)
-    for name in ("A", "B"):
-        path = local / ROW_LIST[name]
-        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-        with os.fdopen(fd, "wb") as f:
-            f.write(lists[name])
-        os.chmod(path, 0o600)
-    export = out / "export"
-    export.mkdir()
-    for name, data in files.items():
-        (export / name).write_bytes(data)
+    """Write the row lists and the export. On an OSError, remove every directory and file it made, then stop."""
+    made = []
+    try:
+        missing = []
+        p = out
+        while not p.exists():
+            missing.append(p)
+            p = p.parent
+        for d in reversed(missing):
+            d.mkdir()
+            made.append(d)
+        local = out / "local"
+        local.mkdir(mode=0o700)
+        made.append(local)
+        for name in ("A", "B"):
+            path = local / ROW_LIST[name]
+            fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            made.append(path)
+            with os.fdopen(fd, "wb") as f:
+                f.write(lists[name])
+            os.chmod(path, 0o600)
+        export = out / "export"
+        export.mkdir()
+        made.append(export)
+        for name, data in files.items():
+            fd = os.open(export / name, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o666)
+            made.append(export / name)
+            with os.fdopen(fd, "wb") as f:
+                f.write(data)
+    except OSError as e:
+        left = 0
+        for m in reversed(made):
+            try:
+                m.rmdir() if m.is_dir() else m.unlink()
+            except OSError:
+                left += 1
+        raise Stop(f"the output could not be written ({type(e).__name__}); of the {len(made)} paths it made, "
+                   f"{left} could not be removed") from None
 
 
 def build(args):
     """(row lists, export files, ids and accessions read, printout). Raises Stop on any check."""
     out = Path(args.out)
+    if out.exists() and not out.is_dir():
+        raise Stop("the output path is not a directory")
     if (out / "local").exists() or (out / "export").exists():
         raise Stop("the output directory already holds local or export")
     if args.hc20 != ["-"] and (len(args.hc20) != 2 or not SHA.fullmatch(args.hc20[1])):
@@ -843,6 +899,8 @@ def main(argv):
     try:
         lists, export, ids, accessions, said = build(args)
         found = scan(export, ids, accessions)
+        if not found:
+            write(Path(args.out), lists, export)
     except Stop as e:
         print(f"stage1: stopped: {e}")
         return 1
@@ -850,7 +908,6 @@ def main(argv):
         for name, n in found:
             print(f"{name} {n}")
         return 1
-    write(Path(args.out), lists, export)
     print("\n".join(said))
     return 0
 

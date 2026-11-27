@@ -13,7 +13,7 @@ ROOT = common.ROOT
 # The rules of stage 1, each with at least one fault. The checks that stop the run are the first six.
 RULES = ("seal", "line count", "folds", "lineage cluster", "copy group", "lab call", "loader", "learners", "reasons",
          "BioProject", "drug names", "tuple", "intermediate", "groups", "pairs", "reading B", "no group", "weights",
-         "shares", "typing", "row list", "scan", "export", "dropped figure", "sha256")
+         "shares", "typing", "row list", "scan", "export", "dropped figure", "sha256", "input shape", "write")
 
 
 def load_faults():

@@ -110,8 +110,8 @@ class Source(unittest.TestCase):
     def test_the_script_uses_the_standard_library_alone(self):
         imported = {a.name.split(".")[0] for n in ast.walk(self.tree) if isinstance(n, ast.Import) for a in n.names}
         imported |= {n.module.split(".")[0] for n in ast.walk(self.tree) if isinstance(n, ast.ImportFrom)}
-        self.assertLessEqual(imported, {"argparse", "collections", "fractions", "gzip", "hashlib", "json", "os", "re",
-                                        "sys", "pathlib"})
+        self.assertLessEqual(imported, {"argparse", "collections", "datetime", "fractions", "gzip", "hashlib", "json",
+                                        "os", "re", "sys", "pathlib"})
 
     def test_the_script_writes_no_stage_2(self):
         for word in ("numpy", "PCG64", "percentile", "bootstrap", "resample", "statistics", "mean("):

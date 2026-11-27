@@ -43,8 +43,8 @@ class Wiring(unittest.TestCase):
             self.assertIsNone(re.search(r"[\"']\.\./", source), path.name)
 
     def test_the_suite_and_its_scripts_use_the_standard_library_alone(self):
-        allowed = {"argparse", "ast", "collections", "contextlib", "copy", "csv", "fractions", "gzip", "hashlib",
-                   "importlib", "io", "json", "os", "pathlib", "re", "shutil", "stat", "subprocess", "sys",
+        allowed = {"argparse", "ast", "collections", "contextlib", "copy", "csv", "datetime", "fractions", "gzip",
+                   "hashlib", "importlib", "io", "json", "os", "pathlib", "re", "shutil", "stat", "subprocess", "sys",
                    "tempfile", "unittest", "tests"}
         for path in sorted(pathlib.Path(ROOT / SUITE).glob("*.py")) + [common.SCRIPT, common.FAULTS]:
             source = path.read_text(encoding="utf-8")

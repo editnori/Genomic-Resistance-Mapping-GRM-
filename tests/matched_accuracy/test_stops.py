@@ -9,6 +9,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from tests.matched_accuracy import common, made_up
 from tests.matched_accuracy.common import report_of
@@ -85,6 +86,35 @@ class Records(common.Case, unittest.TestCase):
         rel = common.release()
         rel["records"][5]["date_inserted"] = " "
         self.assert_stops(self.run_stage1(rel), "a lab record's date_inserted is blank or not a time to the second")
+
+    def test_a_list_of_insertion_times_with_one_at_the_seal_stops(self):
+        rel = common.release()
+        rel["records"][5]["date_inserted"] = ["2025-06-22T08:30:00Z", "2026-11-05T19:10:00Z"]
+        self.assert_stops(self.run_stage1(rel), "a lab record was inserted at or after 2026-11-05T19:10:00")
+
+    def test_a_list_of_insertion_times_with_one_blank_or_malformed_stops(self):
+        for times in (["2025-06-22T08:30:00Z", ""], ["2025-06-22T08:30:00Z", "made-up"], []):
+            with self.subTest(times=times):
+                rel = common.release()
+                rel["records"][5]["date_inserted"] = times
+                self.assert_stops(self.run_stage1(rel), "a lab record's date_inserted is blank or not a time")
+
+    def test_a_list_of_insertion_times_each_before_the_seal_passes(self):
+        rel = common.release()
+        rel["records"][5]["date_inserted"] = ["2025-06-22T08:30:00Z", "2026-11-05T19:09:59Z"]
+        self.assert_passes(self.run_stage1(rel))
+
+    def test_an_impossible_insertion_date_stops(self):
+        for stamp in ("2025-13-01T00:00:00Z", "0000-00-00T00:00:00Z"):
+            with self.subTest(stamp=stamp):
+                rel = common.release()
+                rel["records"][5]["date_inserted"] = stamp
+                self.assert_stops(self.run_stage1(rel), "a lab record's date_inserted is blank or not a time")
+
+    def test_an_insertion_time_in_other_than_ascii_digits_stops(self):
+        rel = common.release()
+        rel["records"][5]["date_inserted"] = "\uff12\uff10\uff12\uff15-06-22T08:30:00Z"
+        self.assert_stops(self.run_stage1(rel), "a lab record's date_inserted is blank or not a time")
 
     def test_a_line_count_other_than_the_pinned_one_stops(self):
         for change in (1, -1):
@@ -169,6 +199,20 @@ class Tables(common.Case, unittest.TestCase):
         rel["genomes"][3]["date_inserted"] = "2026-11-05T19:10:00Z"
         self.assert_stops(self.run_stage1(rel), "a row of the genome table, second copy, is not inserted before")
 
+    def test_a_genome_table_row_with_a_list_of_times_one_at_the_seal_stops(self):
+        rel = common.release()
+        rel["genomes"][3]["date_inserted"] = ["2025-06-22T08:30:00Z", "2026-11-05T19:10:00Z"]
+        self.assert_stops(self.run_stage1(rel), "a row of the genome table, second copy, is not inserted before")
+
+    def test_a_genome_table_row_with_a_list_of_times_one_blank_stops(self):
+        rel = common.release()
+        rel["genomes"][3]["date_inserted"] = ["2025-06-22T08:30:00Z", " "]
+        self.assert_stops(self.run_stage1(rel), "a row of the genome table, second copy, is not inserted before")
+
+    def test_a_genome_table_row_with_an_impossible_date_stops(self):
+        rel = common.release()
+        rel["genomes"][3]["date_inserted"] = "2025-13-01T00:00:00Z"
+        self.assert_stops(self.run_stage1(rel), "a row of the genome table, second copy, is not inserted before")
 
     def test_a_second_genome_copy_that_does_not_read_to_its_end_stops(self):
         rel = common.release()
@@ -192,6 +236,76 @@ class Groups(common.Case, unittest.TestCase):
         rel["records"] += [made_up.record(r["genome_id"], r["antibiotic"], call="Intermediate")
                            for r in list(rel["records"]) if r["antibiotic"].strip() in made_up.RAW.values()]
         self.assert_stops(self.run_stage1(rel), "no group qualifies in reading B")
+
+
+class Inputs(common.Case, unittest.TestCase):
+    """Inputs of a shape the script does not read: one line, exit 1 and nothing written, never a Python error."""
+
+    def test_a_report_that_is_not_json_stops(self):
+        run = self.run_stage1(after=common.report_bytes(AL_A, lambda b: b[:-1]))
+        self.assert_stops(run, f"{AL_A}.json is not a JSON report")
+
+    def test_a_report_that_is_a_json_list_stops(self):
+        run = self.run_stage1(after=common.report_bytes(AL_A, lambda b: b"[]"))
+        self.assert_stops(run, "a report has no list of samples or of splits")
+
+    def test_a_drug_names_file_without_a_list_of_names_stops(self):
+        for doc in ({"list": []}, [], {"names": [{"raw": "Drug A", "canonical": "drug_a"}]},
+                    {"names": [{"raw": ["Drug A"], "kind": "drug", "canonical": "drug_a"}]}):
+            with self.subTest(doc=doc):
+                rel = common.release()
+                rel["drug_names"] = doc
+                self.assert_stops(self.run_stage1(rel), "the drug names file is not a list of names")
+
+    def test_a_label_row_whose_antibiotic_is_not_text_stops(self):
+        for value in (["drug_a"], {"name": "drug_a"}):
+            with self.subTest(value=value):
+                rel = common.release()
+                rel["labels"][0]["antibiotic"] = value
+                self.assert_stops(self.run_stage1(rel), "a row of the label table names an antibiotic that is not text")
+
+    def test_a_genome_row_of_a_report_left_out_without_a_text_id_stops(self):
+        for bad in (None, {"id": 7}, {"id": " "}):
+            with self.subTest(bad=bad):
+                rel = common.release()
+                report_of(rel, "synthia_delta__drug_c")["samples"].append(bad)
+                self.assert_stops(self.run_stage1(rel),
+                                  "synthia_delta__drug_c: a genome row of a report left out lacks a text id")
+
+    def test_an_output_path_that_is_a_file_stops_and_leaves_the_file(self):
+        def before(top):
+            (top.parent / "out").write_bytes(b"made-up")
+        run = self.run_stage1(after=before)
+        self.assertEqual(run.code, 1, run.lines)
+        self.assertEqual(run.lines, ["stage1: stopped: the output path is not a directory"])
+        self.assertEqual(run.out.read_bytes(), b"made-up")
+
+    def test_a_umask_that_bars_the_output_stops_and_leaves_nothing(self):
+        for mask in (0o200, 0o100):
+            with self.subTest(mask=f"{mask:03o}"):
+                run = self.run_stage1(umask=mask)
+                self.assertEqual(run.code, 1, run.lines)
+                self.assertEqual(len(run.lines), 1, run.lines)
+                self.assertTrue(run.lines[0].startswith(common.STOP + "the output could not be written"), run.lines)
+                self.assertFalse(run.out.exists())
+
+    def test_a_write_that_fails_after_a_file_removes_what_it_made(self):
+        real = os.open
+        calls = []
+
+        def second_row_list_fails(path, *a, **kw):
+            if Path(path).parent.name == "local":
+                calls.append(Path(path).name)
+                if len(calls) == 2:
+                    raise OSError(28, "made-up: no space left")
+            return real(path, *a, **kw)
+        with mock.patch.object(common.stage1.os, "open", second_row_list_fails):
+            run = self.run_stage1()
+        self.assertEqual(calls, ["reading-A.tsv", "reading-B.tsv"])
+        self.assertEqual(run.code, 1, run.lines)
+        self.assertEqual(run.lines, ["stage1: stopped: the output could not be written (OSError); of the 3 paths it "
+                                     "made, 0 could not be removed"])
+        self.assertFalse(run.out.exists())
 
 
 class Output(common.Case, unittest.TestCase):

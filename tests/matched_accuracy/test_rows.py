@@ -71,11 +71,25 @@ class Fields(unittest.TestCase):
         self.assertEqual(s1.bioproject_parts("  "), set())
 
     def test_an_insertion_time_is_its_first_19_characters(self):
-        self.assertEqual(s1.stamp_head("2026-11-05T19:09:59.999Z"), "2026-11-05T19:09:59")
-        self.assertIsNone(s1.stamp_head("2026-11-05"))
-        self.assertIsNone(s1.stamp_head(""))
-        self.assertLess(s1.stamp_head("2026-11-05T19:09:59Z"), s1.SEAL)
-        self.assertGreaterEqual(s1.stamp_head("2026-11-05T19:10:00+05:00"), s1.SEAL)
+        self.assertEqual(s1.stamp_heads("2026-11-05T19:09:59.999Z"), ["2026-11-05T19:09:59"])
+        self.assertIsNone(s1.stamp_heads("2026-11-05"))
+        self.assertIsNone(s1.stamp_heads(""))
+        self.assertLess(max(s1.stamp_heads("2026-11-05T19:09:59Z")), s1.SEAL)
+        self.assertGreaterEqual(max(s1.stamp_heads("2026-11-05T19:10:00+05:00")), s1.SEAL)
+
+    def test_a_list_of_insertion_times_gives_each_text_apart(self):
+        self.assertEqual(s1.stamp_heads(["2025-06-22T08:30:00Z", " 2026-11-05T19:10:00Z "]),
+                         ["2025-06-22T08:30:00", "2026-11-05T19:10:00"])
+        for v in ([], ["2025-06-22T08:30:00Z", ""], ["2025-06-22T08:30:00Z", None], ["2025-06-22T08:30:00Z", "x"],
+                  ["2025-06-22T08:30:00Z", ["2025-06-22"]]):
+            with self.subTest(v=v):
+                self.assertIsNone(s1.stamp_heads(v))
+
+    def test_an_impossible_date_or_time_is_no_insertion_time(self):
+        for v in ("2025-13-01T00:00:00Z", "0000-00-00T00:00:00Z", "2025-02-30T08:30:00Z", "2025-06-22T24:00:00Z",
+                  "2025-06-22t08:30:00Z", "\uff12\uff10\uff12\uff15-06-22T08:30:00Z"):
+            with self.subTest(v=v):
+                self.assertIsNone(s1.stamp_heads(v))
 
 
 class Records(unittest.TestCase):

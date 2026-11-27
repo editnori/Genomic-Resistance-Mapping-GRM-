@@ -9,6 +9,7 @@ import contextlib
 import copy
 import csv
 import io
+import os
 import pathlib
 import tempfile
 
@@ -44,6 +45,20 @@ def records_of(rel, genome, raw):
     return [r for r in rel["records"] if r["genome_id"] == genome and r["antibiotic"].strip() == raw]
 
 
+def report_bytes(dataset, change):
+    """An `after` that rewrites one written report's bytes and its line of the made-up sums list."""
+    def after(top):
+        path = top / "reports" / f"{dataset}.json"
+        path.write_bytes(change(path.read_bytes()))
+        lines = []
+        for p in sorted((top / "reports").glob("*.json")):
+            lines.append(f"{made_up.sha(p.read_bytes())}  ./datasets/{p.name}\n")
+        sums = "".join(lines).encode("utf-8")
+        (top / "reports.sha256").write_bytes(sums)
+        return {"REPORT_SUMS_SHA256": made_up.sha(sums)}
+    return after
+
+
 def outcome(fn, *args, **kw):
     """("ok", value) or ("stopped", reason): a stop becomes a value a test can compare, never an error."""
     try:
@@ -53,19 +68,30 @@ def outcome(fn, *args, **kw):
 
 
 class Run:
-    """One run of stage1.main on a release written in a new temporary directory."""
+    """One run of stage1.main on a release written in a new temporary directory.
 
-    def __init__(self, rel=None, hc20=True, after=None, pins=None, extra=None):
+    `after(top)` changes the written files and may return pins to set. A Python error inside main becomes
+    code "error" and a line naming it, so a test meets it as an assertion, never as an error of its own."""
+
+    def __init__(self, rel=None, hc20=True, after=None, pins=None, extra=None, umask=None):
         self._tmp = tempfile.TemporaryDirectory()
         self.top = pathlib.Path(self._tmp.name) / "in"
         self.out = pathlib.Path(self._tmp.name) / "out"
         argv, self.pins = made_up.write_release(self.top, rel or release(), hc20)
         if after:
-            after(self.top)
+            self.pins.update(after(self.top) or {})
         self.pins.update(pins or {})
         printed = io.StringIO()
+        old_mask = None if umask is None else os.umask(umask)
         with contextlib.redirect_stdout(printed):
-            self.code = made_up.run(stage1, argv + ["--out", str(self.out)] + (extra or []), self.pins)
+            try:
+                self.code = made_up.run(stage1, argv + ["--out", str(self.out)] + (extra or []), self.pins)
+            except Exception as e:  # noqa: BLE001 - a Python error is a result the test compares
+                self.code = "error"
+                print(f"python error: {type(e).__name__}")
+            finally:
+                if old_mask is not None:
+                    os.umask(old_mask)
         self.lines = printed.getvalue().splitlines()
 
     def close(self):
