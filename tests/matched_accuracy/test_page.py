@@ -18,6 +18,8 @@ MAKER = r"(?i)\b(cl[a]ude|anthr[o]pic|co-author[e]d-by|generated[ ]with|open[a]i
 MARKER = r"(?i)\bk-?mers?\b|\b(genes?|alleles?|mutations?|variants?|markers?|determinants?|snps?)\b"
 # The numbers the page may give: the revision, the checks' figures, the steps and the stages. None is a result.
 NUMBERS = {"14", "1", "2", "3", "4", "5", "6", "7", "19:10:00", "2026", "1,285,111", "252,148"}
+# What a copy group is, in the words of its rule. The one place the page may name a k-mer.
+COPY_GROUP_WORDS = "genomes of one dataset with identical canonical k-mer sets"
 
 
 def prose(text):
@@ -47,8 +49,10 @@ class Page(unittest.TestCase):
         self.assertEqual(self.page.count("Not run yet."), 1)
         self.assertTrue(self.lines[2].startswith("Not run yet."))
 
-    def test_under_500_words(self):
-        self.assertLess(len(self.page.split()), 500)
+    def test_under_600_words(self):
+        # 500 until the fixes of the review added the two counts of two kinds, the BioProject shape and the 5
+        # November table.
+        self.assertLess(len(self.page.split()), 600)
 
     def test_the_record_line_gives_the_protocols_and_the_amendments_sha256(self):
         self.assertTrue(self.lines[-1].startswith("Record: "))
@@ -105,10 +109,47 @@ class Page(unittest.TestCase):
         self.assertIn("retrospective read inside one database", self.page)
 
     def test_words_it_never_uses(self):
+        page = self.page.replace(COPY_GROUP_WORDS, "")
         for pattern in (BANNED, ROLE, MAKER, MARKER):
-            self.assertIsNone(re.search(pattern, self.page, re.I), pattern)
+            self.assertIsNone(re.search(pattern, page, re.I), pattern)
         self.assertNotIn(chr(0x2014), self.page)
         self.assertIsNone(re.search(r"(?i)\brather than\b", self.page))
+
+    def test_a_copy_group_is_a_listed_group_of_identical_canonical_k_mer_sets(self):
+        self.assertEqual(self.page.count(COPY_GROUP_WORDS), 1)
+        self.assertIn("A copy group is a group the report lists: " + COPY_GROUP_WORDS + ". The script compares no "
+                      "assembly.", self.page)
+
+    def test_a_stop_prints_one_line_and_a_scan_hit_one_line_a_file(self):
+        self.assertIn("A failed check prints one line, a scan hit one line a file; both exit 1 and write nothing, "
+                      "and a write that fails removes what it made.", self.page)
+        self.assertNotIn("Each stop prints one line", self.page)
+
+    def test_the_committed_files_the_tests_read_are_named(self):
+        self.assertIn("Beside made-up files and the repository's own pages and code, the tests read 3 committed "
+                      "files: the protocol, the amendment and the release's checksum list, on which one test runs "
+                      "the script.", self.page)
+        self.assertNotIn("made-up files alone", self.page)
+
+    def test_a_row_list_gives_the_counts_its_sha256_and_line_count(self):
+        self.assertIn("Row lists stay local; only their sha256 and line counts enter the counts.", self.page)
+        self.assertNotIn("only its sha256 enters", self.page)
+
+    def test_the_lab_call_is_checked_among_rows_not_labelled_from_an_mic(self):
+        self.assertIn("a lab call other than the label table's among rows not labelled from an MIC.", self.page)
+
+    def test_the_two_counts_of_rows_lacking_a_typing_value_and_of_genomes_missing(self):
+        self.assertIn("Rows lacking a typing value are counted among rows entering the groups and among eligible "
+                      "rows; genomes missing from the genome table, over every report and over those that enter.",
+                      self.page)
+
+    def test_a_bioproject_is_one_part_of_an_accessions_shape(self):
+        self.assertIn("A BioProject is one part, PRJ, two letters and digits in any case; a genome whose one part has "
+                      "another shape has none and is counted apart. Blank genome table rows are skipped.", self.page)
+
+    def test_the_5_november_table_has_no_insertion_time_and_gives_the_hc20_counts(self):
+        self.assertIn("The 5 November genome table gives the HC20 group and has no insertion time to check; without "
+                      "it, no HC20 count is made.", self.page)
 
     def test_in_the_index(self):
         index = common.INDEX.read_text(encoding="utf-8")

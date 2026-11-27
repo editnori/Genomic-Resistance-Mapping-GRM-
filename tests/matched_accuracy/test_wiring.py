@@ -32,6 +32,13 @@ class Wiring(unittest.TestCase):
         text = CI_DOC.read_text(encoding="utf-8")
         self.assertEqual(text.count(f"The `{SUITE}` suite"), 1)
 
+    def test_ci_doc_says_the_suite_reads_no_release_report_and_the_committed_sums_list(self):
+        text = CI_DOC.read_text(encoding="utf-8")
+        line = next(line for line in text.split("\n") if line.startswith(f"The `{SUITE}` suite"))
+        self.assertIn("reads no score and no release report", line)
+        self.assertIn("reads the committed sums list of the release's reports", line)
+        self.assertNotIn("no release file", line)
+
     def test_paths_inside_the_repository(self):
         for name in ("SCRIPT", "FAULTS", "PAGE", "INDEX", "WORKFLOW", "CI_DOC", "REFERENCE"):
             path = getattr(common, name)
