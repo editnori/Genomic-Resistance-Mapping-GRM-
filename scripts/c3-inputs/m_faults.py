@@ -836,7 +836,7 @@ FAULTS = [
      "    tables = read_tables(tables_dir, FLOOR_FILES)\n    gate_tables(tables, m_set)\n    for name in FLOOR_FILES:",
      f"{T}page.Floor.test_floor_reads_no_other_table_and_does_not_list_the_tables_directory"),
     ("G90", "page record test", "the copies taking the written pages from the tree they copy", RECORD_TEST,
-     '        if f"docs/{p.name}" not in GIVES:\n',
+     "        if name not in GIVES:\n",
      "        if True:\n",
      f"{T}record.CountTaken.test_a_copy_made_from_a_tree_in_each_state_stands_in_each_state"),
     ("G94", "page record test", "a row of a table of this run passed on another page in the state count", RECORD_TEST,
