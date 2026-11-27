@@ -29,7 +29,7 @@ use crate::kset::{BUCKET_BITS, BUCKETS, KsetReader, radix_sort};
 use crate::layout::remove_if_present;
 use anyhow::{Context, Result, ensure};
 use rayon::prelude::*;
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::{FxHashSet, FxHasher};
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Read, Seek, SeekFrom, Write};
@@ -124,26 +124,214 @@ impl Keep {
     }
 }
 
+const EMPTY_SLOT: u32 = u32::MAX;
+
+#[derive(Clone, Copy)]
+struct Slot {
+    id: u32,
+    hash: u32,
+}
+
+impl Slot {
+    const EMPTY: Self = Self {
+        id: EMPTY_SLOT,
+        hash: 0,
+    };
+
+    #[inline]
+    fn is_empty(self) -> bool {
+        self.id == EMPTY_SLOT
+    }
+}
+
+#[inline]
+fn hash_row(row: &[u64]) -> u64 {
+    use std::hash::Hasher;
+    let mut h = FxHasher::default();
+    for &w in row {
+        h.write_u64(w);
+    }
+    let mut x = h.finish();
+    // Mix high bits down so sparse single-word bitsets spread uniformly
+    // across low table index bits.
+    x ^= x >> 33;
+    x = x.wrapping_mul(0xff51_afd7_ed55_8ccd);
+    x ^= x >> 33;
+    x
+}
+
+/// Flat `Vec<u64>` row arena plus an open-addressed hash table for
+/// deduplicating fixed-width `[u64]` presence bitsets without per-lookup heap
+/// allocations.
+///
+/// Distinct rows receive dense sequential IDs `0, 1, 2, ...` in exact order of
+/// first appearance and are stored contiguously at stride `words`.
+pub struct RowInterner {
+    words: usize,
+    rows: Vec<u64>,
+    count: usize,
+    table: Vec<Slot>,
+}
+
+impl RowInterner {
+    pub fn new(words: usize) -> Self {
+        Self {
+            words,
+            rows: Vec::new(),
+            count: 0,
+            table: Vec::new(),
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        self.count
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.count == 0
+    }
+
+    pub fn words(&self) -> usize {
+        self.words
+    }
+
+    #[inline]
+    pub fn row(&self, id: u32) -> &[u64] {
+        let start = id as usize * self.words;
+        &self.rows[start..start + self.words]
+    }
+
+    /// Returns the ID for `row`, appending it to the arena on a miss with zero
+    /// heap allocation on hits.
+    #[inline]
+    pub fn get_or_insert(&mut self, row: &[u64]) -> u32 {
+        self.intern(row).0
+    }
+
+    /// Inserts `row` if absent, returning `true` when `row` was newly added.
+    #[inline]
+    pub fn insert(&mut self, row: &[u64]) -> bool {
+        self.intern(row).1
+    }
+
+    /// Returns `(id, inserted)` for `row`, assigning sequential IDs `0, 1, ...`
+    /// in order of first appearance.
+    #[inline]
+    pub fn intern(&mut self, row: &[u64]) -> (u32, bool) {
+        self.intern_with_hash(row, hash_row(row))
+    }
+
+    #[inline]
+    fn intern_with_hash(&mut self, row: &[u64], hash64: u64) -> (u32, bool) {
+        assert_eq!(row.len(), self.words);
+        let hash32 = hash64 as u32;
+        if !self.table.is_empty() {
+            let mask = self.table.len() - 1;
+            let mut idx = Self::start_index(mask, hash32, hash64);
+            loop {
+                let slot = self.table[idx];
+                if slot.is_empty() {
+                    break;
+                }
+                if slot.hash == hash32 && self.row(slot.id) == row {
+                    return (slot.id, false);
+                }
+                idx = (idx + 1) & mask;
+            }
+            if (self.count + 1) * 8 <= self.table.len() * 5 {
+                let id = self.push_row(row);
+                self.table[idx] = Slot { id, hash: hash32 };
+                return (id, true);
+            }
+        }
+        self.grow();
+        let mask = self.table.len() - 1;
+        let mut idx = Self::start_index(mask, hash32, hash64);
+        while !self.table[idx].is_empty() {
+            idx = (idx + 1) & mask;
+        }
+        let id = self.push_row(row);
+        self.table[idx] = Slot { id, hash: hash32 };
+        (id, true)
+    }
+
+    #[inline]
+    fn start_index(mask: usize, hash32: u32, hash64: u64) -> usize {
+        if mask <= u32::MAX as usize {
+            (hash32 as usize) & mask
+        } else {
+            (hash64 as usize) & mask
+        }
+    }
+
+    #[inline]
+    fn push_row(&mut self, row: &[u64]) -> u32 {
+        assert!(
+            self.count < EMPTY_SLOT as usize,
+            "RowInterner exceeded u32::MAX rows"
+        );
+        let id = self.count as u32;
+        self.rows.extend_from_slice(row);
+        self.count += 1;
+        id
+    }
+
+    #[cold]
+    fn grow(&mut self) {
+        let new_cap = if self.table.is_empty() {
+            16
+        } else {
+            self.table
+                .len()
+                .checked_mul(2)
+                .expect("RowInterner table capacity overflow")
+        };
+        let mut new_table = vec![Slot::EMPTY; new_cap];
+        let mask = new_cap - 1;
+        let use_stored_hash = mask <= u32::MAX as usize;
+        for &slot in &self.table {
+            if slot.is_empty() {
+                continue;
+            }
+            let mut idx = if use_stored_hash {
+                (slot.hash as usize) & mask
+            } else {
+                (hash_row(self.row(slot.id)) as usize) & mask
+            };
+            while !new_table[idx].is_empty() {
+                idx = (idx + 1) & mask;
+            }
+            new_table[idx] = slot;
+        }
+        self.table = new_table;
+    }
+
+    /// Consumes the interner and returns its flat `words`-strided row storage.
+    pub fn into_rows(self) -> Vec<u64> {
+        self.rows
+    }
+}
+
 /// Collects one bucket's k-mers, visited in ascending order, into patterns
 /// numbered by first appearance.
 struct BucketMerge {
     keep: Keep,
-    local: FxHashMap<Box<[u64]>, u32>,
-    out: BucketOut,
+    local: RowInterner,
+    pairs: Vec<(u32, u64)>,
+    distinct: u64,
+    rare: u64,
+    core: u64,
 }
 
 impl BucketMerge {
     fn new(keep: Keep) -> Self {
         BucketMerge {
             keep,
-            local: FxHashMap::default(),
-            out: BucketOut {
-                rows: Vec::new(),
-                pairs: Vec::new(),
-                distinct: 0,
-                rare: 0,
-                core: 0,
-            },
+            local: RowInterner::new(keep.words),
+            pairs: Vec::new(),
+            distinct: 0,
+            rare: 0,
+            core: 0,
         }
     }
 
@@ -151,27 +339,32 @@ impl BucketMerge {
     /// when min <= support <= max.
     #[inline]
     fn add(&mut self, value: u64, row: &[u64], support: u32) -> Result<()> {
-        let out = &mut self.out;
-        out.distinct += 1;
+        self.distinct += 1;
         if support < self.keep.min {
-            out.rare += 1;
+            self.rare += 1;
             return Ok(());
         }
         if support > self.keep.max {
-            out.core += 1;
+            self.core += 1;
             return Ok(());
         }
-        let next = u32::try_from(self.local.len()).context("too many patterns in one bucket")?;
-        let id = *self.local.entry(row.into()).or_insert_with(|| {
-            out.rows.extend_from_slice(row);
-            next
-        });
-        out.pairs.push((id, value));
+        ensure!(
+            self.local.len() < u32::MAX as usize,
+            "too many patterns in one bucket"
+        );
+        let id = self.local.get_or_insert(row);
+        self.pairs.push((id, value));
         Ok(())
     }
 
     fn finish(self) -> BucketOut {
-        self.out
+        BucketOut {
+            rows: self.local.into_rows(),
+            pairs: self.pairs,
+            distinct: self.distinct,
+            rare: self.rare,
+            core: self.core,
+        }
     }
 }
 
@@ -306,7 +499,7 @@ fn assemble(
 ) -> Result<FeatureMatrix> {
     let n = genomes.len();
     let words = words_for(n);
-    let mut index: FxHashMap<Box<[u64]>, u32> = FxHashMap::default();
+    let mut index = RowInterner::new(words);
     let mut support: Vec<u32> = Vec::new();
     let mut pairs: Vec<(u32, u64)> = Vec::new();
     let (mut distinct, mut rare, mut core) = (0u64, 0u64, 0u64);
@@ -329,11 +522,10 @@ fn assemble(
                     support.len() < u32::MAX as usize,
                     "too many patterns for u32 ids"
                 );
-                let next = support.len() as u32;
-                let id = *index.entry(row.into()).or_insert_with(|| {
+                let (id, is_new) = index.intern(row);
+                if is_new {
                     support.push(bits::count(row));
-                    next
-                });
+                }
                 local_to_global.push(id);
             }
             pairs.extend(
@@ -352,16 +544,12 @@ fn assemble(
     }
 
     let n_patterns = support.len();
-    let mut patterns = BitMatrix {
+    let patterns = BitMatrix {
         rows: n_patterns,
         cols: n,
         words,
-        data: vec![0; n_patterns * words],
+        data: index.into_rows(),
     };
-    for (row, &id) in index.iter() {
-        patterns.data[id as usize * words..(id as usize + 1) * words].copy_from_slice(row);
-    }
-    drop(index);
 
     pairs.par_sort_unstable();
     let mut kmer_offsets = Vec::with_capacity(n_patterns + 1);
@@ -1955,13 +2143,12 @@ impl Dataset {
         let parts: Vec<(Vec<u64>, Vec<Vec<u32>>)> = (0..rows.div_ceil(chunk))
             .into_par_iter()
             .map(|c| {
-                let mut local: FxHashMap<Box<[u64]>, usize> = FxHashMap::default();
-                let mut out_rows = Vec::new();
+                let mut local = RowInterner::new(words);
                 let mut members: Vec<Vec<u32>> = Vec::new();
                 let mut row = vec![0u64; words];
                 for p in c * chunk..((c + 1) * chunk).min(rows) {
                     let src = matrix.patterns.row(p);
-                    row.iter_mut().for_each(|w| *w = 0);
+                    row.fill(0);
                     for (i, &col) in columns.iter().enumerate() {
                         if bits::get(src, col) {
                             bits::set(&mut row, i);
@@ -1971,32 +2158,35 @@ impl Dataset {
                     if s < min_support || s > max {
                         continue;
                     }
-                    let next = members.len();
-                    let id = *local.entry(row.as_slice().into()).or_insert_with(|| {
-                        out_rows.extend_from_slice(&row);
+                    let (id, is_new) = local.intern(&row);
+                    if is_new {
                         members.push(Vec::new());
-                        next
-                    });
-                    members[id].push(p as u32);
+                    }
+                    members[id as usize].push(p as u32);
                 }
-                (out_rows, members)
+                (local.into_rows(), members)
             })
             .collect();
 
-        let mut index: FxHashMap<Box<[u64]>, usize> = FxHashMap::default();
-        let mut x = BitMatrix::with_cols(n);
+        let mut index = RowInterner::new(words);
         let mut members: Vec<Vec<u32>> = Vec::new();
         for (part_rows, part_members) in parts {
-            for (row, m) in part_rows.chunks_exact(words).zip(part_members) {
-                let next = members.len();
-                let id = *index.entry(row.into()).or_insert_with(|| {
-                    x.push_row(row);
+            for (i, m) in part_members.into_iter().enumerate() {
+                let row = &part_rows[i * words..(i + 1) * words];
+                let (id, is_new) = index.intern(row);
+                if is_new {
                     members.push(Vec::new());
-                    next
-                });
-                members[id].extend(m);
+                }
+                members[id as usize].extend(m);
             }
         }
+        let n_features = index.len();
+        let x = BitMatrix {
+            rows: n_features,
+            cols: n,
+            words,
+            data: index.into_rows(),
+        };
         let mut feature_offsets = Vec::with_capacity(members.len() + 1);
         let mut feature_patterns = Vec::new();
         for m in &members {
@@ -2051,6 +2241,79 @@ mod tests {
         let path = dir.join(format!("{name}.kset"));
         kset::write(&path, name, space, &values).unwrap();
         path
+    }
+
+    #[test]
+    fn row_interner_matches_fxhashmap_across_widths_collisions_and_resizes() {
+        use rustc_hash::FxHashMap;
+
+        // words = 0: every empty slice collapses to id 0 with empty backing storage.
+        let mut z = RowInterner::new(0);
+        assert!(z.is_empty());
+        assert_eq!(z.words(), 0);
+        assert_eq!(z.intern(&[]), (0, true));
+        assert_eq!(z.intern(&[]), (0, false));
+        assert_eq!(z.get_or_insert(&[]), 0);
+        assert!(!z.insert(&[]));
+        assert_eq!(z.len(), 1);
+        assert_eq!(z.row(0), &[] as &[u64]);
+        assert!(z.into_rows().is_empty());
+
+        // words = 1 (including all 64 single-bit powers of two) and words = 64.
+        let mut rng = ChaCha8Rng::seed_from_u64(0x524f_5749_4e54);
+        for (words, distinct_pool, queries) in
+            [(1usize, 12_000usize, 30_000usize), (64, 1_500, 5_000)]
+        {
+            let mut pool: Vec<Vec<u64>> = Vec::with_capacity(distinct_pool);
+            if words == 1 {
+                pool.push(vec![0]);
+                pool.push(vec![u64::MAX]);
+                for bit in 0..64 {
+                    pool.push(vec![1u64 << bit]);
+                }
+            }
+            while pool.len() < distinct_pool {
+                pool.push((0..words).map(|_| rng.random::<u64>()).collect());
+            }
+
+            let mut interner = RowInterner::new(words);
+            let mut oracle: FxHashMap<Box<[u64]>, u32> = FxHashMap::default();
+            let mut want_rows: Vec<u64> = Vec::new();
+            for q in 0..queries {
+                let row = if q < pool.len() {
+                    &pool[q]
+                } else {
+                    &pool[rng.random_range(0..pool.len())]
+                };
+                let next = oracle.len() as u32;
+                let mut oracle_new = false;
+                let want_id = *oracle.entry(row.as_slice().into()).or_insert_with(|| {
+                    want_rows.extend_from_slice(row);
+                    oracle_new = true;
+                    next
+                });
+                let (got_id, got_new) = interner.intern(row);
+                assert_eq!(got_id, want_id, "words={words} q={q}");
+                assert_eq!(got_new, oracle_new, "words={words} q={q}");
+                assert_eq!(interner.row(got_id), row.as_slice(), "words={words} q={q}");
+            }
+            assert_eq!(interner.len(), oracle.len(), "words={words}");
+            assert_eq!(interner.into_rows(), want_rows, "words={words}");
+        }
+
+        // Forced hash collisions across multiple resizes (16 -> 32 -> 64 -> 128).
+        let mut collided = RowInterner::new(2);
+        let mut rows: Vec<[u64; 2]> = Vec::new();
+        for i in 0..80u64 {
+            let r = [i, i.wrapping_mul(0x9e37_79b9_7f4a_7c15)];
+            rows.push(r);
+            assert_eq!(collided.intern_with_hash(&r, 0xdead_beef), (i as u32, true));
+        }
+        for (i, r) in rows.iter().enumerate() {
+            assert_eq!(collided.intern_with_hash(r, 0xdead_beef), (i as u32, false));
+            assert_eq!(collided.row(i as u32), r.as_slice());
+        }
+        assert_eq!(collided.len(), rows.len());
     }
 
     #[test]
