@@ -1,0 +1,36 @@
+dataset	species_slug	species	antibiotic	cohort	resistant	susceptible	listed	listed_resistant	listed_susceptible	second_resistant	second_susceptible	floor	enters	second_reading
+neisseria_gonorrhoeae__azithromycin	neisseria_gonorrhoeae	Neisseria gonorrhoeae	azithromycin	1899	408	1491	11	0	11	408	1480	25	1	in
+acinetobacter_baumannii__amikacin	acinetobacter_baumannii	Acinetobacter baumannii	amikacin	1277	785	492	31	20	11	765	481	25	1	in
+acinetobacter_baumannii__ampicillin_sulbactam	acinetobacter_baumannii	Acinetobacter baumannii	ampicillin/sulbactam	989	555	434	75	28	47	527	387	25	1	in
+acinetobacter_baumannii__ceftazidime	acinetobacter_baumannii	Acinetobacter baumannii	ceftazidime	1247	1087	160	47	20	27	1067	133	25	1	in
+acinetobacter_baumannii__ceftriaxone	acinetobacter_baumannii	Acinetobacter baumannii	ceftriaxone	1070	1011	59	34	13	21	998	38	25	1	in
+acinetobacter_baumannii__ciprofloxacin	acinetobacter_baumannii	Acinetobacter baumannii	ciprofloxacin	1440	1319	121	7	2	5	1317	116	25	1	short list
+acinetobacter_baumannii__gentamicin	acinetobacter_baumannii	Acinetobacter baumannii	gentamicin	1342	1204	138	78	75	3	1129	135	25	1	short list
+acinetobacter_baumannii__imipenem	acinetobacter_baumannii	Acinetobacter baumannii	imipenem	1544	794	750	33	20	13	774	737	25	1	in
+acinetobacter_baumannii__levofloxacin	acinetobacter_baumannii	Acinetobacter baumannii	levofloxacin	919	760	159	40	28	12	732	147	25	1	in
+acinetobacter_baumannii__meropenem	acinetobacter_baumannii	Acinetobacter baumannii	meropenem	666	455	211	1	0	1	455	210	25	1	short list
+acinetobacter_baumannii__tetracycline	acinetobacter_baumannii	Acinetobacter baumannii	tetracycline	962	759	203	8	3	5	756	198	25	1	short list
+acinetobacter_baumannii__tobramycin	acinetobacter_baumannii	Acinetobacter baumannii	tobramycin	981	681	300	64	52	12	629	288	25	1	in
+enterococcus_faecium__daptomycin	enterococcus_faecium	Enterococcus faecium	daptomycin	333	55	278	21	0	21	55	257	25	1	in
+enterococcus_faecium__linezolid	enterococcus_faecium	Enterococcus faecium	linezolid	1367	70	1297	6	2	4	68	1293	25	1	short list
+escherichia_coli__amoxicillin_clavulanate	escherichia_coli	Escherichia coli	amoxicillin/clavulanate	1115	548	567	9	4	5	544	562	25	1	short list
+escherichia_coli__ampicillin	escherichia_coli	Escherichia coli	ampicillin	1965	1596	369	5	1	4	1595	365	25	1	short list
+escherichia_coli__ciprofloxacin	escherichia_coli	Escherichia coli	ciprofloxacin	1615	826	789	4	0	4	826	785	25	1	short list
+escherichia_coli__gentamicin	escherichia_coli	Escherichia coli	gentamicin	1695	455	1240	2	2	0	453	1240	25	1	short list
+escherichia_coli__meropenem	escherichia_coli	Escherichia coli	meropenem	1539	82	1457	1	1	0	81	1457	25	1	short list
+escherichia_coli__norfloxacin	escherichia_coli	Escherichia coli	norfloxacin	197	41	156	4	0	4	41	152	25	1	short list
+escherichia_coli__sulfamethoxazole_trimethoprim	escherichia_coli	Escherichia coli	sulfamethoxazole/trimethoprim	925	580	345	1	0	1	580	344	25	1	short list
+klebsiella_pneumoniae__amikacin	klebsiella_pneumoniae	Klebsiella pneumoniae	amikacin	1588	318	1270	1	0	1	318	1269	25	1	short list
+klebsiella_pneumoniae__amoxicillin_clavulanate	klebsiella_pneumoniae	Klebsiella pneumoniae	amoxicillin/clavulanate	778	591	187	3	0	3	591	184	25	1	short list
+klebsiella_pneumoniae__gentamicin	klebsiella_pneumoniae	Klebsiella pneumoniae	gentamicin	1842	689	1153	2	0	2	689	1151	25	1	short list
+klebsiella_pneumoniae__meropenem	klebsiella_pneumoniae	Klebsiella pneumoniae	meropenem	1765	736	1029	1	0	1	736	1028	25	1	short list
+klebsiella_pneumoniae__norfloxacin	klebsiella_pneumoniae	Klebsiella pneumoniae	norfloxacin	194	29	165	2	0	2	29	163	25	1	short list
+klebsiella_pneumoniae__piperacillin_tazobactam	klebsiella_pneumoniae	Klebsiella pneumoniae	piperacillin/tazobactam	1452	868	584	1	0	1	868	583	25	1	short list
+mycobacterium_tuberculosis__clofazimine	mycobacterium_tuberculosis	Mycobacterium tuberculosis	clofazimine	1303	193	1110	1	0	1	193	1109	25	1	short list
+mycobacterium_tuberculosis__isoniazid	mycobacterium_tuberculosis	Mycobacterium tuberculosis	isoniazid	1954	1388	566	0	0	0	1388	566	25	1	in
+pseudomonas_aeruginosa__ciprofloxacin	pseudomonas_aeruginosa	Pseudomonas aeruginosa	ciprofloxacin	703	391	312	1	0	1	391	311	25	1	short list
+staphylococcus_aureus__oxacillin	staphylococcus_aureus	Staphylococcus aureus	oxacillin	1318	568	750	0	0	0	568	750	25	1	in
+streptococcus_pneumoniae__cefepime	streptococcus_pneumoniae	Streptococcus pneumoniae	cefepime	1602	49	1553	100	44	56	5	1497	25	0	under the floor
+streptococcus_pneumoniae__cefotaxime	streptococcus_pneumoniae	Streptococcus pneumoniae	cefotaxime	1884	43	1841	86	28	58	15	1783	25	0	under the floor
+streptococcus_pneumoniae__ceftriaxone	streptococcus_pneumoniae	Streptococcus pneumoniae	ceftriaxone	1839	56	1783	105	45	60	11	1723	25	0	under the floor
+streptococcus_pneumoniae__penicillin	streptococcus_pneumoniae	Streptococcus pneumoniae	penicillin	1690	196	1494	64	64	0	132	1494	25	1	in
