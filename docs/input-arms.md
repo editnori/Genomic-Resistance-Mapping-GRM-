@@ -139,6 +139,16 @@ For block C3, `run_m.sh` and `m_reading.py` admit the datasets of M; `run_specie
 
 On a difference in any of the three the run names what differs, writes `OUT/FAILED` and stops. The lead, who rules on the plan's entries in `docs/assumption-plan-corrections.md`, then rules before another build, machine or genome set is used.
 
+**Stop of 27 Nov 2026.** The check species stopped at Same results, before any dataset of M was fitted. 167 of its 180 recorded rows came back at 12 decimals. The other 13 are 13 of the 30 rows of K31 plus amino-acid k-mers.
+
+**Cause.** The run had fetched the species' 2,000 genomes from BV-BRC again. The 2,000 files split into two parts: 98 gave the contigs of the first run's files in another order, and the other 1,902 had the same bytes. The `counts` and `unitigs` inputs came back in 7 of 7 files each, and the `aa` input in 0 of 7 files.
+
+**Gene caller.** Prodigal wrote the same bytes twice on 130 of 130 genomes, but its calls change with contig order: the protein count differed on 65 of the 2,000 genomes, all among the 98. Built from the first run's files with this run's programs, the `aa` input equalled the first run's in 7 of 7 files.
+
+**Ruling 54.** The run on M reads the first run's genome files, which each species' machine keeps. A step before the run copies them into the new output directory and compares the copy with the source by sha256. `run_m.sh` is unchanged: `grm fetch fasta` leaves a file that is present alone. Each species' three inputs must equal the first run's file by file, or the species is not counted.
+
+**Limit of the `aa` arm.** Its figures are for one order of each genome's contigs, the order BV-BRC served on 23 Nov 2026. With the order of 27 Nov, the arm's difference from K31 moved on those 13 rows, on 2 of them by more than 0.02, and 1 row went from inside that margin to better. A build that sorts each genome's contigs before Prodigal reads them would give one input for any order. That is a later change to the arm.
+
 **List.** After the matrix and before any fit, `m_list.py` builds the list. The pinned table `curated.tar` holds each pair's consolidated call and no record's call. So `m_list.py` reads the calls from the kit's `genome_amr.jsonl`, the 1,285,111 lab records that table was rebuilt from on 21 Nov 2026, which the run pins by its own sha256. `m_list.py` prints and flushes that sha256 before any check, so a stop still shows it.
 
 **Records.** Every genome and antibiotic pair of the records must consolidate to the table's call under r-or-s-wins (S with an intermediate call is S, an intermediate call with R is R, R with S is a conflict), and the records' name counts must equal `curated/drug_names.json`'s, or it stops.
