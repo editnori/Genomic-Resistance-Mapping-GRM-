@@ -1065,3 +1065,23 @@ An eleventh came while the text was written. The project's wording rules put rec
 **Written.** This entry was written at 04:54Z on 26 Nov 2026.
 
 **Changed.** After its independent review the lead changed, at 06:52Z on 26 Nov 2026, Plan, Found and Holds, which had named three counts where six are the rebuilt table's, and added Release.
+
+## Last test
+
+**Plan.** The block Later-records test asks whether "the release's rule and each passing arm hold on labels deposited after the release's download", on the 252,148 lab records inserted at or after 2026-11-05T19:10:00. After Measured records the plan calls its two spent test sets "separate from each other and from the release's cohorts". The row Spent test sets says "No comparison reads the outside-study or other-database genomes."
+
+**Found.** The later records and the outside-study genomes are one batch. The outside-study test's frozen rules (`scripts/outside-study/frozen/RULES.md`) cover the genomes whose lab records were inserted on 5 and 6 Nov 2026, 20,108 genome ids. The later-records page counts its records on 20,108 genomes. No id of the two sets was compared for this entry.
+
+**Scored.** On 12 Nov 2026 the outside-study test scored the release's set covering machine, decision tree, lasso and known-gene rule on this batch: 7,258 genomes from studies the cohorts do not hold and 3,144 from studies they hold (`docs/outside-study-results.md`). Those add to 10,402, so the overlap is at most 10,402 of the 10,813 genomes with a later label in the 274. That test scored no random forest, boosted tree or arm.
+
+**Holds.** The later-records test stays last and is scored once. Its report gives the genomes scored on 12 Nov apart from the others, for each learner. On those genomes the set covering machine, the decision tree, the lasso and the known-gene rule are a second look, and the report names them so. The random forest, the boosted trees and each arm are a first look on both parts. Before the scoring a script counts the genomes in both sets and prints counts alone.
+
+**Closed.** The 11 Nov copy of the batch, its labelled records, genome rows and ids, is closed as the sealed file is: no fit, screen, settings search or pick reads it. The 12 Nov figures have been public since that test. An arm chosen after it could have been chosen with them in view.
+
+**Copies.** From 14 Nov to 27 Nov 2026 that copy went to helper machines inside the shared records pack. Since 27 Nov the pack leaves it out. Each block's run is written to take the training table, the records before the cut, and the repository names the three files in the outside-study test's frozen rules alone. Neither fact shows that no run read them.
+
+**Check.** The last test's report lists the inputs of every run that trained or tuned a model and checks the three file names against each list. It gives the count of runs checked and names each run that has no list.
+
+**Page.** `docs/assumption-plan-later-records.md` said "No sequence is fetched before the scoring". That is true of the later-records test's own work, and the page now says so. The outside-study test fetched assemblies of the batch for its run of 12 Nov.
+
+**Written.** This entry was written at 04:36Z on 27 Nov 2026, under the lead's ruling 57 and the coordinator's ask of 03:48Z.
