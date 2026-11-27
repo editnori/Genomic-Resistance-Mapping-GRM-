@@ -1,0 +1,33 @@
+{
+  "bootstrap_cluster_unit": "species",
+  "comparison_kind": "end_to_end_pipeline",
+  "database_pin": {
+    "name": "resfinder-pointfinder-db",
+    "release_date": "2024-09-01",
+    "required_offline": true,
+    "version": "2.3.2"
+  },
+  "display_name": "ResFinder/PointFinder",
+  "genotype_to_drug_rule": "Under primary reading pheno_default, calls R when ResFinder v4 phenotype translation marks amr_resistant=true combining acquired genes (>=90% identity, >=60% coverage) and species PointFinder mutations; absent phenotype entries produce no_call.",
+  "i_handling": {
+    "description": "ResFinder v4 phenotype tables emit binary resistant/susceptible flags without I; any I token is counted separately and never mapped to S.",
+    "policy": "separate_count_never_map_to_s",
+    "tool_emits_intermediate": false
+  },
+  "input_format": "fasta_contigs",
+  "mode": "pretrained",
+  "primary_reading": "pheno_default",
+  "readings": [
+    "pheno_default",
+    "acquired_only"
+  ],
+  "schema_version": "grm-bench-adapter-v1",
+  "software_pin": {
+    "package": "resfinder",
+    "release_date": "2024-09-01",
+    "version": "4.6.0"
+  },
+  "species_scope": "multi_species",
+  "supports_scores": false,
+  "tool": "resfinder_pointfinder"
+}

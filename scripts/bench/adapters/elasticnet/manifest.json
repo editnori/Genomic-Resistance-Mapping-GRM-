@@ -1,0 +1,27 @@
+{
+  "bootstrap_cluster_unit": "species",
+  "comparison_kind": "fixed_learner_representation",
+  "database_pin": null,
+  "display_name": "Elastic Net",
+  "genotype_to_drug_rule": "Fits scikit-learn 1.7.2 LogisticRegression(penalty='elasticnet', solver='saga') over 4 mixes x 10 log-spaced penalties selected by pooled class-balanced log loss on 3 inner folds with feature screening and SD scaling strictly inside each inner/outer training fold; refits on outer training fold; calls R at score >= 0.5.",
+  "i_handling": {
+    "description": "Elastic net outputs continuous probabilities thresholded at 0.5 (>=0.5 -> R, <0.5 -> S); null/unconverged fits fall back to outer training prevalence and any failed genome is counted separately and never mapped to S.",
+    "policy": "separate_count_never_map_to_s",
+    "tool_emits_intermediate": false
+  },
+  "input_format": "grm_export_or_unitigs",
+  "mode": "trainable",
+  "primary_reading": "saga_grid40",
+  "readings": [
+    "saga_grid40"
+  ],
+  "schema_version": "grm-bench-adapter-v1",
+  "software_pin": {
+    "package": "scikit-learn",
+    "release_date": "2025-09-01",
+    "version": "1.7.2"
+  },
+  "species_scope": "multi_species",
+  "supports_scores": true,
+  "tool": "elasticnet"
+}

@@ -1,0 +1,275 @@
+species_slug	canonical_drug	support_tier	tool_drugs	unsupported_reason	notes
+acinetobacter_baumannii	amikacin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+acinetobacter_baumannii	ampicillin/sulbactam	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+acinetobacter_baumannii	cefepime	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+acinetobacter_baumannii	cefotaxime	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+acinetobacter_baumannii	ceftazidime	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+acinetobacter_baumannii	ceftriaxone	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+acinetobacter_baumannii	ciprofloxacin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+acinetobacter_baumannii	doripenem	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+acinetobacter_baumannii	doxycycline	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+acinetobacter_baumannii	gentamicin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+acinetobacter_baumannii	imipenem	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+acinetobacter_baumannii	levofloxacin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+acinetobacter_baumannii	meropenem	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+acinetobacter_baumannii	minocycline	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+acinetobacter_baumannii	moxifloxacin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+acinetobacter_baumannii	sulfamethoxazole/trimethoprim	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+acinetobacter_baumannii	tetracycline	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+acinetobacter_baumannii	tobramycin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+campylobacter_coli	azithromycin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+campylobacter_coli	ciprofloxacin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+campylobacter_coli	clindamycin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+campylobacter_coli	erythromycin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+campylobacter_coli	gentamicin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+campylobacter_coli	nalidixic acid	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+campylobacter_coli	telithromycin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+campylobacter_coli	tetracycline	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+campylobacter_jejuni	ciprofloxacin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+campylobacter_jejuni	clindamycin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+campylobacter_jejuni	nalidixic acid	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+campylobacter_jejuni	tetracycline	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+clostridioides_difficile	azithromycin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+clostridioides_difficile	ceftriaxone	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+clostridioides_difficile	clarithromycin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+clostridioides_difficile	moxifloxacin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+corynebacterium_diphtheriae	sulfamethoxazole/trimethoprim	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+corynebacterium_diphtheriae	tetracycline	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+corynebacterium_diphtheriae	trimethoprim	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+enterobacter_cloacae	cefepime	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+enterobacter_cloacae	ciprofloxacin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+enterobacter_cloacae	gentamicin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+enterobacter_cloacae	imipenem	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+enterobacter_cloacae	levofloxacin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+enterobacter_cloacae	meropenem	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+enterobacter_cloacae	sulfamethoxazole/trimethoprim	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+enterobacter_cloacae	tobramycin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+enterobacter_cloacae	trimethoprim	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+enterococcus_faecium	ampicillin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+enterococcus_faecium	chloramphenicol	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+enterococcus_faecium	clindamycin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+enterococcus_faecium	dalfopristin/quinupristin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+enterococcus_faecium	daptomycin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+enterococcus_faecium	doxycycline	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+enterococcus_faecium	erythromycin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+enterococcus_faecium	gentamicin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+enterococcus_faecium	kanamycin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+enterococcus_faecium	linezolid	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+enterococcus_faecium	streptomycin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+enterococcus_faecium	teicoplanin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+enterococcus_faecium	tetracycline	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+enterococcus_faecium	vancomycin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+escherichia_coli	amikacin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+escherichia_coli	amoxicillin/clavulanate	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+escherichia_coli	ampicillin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+escherichia_coli	ampicillin/sulbactam	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+escherichia_coli	aztreonam	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+escherichia_coli	cefazolin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+escherichia_coli	cefepime	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+escherichia_coli	cefotaxime	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+escherichia_coli	cefoxitin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+escherichia_coli	cefpodoxime	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+escherichia_coli	cefpodoxime/clavulanate	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+escherichia_coli	ceftazidime	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+escherichia_coli	ceftiofur	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+escherichia_coli	ceftriaxone	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+escherichia_coli	cefuroxime	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+escherichia_coli	cephalothin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+escherichia_coli	chloramphenicol	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+escherichia_coli	ciprofloxacin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+escherichia_coli	colistin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+escherichia_coli	doxycycline	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+escherichia_coli	ertapenem	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+escherichia_coli	erythromycin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+escherichia_coli	gentamicin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+escherichia_coli	imipenem	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+escherichia_coli	levofloxacin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+escherichia_coli	meropenem	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+escherichia_coli	nalidixic acid	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+escherichia_coli	nitrofurantoin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+escherichia_coli	norfloxacin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+escherichia_coli	piperacillin/tazobactam	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+escherichia_coli	streptomycin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+escherichia_coli	sulfamethoxazole	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+escherichia_coli	sulfamethoxazole/trimethoprim	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+escherichia_coli	tetracycline	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+escherichia_coli	tobramycin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+escherichia_coli	trimethoprim	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_aerogenes	ertapenem	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_aerogenes	imipenem	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_aerogenes	meropenem	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_oxytoca	cefotaxime	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_oxytoca	cefoxitin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_oxytoca	cefpodoxime	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_oxytoca	ertapenem	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_pneumoniae	amikacin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_pneumoniae	amoxicillin/clavulanate	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_pneumoniae	ampicillin/sulbactam	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_pneumoniae	aztreonam	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_pneumoniae	cefazolin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_pneumoniae	cefepime	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_pneumoniae	cefotetan	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_pneumoniae	cefoxitin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_pneumoniae	cefpodoxime	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_pneumoniae	cefpodoxime/ceftriaxone	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_pneumoniae	cefpodoxime/clavulanate	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_pneumoniae	ceftazidime	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_pneumoniae	ceftazidime/avibactam	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_pneumoniae	ceftriaxone	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_pneumoniae	cefuroxime	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_pneumoniae	chloramphenicol	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_pneumoniae	ciprofloxacin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_pneumoniae	colistin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_pneumoniae	doripenem	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_pneumoniae	doxycycline	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_pneumoniae	ertapenem	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_pneumoniae	fosfomycin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_pneumoniae	gentamicin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_pneumoniae	imipenem	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_pneumoniae	levofloxacin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_pneumoniae	meropenem	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_pneumoniae	nitrofurantoin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_pneumoniae	norfloxacin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_pneumoniae	ofloxacin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_pneumoniae	piperacillin/tazobactam	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_pneumoniae	polymyxin b	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_pneumoniae	streptomycin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_pneumoniae	sulfamethoxazole/trimethoprim	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_pneumoniae	tetracycline	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_pneumoniae	ticarcillin/clavulanate	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_pneumoniae	tigecycline	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_pneumoniae	tobramycin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_pneumoniae	trimethoprim	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_quasipneumoniae	cefotaxime	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_quasipneumoniae	ceftazidime	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+klebsiella_quasipneumoniae	sulfamethoxazole/trimethoprim	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+mycobacterium_tuberculosis	amikacin	supported_primary	Amikacin	-	Mykrobe curated TB panel.
+mycobacterium_tuberculosis	amoxicillin	unsupported	-	drug_not_in_mykrobe_tb_panel	Drug not covered by Mykrobe TB panel.
+mycobacterium_tuberculosis	capreomycin	supported_primary	Capreomycin	-	Mykrobe curated TB panel.
+mycobacterium_tuberculosis	ciprofloxacin	supported_primary	Ciprofloxacin	-	Mykrobe curated TB panel.
+mycobacterium_tuberculosis	clofazimine	unsupported	-	drug_not_in_mykrobe_tb_panel	Drug not covered by Mykrobe TB panel.
+mycobacterium_tuberculosis	cycloserine	unsupported	-	drug_not_in_mykrobe_tb_panel	Drug not covered by Mykrobe TB panel.
+mycobacterium_tuberculosis	delamanid	unsupported	-	drug_not_in_mykrobe_tb_panel	Drug not covered by Mykrobe TB panel.
+mycobacterium_tuberculosis	ethambutol	supported_primary	Ethambutol	-	Mykrobe curated TB panel.
+mycobacterium_tuberculosis	ethionamide	unsupported	-	drug_not_in_mykrobe_tb_panel	Drug not covered by Mykrobe TB panel.
+mycobacterium_tuberculosis	isoniazid	supported_primary	Isoniazid	-	Mykrobe curated TB panel.
+mycobacterium_tuberculosis	kanamycin	supported_primary	Kanamycin	-	Mykrobe curated TB panel.
+mycobacterium_tuberculosis	levofloxacin	supported_primary	Levofloxacin	-	Mykrobe curated TB panel.
+mycobacterium_tuberculosis	linezolid	unsupported	-	drug_not_in_mykrobe_tb_panel	Drug not covered by Mykrobe TB panel.
+mycobacterium_tuberculosis	moxifloxacin	supported_primary	Moxifloxacin	-	Mykrobe curated TB panel.
+mycobacterium_tuberculosis	nicotinamide	unsupported	-	drug_not_in_mykrobe_tb_panel	Drug not covered by Mykrobe TB panel.
+mycobacterium_tuberculosis	ofloxacin	supported_primary	Ofloxacin	-	Mykrobe curated TB panel.
+mycobacterium_tuberculosis	para-aminosalicylic acid	unsupported	-	drug_not_in_mykrobe_tb_panel	Drug not covered by Mykrobe TB panel.
+mycobacterium_tuberculosis	prothionamide	unsupported	-	drug_not_in_mykrobe_tb_panel	Drug not covered by Mykrobe TB panel.
+mycobacterium_tuberculosis	pyrazinamide	supported_primary	Pyrazinamide	-	Mykrobe curated TB panel.
+mycobacterium_tuberculosis	rifabutin	proxy_class	Rifampicin	-	Rifampicin proxy for rifabutin in Mykrobe TB panel.
+mycobacterium_tuberculosis	rifampin	supported_primary	Rifampicin	-	Mykrobe curated TB panel.
+mycobacterium_tuberculosis	streptomycin	supported_primary	Streptomycin	-	Mykrobe curated TB panel.
+neisseria_gonorrhoeae	azithromycin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+neisseria_gonorrhoeae	cefixime	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+neisseria_gonorrhoeae	ceftriaxone	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+neisseria_gonorrhoeae	ciprofloxacin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+neisseria_gonorrhoeae	erythromycin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+neisseria_gonorrhoeae	penicillin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+neisseria_gonorrhoeae	tetracycline	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+pseudomonas_aeruginosa	amikacin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+pseudomonas_aeruginosa	aztreonam	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+pseudomonas_aeruginosa	cefepime	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+pseudomonas_aeruginosa	ceftazidime	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+pseudomonas_aeruginosa	ceftazidime/avibactam	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+pseudomonas_aeruginosa	ceftolozane/tazobactam	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+pseudomonas_aeruginosa	ciprofloxacin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+pseudomonas_aeruginosa	gentamicin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+pseudomonas_aeruginosa	imipenem	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+pseudomonas_aeruginosa	levofloxacin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+pseudomonas_aeruginosa	meropenem	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+pseudomonas_aeruginosa	piperacillin/tazobactam	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+pseudomonas_aeruginosa	tobramycin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+salmonella_enterica	amoxicillin/clavulanate	unsupported	-	mykrobe_panel_typhi_only	Mykrobe Salmonella panel targets serovar Typhi only, not general S. enterica cohorts.
+salmonella_enterica	ampicillin	unsupported	-	mykrobe_panel_typhi_only	Mykrobe Salmonella panel targets serovar Typhi only, not general S. enterica cohorts.
+salmonella_enterica	ampicillin/sulbactam	unsupported	-	mykrobe_panel_typhi_only	Mykrobe Salmonella panel targets serovar Typhi only, not general S. enterica cohorts.
+salmonella_enterica	azithromycin	unsupported	-	mykrobe_panel_typhi_only	Mykrobe Salmonella panel targets serovar Typhi only, not general S. enterica cohorts.
+salmonella_enterica	cefazolin	unsupported	-	mykrobe_panel_typhi_only	Mykrobe Salmonella panel targets serovar Typhi only, not general S. enterica cohorts.
+salmonella_enterica	cefotaxime	unsupported	-	mykrobe_panel_typhi_only	Mykrobe Salmonella panel targets serovar Typhi only, not general S. enterica cohorts.
+salmonella_enterica	cefoxitin	unsupported	-	mykrobe_panel_typhi_only	Mykrobe Salmonella panel targets serovar Typhi only, not general S. enterica cohorts.
+salmonella_enterica	ceftazidime	unsupported	-	mykrobe_panel_typhi_only	Mykrobe Salmonella panel targets serovar Typhi only, not general S. enterica cohorts.
+salmonella_enterica	ceftiofur	unsupported	-	mykrobe_panel_typhi_only	Mykrobe Salmonella panel targets serovar Typhi only, not general S. enterica cohorts.
+salmonella_enterica	ceftriaxone	unsupported	-	mykrobe_panel_typhi_only	Mykrobe Salmonella panel targets serovar Typhi only, not general S. enterica cohorts.
+salmonella_enterica	chloramphenicol	unsupported	-	mykrobe_panel_typhi_only	Mykrobe Salmonella panel targets serovar Typhi only, not general S. enterica cohorts.
+salmonella_enterica	ciprofloxacin	unsupported	-	mykrobe_panel_typhi_only	Mykrobe Salmonella panel targets serovar Typhi only, not general S. enterica cohorts.
+salmonella_enterica	gentamicin	unsupported	-	mykrobe_panel_typhi_only	Mykrobe Salmonella panel targets serovar Typhi only, not general S. enterica cohorts.
+salmonella_enterica	kanamycin	unsupported	-	mykrobe_panel_typhi_only	Mykrobe Salmonella panel targets serovar Typhi only, not general S. enterica cohorts.
+salmonella_enterica	nalidixic acid	unsupported	-	mykrobe_panel_typhi_only	Mykrobe Salmonella panel targets serovar Typhi only, not general S. enterica cohorts.
+salmonella_enterica	pefloxacin	unsupported	-	mykrobe_panel_typhi_only	Mykrobe Salmonella panel targets serovar Typhi only, not general S. enterica cohorts.
+salmonella_enterica	spectinomycin	unsupported	-	mykrobe_panel_typhi_only	Mykrobe Salmonella panel targets serovar Typhi only, not general S. enterica cohorts.
+salmonella_enterica	streptomycin	unsupported	-	mykrobe_panel_typhi_only	Mykrobe Salmonella panel targets serovar Typhi only, not general S. enterica cohorts.
+salmonella_enterica	sulfamethoxazole	unsupported	-	mykrobe_panel_typhi_only	Mykrobe Salmonella panel targets serovar Typhi only, not general S. enterica cohorts.
+salmonella_enterica	sulfamethoxazole/trimethoprim	unsupported	-	mykrobe_panel_typhi_only	Mykrobe Salmonella panel targets serovar Typhi only, not general S. enterica cohorts.
+salmonella_enterica	sulfathiazole	unsupported	-	mykrobe_panel_typhi_only	Mykrobe Salmonella panel targets serovar Typhi only, not general S. enterica cohorts.
+salmonella_enterica	sulfisoxazole	unsupported	-	mykrobe_panel_typhi_only	Mykrobe Salmonella panel targets serovar Typhi only, not general S. enterica cohorts.
+salmonella_enterica	temocillin	unsupported	-	mykrobe_panel_typhi_only	Mykrobe Salmonella panel targets serovar Typhi only, not general S. enterica cohorts.
+salmonella_enterica	tetracycline	unsupported	-	mykrobe_panel_typhi_only	Mykrobe Salmonella panel targets serovar Typhi only, not general S. enterica cohorts.
+salmonella_enterica	trimethoprim	unsupported	-	mykrobe_panel_typhi_only	Mykrobe Salmonella panel targets serovar Typhi only, not general S. enterica cohorts.
+shigella_flexneri	ampicillin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+shigella_flexneri	azithromycin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+shigella_flexneri	ciprofloxacin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+shigella_flexneri	trimethoprim	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+shigella_sonnei	amikacin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+shigella_sonnei	ampicillin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+shigella_sonnei	azithromycin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+shigella_sonnei	cefoperazone	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+shigella_sonnei	cefotaxime	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+shigella_sonnei	cefoxitin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+shigella_sonnei	cefpirome	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+shigella_sonnei	ceftazidime	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+shigella_sonnei	ceftriaxone	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+shigella_sonnei	ciprofloxacin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+shigella_sonnei	colistin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+shigella_sonnei	ertapenem	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+shigella_sonnei	gentamicin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+shigella_sonnei	nalidixic acid	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+shigella_sonnei	streptomycin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+shigella_sonnei	sulfamethoxazole/trimethoprim	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+shigella_sonnei	temocillin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+shigella_sonnei	tetracycline	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+shigella_sonnei	tobramycin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+shigella_sonnei	trimethoprim	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+staphylococcus_aureus	cefoxitin	proxy_class	Methicillin	-	Mykrobe Staph Methicillin proxy for beta-lactamase-stable penicillin/cephamycin screen.
+staphylococcus_aureus	ceftaroline	unsupported	-	drug_not_in_mykrobe_staph_panel	Drug not covered by Mykrobe Staph panel.
+staphylococcus_aureus	chloramphenicol	unsupported	-	drug_not_in_mykrobe_staph_panel	Drug not covered by Mykrobe Staph panel.
+staphylococcus_aureus	ciprofloxacin	supported_primary	Ciprofloxacin	-	Mykrobe curated Staph panel.
+staphylococcus_aureus	clindamycin	supported_primary	Clindamycin	-	Mykrobe curated Staph panel.
+staphylococcus_aureus	daptomycin	unsupported	-	drug_not_in_mykrobe_staph_panel	Drug not covered by Mykrobe Staph panel.
+staphylococcus_aureus	erythromycin	supported_primary	Erythromycin	-	Mykrobe curated Staph panel.
+staphylococcus_aureus	fusidic acid	supported_primary	Fusidic_acid	-	Mykrobe curated Staph panel.
+staphylococcus_aureus	gentamicin	supported_primary	Gentamicin	-	Mykrobe curated Staph panel.
+staphylococcus_aureus	levofloxacin	unsupported	-	drug_not_in_mykrobe_staph_panel	Drug not covered by Mykrobe Staph panel.
+staphylococcus_aureus	moxifloxacin	unsupported	-	drug_not_in_mykrobe_staph_panel	Drug not covered by Mykrobe Staph panel.
+staphylococcus_aureus	mupirocin	supported_primary	Mupirocin	-	Mykrobe curated Staph panel.
+staphylococcus_aureus	oxacillin	proxy_class	Methicillin	-	Mykrobe Staph Methicillin proxy for beta-lactamase-stable penicillin/cephamycin screen.
+staphylococcus_aureus	penicillin	supported_primary	Penicillin	-	Mykrobe curated Staph panel.
+staphylococcus_aureus	rifampin	supported_primary	Rifampicin	-	Mykrobe curated Staph panel.
+staphylococcus_aureus	sulfamethoxazole/trimethoprim	proxy_class	Trimethoprim	-	Mykrobe Staph Trimethoprim proxy for folate combination.
+staphylococcus_aureus	tetracycline	supported_primary	Tetracycline	-	Mykrobe curated Staph panel.
+staphylococcus_aureus	vancomycin	supported_primary	Vancomycin	-	Mykrobe curated Staph panel.
+staphylococcus_haemolyticus	ciprofloxacin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+staphylococcus_haemolyticus	fusidic acid	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+staphylococcus_haemolyticus	tetracycline	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+streptococcus_agalactiae	clindamycin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+streptococcus_agalactiae	erythromycin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+streptococcus_agalactiae	tetracycline	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+streptococcus_pneumoniae	azithromycin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+streptococcus_pneumoniae	cefepime	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+streptococcus_pneumoniae	cefotaxime	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+streptococcus_pneumoniae	ceftriaxone	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+streptococcus_pneumoniae	cefuroxime	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+streptococcus_pneumoniae	chloramphenicol	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+streptococcus_pneumoniae	clindamycin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+streptococcus_pneumoniae	erythromycin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+streptococcus_pneumoniae	meropenem	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+streptococcus_pneumoniae	penicillin	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+streptococcus_pneumoniae	sulfamethoxazole/trimethoprim	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+streptococcus_pneumoniae	tetracycline	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+vibrio_cholerae	nalidixic acid	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+vibrio_cholerae	sulfamethoxazole	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.
+vibrio_cholerae	trimethoprim	unsupported	-	species_not_in_mykrobe_panels	Species has no curated Mykrobe AMR panel.

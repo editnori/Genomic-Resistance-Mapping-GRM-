@@ -1,0 +1,33 @@
+{
+  "bootstrap_cluster_unit": "lineage",
+  "comparison_kind": "end_to_end_pipeline",
+  "database_pin": {
+    "name": "mykrobe-panels",
+    "release_date": "2024-03-01",
+    "required_offline": true,
+    "version": "tb-202206"
+  },
+  "display_name": "Mykrobe",
+  "genotype_to_drug_rule": "Reads Mykrobe JSON susceptibility.<drug>.predict: 'R'->R, 'S'->S, 'r'->I (counted separately, never S), 'N'/'U'/'F'->no_call, unknown token or crash->failure.",
+  "i_handling": {
+    "description": "Mykrobe emits 'r' (minor allele / intermediate resistance) alongside 'R', 'S', and 'N'/'U'/'F'. Every 'r' call maps to canonical 'I', is counted separately (i_r, i_s), and is never mapped to S.",
+    "policy": "separate_count_never_map_to_s",
+    "tool_emits_intermediate": true
+  },
+  "input_format": "fasta_contigs",
+  "mode": "pretrained",
+  "primary_reading": "tool_default",
+  "readings": [
+    "tool_default",
+    "strict_r_only"
+  ],
+  "schema_version": "grm-bench-adapter-v1",
+  "software_pin": {
+    "package": "mykrobe",
+    "release_date": "2024-03-01",
+    "version": "0.13.0"
+  },
+  "species_scope": "single_species",
+  "supports_scores": false,
+  "tool": "mykrobe"
+}

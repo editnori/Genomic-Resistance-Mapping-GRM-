@@ -1,0 +1,275 @@
+species_slug	canonical_drug	support_tier	tool_drugs	unsupported_reason	notes
+acinetobacter_baumannii	amikacin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+acinetobacter_baumannii	ampicillin/sulbactam	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+acinetobacter_baumannii	cefepime	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+acinetobacter_baumannii	cefotaxime	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+acinetobacter_baumannii	ceftazidime	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+acinetobacter_baumannii	ceftriaxone	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+acinetobacter_baumannii	ciprofloxacin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+acinetobacter_baumannii	doripenem	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+acinetobacter_baumannii	doxycycline	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+acinetobacter_baumannii	gentamicin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+acinetobacter_baumannii	imipenem	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+acinetobacter_baumannii	levofloxacin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+acinetobacter_baumannii	meropenem	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+acinetobacter_baumannii	minocycline	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+acinetobacter_baumannii	moxifloxacin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+acinetobacter_baumannii	sulfamethoxazole/trimethoprim	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+acinetobacter_baumannii	tetracycline	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+acinetobacter_baumannii	tobramycin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+campylobacter_coli	azithromycin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+campylobacter_coli	ciprofloxacin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+campylobacter_coli	clindamycin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+campylobacter_coli	erythromycin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+campylobacter_coli	gentamicin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+campylobacter_coli	nalidixic acid	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+campylobacter_coli	telithromycin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+campylobacter_coli	tetracycline	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+campylobacter_jejuni	ciprofloxacin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+campylobacter_jejuni	clindamycin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+campylobacter_jejuni	nalidixic acid	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+campylobacter_jejuni	tetracycline	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+clostridioides_difficile	azithromycin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+clostridioides_difficile	ceftriaxone	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+clostridioides_difficile	clarithromycin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+clostridioides_difficile	moxifloxacin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+corynebacterium_diphtheriae	sulfamethoxazole/trimethoprim	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+corynebacterium_diphtheriae	tetracycline	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+corynebacterium_diphtheriae	trimethoprim	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+enterobacter_cloacae	cefepime	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+enterobacter_cloacae	ciprofloxacin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+enterobacter_cloacae	gentamicin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+enterobacter_cloacae	imipenem	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+enterobacter_cloacae	levofloxacin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+enterobacter_cloacae	meropenem	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+enterobacter_cloacae	sulfamethoxazole/trimethoprim	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+enterobacter_cloacae	tobramycin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+enterobacter_cloacae	trimethoprim	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+enterococcus_faecium	ampicillin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+enterococcus_faecium	chloramphenicol	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+enterococcus_faecium	clindamycin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+enterococcus_faecium	dalfopristin/quinupristin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+enterococcus_faecium	daptomycin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+enterococcus_faecium	doxycycline	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+enterococcus_faecium	erythromycin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+enterococcus_faecium	gentamicin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+enterococcus_faecium	kanamycin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+enterococcus_faecium	linezolid	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+enterococcus_faecium	streptomycin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+enterococcus_faecium	teicoplanin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+enterococcus_faecium	tetracycline	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+enterococcus_faecium	vancomycin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+escherichia_coli	amikacin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+escherichia_coli	amoxicillin/clavulanate	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+escherichia_coli	ampicillin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+escherichia_coli	ampicillin/sulbactam	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+escherichia_coli	aztreonam	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+escherichia_coli	cefazolin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+escherichia_coli	cefepime	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+escherichia_coli	cefotaxime	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+escherichia_coli	cefoxitin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+escherichia_coli	cefpodoxime	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+escherichia_coli	cefpodoxime/clavulanate	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+escherichia_coli	ceftazidime	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+escherichia_coli	ceftiofur	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+escherichia_coli	ceftriaxone	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+escherichia_coli	cefuroxime	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+escherichia_coli	cephalothin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+escherichia_coli	chloramphenicol	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+escherichia_coli	ciprofloxacin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+escherichia_coli	colistin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+escherichia_coli	doxycycline	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+escherichia_coli	ertapenem	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+escherichia_coli	erythromycin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+escherichia_coli	gentamicin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+escherichia_coli	imipenem	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+escherichia_coli	levofloxacin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+escherichia_coli	meropenem	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+escherichia_coli	nalidixic acid	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+escherichia_coli	nitrofurantoin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+escherichia_coli	norfloxacin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+escherichia_coli	piperacillin/tazobactam	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+escherichia_coli	streptomycin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+escherichia_coli	sulfamethoxazole	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+escherichia_coli	sulfamethoxazole/trimethoprim	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+escherichia_coli	tetracycline	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+escherichia_coli	tobramycin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+escherichia_coli	trimethoprim	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_aerogenes	ertapenem	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_aerogenes	imipenem	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_aerogenes	meropenem	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_oxytoca	cefotaxime	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_oxytoca	cefoxitin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_oxytoca	cefpodoxime	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_oxytoca	ertapenem	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_pneumoniae	amikacin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_pneumoniae	amoxicillin/clavulanate	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_pneumoniae	ampicillin/sulbactam	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_pneumoniae	aztreonam	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_pneumoniae	cefazolin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_pneumoniae	cefepime	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_pneumoniae	cefotetan	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_pneumoniae	cefoxitin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_pneumoniae	cefpodoxime	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_pneumoniae	cefpodoxime/ceftriaxone	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_pneumoniae	cefpodoxime/clavulanate	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_pneumoniae	ceftazidime	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_pneumoniae	ceftazidime/avibactam	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_pneumoniae	ceftriaxone	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_pneumoniae	cefuroxime	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_pneumoniae	chloramphenicol	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_pneumoniae	ciprofloxacin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_pneumoniae	colistin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_pneumoniae	doripenem	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_pneumoniae	doxycycline	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_pneumoniae	ertapenem	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_pneumoniae	fosfomycin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_pneumoniae	gentamicin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_pneumoniae	imipenem	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_pneumoniae	levofloxacin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_pneumoniae	meropenem	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_pneumoniae	nitrofurantoin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_pneumoniae	norfloxacin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_pneumoniae	ofloxacin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_pneumoniae	piperacillin/tazobactam	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_pneumoniae	polymyxin b	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_pneumoniae	streptomycin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_pneumoniae	sulfamethoxazole/trimethoprim	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_pneumoniae	tetracycline	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_pneumoniae	ticarcillin/clavulanate	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_pneumoniae	tigecycline	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_pneumoniae	tobramycin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_pneumoniae	trimethoprim	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_quasipneumoniae	cefotaxime	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_quasipneumoniae	ceftazidime	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+klebsiella_quasipneumoniae	sulfamethoxazole/trimethoprim	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+mycobacterium_tuberculosis	amikacin	supported_primary	amikacin	-	WHO catalogue v2 graded endpoint in tbdb 3ed1cb99.
+mycobacterium_tuberculosis	amoxicillin	unsupported	-	drug_not_in_tbdb	Drug not named in TBProfiler tbdb 3ed1cb99.
+mycobacterium_tuberculosis	capreomycin	supported_primary	capreomycin	-	WHO catalogue v2 graded endpoint in tbdb 3ed1cb99.
+mycobacterium_tuberculosis	ciprofloxacin	proxy_class	levofloxacin,moxifloxacin	-	Proxy from related TBProfiler drug(s); reported separately.
+mycobacterium_tuberculosis	clofazimine	supported_primary	clofazimine	-	WHO catalogue v2 graded endpoint in tbdb 3ed1cb99.
+mycobacterium_tuberculosis	cycloserine	supported_ungraded	cycloserine	-	Named in tbdb 3ed1cb99 with 0 WHO v2 graded entries; never pooled into primary medians.
+mycobacterium_tuberculosis	delamanid	supported_primary	delamanid	-	WHO catalogue v2 graded endpoint in tbdb 3ed1cb99.
+mycobacterium_tuberculosis	ethambutol	supported_primary	ethambutol	-	WHO catalogue v2 graded endpoint in tbdb 3ed1cb99.
+mycobacterium_tuberculosis	ethionamide	supported_primary	ethionamide	-	WHO catalogue v2 graded endpoint in tbdb 3ed1cb99.
+mycobacterium_tuberculosis	isoniazid	supported_primary	isoniazid	-	WHO catalogue v2 graded endpoint in tbdb 3ed1cb99.
+mycobacterium_tuberculosis	kanamycin	supported_primary	kanamycin	-	WHO catalogue v2 graded endpoint in tbdb 3ed1cb99.
+mycobacterium_tuberculosis	levofloxacin	supported_primary	levofloxacin	-	WHO catalogue v2 graded endpoint in tbdb 3ed1cb99.
+mycobacterium_tuberculosis	linezolid	supported_primary	linezolid	-	WHO catalogue v2 graded endpoint in tbdb 3ed1cb99.
+mycobacterium_tuberculosis	moxifloxacin	supported_primary	moxifloxacin	-	WHO catalogue v2 graded endpoint in tbdb 3ed1cb99.
+mycobacterium_tuberculosis	nicotinamide	unsupported	-	drug_not_in_tbdb	Drug not named in TBProfiler tbdb 3ed1cb99.
+mycobacterium_tuberculosis	ofloxacin	proxy_class	levofloxacin,moxifloxacin	-	Proxy from related TBProfiler drug(s); reported separately.
+mycobacterium_tuberculosis	para-aminosalicylic acid	supported_ungraded	para-aminosalicylic_acid	-	Named in tbdb 3ed1cb99 with 0 WHO v2 graded entries; never pooled into primary medians.
+mycobacterium_tuberculosis	prothionamide	proxy_class	ethionamide	-	Proxy from related TBProfiler drug(s); reported separately.
+mycobacterium_tuberculosis	pyrazinamide	supported_primary	pyrazinamide	-	WHO catalogue v2 graded endpoint in tbdb 3ed1cb99.
+mycobacterium_tuberculosis	rifabutin	proxy_class	rifampicin	-	Proxy from related TBProfiler drug(s); reported separately.
+mycobacterium_tuberculosis	rifampin	supported_primary	rifampicin	-	WHO catalogue v2 graded endpoint in tbdb 3ed1cb99.
+mycobacterium_tuberculosis	streptomycin	supported_primary	streptomycin	-	WHO catalogue v2 graded endpoint in tbdb 3ed1cb99.
+neisseria_gonorrhoeae	azithromycin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+neisseria_gonorrhoeae	cefixime	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+neisseria_gonorrhoeae	ceftriaxone	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+neisseria_gonorrhoeae	ciprofloxacin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+neisseria_gonorrhoeae	erythromycin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+neisseria_gonorrhoeae	penicillin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+neisseria_gonorrhoeae	tetracycline	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+pseudomonas_aeruginosa	amikacin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+pseudomonas_aeruginosa	aztreonam	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+pseudomonas_aeruginosa	cefepime	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+pseudomonas_aeruginosa	ceftazidime	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+pseudomonas_aeruginosa	ceftazidime/avibactam	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+pseudomonas_aeruginosa	ceftolozane/tazobactam	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+pseudomonas_aeruginosa	ciprofloxacin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+pseudomonas_aeruginosa	gentamicin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+pseudomonas_aeruginosa	imipenem	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+pseudomonas_aeruginosa	levofloxacin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+pseudomonas_aeruginosa	meropenem	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+pseudomonas_aeruginosa	piperacillin/tazobactam	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+pseudomonas_aeruginosa	tobramycin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+salmonella_enterica	amoxicillin/clavulanate	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+salmonella_enterica	ampicillin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+salmonella_enterica	ampicillin/sulbactam	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+salmonella_enterica	azithromycin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+salmonella_enterica	cefazolin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+salmonella_enterica	cefotaxime	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+salmonella_enterica	cefoxitin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+salmonella_enterica	ceftazidime	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+salmonella_enterica	ceftiofur	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+salmonella_enterica	ceftriaxone	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+salmonella_enterica	chloramphenicol	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+salmonella_enterica	ciprofloxacin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+salmonella_enterica	gentamicin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+salmonella_enterica	kanamycin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+salmonella_enterica	nalidixic acid	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+salmonella_enterica	pefloxacin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+salmonella_enterica	spectinomycin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+salmonella_enterica	streptomycin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+salmonella_enterica	sulfamethoxazole	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+salmonella_enterica	sulfamethoxazole/trimethoprim	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+salmonella_enterica	sulfathiazole	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+salmonella_enterica	sulfisoxazole	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+salmonella_enterica	temocillin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+salmonella_enterica	tetracycline	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+salmonella_enterica	trimethoprim	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+shigella_flexneri	ampicillin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+shigella_flexneri	azithromycin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+shigella_flexneri	ciprofloxacin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+shigella_flexneri	trimethoprim	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+shigella_sonnei	amikacin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+shigella_sonnei	ampicillin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+shigella_sonnei	azithromycin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+shigella_sonnei	cefoperazone	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+shigella_sonnei	cefotaxime	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+shigella_sonnei	cefoxitin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+shigella_sonnei	cefpirome	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+shigella_sonnei	ceftazidime	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+shigella_sonnei	ceftriaxone	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+shigella_sonnei	ciprofloxacin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+shigella_sonnei	colistin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+shigella_sonnei	ertapenem	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+shigella_sonnei	gentamicin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+shigella_sonnei	nalidixic acid	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+shigella_sonnei	streptomycin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+shigella_sonnei	sulfamethoxazole/trimethoprim	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+shigella_sonnei	temocillin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+shigella_sonnei	tetracycline	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+shigella_sonnei	tobramycin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+shigella_sonnei	trimethoprim	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+staphylococcus_aureus	cefoxitin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+staphylococcus_aureus	ceftaroline	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+staphylococcus_aureus	chloramphenicol	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+staphylococcus_aureus	ciprofloxacin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+staphylococcus_aureus	clindamycin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+staphylococcus_aureus	daptomycin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+staphylococcus_aureus	erythromycin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+staphylococcus_aureus	fusidic acid	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+staphylococcus_aureus	gentamicin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+staphylococcus_aureus	levofloxacin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+staphylococcus_aureus	moxifloxacin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+staphylococcus_aureus	mupirocin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+staphylococcus_aureus	oxacillin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+staphylococcus_aureus	penicillin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+staphylococcus_aureus	rifampin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+staphylococcus_aureus	sulfamethoxazole/trimethoprim	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+staphylococcus_aureus	tetracycline	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+staphylococcus_aureus	vancomycin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+staphylococcus_haemolyticus	ciprofloxacin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+staphylococcus_haemolyticus	fusidic acid	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+staphylococcus_haemolyticus	tetracycline	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+streptococcus_agalactiae	clindamycin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+streptococcus_agalactiae	erythromycin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+streptococcus_agalactiae	tetracycline	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+streptococcus_pneumoniae	azithromycin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+streptococcus_pneumoniae	cefepime	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+streptococcus_pneumoniae	cefotaxime	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+streptococcus_pneumoniae	ceftriaxone	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+streptococcus_pneumoniae	cefuroxime	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+streptococcus_pneumoniae	chloramphenicol	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+streptococcus_pneumoniae	clindamycin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+streptococcus_pneumoniae	erythromycin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+streptococcus_pneumoniae	meropenem	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+streptococcus_pneumoniae	penicillin	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+streptococcus_pneumoniae	sulfamethoxazole/trimethoprim	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+streptococcus_pneumoniae	tetracycline	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+vibrio_cholerae	nalidixic acid	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+vibrio_cholerae	sulfamethoxazole	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.
+vibrio_cholerae	trimethoprim	unsupported	-	species_not_mtb	TBProfiler supports Mycobacterium tuberculosis complex only.

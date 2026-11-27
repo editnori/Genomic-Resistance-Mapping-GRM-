@@ -1,0 +1,25 @@
+tool_drug	canonical_drug	map_kind	notes
+amikacin	amikacin	exact	TBProfiler WHO catalogue v2 graded drug
+bedaquiline	bedaquiline	exact	TBProfiler WHO catalogue v2 graded drug (external cohorts)
+capreomycin	capreomycin	exact	TBProfiler WHO catalogue v2 graded drug
+levofloxacin	ciprofloxacin	proxy_class	TBProfiler shared-stem proxy drug
+moxifloxacin	ciprofloxacin	proxy_class	TBProfiler shared-stem proxy drug
+clofazimine	clofazimine	exact	TBProfiler WHO catalogue v2 graded drug
+cycloserine	cycloserine	exact	TBProfiler named drug with 0 WHO v2 graded entries
+delamanid	delamanid	exact	TBProfiler WHO catalogue v2 graded drug
+ethambutol	ethambutol	exact	TBProfiler WHO catalogue v2 graded drug
+ethionamide	ethionamide	exact	TBProfiler WHO catalogue v2 graded drug
+isoniazid	isoniazid	exact	TBProfiler WHO catalogue v2 graded drug
+kanamycin	kanamycin	exact	TBProfiler WHO catalogue v2 graded drug
+levofloxacin	levofloxacin	exact	TBProfiler WHO catalogue v2 graded drug
+linezolid	linezolid	exact	TBProfiler WHO catalogue v2 graded drug
+moxifloxacin	moxifloxacin	exact	TBProfiler WHO catalogue v2 graded drug
+levofloxacin	ofloxacin	proxy_class	TBProfiler shared-stem proxy drug
+moxifloxacin	ofloxacin	proxy_class	TBProfiler shared-stem proxy drug
+para-aminosalicylic_acid	para-aminosalicylic acid	exact	TBProfiler named drug with 0 WHO v2 graded entries
+pretomanid	pretomanid	exact	TBProfiler WHO catalogue v2 graded drug (external cohorts)
+ethionamide	prothionamide	proxy_class	TBProfiler shared-stem proxy drug
+pyrazinamide	pyrazinamide	exact	TBProfiler WHO catalogue v2 graded drug
+rifampicin	rifabutin	proxy_class	TBProfiler shared-stem proxy drug
+rifampicin	rifampin	exact	TBProfiler WHO catalogue v2 graded drug
+streptomycin	streptomycin	exact	TBProfiler WHO catalogue v2 graded drug

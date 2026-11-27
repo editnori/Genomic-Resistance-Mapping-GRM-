@@ -1,0 +1,71 @@
+tool_drug	canonical_drug	map_kind	notes
+amikacin	amikacin	exact	ResFinder/PointFinder phenotype drug
+amoxicillin	amoxicillin	exact	ResFinder/PointFinder phenotype drug
+amoxicillin+clavulanic acid	amoxicillin/clavulanate	combination	ResFinder/PointFinder phenotype drug
+ampicillin	ampicillin	exact	ResFinder/PointFinder phenotype drug
+ampicillin+sulbactam	ampicillin/sulbactam	combination	ResFinder/PointFinder phenotype drug
+azithromycin	azithromycin	exact	ResFinder/PointFinder phenotype drug
+aztreonam	aztreonam	exact	ResFinder/PointFinder phenotype drug
+capreomycin	capreomycin	exact	ResFinder/PointFinder phenotype drug
+cefazolin	cefazolin	exact	ResFinder/PointFinder phenotype drug
+cefepime	cefepime	exact	ResFinder/PointFinder phenotype drug
+cefixime	cefixime	exact	ResFinder/PointFinder phenotype drug
+cefoperazone	cefoperazone	exact	ResFinder/PointFinder phenotype drug
+cefotaxime	cefotaxime	exact	ResFinder/PointFinder phenotype drug
+cefotetan	cefotetan	exact	ResFinder/PointFinder phenotype drug
+cefoxitin	cefoxitin	exact	ResFinder/PointFinder phenotype drug
+cefpodoxime	cefpodoxime	exact	ResFinder/PointFinder phenotype drug
+ceftazidime	ceftazidime	exact	ResFinder/PointFinder phenotype drug
+ceftazidime+avibactam	ceftazidime/avibactam	combination	ResFinder/PointFinder phenotype drug
+ceftiofur	ceftiofur	exact	ResFinder/PointFinder phenotype drug
+ceftolozane+tazobactam	ceftolozane/tazobactam	combination	ResFinder/PointFinder phenotype drug
+ceftriaxone	ceftriaxone	exact	ResFinder/PointFinder phenotype drug
+cefuroxime	cefuroxime	exact	ResFinder/PointFinder phenotype drug
+cephalothin	cephalothin	exact	ResFinder/PointFinder phenotype drug
+chloramphenicol	chloramphenicol	exact	ResFinder/PointFinder phenotype drug
+ciprofloxacin	ciprofloxacin	exact	ResFinder/PointFinder phenotype drug
+clarithromycin	clarithromycin	exact	ResFinder/PointFinder phenotype drug
+clindamycin	clindamycin	exact	ResFinder/PointFinder phenotype drug
+colistin	colistin	exact	ResFinder/PointFinder phenotype drug
+quinupristin+dalfopristin	dalfopristin/quinupristin	combination	ResFinder/PointFinder phenotype drug
+doripenem	doripenem	exact	ResFinder/PointFinder phenotype drug
+doxycycline	doxycycline	exact	ResFinder/PointFinder phenotype drug
+ertapenem	ertapenem	exact	ResFinder/PointFinder phenotype drug
+erythromycin	erythromycin	exact	ResFinder/PointFinder phenotype drug
+ethambutol	ethambutol	exact	ResFinder/PointFinder phenotype drug
+ethionamide	ethionamide	exact	ResFinder/PointFinder phenotype drug
+fosfomycin	fosfomycin	exact	ResFinder/PointFinder phenotype drug
+fusidic acid	fusidic acid	exact	ResFinder/PointFinder phenotype drug
+gentamicin	gentamicin	exact	ResFinder/PointFinder phenotype drug
+imipenem	imipenem	exact	ResFinder/PointFinder phenotype drug
+isoniazid	isoniazid	exact	ResFinder/PointFinder phenotype drug
+kanamycin	kanamycin	exact	ResFinder/PointFinder phenotype drug
+levofloxacin	levofloxacin	exact	ResFinder/PointFinder phenotype drug
+linezolid	linezolid	exact	ResFinder/PointFinder phenotype drug
+meropenem	meropenem	exact	ResFinder/PointFinder phenotype drug
+minocycline	minocycline	exact	ResFinder/PointFinder phenotype drug
+moxifloxacin	moxifloxacin	exact	ResFinder/PointFinder phenotype drug
+mupirocin	mupirocin	exact	ResFinder/PointFinder phenotype drug
+nalidixic acid	nalidixic acid	exact	ResFinder/PointFinder phenotype drug
+nitrofurantoin	nitrofurantoin	exact	ResFinder/PointFinder phenotype drug
+norfloxacin	norfloxacin	exact	ResFinder/PointFinder phenotype drug
+ofloxacin	ofloxacin	exact	ResFinder/PointFinder phenotype drug
+oxacillin	oxacillin	exact	ResFinder/PointFinder phenotype drug
+penicillin	penicillin	exact	ResFinder/PointFinder phenotype drug
+piperacillin+tazobactam	piperacillin/tazobactam	combination	ResFinder/PointFinder phenotype drug
+colistin	polymyxin b	proxy_class	ResFinder/PointFinder phenotype drug
+pyrazinamide	pyrazinamide	exact	ResFinder/PointFinder phenotype drug
+rifampicin	rifampin	exact	ResFinder/PointFinder phenotype drug
+spectinomycin	spectinomycin	exact	ResFinder/PointFinder phenotype drug
+streptomycin	streptomycin	exact	ResFinder/PointFinder phenotype drug
+sulfamethoxazole	sulfamethoxazole	exact	ResFinder/PointFinder phenotype drug
+sulfamethoxazole	sulfamethoxazole/trimethoprim	proxy_class	ResFinder sulfamethoxazole component for folate combination
+trimethoprim	sulfamethoxazole/trimethoprim	proxy_class	ResFinder trimethoprim component for folate combination
+sulfamethoxazole	sulfisoxazole	proxy_class	ResFinder/PointFinder phenotype drug
+teicoplanin	teicoplanin	exact	ResFinder/PointFinder phenotype drug
+tetracycline	tetracycline	exact	ResFinder/PointFinder phenotype drug
+ticarcillin+clavulanic acid	ticarcillin/clavulanate	combination	ResFinder/PointFinder phenotype drug
+tigecycline	tigecycline	exact	ResFinder/PointFinder phenotype drug
+tobramycin	tobramycin	exact	ResFinder/PointFinder phenotype drug
+trimethoprim	trimethoprim	exact	ResFinder/PointFinder phenotype drug
+vancomycin	vancomycin	exact	ResFinder/PointFinder phenotype drug

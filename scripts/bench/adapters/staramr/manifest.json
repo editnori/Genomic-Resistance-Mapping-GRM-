@@ -1,0 +1,32 @@
+{
+  "bootstrap_cluster_unit": "species",
+  "comparison_kind": "end_to_end_pipeline",
+  "database_pin": {
+    "name": "staramr-resfinder-pointfinder",
+    "release_date": "2024-05-01",
+    "required_offline": true,
+    "version": "resfinder-2.3.2"
+  },
+  "display_name": "StarAMR",
+  "genotype_to_drug_rule": "Calls R if the mapped drug token appears in StarAMR summary.tsv Predicted Phenotype (combining ResFinder and --pointfinder-organism where supported); calls no_call when Quality Module fails with no resistance hit; otherwise S.",
+  "i_handling": {
+    "description": "StarAMR summary.tsv emits resistance tokens or Sensitive without I; any I token is counted separately and never mapped to S.",
+    "policy": "separate_count_never_map_to_s",
+    "tool_emits_intermediate": false
+  },
+  "input_format": "fasta_contigs",
+  "mode": "pretrained",
+  "primary_reading": "tool_default",
+  "readings": [
+    "tool_default"
+  ],
+  "schema_version": "grm-bench-adapter-v1",
+  "software_pin": {
+    "package": "staramr",
+    "release_date": "2024-05-01",
+    "version": "0.10.0"
+  },
+  "species_scope": "multi_species",
+  "supports_scores": false,
+  "tool": "staramr"
+}
