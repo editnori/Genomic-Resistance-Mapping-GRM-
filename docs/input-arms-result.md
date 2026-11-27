@@ -462,7 +462,7 @@ These points are seen in the tables after the reading. They change no rule and n
 
 **One database.** Every split is a retrospective split inside one public database. A split by lineage or by study is not external validation.
 
-**Labels.** The 35 datasets of M wait for the maintainer's label rule. The count over them is taken when that rule lets them run, with these rules, this scorer and these arguments unchanged.
+**Labels.** The 35 datasets of M wait for the maintainer's label rule. The count over them is taken when that rule lets them run, with these rules, this scorer and these arguments unchanged. After the floor `m_page.py left` writes the left-out page, `docs/input-arms-m-left-out.md`, and after the count `m_page.py page` writes the count page, `docs/input-arms-m-count.md`; this page holds no table of that run.
 
 **Study split.** One study run per dataset at the release's seeds, and no study twin.
 

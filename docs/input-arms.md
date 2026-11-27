@@ -93,7 +93,9 @@ The pilot of all five arms ran the same draw at seed 42, with no twin, `GRAPH` c
 
 ## Tests and planted faults
 
-`input_arms` holds 14 SYNTHETIC tests, `input_build` 8, `learn::eval` one on the screen count and `src/main.rs` 2 on the flags. `tests/c3_inputs` holds 279 tests: 152 SYNTHETIC ones, 71 of the scorer, the refusal record, the lists, the expected results and the run script's rules and 81 of the result page's table script, the run's checks and their fault runner (`docs/input-arms-result.md`, Method); and 127 of the run on the datasets of M (below). `scripts/c3-inputs/planted_faults.py` plants each fault below in a copy of the tree and runs the test meant to catch it, which must fail.
+`input_arms` holds 14 SYNTHETIC tests, `input_build` 8, `learn::eval` one on the screen count and `src/main.rs` 2 on the flags. `tests/c3_inputs` holds 392 tests: 152 SYNTHETIC ones, 71 of the scorer, the refusal record, the lists, the expected results and the run script's rules and 81 of the result page's table script, the run's checks and their fault runner (`docs/input-arms-result.md`, Method); and 240 of the run on the datasets of M (below).
+
+`scripts/c3-inputs/planted_faults.py` plants each fault below in a copy of the tree and runs the test meant to catch it, which must fail.
 
 | Fault | Caught by |
 |---|---|
@@ -147,7 +149,7 @@ On a difference in any of the three the run names what differs, writes `OUT/FAIL
 
 **Floor form.** `m_reading.py floor` writes `m-floor.tsv` and `m-left-out.tsv` from the species' `floor.tsv` files alone, before any score is read. `m-floor.tsv` gives each dataset's second reading as in it, left out under the floor, or left out for a short list (Small lists, below). `m_reading.py count` stops unless both files are, byte for byte, the ones the floor form writes from the same species' files.
 
-**Left-out table.** `m-left-out.tsv` names each dataset left out of the second reading, for either reason, in full, with the reason and its counts by class. It goes on the page as `reference/input-arms-m/m-left-out.tsv` before any score is read.
+**Left-out table.** `m-left-out.tsv` names each dataset left out of the second reading, for either reason, in full, with the reason and its counts by class. It goes on the left-out page (Written pages, below) after the floor and before any score is read.
 
 **Second reading.** `second.py` reads every result again with no refit. Each dataset's listed genomes leave every outer test fold of every arm, the default and the twin, at every seed and on both splits. A fold that holds a listed genome gets each learner's calls taken again from the scores; a fold that holds none keeps its counts; the training counts stay as fitted. An arm's study fit refused for no candidate is the constant model on the default's study folds less the list (ruling 16), and a split that could not be drawn stays unscored. Before it reads, every result's counts must come back from its scores, every listed genome must be in each lineage fit's cohort, and the genomes each lineage fit keeps must give `floor.tsv`'s counts. A dataset under the floor is not scored in this reading. It writes `score/second/` in `score.py`'s columns.
 
@@ -174,6 +176,28 @@ Before it counts, `m_reading.py check` must give back from the record every row 
 - `m-size.tsv`: per reading, arm (the twin too) and learner, the datasets entered, better, worse and the same, the counts the Pick rule's size rule reads; it decides no pick;
 - `m-datasets.tsv`: per reading, dataset, split, pair and learner, with each dataset's listed counts by class and its second reading's state; the second reading gives only the datasets in it.
 
+**Page tables.** `scripts/c3-inputs/m_page.py` keeps the record and writes the pages of its tables. `floor` copies `m-floor.tsv` and `m-left-out.tsv` into `reference/input-arms-m` before any score is read, and `record` the other 5 tables after the count. `print` gives each table in `page_tables.py`'s number forms; a dataset left out reads its reason in place of its second reading's figures.
+
+**Written pages.** After the floor `m_page.py left` writes the left-out page, `docs/input-arms-m-left-out.md`, and after the count `m_page.py page` writes the count page, `docs/input-arms-m-count.md`, each whole from the record and edited by no hand. The count page marks conditions 1 and 2 on each row of all datasets on lineage balanced accuracy, from the record's full figures.
+
+**Gates.** `floor`, `record`, `print`, `left`, `page` and `onpage` each stop on a gate with one line that names the file and row and no value, and never with a traceback. A gate stops on:
+
+- a file missing or changed, a met cell that is not 0, 1 or empty, a count cell that is not a whole number, a figure that is not a number, or a name off its list;
+- a floor row whose cohort is not resistant plus susceptible, or whose state is not the one `enters` and the listed counts give;
+- a dataset of M with no first-reading row in `m-datasets.tsv`, or a count over the datasets read;
+- a first-run row of the second reading unlike its first, a both row unlike `m-conditions.tsv`'s or met in Both when a reading is not, or a count of learners unlike the marks of conditions 1 and 2;
+- a cell in a genome id's shape, with 2 or more digits before the point.
+
+**Count rows.** A gate also stops on a count row whose better, worse and same do not sum to entered, whose p value is outside 0 to 1, or whose interval's low end is above its high end, and on a row of the count, conditions or size table that stands twice, is missing, or is none the lists give.
+
+**Left-out check.** `onpage` exits 0 only when the page file's bytes are the bytes `left` gives. Else it exits 1 with one line that names the first line that differs, or says the page ends early or runs on, with no figure and no text of the page. The record's gates run first, and a page that does not exist stops it. No check of this run reads Markdown: each compares bytes.
+
+**Result page.** The result page holds no table of this run. Under a title, the line that says the script writes it and the line on the datasets read, the count page gives 8 tables under run-in lines, then the Files line: conditions 1 to 5 in both readings; the datasets read by species; then all datasets and M alone, each on lineage balanced accuracy, lineage recall and the study split. For the 9 species of M the 8 hold 370 rows.
+
+**Record test.** `test_m_record.py` checks the tree in its record's state. Before the floor neither written page exists. After it the left-out page is `left`'s bytes and the count page does not exist; after the count each is its command's bytes. It reads each line of every other page under `docs/` as cells, the outer pipes optional and each cell stripped, and fails on a file unlike its `SHA256SUMS` line.
+
+**Before the count.** In every state the record test fails on a line of another page whose cells are a header of this run's 11 tables. After the floor it also fails on a row of the left-out or species table, and after the count on a row of any table `print` gives or of any count in the count page's forms. Before the floor no record exists to compare a row with.
+
 **Pack.** Only `OUT/pack.tar` and `OUT/DONE` leave the box. `pack.py` packs every file under OUT but `work/` and `flags/`: the result files (counts per fold), the build records, `floor.tsv`, the checks, both readings' tables and the logs. The pack holds both readings, as the count needs them. So it goes unopened to the one machine that takes the count over all 9 species, and to no other; it is no page file.
 
 **Pack check.** `pack.py check` refuses the pack, naming the path and why with no genome id, when it would carry a link, a score file (by its name or its format), a study fit's fold result, a report or a list of samples, a list file of genomes, a compressed file, a file that is not UTF-8 text or holds a NUL byte, or a genome id of the species in a path or a file.
@@ -198,7 +222,7 @@ Before it counts, `m_reading.py check` must give back from the record every row 
 - *Enterococcus faecium*'s study fits are counted: plus 0.007;
 - whole seconds: less 0.002.
 
-**Tests.** `tests/c3_inputs/test_m_*.py` holds 127 tests of this run, on SYNTHETIC fits, score files, reports, lists, species directories, logs and timing copies, and on the committed `lists.tsv`, `page-binaries.tsv`, `page-datasets.tsv`, `page-count.tsv`, `page-conditions.tsv`, `first-run-times.tsv`, C3 arms entry and this page's Cost. `scripts/c3-inputs/m_faults.py` plants 113 faults, at least one for each new rule, in a copy of the tree and runs the test meant to catch each.
+**Tests.** `tests/c3_inputs/test_m_*.py` holds 240 tests of this run, on SYNTHETIC fits, score files, reports, lists, species directories, tables, logs and timing copies, and on the committed `lists.tsv`, `page-binaries.tsv`, `page-datasets.tsv`, `page-count.tsv`, `page-conditions.tsv`, `first-run-times.tsv`, `reference/input-arms-m`, C3 arms entry and every page under `docs/`. `scripts/c3-inputs/m_faults.py` plants 264 faults, at least one for each new rule, one at a time in a copy of the tree, and runs the test of each fault's rule, which must fail.
 
 ## What it does not do
 
