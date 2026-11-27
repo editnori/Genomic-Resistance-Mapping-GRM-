@@ -970,6 +970,12 @@ An eleventh came while the text was written. The project's wording rules put rec
 
 **Then.** The run names what differs, and the lead rules on this page before another build, machine or genome set is used.
 
+**Stop of 27 Nov 2026.** Block C3's check species, *Neisseria gonorrhoeae*, stopped at Same results before any dataset of M was fitted. 167 of its 180 recorded rows came back. The other 13 are rows of the amino-acid arm. The run had fetched the species' 2,000 genomes again, and 98 of the files gave their contigs in another order than the first run's. Prodigal's gene calls change with that order.
+
+**Ruling 54.** Block C3's run on M reads the first run's genome files, which each species' machine keeps, and fetches none again. Each species' three built inputs must equal the first run's file by file, by sha256, or the species is not counted and the lead rules again. The check species starts once more, and a second stop gets no third start. Blocks C2, C5 and C9 take this rule in their own entries before they run on M.
+
+**Counts and limit.** `docs/input-arms.md` gives the counts behind the ruling and the limit it puts on the amino-acid arm.
+
 **Block C2.** Its `grm` has no change. Same build is its binary's check, and Same results runs on that binary as a check of the machine and the genome files. Its fits write a prediction per genome and no counts per fold, so Same counts has nothing to compare there. Its study fits are `grm learn` fits for every arm, and the run scripts keep each of their reports too.
 
 **Block C7's binaries.** Block C7 uses block C3's binary, as on its first run. Its export binary is built from `da70f4b`, the commit its first run's `DONE` lines name. That run recorded the export binary's sha256 and no code sha256, so the run holds `src/`, `Cargo.toml`, `Cargo.lock` and `.cargo/config.toml` equal to that commit's.

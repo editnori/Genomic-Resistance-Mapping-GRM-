@@ -466,6 +466,8 @@ These points are seen in the tables after the reading. They change no rule and n
 
 **Study split.** One study run per dataset at the release's seeds, and no study twin.
 
+**Contig order.** The figures of K31 plus amino-acid k-mers are for the contig order BV-BRC served on 23 Nov 2026, since Prodigal's gene calls change with it. On a second fetch on 27 Nov, 98 of the 2,000 *Neisseria gonorrhoeae* files gave their contigs in another order. That arm's difference from K31 moved on 13 of the species' 30 lineage rows, on 2 of them by more than 0.02 (`docs/input-arms.md`, Stop of 27 Nov 2026). The count on this page was not taken again.
+
 **Constant model.** A study run refused for no candidate is scored as the constant model (ruling 16). It enters the count and is marked. The count without it decides nothing.
 
 **The program.** A program-call arm would enter only with the program's version pinned. A program column is named only as the AMRFinderPlus program's table names it.
