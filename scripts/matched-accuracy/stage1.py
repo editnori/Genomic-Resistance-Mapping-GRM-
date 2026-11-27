@@ -753,12 +753,12 @@ def export_files(facts, readings, lists):
     ]
     if facts["hc20_rows"] is None:
         inputs.append({"input": "genome table, 5 Nov", "sha256": "-", "count": 0,
-                       "note": "not given: the HC20 read is dropped and typing.tsv holds no mlst_hc20 step"})
+                       "note": "not given: the HC20 read is dropped and the typing counts hold no mlst_hc20 step"})
     else:
         inputs.append({"input": "genome table, 5 Nov", "sha256": facts["sums"]["genome table, 5 Nov"],
                        "count": facts["hc20_rows"],
                        "note": f"rows; the table has no insertion time, so no row of it is checked against "
-                               f"{SEAL}; it gives the mlst_hc20 step of typing.tsv; genomes of the reports that "
+                               f"{SEAL}; it gives the mlst_hc20 step of the typing counts; genomes of the reports that "
                                f"enter not in it: {facts['not_in_hc20']}"})
     for name in ("A", "B"):
         inputs.append({"input": f"row list, reading {name}", "sha256": hashlib.sha256(lists[name]).hexdigest(),
@@ -818,13 +818,13 @@ def control_plants(ids, accessions):
     return plants + [(what, token, ids) for what, token in CONTROL_TOKENS]
 
 
-def scan(files, ids, accessions):
+def scan(files, ids, accessions, control=True):
     """[(file name, hits)] of the export files that hold any, after a positive control: each plant, apart, in a copy
-    of every export file, sent through the whole scan, must raise the count of every file."""
+    of every export file, sent through this whole scan, its returned list too, must raise the count of every file."""
     found = find(files, ids, accessions)
-    for what, token, lookup in control_plants(ids, accessions):
+    for what, token, lookup in control_plants(ids, accessions) if control else ():
         planted = {name: data + b"\n" + token.encode("utf-8") + b"\n" for name, data in files.items()}
-        got = find(planted, lookup, accessions)
+        got = dict(scan(planted, lookup, accessions, control=False))
         if any(got.get(name, 0) <= found.get(name, 0) for name in files):
             raise Stop(f"the scan's positive control found no {what} in a copy of an export file that holds one")
     return sorted(found.items())

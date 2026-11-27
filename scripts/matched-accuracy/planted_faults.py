@@ -427,6 +427,18 @@ FAULTS = [
      'copies = {i for g in rep["kset_duplicates"] or [] for i in g}',
      'copies = {i for g in rep["kset_duplicates"] or [] for i in g[1:]}',
      MADE_UP + "test_every_member_of_the_listed_copy_group_leaves_under_reason_1_in_both_readings"),
+    ("P99", "export", "the 5 Nov table's note names a file, with its dot", S,
+     'f"{SEAL}; it gives the mlst_hc20 step of the typing counts; genomes of the reports that "',
+     'f"{SEAL}; it gives the mlst_hc20 step of typing.tsv; genomes of the reports that "',
+     EXPORT + "test_no_export_file_holds_a_dot"),
+    ("P100", "scan", "the positive control sends each copy through the lookup alone, not the whole scan", S,
+     "        got = dict(scan(planted, lookup, accessions, control=False))\n",
+     "        got = find(planted, lookup, accessions)\n",
+     SCAN + "Scan.test_a_scan_whose_returned_list_drops_every_hit_fails_the_control"),
+    ("P101", "scan", "the scan returns no hit after the positive control", S,
+     "    return sorted(found.items())\n",
+     "    return []\n",
+     SCAN + "Scan.test_a_clean_export_gives_no_hit"),
 ]
 
 def _c9():

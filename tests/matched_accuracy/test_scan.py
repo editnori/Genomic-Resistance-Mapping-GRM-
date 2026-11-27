@@ -135,6 +135,17 @@ class Scan(unittest.TestCase):
                 self.assertEqual(got[0], "stopped")
                 self.assertIn("-shaped token in a copy of an export file", got[1])
 
+    def test_a_scan_whose_returned_list_drops_every_hit_fails_the_control(self):
+        # Each planted copy goes through scan itself, so a scan that finds each hit and returns none fails.
+        real = s1.scan
+
+        def drop(files, ids, accessions, control=True):
+            return real(files, ids, accessions, control) if control else []
+        with mock.patch.object(s1, "scan", side_effect=drop):
+            got = outcome(real, self.FILES, self.IDS, {"pz-1"})
+        self.assertEqual(got, ("stopped", "the scan's positive control found no read genome id without an id's "
+                                          "shape in a copy of an export file that holds one"))
+
     def test_a_scan_that_looks_up_no_read_id_fails_the_control(self):
         def shapes_alone(data, ids, accessions):
             text = data.decode("utf-8")

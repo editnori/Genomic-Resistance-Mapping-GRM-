@@ -287,8 +287,8 @@ class MadeUp(unittest.TestCase):
                          "shape: 1")
         self.assertEqual(inputs["genome table, 5 Nov"][1],
                          "rows; the table has no insertion time, so no row of it is checked against "
-                         "2026-11-05T19:10:00; it gives the mlst_hc20 step of typing.tsv; genomes of the reports that "
-                         "enter not in it: 1")
+                         "2026-11-05T19:10:00; it gives the mlst_hc20 step of the typing counts; genomes of the "
+                         "reports that enter not in it: 1")
         checks = dict((r["check"], r["result"]) for r in self.made.table("checks.tsv"))
         self.assertEqual(checks["reports"], "11 of 12 reports hold the five learners under the lineage split; "
                                             "left out, holding none of them: 1")

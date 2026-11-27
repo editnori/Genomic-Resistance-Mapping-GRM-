@@ -45,6 +45,11 @@ class Export(unittest.TestCase):
                 self.assertIsNone(re.search(r"\bgz-|(?i:PRJ[A-Z]{2}[0-9])", text))
                 self.assertEqual([x for x in ids | accessions if x in text], [])
 
+    def test_no_export_file_holds_a_dot(self):
+        # Wider than a decimal point: a note naming a file, as "typing.tsv", would bring a dot in too.
+        self.ran()
+        self.assertEqual([n for n in FILES if b"." in self.made.export(n)], [])
+
     def test_the_row_lists_are_mode_0600_in_a_directory_of_mode_0700(self):
         self.ran()
         local = self.made.out / "local"
@@ -118,7 +123,8 @@ class WithoutHc20(common.Case, unittest.TestCase):
         self.assertEqual({r["step"] for r in run.table("typing.tsv")}, {"mlst"})
         row = {r["input"]: r for r in run.table("inputs.tsv")}["genome table, 5 Nov"]
         self.assertEqual((row["sha256"], row["count"], row["note"]),
-                         ("-", "0", "not given: the HC20 read is dropped and typing.tsv holds no mlst_hc20 step"))
+                         ("-", "0", "not given: the HC20 read is dropped and the typing counts hold no mlst_hc20 step"))
+        self.assertEqual([n for n in FILES if b"." in run.export(n)], [])
 
 
 if __name__ == "__main__":
