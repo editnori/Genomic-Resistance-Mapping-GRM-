@@ -48,6 +48,10 @@ class Hits(unittest.TestCase):
             with self.subTest(name=name):
                 self.assertEqual(s1.hits(f"name\t{token}\n".encode(), set(), set()), 1)
 
+    def test_a_biosample_accession_is_a_hit(self):
+        # Made up from pieces: the shape of a real BioSample accession, never a real one.
+        self.assertEqual(s1.hits(f"name\t{'SAM' + 'ZZ' + '9' * 6}\n".encode(), set(), set()), 1)
+
     def test_no_dataset_name_of_the_release_has_a_shape(self):
         # The 274 dataset names of the committed sums list reach counts.tsv and typing.tsv; a shape in one would
         # stop the real run.
@@ -148,6 +152,15 @@ class RunWithAHit(common.Case, unittest.TestCase):
         rel = common.release()
         rel["genomes"].append({"genome_id": "synthia_gamma", "bioproject_accession": "-", "mlst": "made-up",
                                "date_inserted": "2025-06-22T08:30:00Z"})
+        run = self.run_stage1(rel)
+        self.assertEqual((run.code, run.lines), (1, ["counts.tsv 8", "typing.tsv 16"]))
+        self.assertFalse(run.wrote())
+
+    def test_a_genome_id_read_from_the_5_nov_table_alone_is_a_hit(self):
+        # The same made-up id, in a row of the 5 Nov table alone: no other input names it.
+        rel = common.release()
+        rel["hc20"].append({"genome_id": "synthia_gamma", "genome_name": "made-up", "mlst": "made-up",
+                            "cgmlst_hc20": "hc-1"})
         run = self.run_stage1(rel)
         self.assertEqual((run.code, run.lines), (1, ["counts.tsv 8", "typing.tsv 16"]))
         self.assertFalse(run.wrote())

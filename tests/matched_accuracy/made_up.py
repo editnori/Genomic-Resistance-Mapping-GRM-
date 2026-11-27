@@ -139,7 +139,7 @@ def made_up():
     """The made-up release as plain data: reports, records, label table rows, genome table rows, HC20 rows."""
     sp = {"al": ("Synthia alpha", "synthia_alpha"), "be": ("Synthia beta", "synthia_beta"),
           "ga": ("Synthia gamma", "synthia_gamma"), "de": ("Synthia delta", "synthia_delta")}
-    datasets = []   # (tag, drug, rows, copies, learners, bioproject of each genome)
+    datasets = []   # (tag, drug, rows, copy groups, whether the lineage split holds learners)
 
     # alpha: all three datasets on genomes 1 to 10, alpha's BioProject 1; genome 10's is a placeholder dash.
     datasets.append(("al", "drug_a", plan_rows("al", 1), [[6, 8]], True))      # a copy group: positions 7 and 9

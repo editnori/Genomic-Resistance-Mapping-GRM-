@@ -49,7 +49,8 @@ HAND = {
     # gamma drug_c: position 1 adds an I record. B takes it out, and {2} leaves: 3 groups, 7 rows, 4 pairs.
     ("synthia_gamma__drug_c", "A"): (0, 0, 0, 0, 0, 0, 0, 0, 1, 9, 9, 4, 5),
     ("synthia_gamma__drug_c", "B"): (0, 0, 0, 0, 0, 0, 0, 1, 2, 7, 7, 3, 4),
-    # delta drug_a: genomes 1 to 6 are pz-de-1 and 7 to 10 pz-de-2; no group crosses that line, so the plan.
+    # delta drug_a: genomes 1 to 6 are delta's BioProject 1 and 7 to 10 its BioProject 2; no group crosses that
+    # line, so the plan.
     ("synthia_delta__drug_a", "A"): (0, 0, 0, 0, 0, 0, 0, 0, 1, 9, 9, 4, 5),
     ("synthia_delta__drug_a", "B"): (0, 0, 0, 0, 0, 0, 0, 0, 1, 9, 9, 4, 5),
     # delta drug_b: 12 rows; genome 21 (S) joins {7,8,9} and genome 22 (R) joins {10}:
@@ -201,6 +202,19 @@ class MadeUp(unittest.TestCase):
         self.assertEqual((a["reports"], a["reports_left_out"], a["genome_rows"], a["from_mic_rows"], a["datasets"],
                           a["species"]), ("12", "1", "120", "1", "11", "4"))
 
+    def test_every_member_of_the_listed_copy_group_leaves_under_reason_1_in_both_readings(self):
+        # A copy group is a group listed in kset_duplicates: alpha drug_a lists positions 7 and 9, genomes 7 and 9.
+        # Both leave alpha drug_a under reason 1 in each reading, and both stay eligible in alpha drug_c, which
+        # lists no group.
+        self.ran()
+        members = (made_up.gid("al", 7), made_up.gid("al", 9))
+        for reading in ("A", "B"):
+            with self.subTest(reading=reading):
+                self.assertEqual(self.made.counts("dataset", "synthia_alpha__drug_a", reading)["out_copy_group"], "2")
+                rows = [line.split("\t")[:2] for line in self.made.row_list(reading).decode("utf-8").splitlines()]
+                self.assertEqual([g for d, g in rows if d == "synthia_alpha__drug_a" and g in members], [])
+                self.assertEqual([g for d, g in rows if d == "synthia_alpha__drug_c" and g in members], list(members))
+
     def test_a_report_without_learners_is_counted_and_left_out(self):
         self.ran()
         for reading in ("A", "B"):
@@ -285,6 +299,25 @@ class MadeUp(unittest.TestCase):
         self.assertTrue(checks["scan"].startswith("91 genome ids and 10 accession-shaped BioProject parts read by "
                                                   "the run"))
         self.assertEqual(checks["scores opened"], "no")
+
+
+class OneChange(common.Case, unittest.TestCase):
+    """A run of the made-up release with one input changed, beside the hand count above."""
+
+    def test_a_record_name_of_another_kind_reaches_no_pair_though_its_canonical_name_is_a_drug(self):
+        # scripts/c3-inputs/m_list.py reads names of kind drug alone. A made-up name of kind combination whose
+        # canonical name is drug_a, on a record of alpha's genome 1 with another method, would give that pair two
+        # tuples.
+        rel = common.release()
+        rel["drug_names"]["names"].append({"raw": "Drug A Mix", "kind": "combination", "canonical": "drug_a",
+                                           "records": 0, "class": None})
+        rel["records"].append(made_up.record(made_up.gid("al", 1), "Drug A Mix", method="Disk diffusion"))
+        run = self.run_stage1(rel)
+        self.assertEqual(run.code, 0, run.lines)
+        for reading in ("A", "B"):
+            with self.subTest(reading=reading):
+                got = run.counts("dataset", "synthia_alpha__drug_a", reading)
+                self.assertEqual(tuple(int(got[c]) for c in COLUMNS), HAND[("synthia_alpha__drug_a", reading)])
 
 
 if __name__ == "__main__":

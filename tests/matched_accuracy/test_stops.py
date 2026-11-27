@@ -116,6 +116,12 @@ class Records(common.Case, unittest.TestCase):
         rel["records"][5]["date_inserted"] = "\uff12\uff10\uff12\uff15-06-22T08:30:00Z"
         self.assert_stops(self.run_stage1(rel), "a lab record's date_inserted is blank or not a time")
 
+    def test_an_insertion_time_with_a_space_for_the_t_stops(self):
+        # A space sorts before the T: compared as text, 19:10:30 on the day of the seal would pass it.
+        rel = common.release()
+        rel["records"][5]["date_inserted"] = "2026-11-05 19:10:30Z"
+        self.assert_stops(self.run_stage1(rel), "a lab record's date_inserted is blank or not a time to the second")
+
     def test_a_line_count_other_than_the_pinned_one_stops(self):
         for change in (1, -1):
             with self.subTest(change=change):
@@ -157,15 +163,55 @@ class Reports(common.Case, unittest.TestCase):
                 change(rel)
                 self.assert_stops(self.run_stage1(rel), f"{AL_A}: the lineage split has other than 5 folds")
 
+    def run_counting_rows_out(self, rel):
+        """The run, and how many times it took rows out under reasons 1 to 5."""
+        with mock.patch.object(common.stage1, "base_rows", wraps=common.stage1.base_rows) as spy:
+            run = self.run_stage1(rel)
+        return run, spy.call_count
+
     def test_a_lineage_cluster_in_two_folds_stops(self):
+        # The stop comes before any row leaves: no row is taken out under reasons 1 to 5.
         rel = common.release()
         self.split(rel)["test_fold"][1] = 1     # position 2, lineage 10, moves to fold 1; position 1 stays in fold 0
-        self.assert_stops(self.run_stage1(rel), f"{AL_A}: a lineage cluster sits in two folds")
+        run, rows_out = self.run_counting_rows_out(rel)
+        self.assert_stops(run, f"{AL_A}: a lineage cluster sits in two folds")
+        self.assertEqual(rows_out, 0)
 
     def test_a_copy_group_in_two_folds_stops(self):
+        # A copy group is a group listed in kset_duplicates. The stop comes before any row leaves.
         rel = common.release()
         report_of(rel, AL_A)["kset_duplicates"] = [[0, 2]]   # positions 1 and 3: folds 0 and 1
-        self.assert_stops(self.run_stage1(rel), f"{AL_A}: a copy group sits in two folds")
+        run, rows_out = self.run_counting_rows_out(rel)
+        self.assert_stops(run, f"{AL_A}: a copy group sits in two folds")
+        self.assertEqual(rows_out, 0)
+
+    def test_a_genome_in_two_copy_groups_stops(self):
+        rel = common.release()
+        report_of(rel, AL_A)["kset_duplicates"] = [[6, 8], [7, 8]]   # positions 7, 8 and 9, all in fold 3
+        self.assert_stops(self.run_stage1(rel), f"{AL_A}: a genome sits in two copy groups")
+
+    def test_a_copy_group_index_past_the_last_row_stops(self):
+        rel = common.release()
+        report_of(rel, AL_A)["kset_duplicates"] = [[6, 10]]   # the report has 10 rows, indices 0 to 9
+        self.assert_stops(self.run_stage1(rel), f"{AL_A}: kset_duplicates is not a list of lists of sample indices")
+
+    def test_a_genome_id_repeated_in_a_report_stops(self):
+        # Positions 1 and 3 of alpha drug_c are both resistant, so the repeated id still equals the label table.
+        rel = common.release()
+        report_of(rel, "synthia_alpha__drug_c")["samples"][2]["id"] = made_up.gid("al", 1)
+        self.assert_stops(self.run_stage1(rel), "synthia_alpha__drug_c: a genome id is repeated in the report")
+
+    def test_a_learner_name_outside_the_six_stops(self):
+        rel = common.release()
+        self.split(rel)["learners"].append(made_up.learner("made-up", 10, 6))
+        self.assert_stops(self.run_stage1(rel), f"{AL_A}: the lineage split's learners are not each named once from "
+                                                "scm, cart, rf, gbt, lasso, catalog")
+
+    def test_a_test_fold_value_of_true_stops(self):
+        # True equals 1 in Python, so as a set the folds would still read 0 to 4.
+        rel = common.release()
+        self.split(rel)["test_fold"][2] = True
+        self.assert_stops(self.run_stage1(rel), f"{AL_A}: the lineage split has other than 5 folds")
 
     def test_a_report_with_four_of_the_five_learners_stops(self):
         rel = common.release()
@@ -192,12 +238,24 @@ class Calls(common.Case, unittest.TestCase):
         p["label_from_mic"] = True
         self.assert_stops(self.run_stage1(rel), f"{AL_A}: a row's lab call differs from the label table's call")
 
+    def test_a_label_table_pair_given_twice_stops(self):
+        rel = common.release()
+        rel["labels"].append(dict(rel["labels"][0]))
+        self.assert_stops(self.run_stage1(rel), "the label table holds a genome and antibiotic pair twice")
+
 
 class Tables(common.Case, unittest.TestCase):
     def test_a_genome_table_row_inserted_at_the_seal_stops(self):
         rel = common.release()
         rel["genomes"][3]["date_inserted"] = "2026-11-05T19:10:00Z"
         self.assert_stops(self.run_stage1(rel), "a row of the genome table, second copy, is not inserted before")
+
+    def test_a_genome_table_row_with_a_blank_insertion_time_stops(self):
+        for value in (" ", None):
+            with self.subTest(value=value):
+                rel = common.release()
+                rel["genomes"][3]["date_inserted"] = value
+                self.assert_stops(self.run_stage1(rel), "a row of the genome table, second copy, is not inserted before")
 
     def test_a_genome_table_row_with_a_list_of_times_one_at_the_seal_stops(self):
         rel = common.release()

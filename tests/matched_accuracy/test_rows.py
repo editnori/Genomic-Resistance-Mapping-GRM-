@@ -133,6 +133,11 @@ class Records(unittest.TestCase):
         # A blank year is the level "unknown version".
         self.assertEqual(pairs[("gz-2", "drug_a")]["tuples"], {("Broth dilution", "CLSI", None)})
 
+    def test_a_list_of_two_methods_in_one_record_gives_two_tuples(self):
+        got = records([made_up.record("gz-1", "Drug A", method=["Broth dilution", " Disk diffusion "])], self.WANT)
+        self.assertEqual(got[1][0][("gz-1", "drug_a")]["tuples"],
+                         {("Broth dilution", "CLSI", "2018"), ("Disk diffusion", "CLSI", "2018")})
+
     def test_an_intermediate_call_by_curates_words_marks_the_pair(self):
         got = records([made_up.record("gz-1", "Drug A", call="Susceptible-dose dependent"),
                        made_up.record("gz-2", "Drug A", call=" intermediate "),
@@ -208,6 +213,18 @@ class Genomes(unittest.TestCase):
         self.assertIsNone(why["gz-8"])
         # The scan looks up accession-shaped parts alone, those of a value of two parts too.
         self.assertEqual(accessions, {acc(3).lower(), acc(8)})
+
+
+class HC20(unittest.TestCase):
+    def test_a_genome_gets_one_hc20_group_or_none(self):
+        # gz-1's two rows differ, so none; gz-2's two rows are one value once trimmed; gz-3's is blank; gz-4 has none.
+        rows = [{"genome_id": "gz-1", "cgmlst_hc20": "hc-1"}, {"genome_id": "gz-1", "cgmlst_hc20": "hc-2"},
+                {"genome_id": "gz-2", "cgmlst_hc20": "hc-2"}, {"genome_id": "gz-2", "cgmlst_hc20": " hc-2 "},
+                {"genome_id": "gz-3", "cgmlst_hc20": " "}]
+        with tempfile.TemporaryDirectory() as d:
+            got = outcome(s1.read_hc20, write_lines(d, "hc20.jsonl", rows), {"gz-1", "gz-2", "gz-3", "gz-4"})
+        self.assertEqual(got, ("ok", ({"gz-1": None, "gz-2": "hc-2", "gz-3": None, "gz-4": None},
+                                      {"gz-1", "gz-2", "gz-3"}, 5, 1)))
 
 
 class Reasons(unittest.TestCase):
@@ -326,6 +343,12 @@ class Weights(unittest.TestCase):
         self.assertEqual(s1.shares(g), {"bioprojects": 3, "eligible_rows": 10, "largest_bioproject_rows": 6,
                                         "its_weight_numerator": 1, "its_weight_denominator": 4,
                                         "largest_weight_numerator": 1, "largest_weight_denominator": 2})
+
+    def test_among_bioprojects_tied_on_rows_the_share_gives_the_largest_weight(self):
+        # pz-1 and pz-2 tie on 4 rows each; pz-1 weighs 1/2 (d1's one group), pz-2 1/4 (one of d2's two groups).
+        got = s1.shares(self.groups([("d1", "x", "pz-1", 4), ("d2", "x", "pz-2", 4), ("d2", "x", "pz-4", 2)]))
+        self.assertEqual((got["largest_bioproject_rows"], got["its_weight_numerator"], got["its_weight_denominator"]),
+                         (4, 1, 2))
 
     def test_weights_that_do_not_add_up_to_1_stop(self):
         g = self.groups([("d1", "x", "pz-1", 2)])

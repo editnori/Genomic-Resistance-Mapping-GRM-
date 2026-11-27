@@ -1,8 +1,9 @@
 """Shared paths, the script and SYNTHETIC releases for tests/matched_accuracy.
 
 Every release here is made up by tests/matched_accuracy/made_up.py: made-up species, antibiotics, genome ids
-(gz-<species>-<n>, not the shape of a real genome id), BioProject accessions (pz-<species>-<n>), lab records,
-label table, genome tables and scores. A test that needs the shape of a real genome id says so.
+(gz-<species>-<n>, not the shape of a real genome id), BioProject accessions (an accession's shape, which the
+placeholder rule needs; made_up.py says why), lab records, label table, genome tables and scores. A test that
+needs the shape of a real genome id says so.
 """
 
 import contextlib
