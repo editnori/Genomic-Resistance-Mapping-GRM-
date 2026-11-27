@@ -976,6 +976,20 @@ An eleventh came while the text was written. The project's wording rules put rec
 
 **Counts and limit.** `docs/input-arms.md` gives the counts behind the ruling and the limit it puts on the amino-acid arm.
 
+**Ruling 55.** A machine resumed from a snapshot serves its files through a temporary layer while it fetches them. On the check species' machine the copy step wrote 9 seconds into that time and stopped on its own check, with 1 of 2,000 genome files in the new directory. No run script ran. Since then nothing is renamed or written on a resumed machine until its restore reports complete.
+
+**Ruling 58.** The lead's driver stopped 4 of the 9 species before any run started. Its free-disk rule took the earlier runs' size off the free figure, which a restored machine already counts as used. Each of the 4 machines had the disk its species needs, with 99 GB against a need of 89 on the tightest. The driver now compares free disk with the need alone.
+
+**Start scripts.** The lead ran the copy step and the changed disk rule before any review. An independent review then gave 27 findings, 4 of them to fix. Two could write to a machine before its restore completes, one could leave a machine up, and one read free disk rounded up to a whole GiB.
+
+**The 9 starts.** None of the 4 faults touched them. In each start every copied genome file equals the first run's by sha256, 1,421 to 2,000 files a species within that species' own set of 2,000.
+
+**Count script.** The script that takes the counts had the restore fault too, and its id count passed with a known list of 1 id. A list read on a restoring machine can be short. So the lead started the count by hand, after the machine reported its restore complete. The floor's two tables left it at an id count of 23,757 known ids, the figure every species' driver read within this run.
+
+**Fixes.** A worker wrote the fixes to both scripts with tests on 27 November 2026. A review of them is owed, and no machine starts by them until it is done.
+
+**Count.** The count ran by hand on 27 November 2026, once the floor's commit was on the default branch. Over the 35 datasets of M it reads 110 count rows on the first run and 330 on M, in each of the two readings. Its 7 tables are on record, and `docs/input-arms-m-count.md` is written whole from them.
+
 **Block C2.** Its `grm` has no change. Same build is its binary's check, and Same results runs on that binary as a check of the machine and the genome files. Its fits write a prediction per genome and no counts per fold, so Same counts has nothing to compare there. Its study fits are `grm learn` fits for every arm, and the run scripts keep each of their reports too.
 
 **Block C7's binaries.** Block C7 uses block C3's binary, as on its first run. Its export binary is built from `da70f4b`, the commit its first run's `DONE` lines name. That run recorded the export binary's sha256 and no code sha256, so the run holds `src/`, `Cargo.toml`, `Cargo.lock` and `.cargo/config.toml` equal to that commit's.
@@ -1065,3 +1079,33 @@ An eleventh came while the text was written. The project's wording rules put rec
 **Written.** This entry was written at 04:54Z on 26 Nov 2026.
 
 **Changed.** After its independent review the lead changed, at 06:52Z on 26 Nov 2026, Plan, Found and Holds, which had named three counts where six are the rebuilt table's, and added Release.
+
+## Last test
+
+**Plan.** The block Later-records test asks whether "the release's rule and each passing arm hold on labels deposited after the release's download", on the 252,148 lab records inserted at or after 2026-11-05T19:10:00. After Measured records the plan calls its two spent test sets "separate from each other and from the release's cohorts". The row Spent test sets says "No comparison reads the outside-study or other-database genomes."
+
+**Found.** The later records and the outside-study genomes are one batch. The outside-study test's frozen rules (`scripts/outside-study/frozen/RULES.md`) cover the genomes whose lab records were inserted on 5 and 6 Nov 2026, 20,108 genome ids. The later-records page counts its records on 20,108 genomes. No id of the two sets was compared for this entry.
+
+**Scored.** On 12 Nov 2026 the outside-study test scored the release's set covering machine, decision tree, lasso and known-gene rule on this batch: 7,258 genomes from studies the cohorts do not hold and 3,144 from studies they hold (`docs/outside-study-results.md`). Those add to 10,402, so the overlap is at most 10,402 of the 10,813 genomes with a later label in the 274. That test scored no random forest, boosted tree or arm.
+
+**Holds.** The later-records test stays last and is scored once. Its report gives the genomes scored on 12 Nov apart from the others, for each learner. On those genomes the set covering machine, the decision tree, the lasso and the known-gene rule are a second look, and the report names them so. The random forest, the boosted trees and each arm are a first look on both parts. Before the scoring a script counts the genomes in both sets and prints counts alone.
+
+**Closed.** The 11 Nov copy of the batch, its labelled records, genome rows and ids, is closed as the sealed file is: no fit, screen, settings search or pick reads it. The 12 Nov figures have been public since that test. An arm chosen after it could have been chosen with them in view.
+
+**Copies.** From 14 Nov to 27 Nov 2026 that copy went to helper machines inside the shared records pack. Since 27 Nov the pack leaves it out. Each block's run is written to take the training table, the records before the cut, and the repository names the three files in the outside-study test's frozen rules alone. Neither fact shows that no run read them.
+
+**Check.** The last test's report lists the inputs of every run that trained or tuned a model and checks the three file names against each list. It gives the count of runs checked and names each run that has no list.
+
+**Page.** `docs/assumption-plan-later-records.md` said "No sequence is fetched before the scoring". That is true of the later-records test's own work, and the page now says so. The outside-study test fetched assemblies of the batch for its run of 12 Nov.
+
+**Written.** This entry was written at 04:36Z on 27 Nov 2026, under the lead's ruling 57 and the coordinator's ask of 03:48Z.
+
+## Choice count
+
+**Plan.** The inventory's opening says "9 of the 22 assumptions have neither and are marked **none**", and names A1, A2, A6, A8, A12, A15, A16, A18 and A20.
+
+**Found.** By the plan's own definition 10 had neither when it was written. Row A21, the quality checks, is marked "stated, no reason" with "nothing" measured. A page states the rule, and no page gives a reason or a record a measure. The plan's line counts the rows marked **none** and leaves A21 out.
+
+**Holds.** Read the count as 10 of 22 at the plan's writing: the 9 rows marked **none** and A21. No run and no result changes. The two rows defended in part, A9 and A19, stay as the plan has them.
+
+**Since.** The count is of 21 November 2026. The entry Label rule, under Why, has since given a reason for row A16's rule. The lead read rows A16 and A21 alone against later pages, and the other 8 are not checked.

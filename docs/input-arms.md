@@ -122,7 +122,7 @@ The pilot of all five arms ran the same draw at seed 42, with no twin, `GRAPH` c
 
 The first run left out the 35 datasets of M, in 9 species. A dataset is in M when, for its antibiotic, some genome's records pair an intermediate call with S or with R. The entry M run of `docs/assumption-plan-corrections.md` says how they run once, read two ways. This part says what block C3's code for that run does.
 
-**Not run.** The run has not happened: no dataset of M has been fitted, and no figure below comes from one. These are retrospective splits inside one database, never external validation, and "no difference shown" is never "equal".
+**Run and counted.** The run ran on 27 November 2026, each of the 9 species on its own machine, and the count is taken: `docs/input-arms-m-count.md` holds its 7 tables. No figure below comes from a fit of a dataset of M. These are retrospective splits inside one database, never external validation, and "no difference shown" is never "equal".
 
 For block C3, `run_m.sh` and `m_reading.py` admit the datasets of M; `run_species.sh` and `page_tables.py` stay as the first run left them and still refuse one, because blocks C4 and C7 read them and Same results needs the first run's scorer unchanged.
 

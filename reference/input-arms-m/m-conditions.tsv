@@ -1,0 +1,331 @@
+count	m_reading	arm	reading	condition	reads	met	learners
+first run	first	unitigs	ruling 15	1 and 2	a learner carries when its lineage median difference's interval lies wholly above 0 and better beats worse by the one-sided sign test at p < 0.05 after Holm over 30; at least 3 of 5 carry	0	0
+first run	first	unitigs	ruling 15	3	the twin meets 1 in fewer than 3 of 5 learners and 2 in fewer than 3 of 5, each read apart (learners: the larger of the twin's two counts)	1	0
+first run	first	unitigs	ruling 15	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+first run	first	unitigs	ruling 15	5	each learner that carries has a study median of its lineage median's sign	0	0
+first run	first	unitigs	ruling 15	6	the maintainer rules the change		
+first run	first	unitigs	stricter	1	the lineage median difference's interval lies wholly above 0, for at least 3 of 5 learners	0	0
+first run	first	unitigs	stricter	2	better beats worse by the one-sided sign test at p < 0.05 after Holm over 30, for all five	0	0
+first run	first	unitigs	stricter	3	the twin meets neither 1 nor 2 as this reading reads them	1	
+first run	first	unitigs	stricter	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+first run	first	unitigs	stricter	5	each of the five learners has a study median of its lineage median's sign	0	0
+first run	first	unitigs	stricter	6	the maintainer rules the change		
+first run	first	k31-counts	ruling 15	1 and 2	a learner carries when its lineage median difference's interval lies wholly above 0 and better beats worse by the one-sided sign test at p < 0.05 after Holm over 30; at least 3 of 5 carry	0	0
+first run	first	k31-counts	ruling 15	3	the twin meets 1 in fewer than 3 of 5 learners and 2 in fewer than 3 of 5, each read apart (learners: the larger of the twin's two counts)	1	0
+first run	first	k31-counts	ruling 15	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+first run	first	k31-counts	ruling 15	5	each learner that carries has a study median of its lineage median's sign	0	0
+first run	first	k31-counts	ruling 15	6	the maintainer rules the change		
+first run	first	k31-counts	stricter	1	the lineage median difference's interval lies wholly above 0, for at least 3 of 5 learners	0	1
+first run	first	k31-counts	stricter	2	better beats worse by the one-sided sign test at p < 0.05 after Holm over 30, for all five	0	0
+first run	first	k31-counts	stricter	3	the twin meets neither 1 nor 2 as this reading reads them	1	
+first run	first	k31-counts	stricter	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+first run	first	k31-counts	stricter	5	each of the five learners has a study median of its lineage median's sign	0	1
+first run	first	k31-counts	stricter	6	the maintainer rules the change		
+first run	first	k31-aa	ruling 15	1 and 2	a learner carries when its lineage median difference's interval lies wholly above 0 and better beats worse by the one-sided sign test at p < 0.05 after Holm over 30; at least 3 of 5 carry	0	2
+first run	first	k31-aa	ruling 15	3	the twin meets 1 in fewer than 3 of 5 learners and 2 in fewer than 3 of 5, each read apart (learners: the larger of the twin's two counts)	1	0
+first run	first	k31-aa	ruling 15	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+first run	first	k31-aa	ruling 15	5	each learner that carries has a study median of its lineage median's sign	1	2
+first run	first	k31-aa	ruling 15	6	the maintainer rules the change		
+first run	first	k31-aa	stricter	1	the lineage median difference's interval lies wholly above 0, for at least 3 of 5 learners	0	2
+first run	first	k31-aa	stricter	2	better beats worse by the one-sided sign test at p < 0.05 after Holm over 30, for all five	1	5
+first run	first	k31-aa	stricter	3	the twin meets neither 1 nor 2 as this reading reads them	1	
+first run	first	k31-aa	stricter	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+first run	first	k31-aa	stricter	5	each of the five learners has a study median of its lineage median's sign	1	5
+first run	first	k31-aa	stricter	6	the maintainer rules the change		
+first run	first	program	ruling 15	1 and 2	a learner carries when its lineage median difference's interval lies wholly above 0 and better beats worse by the one-sided sign test at p < 0.05 after Holm over 30; at least 3 of 5 carry	1	4
+first run	first	program	ruling 15	3	the twin meets 1 in fewer than 3 of 5 learners and 2 in fewer than 3 of 5, each read apart (learners: the larger of the twin's two counts)	1	0
+first run	first	program	ruling 15	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+first run	first	program	ruling 15	5	each learner that carries has a study median of its lineage median's sign	1	4
+first run	first	program	ruling 15	6	the maintainer rules the change		
+first run	first	program	stricter	1	the lineage median difference's interval lies wholly above 0, for at least 3 of 5 learners	1	4
+first run	first	program	stricter	2	better beats worse by the one-sided sign test at p < 0.05 after Holm over 30, for all five	0	4
+first run	first	program	stricter	3	the twin meets neither 1 nor 2 as this reading reads them	1	
+first run	first	program	stricter	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+first run	first	program	stricter	5	each of the five learners has a study median of its lineage median's sign	1	5
+first run	first	program	stricter	6	the maintainer rules the change		
+first run	first	k31-program	ruling 15	1 and 2	a learner carries when its lineage median difference's interval lies wholly above 0 and better beats worse by the one-sided sign test at p < 0.05 after Holm over 30; at least 3 of 5 carry	0	0
+first run	first	k31-program	ruling 15	3	the twin meets 1 in fewer than 3 of 5 learners and 2 in fewer than 3 of 5, each read apart (learners: the larger of the twin's two counts)	1	0
+first run	first	k31-program	ruling 15	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+first run	first	k31-program	ruling 15	5	each learner that carries has a study median of its lineage median's sign	0	0
+first run	first	k31-program	ruling 15	6	the maintainer rules the change		
+first run	first	k31-program	stricter	1	the lineage median difference's interval lies wholly above 0, for at least 3 of 5 learners	0	0
+first run	first	k31-program	stricter	2	better beats worse by the one-sided sign test at p < 0.05 after Holm over 30, for all five	0	0
+first run	first	k31-program	stricter	3	the twin meets neither 1 nor 2 as this reading reads them	1	
+first run	first	k31-program	stricter	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+first run	first	k31-program	stricter	5	each of the five learners has a study median of its lineage median's sign	0	0
+first run	first	k31-program	stricter	6	the maintainer rules the change		
+M	first	unitigs	ruling 15	1 and 2	a learner carries when its lineage median difference's interval lies wholly above 0 and better beats worse by the one-sided sign test at p < 0.05 after Holm over 30; at least 3 of 5 carry	0	0
+M	first	unitigs	ruling 15	3	the twin meets 1 in fewer than 3 of 5 learners and 2 in fewer than 3 of 5, each read apart (learners: the larger of the twin's two counts)	1	0
+M	first	unitigs	ruling 15	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+M	first	unitigs	ruling 15	5	each learner that carries has a study median of its lineage median's sign	0	0
+M	first	unitigs	ruling 15	6	the maintainer rules the change		
+M	first	unitigs	stricter	1	the lineage median difference's interval lies wholly above 0, for at least 3 of 5 learners	0	0
+M	first	unitigs	stricter	2	better beats worse by the one-sided sign test at p < 0.05 after Holm over 30, for all five	0	0
+M	first	unitigs	stricter	3	the twin meets neither 1 nor 2 as this reading reads them	1	
+M	first	unitigs	stricter	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+M	first	unitigs	stricter	5	each of the five learners has a study median of its lineage median's sign	0	4
+M	first	unitigs	stricter	6	the maintainer rules the change		
+M	first	k31-counts	ruling 15	1 and 2	a learner carries when its lineage median difference's interval lies wholly above 0 and better beats worse by the one-sided sign test at p < 0.05 after Holm over 30; at least 3 of 5 carry	0	0
+M	first	k31-counts	ruling 15	3	the twin meets 1 in fewer than 3 of 5 learners and 2 in fewer than 3 of 5, each read apart (learners: the larger of the twin's two counts)	1	0
+M	first	k31-counts	ruling 15	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+M	first	k31-counts	ruling 15	5	each learner that carries has a study median of its lineage median's sign	0	0
+M	first	k31-counts	ruling 15	6	the maintainer rules the change		
+M	first	k31-counts	stricter	1	the lineage median difference's interval lies wholly above 0, for at least 3 of 5 learners	0	1
+M	first	k31-counts	stricter	2	better beats worse by the one-sided sign test at p < 0.05 after Holm over 30, for all five	0	0
+M	first	k31-counts	stricter	3	the twin meets neither 1 nor 2 as this reading reads them	1	
+M	first	k31-counts	stricter	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+M	first	k31-counts	stricter	5	each of the five learners has a study median of its lineage median's sign	0	1
+M	first	k31-counts	stricter	6	the maintainer rules the change		
+M	first	k31-aa	ruling 15	1 and 2	a learner carries when its lineage median difference's interval lies wholly above 0 and better beats worse by the one-sided sign test at p < 0.05 after Holm over 30; at least 3 of 5 carry	0	0
+M	first	k31-aa	ruling 15	3	the twin meets 1 in fewer than 3 of 5 learners and 2 in fewer than 3 of 5, each read apart (learners: the larger of the twin's two counts)	1	0
+M	first	k31-aa	ruling 15	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+M	first	k31-aa	ruling 15	5	each learner that carries has a study median of its lineage median's sign	0	0
+M	first	k31-aa	ruling 15	6	the maintainer rules the change		
+M	first	k31-aa	stricter	1	the lineage median difference's interval lies wholly above 0, for at least 3 of 5 learners	0	0
+M	first	k31-aa	stricter	2	better beats worse by the one-sided sign test at p < 0.05 after Holm over 30, for all five	0	0
+M	first	k31-aa	stricter	3	the twin meets neither 1 nor 2 as this reading reads them	1	
+M	first	k31-aa	stricter	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+M	first	k31-aa	stricter	5	each of the five learners has a study median of its lineage median's sign	1	5
+M	first	k31-aa	stricter	6	the maintainer rules the change		
+M	first	program	ruling 15	1 and 2	a learner carries when its lineage median difference's interval lies wholly above 0 and better beats worse by the one-sided sign test at p < 0.05 after Holm over 30; at least 3 of 5 carry	0	2
+M	first	program	ruling 15	3	the twin meets 1 in fewer than 3 of 5 learners and 2 in fewer than 3 of 5, each read apart (learners: the larger of the twin's two counts)	1	0
+M	first	program	ruling 15	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+M	first	program	ruling 15	5	each learner that carries has a study median of its lineage median's sign	1	2
+M	first	program	ruling 15	6	the maintainer rules the change		
+M	first	program	stricter	1	the lineage median difference's interval lies wholly above 0, for at least 3 of 5 learners	1	3
+M	first	program	stricter	2	better beats worse by the one-sided sign test at p < 0.05 after Holm over 30, for all five	0	2
+M	first	program	stricter	3	the twin meets neither 1 nor 2 as this reading reads them	1	
+M	first	program	stricter	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+M	first	program	stricter	5	each of the five learners has a study median of its lineage median's sign	1	5
+M	first	program	stricter	6	the maintainer rules the change		
+M	first	k31-program	ruling 15	1 and 2	a learner carries when its lineage median difference's interval lies wholly above 0 and better beats worse by the one-sided sign test at p < 0.05 after Holm over 30; at least 3 of 5 carry	0	0
+M	first	k31-program	ruling 15	3	the twin meets 1 in fewer than 3 of 5 learners and 2 in fewer than 3 of 5, each read apart (learners: the larger of the twin's two counts)	1	0
+M	first	k31-program	ruling 15	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+M	first	k31-program	ruling 15	5	each learner that carries has a study median of its lineage median's sign	0	0
+M	first	k31-program	ruling 15	6	the maintainer rules the change		
+M	first	k31-program	stricter	1	the lineage median difference's interval lies wholly above 0, for at least 3 of 5 learners	0	0
+M	first	k31-program	stricter	2	better beats worse by the one-sided sign test at p < 0.05 after Holm over 30, for all five	0	0
+M	first	k31-program	stricter	3	the twin meets neither 1 nor 2 as this reading reads them	1	
+M	first	k31-program	stricter	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+M	first	k31-program	stricter	5	each of the five learners has a study median of its lineage median's sign	0	0
+M	first	k31-program	stricter	6	the maintainer rules the change		
+all datasets	first	unitigs	ruling 15	1 and 2	a learner carries when its lineage median difference's interval lies wholly above 0 and better beats worse by the one-sided sign test at p < 0.05 after Holm over 30; at least 3 of 5 carry	0	0
+all datasets	first	unitigs	ruling 15	3	the twin meets 1 in fewer than 3 of 5 learners and 2 in fewer than 3 of 5, each read apart (learners: the larger of the twin's two counts)	1	0
+all datasets	first	unitigs	ruling 15	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+all datasets	first	unitigs	ruling 15	5	each learner that carries has a study median of its lineage median's sign	0	0
+all datasets	first	unitigs	ruling 15	6	the maintainer rules the change		
+all datasets	first	unitigs	stricter	1	the lineage median difference's interval lies wholly above 0, for at least 3 of 5 learners	0	0
+all datasets	first	unitigs	stricter	2	better beats worse by the one-sided sign test at p < 0.05 after Holm over 30, for all five	0	0
+all datasets	first	unitigs	stricter	3	the twin meets neither 1 nor 2 as this reading reads them	1	
+all datasets	first	unitigs	stricter	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+all datasets	first	unitigs	stricter	5	each of the five learners has a study median of its lineage median's sign	0	0
+all datasets	first	unitigs	stricter	6	the maintainer rules the change		
+all datasets	first	k31-counts	ruling 15	1 and 2	a learner carries when its lineage median difference's interval lies wholly above 0 and better beats worse by the one-sided sign test at p < 0.05 after Holm over 30; at least 3 of 5 carry	0	0
+all datasets	first	k31-counts	ruling 15	3	the twin meets 1 in fewer than 3 of 5 learners and 2 in fewer than 3 of 5, each read apart (learners: the larger of the twin's two counts)	1	0
+all datasets	first	k31-counts	ruling 15	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+all datasets	first	k31-counts	ruling 15	5	each learner that carries has a study median of its lineage median's sign	0	0
+all datasets	first	k31-counts	ruling 15	6	the maintainer rules the change		
+all datasets	first	k31-counts	stricter	1	the lineage median difference's interval lies wholly above 0, for at least 3 of 5 learners	0	1
+all datasets	first	k31-counts	stricter	2	better beats worse by the one-sided sign test at p < 0.05 after Holm over 30, for all five	0	0
+all datasets	first	k31-counts	stricter	3	the twin meets neither 1 nor 2 as this reading reads them	1	
+all datasets	first	k31-counts	stricter	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+all datasets	first	k31-counts	stricter	5	each of the five learners has a study median of its lineage median's sign	0	1
+all datasets	first	k31-counts	stricter	6	the maintainer rules the change		
+all datasets	first	k31-aa	ruling 15	1 and 2	a learner carries when its lineage median difference's interval lies wholly above 0 and better beats worse by the one-sided sign test at p < 0.05 after Holm over 30; at least 3 of 5 carry	0	2
+all datasets	first	k31-aa	ruling 15	3	the twin meets 1 in fewer than 3 of 5 learners and 2 in fewer than 3 of 5, each read apart (learners: the larger of the twin's two counts)	1	0
+all datasets	first	k31-aa	ruling 15	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+all datasets	first	k31-aa	ruling 15	5	each learner that carries has a study median of its lineage median's sign	1	2
+all datasets	first	k31-aa	ruling 15	6	the maintainer rules the change		
+all datasets	first	k31-aa	stricter	1	the lineage median difference's interval lies wholly above 0, for at least 3 of 5 learners	0	2
+all datasets	first	k31-aa	stricter	2	better beats worse by the one-sided sign test at p < 0.05 after Holm over 30, for all five	1	5
+all datasets	first	k31-aa	stricter	3	the twin meets neither 1 nor 2 as this reading reads them	1	
+all datasets	first	k31-aa	stricter	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+all datasets	first	k31-aa	stricter	5	each of the five learners has a study median of its lineage median's sign	1	5
+all datasets	first	k31-aa	stricter	6	the maintainer rules the change		
+all datasets	first	program	ruling 15	1 and 2	a learner carries when its lineage median difference's interval lies wholly above 0 and better beats worse by the one-sided sign test at p < 0.05 after Holm over 30; at least 3 of 5 carry	1	4
+all datasets	first	program	ruling 15	3	the twin meets 1 in fewer than 3 of 5 learners and 2 in fewer than 3 of 5, each read apart (learners: the larger of the twin's two counts)	1	0
+all datasets	first	program	ruling 15	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+all datasets	first	program	ruling 15	5	each learner that carries has a study median of its lineage median's sign	1	4
+all datasets	first	program	ruling 15	6	the maintainer rules the change		
+all datasets	first	program	stricter	1	the lineage median difference's interval lies wholly above 0, for at least 3 of 5 learners	1	4
+all datasets	first	program	stricter	2	better beats worse by the one-sided sign test at p < 0.05 after Holm over 30, for all five	0	4
+all datasets	first	program	stricter	3	the twin meets neither 1 nor 2 as this reading reads them	1	
+all datasets	first	program	stricter	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+all datasets	first	program	stricter	5	each of the five learners has a study median of its lineage median's sign	1	5
+all datasets	first	program	stricter	6	the maintainer rules the change		
+all datasets	first	k31-program	ruling 15	1 and 2	a learner carries when its lineage median difference's interval lies wholly above 0 and better beats worse by the one-sided sign test at p < 0.05 after Holm over 30; at least 3 of 5 carry	0	0
+all datasets	first	k31-program	ruling 15	3	the twin meets 1 in fewer than 3 of 5 learners and 2 in fewer than 3 of 5, each read apart (learners: the larger of the twin's two counts)	1	0
+all datasets	first	k31-program	ruling 15	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+all datasets	first	k31-program	ruling 15	5	each learner that carries has a study median of its lineage median's sign	0	0
+all datasets	first	k31-program	ruling 15	6	the maintainer rules the change		
+all datasets	first	k31-program	stricter	1	the lineage median difference's interval lies wholly above 0, for at least 3 of 5 learners	0	0
+all datasets	first	k31-program	stricter	2	better beats worse by the one-sided sign test at p < 0.05 after Holm over 30, for all five	0	0
+all datasets	first	k31-program	stricter	3	the twin meets neither 1 nor 2 as this reading reads them	1	
+all datasets	first	k31-program	stricter	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+all datasets	first	k31-program	stricter	5	each of the five learners has a study median of its lineage median's sign	0	0
+all datasets	first	k31-program	stricter	6	the maintainer rules the change		
+first run	second	unitigs	ruling 15	1 and 2	a learner carries when its lineage median difference's interval lies wholly above 0 and better beats worse by the one-sided sign test at p < 0.05 after Holm over 30; at least 3 of 5 carry	0	0
+first run	second	unitigs	ruling 15	3	the twin meets 1 in fewer than 3 of 5 learners and 2 in fewer than 3 of 5, each read apart (learners: the larger of the twin's two counts)	1	0
+first run	second	unitigs	ruling 15	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+first run	second	unitigs	ruling 15	5	each learner that carries has a study median of its lineage median's sign	0	0
+first run	second	unitigs	ruling 15	6	the maintainer rules the change		
+first run	second	unitigs	stricter	1	the lineage median difference's interval lies wholly above 0, for at least 3 of 5 learners	0	0
+first run	second	unitigs	stricter	2	better beats worse by the one-sided sign test at p < 0.05 after Holm over 30, for all five	0	0
+first run	second	unitigs	stricter	3	the twin meets neither 1 nor 2 as this reading reads them	1	
+first run	second	unitigs	stricter	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+first run	second	unitigs	stricter	5	each of the five learners has a study median of its lineage median's sign	0	0
+first run	second	unitigs	stricter	6	the maintainer rules the change		
+first run	second	k31-counts	ruling 15	1 and 2	a learner carries when its lineage median difference's interval lies wholly above 0 and better beats worse by the one-sided sign test at p < 0.05 after Holm over 30; at least 3 of 5 carry	0	0
+first run	second	k31-counts	ruling 15	3	the twin meets 1 in fewer than 3 of 5 learners and 2 in fewer than 3 of 5, each read apart (learners: the larger of the twin's two counts)	1	0
+first run	second	k31-counts	ruling 15	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+first run	second	k31-counts	ruling 15	5	each learner that carries has a study median of its lineage median's sign	0	0
+first run	second	k31-counts	ruling 15	6	the maintainer rules the change		
+first run	second	k31-counts	stricter	1	the lineage median difference's interval lies wholly above 0, for at least 3 of 5 learners	0	1
+first run	second	k31-counts	stricter	2	better beats worse by the one-sided sign test at p < 0.05 after Holm over 30, for all five	0	0
+first run	second	k31-counts	stricter	3	the twin meets neither 1 nor 2 as this reading reads them	1	
+first run	second	k31-counts	stricter	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+first run	second	k31-counts	stricter	5	each of the five learners has a study median of its lineage median's sign	0	1
+first run	second	k31-counts	stricter	6	the maintainer rules the change		
+first run	second	k31-aa	ruling 15	1 and 2	a learner carries when its lineage median difference's interval lies wholly above 0 and better beats worse by the one-sided sign test at p < 0.05 after Holm over 30; at least 3 of 5 carry	0	2
+first run	second	k31-aa	ruling 15	3	the twin meets 1 in fewer than 3 of 5 learners and 2 in fewer than 3 of 5, each read apart (learners: the larger of the twin's two counts)	1	0
+first run	second	k31-aa	ruling 15	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+first run	second	k31-aa	ruling 15	5	each learner that carries has a study median of its lineage median's sign	1	2
+first run	second	k31-aa	ruling 15	6	the maintainer rules the change		
+first run	second	k31-aa	stricter	1	the lineage median difference's interval lies wholly above 0, for at least 3 of 5 learners	0	2
+first run	second	k31-aa	stricter	2	better beats worse by the one-sided sign test at p < 0.05 after Holm over 30, for all five	1	5
+first run	second	k31-aa	stricter	3	the twin meets neither 1 nor 2 as this reading reads them	1	
+first run	second	k31-aa	stricter	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+first run	second	k31-aa	stricter	5	each of the five learners has a study median of its lineage median's sign	1	5
+first run	second	k31-aa	stricter	6	the maintainer rules the change		
+first run	second	program	ruling 15	1 and 2	a learner carries when its lineage median difference's interval lies wholly above 0 and better beats worse by the one-sided sign test at p < 0.05 after Holm over 30; at least 3 of 5 carry	1	4
+first run	second	program	ruling 15	3	the twin meets 1 in fewer than 3 of 5 learners and 2 in fewer than 3 of 5, each read apart (learners: the larger of the twin's two counts)	1	0
+first run	second	program	ruling 15	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+first run	second	program	ruling 15	5	each learner that carries has a study median of its lineage median's sign	1	4
+first run	second	program	ruling 15	6	the maintainer rules the change		
+first run	second	program	stricter	1	the lineage median difference's interval lies wholly above 0, for at least 3 of 5 learners	1	4
+first run	second	program	stricter	2	better beats worse by the one-sided sign test at p < 0.05 after Holm over 30, for all five	0	4
+first run	second	program	stricter	3	the twin meets neither 1 nor 2 as this reading reads them	1	
+first run	second	program	stricter	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+first run	second	program	stricter	5	each of the five learners has a study median of its lineage median's sign	1	5
+first run	second	program	stricter	6	the maintainer rules the change		
+first run	second	k31-program	ruling 15	1 and 2	a learner carries when its lineage median difference's interval lies wholly above 0 and better beats worse by the one-sided sign test at p < 0.05 after Holm over 30; at least 3 of 5 carry	0	0
+first run	second	k31-program	ruling 15	3	the twin meets 1 in fewer than 3 of 5 learners and 2 in fewer than 3 of 5, each read apart (learners: the larger of the twin's two counts)	1	0
+first run	second	k31-program	ruling 15	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+first run	second	k31-program	ruling 15	5	each learner that carries has a study median of its lineage median's sign	0	0
+first run	second	k31-program	ruling 15	6	the maintainer rules the change		
+first run	second	k31-program	stricter	1	the lineage median difference's interval lies wholly above 0, for at least 3 of 5 learners	0	0
+first run	second	k31-program	stricter	2	better beats worse by the one-sided sign test at p < 0.05 after Holm over 30, for all five	0	0
+first run	second	k31-program	stricter	3	the twin meets neither 1 nor 2 as this reading reads them	1	
+first run	second	k31-program	stricter	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+first run	second	k31-program	stricter	5	each of the five learners has a study median of its lineage median's sign	0	0
+first run	second	k31-program	stricter	6	the maintainer rules the change		
+M	second	unitigs	ruling 15	1 and 2	a learner carries when its lineage median difference's interval lies wholly above 0 and better beats worse by the one-sided sign test at p < 0.05 after Holm over 30; at least 3 of 5 carry	0	0
+M	second	unitigs	ruling 15	3	the twin meets 1 in fewer than 3 of 5 learners and 2 in fewer than 3 of 5, each read apart (learners: the larger of the twin's two counts)	1	0
+M	second	unitigs	ruling 15	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+M	second	unitigs	ruling 15	5	each learner that carries has a study median of its lineage median's sign	0	0
+M	second	unitigs	ruling 15	6	the maintainer rules the change		
+M	second	unitigs	stricter	1	the lineage median difference's interval lies wholly above 0, for at least 3 of 5 learners	0	0
+M	second	unitigs	stricter	2	better beats worse by the one-sided sign test at p < 0.05 after Holm over 30, for all five	0	0
+M	second	unitigs	stricter	3	the twin meets neither 1 nor 2 as this reading reads them	1	
+M	second	unitigs	stricter	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+M	second	unitigs	stricter	5	each of the five learners has a study median of its lineage median's sign	0	2
+M	second	unitigs	stricter	6	the maintainer rules the change		
+M	second	k31-counts	ruling 15	1 and 2	a learner carries when its lineage median difference's interval lies wholly above 0 and better beats worse by the one-sided sign test at p < 0.05 after Holm over 30; at least 3 of 5 carry	0	0
+M	second	k31-counts	ruling 15	3	the twin meets 1 in fewer than 3 of 5 learners and 2 in fewer than 3 of 5, each read apart (learners: the larger of the twin's two counts)	1	0
+M	second	k31-counts	ruling 15	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+M	second	k31-counts	ruling 15	5	each learner that carries has a study median of its lineage median's sign	0	0
+M	second	k31-counts	ruling 15	6	the maintainer rules the change		
+M	second	k31-counts	stricter	1	the lineage median difference's interval lies wholly above 0, for at least 3 of 5 learners	0	1
+M	second	k31-counts	stricter	2	better beats worse by the one-sided sign test at p < 0.05 after Holm over 30, for all five	0	0
+M	second	k31-counts	stricter	3	the twin meets neither 1 nor 2 as this reading reads them	1	
+M	second	k31-counts	stricter	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+M	second	k31-counts	stricter	5	each of the five learners has a study median of its lineage median's sign	0	2
+M	second	k31-counts	stricter	6	the maintainer rules the change		
+M	second	k31-aa	ruling 15	1 and 2	a learner carries when its lineage median difference's interval lies wholly above 0 and better beats worse by the one-sided sign test at p < 0.05 after Holm over 30; at least 3 of 5 carry	0	0
+M	second	k31-aa	ruling 15	3	the twin meets 1 in fewer than 3 of 5 learners and 2 in fewer than 3 of 5, each read apart (learners: the larger of the twin's two counts)	1	0
+M	second	k31-aa	ruling 15	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+M	second	k31-aa	ruling 15	5	each learner that carries has a study median of its lineage median's sign	0	0
+M	second	k31-aa	ruling 15	6	the maintainer rules the change		
+M	second	k31-aa	stricter	1	the lineage median difference's interval lies wholly above 0, for at least 3 of 5 learners	0	0
+M	second	k31-aa	stricter	2	better beats worse by the one-sided sign test at p < 0.05 after Holm over 30, for all five	0	0
+M	second	k31-aa	stricter	3	the twin meets neither 1 nor 2 as this reading reads them	1	
+M	second	k31-aa	stricter	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+M	second	k31-aa	stricter	5	each of the five learners has a study median of its lineage median's sign	0	4
+M	second	k31-aa	stricter	6	the maintainer rules the change		
+M	second	program	ruling 15	1 and 2	a learner carries when its lineage median difference's interval lies wholly above 0 and better beats worse by the one-sided sign test at p < 0.05 after Holm over 30; at least 3 of 5 carry	0	0
+M	second	program	ruling 15	3	the twin meets 1 in fewer than 3 of 5 learners and 2 in fewer than 3 of 5, each read apart (learners: the larger of the twin's two counts)	1	0
+M	second	program	ruling 15	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+M	second	program	ruling 15	5	each learner that carries has a study median of its lineage median's sign	0	0
+M	second	program	ruling 15	6	the maintainer rules the change		
+M	second	program	stricter	1	the lineage median difference's interval lies wholly above 0, for at least 3 of 5 learners	0	0
+M	second	program	stricter	2	better beats worse by the one-sided sign test at p < 0.05 after Holm over 30, for all five	0	0
+M	second	program	stricter	3	the twin meets neither 1 nor 2 as this reading reads them	1	
+M	second	program	stricter	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+M	second	program	stricter	5	each of the five learners has a study median of its lineage median's sign	0	4
+M	second	program	stricter	6	the maintainer rules the change		
+M	second	k31-program	ruling 15	1 and 2	a learner carries when its lineage median difference's interval lies wholly above 0 and better beats worse by the one-sided sign test at p < 0.05 after Holm over 30; at least 3 of 5 carry	0	0
+M	second	k31-program	ruling 15	3	the twin meets 1 in fewer than 3 of 5 learners and 2 in fewer than 3 of 5, each read apart (learners: the larger of the twin's two counts)	1	0
+M	second	k31-program	ruling 15	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+M	second	k31-program	ruling 15	5	each learner that carries has a study median of its lineage median's sign	0	0
+M	second	k31-program	ruling 15	6	the maintainer rules the change		
+M	second	k31-program	stricter	1	the lineage median difference's interval lies wholly above 0, for at least 3 of 5 learners	0	0
+M	second	k31-program	stricter	2	better beats worse by the one-sided sign test at p < 0.05 after Holm over 30, for all five	0	0
+M	second	k31-program	stricter	3	the twin meets neither 1 nor 2 as this reading reads them	1	
+M	second	k31-program	stricter	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+M	second	k31-program	stricter	5	each of the five learners has a study median of its lineage median's sign	0	0
+M	second	k31-program	stricter	6	the maintainer rules the change		
+all datasets	second	unitigs	ruling 15	1 and 2	a learner carries when its lineage median difference's interval lies wholly above 0 and better beats worse by the one-sided sign test at p < 0.05 after Holm over 30; at least 3 of 5 carry	0	0
+all datasets	second	unitigs	ruling 15	3	the twin meets 1 in fewer than 3 of 5 learners and 2 in fewer than 3 of 5, each read apart (learners: the larger of the twin's two counts)	1	0
+all datasets	second	unitigs	ruling 15	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+all datasets	second	unitigs	ruling 15	5	each learner that carries has a study median of its lineage median's sign	0	0
+all datasets	second	unitigs	ruling 15	6	the maintainer rules the change		
+all datasets	second	unitigs	stricter	1	the lineage median difference's interval lies wholly above 0, for at least 3 of 5 learners	0	0
+all datasets	second	unitigs	stricter	2	better beats worse by the one-sided sign test at p < 0.05 after Holm over 30, for all five	0	0
+all datasets	second	unitigs	stricter	3	the twin meets neither 1 nor 2 as this reading reads them	1	
+all datasets	second	unitigs	stricter	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+all datasets	second	unitigs	stricter	5	each of the five learners has a study median of its lineage median's sign	0	0
+all datasets	second	unitigs	stricter	6	the maintainer rules the change		
+all datasets	second	k31-counts	ruling 15	1 and 2	a learner carries when its lineage median difference's interval lies wholly above 0 and better beats worse by the one-sided sign test at p < 0.05 after Holm over 30; at least 3 of 5 carry	0	0
+all datasets	second	k31-counts	ruling 15	3	the twin meets 1 in fewer than 3 of 5 learners and 2 in fewer than 3 of 5, each read apart (learners: the larger of the twin's two counts)	1	0
+all datasets	second	k31-counts	ruling 15	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+all datasets	second	k31-counts	ruling 15	5	each learner that carries has a study median of its lineage median's sign	0	0
+all datasets	second	k31-counts	ruling 15	6	the maintainer rules the change		
+all datasets	second	k31-counts	stricter	1	the lineage median difference's interval lies wholly above 0, for at least 3 of 5 learners	0	1
+all datasets	second	k31-counts	stricter	2	better beats worse by the one-sided sign test at p < 0.05 after Holm over 30, for all five	0	0
+all datasets	second	k31-counts	stricter	3	the twin meets neither 1 nor 2 as this reading reads them	1	
+all datasets	second	k31-counts	stricter	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+all datasets	second	k31-counts	stricter	5	each of the five learners has a study median of its lineage median's sign	0	1
+all datasets	second	k31-counts	stricter	6	the maintainer rules the change		
+all datasets	second	k31-aa	ruling 15	1 and 2	a learner carries when its lineage median difference's interval lies wholly above 0 and better beats worse by the one-sided sign test at p < 0.05 after Holm over 30; at least 3 of 5 carry	0	2
+all datasets	second	k31-aa	ruling 15	3	the twin meets 1 in fewer than 3 of 5 learners and 2 in fewer than 3 of 5, each read apart (learners: the larger of the twin's two counts)	1	0
+all datasets	second	k31-aa	ruling 15	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+all datasets	second	k31-aa	ruling 15	5	each learner that carries has a study median of its lineage median's sign	1	2
+all datasets	second	k31-aa	ruling 15	6	the maintainer rules the change		
+all datasets	second	k31-aa	stricter	1	the lineage median difference's interval lies wholly above 0, for at least 3 of 5 learners	0	2
+all datasets	second	k31-aa	stricter	2	better beats worse by the one-sided sign test at p < 0.05 after Holm over 30, for all five	1	5
+all datasets	second	k31-aa	stricter	3	the twin meets neither 1 nor 2 as this reading reads them	1	
+all datasets	second	k31-aa	stricter	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+all datasets	second	k31-aa	stricter	5	each of the five learners has a study median of its lineage median's sign	1	5
+all datasets	second	k31-aa	stricter	6	the maintainer rules the change		
+all datasets	second	program	ruling 15	1 and 2	a learner carries when its lineage median difference's interval lies wholly above 0 and better beats worse by the one-sided sign test at p < 0.05 after Holm over 30; at least 3 of 5 carry	1	4
+all datasets	second	program	ruling 15	3	the twin meets 1 in fewer than 3 of 5 learners and 2 in fewer than 3 of 5, each read apart (learners: the larger of the twin's two counts)	1	0
+all datasets	second	program	ruling 15	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+all datasets	second	program	ruling 15	5	each learner that carries has a study median of its lineage median's sign	1	4
+all datasets	second	program	ruling 15	6	the maintainer rules the change		
+all datasets	second	program	stricter	1	the lineage median difference's interval lies wholly above 0, for at least 3 of 5 learners	1	4
+all datasets	second	program	stricter	2	better beats worse by the one-sided sign test at p < 0.05 after Holm over 30, for all five	0	4
+all datasets	second	program	stricter	3	the twin meets neither 1 nor 2 as this reading reads them	1	
+all datasets	second	program	stricter	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+all datasets	second	program	stricter	5	each of the five learners has a study median of its lineage median's sign	1	5
+all datasets	second	program	stricter	6	the maintainer rules the change		
+all datasets	second	k31-program	ruling 15	1 and 2	a learner carries when its lineage median difference's interval lies wholly above 0 and better beats worse by the one-sided sign test at p < 0.05 after Holm over 30; at least 3 of 5 carry	0	0
+all datasets	second	k31-program	ruling 15	3	the twin meets 1 in fewer than 3 of 5 learners and 2 in fewer than 3 of 5, each read apart (learners: the larger of the twin's two counts)	1	0
+all datasets	second	k31-program	ruling 15	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+all datasets	second	k31-program	ruling 15	5	each learner that carries has a study median of its lineage median's sign	0	0
+all datasets	second	k31-program	ruling 15	6	the maintainer rules the change		
+all datasets	second	k31-program	stricter	1	the lineage median difference's interval lies wholly above 0, for at least 3 of 5 learners	0	0
+all datasets	second	k31-program	stricter	2	better beats worse by the one-sided sign test at p < 0.05 after Holm over 30, for all five	0	0
+all datasets	second	k31-program	stricter	3	the twin meets neither 1 nor 2 as this reading reads them	1	
+all datasets	second	k31-program	stricter	4	no learner's recall interval lies wholly below -0.02, for all five	1	5
+all datasets	second	k31-program	stricter	5	each of the five learners has a study median of its lineage median's sign	0	0
+all datasets	second	k31-program	stricter	6	the maintainer rules the change		
