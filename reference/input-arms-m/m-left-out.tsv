@@ -1,0 +1,24 @@
+dataset	species	antibiotic	reason	cohort	resistant	susceptible	listed	listed_resistant	listed_susceptible	second_resistant	second_susceptible	floor
+acinetobacter_baumannii__ciprofloxacin	Acinetobacter baumannii	ciprofloxacin	short list	1440	1319	121	7	2	5	1317	116	25
+acinetobacter_baumannii__gentamicin	Acinetobacter baumannii	gentamicin	short list	1342	1204	138	78	75	3	1129	135	25
+acinetobacter_baumannii__meropenem	Acinetobacter baumannii	meropenem	short list	666	455	211	1	0	1	455	210	25
+acinetobacter_baumannii__tetracycline	Acinetobacter baumannii	tetracycline	short list	962	759	203	8	3	5	756	198	25
+enterococcus_faecium__linezolid	Enterococcus faecium	linezolid	short list	1367	70	1297	6	2	4	68	1293	25
+escherichia_coli__amoxicillin_clavulanate	Escherichia coli	amoxicillin/clavulanate	short list	1115	548	567	9	4	5	544	562	25
+escherichia_coli__ampicillin	Escherichia coli	ampicillin	short list	1965	1596	369	5	1	4	1595	365	25
+escherichia_coli__ciprofloxacin	Escherichia coli	ciprofloxacin	short list	1615	826	789	4	0	4	826	785	25
+escherichia_coli__gentamicin	Escherichia coli	gentamicin	short list	1695	455	1240	2	2	0	453	1240	25
+escherichia_coli__meropenem	Escherichia coli	meropenem	short list	1539	82	1457	1	1	0	81	1457	25
+escherichia_coli__norfloxacin	Escherichia coli	norfloxacin	short list	197	41	156	4	0	4	41	152	25
+escherichia_coli__sulfamethoxazole_trimethoprim	Escherichia coli	sulfamethoxazole/trimethoprim	short list	925	580	345	1	0	1	580	344	25
+klebsiella_pneumoniae__amikacin	Klebsiella pneumoniae	amikacin	short list	1588	318	1270	1	0	1	318	1269	25
+klebsiella_pneumoniae__amoxicillin_clavulanate	Klebsiella pneumoniae	amoxicillin/clavulanate	short list	778	591	187	3	0	3	591	184	25
+klebsiella_pneumoniae__gentamicin	Klebsiella pneumoniae	gentamicin	short list	1842	689	1153	2	0	2	689	1151	25
+klebsiella_pneumoniae__meropenem	Klebsiella pneumoniae	meropenem	short list	1765	736	1029	1	0	1	736	1028	25
+klebsiella_pneumoniae__norfloxacin	Klebsiella pneumoniae	norfloxacin	short list	194	29	165	2	0	2	29	163	25
+klebsiella_pneumoniae__piperacillin_tazobactam	Klebsiella pneumoniae	piperacillin/tazobactam	short list	1452	868	584	1	0	1	868	583	25
+mycobacterium_tuberculosis__clofazimine	Mycobacterium tuberculosis	clofazimine	short list	1303	193	1110	1	0	1	193	1109	25
+pseudomonas_aeruginosa__ciprofloxacin	Pseudomonas aeruginosa	ciprofloxacin	short list	703	391	312	1	0	1	391	311	25
+streptococcus_pneumoniae__cefepime	Streptococcus pneumoniae	cefepime	under the floor	1602	49	1553	100	44	56	5	1497	25
+streptococcus_pneumoniae__cefotaxime	Streptococcus pneumoniae	cefotaxime	under the floor	1884	43	1841	86	28	58	15	1783	25
+streptococcus_pneumoniae__ceftriaxone	Streptococcus pneumoniae	ceftriaxone	under the floor	1839	56	1783	105	45	60	11	1723	25

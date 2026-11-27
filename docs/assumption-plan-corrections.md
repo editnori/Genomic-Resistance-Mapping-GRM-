@@ -976,6 +976,18 @@ An eleventh came while the text was written. The project's wording rules put rec
 
 **Counts and limit.** `docs/input-arms.md` gives the counts behind the ruling and the limit it puts on the amino-acid arm.
 
+**Ruling 55.** A machine resumed from a snapshot serves its files through a temporary layer while it fetches them. On the check species' machine the copy step wrote 9 seconds into that time and stopped on its own check, with 1 of 2,000 genome files in the new directory. No run script ran. Since then nothing is renamed or written on a resumed machine until its restore reports complete.
+
+**Ruling 58.** The lead's driver stopped 4 of the 9 species before any run started. Its free-disk rule took the earlier runs' size off the free figure, which a restored machine already counts as used. Each of the 4 machines had the disk its species needs, with 99 GB against a need of 89 on the tightest. The driver now compares free disk with the need alone.
+
+**Start scripts.** The lead ran the copy step and the changed disk rule before any review. An independent review then gave 27 findings, 4 of them to fix. Two could write to a machine before its restore completes, one could leave a machine up, and one read free disk rounded up to a whole GiB.
+
+**The 9 starts.** None of the 4 faults touched them. In each start every copied genome file equals the first run's by sha256, 1,421 to 2,000 files a species within that species' own set of 2,000.
+
+**Count script.** The script that takes the counts had the restore fault too, and its id count passed with a known list of 1 id. A list read on a restoring machine can be short. So the lead started the count by hand, after the machine reported its restore complete. The floor's two tables left it at an id count of 23,757 known ids, the figure every species' driver read within this run.
+
+**Fixes.** A worker wrote the fixes to both scripts with tests on 27 November 2026. A review of them is owed, and no machine starts by them until it is done.
+
 **Block C2.** Its `grm` has no change. Same build is its binary's check, and Same results runs on that binary as a check of the machine and the genome files. Its fits write a prediction per genome and no counts per fold, so Same counts has nothing to compare there. Its study fits are `grm learn` fits for every arm, and the run scripts keep each of their reports too.
 
 **Block C7's binaries.** Block C7 uses block C3's binary, as on its first run. Its export binary is built from `da70f4b`, the commit its first run's `DONE` lines name. That run recorded the export binary's sha256 and no code sha256, so the run holds `src/`, `Cargo.toml`, `Cargo.lock` and `.cargo/config.toml` equal to that commit's.
@@ -1085,3 +1097,13 @@ An eleventh came while the text was written. The project's wording rules put rec
 **Page.** `docs/assumption-plan-later-records.md` said "No sequence is fetched before the scoring". That is true of the later-records test's own work, and the page now says so. The outside-study test fetched assemblies of the batch for its run of 12 Nov.
 
 **Written.** This entry was written at 04:36Z on 27 Nov 2026, under the lead's ruling 57 and the coordinator's ask of 03:48Z.
+
+## Choice count
+
+**Plan.** The inventory's opening says "9 of the 22 assumptions have neither and are marked **none**", and names A1, A2, A6, A8, A12, A15, A16, A18 and A20.
+
+**Found.** By the plan's own definition 10 had neither when it was written. Row A21, the quality checks, is marked "stated, no reason" with "nothing" measured. A page states the rule, and no page gives a reason or a record a measure. The plan's line counts the rows marked **none** and leaves A21 out.
+
+**Holds.** Read the count as 10 of 22 at the plan's writing: the 9 rows marked **none** and A21. No run and no result changes. The two rows defended in part, A9 and A19, stay as the plan has them.
+
+**Since.** The count is of 21 November 2026. The entry Label rule, under Why, has since given a reason for row A16's rule. The lead read rows A16 and A21 alone against later pages, and the other 8 are not checked.
