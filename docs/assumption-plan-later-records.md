@@ -43,7 +43,7 @@ The training table holds 612,989 labelled pairs. 9 gain a later record, and none
 
 ## Genomes
 
-The labels that stay in are on 12,617 genomes with 54.85 Gbp of assembly. 10,813 of those genomes, 48.11 Gbp, hold a label in the 274. The largest species are S. enterica (3,894), K. pneumoniae (2,502) and M. tuberculosis (1,192). No sequence is fetched before the scoring.
+The labels that stay in are on 12,617 genomes with 54.85 Gbp of assembly. 10,813 of those genomes, 48.11 Gbp, hold a label in the 274. The largest species are S. enterica (3,894), K. pneumoniae (2,502) and M. tuberculosis (1,192). No sequence is fetched for this test before the scoring. The outside-study test fetched and scored assemblies of this batch on 12 Nov 2026 (the entry Last test of `docs/assumption-plan-corrections.md`).
 
 ## Models
 
