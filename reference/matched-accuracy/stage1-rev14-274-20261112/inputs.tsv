@@ -1,0 +1,10 @@
+input	sha256	count	note
+reports	0aedf8780ca8e2292cfc5f227f61b87b7c6b006a6649ed4c0378514c70b72223	274	each report equals its line of the release's sums list; the sha256 is that list's
+lab records	d231fa768a31fc4ce4c8a6bb7024d05d632621846070688adb892fbfe340fd78	1285111	lines, each inserted before 2026-11-05T19:10:00; 252148 records dropped at the cut is a recorded figure of ruling R49, not measured here
+drug names	17bd12974e1a9eda04c2f36c7b2d10fa88950d0d03019c1c0d149b126294ec14	183	names
+label table	602b1cc999ee527912023750e5e3ec60cc0775cb70c02adb58c49fd61cb3c651	215319	pairs of the release's rows read from it
+genome table, second copy	84ae57a777cb234aa0a39102ab7f9ca9448e52d1474654179f26165644c25f64	35151	rows, each inserted before 2026-11-05T19:10:00; a row with a blank BioProject is skipped; distinct genome ids it lacks: 0 of the 23757 of every report, 0 of the 23757 of the reports that enter; genomes of the reports that enter whose one BioProject part has no accession's shape: 0
+genome table, 5 Nov	d60e2b15f2cc0ed0466a1016da1761869fb42cc7e9fdd817c1ff7051e759a80e	123483	rows; the table has no insertion time, so no row of it is checked against 2026-11-05T19:10:00; it gives the mlst_hc20 step of the typing counts; genomes of the reports that enter not in it: 0
+row list, reading A	b135a8ccd24f3c9b87113498c58bb76181fc8c143135260df01eafbd8ad7dd26	49621	eligible rows; the list stays local
+row list, reading B	e3558b1b5a7a4a9f8ff23c79aca502c25586fcd6f889e4dac8d788cdd0b45d66	48156	eligible rows; the list stays local
+scores opened: no

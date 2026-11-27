@@ -1,0 +1,9 @@
+check	result
+lab records	1285111 lines, each inserted before 2026-11-05T19:10:00
+reports	268 of 274 reports hold the five learners under the lineage split; left out, holding none of them: 6
+folds	each of the 268 has 5 folds, and test_fold and every scores list as long as its genome rows
+lineage clusters	each in one fold
+copy groups	each in one fold
+lab calls	rows with from_mic false, each equal to the label table: 215319; rows with from_mic true, counted apart: 0
+scan	123503 genome ids and 1785 accession-shaped BioProject parts read by the run, looked up in every export file after a positive control, before any file was written
+scores opened	no
