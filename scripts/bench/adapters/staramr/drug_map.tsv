@@ -1,0 +1,35 @@
+tool_drug	canonical_drug	map_kind	notes
+amikacin	amikacin	exact	StarAMR predicted phenotype token
+amoxicillin/clavulanic acid	amoxicillin/clavulanate	combination	StarAMR predicted phenotype token
+ampicillin	ampicillin	exact	StarAMR predicted phenotype token
+azithromycin	azithromycin	exact	StarAMR predicted phenotype token
+cefazolin	cefazolin	exact	StarAMR predicted phenotype token
+cefepime	cefepime	exact	StarAMR predicted phenotype token
+cefotaxime	cefotaxime	exact	StarAMR predicted phenotype token
+cefoxitin	cefoxitin	exact	StarAMR predicted phenotype token
+ceftazidime	ceftazidime	exact	StarAMR predicted phenotype token
+ceftiofur	ceftiofur	exact	StarAMR predicted phenotype token
+ceftriaxone	ceftriaxone	exact	StarAMR predicted phenotype token
+chloramphenicol	chloramphenicol	exact	StarAMR predicted phenotype token
+ciprofloxacin	ciprofloxacin	exact	StarAMR predicted phenotype token
+clindamycin	clindamycin	exact	StarAMR predicted phenotype token
+colistin	colistin	exact	StarAMR predicted phenotype token
+quinupristin-dalfopristin	dalfopristin/quinupristin	combination	StarAMR predicted phenotype token
+doxycycline	doxycycline	exact	StarAMR predicted phenotype token
+erythromycin	erythromycin	exact	StarAMR predicted phenotype token
+fosfomycin	fosfomycin	exact	StarAMR predicted phenotype token
+gentamicin	gentamicin	exact	StarAMR predicted phenotype token
+kanamycin	kanamycin	exact	StarAMR predicted phenotype token
+linezolid	linezolid	exact	StarAMR predicted phenotype token
+meropenem	meropenem	exact	StarAMR predicted phenotype token
+nalidixic acid	nalidixic acid	exact	StarAMR predicted phenotype token
+streptomycin	streptomycin	exact	StarAMR predicted phenotype token
+sulfisoxazole	sulfamethoxazole	proxy_class	StarAMR predicted phenotype token
+sulfisoxazole	sulfamethoxazole/trimethoprim	proxy_class	StarAMR sulfonamide proxy component for folate combination
+trimethoprim	sulfamethoxazole/trimethoprim	proxy_class	StarAMR trimethoprim proxy component for folate combination
+sulfisoxazole	sulfisoxazole	exact	StarAMR predicted phenotype token
+teicoplanin	teicoplanin	exact	StarAMR predicted phenotype token
+tetracycline	tetracycline	exact	StarAMR predicted phenotype token
+tobramycin	tobramycin	exact	StarAMR predicted phenotype token
+trimethoprim	trimethoprim	exact	StarAMR predicted phenotype token
+vancomycin	vancomycin	exact	StarAMR predicted phenotype token

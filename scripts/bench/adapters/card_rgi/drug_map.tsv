@@ -1,0 +1,72 @@
+tool_drug	canonical_drug	map_kind	notes
+amikacin	amikacin	exact	CARD ARO agent annotation
+penam	amoxicillin	proxy_class	CARD ARO drug-class proxy
+penam	amoxicillin/clavulanate	proxy_class	CARD ARO drug-class proxy
+ampicillin	ampicillin	exact	CARD ARO agent annotation
+penam	ampicillin/sulbactam	proxy_class	CARD ARO drug-class proxy
+azithromycin	azithromycin	exact	CARD ARO agent annotation
+aztreonam	aztreonam	exact	CARD ARO agent annotation
+capreomycin	capreomycin	exact	CARD ARO agent annotation
+cefazolin	cefazolin	exact	CARD ARO agent annotation
+cefepime	cefepime	exact	CARD ARO agent annotation
+cephalosporin	cefixime	proxy_class	CARD ARO drug-class proxy
+cefotaxime	cefotaxime	exact	CARD ARO agent annotation
+cephamycin	cefotetan	proxy_class	CARD ARO drug-class proxy
+cefoxitin	cefoxitin	exact	CARD ARO agent annotation
+cephalosporin	cefpodoxime	proxy_class	CARD ARO drug-class proxy
+ceftazidime	ceftazidime	exact	CARD ARO agent annotation
+cephalosporin	ceftazidime/avibactam	proxy_class	CARD ARO drug-class proxy
+cephalosporin	ceftolozane/tazobactam	proxy_class	CARD ARO drug-class proxy
+ceftriaxone	ceftriaxone	exact	CARD ARO agent annotation
+cefuroxime	cefuroxime	exact	CARD ARO agent annotation
+cephalosporin	cephalothin	proxy_class	CARD ARO drug-class proxy
+chloramphenicol	chloramphenicol	exact	CARD ARO agent annotation
+ciprofloxacin	ciprofloxacin	exact	CARD ARO agent annotation
+clarithromycin	clarithromycin	exact	CARD ARO agent annotation
+clindamycin	clindamycin	exact	CARD ARO agent annotation
+phenazine antibiotic	clofazimine	proxy_class	CARD ARO drug-class proxy
+colistin	colistin	exact	CARD ARO agent annotation
+streptogramin antibiotic	dalfopristin/quinupristin	proxy_class	CARD ARO drug-class proxy
+daptomycin	daptomycin	exact	CARD ARO agent annotation
+nitroimidazole antibiotic	delamanid	proxy_class	CARD ARO drug-class proxy
+doripenem	doripenem	exact	CARD ARO agent annotation
+doxycycline	doxycycline	exact	CARD ARO agent annotation
+ertapenem	ertapenem	exact	CARD ARO agent annotation
+erythromycin	erythromycin	exact	CARD ARO agent annotation
+ethambutol	ethambutol	exact	CARD ARO agent annotation
+ethionamide	ethionamide	exact	CARD ARO agent annotation
+fosfomycin	fosfomycin	exact	CARD ARO agent annotation
+fusidic acid	fusidic acid	exact	CARD ARO agent annotation
+gentamicin	gentamicin	exact	CARD ARO agent annotation
+imipenem	imipenem	exact	CARD ARO agent annotation
+isoniazid	isoniazid	exact	CARD ARO agent annotation
+kanamycin	kanamycin	exact	CARD ARO agent annotation
+levofloxacin	levofloxacin	exact	CARD ARO agent annotation
+linezolid	linezolid	exact	CARD ARO agent annotation
+meropenem	meropenem	exact	CARD ARO agent annotation
+minocycline	minocycline	exact	CARD ARO agent annotation
+moxifloxacin	moxifloxacin	exact	CARD ARO agent annotation
+mupirocin	mupirocin	exact	CARD ARO agent annotation
+nalidixic acid	nalidixic acid	exact	CARD ARO agent annotation
+nitrofurantoin	nitrofurantoin	exact	CARD ARO agent annotation
+norfloxacin	norfloxacin	exact	CARD ARO agent annotation
+ofloxacin	ofloxacin	exact	CARD ARO agent annotation
+oxacillin	oxacillin	exact	CARD ARO agent annotation
+penicillin	penicillin	exact	CARD ARO agent annotation
+penam	piperacillin/tazobactam	proxy_class	CARD ARO drug-class proxy
+polymyxin b	polymyxin b	exact	CARD ARO agent annotation
+pyrazinamide	pyrazinamide	exact	CARD ARO agent annotation
+rifamycin antibiotic	rifabutin	proxy_class	CARD ARO drug-class proxy
+rifampicin	rifampin	exact	CARD ARO agent annotation
+spectinomycin	spectinomycin	exact	CARD ARO agent annotation
+streptomycin	streptomycin	exact	CARD ARO agent annotation
+sulfamethoxazole	sulfamethoxazole	exact	CARD ARO agent annotation
+diaminopyrimidine antibiotic	sulfamethoxazole/trimethoprim	proxy_class	CARD ARO drug-class proxy
+sulfonamide antibiotic	sulfamethoxazole/trimethoprim	proxy_class	CARD ARO sulfonamide class component for folate combination
+teicoplanin	teicoplanin	exact	CARD ARO agent annotation
+tetracycline	tetracycline	exact	CARD ARO agent annotation
+penam	ticarcillin/clavulanate	proxy_class	CARD ARO drug-class proxy
+tigecycline	tigecycline	exact	CARD ARO agent annotation
+tobramycin	tobramycin	exact	CARD ARO agent annotation
+trimethoprim	trimethoprim	exact	CARD ARO agent annotation
+vancomycin	vancomycin	exact	CARD ARO agent annotation

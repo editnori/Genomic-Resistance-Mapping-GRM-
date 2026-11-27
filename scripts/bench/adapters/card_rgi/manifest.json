@@ -1,0 +1,34 @@
+{
+  "bootstrap_cluster_unit": "species",
+  "comparison_kind": "end_to_end_pipeline",
+  "database_pin": {
+    "name": "card-data",
+    "release_date": "2024-09-01",
+    "required_offline": true,
+    "version": "3.3.0"
+  },
+  "display_name": "CARD RGI",
+  "genotype_to_drug_rule": "Under primary reading strict_perfect, calls R when any Perfect or Strict RGI hit annotates the mapped ARO Antibiotic or Drug Class token; excludes Loose hits. Reading strict_perfect_no_efflux additionally filters pure antibiotic efflux hits.",
+  "i_handling": {
+    "description": "CARD RGI emits Cut_Off tiers (Perfect/Strict/Loose) rather than clinical I; Loose hits are excluded under strict_perfect and any I token is counted separately and never mapped to S.",
+    "policy": "separate_count_never_map_to_s",
+    "tool_emits_intermediate": false
+  },
+  "input_format": "fasta_contigs",
+  "mode": "pretrained",
+  "primary_reading": "strict_perfect",
+  "readings": [
+    "strict_perfect",
+    "strict_perfect_no_efflux",
+    "perfect_only"
+  ],
+  "schema_version": "grm-bench-adapter-v1",
+  "software_pin": {
+    "package": "rgi",
+    "release_date": "2024-06-01",
+    "version": "6.0.3"
+  },
+  "species_scope": "multi_species",
+  "supports_scores": false,
+  "tool": "card_rgi"
+}

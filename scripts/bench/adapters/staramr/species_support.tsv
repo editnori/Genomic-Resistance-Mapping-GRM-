@@ -1,0 +1,275 @@
+species_slug	canonical_drug	support_tier	tool_drugs	unsupported_reason	notes
+acinetobacter_baumannii	amikacin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+acinetobacter_baumannii	ampicillin/sulbactam	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+acinetobacter_baumannii	cefepime	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+acinetobacter_baumannii	cefotaxime	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+acinetobacter_baumannii	ceftazidime	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+acinetobacter_baumannii	ceftriaxone	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+acinetobacter_baumannii	ciprofloxacin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+acinetobacter_baumannii	doripenem	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+acinetobacter_baumannii	doxycycline	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+acinetobacter_baumannii	gentamicin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+acinetobacter_baumannii	imipenem	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+acinetobacter_baumannii	levofloxacin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+acinetobacter_baumannii	meropenem	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+acinetobacter_baumannii	minocycline	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+acinetobacter_baumannii	moxifloxacin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+acinetobacter_baumannii	sulfamethoxazole/trimethoprim	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+acinetobacter_baumannii	tetracycline	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+acinetobacter_baumannii	tobramycin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+campylobacter_coli	azithromycin	supported_primary	azithromycin	-	StarAMR validated organism panel (ResFinder + PointFinder).
+campylobacter_coli	ciprofloxacin	supported_primary	ciprofloxacin	-	StarAMR validated organism panel (ResFinder + PointFinder).
+campylobacter_coli	clindamycin	supported_primary	clindamycin	-	StarAMR validated organism panel (ResFinder + PointFinder).
+campylobacter_coli	erythromycin	supported_primary	erythromycin	-	StarAMR validated organism panel (ResFinder + PointFinder).
+campylobacter_coli	gentamicin	supported_primary	gentamicin	-	StarAMR validated organism panel (ResFinder + PointFinder).
+campylobacter_coli	nalidixic acid	supported_primary	nalidixic acid	-	StarAMR validated organism panel (ResFinder + PointFinder).
+campylobacter_coli	telithromycin	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+campylobacter_coli	tetracycline	supported_primary	tetracycline	-	StarAMR validated organism panel (ResFinder + PointFinder).
+campylobacter_jejuni	ciprofloxacin	supported_primary	ciprofloxacin	-	StarAMR validated organism panel (ResFinder + PointFinder).
+campylobacter_jejuni	clindamycin	supported_primary	clindamycin	-	StarAMR validated organism panel (ResFinder + PointFinder).
+campylobacter_jejuni	nalidixic acid	supported_primary	nalidixic acid	-	StarAMR validated organism panel (ResFinder + PointFinder).
+campylobacter_jejuni	tetracycline	supported_primary	tetracycline	-	StarAMR validated organism panel (ResFinder + PointFinder).
+clostridioides_difficile	azithromycin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+clostridioides_difficile	ceftriaxone	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+clostridioides_difficile	clarithromycin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+clostridioides_difficile	moxifloxacin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+corynebacterium_diphtheriae	sulfamethoxazole/trimethoprim	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+corynebacterium_diphtheriae	tetracycline	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+corynebacterium_diphtheriae	trimethoprim	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+enterobacter_cloacae	cefepime	proxy_class	cefepime	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+enterobacter_cloacae	ciprofloxacin	proxy_class	ciprofloxacin	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+enterobacter_cloacae	gentamicin	proxy_class	gentamicin	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+enterobacter_cloacae	imipenem	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+enterobacter_cloacae	levofloxacin	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+enterobacter_cloacae	meropenem	proxy_class	meropenem	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+enterobacter_cloacae	sulfamethoxazole/trimethoprim	proxy_class	sulfisoxazole,trimethoprim	-	StarAMR reports sulfonamide and trimethoprim separately; union proxy.
+enterobacter_cloacae	tobramycin	proxy_class	tobramycin	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+enterobacter_cloacae	trimethoprim	proxy_class	trimethoprim	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+enterococcus_faecium	ampicillin	supported_primary	ampicillin	-	StarAMR validated organism panel (ResFinder + PointFinder).
+enterococcus_faecium	chloramphenicol	supported_primary	chloramphenicol	-	StarAMR validated organism panel (ResFinder + PointFinder).
+enterococcus_faecium	clindamycin	supported_primary	clindamycin	-	StarAMR validated organism panel (ResFinder + PointFinder).
+enterococcus_faecium	dalfopristin/quinupristin	supported_primary	quinupristin-dalfopristin	-	StarAMR validated organism panel (ResFinder + PointFinder).
+enterococcus_faecium	daptomycin	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+enterococcus_faecium	doxycycline	supported_primary	doxycycline	-	StarAMR validated organism panel (ResFinder + PointFinder).
+enterococcus_faecium	erythromycin	supported_primary	erythromycin	-	StarAMR validated organism panel (ResFinder + PointFinder).
+enterococcus_faecium	gentamicin	supported_primary	gentamicin	-	StarAMR validated organism panel (ResFinder + PointFinder).
+enterococcus_faecium	kanamycin	supported_primary	kanamycin	-	StarAMR validated organism panel (ResFinder + PointFinder).
+enterococcus_faecium	linezolid	supported_primary	linezolid	-	StarAMR validated organism panel (ResFinder + PointFinder).
+enterococcus_faecium	streptomycin	supported_primary	streptomycin	-	StarAMR validated organism panel (ResFinder + PointFinder).
+enterococcus_faecium	teicoplanin	supported_primary	teicoplanin	-	StarAMR validated organism panel (ResFinder + PointFinder).
+enterococcus_faecium	tetracycline	supported_primary	tetracycline	-	StarAMR validated organism panel (ResFinder + PointFinder).
+enterococcus_faecium	vancomycin	supported_primary	vancomycin	-	StarAMR validated organism panel (ResFinder + PointFinder).
+escherichia_coli	amikacin	supported_primary	amikacin	-	StarAMR validated organism panel (ResFinder + PointFinder).
+escherichia_coli	amoxicillin/clavulanate	supported_primary	amoxicillin/clavulanic acid	-	StarAMR validated organism panel (ResFinder + PointFinder).
+escherichia_coli	ampicillin	supported_primary	ampicillin	-	StarAMR validated organism panel (ResFinder + PointFinder).
+escherichia_coli	ampicillin/sulbactam	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+escherichia_coli	aztreonam	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+escherichia_coli	cefazolin	supported_primary	cefazolin	-	StarAMR validated organism panel (ResFinder + PointFinder).
+escherichia_coli	cefepime	supported_primary	cefepime	-	StarAMR validated organism panel (ResFinder + PointFinder).
+escherichia_coli	cefotaxime	supported_primary	cefotaxime	-	StarAMR validated organism panel (ResFinder + PointFinder).
+escherichia_coli	cefoxitin	supported_primary	cefoxitin	-	StarAMR validated organism panel (ResFinder + PointFinder).
+escherichia_coli	cefpodoxime	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+escherichia_coli	cefpodoxime/clavulanate	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+escherichia_coli	ceftazidime	supported_primary	ceftazidime	-	StarAMR validated organism panel (ResFinder + PointFinder).
+escherichia_coli	ceftiofur	supported_primary	ceftiofur	-	StarAMR validated organism panel (ResFinder + PointFinder).
+escherichia_coli	ceftriaxone	supported_primary	ceftriaxone	-	StarAMR validated organism panel (ResFinder + PointFinder).
+escherichia_coli	cefuroxime	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+escherichia_coli	cephalothin	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+escherichia_coli	chloramphenicol	supported_primary	chloramphenicol	-	StarAMR validated organism panel (ResFinder + PointFinder).
+escherichia_coli	ciprofloxacin	supported_primary	ciprofloxacin	-	StarAMR validated organism panel (ResFinder + PointFinder).
+escherichia_coli	colistin	supported_primary	colistin	-	StarAMR validated organism panel (ResFinder + PointFinder).
+escherichia_coli	doxycycline	supported_primary	doxycycline	-	StarAMR validated organism panel (ResFinder + PointFinder).
+escherichia_coli	ertapenem	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+escherichia_coli	erythromycin	supported_primary	erythromycin	-	StarAMR validated organism panel (ResFinder + PointFinder).
+escherichia_coli	gentamicin	supported_primary	gentamicin	-	StarAMR validated organism panel (ResFinder + PointFinder).
+escherichia_coli	imipenem	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+escherichia_coli	levofloxacin	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+escherichia_coli	meropenem	supported_primary	meropenem	-	StarAMR validated organism panel (ResFinder + PointFinder).
+escherichia_coli	nalidixic acid	supported_primary	nalidixic acid	-	StarAMR validated organism panel (ResFinder + PointFinder).
+escherichia_coli	nitrofurantoin	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+escherichia_coli	norfloxacin	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+escherichia_coli	piperacillin/tazobactam	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+escherichia_coli	streptomycin	supported_primary	streptomycin	-	StarAMR validated organism panel (ResFinder + PointFinder).
+escherichia_coli	sulfamethoxazole	proxy_class	sulfisoxazole	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+escherichia_coli	sulfamethoxazole/trimethoprim	proxy_class	sulfisoxazole,trimethoprim	-	StarAMR reports sulfonamide and trimethoprim separately; union proxy.
+escherichia_coli	tetracycline	supported_primary	tetracycline	-	StarAMR validated organism panel (ResFinder + PointFinder).
+escherichia_coli	tobramycin	supported_primary	tobramycin	-	StarAMR validated organism panel (ResFinder + PointFinder).
+escherichia_coli	trimethoprim	supported_primary	trimethoprim	-	StarAMR validated organism panel (ResFinder + PointFinder).
+klebsiella_aerogenes	ertapenem	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+klebsiella_aerogenes	imipenem	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+klebsiella_aerogenes	meropenem	proxy_class	meropenem	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+klebsiella_oxytoca	cefotaxime	proxy_class	cefotaxime	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+klebsiella_oxytoca	cefoxitin	proxy_class	cefoxitin	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+klebsiella_oxytoca	cefpodoxime	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+klebsiella_oxytoca	ertapenem	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+klebsiella_pneumoniae	amikacin	proxy_class	amikacin	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+klebsiella_pneumoniae	amoxicillin/clavulanate	proxy_class	amoxicillin/clavulanic acid	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+klebsiella_pneumoniae	ampicillin/sulbactam	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+klebsiella_pneumoniae	aztreonam	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+klebsiella_pneumoniae	cefazolin	proxy_class	cefazolin	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+klebsiella_pneumoniae	cefepime	proxy_class	cefepime	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+klebsiella_pneumoniae	cefotetan	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+klebsiella_pneumoniae	cefoxitin	proxy_class	cefoxitin	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+klebsiella_pneumoniae	cefpodoxime	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+klebsiella_pneumoniae	cefpodoxime/ceftriaxone	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+klebsiella_pneumoniae	cefpodoxime/clavulanate	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+klebsiella_pneumoniae	ceftazidime	proxy_class	ceftazidime	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+klebsiella_pneumoniae	ceftazidime/avibactam	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+klebsiella_pneumoniae	ceftriaxone	proxy_class	ceftriaxone	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+klebsiella_pneumoniae	cefuroxime	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+klebsiella_pneumoniae	chloramphenicol	proxy_class	chloramphenicol	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+klebsiella_pneumoniae	ciprofloxacin	proxy_class	ciprofloxacin	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+klebsiella_pneumoniae	colistin	proxy_class	colistin	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+klebsiella_pneumoniae	doripenem	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+klebsiella_pneumoniae	doxycycline	proxy_class	doxycycline	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+klebsiella_pneumoniae	ertapenem	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+klebsiella_pneumoniae	fosfomycin	proxy_class	fosfomycin	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+klebsiella_pneumoniae	gentamicin	proxy_class	gentamicin	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+klebsiella_pneumoniae	imipenem	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+klebsiella_pneumoniae	levofloxacin	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+klebsiella_pneumoniae	meropenem	proxy_class	meropenem	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+klebsiella_pneumoniae	nitrofurantoin	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+klebsiella_pneumoniae	norfloxacin	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+klebsiella_pneumoniae	ofloxacin	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+klebsiella_pneumoniae	piperacillin/tazobactam	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+klebsiella_pneumoniae	polymyxin b	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+klebsiella_pneumoniae	streptomycin	proxy_class	streptomycin	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+klebsiella_pneumoniae	sulfamethoxazole/trimethoprim	proxy_class	sulfisoxazole,trimethoprim	-	StarAMR reports sulfonamide and trimethoprim separately; union proxy.
+klebsiella_pneumoniae	tetracycline	proxy_class	tetracycline	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+klebsiella_pneumoniae	ticarcillin/clavulanate	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+klebsiella_pneumoniae	tigecycline	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+klebsiella_pneumoniae	tobramycin	proxy_class	tobramycin	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+klebsiella_pneumoniae	trimethoprim	proxy_class	trimethoprim	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+klebsiella_quasipneumoniae	cefotaxime	proxy_class	cefotaxime	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+klebsiella_quasipneumoniae	ceftazidime	proxy_class	ceftazidime	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+klebsiella_quasipneumoniae	sulfamethoxazole/trimethoprim	proxy_class	sulfisoxazole,trimethoprim	-	StarAMR reports sulfonamide and trimethoprim separately; union proxy.
+mycobacterium_tuberculosis	amikacin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+mycobacterium_tuberculosis	amoxicillin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+mycobacterium_tuberculosis	capreomycin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+mycobacterium_tuberculosis	ciprofloxacin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+mycobacterium_tuberculosis	clofazimine	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+mycobacterium_tuberculosis	cycloserine	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+mycobacterium_tuberculosis	delamanid	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+mycobacterium_tuberculosis	ethambutol	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+mycobacterium_tuberculosis	ethionamide	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+mycobacterium_tuberculosis	isoniazid	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+mycobacterium_tuberculosis	kanamycin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+mycobacterium_tuberculosis	levofloxacin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+mycobacterium_tuberculosis	linezolid	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+mycobacterium_tuberculosis	moxifloxacin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+mycobacterium_tuberculosis	nicotinamide	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+mycobacterium_tuberculosis	ofloxacin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+mycobacterium_tuberculosis	para-aminosalicylic acid	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+mycobacterium_tuberculosis	prothionamide	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+mycobacterium_tuberculosis	pyrazinamide	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+mycobacterium_tuberculosis	rifabutin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+mycobacterium_tuberculosis	rifampin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+mycobacterium_tuberculosis	streptomycin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+neisseria_gonorrhoeae	azithromycin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+neisseria_gonorrhoeae	cefixime	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+neisseria_gonorrhoeae	ceftriaxone	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+neisseria_gonorrhoeae	ciprofloxacin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+neisseria_gonorrhoeae	erythromycin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+neisseria_gonorrhoeae	penicillin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+neisseria_gonorrhoeae	tetracycline	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+pseudomonas_aeruginosa	amikacin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+pseudomonas_aeruginosa	aztreonam	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+pseudomonas_aeruginosa	cefepime	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+pseudomonas_aeruginosa	ceftazidime	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+pseudomonas_aeruginosa	ceftazidime/avibactam	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+pseudomonas_aeruginosa	ceftolozane/tazobactam	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+pseudomonas_aeruginosa	ciprofloxacin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+pseudomonas_aeruginosa	gentamicin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+pseudomonas_aeruginosa	imipenem	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+pseudomonas_aeruginosa	levofloxacin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+pseudomonas_aeruginosa	meropenem	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+pseudomonas_aeruginosa	piperacillin/tazobactam	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+pseudomonas_aeruginosa	tobramycin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+salmonella_enterica	amoxicillin/clavulanate	supported_primary	amoxicillin/clavulanic acid	-	StarAMR validated organism panel (ResFinder + PointFinder).
+salmonella_enterica	ampicillin	supported_primary	ampicillin	-	StarAMR validated organism panel (ResFinder + PointFinder).
+salmonella_enterica	ampicillin/sulbactam	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+salmonella_enterica	azithromycin	supported_primary	azithromycin	-	StarAMR validated organism panel (ResFinder + PointFinder).
+salmonella_enterica	cefazolin	supported_primary	cefazolin	-	StarAMR validated organism panel (ResFinder + PointFinder).
+salmonella_enterica	cefotaxime	supported_primary	cefotaxime	-	StarAMR validated organism panel (ResFinder + PointFinder).
+salmonella_enterica	cefoxitin	supported_primary	cefoxitin	-	StarAMR validated organism panel (ResFinder + PointFinder).
+salmonella_enterica	ceftazidime	supported_primary	ceftazidime	-	StarAMR validated organism panel (ResFinder + PointFinder).
+salmonella_enterica	ceftiofur	supported_primary	ceftiofur	-	StarAMR validated organism panel (ResFinder + PointFinder).
+salmonella_enterica	ceftriaxone	supported_primary	ceftriaxone	-	StarAMR validated organism panel (ResFinder + PointFinder).
+salmonella_enterica	chloramphenicol	supported_primary	chloramphenicol	-	StarAMR validated organism panel (ResFinder + PointFinder).
+salmonella_enterica	ciprofloxacin	supported_primary	ciprofloxacin	-	StarAMR validated organism panel (ResFinder + PointFinder).
+salmonella_enterica	gentamicin	supported_primary	gentamicin	-	StarAMR validated organism panel (ResFinder + PointFinder).
+salmonella_enterica	kanamycin	supported_primary	kanamycin	-	StarAMR validated organism panel (ResFinder + PointFinder).
+salmonella_enterica	nalidixic acid	supported_primary	nalidixic acid	-	StarAMR validated organism panel (ResFinder + PointFinder).
+salmonella_enterica	pefloxacin	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+salmonella_enterica	spectinomycin	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+salmonella_enterica	streptomycin	supported_primary	streptomycin	-	StarAMR validated organism panel (ResFinder + PointFinder).
+salmonella_enterica	sulfamethoxazole	proxy_class	sulfisoxazole	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+salmonella_enterica	sulfamethoxazole/trimethoprim	proxy_class	sulfisoxazole,trimethoprim	-	StarAMR reports sulfonamide and trimethoprim separately; union proxy.
+salmonella_enterica	sulfathiazole	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+salmonella_enterica	sulfisoxazole	supported_primary	sulfisoxazole	-	StarAMR validated organism panel (ResFinder + PointFinder).
+salmonella_enterica	temocillin	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+salmonella_enterica	tetracycline	supported_primary	tetracycline	-	StarAMR validated organism panel (ResFinder + PointFinder).
+salmonella_enterica	trimethoprim	supported_primary	trimethoprim	-	StarAMR validated organism panel (ResFinder + PointFinder).
+shigella_flexneri	ampicillin	proxy_class	ampicillin	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+shigella_flexneri	azithromycin	proxy_class	azithromycin	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+shigella_flexneri	ciprofloxacin	proxy_class	ciprofloxacin	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+shigella_flexneri	trimethoprim	proxy_class	trimethoprim	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+shigella_sonnei	amikacin	proxy_class	amikacin	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+shigella_sonnei	ampicillin	proxy_class	ampicillin	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+shigella_sonnei	azithromycin	proxy_class	azithromycin	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+shigella_sonnei	cefoperazone	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+shigella_sonnei	cefotaxime	proxy_class	cefotaxime	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+shigella_sonnei	cefoxitin	proxy_class	cefoxitin	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+shigella_sonnei	cefpirome	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+shigella_sonnei	ceftazidime	proxy_class	ceftazidime	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+shigella_sonnei	ceftriaxone	proxy_class	ceftriaxone	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+shigella_sonnei	ciprofloxacin	proxy_class	ciprofloxacin	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+shigella_sonnei	colistin	proxy_class	colistin	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+shigella_sonnei	ertapenem	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+shigella_sonnei	gentamicin	proxy_class	gentamicin	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+shigella_sonnei	nalidixic acid	proxy_class	nalidixic acid	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+shigella_sonnei	streptomycin	proxy_class	streptomycin	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+shigella_sonnei	sulfamethoxazole/trimethoprim	proxy_class	sulfisoxazole,trimethoprim	-	StarAMR reports sulfonamide and trimethoprim separately; union proxy.
+shigella_sonnei	temocillin	unsupported	-	drug_not_in_staramr_phenotype_table	Drug absent from StarAMR ResFinder/PointFinder phenotype map.
+shigella_sonnei	tetracycline	proxy_class	tetracycline	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+shigella_sonnei	tobramycin	proxy_class	tobramycin	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+shigella_sonnei	trimethoprim	proxy_class	trimethoprim	-	ResFinder-only or drug-proxy screening without StarAMR PointFinder species panel.
+staphylococcus_aureus	cefoxitin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+staphylococcus_aureus	ceftaroline	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+staphylococcus_aureus	chloramphenicol	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+staphylococcus_aureus	ciprofloxacin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+staphylococcus_aureus	clindamycin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+staphylococcus_aureus	daptomycin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+staphylococcus_aureus	erythromycin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+staphylococcus_aureus	fusidic acid	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+staphylococcus_aureus	gentamicin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+staphylococcus_aureus	levofloxacin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+staphylococcus_aureus	moxifloxacin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+staphylococcus_aureus	mupirocin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+staphylococcus_aureus	oxacillin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+staphylococcus_aureus	penicillin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+staphylococcus_aureus	rifampin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+staphylococcus_aureus	sulfamethoxazole/trimethoprim	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+staphylococcus_aureus	tetracycline	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+staphylococcus_aureus	vancomycin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+staphylococcus_haemolyticus	ciprofloxacin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+staphylococcus_haemolyticus	fusidic acid	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+staphylococcus_haemolyticus	tetracycline	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+streptococcus_agalactiae	clindamycin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+streptococcus_agalactiae	erythromycin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+streptococcus_agalactiae	tetracycline	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+streptococcus_pneumoniae	azithromycin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+streptococcus_pneumoniae	cefepime	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+streptococcus_pneumoniae	cefotaxime	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+streptococcus_pneumoniae	ceftriaxone	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+streptococcus_pneumoniae	cefuroxime	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+streptococcus_pneumoniae	chloramphenicol	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+streptococcus_pneumoniae	clindamycin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+streptococcus_pneumoniae	erythromycin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+streptococcus_pneumoniae	meropenem	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+streptococcus_pneumoniae	penicillin	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+streptococcus_pneumoniae	sulfamethoxazole/trimethoprim	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+streptococcus_pneumoniae	tetracycline	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+vibrio_cholerae	nalidixic acid	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+vibrio_cholerae	sulfamethoxazole	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.
+vibrio_cholerae	trimethoprim	unsupported	-	species_outside_staramr_scope	Species outside StarAMR validated organism panels.

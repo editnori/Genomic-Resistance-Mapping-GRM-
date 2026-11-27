@@ -1,0 +1,275 @@
+species_slug	canonical_drug	support_tier	tool_drugs	unsupported_reason	notes
+acinetobacter_baumannii	amikacin	supported_primary	AMIKACIN	-	AMRFinderPlus with organism option and published rule.
+acinetobacter_baumannii	ampicillin/sulbactam	supported_primary	BETA-LACTAM	-	AMRFinderPlus with organism option and published rule.
+acinetobacter_baumannii	cefepime	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+acinetobacter_baumannii	cefotaxime	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+acinetobacter_baumannii	ceftazidime	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+acinetobacter_baumannii	ceftriaxone	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+acinetobacter_baumannii	ciprofloxacin	supported_primary	QUINOLONE	-	AMRFinderPlus with organism option and published rule.
+acinetobacter_baumannii	doripenem	supported_primary	CARBAPENEM	-	AMRFinderPlus with organism option and published rule.
+acinetobacter_baumannii	doxycycline	supported_primary	DOXYCYCLINE	-	AMRFinderPlus with organism option and published rule.
+acinetobacter_baumannii	gentamicin	supported_primary	GENTAMICIN	-	AMRFinderPlus with organism option and published rule.
+acinetobacter_baumannii	imipenem	supported_primary	CARBAPENEM	-	AMRFinderPlus with organism option and published rule.
+acinetobacter_baumannii	levofloxacin	supported_primary	QUINOLONE	-	AMRFinderPlus with organism option and published rule.
+acinetobacter_baumannii	meropenem	supported_primary	CARBAPENEM	-	AMRFinderPlus with organism option and published rule.
+acinetobacter_baumannii	minocycline	supported_primary	MINOCYCLINE	-	AMRFinderPlus with organism option and published rule.
+acinetobacter_baumannii	moxifloxacin	supported_primary	QUINOLONE	-	AMRFinderPlus with organism option and published rule.
+acinetobacter_baumannii	sulfamethoxazole/trimethoprim	supported_primary	SULFONAMIDE,TRIMETHOPRIM	-	AMRFinderPlus with organism option and published rule.
+acinetobacter_baumannii	tetracycline	supported_primary	TETRACYCLINE	-	AMRFinderPlus with organism option and published rule.
+acinetobacter_baumannii	tobramycin	supported_primary	TOBRAMYCIN	-	AMRFinderPlus with organism option and published rule.
+campylobacter_coli	azithromycin	supported_primary	AZITHROMYCIN	-	AMRFinderPlus with organism option and published rule.
+campylobacter_coli	ciprofloxacin	supported_primary	QUINOLONE	-	AMRFinderPlus with organism option and published rule.
+campylobacter_coli	clindamycin	supported_primary	CLINDAMYCIN	-	AMRFinderPlus with organism option and published rule.
+campylobacter_coli	erythromycin	supported_primary	ERYTHROMYCIN	-	AMRFinderPlus with organism option and published rule.
+campylobacter_coli	gentamicin	supported_primary	GENTAMICIN	-	AMRFinderPlus with organism option and published rule.
+campylobacter_coli	nalidixic acid	supported_primary	QUINOLONE	-	AMRFinderPlus with organism option and published rule.
+campylobacter_coli	telithromycin	unsupported	-	no_published_amrfinderplus_rule	No published AMRFinderPlus catalog rule for this species-drug endpoint.
+campylobacter_coli	tetracycline	supported_primary	TETRACYCLINE	-	AMRFinderPlus with organism option and published rule.
+campylobacter_jejuni	ciprofloxacin	supported_primary	QUINOLONE	-	AMRFinderPlus with organism option and published rule.
+campylobacter_jejuni	clindamycin	supported_primary	CLINDAMYCIN	-	AMRFinderPlus with organism option and published rule.
+campylobacter_jejuni	nalidixic acid	supported_primary	QUINOLONE	-	AMRFinderPlus with organism option and published rule.
+campylobacter_jejuni	tetracycline	supported_primary	TETRACYCLINE	-	AMRFinderPlus with organism option and published rule.
+clostridioides_difficile	azithromycin	supported_primary	AZITHROMYCIN	-	AMRFinderPlus with organism option and published rule.
+clostridioides_difficile	ceftriaxone	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+clostridioides_difficile	clarithromycin	supported_primary	MACROLIDE	-	AMRFinderPlus with organism option and published rule.
+clostridioides_difficile	moxifloxacin	supported_primary	QUINOLONE	-	AMRFinderPlus with organism option and published rule.
+corynebacterium_diphtheriae	sulfamethoxazole/trimethoprim	supported_primary	SULFONAMIDE,TRIMETHOPRIM	-	AMRFinderPlus with organism option and published rule.
+corynebacterium_diphtheriae	tetracycline	supported_primary	TETRACYCLINE	-	AMRFinderPlus with organism option and published rule.
+corynebacterium_diphtheriae	trimethoprim	supported_primary	TRIMETHOPRIM	-	AMRFinderPlus with organism option and published rule.
+enterobacter_cloacae	cefepime	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+enterobacter_cloacae	ciprofloxacin	supported_primary	QUINOLONE	-	AMRFinderPlus with organism option and published rule.
+enterobacter_cloacae	gentamicin	supported_primary	GENTAMICIN	-	AMRFinderPlus with organism option and published rule.
+enterobacter_cloacae	imipenem	supported_primary	CARBAPENEM	-	AMRFinderPlus with organism option and published rule.
+enterobacter_cloacae	levofloxacin	supported_primary	QUINOLONE	-	AMRFinderPlus with organism option and published rule.
+enterobacter_cloacae	meropenem	supported_primary	CARBAPENEM	-	AMRFinderPlus with organism option and published rule.
+enterobacter_cloacae	sulfamethoxazole/trimethoprim	supported_primary	SULFONAMIDE,TRIMETHOPRIM	-	AMRFinderPlus with organism option and published rule.
+enterobacter_cloacae	tobramycin	supported_primary	TOBRAMYCIN	-	AMRFinderPlus with organism option and published rule.
+enterobacter_cloacae	trimethoprim	supported_primary	TRIMETHOPRIM	-	AMRFinderPlus with organism option and published rule.
+enterococcus_faecium	ampicillin	supported_primary	AMPICILLIN	-	AMRFinderPlus with organism option and published rule.
+enterococcus_faecium	chloramphenicol	supported_primary	CHLORAMPHENICOL	-	AMRFinderPlus with organism option and published rule.
+enterococcus_faecium	clindamycin	supported_primary	CLINDAMYCIN	-	AMRFinderPlus with organism option and published rule.
+enterococcus_faecium	dalfopristin/quinupristin	supported_primary	STREPTOGRAMIN	-	AMRFinderPlus with organism option and published rule.
+enterococcus_faecium	daptomycin	supported_primary	DAPTOMYCIN	-	AMRFinderPlus with organism option and published rule.
+enterococcus_faecium	doxycycline	supported_primary	DOXYCYCLINE	-	AMRFinderPlus with organism option and published rule.
+enterococcus_faecium	erythromycin	supported_primary	ERYTHROMYCIN	-	AMRFinderPlus with organism option and published rule.
+enterococcus_faecium	gentamicin	supported_primary	GENTAMICIN	-	AMRFinderPlus with organism option and published rule.
+enterococcus_faecium	kanamycin	supported_primary	KANAMYCIN	-	AMRFinderPlus with organism option and published rule.
+enterococcus_faecium	linezolid	supported_primary	LINEZOLID	-	AMRFinderPlus with organism option and published rule.
+enterococcus_faecium	streptomycin	supported_primary	STREPTOMYCIN	-	AMRFinderPlus with organism option and published rule.
+enterococcus_faecium	teicoplanin	supported_primary	GLYCOPEPTIDE	-	AMRFinderPlus with organism option and published rule.
+enterococcus_faecium	tetracycline	supported_primary	TETRACYCLINE	-	AMRFinderPlus with organism option and published rule.
+enterococcus_faecium	vancomycin	supported_primary	VANCOMYCIN	-	AMRFinderPlus with organism option and published rule.
+escherichia_coli	amikacin	supported_primary	AMIKACIN	-	AMRFinderPlus with organism option and published rule.
+escherichia_coli	amoxicillin/clavulanate	supported_primary	BETA-LACTAM	-	AMRFinderPlus with organism option and published rule.
+escherichia_coli	ampicillin	supported_primary	AMPICILLIN	-	AMRFinderPlus with organism option and published rule.
+escherichia_coli	ampicillin/sulbactam	supported_primary	BETA-LACTAM	-	AMRFinderPlus with organism option and published rule.
+escherichia_coli	aztreonam	supported_primary	BETA-LACTAM	-	AMRFinderPlus with organism option and published rule.
+escherichia_coli	cefazolin	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+escherichia_coli	cefepime	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+escherichia_coli	cefotaxime	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+escherichia_coli	cefoxitin	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+escherichia_coli	cefpodoxime	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+escherichia_coli	cefpodoxime/clavulanate	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+escherichia_coli	ceftazidime	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+escherichia_coli	ceftiofur	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+escherichia_coli	ceftriaxone	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+escherichia_coli	cefuroxime	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+escherichia_coli	cephalothin	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+escherichia_coli	chloramphenicol	supported_primary	CHLORAMPHENICOL	-	AMRFinderPlus with organism option and published rule.
+escherichia_coli	ciprofloxacin	supported_primary	QUINOLONE	-	AMRFinderPlus with organism option and published rule.
+escherichia_coli	colistin	supported_primary	COLISTIN	-	AMRFinderPlus with organism option and published rule.
+escherichia_coli	doxycycline	supported_primary	DOXYCYCLINE	-	AMRFinderPlus with organism option and published rule.
+escherichia_coli	ertapenem	supported_primary	CARBAPENEM	-	AMRFinderPlus with organism option and published rule.
+escherichia_coli	erythromycin	supported_primary	ERYTHROMYCIN	-	AMRFinderPlus with organism option and published rule.
+escherichia_coli	gentamicin	supported_primary	GENTAMICIN	-	AMRFinderPlus with organism option and published rule.
+escherichia_coli	imipenem	supported_primary	CARBAPENEM	-	AMRFinderPlus with organism option and published rule.
+escherichia_coli	levofloxacin	supported_primary	QUINOLONE	-	AMRFinderPlus with organism option and published rule.
+escherichia_coli	meropenem	supported_primary	CARBAPENEM	-	AMRFinderPlus with organism option and published rule.
+escherichia_coli	nalidixic acid	supported_primary	QUINOLONE	-	AMRFinderPlus with organism option and published rule.
+escherichia_coli	nitrofurantoin	supported_primary	NITROFURANTOIN	-	AMRFinderPlus with organism option and published rule.
+escherichia_coli	norfloxacin	supported_primary	QUINOLONE	-	AMRFinderPlus with organism option and published rule.
+escherichia_coli	piperacillin/tazobactam	supported_primary	BETA-LACTAM	-	AMRFinderPlus with organism option and published rule.
+escherichia_coli	streptomycin	supported_primary	STREPTOMYCIN	-	AMRFinderPlus with organism option and published rule.
+escherichia_coli	sulfamethoxazole	supported_primary	SULFONAMIDE	-	AMRFinderPlus with organism option and published rule.
+escherichia_coli	sulfamethoxazole/trimethoprim	supported_primary	SULFONAMIDE,TRIMETHOPRIM	-	AMRFinderPlus with organism option and published rule.
+escherichia_coli	tetracycline	supported_primary	TETRACYCLINE	-	AMRFinderPlus with organism option and published rule.
+escherichia_coli	tobramycin	supported_primary	TOBRAMYCIN	-	AMRFinderPlus with organism option and published rule.
+escherichia_coli	trimethoprim	supported_primary	TRIMETHOPRIM	-	AMRFinderPlus with organism option and published rule.
+klebsiella_aerogenes	ertapenem	supported_primary	CARBAPENEM	-	AMRFinderPlus with organism option and published rule.
+klebsiella_aerogenes	imipenem	supported_primary	CARBAPENEM	-	AMRFinderPlus with organism option and published rule.
+klebsiella_aerogenes	meropenem	supported_primary	CARBAPENEM	-	AMRFinderPlus with organism option and published rule.
+klebsiella_oxytoca	cefotaxime	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+klebsiella_oxytoca	cefoxitin	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+klebsiella_oxytoca	cefpodoxime	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+klebsiella_oxytoca	ertapenem	supported_primary	CARBAPENEM	-	AMRFinderPlus with organism option and published rule.
+klebsiella_pneumoniae	amikacin	supported_primary	AMIKACIN	-	AMRFinderPlus with organism option and published rule.
+klebsiella_pneumoniae	amoxicillin/clavulanate	supported_primary	BETA-LACTAM	-	AMRFinderPlus with organism option and published rule.
+klebsiella_pneumoniae	ampicillin/sulbactam	supported_primary	BETA-LACTAM	-	AMRFinderPlus with organism option and published rule.
+klebsiella_pneumoniae	aztreonam	supported_primary	BETA-LACTAM	-	AMRFinderPlus with organism option and published rule.
+klebsiella_pneumoniae	cefazolin	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+klebsiella_pneumoniae	cefepime	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+klebsiella_pneumoniae	cefotetan	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+klebsiella_pneumoniae	cefoxitin	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+klebsiella_pneumoniae	cefpodoxime	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+klebsiella_pneumoniae	cefpodoxime/ceftriaxone	unsupported	-	no_published_amrfinderplus_rule	No published AMRFinderPlus catalog rule for this species-drug endpoint.
+klebsiella_pneumoniae	cefpodoxime/clavulanate	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+klebsiella_pneumoniae	ceftazidime	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+klebsiella_pneumoniae	ceftazidime/avibactam	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+klebsiella_pneumoniae	ceftriaxone	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+klebsiella_pneumoniae	cefuroxime	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+klebsiella_pneumoniae	chloramphenicol	supported_primary	CHLORAMPHENICOL	-	AMRFinderPlus with organism option and published rule.
+klebsiella_pneumoniae	ciprofloxacin	supported_primary	QUINOLONE	-	AMRFinderPlus with organism option and published rule.
+klebsiella_pneumoniae	colistin	supported_primary	COLISTIN	-	AMRFinderPlus with organism option and published rule.
+klebsiella_pneumoniae	doripenem	supported_primary	CARBAPENEM	-	AMRFinderPlus with organism option and published rule.
+klebsiella_pneumoniae	doxycycline	supported_primary	DOXYCYCLINE	-	AMRFinderPlus with organism option and published rule.
+klebsiella_pneumoniae	ertapenem	supported_primary	CARBAPENEM	-	AMRFinderPlus with organism option and published rule.
+klebsiella_pneumoniae	fosfomycin	supported_primary	FOSFOMYCIN	-	AMRFinderPlus with organism option and published rule.
+klebsiella_pneumoniae	gentamicin	supported_primary	GENTAMICIN	-	AMRFinderPlus with organism option and published rule.
+klebsiella_pneumoniae	imipenem	supported_primary	CARBAPENEM	-	AMRFinderPlus with organism option and published rule.
+klebsiella_pneumoniae	levofloxacin	supported_primary	QUINOLONE	-	AMRFinderPlus with organism option and published rule.
+klebsiella_pneumoniae	meropenem	supported_primary	CARBAPENEM	-	AMRFinderPlus with organism option and published rule.
+klebsiella_pneumoniae	nitrofurantoin	supported_primary	NITROFURANTOIN	-	AMRFinderPlus with organism option and published rule.
+klebsiella_pneumoniae	norfloxacin	supported_primary	QUINOLONE	-	AMRFinderPlus with organism option and published rule.
+klebsiella_pneumoniae	ofloxacin	supported_primary	QUINOLONE	-	AMRFinderPlus with organism option and published rule.
+klebsiella_pneumoniae	piperacillin/tazobactam	supported_primary	BETA-LACTAM	-	AMRFinderPlus with organism option and published rule.
+klebsiella_pneumoniae	polymyxin b	supported_primary	COLISTIN	-	AMRFinderPlus with organism option and published rule.
+klebsiella_pneumoniae	streptomycin	supported_primary	STREPTOMYCIN	-	AMRFinderPlus with organism option and published rule.
+klebsiella_pneumoniae	sulfamethoxazole/trimethoprim	supported_primary	SULFONAMIDE,TRIMETHOPRIM	-	AMRFinderPlus with organism option and published rule.
+klebsiella_pneumoniae	tetracycline	supported_primary	TETRACYCLINE	-	AMRFinderPlus with organism option and published rule.
+klebsiella_pneumoniae	ticarcillin/clavulanate	supported_primary	BETA-LACTAM	-	AMRFinderPlus with organism option and published rule.
+klebsiella_pneumoniae	tigecycline	supported_primary	TIGECYCLINE	-	AMRFinderPlus with organism option and published rule.
+klebsiella_pneumoniae	tobramycin	supported_primary	TOBRAMYCIN	-	AMRFinderPlus with organism option and published rule.
+klebsiella_pneumoniae	trimethoprim	supported_primary	TRIMETHOPRIM	-	AMRFinderPlus with organism option and published rule.
+klebsiella_quasipneumoniae	cefotaxime	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+klebsiella_quasipneumoniae	ceftazidime	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+klebsiella_quasipneumoniae	sulfamethoxazole/trimethoprim	supported_primary	SULFONAMIDE,TRIMETHOPRIM	-	AMRFinderPlus with organism option and published rule.
+mycobacterium_tuberculosis	amikacin	proxy_class	AMIKACIN	-	No AMRFinderPlus --organism point-mutation option for this species; acquired genes only.
+mycobacterium_tuberculosis	amoxicillin	proxy_class	BETA-LACTAM	-	No AMRFinderPlus --organism point-mutation option for this species; acquired genes only.
+mycobacterium_tuberculosis	capreomycin	unsupported	-	no_published_amrfinderplus_rule	No published AMRFinderPlus catalog rule for this species-drug endpoint.
+mycobacterium_tuberculosis	ciprofloxacin	proxy_class	QUINOLONE	-	No AMRFinderPlus --organism point-mutation option for this species; acquired genes only.
+mycobacterium_tuberculosis	clofazimine	unsupported	-	no_published_amrfinderplus_rule	No published AMRFinderPlus catalog rule for this species-drug endpoint.
+mycobacterium_tuberculosis	cycloserine	unsupported	-	no_published_amrfinderplus_rule	No published AMRFinderPlus catalog rule for this species-drug endpoint.
+mycobacterium_tuberculosis	delamanid	unsupported	-	no_published_amrfinderplus_rule	No published AMRFinderPlus catalog rule for this species-drug endpoint.
+mycobacterium_tuberculosis	ethambutol	unsupported	-	no_published_amrfinderplus_rule	No published AMRFinderPlus catalog rule for this species-drug endpoint.
+mycobacterium_tuberculosis	ethionamide	unsupported	-	no_published_amrfinderplus_rule	No published AMRFinderPlus catalog rule for this species-drug endpoint.
+mycobacterium_tuberculosis	isoniazid	unsupported	-	no_published_amrfinderplus_rule	No published AMRFinderPlus catalog rule for this species-drug endpoint.
+mycobacterium_tuberculosis	kanamycin	proxy_class	KANAMYCIN	-	No AMRFinderPlus --organism point-mutation option for this species; acquired genes only.
+mycobacterium_tuberculosis	levofloxacin	proxy_class	QUINOLONE	-	No AMRFinderPlus --organism point-mutation option for this species; acquired genes only.
+mycobacterium_tuberculosis	linezolid	proxy_class	LINEZOLID	-	No AMRFinderPlus --organism point-mutation option for this species; acquired genes only.
+mycobacterium_tuberculosis	moxifloxacin	proxy_class	QUINOLONE	-	No AMRFinderPlus --organism point-mutation option for this species; acquired genes only.
+mycobacterium_tuberculosis	nicotinamide	unsupported	-	no_published_amrfinderplus_rule	No published AMRFinderPlus catalog rule for this species-drug endpoint.
+mycobacterium_tuberculosis	ofloxacin	proxy_class	QUINOLONE	-	No AMRFinderPlus --organism point-mutation option for this species; acquired genes only.
+mycobacterium_tuberculosis	para-aminosalicylic acid	unsupported	-	no_published_amrfinderplus_rule	No published AMRFinderPlus catalog rule for this species-drug endpoint.
+mycobacterium_tuberculosis	prothionamide	unsupported	-	no_published_amrfinderplus_rule	No published AMRFinderPlus catalog rule for this species-drug endpoint.
+mycobacterium_tuberculosis	pyrazinamide	unsupported	-	no_published_amrfinderplus_rule	No published AMRFinderPlus catalog rule for this species-drug endpoint.
+mycobacterium_tuberculosis	rifabutin	unsupported	-	no_published_amrfinderplus_rule	No published AMRFinderPlus catalog rule for this species-drug endpoint.
+mycobacterium_tuberculosis	rifampin	unsupported	-	no_published_amrfinderplus_rule	No published AMRFinderPlus catalog rule for this species-drug endpoint.
+mycobacterium_tuberculosis	streptomycin	proxy_class	STREPTOMYCIN	-	No AMRFinderPlus --organism point-mutation option for this species; acquired genes only.
+neisseria_gonorrhoeae	azithromycin	supported_primary	AZITHROMYCIN	-	AMRFinderPlus with organism option and published rule.
+neisseria_gonorrhoeae	cefixime	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+neisseria_gonorrhoeae	ceftriaxone	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+neisseria_gonorrhoeae	ciprofloxacin	supported_primary	QUINOLONE	-	AMRFinderPlus with organism option and published rule.
+neisseria_gonorrhoeae	erythromycin	supported_primary	ERYTHROMYCIN	-	AMRFinderPlus with organism option and published rule.
+neisseria_gonorrhoeae	penicillin	supported_primary	BETA-LACTAM	-	AMRFinderPlus with organism option and published rule.
+neisseria_gonorrhoeae	tetracycline	supported_primary	TETRACYCLINE	-	AMRFinderPlus with organism option and published rule.
+pseudomonas_aeruginosa	amikacin	supported_primary	AMIKACIN	-	AMRFinderPlus with organism option and published rule.
+pseudomonas_aeruginosa	aztreonam	supported_primary	BETA-LACTAM	-	AMRFinderPlus with organism option and published rule.
+pseudomonas_aeruginosa	cefepime	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+pseudomonas_aeruginosa	ceftazidime	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+pseudomonas_aeruginosa	ceftazidime/avibactam	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+pseudomonas_aeruginosa	ceftolozane/tazobactam	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+pseudomonas_aeruginosa	ciprofloxacin	supported_primary	QUINOLONE	-	AMRFinderPlus with organism option and published rule.
+pseudomonas_aeruginosa	gentamicin	supported_primary	GENTAMICIN	-	AMRFinderPlus with organism option and published rule.
+pseudomonas_aeruginosa	imipenem	supported_primary	CARBAPENEM	-	AMRFinderPlus with organism option and published rule.
+pseudomonas_aeruginosa	levofloxacin	supported_primary	QUINOLONE	-	AMRFinderPlus with organism option and published rule.
+pseudomonas_aeruginosa	meropenem	supported_primary	CARBAPENEM	-	AMRFinderPlus with organism option and published rule.
+pseudomonas_aeruginosa	piperacillin/tazobactam	supported_primary	BETA-LACTAM	-	AMRFinderPlus with organism option and published rule.
+pseudomonas_aeruginosa	tobramycin	supported_primary	TOBRAMYCIN	-	AMRFinderPlus with organism option and published rule.
+salmonella_enterica	amoxicillin/clavulanate	supported_primary	BETA-LACTAM	-	AMRFinderPlus with organism option and published rule.
+salmonella_enterica	ampicillin	supported_primary	AMPICILLIN	-	AMRFinderPlus with organism option and published rule.
+salmonella_enterica	ampicillin/sulbactam	supported_primary	BETA-LACTAM	-	AMRFinderPlus with organism option and published rule.
+salmonella_enterica	azithromycin	supported_primary	AZITHROMYCIN	-	AMRFinderPlus with organism option and published rule.
+salmonella_enterica	cefazolin	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+salmonella_enterica	cefotaxime	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+salmonella_enterica	cefoxitin	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+salmonella_enterica	ceftazidime	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+salmonella_enterica	ceftiofur	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+salmonella_enterica	ceftriaxone	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+salmonella_enterica	chloramphenicol	supported_primary	CHLORAMPHENICOL	-	AMRFinderPlus with organism option and published rule.
+salmonella_enterica	ciprofloxacin	supported_primary	QUINOLONE	-	AMRFinderPlus with organism option and published rule.
+salmonella_enterica	gentamicin	supported_primary	GENTAMICIN	-	AMRFinderPlus with organism option and published rule.
+salmonella_enterica	kanamycin	supported_primary	KANAMYCIN	-	AMRFinderPlus with organism option and published rule.
+salmonella_enterica	nalidixic acid	supported_primary	QUINOLONE	-	AMRFinderPlus with organism option and published rule.
+salmonella_enterica	pefloxacin	unsupported	-	no_published_amrfinderplus_rule	No published AMRFinderPlus catalog rule for this species-drug endpoint.
+salmonella_enterica	spectinomycin	supported_primary	SPECTINOMYCIN	-	AMRFinderPlus with organism option and published rule.
+salmonella_enterica	streptomycin	supported_primary	STREPTOMYCIN	-	AMRFinderPlus with organism option and published rule.
+salmonella_enterica	sulfamethoxazole	supported_primary	SULFONAMIDE	-	AMRFinderPlus with organism option and published rule.
+salmonella_enterica	sulfamethoxazole/trimethoprim	supported_primary	SULFONAMIDE,TRIMETHOPRIM	-	AMRFinderPlus with organism option and published rule.
+salmonella_enterica	sulfathiazole	supported_primary	SULFONAMIDE	-	AMRFinderPlus with organism option and published rule.
+salmonella_enterica	sulfisoxazole	supported_primary	SULFONAMIDE	-	AMRFinderPlus with organism option and published rule.
+salmonella_enterica	temocillin	unsupported	-	no_published_amrfinderplus_rule	No published AMRFinderPlus catalog rule for this species-drug endpoint.
+salmonella_enterica	tetracycline	supported_primary	TETRACYCLINE	-	AMRFinderPlus with organism option and published rule.
+salmonella_enterica	trimethoprim	supported_primary	TRIMETHOPRIM	-	AMRFinderPlus with organism option and published rule.
+shigella_flexneri	ampicillin	supported_primary	AMPICILLIN	-	AMRFinderPlus with organism option and published rule.
+shigella_flexneri	azithromycin	supported_primary	AZITHROMYCIN	-	AMRFinderPlus with organism option and published rule.
+shigella_flexneri	ciprofloxacin	supported_primary	QUINOLONE	-	AMRFinderPlus with organism option and published rule.
+shigella_flexneri	trimethoprim	supported_primary	TRIMETHOPRIM	-	AMRFinderPlus with organism option and published rule.
+shigella_sonnei	amikacin	supported_primary	AMIKACIN	-	AMRFinderPlus with organism option and published rule.
+shigella_sonnei	ampicillin	supported_primary	AMPICILLIN	-	AMRFinderPlus with organism option and published rule.
+shigella_sonnei	azithromycin	supported_primary	AZITHROMYCIN	-	AMRFinderPlus with organism option and published rule.
+shigella_sonnei	cefoperazone	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+shigella_sonnei	cefotaxime	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+shigella_sonnei	cefoxitin	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+shigella_sonnei	cefpirome	unsupported	-	no_published_amrfinderplus_rule	No published AMRFinderPlus catalog rule for this species-drug endpoint.
+shigella_sonnei	ceftazidime	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+shigella_sonnei	ceftriaxone	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+shigella_sonnei	ciprofloxacin	supported_primary	QUINOLONE	-	AMRFinderPlus with organism option and published rule.
+shigella_sonnei	colistin	supported_primary	COLISTIN	-	AMRFinderPlus with organism option and published rule.
+shigella_sonnei	ertapenem	supported_primary	CARBAPENEM	-	AMRFinderPlus with organism option and published rule.
+shigella_sonnei	gentamicin	supported_primary	GENTAMICIN	-	AMRFinderPlus with organism option and published rule.
+shigella_sonnei	nalidixic acid	supported_primary	QUINOLONE	-	AMRFinderPlus with organism option and published rule.
+shigella_sonnei	streptomycin	supported_primary	STREPTOMYCIN	-	AMRFinderPlus with organism option and published rule.
+shigella_sonnei	sulfamethoxazole/trimethoprim	supported_primary	SULFONAMIDE,TRIMETHOPRIM	-	AMRFinderPlus with organism option and published rule.
+shigella_sonnei	temocillin	unsupported	-	no_published_amrfinderplus_rule	No published AMRFinderPlus catalog rule for this species-drug endpoint.
+shigella_sonnei	tetracycline	supported_primary	TETRACYCLINE	-	AMRFinderPlus with organism option and published rule.
+shigella_sonnei	tobramycin	supported_primary	TOBRAMYCIN	-	AMRFinderPlus with organism option and published rule.
+shigella_sonnei	trimethoprim	supported_primary	TRIMETHOPRIM	-	AMRFinderPlus with organism option and published rule.
+staphylococcus_aureus	cefoxitin	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+staphylococcus_aureus	ceftaroline	unsupported	-	no_published_amrfinderplus_rule	No published AMRFinderPlus catalog rule for this species-drug endpoint.
+staphylococcus_aureus	chloramphenicol	supported_primary	CHLORAMPHENICOL	-	AMRFinderPlus with organism option and published rule.
+staphylococcus_aureus	ciprofloxacin	supported_primary	QUINOLONE	-	AMRFinderPlus with organism option and published rule.
+staphylococcus_aureus	clindamycin	supported_primary	CLINDAMYCIN	-	AMRFinderPlus with organism option and published rule.
+staphylococcus_aureus	daptomycin	supported_primary	DAPTOMYCIN	-	AMRFinderPlus with organism option and published rule.
+staphylococcus_aureus	erythromycin	supported_primary	ERYTHROMYCIN	-	AMRFinderPlus with organism option and published rule.
+staphylococcus_aureus	fusidic acid	supported_primary	FUSIDIC ACID	-	AMRFinderPlus with organism option and published rule.
+staphylococcus_aureus	gentamicin	supported_primary	GENTAMICIN	-	AMRFinderPlus with organism option and published rule.
+staphylococcus_aureus	levofloxacin	supported_primary	QUINOLONE	-	AMRFinderPlus with organism option and published rule.
+staphylococcus_aureus	moxifloxacin	supported_primary	QUINOLONE	-	AMRFinderPlus with organism option and published rule.
+staphylococcus_aureus	mupirocin	supported_primary	MUPIROCIN	-	AMRFinderPlus with organism option and published rule.
+staphylococcus_aureus	oxacillin	supported_primary	METHICILLIN	-	AMRFinderPlus with organism option and published rule.
+staphylococcus_aureus	penicillin	supported_primary	BETA-LACTAM	-	AMRFinderPlus with organism option and published rule.
+staphylococcus_aureus	rifampin	unsupported	-	no_published_amrfinderplus_rule	No published AMRFinderPlus catalog rule for this species-drug endpoint.
+staphylococcus_aureus	sulfamethoxazole/trimethoprim	supported_primary	SULFONAMIDE,TRIMETHOPRIM	-	AMRFinderPlus with organism option and published rule.
+staphylococcus_aureus	tetracycline	supported_primary	TETRACYCLINE	-	AMRFinderPlus with organism option and published rule.
+staphylococcus_aureus	vancomycin	supported_primary	VANCOMYCIN	-	AMRFinderPlus with organism option and published rule.
+staphylococcus_haemolyticus	ciprofloxacin	proxy_class	QUINOLONE	-	No AMRFinderPlus --organism point-mutation option for this species; acquired genes only.
+staphylococcus_haemolyticus	fusidic acid	proxy_class	FUSIDIC ACID	-	No AMRFinderPlus --organism point-mutation option for this species; acquired genes only.
+staphylococcus_haemolyticus	tetracycline	proxy_class	TETRACYCLINE	-	No AMRFinderPlus --organism point-mutation option for this species; acquired genes only.
+streptococcus_agalactiae	clindamycin	supported_primary	CLINDAMYCIN	-	AMRFinderPlus with organism option and published rule.
+streptococcus_agalactiae	erythromycin	supported_primary	ERYTHROMYCIN	-	AMRFinderPlus with organism option and published rule.
+streptococcus_agalactiae	tetracycline	supported_primary	TETRACYCLINE	-	AMRFinderPlus with organism option and published rule.
+streptococcus_pneumoniae	azithromycin	supported_primary	AZITHROMYCIN	-	AMRFinderPlus with organism option and published rule.
+streptococcus_pneumoniae	cefepime	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+streptococcus_pneumoniae	cefotaxime	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+streptococcus_pneumoniae	ceftriaxone	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+streptococcus_pneumoniae	cefuroxime	supported_primary	CEPHALOSPORIN	-	AMRFinderPlus with organism option and published rule.
+streptococcus_pneumoniae	chloramphenicol	supported_primary	CHLORAMPHENICOL	-	AMRFinderPlus with organism option and published rule.
+streptococcus_pneumoniae	clindamycin	supported_primary	CLINDAMYCIN	-	AMRFinderPlus with organism option and published rule.
+streptococcus_pneumoniae	erythromycin	supported_primary	ERYTHROMYCIN	-	AMRFinderPlus with organism option and published rule.
+streptococcus_pneumoniae	meropenem	supported_primary	CARBAPENEM	-	AMRFinderPlus with organism option and published rule.
+streptococcus_pneumoniae	penicillin	supported_primary	BETA-LACTAM	-	AMRFinderPlus with organism option and published rule.
+streptococcus_pneumoniae	sulfamethoxazole/trimethoprim	supported_primary	SULFONAMIDE,TRIMETHOPRIM	-	AMRFinderPlus with organism option and published rule.
+streptococcus_pneumoniae	tetracycline	supported_primary	TETRACYCLINE	-	AMRFinderPlus with organism option and published rule.
+vibrio_cholerae	nalidixic acid	supported_primary	QUINOLONE	-	AMRFinderPlus with organism option and published rule.
+vibrio_cholerae	sulfamethoxazole	supported_primary	SULFONAMIDE	-	AMRFinderPlus with organism option and published rule.
+vibrio_cholerae	trimethoprim	supported_primary	TRIMETHOPRIM	-	AMRFinderPlus with organism option and published rule.

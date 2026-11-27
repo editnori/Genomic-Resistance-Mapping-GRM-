@@ -1,0 +1,275 @@
+species_slug	canonical_drug	support_tier	tool_drugs	unsupported_reason	notes
+acinetobacter_baumannii	amikacin	proxy_class	amikacin	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+acinetobacter_baumannii	ampicillin/sulbactam	proxy_class	ampicillin+sulbactam	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+acinetobacter_baumannii	cefepime	proxy_class	cefepime	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+acinetobacter_baumannii	cefotaxime	proxy_class	cefotaxime	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+acinetobacter_baumannii	ceftazidime	proxy_class	ceftazidime	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+acinetobacter_baumannii	ceftriaxone	proxy_class	ceftriaxone	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+acinetobacter_baumannii	ciprofloxacin	proxy_class	ciprofloxacin	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+acinetobacter_baumannii	doripenem	proxy_class	doripenem	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+acinetobacter_baumannii	doxycycline	proxy_class	doxycycline	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+acinetobacter_baumannii	gentamicin	proxy_class	gentamicin	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+acinetobacter_baumannii	imipenem	proxy_class	imipenem	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+acinetobacter_baumannii	levofloxacin	proxy_class	levofloxacin	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+acinetobacter_baumannii	meropenem	proxy_class	meropenem	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+acinetobacter_baumannii	minocycline	proxy_class	minocycline	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+acinetobacter_baumannii	moxifloxacin	proxy_class	moxifloxacin	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+acinetobacter_baumannii	sulfamethoxazole/trimethoprim	proxy_class	sulfamethoxazole,trimethoprim	-	ResFinder predicts sulfamethoxazole and trimethoprim separately; union proxy.
+acinetobacter_baumannii	tetracycline	proxy_class	tetracycline	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+acinetobacter_baumannii	tobramycin	proxy_class	tobramycin	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+campylobacter_coli	azithromycin	supported_primary	azithromycin	-	ResFinder + species PointFinder panel.
+campylobacter_coli	ciprofloxacin	supported_primary	ciprofloxacin	-	ResFinder + species PointFinder panel.
+campylobacter_coli	clindamycin	supported_primary	clindamycin	-	ResFinder + species PointFinder panel.
+campylobacter_coli	erythromycin	supported_primary	erythromycin	-	ResFinder + species PointFinder panel.
+campylobacter_coli	gentamicin	supported_primary	gentamicin	-	ResFinder + species PointFinder panel.
+campylobacter_coli	nalidixic acid	supported_primary	nalidixic acid	-	ResFinder + species PointFinder panel.
+campylobacter_coli	telithromycin	unsupported	-	drug_not_in_resfinder_phenotypes	Drug absent from ResFinder/PointFinder phenotype translation table.
+campylobacter_coli	tetracycline	supported_primary	tetracycline	-	ResFinder + species PointFinder panel.
+campylobacter_jejuni	ciprofloxacin	supported_primary	ciprofloxacin	-	ResFinder + species PointFinder panel.
+campylobacter_jejuni	clindamycin	supported_primary	clindamycin	-	ResFinder + species PointFinder panel.
+campylobacter_jejuni	nalidixic acid	supported_primary	nalidixic acid	-	ResFinder + species PointFinder panel.
+campylobacter_jejuni	tetracycline	supported_primary	tetracycline	-	ResFinder + species PointFinder panel.
+clostridioides_difficile	azithromycin	supported_primary	azithromycin	-	ResFinder + species PointFinder panel.
+clostridioides_difficile	ceftriaxone	supported_primary	ceftriaxone	-	ResFinder + species PointFinder panel.
+clostridioides_difficile	clarithromycin	supported_primary	clarithromycin	-	ResFinder + species PointFinder panel.
+clostridioides_difficile	moxifloxacin	supported_primary	moxifloxacin	-	ResFinder + species PointFinder panel.
+corynebacterium_diphtheriae	sulfamethoxazole/trimethoprim	proxy_class	sulfamethoxazole,trimethoprim	-	ResFinder predicts sulfamethoxazole and trimethoprim separately; union proxy.
+corynebacterium_diphtheriae	tetracycline	proxy_class	tetracycline	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+corynebacterium_diphtheriae	trimethoprim	proxy_class	trimethoprim	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+enterobacter_cloacae	cefepime	proxy_class	cefepime	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+enterobacter_cloacae	ciprofloxacin	proxy_class	ciprofloxacin	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+enterobacter_cloacae	gentamicin	proxy_class	gentamicin	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+enterobacter_cloacae	imipenem	proxy_class	imipenem	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+enterobacter_cloacae	levofloxacin	proxy_class	levofloxacin	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+enterobacter_cloacae	meropenem	proxy_class	meropenem	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+enterobacter_cloacae	sulfamethoxazole/trimethoprim	proxy_class	sulfamethoxazole,trimethoprim	-	ResFinder predicts sulfamethoxazole and trimethoprim separately; union proxy.
+enterobacter_cloacae	tobramycin	proxy_class	tobramycin	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+enterobacter_cloacae	trimethoprim	proxy_class	trimethoprim	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+enterococcus_faecium	ampicillin	supported_primary	ampicillin	-	ResFinder + species PointFinder panel.
+enterococcus_faecium	chloramphenicol	supported_primary	chloramphenicol	-	ResFinder + species PointFinder panel.
+enterococcus_faecium	clindamycin	supported_primary	clindamycin	-	ResFinder + species PointFinder panel.
+enterococcus_faecium	dalfopristin/quinupristin	supported_primary	quinupristin+dalfopristin	-	ResFinder + species PointFinder panel.
+enterococcus_faecium	daptomycin	unsupported	-	drug_not_in_resfinder_phenotypes	Drug absent from ResFinder/PointFinder phenotype translation table.
+enterococcus_faecium	doxycycline	supported_primary	doxycycline	-	ResFinder + species PointFinder panel.
+enterococcus_faecium	erythromycin	supported_primary	erythromycin	-	ResFinder + species PointFinder panel.
+enterococcus_faecium	gentamicin	supported_primary	gentamicin	-	ResFinder + species PointFinder panel.
+enterococcus_faecium	kanamycin	supported_primary	kanamycin	-	ResFinder + species PointFinder panel.
+enterococcus_faecium	linezolid	supported_primary	linezolid	-	ResFinder + species PointFinder panel.
+enterococcus_faecium	streptomycin	supported_primary	streptomycin	-	ResFinder + species PointFinder panel.
+enterococcus_faecium	teicoplanin	supported_primary	teicoplanin	-	ResFinder + species PointFinder panel.
+enterococcus_faecium	tetracycline	supported_primary	tetracycline	-	ResFinder + species PointFinder panel.
+enterococcus_faecium	vancomycin	supported_primary	vancomycin	-	ResFinder + species PointFinder panel.
+escherichia_coli	amikacin	supported_primary	amikacin	-	ResFinder + species PointFinder panel.
+escherichia_coli	amoxicillin/clavulanate	supported_primary	amoxicillin+clavulanic acid	-	ResFinder + species PointFinder panel.
+escherichia_coli	ampicillin	supported_primary	ampicillin	-	ResFinder + species PointFinder panel.
+escherichia_coli	ampicillin/sulbactam	supported_primary	ampicillin+sulbactam	-	ResFinder + species PointFinder panel.
+escherichia_coli	aztreonam	supported_primary	aztreonam	-	ResFinder + species PointFinder panel.
+escherichia_coli	cefazolin	supported_primary	cefazolin	-	ResFinder + species PointFinder panel.
+escherichia_coli	cefepime	supported_primary	cefepime	-	ResFinder + species PointFinder panel.
+escherichia_coli	cefotaxime	supported_primary	cefotaxime	-	ResFinder + species PointFinder panel.
+escherichia_coli	cefoxitin	supported_primary	cefoxitin	-	ResFinder + species PointFinder panel.
+escherichia_coli	cefpodoxime	supported_primary	cefpodoxime	-	ResFinder + species PointFinder panel.
+escherichia_coli	cefpodoxime/clavulanate	unsupported	-	drug_not_in_resfinder_phenotypes	Drug absent from ResFinder/PointFinder phenotype translation table.
+escherichia_coli	ceftazidime	supported_primary	ceftazidime	-	ResFinder + species PointFinder panel.
+escherichia_coli	ceftiofur	supported_primary	ceftiofur	-	ResFinder + species PointFinder panel.
+escherichia_coli	ceftriaxone	supported_primary	ceftriaxone	-	ResFinder + species PointFinder panel.
+escherichia_coli	cefuroxime	supported_primary	cefuroxime	-	ResFinder + species PointFinder panel.
+escherichia_coli	cephalothin	supported_primary	cephalothin	-	ResFinder + species PointFinder panel.
+escherichia_coli	chloramphenicol	supported_primary	chloramphenicol	-	ResFinder + species PointFinder panel.
+escherichia_coli	ciprofloxacin	supported_primary	ciprofloxacin	-	ResFinder + species PointFinder panel.
+escherichia_coli	colistin	supported_primary	colistin	-	ResFinder + species PointFinder panel.
+escherichia_coli	doxycycline	supported_primary	doxycycline	-	ResFinder + species PointFinder panel.
+escherichia_coli	ertapenem	supported_primary	ertapenem	-	ResFinder + species PointFinder panel.
+escherichia_coli	erythromycin	supported_primary	erythromycin	-	ResFinder + species PointFinder panel.
+escherichia_coli	gentamicin	supported_primary	gentamicin	-	ResFinder + species PointFinder panel.
+escherichia_coli	imipenem	supported_primary	imipenem	-	ResFinder + species PointFinder panel.
+escherichia_coli	levofloxacin	supported_primary	levofloxacin	-	ResFinder + species PointFinder panel.
+escherichia_coli	meropenem	supported_primary	meropenem	-	ResFinder + species PointFinder panel.
+escherichia_coli	nalidixic acid	supported_primary	nalidixic acid	-	ResFinder + species PointFinder panel.
+escherichia_coli	nitrofurantoin	supported_primary	nitrofurantoin	-	ResFinder + species PointFinder panel.
+escherichia_coli	norfloxacin	supported_primary	norfloxacin	-	ResFinder + species PointFinder panel.
+escherichia_coli	piperacillin/tazobactam	supported_primary	piperacillin+tazobactam	-	ResFinder + species PointFinder panel.
+escherichia_coli	streptomycin	supported_primary	streptomycin	-	ResFinder + species PointFinder panel.
+escherichia_coli	sulfamethoxazole	supported_primary	sulfamethoxazole	-	ResFinder + species PointFinder panel.
+escherichia_coli	sulfamethoxazole/trimethoprim	proxy_class	sulfamethoxazole,trimethoprim	-	ResFinder predicts sulfamethoxazole and trimethoprim separately; union proxy.
+escherichia_coli	tetracycline	supported_primary	tetracycline	-	ResFinder + species PointFinder panel.
+escherichia_coli	tobramycin	supported_primary	tobramycin	-	ResFinder + species PointFinder panel.
+escherichia_coli	trimethoprim	supported_primary	trimethoprim	-	ResFinder + species PointFinder panel.
+klebsiella_aerogenes	ertapenem	proxy_class	ertapenem	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+klebsiella_aerogenes	imipenem	proxy_class	imipenem	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+klebsiella_aerogenes	meropenem	proxy_class	meropenem	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+klebsiella_oxytoca	cefotaxime	proxy_class	cefotaxime	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+klebsiella_oxytoca	cefoxitin	proxy_class	cefoxitin	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+klebsiella_oxytoca	cefpodoxime	proxy_class	cefpodoxime	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+klebsiella_oxytoca	ertapenem	proxy_class	ertapenem	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+klebsiella_pneumoniae	amikacin	supported_primary	amikacin	-	ResFinder + species PointFinder panel.
+klebsiella_pneumoniae	amoxicillin/clavulanate	supported_primary	amoxicillin+clavulanic acid	-	ResFinder + species PointFinder panel.
+klebsiella_pneumoniae	ampicillin/sulbactam	supported_primary	ampicillin+sulbactam	-	ResFinder + species PointFinder panel.
+klebsiella_pneumoniae	aztreonam	supported_primary	aztreonam	-	ResFinder + species PointFinder panel.
+klebsiella_pneumoniae	cefazolin	supported_primary	cefazolin	-	ResFinder + species PointFinder panel.
+klebsiella_pneumoniae	cefepime	supported_primary	cefepime	-	ResFinder + species PointFinder panel.
+klebsiella_pneumoniae	cefotetan	supported_primary	cefotetan	-	ResFinder + species PointFinder panel.
+klebsiella_pneumoniae	cefoxitin	supported_primary	cefoxitin	-	ResFinder + species PointFinder panel.
+klebsiella_pneumoniae	cefpodoxime	supported_primary	cefpodoxime	-	ResFinder + species PointFinder panel.
+klebsiella_pneumoniae	cefpodoxime/ceftriaxone	unsupported	-	drug_not_in_resfinder_phenotypes	Drug absent from ResFinder/PointFinder phenotype translation table.
+klebsiella_pneumoniae	cefpodoxime/clavulanate	unsupported	-	drug_not_in_resfinder_phenotypes	Drug absent from ResFinder/PointFinder phenotype translation table.
+klebsiella_pneumoniae	ceftazidime	supported_primary	ceftazidime	-	ResFinder + species PointFinder panel.
+klebsiella_pneumoniae	ceftazidime/avibactam	supported_primary	ceftazidime+avibactam	-	ResFinder + species PointFinder panel.
+klebsiella_pneumoniae	ceftriaxone	supported_primary	ceftriaxone	-	ResFinder + species PointFinder panel.
+klebsiella_pneumoniae	cefuroxime	supported_primary	cefuroxime	-	ResFinder + species PointFinder panel.
+klebsiella_pneumoniae	chloramphenicol	supported_primary	chloramphenicol	-	ResFinder + species PointFinder panel.
+klebsiella_pneumoniae	ciprofloxacin	supported_primary	ciprofloxacin	-	ResFinder + species PointFinder panel.
+klebsiella_pneumoniae	colistin	supported_primary	colistin	-	ResFinder + species PointFinder panel.
+klebsiella_pneumoniae	doripenem	supported_primary	doripenem	-	ResFinder + species PointFinder panel.
+klebsiella_pneumoniae	doxycycline	supported_primary	doxycycline	-	ResFinder + species PointFinder panel.
+klebsiella_pneumoniae	ertapenem	supported_primary	ertapenem	-	ResFinder + species PointFinder panel.
+klebsiella_pneumoniae	fosfomycin	supported_primary	fosfomycin	-	ResFinder + species PointFinder panel.
+klebsiella_pneumoniae	gentamicin	supported_primary	gentamicin	-	ResFinder + species PointFinder panel.
+klebsiella_pneumoniae	imipenem	supported_primary	imipenem	-	ResFinder + species PointFinder panel.
+klebsiella_pneumoniae	levofloxacin	supported_primary	levofloxacin	-	ResFinder + species PointFinder panel.
+klebsiella_pneumoniae	meropenem	supported_primary	meropenem	-	ResFinder + species PointFinder panel.
+klebsiella_pneumoniae	nitrofurantoin	supported_primary	nitrofurantoin	-	ResFinder + species PointFinder panel.
+klebsiella_pneumoniae	norfloxacin	supported_primary	norfloxacin	-	ResFinder + species PointFinder panel.
+klebsiella_pneumoniae	ofloxacin	supported_primary	ofloxacin	-	ResFinder + species PointFinder panel.
+klebsiella_pneumoniae	piperacillin/tazobactam	supported_primary	piperacillin+tazobactam	-	ResFinder + species PointFinder panel.
+klebsiella_pneumoniae	polymyxin b	proxy_class	colistin	-	Proxy mapping in ResFinder phenotype table.
+klebsiella_pneumoniae	streptomycin	supported_primary	streptomycin	-	ResFinder + species PointFinder panel.
+klebsiella_pneumoniae	sulfamethoxazole/trimethoprim	proxy_class	sulfamethoxazole,trimethoprim	-	ResFinder predicts sulfamethoxazole and trimethoprim separately; union proxy.
+klebsiella_pneumoniae	tetracycline	supported_primary	tetracycline	-	ResFinder + species PointFinder panel.
+klebsiella_pneumoniae	ticarcillin/clavulanate	supported_primary	ticarcillin+clavulanic acid	-	ResFinder + species PointFinder panel.
+klebsiella_pneumoniae	tigecycline	supported_primary	tigecycline	-	ResFinder + species PointFinder panel.
+klebsiella_pneumoniae	tobramycin	supported_primary	tobramycin	-	ResFinder + species PointFinder panel.
+klebsiella_pneumoniae	trimethoprim	supported_primary	trimethoprim	-	ResFinder + species PointFinder panel.
+klebsiella_quasipneumoniae	cefotaxime	proxy_class	cefotaxime	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+klebsiella_quasipneumoniae	ceftazidime	proxy_class	ceftazidime	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+klebsiella_quasipneumoniae	sulfamethoxazole/trimethoprim	proxy_class	sulfamethoxazole,trimethoprim	-	ResFinder predicts sulfamethoxazole and trimethoprim separately; union proxy.
+mycobacterium_tuberculosis	amikacin	supported_primary	amikacin	-	ResFinder + species PointFinder panel.
+mycobacterium_tuberculosis	amoxicillin	supported_primary	amoxicillin	-	ResFinder + species PointFinder panel.
+mycobacterium_tuberculosis	capreomycin	supported_primary	capreomycin	-	ResFinder + species PointFinder panel.
+mycobacterium_tuberculosis	ciprofloxacin	supported_primary	ciprofloxacin	-	ResFinder + species PointFinder panel.
+mycobacterium_tuberculosis	clofazimine	unsupported	-	drug_not_in_resfinder_phenotypes	Drug absent from ResFinder/PointFinder phenotype translation table.
+mycobacterium_tuberculosis	cycloserine	unsupported	-	drug_not_in_resfinder_phenotypes	Drug absent from ResFinder/PointFinder phenotype translation table.
+mycobacterium_tuberculosis	delamanid	unsupported	-	drug_not_in_resfinder_phenotypes	Drug absent from ResFinder/PointFinder phenotype translation table.
+mycobacterium_tuberculosis	ethambutol	supported_primary	ethambutol	-	ResFinder + species PointFinder panel.
+mycobacterium_tuberculosis	ethionamide	supported_primary	ethionamide	-	ResFinder + species PointFinder panel.
+mycobacterium_tuberculosis	isoniazid	supported_primary	isoniazid	-	ResFinder + species PointFinder panel.
+mycobacterium_tuberculosis	kanamycin	supported_primary	kanamycin	-	ResFinder + species PointFinder panel.
+mycobacterium_tuberculosis	levofloxacin	supported_primary	levofloxacin	-	ResFinder + species PointFinder panel.
+mycobacterium_tuberculosis	linezolid	supported_primary	linezolid	-	ResFinder + species PointFinder panel.
+mycobacterium_tuberculosis	moxifloxacin	supported_primary	moxifloxacin	-	ResFinder + species PointFinder panel.
+mycobacterium_tuberculosis	nicotinamide	unsupported	-	drug_not_in_resfinder_phenotypes	Drug absent from ResFinder/PointFinder phenotype translation table.
+mycobacterium_tuberculosis	ofloxacin	supported_primary	ofloxacin	-	ResFinder + species PointFinder panel.
+mycobacterium_tuberculosis	para-aminosalicylic acid	unsupported	-	drug_not_in_resfinder_phenotypes	Drug absent from ResFinder/PointFinder phenotype translation table.
+mycobacterium_tuberculosis	prothionamide	unsupported	-	drug_not_in_resfinder_phenotypes	Drug absent from ResFinder/PointFinder phenotype translation table.
+mycobacterium_tuberculosis	pyrazinamide	supported_primary	pyrazinamide	-	ResFinder + species PointFinder panel.
+mycobacterium_tuberculosis	rifabutin	unsupported	-	drug_not_in_resfinder_phenotypes	Drug absent from ResFinder/PointFinder phenotype translation table.
+mycobacterium_tuberculosis	rifampin	supported_primary	rifampicin	-	ResFinder + species PointFinder panel.
+mycobacterium_tuberculosis	streptomycin	supported_primary	streptomycin	-	ResFinder + species PointFinder panel.
+neisseria_gonorrhoeae	azithromycin	supported_primary	azithromycin	-	ResFinder + species PointFinder panel.
+neisseria_gonorrhoeae	cefixime	supported_primary	cefixime	-	ResFinder + species PointFinder panel.
+neisseria_gonorrhoeae	ceftriaxone	supported_primary	ceftriaxone	-	ResFinder + species PointFinder panel.
+neisseria_gonorrhoeae	ciprofloxacin	supported_primary	ciprofloxacin	-	ResFinder + species PointFinder panel.
+neisseria_gonorrhoeae	erythromycin	supported_primary	erythromycin	-	ResFinder + species PointFinder panel.
+neisseria_gonorrhoeae	penicillin	supported_primary	penicillin	-	ResFinder + species PointFinder panel.
+neisseria_gonorrhoeae	tetracycline	supported_primary	tetracycline	-	ResFinder + species PointFinder panel.
+pseudomonas_aeruginosa	amikacin	supported_primary	amikacin	-	ResFinder + species PointFinder panel.
+pseudomonas_aeruginosa	aztreonam	supported_primary	aztreonam	-	ResFinder + species PointFinder panel.
+pseudomonas_aeruginosa	cefepime	supported_primary	cefepime	-	ResFinder + species PointFinder panel.
+pseudomonas_aeruginosa	ceftazidime	supported_primary	ceftazidime	-	ResFinder + species PointFinder panel.
+pseudomonas_aeruginosa	ceftazidime/avibactam	supported_primary	ceftazidime+avibactam	-	ResFinder + species PointFinder panel.
+pseudomonas_aeruginosa	ceftolozane/tazobactam	supported_primary	ceftolozane+tazobactam	-	ResFinder + species PointFinder panel.
+pseudomonas_aeruginosa	ciprofloxacin	supported_primary	ciprofloxacin	-	ResFinder + species PointFinder panel.
+pseudomonas_aeruginosa	gentamicin	supported_primary	gentamicin	-	ResFinder + species PointFinder panel.
+pseudomonas_aeruginosa	imipenem	supported_primary	imipenem	-	ResFinder + species PointFinder panel.
+pseudomonas_aeruginosa	levofloxacin	supported_primary	levofloxacin	-	ResFinder + species PointFinder panel.
+pseudomonas_aeruginosa	meropenem	supported_primary	meropenem	-	ResFinder + species PointFinder panel.
+pseudomonas_aeruginosa	piperacillin/tazobactam	supported_primary	piperacillin+tazobactam	-	ResFinder + species PointFinder panel.
+pseudomonas_aeruginosa	tobramycin	supported_primary	tobramycin	-	ResFinder + species PointFinder panel.
+salmonella_enterica	amoxicillin/clavulanate	supported_primary	amoxicillin+clavulanic acid	-	ResFinder + species PointFinder panel.
+salmonella_enterica	ampicillin	supported_primary	ampicillin	-	ResFinder + species PointFinder panel.
+salmonella_enterica	ampicillin/sulbactam	supported_primary	ampicillin+sulbactam	-	ResFinder + species PointFinder panel.
+salmonella_enterica	azithromycin	supported_primary	azithromycin	-	ResFinder + species PointFinder panel.
+salmonella_enterica	cefazolin	supported_primary	cefazolin	-	ResFinder + species PointFinder panel.
+salmonella_enterica	cefotaxime	supported_primary	cefotaxime	-	ResFinder + species PointFinder panel.
+salmonella_enterica	cefoxitin	supported_primary	cefoxitin	-	ResFinder + species PointFinder panel.
+salmonella_enterica	ceftazidime	supported_primary	ceftazidime	-	ResFinder + species PointFinder panel.
+salmonella_enterica	ceftiofur	supported_primary	ceftiofur	-	ResFinder + species PointFinder panel.
+salmonella_enterica	ceftriaxone	supported_primary	ceftriaxone	-	ResFinder + species PointFinder panel.
+salmonella_enterica	chloramphenicol	supported_primary	chloramphenicol	-	ResFinder + species PointFinder panel.
+salmonella_enterica	ciprofloxacin	supported_primary	ciprofloxacin	-	ResFinder + species PointFinder panel.
+salmonella_enterica	gentamicin	supported_primary	gentamicin	-	ResFinder + species PointFinder panel.
+salmonella_enterica	kanamycin	supported_primary	kanamycin	-	ResFinder + species PointFinder panel.
+salmonella_enterica	nalidixic acid	supported_primary	nalidixic acid	-	ResFinder + species PointFinder panel.
+salmonella_enterica	pefloxacin	unsupported	-	drug_not_in_resfinder_phenotypes	Drug absent from ResFinder/PointFinder phenotype translation table.
+salmonella_enterica	spectinomycin	supported_primary	spectinomycin	-	ResFinder + species PointFinder panel.
+salmonella_enterica	streptomycin	supported_primary	streptomycin	-	ResFinder + species PointFinder panel.
+salmonella_enterica	sulfamethoxazole	supported_primary	sulfamethoxazole	-	ResFinder + species PointFinder panel.
+salmonella_enterica	sulfamethoxazole/trimethoprim	proxy_class	sulfamethoxazole,trimethoprim	-	ResFinder predicts sulfamethoxazole and trimethoprim separately; union proxy.
+salmonella_enterica	sulfathiazole	unsupported	-	drug_not_in_resfinder_phenotypes	Drug absent from ResFinder/PointFinder phenotype translation table.
+salmonella_enterica	sulfisoxazole	proxy_class	sulfamethoxazole	-	Proxy mapping in ResFinder phenotype table.
+salmonella_enterica	temocillin	unsupported	-	drug_not_in_resfinder_phenotypes	Drug absent from ResFinder/PointFinder phenotype translation table.
+salmonella_enterica	tetracycline	supported_primary	tetracycline	-	ResFinder + species PointFinder panel.
+salmonella_enterica	trimethoprim	supported_primary	trimethoprim	-	ResFinder + species PointFinder panel.
+shigella_flexneri	ampicillin	proxy_class	ampicillin	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+shigella_flexneri	azithromycin	proxy_class	azithromycin	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+shigella_flexneri	ciprofloxacin	proxy_class	ciprofloxacin	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+shigella_flexneri	trimethoprim	proxy_class	trimethoprim	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+shigella_sonnei	amikacin	proxy_class	amikacin	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+shigella_sonnei	ampicillin	proxy_class	ampicillin	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+shigella_sonnei	azithromycin	proxy_class	azithromycin	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+shigella_sonnei	cefoperazone	proxy_class	cefoperazone	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+shigella_sonnei	cefotaxime	proxy_class	cefotaxime	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+shigella_sonnei	cefoxitin	proxy_class	cefoxitin	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+shigella_sonnei	cefpirome	unsupported	-	drug_not_in_resfinder_phenotypes	Drug absent from ResFinder/PointFinder phenotype translation table.
+shigella_sonnei	ceftazidime	proxy_class	ceftazidime	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+shigella_sonnei	ceftriaxone	proxy_class	ceftriaxone	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+shigella_sonnei	ciprofloxacin	proxy_class	ciprofloxacin	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+shigella_sonnei	colistin	proxy_class	colistin	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+shigella_sonnei	ertapenem	proxy_class	ertapenem	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+shigella_sonnei	gentamicin	proxy_class	gentamicin	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+shigella_sonnei	nalidixic acid	proxy_class	nalidixic acid	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+shigella_sonnei	streptomycin	proxy_class	streptomycin	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+shigella_sonnei	sulfamethoxazole/trimethoprim	proxy_class	sulfamethoxazole,trimethoprim	-	ResFinder predicts sulfamethoxazole and trimethoprim separately; union proxy.
+shigella_sonnei	temocillin	unsupported	-	drug_not_in_resfinder_phenotypes	Drug absent from ResFinder/PointFinder phenotype translation table.
+shigella_sonnei	tetracycline	proxy_class	tetracycline	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+shigella_sonnei	tobramycin	proxy_class	tobramycin	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+shigella_sonnei	trimethoprim	proxy_class	trimethoprim	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+staphylococcus_aureus	cefoxitin	supported_primary	cefoxitin	-	ResFinder + species PointFinder panel.
+staphylococcus_aureus	ceftaroline	unsupported	-	drug_not_in_resfinder_phenotypes	Drug absent from ResFinder/PointFinder phenotype translation table.
+staphylococcus_aureus	chloramphenicol	supported_primary	chloramphenicol	-	ResFinder + species PointFinder panel.
+staphylococcus_aureus	ciprofloxacin	supported_primary	ciprofloxacin	-	ResFinder + species PointFinder panel.
+staphylococcus_aureus	clindamycin	supported_primary	clindamycin	-	ResFinder + species PointFinder panel.
+staphylococcus_aureus	daptomycin	unsupported	-	drug_not_in_resfinder_phenotypes	Drug absent from ResFinder/PointFinder phenotype translation table.
+staphylococcus_aureus	erythromycin	supported_primary	erythromycin	-	ResFinder + species PointFinder panel.
+staphylococcus_aureus	fusidic acid	supported_primary	fusidic acid	-	ResFinder + species PointFinder panel.
+staphylococcus_aureus	gentamicin	supported_primary	gentamicin	-	ResFinder + species PointFinder panel.
+staphylococcus_aureus	levofloxacin	supported_primary	levofloxacin	-	ResFinder + species PointFinder panel.
+staphylococcus_aureus	moxifloxacin	supported_primary	moxifloxacin	-	ResFinder + species PointFinder panel.
+staphylococcus_aureus	mupirocin	supported_primary	mupirocin	-	ResFinder + species PointFinder panel.
+staphylococcus_aureus	oxacillin	supported_primary	oxacillin	-	ResFinder + species PointFinder panel.
+staphylococcus_aureus	penicillin	supported_primary	penicillin	-	ResFinder + species PointFinder panel.
+staphylococcus_aureus	rifampin	supported_primary	rifampicin	-	ResFinder + species PointFinder panel.
+staphylococcus_aureus	sulfamethoxazole/trimethoprim	proxy_class	sulfamethoxazole,trimethoprim	-	ResFinder predicts sulfamethoxazole and trimethoprim separately; union proxy.
+staphylococcus_aureus	tetracycline	supported_primary	tetracycline	-	ResFinder + species PointFinder panel.
+staphylococcus_aureus	vancomycin	supported_primary	vancomycin	-	ResFinder + species PointFinder panel.
+staphylococcus_haemolyticus	ciprofloxacin	proxy_class	ciprofloxacin	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+staphylococcus_haemolyticus	fusidic acid	proxy_class	fusidic acid	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+staphylococcus_haemolyticus	tetracycline	proxy_class	tetracycline	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+streptococcus_agalactiae	clindamycin	proxy_class	clindamycin	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+streptococcus_agalactiae	erythromycin	proxy_class	erythromycin	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+streptococcus_agalactiae	tetracycline	proxy_class	tetracycline	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+streptococcus_pneumoniae	azithromycin	proxy_class	azithromycin	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+streptococcus_pneumoniae	cefepime	proxy_class	cefepime	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+streptococcus_pneumoniae	cefotaxime	proxy_class	cefotaxime	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+streptococcus_pneumoniae	ceftriaxone	proxy_class	ceftriaxone	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+streptococcus_pneumoniae	cefuroxime	proxy_class	cefuroxime	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+streptococcus_pneumoniae	chloramphenicol	proxy_class	chloramphenicol	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+streptococcus_pneumoniae	clindamycin	proxy_class	clindamycin	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+streptococcus_pneumoniae	erythromycin	proxy_class	erythromycin	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+streptococcus_pneumoniae	meropenem	proxy_class	meropenem	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+streptococcus_pneumoniae	penicillin	proxy_class	penicillin	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+streptococcus_pneumoniae	sulfamethoxazole/trimethoprim	proxy_class	sulfamethoxazole,trimethoprim	-	ResFinder predicts sulfamethoxazole and trimethoprim separately; union proxy.
+streptococcus_pneumoniae	tetracycline	proxy_class	tetracycline	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+vibrio_cholerae	nalidixic acid	proxy_class	nalidixic acid	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+vibrio_cholerae	sulfamethoxazole	proxy_class	sulfamethoxazole	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).
+vibrio_cholerae	trimethoprim	proxy_class	trimethoprim	-	ResFinder acquired-gene screening only (no dedicated PointFinder species panel).

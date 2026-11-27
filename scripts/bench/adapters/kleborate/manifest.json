@@ -1,0 +1,33 @@
+{
+  "bootstrap_cluster_unit": "lineage",
+  "comparison_kind": "end_to_end_pipeline",
+  "database_pin": {
+    "name": "kleborate-card-kpsc",
+    "release_date": "2024-11-01",
+    "required_offline": true,
+    "version": "3.1.3"
+  },
+  "display_name": "Kleborate",
+  "genotype_to_drug_rule": "Within Klebsiella pneumoniae species complex, calls R when any mapped Kleborate resistance column contains a non-'-' determinant; absent columns yield no_call and non-KpSC species are unsupported.",
+  "i_handling": {
+    "description": "Kleborate reports AMR locus/mutation presence strings or '-' without an I category; any I token is counted separately and never mapped to S.",
+    "policy": "separate_count_never_map_to_s",
+    "tool_emits_intermediate": false
+  },
+  "input_format": "fasta_contigs",
+  "mode": "pretrained",
+  "primary_reading": "tool_default",
+  "readings": [
+    "tool_default",
+    "acquired_only"
+  ],
+  "schema_version": "grm-bench-adapter-v1",
+  "software_pin": {
+    "package": "kleborate",
+    "release_date": "2024-11-01",
+    "version": "3.1.3"
+  },
+  "species_scope": "species_complex",
+  "supports_scores": false,
+  "tool": "kleborate"
+}

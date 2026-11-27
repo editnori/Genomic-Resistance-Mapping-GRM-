@@ -1,0 +1,27 @@
+tool_drug	canonical_drug	map_kind	notes
+Amikacin	amikacin	exact	Mykrobe TB panel drug
+Capreomycin	capreomycin	exact	Mykrobe TB panel drug
+Methicillin	cefoxitin	proxy_class	Mykrobe Staph methicillin proxy for cefoxitin
+Ciprofloxacin	ciprofloxacin	exact	Mykrobe TB panel drug
+Clindamycin	clindamycin	exact	Mykrobe Staph panel drug
+Erythromycin	erythromycin	exact	Mykrobe Staph panel drug
+Ethambutol	ethambutol	exact	Mykrobe TB panel drug
+Fusidic_acid	fusidic acid	exact	Mykrobe Staph panel drug
+Gentamicin	gentamicin	exact	Mykrobe Staph panel drug
+Isoniazid	isoniazid	exact	Mykrobe TB panel drug
+Kanamycin	kanamycin	exact	Mykrobe TB panel drug
+Levofloxacin	levofloxacin	exact	Mykrobe TB panel drug
+Methicillin	methicillin	exact	Mykrobe Staph panel methicillin
+Moxifloxacin	moxifloxacin	exact	Mykrobe TB panel drug
+Mupirocin	mupirocin	exact	Mykrobe Staph panel drug
+Ofloxacin	ofloxacin	exact	Mykrobe TB panel drug
+Methicillin	oxacillin	proxy_class	Mykrobe Staph methicillin proxy for oxacillin
+Penicillin	penicillin	exact	Mykrobe Staph panel drug
+Pyrazinamide	pyrazinamide	exact	Mykrobe TB panel drug
+Rifampicin	rifabutin	proxy_class	Mykrobe rifampicin proxy for rifabutin
+Rifampicin	rifampin	exact	Mykrobe TB panel drug
+Streptomycin	streptomycin	exact	Mykrobe TB panel drug
+Trimethoprim	sulfamethoxazole/trimethoprim	proxy_class	Mykrobe trimethoprim proxy for folate combination
+Tetracycline	tetracycline	exact	Mykrobe Staph panel drug
+Trimethoprim	trimethoprim	exact	Mykrobe Staph panel trimethoprim
+Vancomycin	vancomycin	exact	Mykrobe Staph panel drug

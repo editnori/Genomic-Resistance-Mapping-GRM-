@@ -1,0 +1,63 @@
+tool_drug	canonical_drug	map_kind	notes
+AGly_acquired	amikacin	proxy_class	Kleborate aminoglycoside class column proxy.
+Bla_AmpC_acquired	amoxicillin/clavulanate	proxy_class	Kleborate inhibitor-resistant/AmpC/carbapenemase class proxy.
+Bla_Carb_acquired	amoxicillin/clavulanate	proxy_class	Kleborate inhibitor-resistant/AmpC/carbapenemase class proxy.
+Bla_ESBL_inhR_acquired	amoxicillin/clavulanate	proxy_class	Kleborate inhibitor-resistant/AmpC/carbapenemase class proxy.
+Bla_AmpC_acquired	ampicillin/sulbactam	proxy_class	Kleborate inhibitor-resistant/AmpC/carbapenemase class proxy.
+Bla_Carb_acquired	ampicillin/sulbactam	proxy_class	Kleborate inhibitor-resistant/AmpC/carbapenemase class proxy.
+Bla_ESBL_inhR_acquired	ampicillin/sulbactam	proxy_class	Kleborate inhibitor-resistant/AmpC/carbapenemase class proxy.
+Bla_Carb_acquired	aztreonam	proxy_class	Kleborate ESBL/carbapenemase class proxy.
+Bla_ESBL_acquired	aztreonam	proxy_class	Kleborate ESBL/carbapenemase class proxy.
+Bla_AmpC_acquired	cefazolin	proxy_class	Kleborate cephalosporinase class proxy.
+Bla_Carb_acquired	cefazolin	proxy_class	Kleborate cephalosporinase class proxy.
+Bla_ESBL_acquired	cefazolin	proxy_class	Kleborate cephalosporinase class proxy.
+Bla_Carb_acquired	cefepime	proxy_class	Kleborate ESBL/carbapenemase class proxy.
+Bla_ESBL_acquired	cefepime	proxy_class	Kleborate ESBL/carbapenemase class proxy.
+Bla_Carb_acquired	cefotaxime	proxy_class	Kleborate ESBL/carbapenemase class proxy.
+Bla_ESBL_acquired	cefotaxime	proxy_class	Kleborate ESBL/carbapenemase class proxy.
+Bla_AmpC_acquired	cefotetan	proxy_class	Kleborate AmpC/carbapenemase class proxy.
+Bla_Carb_acquired	cefotetan	proxy_class	Kleborate AmpC/carbapenemase class proxy.
+Bla_AmpC_acquired	cefoxitin	proxy_class	Kleborate AmpC/carbapenemase class proxy.
+Bla_Carb_acquired	cefoxitin	proxy_class	Kleborate AmpC/carbapenemase class proxy.
+Bla_Carb_acquired	cefpodoxime	proxy_class	Kleborate ESBL/carbapenemase class proxy.
+Bla_ESBL_acquired	cefpodoxime	proxy_class	Kleborate ESBL/carbapenemase class proxy.
+Bla_Carb_acquired	ceftazidime	proxy_class	Kleborate ESBL/carbapenemase class proxy.
+Bla_ESBL_acquired	ceftazidime	proxy_class	Kleborate ESBL/carbapenemase class proxy.
+Bla_Carb_acquired	ceftriaxone	proxy_class	Kleborate ESBL/carbapenemase class proxy.
+Bla_ESBL_acquired	ceftriaxone	proxy_class	Kleborate ESBL/carbapenemase class proxy.
+Bla_AmpC_acquired	cefuroxime	proxy_class	Kleborate cephalosporinase class proxy.
+Bla_Carb_acquired	cefuroxime	proxy_class	Kleborate cephalosporinase class proxy.
+Bla_ESBL_acquired	cefuroxime	proxy_class	Kleborate cephalosporinase class proxy.
+Phe_acquired	chloramphenicol	exact	Direct Kleborate phenicol column.
+Flq_acquired	ciprofloxacin	exact	Direct Kleborate fluoroquinolone columns.
+Flq_mutations	ciprofloxacin	exact	Direct Kleborate fluoroquinolone columns.
+Col_acquired	colistin	exact	Direct Kleborate colistin columns.
+Col_mutations	colistin	exact	Direct Kleborate colistin columns.
+Bla_Carb_acquired	doripenem	proxy_class	Kleborate carbapenemase class column proxy.
+Tet_acquired	doxycycline	proxy_class	Kleborate tetracycline class column proxy.
+Bla_Carb_acquired	ertapenem	proxy_class	Kleborate carbapenemase class column proxy.
+Fcyn_acquired	fosfomycin	exact	Direct Kleborate fosfomycin column.
+AGly_acquired	gentamicin	proxy_class	Kleborate aminoglycoside class column proxy.
+Bla_Carb_acquired	imipenem	proxy_class	Kleborate carbapenemase class column proxy.
+Flq_acquired	levofloxacin	proxy_class	Kleborate fluoroquinolone class column proxy.
+Flq_mutations	levofloxacin	proxy_class	Kleborate fluoroquinolone class column proxy.
+Bla_Carb_acquired	meropenem	proxy_class	Kleborate carbapenemase class column proxy.
+Flq_acquired	norfloxacin	proxy_class	Kleborate fluoroquinolone class column proxy.
+Flq_mutations	norfloxacin	proxy_class	Kleborate fluoroquinolone class column proxy.
+Flq_acquired	ofloxacin	proxy_class	Kleborate fluoroquinolone class column proxy.
+Flq_mutations	ofloxacin	proxy_class	Kleborate fluoroquinolone class column proxy.
+Bla_AmpC_acquired	piperacillin/tazobactam	proxy_class	Kleborate inhibitor-resistant/AmpC/carbapenemase class proxy.
+Bla_Carb_acquired	piperacillin/tazobactam	proxy_class	Kleborate inhibitor-resistant/AmpC/carbapenemase class proxy.
+Bla_ESBL_inhR_acquired	piperacillin/tazobactam	proxy_class	Kleborate inhibitor-resistant/AmpC/carbapenemase class proxy.
+Col_acquired	polymyxin b	proxy_class	Kleborate colistin column proxy for polymyxin b.
+Col_mutations	polymyxin b	proxy_class	Kleborate colistin column proxy for polymyxin b.
+AGly_acquired	streptomycin	proxy_class	Kleborate aminoglycoside class column proxy.
+Sul_acquired	sulfamethoxazole/trimethoprim	proxy_class	Kleborate sulfonamide/trimethoprim class proxy.
+Tmt_acquired	sulfamethoxazole/trimethoprim	proxy_class	Kleborate sulfonamide/trimethoprim class proxy.
+Tet_acquired	tetracycline	exact	Direct Kleborate tetracycline column.
+Bla_AmpC_acquired	ticarcillin/clavulanate	proxy_class	Kleborate inhibitor-resistant/AmpC/carbapenemase class proxy.
+Bla_Carb_acquired	ticarcillin/clavulanate	proxy_class	Kleborate inhibitor-resistant/AmpC/carbapenemase class proxy.
+Bla_ESBL_inhR_acquired	ticarcillin/clavulanate	proxy_class	Kleborate inhibitor-resistant/AmpC/carbapenemase class proxy.
+Tgc_acquired	tigecycline	exact	Direct Kleborate tigecycline column.
+AGly_acquired	tobramycin	proxy_class	Kleborate aminoglycoside class column proxy.
+Tmt_acquired	trimethoprim	exact	Direct Kleborate trimethoprim column.

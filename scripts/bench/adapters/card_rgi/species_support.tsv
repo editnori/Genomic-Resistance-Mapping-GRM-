@@ -1,0 +1,275 @@
+species_slug	canonical_drug	support_tier	tool_drugs	unsupported_reason	notes
+acinetobacter_baumannii	amikacin	supported_primary	amikacin	-	CARD RGI Perfect/Strict ARO agent mapping.
+acinetobacter_baumannii	ampicillin/sulbactam	proxy_class	penam	-	CARD ARO drug-class proxy (no agent-specific breakpoint curation).
+acinetobacter_baumannii	cefepime	supported_primary	cefepime	-	CARD RGI Perfect/Strict ARO agent mapping.
+acinetobacter_baumannii	cefotaxime	supported_primary	cefotaxime	-	CARD RGI Perfect/Strict ARO agent mapping.
+acinetobacter_baumannii	ceftazidime	supported_primary	ceftazidime	-	CARD RGI Perfect/Strict ARO agent mapping.
+acinetobacter_baumannii	ceftriaxone	supported_primary	ceftriaxone	-	CARD RGI Perfect/Strict ARO agent mapping.
+acinetobacter_baumannii	ciprofloxacin	supported_primary	ciprofloxacin	-	CARD RGI Perfect/Strict ARO agent mapping.
+acinetobacter_baumannii	doripenem	supported_primary	doripenem	-	CARD RGI Perfect/Strict ARO agent mapping.
+acinetobacter_baumannii	doxycycline	supported_primary	doxycycline	-	CARD RGI Perfect/Strict ARO agent mapping.
+acinetobacter_baumannii	gentamicin	supported_primary	gentamicin	-	CARD RGI Perfect/Strict ARO agent mapping.
+acinetobacter_baumannii	imipenem	supported_primary	imipenem	-	CARD RGI Perfect/Strict ARO agent mapping.
+acinetobacter_baumannii	levofloxacin	supported_primary	levofloxacin	-	CARD RGI Perfect/Strict ARO agent mapping.
+acinetobacter_baumannii	meropenem	supported_primary	meropenem	-	CARD RGI Perfect/Strict ARO agent mapping.
+acinetobacter_baumannii	minocycline	supported_primary	minocycline	-	CARD RGI Perfect/Strict ARO agent mapping.
+acinetobacter_baumannii	moxifloxacin	supported_primary	moxifloxacin	-	CARD RGI Perfect/Strict ARO agent mapping.
+acinetobacter_baumannii	sulfamethoxazole/trimethoprim	proxy_class	diaminopyrimidine antibiotic,sulfonamide antibiotic	-	CARD ARO drug-class proxy for folate pathway combination.
+acinetobacter_baumannii	tetracycline	supported_primary	tetracycline	-	CARD RGI Perfect/Strict ARO agent mapping.
+acinetobacter_baumannii	tobramycin	supported_primary	tobramycin	-	CARD RGI Perfect/Strict ARO agent mapping.
+campylobacter_coli	azithromycin	supported_primary	azithromycin	-	CARD RGI Perfect/Strict ARO agent mapping.
+campylobacter_coli	ciprofloxacin	supported_primary	ciprofloxacin	-	CARD RGI Perfect/Strict ARO agent mapping.
+campylobacter_coli	clindamycin	supported_primary	clindamycin	-	CARD RGI Perfect/Strict ARO agent mapping.
+campylobacter_coli	erythromycin	supported_primary	erythromycin	-	CARD RGI Perfect/Strict ARO agent mapping.
+campylobacter_coli	gentamicin	supported_primary	gentamicin	-	CARD RGI Perfect/Strict ARO agent mapping.
+campylobacter_coli	nalidixic acid	supported_primary	nalidixic acid	-	CARD RGI Perfect/Strict ARO agent mapping.
+campylobacter_coli	telithromycin	unsupported	-	drug_not_curated_in_card_aro	Drug not directly curated in CARD ARO mapping table.
+campylobacter_coli	tetracycline	supported_primary	tetracycline	-	CARD RGI Perfect/Strict ARO agent mapping.
+campylobacter_jejuni	ciprofloxacin	supported_primary	ciprofloxacin	-	CARD RGI Perfect/Strict ARO agent mapping.
+campylobacter_jejuni	clindamycin	supported_primary	clindamycin	-	CARD RGI Perfect/Strict ARO agent mapping.
+campylobacter_jejuni	nalidixic acid	supported_primary	nalidixic acid	-	CARD RGI Perfect/Strict ARO agent mapping.
+campylobacter_jejuni	tetracycline	supported_primary	tetracycline	-	CARD RGI Perfect/Strict ARO agent mapping.
+clostridioides_difficile	azithromycin	supported_primary	azithromycin	-	CARD RGI Perfect/Strict ARO agent mapping.
+clostridioides_difficile	ceftriaxone	supported_primary	ceftriaxone	-	CARD RGI Perfect/Strict ARO agent mapping.
+clostridioides_difficile	clarithromycin	supported_primary	clarithromycin	-	CARD RGI Perfect/Strict ARO agent mapping.
+clostridioides_difficile	moxifloxacin	supported_primary	moxifloxacin	-	CARD RGI Perfect/Strict ARO agent mapping.
+corynebacterium_diphtheriae	sulfamethoxazole/trimethoprim	proxy_class	diaminopyrimidine antibiotic,sulfonamide antibiotic	-	CARD ARO drug-class proxy for folate pathway combination.
+corynebacterium_diphtheriae	tetracycline	supported_primary	tetracycline	-	CARD RGI Perfect/Strict ARO agent mapping.
+corynebacterium_diphtheriae	trimethoprim	supported_primary	trimethoprim	-	CARD RGI Perfect/Strict ARO agent mapping.
+enterobacter_cloacae	cefepime	supported_primary	cefepime	-	CARD RGI Perfect/Strict ARO agent mapping.
+enterobacter_cloacae	ciprofloxacin	supported_primary	ciprofloxacin	-	CARD RGI Perfect/Strict ARO agent mapping.
+enterobacter_cloacae	gentamicin	supported_primary	gentamicin	-	CARD RGI Perfect/Strict ARO agent mapping.
+enterobacter_cloacae	imipenem	supported_primary	imipenem	-	CARD RGI Perfect/Strict ARO agent mapping.
+enterobacter_cloacae	levofloxacin	supported_primary	levofloxacin	-	CARD RGI Perfect/Strict ARO agent mapping.
+enterobacter_cloacae	meropenem	supported_primary	meropenem	-	CARD RGI Perfect/Strict ARO agent mapping.
+enterobacter_cloacae	sulfamethoxazole/trimethoprim	proxy_class	diaminopyrimidine antibiotic,sulfonamide antibiotic	-	CARD ARO drug-class proxy for folate pathway combination.
+enterobacter_cloacae	tobramycin	supported_primary	tobramycin	-	CARD RGI Perfect/Strict ARO agent mapping.
+enterobacter_cloacae	trimethoprim	supported_primary	trimethoprim	-	CARD RGI Perfect/Strict ARO agent mapping.
+enterococcus_faecium	ampicillin	supported_primary	ampicillin	-	CARD RGI Perfect/Strict ARO agent mapping.
+enterococcus_faecium	chloramphenicol	supported_primary	chloramphenicol	-	CARD RGI Perfect/Strict ARO agent mapping.
+enterococcus_faecium	clindamycin	supported_primary	clindamycin	-	CARD RGI Perfect/Strict ARO agent mapping.
+enterococcus_faecium	dalfopristin/quinupristin	proxy_class	streptogramin antibiotic	-	CARD ARO drug-class proxy (no agent-specific breakpoint curation).
+enterococcus_faecium	daptomycin	supported_primary	daptomycin	-	CARD RGI Perfect/Strict ARO agent mapping.
+enterococcus_faecium	doxycycline	supported_primary	doxycycline	-	CARD RGI Perfect/Strict ARO agent mapping.
+enterococcus_faecium	erythromycin	supported_primary	erythromycin	-	CARD RGI Perfect/Strict ARO agent mapping.
+enterococcus_faecium	gentamicin	supported_primary	gentamicin	-	CARD RGI Perfect/Strict ARO agent mapping.
+enterococcus_faecium	kanamycin	supported_primary	kanamycin	-	CARD RGI Perfect/Strict ARO agent mapping.
+enterococcus_faecium	linezolid	supported_primary	linezolid	-	CARD RGI Perfect/Strict ARO agent mapping.
+enterococcus_faecium	streptomycin	supported_primary	streptomycin	-	CARD RGI Perfect/Strict ARO agent mapping.
+enterococcus_faecium	teicoplanin	supported_primary	teicoplanin	-	CARD RGI Perfect/Strict ARO agent mapping.
+enterococcus_faecium	tetracycline	supported_primary	tetracycline	-	CARD RGI Perfect/Strict ARO agent mapping.
+enterococcus_faecium	vancomycin	supported_primary	vancomycin	-	CARD RGI Perfect/Strict ARO agent mapping.
+escherichia_coli	amikacin	supported_primary	amikacin	-	CARD RGI Perfect/Strict ARO agent mapping.
+escherichia_coli	amoxicillin/clavulanate	proxy_class	penam	-	CARD ARO drug-class proxy (no agent-specific breakpoint curation).
+escherichia_coli	ampicillin	supported_primary	ampicillin	-	CARD RGI Perfect/Strict ARO agent mapping.
+escherichia_coli	ampicillin/sulbactam	proxy_class	penam	-	CARD ARO drug-class proxy (no agent-specific breakpoint curation).
+escherichia_coli	aztreonam	supported_primary	aztreonam	-	CARD RGI Perfect/Strict ARO agent mapping.
+escherichia_coli	cefazolin	supported_primary	cefazolin	-	CARD RGI Perfect/Strict ARO agent mapping.
+escherichia_coli	cefepime	supported_primary	cefepime	-	CARD RGI Perfect/Strict ARO agent mapping.
+escherichia_coli	cefotaxime	supported_primary	cefotaxime	-	CARD RGI Perfect/Strict ARO agent mapping.
+escherichia_coli	cefoxitin	supported_primary	cefoxitin	-	CARD RGI Perfect/Strict ARO agent mapping.
+escherichia_coli	cefpodoxime	proxy_class	cephalosporin	-	CARD ARO drug-class proxy (no agent-specific breakpoint curation).
+escherichia_coli	cefpodoxime/clavulanate	unsupported	-	drug_not_curated_in_card_aro	Drug not directly curated in CARD ARO mapping table.
+escherichia_coli	ceftazidime	supported_primary	ceftazidime	-	CARD RGI Perfect/Strict ARO agent mapping.
+escherichia_coli	ceftiofur	unsupported	-	drug_not_curated_in_card_aro	Drug not directly curated in CARD ARO mapping table.
+escherichia_coli	ceftriaxone	supported_primary	ceftriaxone	-	CARD RGI Perfect/Strict ARO agent mapping.
+escherichia_coli	cefuroxime	supported_primary	cefuroxime	-	CARD RGI Perfect/Strict ARO agent mapping.
+escherichia_coli	cephalothin	proxy_class	cephalosporin	-	CARD ARO drug-class proxy (no agent-specific breakpoint curation).
+escherichia_coli	chloramphenicol	supported_primary	chloramphenicol	-	CARD RGI Perfect/Strict ARO agent mapping.
+escherichia_coli	ciprofloxacin	supported_primary	ciprofloxacin	-	CARD RGI Perfect/Strict ARO agent mapping.
+escherichia_coli	colistin	supported_primary	colistin	-	CARD RGI Perfect/Strict ARO agent mapping.
+escherichia_coli	doxycycline	supported_primary	doxycycline	-	CARD RGI Perfect/Strict ARO agent mapping.
+escherichia_coli	ertapenem	supported_primary	ertapenem	-	CARD RGI Perfect/Strict ARO agent mapping.
+escherichia_coli	erythromycin	supported_primary	erythromycin	-	CARD RGI Perfect/Strict ARO agent mapping.
+escherichia_coli	gentamicin	supported_primary	gentamicin	-	CARD RGI Perfect/Strict ARO agent mapping.
+escherichia_coli	imipenem	supported_primary	imipenem	-	CARD RGI Perfect/Strict ARO agent mapping.
+escherichia_coli	levofloxacin	supported_primary	levofloxacin	-	CARD RGI Perfect/Strict ARO agent mapping.
+escherichia_coli	meropenem	supported_primary	meropenem	-	CARD RGI Perfect/Strict ARO agent mapping.
+escherichia_coli	nalidixic acid	supported_primary	nalidixic acid	-	CARD RGI Perfect/Strict ARO agent mapping.
+escherichia_coli	nitrofurantoin	supported_primary	nitrofurantoin	-	CARD RGI Perfect/Strict ARO agent mapping.
+escherichia_coli	norfloxacin	supported_primary	norfloxacin	-	CARD RGI Perfect/Strict ARO agent mapping.
+escherichia_coli	piperacillin/tazobactam	proxy_class	penam	-	CARD ARO drug-class proxy (no agent-specific breakpoint curation).
+escherichia_coli	streptomycin	supported_primary	streptomycin	-	CARD RGI Perfect/Strict ARO agent mapping.
+escherichia_coli	sulfamethoxazole	supported_primary	sulfamethoxazole	-	CARD RGI Perfect/Strict ARO agent mapping.
+escherichia_coli	sulfamethoxazole/trimethoprim	proxy_class	diaminopyrimidine antibiotic,sulfonamide antibiotic	-	CARD ARO drug-class proxy for folate pathway combination.
+escherichia_coli	tetracycline	supported_primary	tetracycline	-	CARD RGI Perfect/Strict ARO agent mapping.
+escherichia_coli	tobramycin	supported_primary	tobramycin	-	CARD RGI Perfect/Strict ARO agent mapping.
+escherichia_coli	trimethoprim	supported_primary	trimethoprim	-	CARD RGI Perfect/Strict ARO agent mapping.
+klebsiella_aerogenes	ertapenem	supported_primary	ertapenem	-	CARD RGI Perfect/Strict ARO agent mapping.
+klebsiella_aerogenes	imipenem	supported_primary	imipenem	-	CARD RGI Perfect/Strict ARO agent mapping.
+klebsiella_aerogenes	meropenem	supported_primary	meropenem	-	CARD RGI Perfect/Strict ARO agent mapping.
+klebsiella_oxytoca	cefotaxime	supported_primary	cefotaxime	-	CARD RGI Perfect/Strict ARO agent mapping.
+klebsiella_oxytoca	cefoxitin	supported_primary	cefoxitin	-	CARD RGI Perfect/Strict ARO agent mapping.
+klebsiella_oxytoca	cefpodoxime	proxy_class	cephalosporin	-	CARD ARO drug-class proxy (no agent-specific breakpoint curation).
+klebsiella_oxytoca	ertapenem	supported_primary	ertapenem	-	CARD RGI Perfect/Strict ARO agent mapping.
+klebsiella_pneumoniae	amikacin	supported_primary	amikacin	-	CARD RGI Perfect/Strict ARO agent mapping.
+klebsiella_pneumoniae	amoxicillin/clavulanate	proxy_class	penam	-	CARD ARO drug-class proxy (no agent-specific breakpoint curation).
+klebsiella_pneumoniae	ampicillin/sulbactam	proxy_class	penam	-	CARD ARO drug-class proxy (no agent-specific breakpoint curation).
+klebsiella_pneumoniae	aztreonam	supported_primary	aztreonam	-	CARD RGI Perfect/Strict ARO agent mapping.
+klebsiella_pneumoniae	cefazolin	supported_primary	cefazolin	-	CARD RGI Perfect/Strict ARO agent mapping.
+klebsiella_pneumoniae	cefepime	supported_primary	cefepime	-	CARD RGI Perfect/Strict ARO agent mapping.
+klebsiella_pneumoniae	cefotetan	proxy_class	cephamycin	-	CARD ARO drug-class proxy (no agent-specific breakpoint curation).
+klebsiella_pneumoniae	cefoxitin	supported_primary	cefoxitin	-	CARD RGI Perfect/Strict ARO agent mapping.
+klebsiella_pneumoniae	cefpodoxime	proxy_class	cephalosporin	-	CARD ARO drug-class proxy (no agent-specific breakpoint curation).
+klebsiella_pneumoniae	cefpodoxime/ceftriaxone	unsupported	-	drug_not_curated_in_card_aro	Drug not directly curated in CARD ARO mapping table.
+klebsiella_pneumoniae	cefpodoxime/clavulanate	unsupported	-	drug_not_curated_in_card_aro	Drug not directly curated in CARD ARO mapping table.
+klebsiella_pneumoniae	ceftazidime	supported_primary	ceftazidime	-	CARD RGI Perfect/Strict ARO agent mapping.
+klebsiella_pneumoniae	ceftazidime/avibactam	proxy_class	cephalosporin	-	CARD ARO drug-class proxy (no agent-specific breakpoint curation).
+klebsiella_pneumoniae	ceftriaxone	supported_primary	ceftriaxone	-	CARD RGI Perfect/Strict ARO agent mapping.
+klebsiella_pneumoniae	cefuroxime	supported_primary	cefuroxime	-	CARD RGI Perfect/Strict ARO agent mapping.
+klebsiella_pneumoniae	chloramphenicol	supported_primary	chloramphenicol	-	CARD RGI Perfect/Strict ARO agent mapping.
+klebsiella_pneumoniae	ciprofloxacin	supported_primary	ciprofloxacin	-	CARD RGI Perfect/Strict ARO agent mapping.
+klebsiella_pneumoniae	colistin	supported_primary	colistin	-	CARD RGI Perfect/Strict ARO agent mapping.
+klebsiella_pneumoniae	doripenem	supported_primary	doripenem	-	CARD RGI Perfect/Strict ARO agent mapping.
+klebsiella_pneumoniae	doxycycline	supported_primary	doxycycline	-	CARD RGI Perfect/Strict ARO agent mapping.
+klebsiella_pneumoniae	ertapenem	supported_primary	ertapenem	-	CARD RGI Perfect/Strict ARO agent mapping.
+klebsiella_pneumoniae	fosfomycin	supported_primary	fosfomycin	-	CARD RGI Perfect/Strict ARO agent mapping.
+klebsiella_pneumoniae	gentamicin	supported_primary	gentamicin	-	CARD RGI Perfect/Strict ARO agent mapping.
+klebsiella_pneumoniae	imipenem	supported_primary	imipenem	-	CARD RGI Perfect/Strict ARO agent mapping.
+klebsiella_pneumoniae	levofloxacin	supported_primary	levofloxacin	-	CARD RGI Perfect/Strict ARO agent mapping.
+klebsiella_pneumoniae	meropenem	supported_primary	meropenem	-	CARD RGI Perfect/Strict ARO agent mapping.
+klebsiella_pneumoniae	nitrofurantoin	supported_primary	nitrofurantoin	-	CARD RGI Perfect/Strict ARO agent mapping.
+klebsiella_pneumoniae	norfloxacin	supported_primary	norfloxacin	-	CARD RGI Perfect/Strict ARO agent mapping.
+klebsiella_pneumoniae	ofloxacin	supported_primary	ofloxacin	-	CARD RGI Perfect/Strict ARO agent mapping.
+klebsiella_pneumoniae	piperacillin/tazobactam	proxy_class	penam	-	CARD ARO drug-class proxy (no agent-specific breakpoint curation).
+klebsiella_pneumoniae	polymyxin b	supported_primary	polymyxin b	-	CARD RGI Perfect/Strict ARO agent mapping.
+klebsiella_pneumoniae	streptomycin	supported_primary	streptomycin	-	CARD RGI Perfect/Strict ARO agent mapping.
+klebsiella_pneumoniae	sulfamethoxazole/trimethoprim	proxy_class	diaminopyrimidine antibiotic,sulfonamide antibiotic	-	CARD ARO drug-class proxy for folate pathway combination.
+klebsiella_pneumoniae	tetracycline	supported_primary	tetracycline	-	CARD RGI Perfect/Strict ARO agent mapping.
+klebsiella_pneumoniae	ticarcillin/clavulanate	proxy_class	penam	-	CARD ARO drug-class proxy (no agent-specific breakpoint curation).
+klebsiella_pneumoniae	tigecycline	supported_primary	tigecycline	-	CARD RGI Perfect/Strict ARO agent mapping.
+klebsiella_pneumoniae	tobramycin	supported_primary	tobramycin	-	CARD RGI Perfect/Strict ARO agent mapping.
+klebsiella_pneumoniae	trimethoprim	supported_primary	trimethoprim	-	CARD RGI Perfect/Strict ARO agent mapping.
+klebsiella_quasipneumoniae	cefotaxime	supported_primary	cefotaxime	-	CARD RGI Perfect/Strict ARO agent mapping.
+klebsiella_quasipneumoniae	ceftazidime	supported_primary	ceftazidime	-	CARD RGI Perfect/Strict ARO agent mapping.
+klebsiella_quasipneumoniae	sulfamethoxazole/trimethoprim	proxy_class	diaminopyrimidine antibiotic,sulfonamide antibiotic	-	CARD ARO drug-class proxy for folate pathway combination.
+mycobacterium_tuberculosis	amikacin	supported_primary	amikacin	-	CARD RGI Perfect/Strict ARO agent mapping.
+mycobacterium_tuberculosis	amoxicillin	proxy_class	penam	-	CARD ARO drug-class proxy (no agent-specific breakpoint curation).
+mycobacterium_tuberculosis	capreomycin	supported_primary	capreomycin	-	CARD RGI Perfect/Strict ARO agent mapping.
+mycobacterium_tuberculosis	ciprofloxacin	supported_primary	ciprofloxacin	-	CARD RGI Perfect/Strict ARO agent mapping.
+mycobacterium_tuberculosis	clofazimine	proxy_class	phenazine antibiotic	-	CARD ARO drug-class proxy (no agent-specific breakpoint curation).
+mycobacterium_tuberculosis	cycloserine	unsupported	-	drug_not_curated_in_card_aro	Drug not directly curated in CARD ARO mapping table.
+mycobacterium_tuberculosis	delamanid	proxy_class	nitroimidazole antibiotic	-	CARD ARO drug-class proxy (no agent-specific breakpoint curation).
+mycobacterium_tuberculosis	ethambutol	supported_primary	ethambutol	-	CARD RGI Perfect/Strict ARO agent mapping.
+mycobacterium_tuberculosis	ethionamide	supported_primary	ethionamide	-	CARD RGI Perfect/Strict ARO agent mapping.
+mycobacterium_tuberculosis	isoniazid	supported_primary	isoniazid	-	CARD RGI Perfect/Strict ARO agent mapping.
+mycobacterium_tuberculosis	kanamycin	supported_primary	kanamycin	-	CARD RGI Perfect/Strict ARO agent mapping.
+mycobacterium_tuberculosis	levofloxacin	supported_primary	levofloxacin	-	CARD RGI Perfect/Strict ARO agent mapping.
+mycobacterium_tuberculosis	linezolid	supported_primary	linezolid	-	CARD RGI Perfect/Strict ARO agent mapping.
+mycobacterium_tuberculosis	moxifloxacin	supported_primary	moxifloxacin	-	CARD RGI Perfect/Strict ARO agent mapping.
+mycobacterium_tuberculosis	nicotinamide	unsupported	-	drug_not_curated_in_card_aro	Drug not directly curated in CARD ARO mapping table.
+mycobacterium_tuberculosis	ofloxacin	supported_primary	ofloxacin	-	CARD RGI Perfect/Strict ARO agent mapping.
+mycobacterium_tuberculosis	para-aminosalicylic acid	unsupported	-	drug_not_curated_in_card_aro	Drug not directly curated in CARD ARO mapping table.
+mycobacterium_tuberculosis	prothionamide	unsupported	-	drug_not_curated_in_card_aro	Drug not directly curated in CARD ARO mapping table.
+mycobacterium_tuberculosis	pyrazinamide	supported_primary	pyrazinamide	-	CARD RGI Perfect/Strict ARO agent mapping.
+mycobacterium_tuberculosis	rifabutin	proxy_class	rifamycin antibiotic	-	CARD ARO drug-class proxy (no agent-specific breakpoint curation).
+mycobacterium_tuberculosis	rifampin	supported_primary	rifampicin	-	CARD RGI Perfect/Strict ARO agent mapping.
+mycobacterium_tuberculosis	streptomycin	supported_primary	streptomycin	-	CARD RGI Perfect/Strict ARO agent mapping.
+neisseria_gonorrhoeae	azithromycin	supported_primary	azithromycin	-	CARD RGI Perfect/Strict ARO agent mapping.
+neisseria_gonorrhoeae	cefixime	proxy_class	cephalosporin	-	CARD ARO drug-class proxy (no agent-specific breakpoint curation).
+neisseria_gonorrhoeae	ceftriaxone	supported_primary	ceftriaxone	-	CARD RGI Perfect/Strict ARO agent mapping.
+neisseria_gonorrhoeae	ciprofloxacin	supported_primary	ciprofloxacin	-	CARD RGI Perfect/Strict ARO agent mapping.
+neisseria_gonorrhoeae	erythromycin	supported_primary	erythromycin	-	CARD RGI Perfect/Strict ARO agent mapping.
+neisseria_gonorrhoeae	penicillin	supported_primary	penicillin	-	CARD RGI Perfect/Strict ARO agent mapping.
+neisseria_gonorrhoeae	tetracycline	supported_primary	tetracycline	-	CARD RGI Perfect/Strict ARO agent mapping.
+pseudomonas_aeruginosa	amikacin	supported_primary	amikacin	-	CARD RGI Perfect/Strict ARO agent mapping.
+pseudomonas_aeruginosa	aztreonam	supported_primary	aztreonam	-	CARD RGI Perfect/Strict ARO agent mapping.
+pseudomonas_aeruginosa	cefepime	supported_primary	cefepime	-	CARD RGI Perfect/Strict ARO agent mapping.
+pseudomonas_aeruginosa	ceftazidime	supported_primary	ceftazidime	-	CARD RGI Perfect/Strict ARO agent mapping.
+pseudomonas_aeruginosa	ceftazidime/avibactam	proxy_class	cephalosporin	-	CARD ARO drug-class proxy (no agent-specific breakpoint curation).
+pseudomonas_aeruginosa	ceftolozane/tazobactam	proxy_class	cephalosporin	-	CARD ARO drug-class proxy (no agent-specific breakpoint curation).
+pseudomonas_aeruginosa	ciprofloxacin	supported_primary	ciprofloxacin	-	CARD RGI Perfect/Strict ARO agent mapping.
+pseudomonas_aeruginosa	gentamicin	supported_primary	gentamicin	-	CARD RGI Perfect/Strict ARO agent mapping.
+pseudomonas_aeruginosa	imipenem	supported_primary	imipenem	-	CARD RGI Perfect/Strict ARO agent mapping.
+pseudomonas_aeruginosa	levofloxacin	supported_primary	levofloxacin	-	CARD RGI Perfect/Strict ARO agent mapping.
+pseudomonas_aeruginosa	meropenem	supported_primary	meropenem	-	CARD RGI Perfect/Strict ARO agent mapping.
+pseudomonas_aeruginosa	piperacillin/tazobactam	proxy_class	penam	-	CARD ARO drug-class proxy (no agent-specific breakpoint curation).
+pseudomonas_aeruginosa	tobramycin	supported_primary	tobramycin	-	CARD RGI Perfect/Strict ARO agent mapping.
+salmonella_enterica	amoxicillin/clavulanate	proxy_class	penam	-	CARD ARO drug-class proxy (no agent-specific breakpoint curation).
+salmonella_enterica	ampicillin	supported_primary	ampicillin	-	CARD RGI Perfect/Strict ARO agent mapping.
+salmonella_enterica	ampicillin/sulbactam	proxy_class	penam	-	CARD ARO drug-class proxy (no agent-specific breakpoint curation).
+salmonella_enterica	azithromycin	supported_primary	azithromycin	-	CARD RGI Perfect/Strict ARO agent mapping.
+salmonella_enterica	cefazolin	supported_primary	cefazolin	-	CARD RGI Perfect/Strict ARO agent mapping.
+salmonella_enterica	cefotaxime	supported_primary	cefotaxime	-	CARD RGI Perfect/Strict ARO agent mapping.
+salmonella_enterica	cefoxitin	supported_primary	cefoxitin	-	CARD RGI Perfect/Strict ARO agent mapping.
+salmonella_enterica	ceftazidime	supported_primary	ceftazidime	-	CARD RGI Perfect/Strict ARO agent mapping.
+salmonella_enterica	ceftiofur	unsupported	-	drug_not_curated_in_card_aro	Drug not directly curated in CARD ARO mapping table.
+salmonella_enterica	ceftriaxone	supported_primary	ceftriaxone	-	CARD RGI Perfect/Strict ARO agent mapping.
+salmonella_enterica	chloramphenicol	supported_primary	chloramphenicol	-	CARD RGI Perfect/Strict ARO agent mapping.
+salmonella_enterica	ciprofloxacin	supported_primary	ciprofloxacin	-	CARD RGI Perfect/Strict ARO agent mapping.
+salmonella_enterica	gentamicin	supported_primary	gentamicin	-	CARD RGI Perfect/Strict ARO agent mapping.
+salmonella_enterica	kanamycin	supported_primary	kanamycin	-	CARD RGI Perfect/Strict ARO agent mapping.
+salmonella_enterica	nalidixic acid	supported_primary	nalidixic acid	-	CARD RGI Perfect/Strict ARO agent mapping.
+salmonella_enterica	pefloxacin	unsupported	-	drug_not_curated_in_card_aro	Drug not directly curated in CARD ARO mapping table.
+salmonella_enterica	spectinomycin	supported_primary	spectinomycin	-	CARD RGI Perfect/Strict ARO agent mapping.
+salmonella_enterica	streptomycin	supported_primary	streptomycin	-	CARD RGI Perfect/Strict ARO agent mapping.
+salmonella_enterica	sulfamethoxazole	supported_primary	sulfamethoxazole	-	CARD RGI Perfect/Strict ARO agent mapping.
+salmonella_enterica	sulfamethoxazole/trimethoprim	proxy_class	diaminopyrimidine antibiotic,sulfonamide antibiotic	-	CARD ARO drug-class proxy for folate pathway combination.
+salmonella_enterica	sulfathiazole	unsupported	-	drug_not_curated_in_card_aro	Drug not directly curated in CARD ARO mapping table.
+salmonella_enterica	sulfisoxazole	unsupported	-	drug_not_curated_in_card_aro	Drug not directly curated in CARD ARO mapping table.
+salmonella_enterica	temocillin	unsupported	-	drug_not_curated_in_card_aro	Drug not directly curated in CARD ARO mapping table.
+salmonella_enterica	tetracycline	supported_primary	tetracycline	-	CARD RGI Perfect/Strict ARO agent mapping.
+salmonella_enterica	trimethoprim	supported_primary	trimethoprim	-	CARD RGI Perfect/Strict ARO agent mapping.
+shigella_flexneri	ampicillin	supported_primary	ampicillin	-	CARD RGI Perfect/Strict ARO agent mapping.
+shigella_flexneri	azithromycin	supported_primary	azithromycin	-	CARD RGI Perfect/Strict ARO agent mapping.
+shigella_flexneri	ciprofloxacin	supported_primary	ciprofloxacin	-	CARD RGI Perfect/Strict ARO agent mapping.
+shigella_flexneri	trimethoprim	supported_primary	trimethoprim	-	CARD RGI Perfect/Strict ARO agent mapping.
+shigella_sonnei	amikacin	supported_primary	amikacin	-	CARD RGI Perfect/Strict ARO agent mapping.
+shigella_sonnei	ampicillin	supported_primary	ampicillin	-	CARD RGI Perfect/Strict ARO agent mapping.
+shigella_sonnei	azithromycin	supported_primary	azithromycin	-	CARD RGI Perfect/Strict ARO agent mapping.
+shigella_sonnei	cefoperazone	unsupported	-	drug_not_curated_in_card_aro	Drug not directly curated in CARD ARO mapping table.
+shigella_sonnei	cefotaxime	supported_primary	cefotaxime	-	CARD RGI Perfect/Strict ARO agent mapping.
+shigella_sonnei	cefoxitin	supported_primary	cefoxitin	-	CARD RGI Perfect/Strict ARO agent mapping.
+shigella_sonnei	cefpirome	unsupported	-	drug_not_curated_in_card_aro	Drug not directly curated in CARD ARO mapping table.
+shigella_sonnei	ceftazidime	supported_primary	ceftazidime	-	CARD RGI Perfect/Strict ARO agent mapping.
+shigella_sonnei	ceftriaxone	supported_primary	ceftriaxone	-	CARD RGI Perfect/Strict ARO agent mapping.
+shigella_sonnei	ciprofloxacin	supported_primary	ciprofloxacin	-	CARD RGI Perfect/Strict ARO agent mapping.
+shigella_sonnei	colistin	supported_primary	colistin	-	CARD RGI Perfect/Strict ARO agent mapping.
+shigella_sonnei	ertapenem	supported_primary	ertapenem	-	CARD RGI Perfect/Strict ARO agent mapping.
+shigella_sonnei	gentamicin	supported_primary	gentamicin	-	CARD RGI Perfect/Strict ARO agent mapping.
+shigella_sonnei	nalidixic acid	supported_primary	nalidixic acid	-	CARD RGI Perfect/Strict ARO agent mapping.
+shigella_sonnei	streptomycin	supported_primary	streptomycin	-	CARD RGI Perfect/Strict ARO agent mapping.
+shigella_sonnei	sulfamethoxazole/trimethoprim	proxy_class	diaminopyrimidine antibiotic,sulfonamide antibiotic	-	CARD ARO drug-class proxy for folate pathway combination.
+shigella_sonnei	temocillin	unsupported	-	drug_not_curated_in_card_aro	Drug not directly curated in CARD ARO mapping table.
+shigella_sonnei	tetracycline	supported_primary	tetracycline	-	CARD RGI Perfect/Strict ARO agent mapping.
+shigella_sonnei	tobramycin	supported_primary	tobramycin	-	CARD RGI Perfect/Strict ARO agent mapping.
+shigella_sonnei	trimethoprim	supported_primary	trimethoprim	-	CARD RGI Perfect/Strict ARO agent mapping.
+staphylococcus_aureus	cefoxitin	supported_primary	cefoxitin	-	CARD RGI Perfect/Strict ARO agent mapping.
+staphylococcus_aureus	ceftaroline	unsupported	-	drug_not_curated_in_card_aro	Drug not directly curated in CARD ARO mapping table.
+staphylococcus_aureus	chloramphenicol	supported_primary	chloramphenicol	-	CARD RGI Perfect/Strict ARO agent mapping.
+staphylococcus_aureus	ciprofloxacin	supported_primary	ciprofloxacin	-	CARD RGI Perfect/Strict ARO agent mapping.
+staphylococcus_aureus	clindamycin	supported_primary	clindamycin	-	CARD RGI Perfect/Strict ARO agent mapping.
+staphylococcus_aureus	daptomycin	supported_primary	daptomycin	-	CARD RGI Perfect/Strict ARO agent mapping.
+staphylococcus_aureus	erythromycin	supported_primary	erythromycin	-	CARD RGI Perfect/Strict ARO agent mapping.
+staphylococcus_aureus	fusidic acid	supported_primary	fusidic acid	-	CARD RGI Perfect/Strict ARO agent mapping.
+staphylococcus_aureus	gentamicin	supported_primary	gentamicin	-	CARD RGI Perfect/Strict ARO agent mapping.
+staphylococcus_aureus	levofloxacin	supported_primary	levofloxacin	-	CARD RGI Perfect/Strict ARO agent mapping.
+staphylococcus_aureus	moxifloxacin	supported_primary	moxifloxacin	-	CARD RGI Perfect/Strict ARO agent mapping.
+staphylococcus_aureus	mupirocin	supported_primary	mupirocin	-	CARD RGI Perfect/Strict ARO agent mapping.
+staphylococcus_aureus	oxacillin	supported_primary	oxacillin	-	CARD RGI Perfect/Strict ARO agent mapping.
+staphylococcus_aureus	penicillin	supported_primary	penicillin	-	CARD RGI Perfect/Strict ARO agent mapping.
+staphylococcus_aureus	rifampin	supported_primary	rifampicin	-	CARD RGI Perfect/Strict ARO agent mapping.
+staphylococcus_aureus	sulfamethoxazole/trimethoprim	proxy_class	diaminopyrimidine antibiotic,sulfonamide antibiotic	-	CARD ARO drug-class proxy for folate pathway combination.
+staphylococcus_aureus	tetracycline	supported_primary	tetracycline	-	CARD RGI Perfect/Strict ARO agent mapping.
+staphylococcus_aureus	vancomycin	supported_primary	vancomycin	-	CARD RGI Perfect/Strict ARO agent mapping.
+staphylococcus_haemolyticus	ciprofloxacin	supported_primary	ciprofloxacin	-	CARD RGI Perfect/Strict ARO agent mapping.
+staphylococcus_haemolyticus	fusidic acid	supported_primary	fusidic acid	-	CARD RGI Perfect/Strict ARO agent mapping.
+staphylococcus_haemolyticus	tetracycline	supported_primary	tetracycline	-	CARD RGI Perfect/Strict ARO agent mapping.
+streptococcus_agalactiae	clindamycin	supported_primary	clindamycin	-	CARD RGI Perfect/Strict ARO agent mapping.
+streptococcus_agalactiae	erythromycin	supported_primary	erythromycin	-	CARD RGI Perfect/Strict ARO agent mapping.
+streptococcus_agalactiae	tetracycline	supported_primary	tetracycline	-	CARD RGI Perfect/Strict ARO agent mapping.
+streptococcus_pneumoniae	azithromycin	supported_primary	azithromycin	-	CARD RGI Perfect/Strict ARO agent mapping.
+streptococcus_pneumoniae	cefepime	supported_primary	cefepime	-	CARD RGI Perfect/Strict ARO agent mapping.
+streptococcus_pneumoniae	cefotaxime	supported_primary	cefotaxime	-	CARD RGI Perfect/Strict ARO agent mapping.
+streptococcus_pneumoniae	ceftriaxone	supported_primary	ceftriaxone	-	CARD RGI Perfect/Strict ARO agent mapping.
+streptococcus_pneumoniae	cefuroxime	supported_primary	cefuroxime	-	CARD RGI Perfect/Strict ARO agent mapping.
+streptococcus_pneumoniae	chloramphenicol	supported_primary	chloramphenicol	-	CARD RGI Perfect/Strict ARO agent mapping.
+streptococcus_pneumoniae	clindamycin	supported_primary	clindamycin	-	CARD RGI Perfect/Strict ARO agent mapping.
+streptococcus_pneumoniae	erythromycin	supported_primary	erythromycin	-	CARD RGI Perfect/Strict ARO agent mapping.
+streptococcus_pneumoniae	meropenem	supported_primary	meropenem	-	CARD RGI Perfect/Strict ARO agent mapping.
+streptococcus_pneumoniae	penicillin	supported_primary	penicillin	-	CARD RGI Perfect/Strict ARO agent mapping.
+streptococcus_pneumoniae	sulfamethoxazole/trimethoprim	proxy_class	diaminopyrimidine antibiotic,sulfonamide antibiotic	-	CARD ARO drug-class proxy for folate pathway combination.
+streptococcus_pneumoniae	tetracycline	supported_primary	tetracycline	-	CARD RGI Perfect/Strict ARO agent mapping.
+vibrio_cholerae	nalidixic acid	supported_primary	nalidixic acid	-	CARD RGI Perfect/Strict ARO agent mapping.
+vibrio_cholerae	sulfamethoxazole	supported_primary	sulfamethoxazole	-	CARD RGI Perfect/Strict ARO agent mapping.
+vibrio_cholerae	trimethoprim	supported_primary	trimethoprim	-	CARD RGI Perfect/Strict ARO agent mapping.

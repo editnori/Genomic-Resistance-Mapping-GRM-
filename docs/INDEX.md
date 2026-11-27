@@ -68,6 +68,7 @@ Every document under `docs/`, grouped by purpose. For the headline Revision 14 n
 | [lasso-stopping.md](lasso-stopping.md) | Lasso convergence rule and the 18-dataset Revision 14 scan. |
 | [ablation-report.md](ablation-report.md) | Schema and validator contract (`ablation-report` 1) for feature-block ablations. |
 | [ablation-runner.md](ablation-runner.md) | Runner contract for feature-block ablations. |
+| [benchmark-harness.md](benchmark-harness.md) | Unified Track A benchmark harness (`scripts/bench/`): two-mode adapter protocol for 11 AMR tools, 4-tier support registry, time-split provenance rules, `grm-bench-result-v1` scoring core, and Lambda runner. |
 | [association-plan.md](association-plan.md) | Planned association analysis specification. |
 
 ## Methodology, pipeline, and contracts

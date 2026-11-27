@@ -1,0 +1,27 @@
+{
+  "bootstrap_cluster_unit": "species",
+  "comparison_kind": "end_to_end_pipeline",
+  "database_pin": null,
+  "display_name": "Kover SCM",
+  "genotype_to_drug_rule": "Fits Kover 2.0.7 Set Covering Machine (conjunction and disjunction, max 6 rules, p in {0.1, 0.316, 0.562, 1.0, 1.778, 3.162, 10.0}, 3-fold inner CV) strictly inside each outer training fold and predicts 0/1 on outer test genomes.",
+  "i_handling": {
+    "description": "Kover SCM fits binary R/S rules inside outer training folds without an I category; any uncalled or failed test genome is counted separately and never mapped to S.",
+    "policy": "separate_count_never_map_to_s",
+    "tool_emits_intermediate": false
+  },
+  "input_format": "fasta_contigs_or_export",
+  "mode": "trainable",
+  "primary_reading": "scm_cv",
+  "readings": [
+    "scm_cv"
+  ],
+  "schema_version": "grm-bench-adapter-v1",
+  "software_pin": {
+    "package": "kover",
+    "release_date": "2021-02-01",
+    "version": "2.0.7"
+  },
+  "species_scope": "multi_species",
+  "supports_scores": false,
+  "tool": "kover"
+}

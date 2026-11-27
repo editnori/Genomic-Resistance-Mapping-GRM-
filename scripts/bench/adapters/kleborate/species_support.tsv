@@ -1,0 +1,275 @@
+species_slug	canonical_drug	support_tier	tool_drugs	unsupported_reason	notes
+acinetobacter_baumannii	amikacin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+acinetobacter_baumannii	ampicillin/sulbactam	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+acinetobacter_baumannii	cefepime	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+acinetobacter_baumannii	cefotaxime	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+acinetobacter_baumannii	ceftazidime	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+acinetobacter_baumannii	ceftriaxone	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+acinetobacter_baumannii	ciprofloxacin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+acinetobacter_baumannii	doripenem	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+acinetobacter_baumannii	doxycycline	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+acinetobacter_baumannii	gentamicin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+acinetobacter_baumannii	imipenem	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+acinetobacter_baumannii	levofloxacin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+acinetobacter_baumannii	meropenem	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+acinetobacter_baumannii	minocycline	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+acinetobacter_baumannii	moxifloxacin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+acinetobacter_baumannii	sulfamethoxazole/trimethoprim	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+acinetobacter_baumannii	tetracycline	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+acinetobacter_baumannii	tobramycin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+campylobacter_coli	azithromycin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+campylobacter_coli	ciprofloxacin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+campylobacter_coli	clindamycin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+campylobacter_coli	erythromycin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+campylobacter_coli	gentamicin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+campylobacter_coli	nalidixic acid	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+campylobacter_coli	telithromycin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+campylobacter_coli	tetracycline	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+campylobacter_jejuni	ciprofloxacin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+campylobacter_jejuni	clindamycin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+campylobacter_jejuni	nalidixic acid	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+campylobacter_jejuni	tetracycline	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+clostridioides_difficile	azithromycin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+clostridioides_difficile	ceftriaxone	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+clostridioides_difficile	clarithromycin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+clostridioides_difficile	moxifloxacin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+corynebacterium_diphtheriae	sulfamethoxazole/trimethoprim	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+corynebacterium_diphtheriae	tetracycline	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+corynebacterium_diphtheriae	trimethoprim	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+enterobacter_cloacae	cefepime	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+enterobacter_cloacae	ciprofloxacin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+enterobacter_cloacae	gentamicin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+enterobacter_cloacae	imipenem	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+enterobacter_cloacae	levofloxacin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+enterobacter_cloacae	meropenem	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+enterobacter_cloacae	sulfamethoxazole/trimethoprim	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+enterobacter_cloacae	tobramycin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+enterobacter_cloacae	trimethoprim	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+enterococcus_faecium	ampicillin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+enterococcus_faecium	chloramphenicol	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+enterococcus_faecium	clindamycin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+enterococcus_faecium	dalfopristin/quinupristin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+enterococcus_faecium	daptomycin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+enterococcus_faecium	doxycycline	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+enterococcus_faecium	erythromycin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+enterococcus_faecium	gentamicin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+enterococcus_faecium	kanamycin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+enterococcus_faecium	linezolid	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+enterococcus_faecium	streptomycin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+enterococcus_faecium	teicoplanin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+enterococcus_faecium	tetracycline	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+enterococcus_faecium	vancomycin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+escherichia_coli	amikacin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+escherichia_coli	amoxicillin/clavulanate	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+escherichia_coli	ampicillin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+escherichia_coli	ampicillin/sulbactam	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+escherichia_coli	aztreonam	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+escherichia_coli	cefazolin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+escherichia_coli	cefepime	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+escherichia_coli	cefotaxime	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+escherichia_coli	cefoxitin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+escherichia_coli	cefpodoxime	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+escherichia_coli	cefpodoxime/clavulanate	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+escherichia_coli	ceftazidime	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+escherichia_coli	ceftiofur	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+escherichia_coli	ceftriaxone	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+escherichia_coli	cefuroxime	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+escherichia_coli	cephalothin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+escherichia_coli	chloramphenicol	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+escherichia_coli	ciprofloxacin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+escherichia_coli	colistin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+escherichia_coli	doxycycline	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+escherichia_coli	ertapenem	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+escherichia_coli	erythromycin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+escherichia_coli	gentamicin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+escherichia_coli	imipenem	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+escherichia_coli	levofloxacin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+escherichia_coli	meropenem	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+escherichia_coli	nalidixic acid	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+escherichia_coli	nitrofurantoin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+escherichia_coli	norfloxacin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+escherichia_coli	piperacillin/tazobactam	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+escherichia_coli	streptomycin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+escherichia_coli	sulfamethoxazole	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+escherichia_coli	sulfamethoxazole/trimethoprim	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+escherichia_coli	tetracycline	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+escherichia_coli	tobramycin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+escherichia_coli	trimethoprim	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+klebsiella_aerogenes	ertapenem	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+klebsiella_aerogenes	imipenem	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+klebsiella_aerogenes	meropenem	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+klebsiella_oxytoca	cefotaxime	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+klebsiella_oxytoca	cefoxitin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+klebsiella_oxytoca	cefpodoxime	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+klebsiella_oxytoca	ertapenem	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+klebsiella_pneumoniae	amikacin	proxy_class	AGly_acquired	-	Kleborate aminoglycoside class column proxy.
+klebsiella_pneumoniae	amoxicillin/clavulanate	proxy_class	Bla_ESBL_inhR_acquired,Bla_AmpC_acquired,Bla_Carb_acquired	-	Kleborate inhibitor-resistant/AmpC/carbapenemase class proxy.
+klebsiella_pneumoniae	ampicillin/sulbactam	proxy_class	Bla_ESBL_inhR_acquired,Bla_AmpC_acquired,Bla_Carb_acquired	-	Kleborate inhibitor-resistant/AmpC/carbapenemase class proxy.
+klebsiella_pneumoniae	aztreonam	proxy_class	Bla_ESBL_acquired,Bla_Carb_acquired	-	Kleborate ESBL/carbapenemase class proxy.
+klebsiella_pneumoniae	cefazolin	proxy_class	Bla_ESBL_acquired,Bla_AmpC_acquired,Bla_Carb_acquired	-	Kleborate cephalosporinase class proxy.
+klebsiella_pneumoniae	cefepime	proxy_class	Bla_ESBL_acquired,Bla_Carb_acquired	-	Kleborate ESBL/carbapenemase class proxy.
+klebsiella_pneumoniae	cefotetan	proxy_class	Bla_AmpC_acquired,Bla_Carb_acquired	-	Kleborate AmpC/carbapenemase class proxy.
+klebsiella_pneumoniae	cefoxitin	proxy_class	Bla_AmpC_acquired,Bla_Carb_acquired	-	Kleborate AmpC/carbapenemase class proxy.
+klebsiella_pneumoniae	cefpodoxime	proxy_class	Bla_ESBL_acquired,Bla_Carb_acquired	-	Kleborate ESBL/carbapenemase class proxy.
+klebsiella_pneumoniae	cefpodoxime/ceftriaxone	unsupported	-	drug_not_reported_by_kleborate	Kleborate does not report an AMR column for this drug.
+klebsiella_pneumoniae	cefpodoxime/clavulanate	unsupported	-	drug_not_reported_by_kleborate	Kleborate does not report an AMR column for this drug.
+klebsiella_pneumoniae	ceftazidime	proxy_class	Bla_ESBL_acquired,Bla_Carb_acquired	-	Kleborate ESBL/carbapenemase class proxy.
+klebsiella_pneumoniae	ceftazidime/avibactam	unsupported	-	drug_not_reported_by_kleborate	Kleborate does not report an AMR column for this drug.
+klebsiella_pneumoniae	ceftriaxone	proxy_class	Bla_ESBL_acquired,Bla_Carb_acquired	-	Kleborate ESBL/carbapenemase class proxy.
+klebsiella_pneumoniae	cefuroxime	proxy_class	Bla_ESBL_acquired,Bla_AmpC_acquired,Bla_Carb_acquired	-	Kleborate cephalosporinase class proxy.
+klebsiella_pneumoniae	chloramphenicol	supported_primary	Phe_acquired	-	Direct Kleborate phenicol column.
+klebsiella_pneumoniae	ciprofloxacin	supported_primary	Flq_acquired,Flq_mutations	-	Direct Kleborate fluoroquinolone columns.
+klebsiella_pneumoniae	colistin	supported_primary	Col_acquired,Col_mutations	-	Direct Kleborate colistin columns.
+klebsiella_pneumoniae	doripenem	proxy_class	Bla_Carb_acquired	-	Kleborate carbapenemase class column proxy.
+klebsiella_pneumoniae	doxycycline	proxy_class	Tet_acquired	-	Kleborate tetracycline class column proxy.
+klebsiella_pneumoniae	ertapenem	proxy_class	Bla_Carb_acquired	-	Kleborate carbapenemase class column proxy.
+klebsiella_pneumoniae	fosfomycin	supported_primary	Fcyn_acquired	-	Direct Kleborate fosfomycin column.
+klebsiella_pneumoniae	gentamicin	proxy_class	AGly_acquired	-	Kleborate aminoglycoside class column proxy.
+klebsiella_pneumoniae	imipenem	proxy_class	Bla_Carb_acquired	-	Kleborate carbapenemase class column proxy.
+klebsiella_pneumoniae	levofloxacin	proxy_class	Flq_acquired,Flq_mutations	-	Kleborate fluoroquinolone class column proxy.
+klebsiella_pneumoniae	meropenem	proxy_class	Bla_Carb_acquired	-	Kleborate carbapenemase class column proxy.
+klebsiella_pneumoniae	nitrofurantoin	unsupported	-	drug_not_reported_by_kleborate	Kleborate does not report an AMR column for this drug.
+klebsiella_pneumoniae	norfloxacin	proxy_class	Flq_acquired,Flq_mutations	-	Kleborate fluoroquinolone class column proxy.
+klebsiella_pneumoniae	ofloxacin	proxy_class	Flq_acquired,Flq_mutations	-	Kleborate fluoroquinolone class column proxy.
+klebsiella_pneumoniae	piperacillin/tazobactam	proxy_class	Bla_ESBL_inhR_acquired,Bla_AmpC_acquired,Bla_Carb_acquired	-	Kleborate inhibitor-resistant/AmpC/carbapenemase class proxy.
+klebsiella_pneumoniae	polymyxin b	proxy_class	Col_acquired,Col_mutations	-	Kleborate colistin column proxy for polymyxin b.
+klebsiella_pneumoniae	streptomycin	proxy_class	AGly_acquired	-	Kleborate aminoglycoside class column proxy.
+klebsiella_pneumoniae	sulfamethoxazole/trimethoprim	proxy_class	Sul_acquired,Tmt_acquired	-	Kleborate sulfonamide/trimethoprim class proxy.
+klebsiella_pneumoniae	tetracycline	supported_primary	Tet_acquired	-	Direct Kleborate tetracycline column.
+klebsiella_pneumoniae	ticarcillin/clavulanate	proxy_class	Bla_ESBL_inhR_acquired,Bla_AmpC_acquired,Bla_Carb_acquired	-	Kleborate inhibitor-resistant/AmpC/carbapenemase class proxy.
+klebsiella_pneumoniae	tigecycline	supported_primary	Tgc_acquired	-	Direct Kleborate tigecycline column.
+klebsiella_pneumoniae	tobramycin	proxy_class	AGly_acquired	-	Kleborate aminoglycoside class column proxy.
+klebsiella_pneumoniae	trimethoprim	supported_primary	Tmt_acquired	-	Direct Kleborate trimethoprim column.
+klebsiella_quasipneumoniae	cefotaxime	proxy_class	Bla_ESBL_acquired,Bla_Carb_acquired	-	Kleborate ESBL/carbapenemase class proxy.
+klebsiella_quasipneumoniae	ceftazidime	proxy_class	Bla_ESBL_acquired,Bla_Carb_acquired	-	Kleborate ESBL/carbapenemase class proxy.
+klebsiella_quasipneumoniae	sulfamethoxazole/trimethoprim	proxy_class	Sul_acquired,Tmt_acquired	-	Kleborate sulfonamide/trimethoprim class proxy.
+mycobacterium_tuberculosis	amikacin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+mycobacterium_tuberculosis	amoxicillin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+mycobacterium_tuberculosis	capreomycin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+mycobacterium_tuberculosis	ciprofloxacin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+mycobacterium_tuberculosis	clofazimine	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+mycobacterium_tuberculosis	cycloserine	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+mycobacterium_tuberculosis	delamanid	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+mycobacterium_tuberculosis	ethambutol	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+mycobacterium_tuberculosis	ethionamide	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+mycobacterium_tuberculosis	isoniazid	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+mycobacterium_tuberculosis	kanamycin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+mycobacterium_tuberculosis	levofloxacin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+mycobacterium_tuberculosis	linezolid	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+mycobacterium_tuberculosis	moxifloxacin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+mycobacterium_tuberculosis	nicotinamide	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+mycobacterium_tuberculosis	ofloxacin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+mycobacterium_tuberculosis	para-aminosalicylic acid	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+mycobacterium_tuberculosis	prothionamide	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+mycobacterium_tuberculosis	pyrazinamide	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+mycobacterium_tuberculosis	rifabutin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+mycobacterium_tuberculosis	rifampin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+mycobacterium_tuberculosis	streptomycin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+neisseria_gonorrhoeae	azithromycin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+neisseria_gonorrhoeae	cefixime	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+neisseria_gonorrhoeae	ceftriaxone	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+neisseria_gonorrhoeae	ciprofloxacin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+neisseria_gonorrhoeae	erythromycin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+neisseria_gonorrhoeae	penicillin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+neisseria_gonorrhoeae	tetracycline	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+pseudomonas_aeruginosa	amikacin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+pseudomonas_aeruginosa	aztreonam	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+pseudomonas_aeruginosa	cefepime	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+pseudomonas_aeruginosa	ceftazidime	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+pseudomonas_aeruginosa	ceftazidime/avibactam	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+pseudomonas_aeruginosa	ceftolozane/tazobactam	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+pseudomonas_aeruginosa	ciprofloxacin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+pseudomonas_aeruginosa	gentamicin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+pseudomonas_aeruginosa	imipenem	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+pseudomonas_aeruginosa	levofloxacin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+pseudomonas_aeruginosa	meropenem	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+pseudomonas_aeruginosa	piperacillin/tazobactam	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+pseudomonas_aeruginosa	tobramycin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+salmonella_enterica	amoxicillin/clavulanate	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+salmonella_enterica	ampicillin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+salmonella_enterica	ampicillin/sulbactam	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+salmonella_enterica	azithromycin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+salmonella_enterica	cefazolin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+salmonella_enterica	cefotaxime	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+salmonella_enterica	cefoxitin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+salmonella_enterica	ceftazidime	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+salmonella_enterica	ceftiofur	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+salmonella_enterica	ceftriaxone	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+salmonella_enterica	chloramphenicol	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+salmonella_enterica	ciprofloxacin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+salmonella_enterica	gentamicin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+salmonella_enterica	kanamycin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+salmonella_enterica	nalidixic acid	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+salmonella_enterica	pefloxacin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+salmonella_enterica	spectinomycin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+salmonella_enterica	streptomycin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+salmonella_enterica	sulfamethoxazole	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+salmonella_enterica	sulfamethoxazole/trimethoprim	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+salmonella_enterica	sulfathiazole	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+salmonella_enterica	sulfisoxazole	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+salmonella_enterica	temocillin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+salmonella_enterica	tetracycline	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+salmonella_enterica	trimethoprim	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+shigella_flexneri	ampicillin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+shigella_flexneri	azithromycin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+shigella_flexneri	ciprofloxacin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+shigella_flexneri	trimethoprim	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+shigella_sonnei	amikacin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+shigella_sonnei	ampicillin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+shigella_sonnei	azithromycin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+shigella_sonnei	cefoperazone	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+shigella_sonnei	cefotaxime	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+shigella_sonnei	cefoxitin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+shigella_sonnei	cefpirome	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+shigella_sonnei	ceftazidime	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+shigella_sonnei	ceftriaxone	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+shigella_sonnei	ciprofloxacin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+shigella_sonnei	colistin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+shigella_sonnei	ertapenem	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+shigella_sonnei	gentamicin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+shigella_sonnei	nalidixic acid	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+shigella_sonnei	streptomycin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+shigella_sonnei	sulfamethoxazole/trimethoprim	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+shigella_sonnei	temocillin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+shigella_sonnei	tetracycline	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+shigella_sonnei	tobramycin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+shigella_sonnei	trimethoprim	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+staphylococcus_aureus	cefoxitin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+staphylococcus_aureus	ceftaroline	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+staphylococcus_aureus	chloramphenicol	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+staphylococcus_aureus	ciprofloxacin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+staphylococcus_aureus	clindamycin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+staphylococcus_aureus	daptomycin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+staphylococcus_aureus	erythromycin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+staphylococcus_aureus	fusidic acid	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+staphylococcus_aureus	gentamicin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+staphylococcus_aureus	levofloxacin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+staphylococcus_aureus	moxifloxacin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+staphylococcus_aureus	mupirocin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+staphylococcus_aureus	oxacillin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+staphylococcus_aureus	penicillin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+staphylococcus_aureus	rifampin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+staphylococcus_aureus	sulfamethoxazole/trimethoprim	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+staphylococcus_aureus	tetracycline	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+staphylococcus_aureus	vancomycin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+staphylococcus_haemolyticus	ciprofloxacin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+staphylococcus_haemolyticus	fusidic acid	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+staphylococcus_haemolyticus	tetracycline	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+streptococcus_agalactiae	clindamycin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+streptococcus_agalactiae	erythromycin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+streptococcus_agalactiae	tetracycline	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+streptococcus_pneumoniae	azithromycin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+streptococcus_pneumoniae	cefepime	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+streptococcus_pneumoniae	cefotaxime	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+streptococcus_pneumoniae	ceftriaxone	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+streptococcus_pneumoniae	cefuroxime	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+streptococcus_pneumoniae	chloramphenicol	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+streptococcus_pneumoniae	clindamycin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+streptococcus_pneumoniae	erythromycin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+streptococcus_pneumoniae	meropenem	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+streptococcus_pneumoniae	penicillin	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+streptococcus_pneumoniae	sulfamethoxazole/trimethoprim	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+streptococcus_pneumoniae	tetracycline	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+vibrio_cholerae	nalidixic acid	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+vibrio_cholerae	sulfamethoxazole	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
+vibrio_cholerae	trimethoprim	unsupported	-	species_outside_kpsc	Kleborate AMR module targets Klebsiella pneumoniae species complex only.
