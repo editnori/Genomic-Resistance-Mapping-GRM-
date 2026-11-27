@@ -24,7 +24,7 @@ Reading A uses these rows. Reading B first takes out each genome and antibiotic 
 
 ## Counts
 
-Per dataset, species and overall: rows out by each reason, then the rows, genomes, groups and pairs left, the largest BioProject's share of rows and of weight, and the same for exact MLST and MLST with HC20, beside the wider match on those rows. Groups weigh equally inside a dataset, datasets inside a species and species overall.
+Per dataset, species and overall: rows out by each reason, then the rows, genomes, groups and pairs left, and the same for exact MLST and MLST with HC20, beside the wider match on those rows. Overall alone: the largest BioProject's share of rows and of weight. Groups weigh equally inside a dataset, datasets inside a species and species overall.
 
 Rows lacking a typing value are counted among rows entering the groups and among eligible rows; genomes missing from the genome table, over every report and over those that enter.
 
