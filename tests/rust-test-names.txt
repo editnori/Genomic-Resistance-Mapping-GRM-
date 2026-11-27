@@ -262,6 +262,7 @@ src/lib.rs dna::tests::canonical_matches_both_strands
 src/lib.rs dna::tests::fused_canonical_with_stats_matches_separate_passes
 src/lib.rs dna::tests::mixed_values_balance_across_top_bits
 src/lib.rs dna::tests::mixer_round_trips_and_stays_in_range
+src/lib.rs dna::tests::swar_reverse_complement_matches_reference_loop_for_every_k
 src/lib.rs dna::tests::window_breaks_on_non_acgt
 src/lib.rs drugs::tests::classes_combinations_by_component
 src/lib.rs drugs::tests::resolves_submitter_variants
