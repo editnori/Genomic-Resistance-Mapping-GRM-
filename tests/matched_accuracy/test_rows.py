@@ -1,5 +1,8 @@
 """The rows of scripts/matched-accuracy/stage1.py: fields, lab records, BioProjects, reasons, groups, readings
-and weights, each on a few SYNTHETIC rows written here (gz-<n> genome ids and pz-<n> BioProjects, made up)."""
+and weights, each on a few SYNTHETIC rows written here (gz-<n> genome ids and pz-<n> BioProjects, made up).
+
+The genome table tests need BioProjects of an accession's shape, PRJ, two letters and digits, since ruling R53
+reads no other shape as a BioProject: acc() builds them from pieces, with the letters ZZ, which no registry uses."""
 
 import collections
 import fractions
@@ -16,6 +19,11 @@ s1 = common.stage1
 F = fractions.Fraction
 RESOLVE = {"Drug A": ("drug", "drug_a"), "Drug B": ("drug", "drug_b"), "Drug Class Q": ("class", None)}
 ASSAY = ("Broth dilution", "CLSI", "2018")
+
+
+def acc(n):
+    """A made-up BioProject of an accession's shape (see the module's note)."""
+    return "PRJ" + "ZZ" + f"9{n:03d}"
 
 
 def write_lines(d, name, rows):
@@ -157,19 +165,49 @@ class Labels(unittest.TestCase):
 
 
 class Genomes(unittest.TestCase):
+    @staticmethod
+    def read(rows, wanted):
+        return genome_rows([{"genome_id": g, "bioproject_accession": b, "date_inserted": made_up.STAMP}
+                            for g, b in rows], wanted)
+
     def test_a_genome_gets_one_bioproject_or_none(self):
-        rows = [("gz-1", "pz-1"), ("gz-2", "pz-1, pz-9"), ("gz-3", ""), ("gz-4", "pz-1"), ("gz-4", "pz-2"),
-                ("gz-5", "pz-5"), ("gz-5", " pz-5 "), ("gz-8", "pz-8")]
-        got = genome_rows([{"genome_id": g, "bioproject_accession": b, "date_inserted": made_up.STAMP} for g, b in rows],
-                          {"gz-1", "gz-2", "gz-3", "gz-4", "gz-5", "gz-6"})
+        rows = [("gz-1", acc(1)), ("gz-2", f"{acc(1)}, {acc(9)}"), ("gz-3", ""), ("gz-4", acc(1)), ("gz-4", acc(2)),
+                ("gz-5", acc(5)), ("gz-5", f" {acc(5)} "), ("gz-8", acc(8))]
+        got = self.read(rows, {"gz-1", "gz-2", "gz-3", "gz-4", "gz-5", "gz-6"})
         self.assertEqual(got[0], "ok")
-        project, absent, ids, accessions, n = got[1]
-        self.assertEqual(project, {"gz-1": "pz-1", "gz-2": None, "gz-3": None, "gz-4": None, "gz-5": "pz-5",
+        project, why, ids, accessions, n = got[1]
+        self.assertEqual(project, {"gz-1": acc(1), "gz-2": None, "gz-3": None, "gz-4": None, "gz-5": acc(5),
                                    "gz-6": None})
-        self.assertEqual({g for g, a in absent.items() if a}, {"gz-6"})
+        self.assertEqual({g: w for g, w in why.items() if w}, {"gz-6": "not_in_table"})
         self.assertEqual(ids, {"gz-1", "gz-2", "gz-3", "gz-4", "gz-5", "gz-8"})
-        self.assertEqual(accessions, {"pz-1", "pz-9", "pz-2", "pz-5", "pz-8"})
+        self.assertEqual(accessions, {acc(1), acc(9), acc(2), acc(5), acc(8)})
         self.assertEqual(n, 8)
+
+    def test_a_blank_row_beside_a_row_naming_a_bioproject_is_skipped(self):
+        # As the study split's reader skips it (scripts/c2-cap/check_folds.py, bioprojects); two BioProjects
+        # still give none, and a genome with blank rows alone is in the table but has none.
+        rows = [("gz-1", ""), ("gz-1", acc(1)), ("gz-2", None), ("gz-2", acc(2)), ("gz-3", [" "]), ("gz-3", acc(3)),
+                ("gz-4", acc(4)), ("gz-4", " "), ("gz-4", acc(5)), ("gz-5", ""), ("gz-5", None)]
+        project, why, ids, accessions, n = self.read(rows, {"gz-1", "gz-2", "gz-3", "gz-4", "gz-5"})[1]
+        self.assertEqual(project, {"gz-1": acc(1), "gz-2": acc(2), "gz-3": acc(3), "gz-4": None, "gz-5": None})
+        self.assertEqual(why, {"gz-1": None, "gz-2": None, "gz-3": None, "gz-4": None, "gz-5": None})
+        self.assertEqual(n, 11)
+
+    def test_a_value_of_one_part_without_an_accessions_shape_reads_as_no_bioproject(self):
+        # Ruling R53: a part is an accession when the whole part is PRJ, two letters and digits, without case.
+        rows = [("gz-1", "-"), ("gz-2", "n/a"), ("gz-3", acc(3).lower()), ("gz-4", "PRJ" + "Z" + "9004"),
+                ("gz-5", "PRJ" + "ZZZ" + "9005"), ("gz-6", "x" + acc(6)), ("gz-7", acc(7) + "x"),
+                ("gz-8", f"-, {acc(8)}"), ("gz-9", "PRJ" + "ZZ"), ("gz-10", "PRJ" + "ZZ" + "\uff19\uff10"),
+                ("gz-11", "-"), ("gz-11", "-")]
+        wanted = {f"gz-{i}" for i in range(1, 12)}
+        project, why, ids, accessions, n = self.read(rows, wanted)[1]
+        self.assertEqual({g for g, b in project.items() if b}, {"gz-3"})
+        self.assertEqual(project["gz-3"], acc(3).lower())
+        self.assertEqual({g for g, w in why.items() if w == "no_accession"},
+                         {"gz-1", "gz-2", "gz-4", "gz-5", "gz-6", "gz-7", "gz-9", "gz-10", "gz-11"})
+        self.assertIsNone(why["gz-8"])
+        # The scan looks up accession-shaped parts alone, those of a value of two parts too.
+        self.assertEqual(accessions, {acc(3).lower(), acc(8)})
 
 
 class Reasons(unittest.TestCase):
@@ -192,8 +230,8 @@ class Reasons(unittest.TestCase):
                  ("gz-6", "drug_a"): self.pair(ASSAY)}
         project = {"gz-0": None, "gz-1": "pz-1", "gz-2": None, "gz-3": "pz-1", "gz-4": "pz-1", "gz-5": "pz-1",
                    "gz-6": "pz-1"}
-        absent = {g: g == "gz-0" for g in project}
-        rows, out = s1.base_rows([rep], pairs, project, absent)
+        why = {g: "not_in_table" if g == "gz-0" else None for g in project}
+        rows, out = s1.base_rows([rep], pairs, project, why)
         # gz-0: a copy group, no BioProject and no record; gz-1: a copy group; gz-2: no BioProject and no record;
         # gz-3: no record; gz-4: a blank and two tuples; gz-5: two tuples; gz-6 stays.
         self.assertEqual(out["d1"], collections.Counter({"copy_group": 2, "bioproject": 1, "no_lab_record": 1,
@@ -203,19 +241,26 @@ class Reasons(unittest.TestCase):
     def test_a_pair_with_two_tuples_leaves_under_reason_5(self):
         rep = self.report(1)
         pairs = {("gz-0", "drug_a"): self.pair(ASSAY, ASSAY[:2] + ("2020",))}
-        rows, out = s1.base_rows([rep], pairs, {"gz-0": "pz-1"}, {"gz-0": False})
+        rows, out = s1.base_rows([rep], pairs, {"gz-0": "pz-1"}, {"gz-0": None})
         self.assertEqual((rows, dict(out["d1"])), ([], {"assay_not_single": 1}))
 
     def test_a_genome_the_second_copy_lacks_is_counted_apart_under_reason_2(self):
         rep = self.report(2)
-        rows, out = s1.base_rows([rep], {}, {"gz-0": None, "gz-1": None}, {"gz-0": True, "gz-1": False})
+        rows, out = s1.base_rows([rep], {}, {"gz-0": None, "gz-1": None}, {"gz-0": "not_in_table", "gz-1": None})
         self.assertEqual(dict(out["d1"]), {"bioproject": 2, "bioproject_not_in_table": 1})
+
+    def test_a_genome_whose_bioproject_has_no_accessions_shape_is_counted_apart_under_reason_2(self):
+        rep = self.report(3)
+        why = {"gz-0": "no_accession", "gz-1": "not_in_table", "gz-2": None}
+        rows, out = s1.base_rows([rep], {}, {"gz-0": None, "gz-1": None, "gz-2": None}, why)
+        self.assertEqual(dict(out["d1"]), {"bioproject": 3, "bioproject_no_accession": 1,
+                                           "bioproject_not_in_table": 1})
 
     def test_a_kept_row_carries_its_fields_and_a_blank_mlst_as_none(self):
         rep = self.report(1)
         rep["samples"][0]["mlst"] = " "
         rows, _ = s1.base_rows([rep], {("gz-0", "drug_a"): self.pair(ASSAY, intermediate=True)}, {"gz-0": "pz-1"},
-                               {"gz-0": False})
+                               {"gz-0": None})
         self.assertEqual(rows, [row(dataset="d1", species="sp1", genome="gz-0", fold=0, lineage=1, bioproject="pz-1",
                                     resistant=True, intermediate=True, mlst=None)])
 
@@ -293,21 +338,36 @@ class Typing(unittest.TestCase):
         rows = [row(genome="gz-1", resistant=True, mlst="ST-1"), row(genome="gz-2", resistant=False, mlst="ST-1"),
                 row(genome="gz-3", resistant=True, mlst="ST-2"), row(genome="gz-4", resistant=False, mlst=None)]
         hc20 = {"gz-1": "hc-1", "gz-2": "hc-2", "gz-3": "hc-1", "gz-4": "hc-1"}
-        eligible = {"dataset": {"d1": 4}, "species": {"sp1": 4}, "overall": {"all": 4}}
         names = {"dataset": {"d1"}, "species": {"sp1"}, "overall": {"all"}}
-        got = s1.typing(rows, eligible, hc20, names)
+        groups = s1.groups_of(rows)[0]
+        self.assertEqual(sum(len(g) for g in groups.values()), 4)
+        got = s1.typing(rows, groups, hc20, names)
         mlst = got["mlst"]["dataset"]["d1"]
-        self.assertEqual({k: mlst[k] for k in ("rows_lacking_value", "rows", "groups", "pairs", "primary_groups",
-                                               "primary_pairs", "rows_lost_from_primary")},
-                         {"rows_lacking_value": 1, "rows": 2, "groups": 1, "pairs": 1, "primary_groups": 1,
-                          "primary_pairs": 1, "rows_lost_from_primary": 2})
+        self.assertEqual({k: mlst[k] for k in ("lacking_value_of_rows_entering_groups", "rows", "groups", "pairs",
+                                               "primary_groups", "primary_pairs", "rows_lost_from_primary")},
+                         {"lacking_value_of_rows_entering_groups": 1, "rows": 2, "groups": 1, "pairs": 1,
+                          "primary_groups": 1, "primary_pairs": 1, "rows_lost_from_primary": 2})
         hc = got["mlst_hc20"]["overall"]["all"]
-        self.assertEqual((hc["rows_lacking_value"], hc["rows"], hc["groups"], hc["mlst_groups"],
+        self.assertEqual((hc["lacking_value_of_rows_entering_groups"], hc["rows"], hc["groups"], hc["mlst_groups"],
                           hc["rows_lost_from_primary"]), (1, 0, 0, 0, 4))
+
+    def test_a_row_lacking_a_value_is_counted_among_the_rows_entering_groups_and_among_the_eligible_rows(self):
+        # gz-1, gz-2 and gz-4 form a group with both outcomes; gz-3 sits alone and leaves by the one-outcome rule.
+        # gz-3 and gz-4 lack an MLST type: 2 of the 4 rows that enter the groups, 1 of the 3 eligible rows.
+        rows = [row(genome="gz-1", resistant=True, mlst="ST-1"), row(genome="gz-2", resistant=False, mlst="ST-1"),
+                row(genome="gz-3", resistant=True, lineage=2, mlst=None),
+                row(genome="gz-4", resistant=False, mlst=None)]
+        names = {"dataset": {"d1"}, "species": {"sp1"}, "overall": {"all"}}
+        got = s1.typing(rows, s1.groups_of(rows)[0], None, names)
+        for level, name in (("dataset", "d1"), ("species", "sp1"), ("overall", "all")):
+            c = got["mlst"][level][name]
+            with self.subTest(level=level):
+                self.assertEqual((c["lacking_value_of_rows_entering_groups"], c["lacking_value_of_eligible_rows"],
+                                  c["rows"], c["rows_lost_from_primary"]), (2, 1, 2, 1))
 
     def test_without_hc20_only_the_mlst_step_is_counted(self):
         names = {"dataset": {"d1"}, "species": {"sp1"}, "overall": {"all"}}
-        got = s1.typing([row()], {"dataset": {}, "species": {}, "overall": {}}, None, names)
+        got = s1.typing([row()], {}, None, names)
         self.assertEqual(list(got), ["mlst"])
 
 

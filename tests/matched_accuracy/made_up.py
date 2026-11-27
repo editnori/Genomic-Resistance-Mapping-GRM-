@@ -6,8 +6,11 @@ writes the made-up release under <top> and runs scripts/matched-accuracy/stage1.
 pinned sha256 values and line count set to those of the made-up files (a real run checks the real ones).
 
 Everything here is made up: the species, the antibiotics, the genome ids (gz-<species>-<n>, which is not the
-shape of a real genome id), the BioProject accessions (pz-<species>-<n>, not the shape of a real accession),
-the lab records, the label table, the genome tables and every score. No row comes from a real file.
+shape of a real genome id), the BioProject accessions, the lab records, the label table, the genome tables and
+every score. No row comes from a real file. A BioProject here has an accession's shape, PRJ, two letters and
+digits, because ruling R53 reads a value of any other shape as no BioProject; the test needs the shape, so
+bioproject() builds it from pieces, with the letters ZZ, which no registry uses, and the digits 9, the
+species' number and the project's number.
 
 The made-up release holds 12 reports in 4 species. Most datasets follow one plan of 10 rows:
 
@@ -49,6 +52,14 @@ def load_script():
 
 def gid(tag, n):
     return f"gz-{tag}-{n:02d}"
+
+
+SPECIES_NUMBER = {"al": 1, "be": 2, "ga": 3, "de": 4, "zz": 8}
+
+
+def bioproject(tag, n):
+    """A made-up BioProject with an accession's shape (see the module's note), such as BioProject 1 of alpha."""
+    return "PRJ" + "ZZ" + f"9{SPECIES_NUMBER[tag]}{n:02d}"
 
 
 def plan_rows(tag, first, mlst="ST-1", change=None):
@@ -130,22 +141,23 @@ def made_up():
           "ga": ("Synthia gamma", "synthia_gamma"), "de": ("Synthia delta", "synthia_delta")}
     datasets = []   # (tag, drug, rows, copies, learners, bioproject of each genome)
 
-    # alpha: all three datasets on genomes 1 to 10, BioProject pz-al-1.
+    # alpha: all three datasets on genomes 1 to 10, alpha's BioProject 1; genome 10's is a placeholder dash.
     datasets.append(("al", "drug_a", plan_rows("al", 1), [[6, 8]], True))      # a copy group: positions 7 and 9
     datasets.append(("al", "drug_b", plan_rows("al", 1), None, True))          # positions 3 and 8 add an I record
     datasets.append(("al", "drug_c", plan_rows("al", 1), None, True))          # the plan
-    # beta: drug_a on genomes 1 to 10 (pz-be-1); drug_b and drug_c on genomes 11 to 20 (pz-be-2).
+    # beta: drug_a on genomes 1 to 10 (BioProject 1); drug_b and drug_c on genomes 11 to 20 (BioProject 2).
     datasets.append(("be", "drug_a", plan_rows("be", 1), None, True))          # genome 1 blank, genome 5 two values
     datasets.append(("be", "drug_b", plan_rows("be", 11), None, True))         # genome 11 not in the genome table
     datasets.append(("be", "drug_c", plan_rows("be", 11, change={9: {"from_mic": True}}), None, True))
-    # gamma: one block of 10 genomes a dataset, pz-ga-1, pz-ga-2 and pz-ga-3.
+    # gamma: one block of 10 genomes a dataset, BioProjects 1, 2 and 3; genome 1 has a second, blank row.
     datasets.append(("ga", "drug_a", plan_rows("ga", 1), None, True))          # two tuples; case; blank years
     datasets.append(("ga", "drug_b", plan_rows("ga", 11), None, True))         # no record; blank method; blank standard
     datasets.append(("ga", "drug_c", plan_rows("ga", 21), None, True))         # position 1 adds an I record
-    # delta: drug_a on genomes 1 to 10 (1 to 6 pz-de-1, 7 to 10 pz-de-2); drug_b on 11 to 22 (pz-de-2), 12 rows;
-    # drug_c on 23 to 30 without learners.
+    # delta: drug_a on genomes 1 to 10 (1 to 6 BioProject 1, 7 to 10 BioProject 2); drug_b on 11 to 22
+    # (BioProject 2), 12 rows; drug_c on 23 to 30 without learners, and the second copy lacks genome 30.
+    # drug_a's position 10 lacks an MLST type and leaves by the one-outcome rule.
     mlst_a = {1: "ST-1", 2: "ST-1", 3: "ST-3", 4: "ST-4", 5: "ST-5", 6: None, 7: "ST-7", 8: "ST-7", 9: "ST-9",
-              10: "ST-10"}
+              10: None}
     datasets.append(("de", "drug_a", plan_rows("de", 1, change={p: {"mlst": m} for p, m in mlst_a.items()}), None, True))
     rows_b = plan_rows("de", 11, mlst="ST-2", change={9: {"mlst": "ST-6"}})
     rows_b += [{"id": gid("de", 21), "resistant": False, "fold": 3, "lineage": 13, "mlst": "ST-6", "from_mic": False},
@@ -196,26 +208,34 @@ def made_up():
     # A record of a drug class and one of a genome in no report: both read and passed over.
     records.append(record(gid("al", 1), "Drug Class Q", call="Susceptible"))
     records.append(record(gid("zz", 1), "Drug A", call="Resistant"))
+    # A record whose insertion time is a list of two texts, each before the seal.
+    records[0]["date_inserted"] = [STAMP, "2026-11-05T19:09:59Z"]
 
     project = {}
     for n in range(1, 11):
-        project[gid("al", n)] = "pz-al-1"
-        project[gid("be", n)] = "pz-be-1"
-        project[gid("ga", n)] = "pz-ga-1"
-        project[gid("de", n)] = "pz-de-1" if n <= 6 else "pz-de-2"
+        project[gid("al", n)] = bioproject("al", 1)
+        project[gid("be", n)] = bioproject("be", 1)
+        project[gid("ga", n)] = bioproject("ga", 1)
+        project[gid("de", n)] = bioproject("de", 1 if n <= 6 else 2)
     for n in range(11, 21):
-        project[gid("be", n)] = "pz-be-2"
-        project[gid("ga", n)] = "pz-ga-2"
+        project[gid("be", n)] = bioproject("be", 2)
+        project[gid("ga", n)] = bioproject("ga", 2)
     for n in range(21, 31):
-        project[gid("ga", n)] = "pz-ga-3"
+        project[gid("ga", n)] = bioproject("ga", 3)
     for n in range(11, 31):
-        project[gid("de", n)] = "pz-de-2"
+        project[gid("de", n)] = bioproject("de", 2)
+    project[gid("al", 10)] = "-"
     project[gid("be", 1)] = ""
-    project[gid("be", 5)] = "pz-be-1, pz-be-9"
-    project[gid("zz", 1)] = "pz-zz-1"
-    del project[gid("be", 11)]
+    project[gid("be", 5)] = bioproject("be", 1) + ", " + bioproject("be", 9)
+    project[gid("zz", 1)] = bioproject("zz", 1)
+    copy = {g: b for g, b in project.items() if g not in (gid("be", 11), gid("de", 30))}
     genomes = [{"genome_id": g, "bioproject_accession": b, "mlst": "made-up", "date_inserted": STAMP}
-               for g, b in sorted(project.items())]
+               for g, b in sorted(copy.items())]
+    # A second, blank row of gamma's genome 1, which the reader skips; a row whose insertion time is a list.
+    genomes.insert(genomes.index(next(r for r in genomes if r["genome_id"] == gid("ga", 1))) + 1,
+                   {"genome_id": gid("ga", 1), "bioproject_accession": " ", "mlst": "made-up",
+                    "date_inserted": STAMP})
+    next(r for r in genomes if r["genome_id"] == gid("al", 2))["date_inserted"] = [STAMP, "2025-07-01T00:00:00Z"]
 
     hc20 = {}
     for g in sorted(set(project) | {gid("be", 11)}):

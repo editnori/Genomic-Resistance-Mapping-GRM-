@@ -30,15 +30,16 @@ Steps.
 3. Check each row's lab call against the label table, for rows with
    from_mic false. Rows with from_mic true are counted apart.
 4. Take each row out under the first reason that applies: 1 a copy group,
-   2 no single BioProject, 3 no lab record for the pair, 4 a record with a
-   blank method or standard, 5 more than one tuple of method, standard and
-   year. Group the rest by dataset, fold, lineage cluster, BioProject,
+   2 no single BioProject (a value of one part without an accession's shape,
+   PRJ, two letters and digits, reads as none and is counted apart), 3 no lab
+   record for the pair, 4 a record with a blank method or standard, 5 more
+   than one tuple of method, standard and year. Group the rest by dataset, fold, lineage cluster, BioProject,
    method, standard and year; a group with one lab outcome leaves (6).
 5. Reading A is those rows. Reading B first takes out every pair with an
    intermediate record, then forms the groups again.
 6. Write one row list a reading under <out>/local/, mode 0600, and counts
    alone under <out>/export/, after a scan for every genome id and
-   BioProject accession the run read, with a positive control.
+   accession-shaped BioProject part the run read, with a positive control.
 
 Every check that fails prints one line and exits 1, writing nothing; a scan
 hit prints one line a file.
@@ -82,18 +83,21 @@ I_WORDS = {"intermediate", "susceptible-dose dependent", "reduced susceptibility
 
 REASONS = ("copy_group", "bioproject", "no_lab_record", "blank_method_or_standard", "assay_not_single")
 COUNT_COLUMNS = ("level", "name", "reading", "reports", "reports_left_out", "genome_rows", "from_mic_rows",
-                 "out_copy_group", "out_bioproject", "out_bioproject_not_in_table", "out_no_lab_record",
-                 "out_blank_method_or_standard", "out_assay_not_single", "out_intermediate", "out_one_lab_outcome",
-                 "rows", "genomes", "groups", "pairs", "datasets", "species")
-TYPING_COLUMNS = ("level", "name", "reading", "step", "rows_lacking_value", "rows", "genomes", "groups", "pairs",
-                  "datasets", "species", "primary_groups", "primary_pairs", "mlst_groups", "mlst_pairs",
-                  "rows_lost_from_primary")
+                 "out_copy_group", "out_bioproject", "out_bioproject_not_in_table", "out_bioproject_no_accession",
+                 "out_no_lab_record", "out_blank_method_or_standard", "out_assay_not_single", "out_intermediate",
+                 "out_one_lab_outcome", "rows", "genomes", "groups", "pairs", "datasets", "species")
+OUT_COLUMNS = tuple(c for c in COUNT_COLUMNS if c.startswith("out_"))
+TYPING_COLUMNS = ("level", "name", "reading", "step", "lacking_value_of_rows_entering_groups",
+                  "lacking_value_of_eligible_rows", "rows", "genomes", "groups", "pairs", "datasets", "species",
+                  "primary_groups", "primary_pairs", "mlst_groups", "mlst_pairs", "rows_lost_from_primary")
 SHARE_COLUMNS = ("reading", "bioprojects", "eligible_rows", "largest_bioproject_rows",
                  "its_weight_numerator", "its_weight_denominator",
                  "largest_weight_numerator", "largest_weight_denominator")
 ROW_LIST = {"A": "reading-A.tsv", "B": "reading-B.tsv"}
 ID_SHAPED = re.compile(r"\d+\.\d+")
 ACCESSION_SHAPED = re.compile(r"\b(?:PRJ[A-Z]{1,2}|SAM[A-Z]{1,2}|GC[AF]_)\d+")
+# A BioProject part is an accession when the whole part is PRJ, two letters and digits, matched without case.
+BIOPROJECT = re.compile(r"PRJ[A-Z]{2}[0-9]+", re.IGNORECASE | re.ASCII)
 
 
 class Stop(Exception):
@@ -431,11 +435,17 @@ def bioproject_parts(v):
     return {p for t in values(v) for p in re.split(r"[\s,;]+", t) if p}
 
 
-def read_genomes(path, wanted):
-    """({genome: BioProject or None}, {genome: True when the copy lacks it}, ids read, accessions read, rows).
+def is_accession(part):
+    return BIOPROJECT.fullmatch(part) is not None
 
-    A genome gets None when the copy gives it no BioProject, a value that holds more than one, or two rows that
-    differ. Every row must be inserted before the seal."""
+
+def read_genomes(path, wanted):
+    """({genome: BioProject or None}, {genome: why it has none}, ids read, accession-shaped parts read, rows).
+
+    A row whose BioProject is blank is skipped, as the study split's reader skips it
+    (scripts/c2-cap/check_folds.py, bioprojects). A genome gets None when the copy lacks it ("not_in_table"),
+    when its one part has no accession's shape ("no_accession"), or when it has no row with a value, a value of
+    more than one part, or two rows that differ. Every row must be inserted before the seal."""
     found, ids, accessions, n = {}, set(), set(), 0
     for row in jsonl(path, "the genome table, second copy"):
         n += 1
@@ -447,16 +457,18 @@ def read_genomes(path, wanted):
             raise Stop(f"a row of the genome table, second copy, is not inserted before {SEAL}")
         parts = bioproject_parts(row.get("bioproject_accession"))
         ids.add(genome)
-        accessions |= parts
-        if genome in wanted:
+        accessions |= {p for p in parts if is_accession(p)}
+        if genome in wanted and parts:
             found.setdefault(genome, []).append(frozenset(parts))
-    project, absent = {}, {}
+    project, why = {}, {}
     for g in wanted:
         rows = found.get(g)
-        absent[g] = rows is None
         one = rows is not None and len(set(rows)) == 1 and len(rows[0]) == 1
-        project[g] = next(iter(rows[0])) if one else None
-    return project, absent, ids, accessions, n
+        part = next(iter(rows[0])) if one else None
+        project[g] = part if part is not None and is_accession(part) else None
+        why[g] = "not_in_table" if g not in ids else "no_accession" if part is not None and project[g] is None \
+            else None
+    return project, why, ids, accessions, n
 
 
 def read_hc20(path, wanted):
@@ -479,7 +491,7 @@ def read_hc20(path, wanted):
 
 # 4. The rows, the readings and the groups.
 
-def base_rows(entering, pairs, project, absent):
+def base_rows(entering, pairs, project, why):
     """(rows that pass reasons 1 to 5, {dataset: Counter of reasons}). A row leaves under the first that applies."""
     rows, out = [], {}
     for rep in entering:
@@ -492,7 +504,8 @@ def base_rows(entering, pairs, project, absent):
                 c["copy_group"] += 1
             elif project[s["id"]] is None:
                 c["bioproject"] += 1
-                c["bioproject_not_in_table"] += absent[s["id"]]
+                if why[s["id"]]:
+                    c["bioproject_" + why[s["id"]]] += 1
             elif pair is None:
                 c["no_lab_record"] += 1
             elif pair["blank"]:
@@ -591,20 +604,27 @@ def shares(groups):
             "largest_weight_numerator": most.numerator, "largest_weight_denominator": most.denominator}
 
 
-def typing(rows, eligible_rows, hc20, names):
+def typing(rows, groups, hc20, names):
     """{step: {level: {name: counts}}}: each narrower match beside the wider matches on its surviving rows.
 
-    rows: the reading's rows that enter grouping. eligible_rows: {level: {name: rows}} of the reading itself.
-    names: {level: names} of the datasets and species that enter, and "all"."""
+    rows: the reading's rows that enter grouping. groups: the reading's eligible groups. names: {level: names}
+    of the datasets and species that enter, and "all". Rows lacking a value are counted twice: among the rows
+    that enter the groups, and among the eligible rows of the reading."""
+    eligible_rows = {level: {n: c["rows"] for n, c in ns.items()} for level, ns in support(groups).items()}
+    eligible = {(r["dataset"], r["genome"]) for g in groups.values() for r in g}
     steps = [("mlst", ("mlst",))] + ([("mlst_hc20", ("mlst", "hc20"))] if hc20 is not None else [])
     out = {}
     for step, extra in steps:
-        typed, lacking = [], collections.defaultdict(collections.Counter)
+        typed = []
+        lacking = collections.defaultdict(collections.Counter)
+        lacking_eligible = collections.defaultdict(collections.Counter)
         for r in rows:
             r2 = dict(r, hc20=hc20.get(r["genome"]) if hc20 is not None else None)
             if any(r2[k] is None for k in extra):
                 for level, name in (("dataset", r["dataset"]), ("species", r["species"]), ("overall", "all")):
                     lacking[level][name] += 1
+                    if (r["dataset"], r["genome"]) in eligible:
+                        lacking_eligible[level][name] += 1
             else:
                 typed.append(r2)
         narrow, _ = groups_of(typed, extra)
@@ -620,7 +640,9 @@ def typing(rows, eligible_rows, hc20, names):
                                                    "species": 0})
                 p = primary.get(level, {}).get(n, {"groups": 0, "pairs": 0})
                 m = mlst.get(level, {}).get(n, {"groups": 0, "pairs": 0}) if mlst is not None else None
-                table[level][n] = dict(c, rows_lacking_value=lacking[level][n], primary_groups=p["groups"],
+                table[level][n] = dict(c, lacking_value_of_rows_entering_groups=lacking[level][n],
+                                       lacking_value_of_eligible_rows=lacking_eligible[level][n],
+                                       primary_groups=p["groups"],
                                        primary_pairs=p["pairs"], mlst_groups="" if m is None else m["groups"],
                                        mlst_pairs="" if m is None else m["pairs"],
                                        rows_lost_from_primary=eligible_rows[level].get(n, 0) - c["rows"])
@@ -670,6 +692,7 @@ def count_rows(entering, left_out, base_reasons, readings):
                 for r in REASONS:
                     c["out_" + r] = b[r]
                 c["out_bioproject_not_in_table"] = b["bioproject_not_in_table"]
+                c["out_bioproject_no_accession"] = b["bioproject_no_accession"]
                 c["out_intermediate"] = o["intermediate"]
                 c["out_one_lab_outcome"] = o["one_lab_outcome"]
             else:
@@ -679,7 +702,7 @@ def count_rows(entering, left_out, base_reasons, readings):
             for d, (c, sp) in per["dataset"].items():
                 n = sp if level == "species" else "all"
                 t = per[level].setdefault(n, (dict(zero), None))[0]
-                for k in ("reports", "reports_left_out", "genome_rows", "from_mic_rows") + COUNT_COLUMNS[7:15]:
+                for k in ("reports", "reports_left_out", "genome_rows", "from_mic_rows") + OUT_COLUMNS:
                     t[k] += c[k]
         for level in ("dataset", "species", "overall"):
             for n in sorted(per[level]):
@@ -716,16 +739,21 @@ def export_files(facts, readings, lists):
          "note": "pairs of the release's rows read from it"},
         {"input": "genome table, second copy", "sha256": facts["sums"]["genome table, second copy"],
          "count": facts["genome_rows"],
-         "note": f"rows, each inserted before {SEAL}; genomes of the reports that enter not in it: "
-                 f"{facts['not_in_copy']}"},
+         "note": f"rows, each inserted before {SEAL}; a row with a blank BioProject is skipped; distinct genome "
+                 f"ids it lacks: {facts['not_in_copy_every']} of the {facts['genomes_every']} of every report, "
+                 f"{facts['not_in_copy']} of the {facts['genomes_entering']} of the reports that enter; genomes of "
+                 f"the reports that enter whose one BioProject part has no accession's shape: "
+                 f"{facts['no_accession']}"},
     ]
     if facts["hc20_rows"] is None:
         inputs.append({"input": "genome table, 5 Nov", "sha256": "-", "count": 0,
-                       "note": "not given: the HC20 read is dropped"})
+                       "note": "not given: the HC20 read is dropped and typing.tsv holds no mlst_hc20 step"})
     else:
         inputs.append({"input": "genome table, 5 Nov", "sha256": facts["sums"]["genome table, 5 Nov"],
                        "count": facts["hc20_rows"],
-                       "note": f"rows; genomes of the reports that enter not in it: {facts['not_in_hc20']}"})
+                       "note": f"rows; the table has no insertion time, so no row of it is checked against "
+                               f"{SEAL}; it gives the mlst_hc20 step of typing.tsv; genomes of the reports that "
+                               f"enter not in it: {facts['not_in_hc20']}"})
     for name in ("A", "B"):
         inputs.append({"input": f"row list, reading {name}", "sha256": hashlib.sha256(lists[name]).hexdigest(),
                        "count": lists[name].count(b"\n"), "note": "eligible rows; the list stays local"})
@@ -740,9 +768,9 @@ def export_files(facts, readings, lists):
         {"check": "lab calls", "result": f"rows with from_mic false, each equal to the label table: "
                                          f"{facts['labels_equal']}; rows with from_mic true, counted apart: "
                                          f"{facts['from_mic']}"},
-        {"check": "scan", "result": f"{facts['scan_ids']} genome ids and {facts['scan_accessions']} BioProject "
-                                    f"accessions read by the run, looked up in every export file after a positive "
-                                    f"control, before any file was written"},
+        {"check": "scan", "result": f"{facts['scan_ids']} genome ids and {facts['scan_accessions']} "
+                                    f"accession-shaped BioProject parts read by the run, looked up in every export "
+                                    f"file after a positive control, before any file was written"},
         {"check": "scores opened", "result": "no"},
     ]
     out = {
@@ -840,12 +868,13 @@ def build(args):
     table, label_ids = read_labels(args.labels[0], {(s["id"], rep["antibiotic"]) for rep in entering
                                                     for s in rep["samples"] if not s["from_mic"]})
     labels_equal, from_mic = check_labels(entering, table)
-    project, absent, genome_ids, accessions, genome_rows = read_genomes(args.genomes, wanted_genomes)
+    project, why, genome_ids, accessions, genome_rows = read_genomes(args.genomes, wanted_genomes)
+    every_genome = {s["id"] for rep in entering + left_out for s in rep["samples"]}
     hc20 = hc20_ids = hc20_rows = not_in_hc20 = None
     if args.hc20 != ["-"]:
         hc20, hc20_ids, hc20_rows, not_in_hc20 = read_hc20(args.hc20[0], wanted_genomes)
 
-    base, base_reasons = base_rows(entering, pairs, project, absent)
+    base, base_reasons = base_rows(entering, pairs, project, why)
     names = {"dataset": {rep["id"] for rep in entering}, "species": {rep["species_slug"] for rep in entering},
              "overall": {"all"}}
     readings = {}
@@ -853,21 +882,21 @@ def build(args):
         groups, own, rows = reading(base, name)
         if not groups:
             raise Stop(f"no group qualifies in reading {name}")
-        sup = support(groups)
-        eligible = {level: {n: c["rows"] for n, c in names.items()} for level, names in sup.items()}
         readings[name] = {"groups": groups, "reasons": own, "shares": shares(groups),
-                          "typing": typing(rows, eligible, hc20, names)}
+                          "typing": typing(rows, groups, hc20, names)}
     readings["counts"] = count_rows(entering, left_out, base_reasons, readings)
     readings["typing_rows"] = typing_rows(readings)
     lists = {name: row_list(readings[name]["groups"]) for name in ("A", "B")}
 
-    ids = {s["id"] for rep in entering + left_out for s in rep["samples"]} | record_ids | label_ids | genome_ids
+    ids = every_genome | record_ids | label_ids | genome_ids
     if hc20_ids:
         ids |= hc20_ids
     ids.discard(None)
     facts = {"sums": sums, "reports": len(files), "entering": len(entering), "left_out": len(left_out),
              "record_lines": record_lines, "drug_names": len(resolve), "label_pairs": len(table),
-             "genome_rows": genome_rows, "not_in_copy": sum(absent.values()), "hc20_rows": hc20_rows,
+             "genome_rows": genome_rows, "genomes_every": len(every_genome), "genomes_entering": len(wanted_genomes),
+             "not_in_copy_every": len(every_genome - genome_ids), "not_in_copy": len(wanted_genomes - genome_ids),
+             "no_accession": sum(1 for w in why.values() if w == "no_accession"), "hc20_rows": hc20_rows,
              "not_in_hc20": not_in_hc20, "labels_equal": labels_equal, "from_mic": from_mic,
              "scan_ids": len(ids), "scan_accessions": len(accessions)}
     export = export_files(facts, readings, lists)

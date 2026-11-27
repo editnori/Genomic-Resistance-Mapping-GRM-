@@ -33,14 +33,16 @@ class Export(unittest.TestCase):
     def test_no_export_file_holds_a_decimal_point_a_genome_id_or_an_accession(self):
         self.ran()
         ids = {s["id"] for r in self.rel["reports"] for s in r["samples"]} | {"gz-zz-01"}
-        accessions = {p for g in self.rel["genomes"] for p in s1.bioproject_parts(g["bioproject_accession"])}
+        parts = {p for g in self.rel["genomes"] for p in s1.bioproject_parts(g["bioproject_accession"])}
+        accessions = {p for p in parts if s1.is_accession(p)}
         self.assertEqual(len(ids), 91)
-        self.assertEqual(len(accessions), 10)
+        self.assertEqual((len(parts), len(accessions)), (11, 10))
+        self.assertEqual(parts - accessions, {"-"})
         for name in FILES:
             text = self.made.export(name).decode("utf-8")
             with self.subTest(file=name):
                 self.assertIsNone(re.search(r"\d\.\d", text))
-                self.assertIsNone(re.search(r"\b(gz|pz)-", text))
+                self.assertIsNone(re.search(r"\bgz-|(?i:PRJ[A-Z]{2}[0-9])", text))
                 self.assertEqual([x for x in ids | accessions if x in text], [])
 
     def test_the_row_lists_are_mode_0600_in_a_directory_of_mode_0700(self):
@@ -115,7 +117,8 @@ class WithoutHc20(common.Case, unittest.TestCase):
         self.assertEqual(run.code, 0, run.lines)
         self.assertEqual({r["step"] for r in run.table("typing.tsv")}, {"mlst"})
         row = {r["input"]: r for r in run.table("inputs.tsv")}["genome table, 5 Nov"]
-        self.assertEqual((row["sha256"], row["count"], row["note"]), ("-", "0", "not given: the HC20 read is dropped"))
+        self.assertEqual((row["sha256"], row["count"], row["note"]),
+                         ("-", "0", "not given: the HC20 read is dropped and typing.tsv holds no mlst_hc20 step"))
 
 
 if __name__ == "__main__":
