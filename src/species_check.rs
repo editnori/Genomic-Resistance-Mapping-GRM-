@@ -135,8 +135,7 @@ pub fn sketch_fasta(id: &str, path: &Path, space: &KmerSpace, s: usize) -> Resul
     let mut kept: Vec<u64> = Vec::with_capacity(4 * s);
     let mut cut = u64::MAX;
     fasta::for_each_record(path, |_, seq| {
-        stats.add(seq);
-        space.for_each_canonical(seq, |x| {
+        let (gc, ambiguous) = space.for_each_canonical_with_stats(seq, |x| {
             let h = space.mix(x);
             if h < cut {
                 kept.push(h);
@@ -150,6 +149,7 @@ pub fn sketch_fasta(id: &str, path: &Path, space: &KmerSpace, s: usize) -> Resul
                 }
             }
         });
+        stats.add_counts(seq.len() as u64, gc, ambiguous);
     })?;
     kept.sort_unstable();
     kept.dedup();

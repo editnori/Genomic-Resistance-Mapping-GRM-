@@ -48,8 +48,9 @@ pub fn count_into(
     values.clear();
     let mut stats = StatsBuilder::default();
     fasta::for_each_record(path, |_, seq| {
-        stats.add(seq);
-        space.for_each_canonical(seq, |x| values.push(space.mix(x)));
+        let (gc, ambiguous) =
+            space.for_each_canonical_with_stats(seq, |x| values.push(space.mix(x)));
+        stats.add_counts(seq.len() as u64, gc, ambiguous);
     })?;
     radix_sort(values, scratch);
     dedup_with_min_count(values, min_abundance);

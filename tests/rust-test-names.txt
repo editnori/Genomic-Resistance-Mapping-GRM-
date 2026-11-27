@@ -259,6 +259,7 @@ src/lib.rs cutoff::tests::the_truth_is_the_final_models_on_the_scored_set
 src/lib.rs cutoff::tests::the_truths_forest_reads_a_scored_genome_on_the_screened_features
 src/lib.rs dna::tests::canonical_matches_a_naive_reference_on_both_strands
 src/lib.rs dna::tests::canonical_matches_both_strands
+src/lib.rs dna::tests::fused_canonical_with_stats_matches_separate_passes
 src/lib.rs dna::tests::mixed_values_balance_across_top_bits
 src/lib.rs dna::tests::mixer_round_trips_and_stays_in_range
 src/lib.rs dna::tests::window_breaks_on_non_acgt
@@ -270,6 +271,7 @@ src/lib.rs export::tests::plans_are_the_outer_folds_evaluate_scores
 src/lib.rs export::tests::screens_are_matrix_rows_ranked_on_training_samples_only
 src/lib.rs export::tests::the_screen_keeps_the_lower_row_of_a_tie_at_the_cut
 src/lib.rs fasta::tests::gzip_reads_every_member_and_rejects_truncation
+src/lib.rs fasta::tests::open_handles_empty_short_fastq_and_non_seekable_streams
 src/lib.rs fasta::tests::reads_fastq
 src/lib.rs fasta::tests::reads_multiline_fasta_and_gzip
 src/lib.rs fasta::tests::stats_report_n50_and_gc
