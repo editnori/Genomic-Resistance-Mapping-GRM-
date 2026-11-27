@@ -10,10 +10,11 @@
 //!   | name_len u32 | name | bucket byte offsets [(B+1) x u64] | counts [B x u32]
 //!   | data: per bucket, LEB128 gaps from the bucket's lower bound.
 
-use crate::dna::{KmerSpace, MAX_K};
+use crate::dna::{KmerSpace, MAX_K, MIN_K};
 use crate::fasta::{self, SeqStats, StatsBuilder};
 use crate::fnv::Fnv;
 use anyhow::{Context, Result, bail, ensure};
+use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::{BufWriter, Read, Write};
 use std::os::unix::fs::FileExt;
@@ -268,6 +269,205 @@ pub fn digest(values: &[u64]) -> String {
         h.u64(v);
     }
     h.hex()
+}
+
+fn hex_digest(bytes: &[u8]) -> String {
+    bytes.iter().map(|b| format!("{b:02x}")).collect()
+}
+
+/// SHA-256 over sorted mixed canonical k-mers encoded as little-endian `u64`
+/// bytes (64-char lowercase hex).
+pub fn sha256_kmers(values: &[u64]) -> String {
+    let mut ctx = ring::digest::Context::new(&ring::digest::SHA256);
+    for &v in values {
+        ctx.update(&v.to_le_bytes());
+    }
+    hex_digest(ctx.finish().as_ref())
+}
+
+fn normalize_acgtn(seq: &[u8]) -> Vec<u8> {
+    let mut out = Vec::with_capacity(seq.len());
+    for &b in seq {
+        if b.is_ascii_whitespace() {
+            continue;
+        }
+        out.push(match b {
+            b'A' | b'a' => b'A',
+            b'C' | b'c' => b'C',
+            b'G' | b'g' => b'G',
+            b'T' | b't' => b'T',
+            _ => b'N',
+        });
+    }
+    out
+}
+
+fn reverse_complement_acgtn(seq: &[u8]) -> Vec<u8> {
+    seq.iter()
+        .rev()
+        .map(|&b| match b {
+            b'A' => b'T',
+            b'C' => b'G',
+            b'G' => b'C',
+            b'T' => b'A',
+            _ => b'N',
+        })
+        .collect()
+}
+
+/// Strand-canonical uppercase ACGTN contig sequence: the lexicographically
+/// smaller of the normalized forward sequence and its reverse complement.
+pub fn canonicalize_contig(seq: &[u8]) -> Vec<u8> {
+    let fwd = normalize_acgtn(seq);
+    let rc = reverse_complement_acgtn(&fwd);
+    if rc < fwd { rc } else { fwd }
+}
+
+/// SHA-256 of canonicalized uppercase ACGTN contigs sorted lexicographically,
+/// length-delimited so contig boundaries and copy counts stay distinct.
+fn sha256_normalized_contigs(contigs: &mut [Vec<u8>]) -> String {
+    contigs.sort_unstable();
+    let mut ctx = ring::digest::Context::new(&ring::digest::SHA256);
+    ctx.update(b"GRM-ASM-V1\0");
+    ctx.update(&(contigs.len() as u64).to_le_bytes());
+    for contig in contigs.iter() {
+        ctx.update(&(contig.len() as u64).to_le_bytes());
+        ctx.update(contig);
+    }
+    hex_digest(ctx.finish().as_ref())
+}
+
+/// In-memory sequence fingerprint of one FASTA assembly (plain or gzip),
+/// computed without writing a `.kset` file.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct FastaFingerprint {
+    pub k_digest: usize,
+    pub k_sketch: usize,
+    pub sketch_size: usize,
+    /// Deterministic 16-char lowercase hex matching [`digest`] (and
+    /// `counted.json`'s `kset_digest` when `k_digest == 31`).
+    pub fnv64_k31: String,
+    /// 64-char lowercase hex SHA-256 over sorted mixed canonical k-mers at
+    /// `k_digest` (little-endian `u64` bytes).
+    pub sha256_k31: String,
+    /// 64-char lowercase hex SHA-256 over strand-canonical uppercase ACGTN
+    /// contig sequences sorted lexicographically.
+    pub assembly_sha256: String,
+    /// Distinct canonical k-mer count at `k_digest`.
+    pub n_kmers: u64,
+    pub contigs: u32,
+    pub bp: u64,
+    /// Bottom-`sketch_size` MinHash sketch at `k_sketch` (compatible with
+    /// `species-check/sketches/*.json` at `k_sketch = 21`, `sketch_size = 1000`).
+    pub sketch_k21: Vec<u64>,
+    /// Optional bottom-`sketch_size` MinHash sketch at `k_digest`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sketch_k31: Option<Vec<u64>>,
+}
+
+/// Computes a [`FastaFingerprint`] directly in memory from a plain or `.gz`
+/// FASTA file without writing a `.kset` file.
+pub fn fingerprint_fasta(
+    path: &Path,
+    k_digest: usize,
+    k_sketch: usize,
+    sketch_size: usize,
+) -> Result<FastaFingerprint> {
+    fingerprint_fasta_into(
+        path,
+        k_digest,
+        k_sketch,
+        sketch_size,
+        &mut Vec::new(),
+        &mut Vec::new(),
+    )
+}
+
+/// [`fingerprint_fasta`] reusing caller-owned sort buffers across genomes.
+pub fn fingerprint_fasta_into(
+    path: &Path,
+    k_digest: usize,
+    k_sketch: usize,
+    sketch_size: usize,
+    values: &mut Vec<u64>,
+    scratch: &mut Vec<u64>,
+) -> Result<FastaFingerprint> {
+    ensure!(
+        (MIN_K..=MAX_K).contains(&k_digest),
+        "k_digest must be within {MIN_K}..={MAX_K}, got {k_digest}"
+    );
+    ensure!(
+        (MIN_K..=MAX_K).contains(&k_sketch),
+        "k_sketch must be within {MIN_K}..={MAX_K}, got {k_sketch}"
+    );
+    let space_digest = KmerSpace::new(k_digest);
+    let space_sketch = KmerSpace::new(k_sketch);
+    let separate_sketch = k_sketch != k_digest && sketch_size > 0;
+    let sketch_cap = sketch_size.saturating_mul(4).max(16);
+
+    values.clear();
+    let mut kept_sketch: Vec<u64> = if separate_sketch {
+        Vec::with_capacity(sketch_cap)
+    } else {
+        Vec::new()
+    };
+    let mut cut = u64::MAX;
+    let mut full_sketch = false;
+    let mut stats = StatsBuilder::default();
+    let mut contigs: Vec<Vec<u8>> = Vec::new();
+
+    fasta::for_each_record(path, |_, seq| {
+        stats.add(seq);
+        contigs.push(canonicalize_contig(seq));
+        space_digest.for_each_canonical(seq, |x| values.push(space_digest.mix(x)));
+        if separate_sketch {
+            space_sketch.for_each_canonical(seq, |x| {
+                let h = space_sketch.mix(x);
+                if !full_sketch || h < cut {
+                    kept_sketch.push(h);
+                    if kept_sketch.len() >= sketch_cap {
+                        kept_sketch.sort_unstable();
+                        kept_sketch.dedup();
+                        kept_sketch.truncate(sketch_size);
+                        if kept_sketch.len() == sketch_size {
+                            cut = kept_sketch[sketch_size - 1];
+                            full_sketch = true;
+                        }
+                    }
+                }
+            });
+        }
+    })?;
+
+    radix_sort(values, scratch);
+    dedup_with_min_count(values, 1);
+
+    let sketch_k21 = if sketch_size == 0 {
+        Vec::new()
+    } else if separate_sketch {
+        kept_sketch.sort_unstable();
+        kept_sketch.dedup();
+        kept_sketch.truncate(sketch_size);
+        kept_sketch
+    } else {
+        values.iter().copied().take(sketch_size).collect()
+    };
+    let sketch_k31 = (sketch_size > 0).then(|| values.iter().copied().take(sketch_size).collect());
+
+    let stats = stats.finish();
+    Ok(FastaFingerprint {
+        k_digest,
+        k_sketch,
+        sketch_size,
+        fnv64_k31: digest(values),
+        sha256_k31: sha256_kmers(values),
+        assembly_sha256: sha256_normalized_contigs(&mut contigs),
+        n_kmers: values.len() as u64,
+        contigs: stats.contigs,
+        bp: stats.length,
+        sketch_k21,
+        sketch_k31,
+    })
 }
 
 /// Random access to one kset's buckets.
@@ -700,5 +900,93 @@ mod tests {
             assert!(reader.read_all().is_err());
             out.clear();
         }
+    }
+
+    #[test]
+    fn fingerprint_fasta_matches_kset_digest_and_species_sketch_for_plain_and_gz() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
+        let c1: Vec<u8> = (0..12_000)
+            .map(|_| b"ACGT"[rng.random_range(0..4)])
+            .collect();
+        let c2: Vec<u8> = (0..8_000)
+            .map(|_| b"ACGT"[rng.random_range(0..4)])
+            .collect();
+        let fasta_text = [b">c1 desc\n".as_slice(), &c1, b"\n>c2\n", &c2, b"\n"].concat();
+        let plain = dir.path().join("g.fna");
+        std::fs::write(&plain, &fasta_text).unwrap();
+        let gz = dir.path().join("g.fna.gz");
+        let mut enc =
+            flate2::write::GzEncoder::new(File::create(&gz).unwrap(), flate2::Compression::fast());
+        enc.write_all(&fasta_text).unwrap();
+        enc.finish().unwrap();
+
+        let fp_plain = fingerprint_fasta(&plain, 31, 21, 1000).unwrap();
+        let fp_gz = fingerprint_fasta(&gz, 31, 21, 1000).unwrap();
+        assert_eq!(fp_plain, fp_gz);
+
+        let (values31, stats31) = count_file(&plain, &KmerSpace::new(31), 1).unwrap();
+        assert_eq!(fp_plain.fnv64_k31, digest(&values31));
+        assert_eq!(fp_plain.sha256_k31, sha256_kmers(&values31));
+        assert_eq!(fp_plain.sha256_k31.len(), 64);
+        assert_eq!(fp_plain.fnv64_k31.len(), 16);
+        assert_eq!(fp_plain.n_kmers, values31.len() as u64);
+        assert_eq!(fp_plain.contigs, stats31.contigs);
+        assert_eq!(fp_plain.bp, stats31.length);
+        assert_eq!(
+            fp_plain.sketch_k31.as_deref(),
+            Some(&values31[..1000.min(values31.len())])
+        );
+
+        let sp_sketch =
+            crate::species_check::sketch_fasta("g", &plain, &KmerSpace::new(21), 1000).unwrap();
+        assert_eq!(fp_plain.sketch_k21, sp_sketch.sketch);
+    }
+
+    #[test]
+    fn assembly_sha256_normalizes_layout_and_separates_from_kset_identity() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut rng = ChaCha8Rng::seed_from_u64(99);
+        let c1: String = (0..500)
+            .map(|_| b"ACGT"[rng.random_range(0..4)] as char)
+            .collect();
+        let c2: String = (0..300)
+            .map(|_| b"ACGT"[rng.random_range(0..4)] as char)
+            .collect();
+        let rc_c2: String = reverse_complement_acgtn(c2.as_bytes())
+            .into_iter()
+            .map(char::from)
+            .collect();
+
+        let p1 = dir.path().join("a.fna");
+        std::fs::write(&p1, format!(">h1\n{c1}\n>h2\n{c2}\n")).unwrap();
+        // Reordered, different headers, lowercase, wrapped lines, reverse-complemented contig.
+        let p2 = dir.path().join("b.fna");
+        let wrapped_c1 = c1
+            .to_lowercase()
+            .as_bytes()
+            .chunks(60)
+            .map(|chunk| std::str::from_utf8(chunk).unwrap())
+            .collect::<Vec<_>>()
+            .join("\n");
+        std::fs::write(&p2, format!(">other_a\n{rc_c2}\n>other_b\n{wrapped_c1}\n")).unwrap();
+        // Duplicated contig: identical canonical k-mer set, different assembly content!
+        let p3 = dir.path().join("c.fna");
+        std::fs::write(&p3, format!(">h1\n{c1}\n>h2\n{c2}\n>h2_dup\n{c2}\n")).unwrap();
+
+        let f1 = fingerprint_fasta(&p1, 31, 21, 200).unwrap();
+        let f2 = fingerprint_fasta(&p2, 31, 21, 200).unwrap();
+        let f3 = fingerprint_fasta(&p3, 31, 21, 200).unwrap();
+
+        assert_eq!(f1.assembly_sha256, f2.assembly_sha256);
+        assert_eq!(f1.fnv64_k31, f2.fnv64_k31);
+        assert_eq!(f1.sha256_k31, f2.sha256_k31);
+        assert_eq!(f1.sketch_k21, f2.sketch_k21);
+
+        // Duplicated contig preserves canonical k-mer set but changes assembly content hash.
+        assert_eq!(f1.fnv64_k31, f3.fnv64_k31);
+        assert_eq!(f1.sha256_k31, f3.sha256_k31);
+        assert_ne!(f1.assembly_sha256, f3.assembly_sha256);
+        assert_eq!(f3.contigs, 3);
     }
 }
