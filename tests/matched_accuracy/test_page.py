@@ -142,8 +142,7 @@ class FileWords(unittest.TestCase):
     def test_no_id_accession_or_sequence(self):
         for name, text in self.texts.items():
             with self.subTest(file=name):
-                self.assertIsNone(re.search(r"\bPRJ[A-Z]{1,2}\d+|\bSAM[NED][A-Z]?\d+|\bGC[AF]_\d+|\b[SE]R[RSX]\d{5,}",
-                                            text))
+                self.assertIsNone(re.search(r"(?i)(?:PRJ[A-Z]{1,2}|SAM[A-Z]{1,2}|GC[AF]_|[SED]R[RSXP])\d+", text))
                 self.assertIsNone(re.search(r"\b\d{3,7}\.\d{3,6}\b", text))
                 self.assertIsNone(re.search(r"\b[ACGT]{8,}\b", text))
 

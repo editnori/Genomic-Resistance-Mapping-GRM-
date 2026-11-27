@@ -24,6 +24,7 @@ INDEX = ROOT / "docs" / "INDEX.md"
 WORKFLOW = ROOT / ".github" / "workflows" / "ci.yml"
 CI_DOC = ROOT / "docs" / "ci.md"
 REFERENCE = ROOT / "reference" / "matched-accuracy"
+REPORT_SUMS = ROOT / "reference" / "lineage-control" / "rev14-274-20261112.reports.sha256"
 stage1 = made_up.load_script()
 STOP = "stage1: stopped: "
 

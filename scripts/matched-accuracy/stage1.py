@@ -95,7 +95,13 @@ SHARE_COLUMNS = ("reading", "bioprojects", "eligible_rows", "largest_bioproject_
                  "largest_weight_numerator", "largest_weight_denominator")
 ROW_LIST = {"A": "reading-A.tsv", "B": "reading-B.tsv"}
 ID_SHAPED = re.compile(r"\d+\.\d+")
-ACCESSION_SHAPED = re.compile(r"\b(?:PRJ[A-Z]{1,2}|SAM[A-Z]{1,2}|GC[AF]_)\d+")
+# BioProject, BioSample, assembly, and run, sample, experiment or study accessions; without case, and inside a word.
+ACCESSION_SHAPED = re.compile(r"(?:PRJ[A-Z]{1,2}|SAM[A-Z]{1,2}|GC[AF]_|[SED]R[RSXP])\d+", re.IGNORECASE)
+# The positive control's tokens: one of each shape, made up of zeros, planted apart in a copy of every export file.
+CONTROL_TOKENS = (("id-shaped token", "0" * 3 + "." + "0" * 5), ("BioProject-shaped token", "PRJ" + "ZZ" + "0" * 6),
+                  ("BioSample-shaped token", "SAM" + "ZZ" + "0" * 6), ("assembly-shaped token", "GC" + "A_" + "0" * 9),
+                  ("run-shaped token", "S" + "RR" + "0" * 7), ("sample-shaped token", "e" + "rs" + "0" * 7))
+CONTROL_ID = "stage1-scan-control"
 # A BioProject part is an accession when the whole part is PRJ, two letters and digits, matched without case.
 BIOPROJECT = re.compile(r"PRJ[A-Z]{2}[0-9]+", re.IGNORECASE | re.ASCII)
 
@@ -790,15 +796,38 @@ def hits(data, ids, accessions):
     return n + len(ID_SHAPED.findall(text)) + len(ACCESSION_SHAPED.findall(text))
 
 
+def shaped(token):
+    return ID_SHAPED.search(token) is not None or ACCESSION_SHAPED.search(token) is not None
+
+
+def find(files, ids, accessions):
+    """{file name: hits} of the export files that hold any."""
+    return {name: n for name in sorted(files) if (n := hits(files[name], ids, accessions))}
+
+
+def control_plants(ids, accessions):
+    """[(what, token, ids to look up)]: a read genome id without a shape, the smallest accession read, and one token
+    of each shape. When every read id has a shape, a made-up id without one stands in, added to the lookup."""
+    shapeless = sorted(i for i in ids if not shaped(i))
+    if shapeless:
+        plants = [("read genome id without an id's shape", shapeless[0], ids)]
+    else:
+        plants = [("made-up genome id without an id's shape", CONTROL_ID, ids | {CONTROL_ID})]
+    if accessions:
+        plants.append(("read accession", min(accessions), ids))
+    return plants + [(what, token, ids) for what, token in CONTROL_TOKENS]
+
+
 def scan(files, ids, accessions):
-    """[(file name, hits)] of the export files that hold any. A positive control runs first."""
-    first = sorted(files)[0]
-    planted = files[first] + min(ids).encode("utf-8")
-    if hits(planted, ids, accessions) == 0:
-        raise Stop("the scan's positive control found no genome id in a file that holds one")
-    if accessions and hits(files[first] + min(accessions).encode("utf-8"), ids, accessions) == 0:
-        raise Stop("the scan's positive control found no accession in a file that holds one")
-    return [(name, n) for name in sorted(files) if (n := hits(files[name], ids, accessions))]
+    """[(file name, hits)] of the export files that hold any, after a positive control: each plant, apart, in a copy
+    of every export file, sent through the whole scan, must raise the count of every file."""
+    found = find(files, ids, accessions)
+    for what, token, lookup in control_plants(ids, accessions):
+        planted = {name: data + b"\n" + token.encode("utf-8") + b"\n" for name, data in files.items()}
+        got = find(planted, lookup, accessions)
+        if any(got.get(name, 0) <= found.get(name, 0) for name in files):
+            raise Stop(f"the scan's positive control found no {what} in a copy of an export file that holds one")
+    return sorted(found.items())
 
 
 def write(out, lists, files):
