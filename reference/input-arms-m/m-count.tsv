@@ -1,0 +1,1101 @@
+count	m_reading	split	pair	learner	measure	orientation	withdrawn	datasets	entered	not_scored	constant	better	worse	same	median_difference	species	interval_lo	interval_hi	sign_p	holm_p
+first run	first	lineage	unitigs-k31	scm	balanced_accuracy	higher	0	233	232	1	0	19	29	184	0.0	23	-0.000947612173	0.0	0.944298554469	1.0
+first run	first	lineage	unitigs-k31	scm	recall	higher	0	233	232	1	0	33	39	160	0.0	23	0.0	0.0	0.795210302036	
+first run	first	lineage	unitigs-k31	cart	balanced_accuracy	higher	0	233	232	1	0	24	19	189	0.0	23	0.0	9.6476386e-05	0.271192005928	1.0
+first run	first	lineage	unitigs-k31	cart	recall	higher	0	233	232	1	0	38	36	158	0.0	23	0.0	0.0	0.453780308806	
+first run	first	lineage	unitigs-k31	rf	balanced_accuracy	higher	0	233	232	1	0	10	12	210	0.0	23	-0.000508130081	0.0	0.738266468048	1.0
+first run	first	lineage	unitigs-k31	rf	recall	higher	0	233	232	1	0	17	14	201	0.0	23	0.0	0.0	0.360050065909	
+first run	first	lineage	unitigs-k31	gbt	balanced_accuracy	higher	0	233	232	1	0	34	15	183	0.000381358025	23	0.0	0.001418439716	0.004699620762	0.098692036001
+first run	first	lineage	unitigs-k31	gbt	recall	higher	0	233	232	1	0	45	30	157	0.0	23	-0.00055463117	0.0	0.052671134437	
+first run	first	lineage	unitigs-k31	lasso	balanced_accuracy	higher	0	233	232	1	0	12	11	209	0.0	23	-0.000936084988	0.000511247444	0.5	1.0
+first run	first	lineage	unitigs-k31	lasso	recall	higher	0	233	232	1	0	25	17	190	0.0	23	0.0	0.0	0.139978119264	
+first run	first	lineage	k31-counts-k31	scm	balanced_accuracy	higher	0	233	232	1	0	19	18	195	0.0	23	-0.000175494145	0.0	0.5	1.0
+first run	first	lineage	k31-counts-k31	scm	recall	higher	0	233	232	1	0	34	34	164	0.0	23	0.0	0.0	0.548201327158	
+first run	first	lineage	k31-counts-k31	cart	balanced_accuracy	higher	0	233	232	1	0	27	23	182	0.0	23	0.0	0.0	0.335905516883	1.0
+first run	first	lineage	k31-counts-k31	cart	recall	higher	0	233	232	1	0	35	33	164	0.0	23	0.0	0.0	0.451798672842	
+first run	first	lineage	k31-counts-k31	rf	balanced_accuracy	higher	0	233	232	1	0	18	12	202	0.0	23	0.0	0.000416489879	0.180797304027	1.0
+first run	first	lineage	k31-counts-k31	rf	recall	higher	0	233	232	1	0	34	13	185	0.0	23	0.0	0.0	0.001543838231	
+first run	first	lineage	k31-counts-k31	gbt	balanced_accuracy	higher	0	233	232	1	0	35	18	179	0.000993076535	23	3.9897007e-05	0.001693782295	0.013504158827	0.270083176537
+first run	first	lineage	k31-counts-k31	gbt	recall	higher	0	233	232	1	0	43	30	159	0.0	23	0.0	0.000488400489	0.079855841559	
+first run	first	lineage	k31-counts-k31	lasso	balanced_accuracy	higher	0	233	232	1	0	19	11	202	0.0	23	0.0	1.9464283e-05	0.100244211033	1.0
+first run	first	lineage	k31-counts-k31	lasso	recall	higher	0	233	232	1	0	31	22	179	0.0	23	0.0	0.0	0.135839583033	
+first run	first	lineage	k31-aa-k31	scm	balanced_accuracy	higher	0	233	232	1	0	48	23	161	0.000655183964	23	0.0	0.003379283281	0.002032558062	0.044716277371
+first run	first	lineage	k31-aa-k31	scm	recall	higher	0	233	232	1	0	55	45	132	0.0	23	0.0	0.004535147392	0.184100808663	
+first run	first	lineage	k31-aa-k31	cart	balanced_accuracy	higher	0	233	232	1	0	54	25	153	0.00041048154	23	0.0	0.002827558741	0.000733035974	0.016859827394
+first run	first	lineage	k31-aa-k31	cart	recall	higher	0	233	232	1	0	66	36	130	0.0	23	0.0	0.001214329084	0.001932791794	
+first run	first	lineage	k31-aa-k31	rf	balanced_accuracy	higher	0	233	232	1	0	39	8	185	0.001713259268	23	0.000508130081	0.004901960785	2.769811e-06	7.4784892e-05
+first run	first	lineage	k31-aa-k31	rf	recall	higher	0	233	232	1	0	48	19	165	0.001216804334	23	0.0	0.003993610224	0.000260806378	
+first run	first	lineage	k31-aa-k31	gbt	balanced_accuracy	higher	0	233	232	1	0	51	16	165	0.002594750406	23	0.000521055172	0.005175983437	1.0844619e-05	0.000281960104
+first run	first	lineage	k31-aa-k31	gbt	recall	higher	0	233	232	1	0	55	36	141	0.000548336498	23	0.0	0.003570064911	0.029286764205	
+first run	first	lineage	k31-aa-k31	lasso	balanced_accuracy	higher	0	233	232	1	0	46	16	170	0.001143556124	23	0.0	0.004264543137	8.8163556e-05	0.002126180979
+first run	first	lineage	k31-aa-k31	lasso	recall	higher	0	233	232	1	0	53	33	146	0.00022737608	23	0.0	0.005602240896	0.01992681428	
+first run	first	lineage	program-k31	scm	balanced_accuracy	higher	0	204	203	1	0	70	53	80	0.004539873877	21	0.0	0.012979283527	0.074408123119	1.0
+first run	first	lineage	program-k31	scm	recall	higher	0	204	203	1	0	66	62	75	0.0	21	-0.001205414756	0.006894776444	0.395503724701	
+first run	first	lineage	program-k31	cart	balanced_accuracy	higher	0	204	203	1	0	85	42	76	0.009414798721	21	0.004662662815	0.018429487179	8.5047239e-05	0.002126180979
+first run	first	lineage	program-k31	cart	recall	higher	0	204	203	1	0	79	63	61	0.001937984496	21	0.0	0.014336917563	0.103979210759	
+first run	first	lineage	program-k31	rf	balanced_accuracy	higher	0	204	203	1	0	121	28	54	0.035864978903	21	0.024741660927	0.052721088435	0.0	0.0
+first run	first	lineage	program-k31	rf	recall	higher	0	204	203	1	0	104	38	61	0.023088023088	21	0.011299435028	0.042618059159	1.3917e-08	
+first run	first	lineage	program-k31	gbt	balanced_accuracy	higher	0	204	203	1	0	105	26	72	0.021080177157	21	0.012535432388	0.030082875229	1e-12	2.7e-11
+first run	first	lineage	program-k31	gbt	recall	higher	0	204	203	1	0	88	49	66	0.010370370371	21	0.002173913044	0.025641025641	0.000545511808	
+first run	first	lineage	program-k31	lasso	balanced_accuracy	higher	0	204	203	1	0	102	32	69	0.02020917125	21	0.010624497802	0.027394305436	5.21e-10	1.458e-08
+first run	first	lineage	program-k31	lasso	recall	higher	0	204	203	1	0	82	50	71	0.011594202899	21	0.003875968993	0.017918271288	0.00337317943	
+first run	first	lineage	k31-program-k31	scm	balanced_accuracy	higher	0	204	203	1	0	6	9	188	0.0	21	0.0	0.0	0.84912109375	1.0
+first run	first	lineage	k31-program-k31	scm	recall	higher	0	204	203	1	0	19	10	174	0.0	21	0.0	0.0	0.068022973835	
+first run	first	lineage	k31-program-k31	cart	balanced_accuracy	higher	0	204	203	1	0	5	5	193	0.0	21	0.0	0.0	0.623046875	1.0
+first run	first	lineage	k31-program-k31	cart	recall	higher	0	204	203	1	0	9	7	187	0.0	21	0.0	0.0	0.401809692383	
+first run	first	lineage	k31-program-k31	rf	balanced_accuracy	higher	0	204	203	1	0	4	1	198	0.0	21	0.0	0.0	0.1875	1.0
+first run	first	lineage	k31-program-k31	rf	recall	higher	0	204	203	1	0	10	6	187	0.0	21	0.0	0.0	0.227249145508	
+first run	first	lineage	k31-program-k31	gbt	balanced_accuracy	higher	0	204	203	1	0	10	10	183	0.0	21	0.0	0.0	0.588098526001	1.0
+first run	first	lineage	k31-program-k31	gbt	recall	higher	0	204	203	1	0	19	18	166	0.0	21	0.0	0.0	0.5	
+first run	first	lineage	k31-program-k31	lasso	balanced_accuracy	higher	0	204	203	1	0	1	1	201	0.0	21	0.0	0.0	0.75	1.0
+first run	first	lineage	k31-program-k31	lasso	recall	higher	0	204	203	1	0	3	3	197	0.0	21	0.0	0.0	0.65625	
+first run	first	lineage	twin-k31	scm	balanced_accuracy	higher	0	233	232	1	0	29	27	176	0.0	23	-9.6450617e-05	0.000525535642	0.446926547418	1.0
+first run	first	lineage	twin-k31	scm	recall	higher	0	233	232	1	0	44	43	145	0.0	23	0.0	0.0	0.5	
+first run	first	lineage	twin-k31	cart	balanced_accuracy	higher	0	233	232	1	0	27	30	175	0.0	23	-9.5443431e-05	0.0	0.701679119813	1.0
+first run	first	lineage	twin-k31	cart	recall	higher	0	233	232	1	0	40	44	148	0.0	23	0.0	0.0	0.707176602639	
+first run	first	lineage	twin-k31	rf	balanced_accuracy	higher	0	233	232	1	0	18	22	192	-0.000526913739	23	-0.002808519934	0.0	0.785204746078	1.0
+first run	first	lineage	twin-k31	rf	recall	higher	0	233	232	1	0	25	39	168	0.0	23	-0.001291989664	0.0	0.970029405217	
+first run	first	lineage	twin-k31	gbt	balanced_accuracy	higher	0	233	232	1	0	40	33	159	0.0	23	-0.000251538427	0.001154401154	0.241394278422	1.0
+first run	first	lineage	twin-k31	gbt	recall	higher	0	233	232	1	0	53	47	132	0.0	23	-0.00036231884	0.0	0.308649706795	
+first run	first	lineage	twin-k31	lasso	balanced_accuracy	higher	0	233	232	1	0	28	19	185	0.0	23	-0.000995807128	0.000188964475	0.121480108642	1.0
+first run	first	lineage	twin-k31	lasso	recall	higher	0	233	232	1	0	41	32	159	0.0	23	0.0	0.000957414215	0.174590919085	
+first run	first	study	unitigs-k31	scm	balanced_accuracy	higher	0	55	55	0	0	8	6	41	0.0	8	0.0	0.000581395349	0.395263671875	
+first run	first	study	unitigs-k31	scm	recall	higher	0	55	55	0	0	11	8	36	0.0	8	0.0	0.003174603174	0.323802947998	
+first run	first	study	unitigs-k31	cart	balanced_accuracy	higher	0	55	55	0	0	7	6	42	0.0	8	0.0	0.0025	0.5	
+first run	first	study	unitigs-k31	cart	recall	higher	0	55	55	0	0	15	8	32	0.0	8	-0.002257336343	0.0	0.105019807816	
+first run	first	study	unitigs-k31	rf	balanced_accuracy	higher	0	55	55	0	0	2	2	51	-0.000912408759	8	-0.001322751323	0.0	0.6875	
+first run	first	study	unitigs-k31	rf	recall	higher	0	55	55	0	0	4	4	47	0.0	8	0.0	0.0	0.63671875	
+first run	first	study	unitigs-k31	gbt	balanced_accuracy	higher	0	55	55	0	0	4	6	45	-9.2736628e-05	8	-0.003821826878	0.000886082268	0.828125	
+first run	first	study	unitigs-k31	gbt	recall	higher	0	55	55	0	0	6	7	42	0.0	8	-0.001754385965	0.002257336343	0.70947265625	
+first run	first	study	unitigs-k31	lasso	balanced_accuracy	higher	0	55	55	0	0	2	1	52	0.0	8	-0.000558997262	0.002382954864	0.5	
+first run	first	study	unitigs-k31	lasso	recall	higher	0	55	55	0	0	2	2	51	0.0	8	0.0	0.001466657204	0.6875	
+first run	first	study	k31-counts-k31	scm	balanced_accuracy	higher	0	55	55	0	0	9	7	39	0.0	8	-0.000913242009	0.003631880581	0.401809692383	
+first run	first	study	k31-counts-k31	scm	recall	higher	0	55	55	0	0	8	14	33	0.0	8	-0.003680832704	0.0	0.933099746704	
+first run	first	study	k31-counts-k31	cart	balanced_accuracy	higher	0	55	55	0	0	11	11	33	0.0	8	0.0	0.002908551478	0.584094047546	
+first run	first	study	k31-counts-k31	cart	recall	higher	0	55	55	0	0	13	19	23	0.0	8	-0.017543859649	0.0	0.892336425139	
+first run	first	study	k31-counts-k31	rf	balanced_accuracy	higher	0	55	55	0	0	5	6	44	0.0	8	-0.002650894003	0.003902461987	0.7255859375	
+first run	first	study	k31-counts-k31	rf	recall	higher	0	55	55	0	0	4	10	41	-0.001818181818	8	-0.012048192772	0.0	0.971313476562	
+first run	first	study	k31-counts-k31	gbt	balanced_accuracy	higher	0	55	55	0	0	8	10	37	0.000776397515	8	-0.000304224009	0.008848133848	0.759658813477	
+first run	first	study	k31-counts-k31	gbt	recall	higher	0	55	55	0	0	8	11	36	0.0	8	-0.004310344827	0.003011057138	0.820358276367	
+first run	first	study	k31-counts-k31	lasso	balanced_accuracy	higher	0	55	55	0	0	8	9	38	0.0	8	-0.000812193371	0.001213592233	0.685470581055	
+first run	first	study	k31-counts-k31	lasso	recall	higher	0	55	55	0	0	10	13	32	0.0	8	-0.006772009029	0.0	0.797563552856	
+first run	first	study	k31-aa-k31	scm	balanced_accuracy	higher	0	55	55	0	0	17	11	27	0.002730449978	8	-0.000447475856	0.01917556909	0.172464225441	
+first run	first	study	k31-aa-k31	scm	recall	higher	0	55	55	0	0	21	11	23	0.001821493625	8	-0.002348630257	0.024844720497	0.055092082592	
+first run	first	study	k31-aa-k31	cart	balanced_accuracy	higher	0	55	55	0	0	17	11	27	0.005265263852	8	0.001629284807	0.011858650748	0.172464225441	
+first run	first	study	k31-aa-k31	cart	recall	higher	0	55	55	0	0	17	11	27	0.004444444445	8	-0.00677200903	0.009816712666	0.172464225441	
+first run	first	study	k31-aa-k31	rf	balanced_accuracy	higher	0	55	55	0	0	6	3	46	0.001626984126	8	0.0	0.008474576271	0.25390625	
+first run	first	study	k31-aa-k31	rf	recall	higher	0	55	55	0	0	5	4	46	0.0	8	0.0	0.005772005772	0.5	
+first run	first	study	k31-aa-k31	gbt	balanced_accuracy	higher	0	55	55	0	0	13	7	35	0.004038772213	8	0.00165044435	0.011941806425	0.131587982178	
+first run	first	study	k31-aa-k31	gbt	recall	higher	0	55	55	0	0	10	9	36	0.002155172414	8	0.0	0.009708737864	0.5	
+first run	first	study	k31-aa-k31	lasso	balanced_accuracy	higher	0	55	55	0	0	11	8	36	0.002048868172	8	0.000228310502	0.016672999128	0.323802947998	
+first run	first	study	k31-aa-k31	lasso	recall	higher	0	55	55	0	0	13	9	33	0.0	8	0.0	0.017932489452	0.261733531952	
+first run	first	study	program-k31	scm	balanced_accuracy	higher	0	54	54	0	0	23	10	21	0.014814009896	7	-0.000514884853	0.042572199397	0.017541016685	
+first run	first	study	program-k31	scm	recall	higher	0	54	54	0	0	16	24	14	-0.012296285421	7	-0.015748031496	0.002886002886	0.923070027919	
+first run	first	study	program-k31	cart	balanced_accuracy	higher	0	54	54	0	0	21	11	22	0.006985790943	7	0.001582761251	0.027294685991	0.055092082592	
+first run	first	study	program-k31	cart	recall	higher	0	54	54	0	0	18	23	13	-0.008560135516	7	-0.03640776699	0.009900990099	0.825555560275	
+first run	first	study	program-k31	rf	balanced_accuracy	higher	0	54	54	0	0	36	7	11	0.039732075955	7	0.027227772129	0.061437001041	4.48152e-06	
+first run	first	study	program-k31	rf	recall	higher	0	54	54	0	0	26	13	15	0.01820891416	7	0.012747087022	0.029850746269	0.026625957049	
+first run	first	study	program-k31	gbt	balanced_accuracy	higher	0	54	54	0	0	25	8	21	0.01607019825	7	0.006616088118	0.040452423394	0.002275692066	
+first run	first	study	program-k31	gbt	recall	higher	0	54	54	0	0	16	17	21	0.0	7	0.0	0.004792332268	0.635833759559	
+first run	first	study	program-k31	lasso	balanced_accuracy	higher	0	54	54	0	0	32	5	17	0.029776552372	7	0.009402427638	0.050601710889	3.713765e-06	
+first run	first	study	program-k31	lasso	recall	higher	0	54	54	0	0	20	14	20	0.005395162664	7	0.0	0.022538552787	0.195764152566	
+first run	first	study	k31-program-k31	scm	balanced_accuracy	higher	0	54	54	0	0	3	2	49	0.0	7	0.0	0.0	0.5	
+first run	first	study	k31-program-k31	scm	recall	higher	0	54	54	0	0	4	2	48	0.0	7	0.0	0.0	0.34375	
+first run	first	study	k31-program-k31	cart	balanced_accuracy	higher	0	54	54	0	0	1	1	52	0.0	7	0.0	0.0	0.75	
+first run	first	study	k31-program-k31	cart	recall	higher	0	54	54	0	0	2	2	50	0.0	7	0.0	0.0	0.6875	
+first run	first	study	k31-program-k31	rf	balanced_accuracy	higher	0	54	54	0	0	3	2	49	0.0	7	-0.001552795031	0.0	0.5	
+first run	first	study	k31-program-k31	rf	recall	higher	0	54	54	0	0	4	6	44	0.0	7	0.0	0.0	0.828125	
+first run	first	study	k31-program-k31	gbt	balanced_accuracy	higher	0	54	54	0	0	0	3	51	0.0	7	-0.0023937297	0.001224644877	1.0	
+first run	first	study	k31-program-k31	gbt	recall	higher	0	54	54	0	0	4	4	46	0.0	7	0.0	0.0	0.63671875	
+first run	first	study	k31-program-k31	lasso	balanced_accuracy	higher	0	54	54	0	0	1	0	53	0.0	7	0.0	0.0	0.5	
+first run	first	study	k31-program-k31	lasso	recall	higher	0	54	54	0	0	0	1	53	0.0	7	0.0	0.0	1.0	
+M	first	lineage	unitigs-k31	scm	balanced_accuracy	higher	0	35	35	0	0	7	3	25	0.0	9	-0.001315789474	0.004196642685	0.171875	1.0
+M	first	lineage	unitigs-k31	scm	recall	higher	0	35	35	0	0	5	6	24	-0.001358695652	9	-0.00459770115	0.0	0.7255859375	
+M	first	lineage	unitigs-k31	scm	specificity	higher	0	35	35	0	0	5	4	26	0.002150537634	9	0.0	0.008393285372	0.5	
+M	first	lineage	unitigs-k31	scm	vme	lower	0	35	35	0	0	5	6	24	0.001358695652	9	0.0	0.00459770115	0.7255859375	
+M	first	lineage	unitigs-k31	scm	me	lower	0	35	35	0	0	5	4	26	-0.002150537634	9	-0.008393285372	0.0	0.5	
+M	first	lineage	unitigs-k31	scm	log_loss	lower	0	35	35	0	0	13	15	7	-0.003142354271	9	-0.064536218788	0.022027480699	0.714205905795	
+M	first	lineage	unitigs-k31	cart	balanced_accuracy	higher	0	35	35	0	0	2	4	29	-0.000758150114	9	-0.003069665893	0.0	0.890625	1.0
+M	first	lineage	unitigs-k31	cart	recall	higher	0	35	35	0	0	4	9	22	-0.000720461095	9	-0.013546202225	0.000403551251	0.953857421875	
+M	first	lineage	unitigs-k31	cart	specificity	higher	0	35	35	0	0	4	1	30	0.0	9	0.0	0.002020202021	0.1875	
+M	first	lineage	unitigs-k31	cart	vme	lower	0	35	35	0	0	4	9	22	0.000720461095	9	-0.000403551251	0.013546202225	0.953857421875	
+M	first	lineage	unitigs-k31	cart	me	lower	0	35	35	0	0	4	1	30	0.0	9	-0.002020202021	0.0	0.1875	
+M	first	lineage	unitigs-k31	cart	log_loss	lower	0	35	35	0	0	9	6	20	0.0	9	-0.007183951261	0.002791410432	0.303619384766	
+M	first	lineage	unitigs-k31	rf	balanced_accuracy	higher	0	35	35	0	0	1	4	30	-0.000750750751	9	-0.005252080274	0.0008716427	0.96875	1.0
+M	first	lineage	unitigs-k31	rf	recall	higher	0	35	35	0	0	1	4	30	0.0	9	-0.001705029838	0.002298850575	0.96875	
+M	first	lineage	unitigs-k31	rf	specificity	higher	0	35	35	0	0	1	3	31	0.0	9	-0.006666666667	0.0	0.9375	
+M	first	lineage	unitigs-k31	rf	vme	lower	0	35	35	0	0	1	4	30	0.0	9	-0.002298850575	0.001728110599	0.96875	
+M	first	lineage	unitigs-k31	rf	me	lower	0	35	35	0	0	1	3	31	0.0	9	0.0	0.006666666667	0.9375	
+M	first	lineage	unitigs-k31	rf	log_loss	lower	0	35	35	0	0	0	0	35	0.000133763051	9	-0.001680842585	0.000953506225	1.0	
+M	first	lineage	unitigs-k31	gbt	balanced_accuracy	higher	0	35	35	0	0	3	1	31	0.000126358352	9	-0.003498250875	0.003928733515	0.3125	1.0
+M	first	lineage	unitigs-k31	gbt	recall	higher	0	35	35	0	0	4	6	25	0.0	9	-0.005241090147	0.001614205004	0.828125	
+M	first	lineage	unitigs-k31	gbt	specificity	higher	0	35	35	0	0	4	2	29	-0.000429276669	9	-0.001827981681	0.001542020046	0.34375	
+M	first	lineage	unitigs-k31	gbt	vme	lower	0	35	35	0	0	4	6	25	0.0	9	-0.001647640447	0.005241090147	0.828125	
+M	first	lineage	unitigs-k31	gbt	me	lower	0	35	35	0	0	4	2	29	0.000429276669	9	-0.001542020046	0.001827981681	0.34375	
+M	first	lineage	unitigs-k31	gbt	log_loss	lower	0	35	35	0	0	5	4	26	-6.9954576e-05	9	-0.002901935147	0.005574335747	0.5	
+M	first	lineage	unitigs-k31	lasso	balanced_accuracy	higher	0	35	35	0	0	0	2	33	0.000167448554	9	-0.00101010101	0.000888462203	1.0	1.0
+M	first	lineage	unitigs-k31	lasso	recall	higher	0	35	35	0	0	0	5	30	0.0	9	-0.001201201202	0.003144654088	1.0	
+M	first	lineage	unitigs-k31	lasso	specificity	higher	0	35	35	0	0	0	2	33	0.0	9	-0.001156403585	0.000491039427	1.0	
+M	first	lineage	unitigs-k31	lasso	vme	lower	0	35	35	0	0	0	5	30	0.0	9	-0.003333658966	0.001201201202	1.0	
+M	first	lineage	unitigs-k31	lasso	me	lower	0	35	35	0	0	0	2	33	0.0	9	-0.000444444445	0.001156403585	1.0	
+M	first	lineage	unitigs-k31	lasso	log_loss	lower	0	35	35	0	0	1	6	28	0.000381613252	9	-0.004499495599	0.00309413795	0.9921875	
+M	first	lineage	k31-counts-k31	scm	balanced_accuracy	higher	0	35	35	0	0	4	3	28	0.0	9	-0.001506258109	0.002104791046	0.5	1.0
+M	first	lineage	k31-counts-k31	scm	recall	higher	0	35	35	0	0	4	4	27	0.000483792937	9	0.0	0.007042253521	0.63671875	
+M	first	lineage	k31-counts-k31	scm	specificity	higher	0	35	35	0	0	6	4	25	0.0	9	-0.001441729487	0.002136752137	0.376953125	
+M	first	lineage	k31-counts-k31	scm	vme	lower	0	35	35	0	0	4	4	27	-0.000483792937	9	-0.007042253521	0.0	0.63671875	
+M	first	lineage	k31-counts-k31	scm	me	lower	0	35	35	0	0	6	4	25	0.0	9	-0.002136752137	0.001441729487	0.376953125	
+M	first	lineage	k31-counts-k31	scm	log_loss	lower	0	35	35	0	0	11	14	10	0.00834714552	9	0.0	0.021184204666	0.787821888924	
+M	first	lineage	k31-counts-k31	cart	balanced_accuracy	higher	0	35	35	0	0	3	3	29	0.0	9	-0.002018394246	0.0	0.65625	1.0
+M	first	lineage	k31-counts-k31	cart	recall	higher	0	35	35	0	0	5	8	22	-0.000403551251	9	-0.005709266579	0.0	0.866577148438	
+M	first	lineage	k31-counts-k31	cart	specificity	higher	0	35	35	0	0	7	2	26	0.0	9	-0.001004016064	0.000647878199	0.08984375	
+M	first	lineage	k31-counts-k31	cart	vme	lower	0	35	35	0	0	5	8	22	0.000403551251	9	0.0	0.004319834755	0.866577148438	
+M	first	lineage	k31-counts-k31	cart	me	lower	0	35	35	0	0	7	2	26	0.0	9	-0.001295756398	0.001004016064	0.08984375	
+M	first	lineage	k31-counts-k31	cart	log_loss	lower	0	35	35	0	0	9	10	16	0.0	9	-0.005303649563	0.004342215295	0.676197052002	
+M	first	lineage	k31-counts-k31	rf	balanced_accuracy	higher	0	35	35	0	0	0	2	33	0.000871246532	9	-0.000600600601	0.001734018669	1.0	1.0
+M	first	lineage	k31-counts-k31	rf	recall	higher	0	35	35	0	0	4	4	27	0.000252716705	9	0.0	0.00293040293	0.63671875	
+M	first	lineage	k31-counts-k31	rf	specificity	higher	0	35	35	0	0	0	0	35	0.0	9	-0.000181061018	0.000677506775	1.0	
+M	first	lineage	k31-counts-k31	rf	vme	lower	0	35	35	0	0	4	4	27	-0.000252716705	9	-0.00293040293	0.0	0.63671875	
+M	first	lineage	k31-counts-k31	rf	me	lower	0	35	35	0	0	0	0	35	0.0	9	-0.000677506775	0.000181061018	1.0	
+M	first	lineage	k31-counts-k31	rf	log_loss	lower	0	35	35	0	0	3	0	32	-0.002018890942	9	-0.004021149883	-0.000903116189	0.125	
+M	first	lineage	k31-counts-k31	gbt	balanced_accuracy	higher	0	35	35	0	0	5	3	27	0.001377410468	9	0.000796367613	0.004364632237	0.36328125	1.0
+M	first	lineage	k31-counts-k31	gbt	recall	higher	0	35	35	0	0	9	6	20	0.0	9	-0.001210653753	0.006789583212	0.303619384766	
+M	first	lineage	k31-counts-k31	gbt	specificity	higher	0	35	35	0	0	6	1	28	0.00188172043	9	0.0	0.006476312858	0.0625	
+M	first	lineage	k31-counts-k31	gbt	vme	lower	0	35	35	0	0	9	6	20	0.0	9	-0.011280315849	0.001210653753	0.303619384766	
+M	first	lineage	k31-counts-k31	gbt	me	lower	0	35	35	0	0	6	1	28	-0.00188172043	9	-0.006476312858	0.0	0.0625	
+M	first	lineage	k31-counts-k31	gbt	log_loss	lower	0	35	35	0	0	8	3	24	-0.001154740636	9	-0.004554666569	0.001666485829	0.11328125	
+M	first	lineage	k31-counts-k31	lasso	balanced_accuracy	higher	0	35	35	0	0	2	2	31	0.0	9	-0.000800325776	0.001377410468	0.6875	1.0
+M	first	lineage	k31-counts-k31	lasso	recall	higher	0	35	35	0	0	4	3	28	0.0	9	-0.001145942149	0.00576096343	0.5	
+M	first	lineage	k31-counts-k31	lasso	specificity	higher	0	35	35	0	0	2	0	33	0.0	9	-0.001075268817	0.00191140559	0.25	
+M	first	lineage	k31-counts-k31	lasso	vme	lower	0	35	35	0	0	4	3	28	0.0	9	-0.00576096343	0.001494195722	0.5	
+M	first	lineage	k31-counts-k31	lasso	me	lower	0	35	35	0	0	2	0	33	0.0	9	-0.002056026729	0.001075268817	0.25	
+M	first	lineage	k31-counts-k31	lasso	log_loss	lower	0	35	35	0	0	8	2	25	-0.000215137665	9	-0.005543520418	3.4851596e-05	0.0546875	
+M	first	lineage	k31-aa-k31	scm	balanced_accuracy	higher	0	35	35	0	0	10	3	22	0.003631417188	9	-0.001489195575	0.013906508047	0.046142578125	1.0
+M	first	lineage	k31-aa-k31	scm	recall	higher	0	35	35	0	0	9	6	20	0.002433090024	9	-0.001358695652	0.013605442177	0.303619384766	
+M	first	lineage	k31-aa-k31	scm	specificity	higher	0	35	35	0	0	10	3	22	0.000181061018	9	-0.004112053456	0.007320979181	0.046142578125	
+M	first	lineage	k31-aa-k31	scm	vme	lower	0	35	35	0	0	9	6	20	-0.002433090024	9	-0.013605442177	0.001358695652	0.303619384766	
+M	first	lineage	k31-aa-k31	scm	me	lower	0	35	35	0	0	10	3	22	-0.000181061018	9	-0.007320979181	0.004112053456	0.046142578125	
+M	first	lineage	k31-aa-k31	scm	log_loss	lower	0	35	35	0	0	19	8	8	-0.023048649567	9	-0.060638012657	0.013915377325	0.026119492948	
+M	first	lineage	k31-aa-k31	cart	balanced_accuracy	higher	0	35	35	0	0	7	3	25	0.003133895993	9	-0.002864567083	0.009758474777	0.171875	1.0
+M	first	lineage	k31-aa-k31	cart	recall	higher	0	35	35	0	0	11	6	18	0.0	9	-0.004761904762	0.010954940058	0.166152954102	
+M	first	lineage	k31-aa-k31	cart	specificity	higher	0	35	35	0	0	7	6	22	0.002891008962	9	0.0	0.012196719052	0.5	
+M	first	lineage	k31-aa-k31	cart	vme	lower	0	35	35	0	0	11	6	18	0.0	9	-0.012067724138	0.004761904762	0.166152954102	
+M	first	lineage	k31-aa-k31	cart	me	lower	0	35	35	0	0	7	6	22	-0.002891008962	9	-0.010683760684	0.000588928151	0.5	
+M	first	lineage	k31-aa-k31	cart	log_loss	lower	0	35	35	0	0	15	10	10	-0.001735091092	9	-0.02021276408	0.006123616378	0.212178111076	
+M	first	lineage	k31-aa-k31	rf	balanced_accuracy	higher	0	35	35	0	0	6	2	27	0.003790312635	9	0.0	0.006129623065	0.14453125	1.0
+M	first	lineage	k31-aa-k31	rf	recall	higher	0	35	35	0	0	5	4	26	0.002433090025	9	0.0	0.007207207207	0.5	
+M	first	lineage	k31-aa-k31	rf	specificity	higher	0	35	35	0	0	5	1	29	0.000537634409	9	0.0	0.003771734348	0.109375	
+M	first	lineage	k31-aa-k31	rf	vme	lower	0	35	35	0	0	5	4	26	-0.002433090025	9	-0.007207207207	0.0	0.5	
+M	first	lineage	k31-aa-k31	rf	me	lower	0	35	35	0	0	5	1	29	-0.000537634409	9	-0.003771734348	0.0	0.109375	
+M	first	lineage	k31-aa-k31	rf	log_loss	lower	0	35	35	0	0	8	0	27	-0.004798799054	9	-0.010928524463	-0.002716203895	0.00390625	
+M	first	lineage	k31-aa-k31	gbt	balanced_accuracy	higher	0	35	35	0	0	6	4	25	0.002392623716	9	-0.005183856734	0.005693009915	0.376953125	1.0
+M	first	lineage	k31-aa-k31	gbt	recall	higher	0	35	35	0	0	6	9	20	0.0	9	-0.006090808417	0.003243174078	0.84912109375	
+M	first	lineage	k31-aa-k31	gbt	specificity	higher	0	35	35	0	0	7	5	23	0.005136986302	9	-0.000262467191	0.013056835637	0.38720703125	
+M	first	lineage	k31-aa-k31	gbt	vme	lower	0	35	35	0	0	6	9	20	0.0	9	-0.003243174078	0.006289308176	0.84912109375	
+M	first	lineage	k31-aa-k31	gbt	me	lower	0	35	35	0	0	7	5	23	-0.005136986302	9	-0.013056835637	0.000195835376	0.38720703125	
+M	first	lineage	k31-aa-k31	gbt	log_loss	lower	0	35	35	0	0	8	3	24	-0.006254063265	9	-0.011028042384	0.003220375647	0.11328125	
+M	first	lineage	k31-aa-k31	lasso	balanced_accuracy	higher	0	35	35	0	0	4	4	27	-0.000251609794	9	-0.00241533798	0.002995696789	0.63671875	1.0
+M	first	lineage	k31-aa-k31	lasso	recall	higher	0	35	35	0	0	5	7	23	0.0	9	-0.007738095238	0.004258225029	0.80615234375	
+M	first	lineage	k31-aa-k31	lasso	specificity	higher	0	35	35	0	0	6	5	24	0.001121704992	9	-0.001502468341	0.010375053529	0.5	
+M	first	lineage	k31-aa-k31	lasso	vme	lower	0	35	35	0	0	5	7	23	0.0	9	-0.003967584238	0.005952380952	0.80615234375	
+M	first	lineage	k31-aa-k31	lasso	me	lower	0	35	35	0	0	6	5	24	-0.001121704992	9	-0.010683760684	0.001502468341	0.5	
+M	first	lineage	k31-aa-k31	lasso	log_loss	lower	0	35	35	0	0	9	6	20	-0.000984374886	9	-0.005072704437	0.012367230829	0.303619384766	
+M	first	lineage	program-k31	scm	balanced_accuracy	higher	0	33	33	0	0	9	9	15	0.002955499581	8	-0.019332696183	0.013929566163	0.592735290527	1.0
+M	first	lineage	program-k31	scm	recall	higher	0	33	33	0	0	10	13	10	-0.000967585873	8	-0.035130718954	0.000852514919	0.797563552856	
+M	first	lineage	program-k31	scm	specificity	higher	0	33	33	0	0	12	8	13	0.005506964691	8	-0.004078128353	0.035256410256	0.251722335815	
+M	first	lineage	program-k31	scm	vme	lower	0	33	33	0	0	10	13	10	0.000967585873	8	-0.000852514919	0.035130718954	0.797563552856	
+M	first	lineage	program-k31	scm	me	lower	0	33	33	0	0	12	8	13	-0.005506964691	8	-0.035256410256	0.004078128353	0.251722335815	
+M	first	lineage	program-k31	scm	log_loss	lower	0	33	33	0	0	17	13	3	-0.039828066452	8	-0.111808684273	0.047360368946	0.292332355864	
+M	first	lineage	program-k31	cart	balanced_accuracy	higher	0	33	33	0	0	16	9	8	0.018719130439	8	-0.004516843361	0.037716057071	0.114761471748	1.0
+M	first	lineage	program-k31	cart	recall	higher	0	33	33	0	0	19	8	6	0.026754385965	8	-0.018755328219	0.06724137931	0.026119492948	
+M	first	lineage	program-k31	cart	specificity	higher	0	33	33	0	0	17	10	6	0.029185867895	8	-0.016047846834	0.033098062145	0.123894281685	
+M	first	lineage	program-k31	cart	vme	lower	0	33	33	0	0	19	8	6	-0.026754385965	8	-0.06724137931	0.018755328219	0.026119492948	
+M	first	lineage	program-k31	cart	me	lower	0	33	33	0	0	17	10	6	-0.029185867895	8	-0.033675799087	0.019192467862	0.123894281685	
+M	first	lineage	program-k31	cart	log_loss	lower	0	33	33	0	0	18	10	5	-0.03802607945	8	-0.071696716093	-0.00485235382	0.09246667102	
+M	first	lineage	program-k31	rf	balanced_accuracy	higher	0	33	33	0	0	24	4	5	0.063532187395	8	0.043912060024	0.094356169698	8.9995563e-05	0.002609871328
+M	first	lineage	program-k31	rf	recall	higher	0	33	33	0	0	19	4	10	0.071052631579	8	0.012849456348	0.186991869919	0.001299738884	
+M	first	lineage	program-k31	rf	specificity	higher	0	33	33	0	0	13	7	13	0.005509641873	8	-0.02615694165	0.042654028436	0.131587982178	
+M	first	lineage	program-k31	rf	vme	lower	0	33	33	0	0	19	4	10	-0.071052631579	8	-0.186991869919	-0.012849456348	0.001299738884	
+M	first	lineage	program-k31	rf	me	lower	0	33	33	0	0	13	7	13	-0.005509641873	8	-0.042654028436	0.02615694165	0.131587982178	
+M	first	lineage	program-k31	rf	log_loss	lower	0	33	33	0	0	22	7	4	-0.047762752745	8	-0.071518790156	0.01986558261	0.004065029323	
+M	first	lineage	program-k31	gbt	balanced_accuracy	higher	0	33	33	0	0	22	2	9	0.047215821813	8	0.020694080383	0.056078056631	1.7940998e-05	0.000538229942
+M	first	lineage	program-k31	gbt	recall	higher	0	33	33	0	0	20	6	7	0.050530785562	8	0.00459770115	0.119815668202	0.004677653313	
+M	first	lineage	program-k31	gbt	specificity	higher	0	33	33	0	0	16	9	8	0.014435695538	8	-0.035980467746	0.0476671787	0.114761471748	
+M	first	lineage	program-k31	gbt	vme	lower	0	33	33	0	0	20	6	7	-0.050530785562	8	-0.119815668202	-0.00459770115	0.004677653313	
+M	first	lineage	program-k31	gbt	me	lower	0	33	33	0	0	16	9	8	-0.014435695538	8	-0.0476671787	0.035980467746	0.114761471748	
+M	first	lineage	program-k31	gbt	log_loss	lower	0	33	33	0	0	19	9	5	-0.031539156299	8	-0.064277920598	0.035494031415	0.043579276651	
+M	first	lineage	program-k31	lasso	balanced_accuracy	higher	0	33	33	0	0	18	4	11	0.02642998297	8	0.003367762129	0.052025015493	0.002171754837	0.060809135437
+M	first	lineage	program-k31	lasso	recall	higher	0	33	33	0	0	19	5	9	0.0496267018	8	-0.003268410056	0.096978326214	0.003305375576	
+M	first	lineage	program-k31	lasso	specificity	higher	0	33	33	0	0	12	7	14	0.011019283746	8	-0.026471344127	0.026509186351	0.179641723633	
+M	first	lineage	program-k31	lasso	vme	lower	0	33	33	0	0	19	5	9	-0.0496267018	8	-0.094655797101	-0.000505433409	0.003305375576	
+M	first	lineage	program-k31	lasso	me	lower	0	33	33	0	0	12	7	14	-0.011019283746	8	-0.026509186351	0.026471344127	0.179641723633	
+M	first	lineage	program-k31	lasso	log_loss	lower	0	33	33	0	0	19	7	7	-0.035654032584	8	-0.114789774482	0.059807951578	0.014479637146	
+M	first	lineage	k31-program-k31	scm	balanced_accuracy	higher	0	33	33	0	0	1	0	32	0.0	8	0.0	2.066505e-05	0.5	1.0
+M	first	lineage	k31-program-k31	scm	recall	higher	0	33	33	0	0	0	1	32	0.0	8	0.0	0.0	1.0	
+M	first	lineage	k31-program-k31	scm	specificity	higher	0	33	33	0	0	2	1	30	0.0	8	0.0	0.0	0.5	
+M	first	lineage	k31-program-k31	scm	vme	lower	0	33	33	0	0	0	1	32	0.0	8	0.0	0.0	1.0	
+M	first	lineage	k31-program-k31	scm	me	lower	0	33	33	0	0	2	1	30	0.0	8	0.0	0.0	0.5	
+M	first	lineage	k31-program-k31	scm	log_loss	lower	0	33	33	0	0	4	2	27	0.0	8	-0.001933299825	0.0	0.34375	
+M	first	lineage	k31-program-k31	cart	balanced_accuracy	higher	0	33	33	0	0	1	1	31	0.0	8	-0.000744584345	0.0	0.75	1.0
+M	first	lineage	k31-program-k31	cart	recall	higher	0	33	33	0	0	2	2	29	0.0	8	0.0	0.000366300367	0.6875	
+M	first	lineage	k31-program-k31	cart	specificity	higher	0	33	33	0	0	1	3	29	0.0	8	-0.003284072249	0.0	0.9375	
+M	first	lineage	k31-program-k31	cart	vme	lower	0	33	33	0	0	2	2	29	0.0	8	0.0	0.0	0.6875	
+M	first	lineage	k31-program-k31	cart	me	lower	0	33	33	0	0	1	3	29	0.0	8	0.0	0.003284072249	0.9375	
+M	first	lineage	k31-program-k31	cart	log_loss	lower	0	33	33	0	0	6	6	21	0.0	8	-0.001745101545	0.001509802184	0.61279296875	
+M	first	lineage	k31-program-k31	rf	balanced_accuracy	higher	0	33	33	0	0	1	0	32	0.0	8	0.0	0.001648084182	0.5	1.0
+M	first	lineage	k31-program-k31	rf	recall	higher	0	33	33	0	0	2	3	28	0.000505433409	8	-0.002380952381	0.001420736332	0.8125	
+M	first	lineage	k31-program-k31	rf	specificity	higher	0	33	33	0	0	1	0	32	0.0	8	0.0	0.0	0.5	
+M	first	lineage	k31-program-k31	rf	vme	lower	0	33	33	0	0	2	3	28	-0.000505433409	8	-0.001420736332	0.002380952381	0.8125	
+M	first	lineage	k31-program-k31	rf	me	lower	0	33	33	0	0	1	0	32	0.0	8	0.0	0.0	0.5	
+M	first	lineage	k31-program-k31	rf	log_loss	lower	0	33	33	0	0	0	0	33	-0.002328424694	8	-0.002816582135	-0.00094318574	1.0	
+M	first	lineage	k31-program-k31	gbt	balanced_accuracy	higher	0	33	33	0	0	3	1	29	0.0	8	-0.000989119683	0.003097197631	0.3125	1.0
+M	first	lineage	k31-program-k31	gbt	recall	higher	0	33	33	0	0	3	2	28	0.0	8	-0.003180621044	0.0	0.5	
+M	first	lineage	k31-program-k31	gbt	specificity	higher	0	33	33	0	0	3	2	28	0.0	8	-0.000560852495	0.001997716895	0.5	
+M	first	lineage	k31-program-k31	gbt	vme	lower	0	33	33	0	0	3	2	28	0.0	8	0.0	0.00313283208	0.5	
+M	first	lineage	k31-program-k31	gbt	me	lower	0	33	33	0	0	3	2	28	0.0	8	-0.002535351304	0.000560852495	0.5	
+M	first	lineage	k31-program-k31	gbt	log_loss	lower	0	33	33	0	0	1	4	28	-0.001084990885	8	-0.0018990301	0.000293150156	0.96875	
+M	first	lineage	k31-program-k31	lasso	balanced_accuracy	higher	0	33	33	0	0	0	1	32	0.0	8	0.0	0.0	1.0	1.0
+M	first	lineage	k31-program-k31	lasso	recall	higher	0	33	33	0	0	0	1	32	0.0	8	0.0	0.0	1.0	
+M	first	lineage	k31-program-k31	lasso	specificity	higher	0	33	33	0	0	0	0	33	0.0	8	0.0	0.0	1.0	
+M	first	lineage	k31-program-k31	lasso	vme	lower	0	33	33	0	0	0	1	32	0.0	8	0.0	0.0	1.0	
+M	first	lineage	k31-program-k31	lasso	me	lower	0	33	33	0	0	0	0	33	0.0	8	0.0	0.0	1.0	
+M	first	lineage	k31-program-k31	lasso	log_loss	lower	0	33	33	0	0	0	1	32	0.0	8	0.0	0.0	1.0	
+M	first	lineage	twin-k31	scm	balanced_accuracy	higher	0	35	35	0	0	4	4	27	0.0	9	-0.000483091788	0.005535353375	0.63671875	1.0
+M	first	lineage	twin-k31	scm	recall	higher	0	35	35	0	0	6	6	23	0.0	9	-0.00403551251	0.012719298245	0.61279296875	
+M	first	lineage	twin-k31	scm	specificity	higher	0	35	35	0	0	8	3	24	0.001333333333	9	-0.00195064498	0.005183025591	0.11328125	
+M	first	lineage	twin-k31	scm	vme	lower	0	35	35	0	0	6	6	23	0.0	9	-0.012719298245	0.00403551251	0.61279296875	
+M	first	lineage	twin-k31	scm	me	lower	0	35	35	0	0	8	3	24	-0.001333333333	9	-0.005183025591	0.002617311647	0.11328125	
+M	first	lineage	twin-k31	scm	log_loss	lower	0	35	35	0	0	16	9	10	-0.004713531406	9	-0.075002849357	0.011072068705	0.114761471748	
+M	first	lineage	twin-k31	cart	balanced_accuracy	higher	0	35	35	0	0	6	4	25	0.0	9	-0.001320845341	0.014303122462	0.376953125	1.0
+M	first	lineage	twin-k31	cart	recall	higher	0	35	35	0	0	10	7	18	0.0	9	-0.004670912951	0.032616227541	0.314529418945	
+M	first	lineage	twin-k31	cart	specificity	higher	0	35	35	0	0	7	6	22	0.0	9	-0.000903342367	0.00899554763	0.5	
+M	first	lineage	twin-k31	cart	vme	lower	0	35	35	0	0	10	7	18	0.0	9	-0.032616227541	0.004670912951	0.314529418945	
+M	first	lineage	twin-k31	cart	me	lower	0	35	35	0	0	7	6	22	0.0	9	-0.009125102447	0.000903342367	0.5	
+M	first	lineage	twin-k31	cart	log_loss	lower	0	35	35	0	0	12	13	10	0.000996121795	9	-0.040005863382	0.016987181691	0.654981017113	
+M	first	lineage	twin-k31	rf	balanced_accuracy	higher	0	35	35	0	0	2	2	31	-0.001743872262	9	-0.00322194938	0.0	0.6875	1.0
+M	first	lineage	twin-k31	rf	recall	higher	0	35	35	0	0	1	3	31	0.0	9	0.0	0.002401536984	0.9375	
+M	first	lineage	twin-k31	rf	specificity	higher	0	35	35	0	0	3	3	29	0.0	9	-0.003603603604	0.0	0.65625	
+M	first	lineage	twin-k31	rf	vme	lower	0	35	35	0	0	1	3	31	0.0	9	-0.002401536984	0.0	0.9375	
+M	first	lineage	twin-k31	rf	me	lower	0	35	35	0	0	3	3	29	0.0	9	0.0	0.003603603604	0.65625	
+M	first	lineage	twin-k31	rf	log_loss	lower	0	35	35	0	0	2	0	33	-0.003082869665	9	-0.006517089022	0.001022540545	0.25	
+M	first	lineage	twin-k31	gbt	balanced_accuracy	higher	0	35	35	0	0	8	4	23	0.000477076687	9	-0.001354119096	0.006873962807	0.19384765625	1.0
+M	first	lineage	twin-k31	gbt	recall	higher	0	35	35	0	0	4	6	25	0.001315789474	9	-0.001200768491	0.003968253969	0.828125	
+M	first	lineage	twin-k31	gbt	specificity	higher	0	35	35	0	0	6	5	24	-0.002136752137	9	-0.008547008547	0.004122497056	0.5	
+M	first	lineage	twin-k31	gbt	vme	lower	0	35	35	0	0	4	6	25	-0.001315789474	9	-0.003968253969	0.001200768491	0.828125	
+M	first	lineage	twin-k31	gbt	me	lower	0	35	35	0	0	6	5	24	0.002136752137	9	-0.004122497056	0.007729725471	0.5	
+M	first	lineage	twin-k31	gbt	log_loss	lower	0	35	35	0	0	8	6	21	-0.001260708351	9	-0.007317887484	0.000326100026	0.395263671875	
+M	first	lineage	twin-k31	lasso	balanced_accuracy	higher	0	35	35	0	0	4	2	29	-7.9127103e-05	9	-0.002416007099	0.000914790413	0.34375	1.0
+M	first	lineage	twin-k31	lasso	recall	higher	0	35	35	0	0	5	5	25	0.0	9	-0.003410059676	0.001210653753	0.623046875	
+M	first	lineage	twin-k31	lasso	specificity	higher	0	35	35	0	0	3	3	29	0.000787401574	9	-0.003129890454	0.003565062389	0.65625	
+M	first	lineage	twin-k31	lasso	vme	lower	0	35	35	0	0	5	5	25	0.0	9	-0.001210653753	0.003410059676	0.623046875	
+M	first	lineage	twin-k31	lasso	me	lower	0	35	35	0	0	3	3	29	-0.000787401574	9	-0.003565062389	0.003129890454	0.65625	
+M	first	lineage	twin-k31	lasso	log_loss	lower	0	35	35	0	0	7	6	22	-0.00271637228	9	-0.005916181089	0.004297514871	0.5	
+M	first	study	unitigs-k31	scm	balanced_accuracy	higher	0	14	14	0	0	2	3	9	0.002928733178	4	0.002586902225	0.013879944802	0.8125	
+M	first	study	unitigs-k31	scm	recall	higher	0	14	14	0	0	0	4	10	-0.00113722517	4	-0.018181818182	0.0	1.0	
+M	first	study	unitigs-k31	scm	specificity	higher	0	14	14	0	0	3	1	10	0.005581506767	4	0.002478788059	0.025	0.3125	
+M	first	study	unitigs-k31	scm	vme	lower	0	14	14	0	0	0	4	10	0.00113722517	4	0.0	0.018181818182	1.0	
+M	first	study	unitigs-k31	scm	me	lower	0	14	14	0	0	3	1	10	-0.005581506767	4	-0.025	-0.002478788059	0.3125	
+M	first	study	unitigs-k31	scm	log_loss	lower	0	14	14	0	0	7	4	3	-0.021926139896	4	-0.076072781792	0.01279200051	0.2744140625	
+M	first	study	unitigs-k31	cart	balanced_accuracy	higher	0	14	14	0	0	2	0	12	-0.000379075057	4	-0.002442709579	0.010136096557	0.25	
+M	first	study	unitigs-k31	cart	recall	higher	0	14	14	0	0	2	1	11	-0.000758150114	4	-0.009450513462	0.015384615385	0.5	
+M	first	study	unitigs-k31	cart	specificity	higher	0	14	14	0	0	2	0	12	0.003424657535	4	0.0	0.009540329575	0.25	
+M	first	study	unitigs-k31	cart	vme	lower	0	14	14	0	0	2	1	11	0.000758150114	4	-0.015384615385	0.009450513462	0.5	
+M	first	study	unitigs-k31	cart	me	lower	0	14	14	0	0	2	0	12	-0.003424657535	4	-0.009540329575	0.0	0.25	
+M	first	study	unitigs-k31	cart	log_loss	lower	0	14	14	0	0	6	5	3	-0.001807210433	4	-0.019084900292	0.060732461486	0.5	
+M	first	study	unitigs-k31	rf	balanced_accuracy	higher	0	14	14	0	0	0	1	13	-0.002369668246	4	-0.008970514742	0.003597122302	1.0	
+M	first	study	unitigs-k31	rf	recall	higher	0	14	14	0	0	0	1	13	0.0	4	-0.001358695652	0.0	1.0	
+M	first	study	unitigs-k31	rf	specificity	higher	0	14	14	0	0	0	2	12	-0.001654704263	4	-0.00576884919	0.007194244604	1.0	
+M	first	study	unitigs-k31	rf	vme	lower	0	14	14	0	0	0	1	13	0.0	4	0.0	0.001358695652	1.0	
+M	first	study	unitigs-k31	rf	me	lower	0	14	14	0	0	0	2	12	0.001654704263	4	-0.006666666666	0.00576884919	1.0	
+M	first	study	unitigs-k31	rf	log_loss	lower	0	14	14	0	0	0	1	13	4.8109987e-05	4	-0.000548527607	0.000913242115	1.0	
+M	first	study	unitigs-k31	gbt	balanced_accuracy	higher	0	14	14	0	0	2	0	12	0.003272830908	4	-0.001728123077	0.005567559169	0.25	
+M	first	study	unitigs-k31	gbt	recall	higher	0	14	14	0	0	1	0	13	-0.000459981601	4	-0.006289308176	0.006593406593	0.5	
+M	first	study	unitigs-k31	gbt	specificity	higher	0	14	14	0	0	4	1	9	0.002634287367	4	-0.002745367193	0.014670921877	0.1875	
+M	first	study	unitigs-k31	gbt	vme	lower	0	14	14	0	0	1	0	13	0.000459981601	4	-0.006593406593	0.006289308176	0.5	
+M	first	study	unitigs-k31	gbt	me	lower	0	14	14	0	0	4	1	9	-0.002634287367	4	-0.014670921877	0.002745367193	0.1875	
+M	first	study	unitigs-k31	gbt	log_loss	lower	0	14	14	0	0	1	0	13	0.001819246303	4	-0.009403530253	0.005165946621	0.5	
+M	first	study	unitigs-k31	lasso	balanced_accuracy	higher	0	14	14	0	0	1	0	13	0.000861059284	4	-0.001761619191	0.008156586371	0.5	
+M	first	study	unitigs-k31	lasso	recall	higher	0	14	14	0	0	1	0	13	-0.000758150114	4	-0.001670558873	0.008791208791	0.5	
+M	first	study	unitigs-k31	lasso	specificity	higher	0	14	14	0	0	2	1	11	0.000403225806	4	-0.005709356202	0.0125	0.5	
+M	first	study	unitigs-k31	lasso	vme	lower	0	14	14	0	0	1	0	13	0.000758150114	4	-0.008791208791	0.001670558873	0.5	
+M	first	study	unitigs-k31	lasso	me	lower	0	14	14	0	0	2	1	11	-0.000403225806	4	-0.0125	0.005709356202	0.5	
+M	first	study	unitigs-k31	lasso	log_loss	lower	0	14	14	0	0	1	0	13	0.001995120971	4	-0.008560186424	0.004505995916	0.5	
+M	first	study	k31-counts-k31	scm	balanced_accuracy	higher	0	14	14	0	0	1	3	10	0.0	4	-0.014633678476	0.019188916877	0.9375	
+M	first	study	k31-counts-k31	scm	recall	higher	0	14	14	0	0	2	4	8	0.0	4	-0.025157232705	0.0	0.890625	
+M	first	study	k31-counts-k31	scm	specificity	higher	0	14	14	0	0	2	1	11	0.0	4	-0.000806451613	0.002198237416	0.5	
+M	first	study	k31-counts-k31	scm	vme	lower	0	14	14	0	0	2	4	8	0.0	4	0.0	0.025157232705	0.890625	
+M	first	study	k31-counts-k31	scm	me	lower	0	14	14	0	0	2	1	11	0.0	4	-0.002198237416	0.000806451613	0.5	
+M	first	study	k31-counts-k31	scm	log_loss	lower	0	14	14	0	0	5	4	5	0.0	4	-0.152121087142	0.056582642889	0.5	
+M	first	study	k31-counts-k31	cart	balanced_accuracy	higher	0	14	14	0	0	2	4	8	0.0	4	-0.03306401656	0.012894363701	0.890625	
+M	first	study	k31-counts-k31	cart	recall	higher	0	14	14	0	0	2	4	8	-0.004562043796	4	-0.028801843318	0.0	0.890625	
+M	first	study	k31-counts-k31	cart	specificity	higher	0	14	14	0	0	3	2	9	0.001292360263	4	-0.017616761946	0.007875162948	0.5	
+M	first	study	k31-counts-k31	cart	vme	lower	0	14	14	0	0	2	4	8	0.004562043796	4	0.0	0.028801843318	0.890625	
+M	first	study	k31-counts-k31	cart	me	lower	0	14	14	0	0	3	2	9	-0.001292360263	4	-0.007875162948	0.017616761946	0.5	
+M	first	study	k31-counts-k31	cart	log_loss	lower	0	14	14	0	0	8	4	2	-0.03084057997	4	-0.070722767733	0.095356242178	0.19384765625	
+M	first	study	k31-counts-k31	rf	balanced_accuracy	higher	0	14	14	0	0	0	4	10	-0.007818347154	4	-0.015910978503	0.008011234358	1.0	
+M	first	study	k31-counts-k31	rf	recall	higher	0	14	14	0	0	2	3	9	0.001960970065	4	0.001692047377	0.010989010989	0.8125	
+M	first	study	k31-counts-k31	rf	specificity	higher	0	14	14	0	0	0	5	9	0.0	4	-0.010144927536	0.002362204724	1.0	
+M	first	study	k31-counts-k31	rf	vme	lower	0	14	14	0	0	2	3	9	-0.001960970065	4	-0.010989010989	-0.001692047377	0.8125	
+M	first	study	k31-counts-k31	rf	me	lower	0	14	14	0	0	0	5	9	0.0	4	-0.002362204724	0.010144927536	1.0	
+M	first	study	k31-counts-k31	rf	log_loss	lower	0	14	14	0	0	0	1	13	0.001058664072	4	-0.005284831811	0.001424090707	1.0	
+M	first	study	k31-counts-k31	gbt	balanced_accuracy	higher	0	14	14	0	0	0	1	13	0.000403225806	4	-0.001255043943	0.004297229219	1.0	
+M	first	study	k31-counts-k31	gbt	recall	higher	0	14	14	0	0	1	1	12	0.000862068965	4	0.0	0.002902757619	0.75	
+M	first	study	k31-counts-k31	gbt	specificity	higher	0	14	14	0	0	1	3	10	0.000806451613	4	-0.002	0.00625	0.9375	
+M	first	study	k31-counts-k31	gbt	vme	lower	0	14	14	0	0	1	1	12	-0.000862068965	4	-0.002902757619	0.0	0.75	
+M	first	study	k31-counts-k31	gbt	me	lower	0	14	14	0	0	1	3	10	-0.000806451613	4	-0.00625	0.002	0.9375	
+M	first	study	k31-counts-k31	gbt	log_loss	lower	0	14	14	0	0	1	2	11	0.000578970437	4	-0.010323248318	0.002657652196	0.875	
+M	first	study	k31-counts-k31	lasso	balanced_accuracy	higher	0	14	14	0	0	0	1	13	0.001730403216	4	-0.001905352712	0.008133137888	1.0	
+M	first	study	k31-counts-k31	lasso	recall	higher	0	14	14	0	0	2	1	11	0.0	4	-0.002197802198	0.014896424331	0.5	
+M	first	study	k31-counts-k31	lasso	specificity	higher	0	14	14	0	0	0	1	13	0.0	4	-0.001612903226	0.000971817298	1.0	
+M	first	study	k31-counts-k31	lasso	vme	lower	0	14	14	0	0	2	1	11	0.0	4	-0.014896424331	0.002197802198	0.5	
+M	first	study	k31-counts-k31	lasso	me	lower	0	14	14	0	0	0	1	13	0.0	4	-0.000971817298	0.001612903226	1.0	
+M	first	study	k31-counts-k31	lasso	log_loss	lower	0	14	14	0	0	2	1	11	-0.00092882438	4	-0.01222143031	0.000955378614	0.5	
+M	first	study	k31-aa-k31	scm	balanced_accuracy	higher	0	14	14	0	0	7	2	5	0.018982620067	4	0.008453886213	0.040287769785	0.08984375	
+M	first	study	k31-aa-k31	scm	recall	higher	0	14	14	0	0	4	5	5	0.000379075056	4	-0.065542891805	0.036585365853	0.74609375	
+M	first	study	k31-aa-k31	scm	specificity	higher	0	14	14	0	0	5	1	8	0.010987070114	4	0.002798898072	0.127536231884	0.109375	
+M	first	study	k31-aa-k31	scm	vme	lower	0	14	14	0	0	4	5	5	-0.000379075056	4	-0.036585365853	0.065542891805	0.74609375	
+M	first	study	k31-aa-k31	scm	me	lower	0	14	14	0	0	5	1	8	-0.010987070114	4	-0.127536231884	-0.002798898072	0.109375	
+M	first	study	k31-aa-k31	scm	log_loss	lower	0	14	14	0	0	7	3	4	-0.050751265479	4	-0.774434625451	0.0	0.171875	
+M	first	study	k31-aa-k31	cart	balanced_accuracy	higher	0	14	14	0	0	5	3	6	0.003123985404	4	-0.017107471852	0.050115207373	0.36328125	
+M	first	study	k31-aa-k31	cart	recall	higher	0	14	14	0	0	5	2	7	0.001299038258	4	-0.01222826087	0.077586206896	0.2265625	
+M	first	study	k31-aa-k31	cart	specificity	higher	0	14	14	0	0	5	4	5	0.009336047537	4	-0.041349661195	0.028191489362	0.5	
+M	first	study	k31-aa-k31	cart	vme	lower	0	14	14	0	0	5	2	7	-0.001299038258	4	-0.077586206896	0.01222826087	0.2265625	
+M	first	study	k31-aa-k31	cart	me	lower	0	14	14	0	0	5	4	5	-0.009336047537	4	-0.028191489362	0.041349661195	0.5	
+M	first	study	k31-aa-k31	cart	log_loss	lower	0	14	14	0	0	6	5	3	-0.009889556351	4	-0.082772757998	0.130828549593	0.5	
+M	first	study	k31-aa-k31	rf	balanced_accuracy	higher	0	14	14	0	0	3	1	10	0.006553143283	4	-0.001798561151	0.00815702029	0.3125	
+M	first	study	k31-aa-k31	rf	recall	higher	0	14	14	0	0	1	2	11	0.0	4	-0.005760368664	0.00314861461	0.875	
+M	first	study	k31-aa-k31	rf	specificity	higher	0	14	14	0	0	4	2	8	0.006382521162	4	-0.003597122302	0.009957671958	0.34375	
+M	first	study	k31-aa-k31	rf	vme	lower	0	14	14	0	0	1	2	11	0.0	4	-0.00314861461	0.005760368664	0.875	
+M	first	study	k31-aa-k31	rf	me	lower	0	14	14	0	0	4	2	8	-0.006382521162	4	-0.009957671958	0.003597122302	0.34375	
+M	first	study	k31-aa-k31	rf	log_loss	lower	0	14	14	0	0	6	0	8	-0.011421306343	4	-0.024206460626	0.000515333959	0.015625	
+M	first	study	k31-aa-k31	gbt	balanced_accuracy	higher	0	14	14	0	0	6	2	6	0.007811450805	4	0.003034057193	0.034849193627	0.14453125	
+M	first	study	k31-aa-k31	gbt	recall	higher	0	14	14	0	0	2	3	9	-0.000912408759	4	-0.013586956522	0.003827350918	0.8125	
+M	first	study	k31-aa-k31	gbt	specificity	higher	0	14	14	0	0	7	1	6	0.016526090955	4	0.01166180758	0.053956834532	0.03515625	
+M	first	study	k31-aa-k31	gbt	vme	lower	0	14	14	0	0	2	3	9	0.000912408759	4	-0.003827350918	0.013586956522	0.8125	
+M	first	study	k31-aa-k31	gbt	me	lower	0	14	14	0	0	7	1	6	-0.016526090955	4	-0.053956834532	-0.01166180758	0.03515625	
+M	first	study	k31-aa-k31	gbt	log_loss	lower	0	14	14	0	0	7	1	6	-0.012979339886	4	-0.040565152053	-9.9552494e-05	0.03515625	
+M	first	study	k31-aa-k31	lasso	balanced_accuracy	higher	0	14	14	0	0	4	1	9	-0.001503113151	4	-0.009577712026	0.03523573201	0.1875	
+M	first	study	k31-aa-k31	lasso	recall	higher	0	14	14	0	0	2	3	9	0.001299038258	4	-0.002304147465	0.015517241379	0.8125	
+M	first	study	k31-aa-k31	lasso	specificity	higher	0	14	14	0	0	2	2	10	-0.004989474882	4	-0.015364364924	0.00826446281	0.6875	
+M	first	study	k31-aa-k31	lasso	vme	lower	0	14	14	0	0	2	3	9	-0.001299038258	4	-0.015517241379	0.002304147465	0.8125	
+M	first	study	k31-aa-k31	lasso	me	lower	0	14	14	0	0	2	2	10	0.004989474882	4	-0.00826446281	0.015364364924	0.6875	
+M	first	study	k31-aa-k31	lasso	log_loss	lower	0	14	14	0	0	5	1	8	-0.002786781462	4	-0.044631173916	0.008232833021	0.109375	
+M	first	study	program-k31	scm	balanced_accuracy	higher	0	14	14	0	0	5	3	6	0.002011075724	4	-0.008992805755	0.004132231405	0.36328125	
+M	first	study	program-k31	scm	recall	higher	0	14	14	0	0	1	6	7	-0.009836481541	4	-0.033073313548	0.0	0.9921875	
+M	first	study	program-k31	scm	specificity	higher	0	14	14	0	0	5	1	8	0.002368562975	4	-0.011041221888	0.013406424954	0.109375	
+M	first	study	program-k31	scm	vme	lower	0	14	14	0	0	1	6	7	0.009836481541	4	0.0	0.033073313548	0.9921875	
+M	first	study	program-k31	scm	me	lower	0	14	14	0	0	5	1	8	-0.002368562975	4	-0.013406424954	0.011041221888	0.109375	
+M	first	study	program-k31	scm	log_loss	lower	0	14	14	0	0	5	7	2	0.025299778657	4	0.010000260985	0.138291897402	0.80615234375	
+M	first	study	program-k31	cart	balanced_accuracy	higher	0	14	14	0	0	6	0	8	0.013111707327	4	0.001156553784	0.03246717379	0.015625	
+M	first	study	program-k31	cart	recall	higher	0	14	14	0	0	5	6	3	0.005079825834	4	-0.010948905109	0.048275862069	0.7255859375	
+M	first	study	program-k31	cart	specificity	higher	0	14	14	0	0	8	3	3	0.045696682464	4	-0.040523854196	0.05905511811	0.11328125	
+M	first	study	program-k31	cart	vme	lower	0	14	14	0	0	5	6	3	-0.005079825834	4	-0.048275862069	0.010948905109	0.7255859375	
+M	first	study	program-k31	cart	me	lower	0	14	14	0	0	8	3	3	-0.045696682464	4	-0.05905511811	0.040523854196	0.11328125	
+M	first	study	program-k31	cart	log_loss	lower	0	14	14	0	0	10	2	2	-0.052199898261	4	-0.133820290745	-0.002329078413	0.019287109375	
+M	first	study	program-k31	rf	balanced_accuracy	higher	0	14	14	0	0	9	2	3	0.065350406279	4	0.012166512199	0.070402583199	0.03271484375	
+M	first	study	program-k31	rf	recall	higher	0	14	14	0	0	7	2	5	0.023274835995	4	0.014265661346	0.047969072923	0.08984375	
+M	first	study	program-k31	rf	specificity	higher	0	14	14	0	0	7	1	6	0.042509942554	4	0.000686341798	0.123222748815	0.03515625	
+M	first	study	program-k31	rf	vme	lower	0	14	14	0	0	7	2	5	-0.023274835995	4	-0.047969072923	-0.014265661346	0.08984375	
+M	first	study	program-k31	rf	me	lower	0	14	14	0	0	7	1	6	-0.042509942554	4	-0.123222748815	-0.000686341798	0.03515625	
+M	first	study	program-k31	rf	log_loss	lower	0	14	14	0	0	10	2	2	-0.037100369432	4	-0.050421906057	0.017063046007	0.019287109375	
+M	first	study	program-k31	gbt	balanced_accuracy	higher	0	14	14	0	0	8	2	4	0.037258246384	4	-0.018040302267	0.053471500024	0.0546875	
+M	first	study	program-k31	gbt	recall	higher	0	14	14	0	0	6	3	5	0.014645544673	4	-0.006593406593	0.041206283066	0.25390625	
+M	first	study	program-k31	gbt	specificity	higher	0	14	14	0	0	6	1	7	0.011874015748	4	-0.000806451613	0.051826086956	0.0625	
+M	first	study	program-k31	gbt	vme	lower	0	14	14	0	0	6	3	5	-0.014645544673	4	-0.041206283066	0.006593406593	0.25390625	
+M	first	study	program-k31	gbt	me	lower	0	14	14	0	0	6	1	7	-0.011874015748	4	-0.051826086956	0.000806451613	0.0625	
+M	first	study	program-k31	gbt	log_loss	lower	0	14	14	0	0	8	2	4	-0.025512666962	4	-0.047011286383	0.01206121168	0.0546875	
+M	first	study	program-k31	lasso	balanced_accuracy	higher	0	14	14	0	0	8	0	6	0.043853016264	4	0.023988116718	0.056608725796	0.00390625	
+M	first	study	program-k31	lasso	recall	higher	0	14	14	0	0	6	2	6	0.004395604395	4	-0.001379944802	0.072327044025	0.14453125	
+M	first	study	program-k31	lasso	specificity	higher	0	14	14	0	0	8	0	6	0.026846905992	4	0.006451612903	0.06	0.00390625	
+M	first	study	program-k31	lasso	vme	lower	0	14	14	0	0	6	2	6	-0.004395604395	4	-0.072327044025	0.001379944802	0.14453125	
+M	first	study	program-k31	lasso	me	lower	0	14	14	0	0	8	0	6	-0.026846905992	4	-0.06	-0.006451612903	0.00390625	
+M	first	study	program-k31	lasso	log_loss	lower	0	14	14	0	0	9	1	4	-0.036867973926	4	-0.085488488163	-0.007979916482	0.0107421875	
+M	first	study	k31-program-k31	scm	balanced_accuracy	higher	0	14	14	0	0	0	1	13	0.0	4	0.0	0.0	1.0	
+M	first	study	k31-program-k31	scm	recall	higher	0	14	14	0	0	0	1	13	0.0	4	0.0	0.0	1.0	
+M	first	study	k31-program-k31	scm	specificity	higher	0	14	14	0	0	0	0	14	0.0	4	0.0	0.0	1.0	
+M	first	study	k31-program-k31	scm	vme	lower	0	14	14	0	0	0	1	13	0.0	4	0.0	0.0	1.0	
+M	first	study	k31-program-k31	scm	me	lower	0	14	14	0	0	0	0	14	0.0	4	0.0	0.0	1.0	
+M	first	study	k31-program-k31	scm	log_loss	lower	0	14	14	0	0	0	2	12	0.0	4	0.0	0.0	1.0	
+M	first	study	k31-program-k31	cart	balanced_accuracy	higher	0	14	14	0	0	0	0	14	0.000354033209	4	-0.001333333333	0.000846023689	1.0	
+M	first	study	k31-program-k31	cart	recall	higher	0	14	14	0	0	1	0	13	0.0	4	0.0	0.001692047378	0.5	
+M	first	study	k31-program-k31	cart	specificity	higher	0	14	14	0	0	0	1	13	0.0	4	-0.003527336861	0.000971817299	1.0	
+M	first	study	k31-program-k31	cart	vme	lower	0	14	14	0	0	1	0	13	0.0	4	-0.001692047378	0.0	0.5	
+M	first	study	k31-program-k31	cart	me	lower	0	14	14	0	0	0	1	13	0.0	4	-0.000971817299	0.003527336861	1.0	
+M	first	study	k31-program-k31	cart	log_loss	lower	0	14	14	0	0	3	3	8	0.000153722574	4	-0.011892400549	0.044564900532	0.65625	
+M	first	study	k31-program-k31	rf	balanced_accuracy	higher	0	14	14	0	0	0	2	12	-0.003855103698	4	-0.005847106067	0.004373177843	1.0	
+M	first	study	k31-program-k31	rf	recall	higher	0	14	14	0	0	0	2	12	0.0	4	-0.005474452555	0.0	1.0	
+M	first	study	k31-program-k31	rf	specificity	higher	0	14	14	0	0	0	3	11	0.0	4	-0.00625	0.0	1.0	
+M	first	study	k31-program-k31	rf	vme	lower	0	14	14	0	0	0	2	12	0.0	4	0.0	0.005474452555	1.0	
+M	first	study	k31-program-k31	rf	me	lower	0	14	14	0	0	0	3	11	0.0	4	0.0	0.00625	1.0	
+M	first	study	k31-program-k31	rf	log_loss	lower	0	14	14	0	0	0	0	14	-0.003135272589	4	-0.004338660088	0.000771516477	1.0	
+M	first	study	k31-program-k31	gbt	balanced_accuracy	higher	0	14	14	0	0	0	0	14	-0.000171585449	4	-0.007073047859	0.000514002127	1.0	
+M	first	study	k31-program-k31	gbt	recall	higher	0	14	14	0	0	0	0	14	0.0	4	-0.002717391305	0.001824817518	1.0	
+M	first	study	k31-program-k31	gbt	specificity	higher	0	14	14	0	0	0	2	12	0.0	4	-0.009478672986	0.00176366843	1.0	
+M	first	study	k31-program-k31	gbt	vme	lower	0	14	14	0	0	0	0	14	0.0	4	-0.001824817518	0.002717391305	1.0	
+M	first	study	k31-program-k31	gbt	me	lower	0	14	14	0	0	0	2	12	0.0	4	-0.00176366843	0.009478672986	1.0	
+M	first	study	k31-program-k31	gbt	log_loss	lower	0	14	14	0	0	0	1	13	0.000478431082	4	-0.000335715344	0.006398748379	1.0	
+M	first	study	k31-program-k31	lasso	balanced_accuracy	higher	0	14	14	0	0	0	0	14	0.0	4	-0.000433651345	0.0	1.0	
+M	first	study	k31-program-k31	lasso	recall	higher	0	14	14	0	0	1	0	13	0.0	4	0.0	0.0	0.5	
+M	first	study	k31-program-k31	lasso	specificity	higher	0	14	14	0	0	0	0	14	0.0	4	0.0	0.0	1.0	
+M	first	study	k31-program-k31	lasso	vme	lower	0	14	14	0	0	1	0	13	0.0	4	0.0	0.0	0.5	
+M	first	study	k31-program-k31	lasso	me	lower	0	14	14	0	0	0	0	14	0.0	4	0.0	0.0	1.0	
+M	first	study	k31-program-k31	lasso	log_loss	lower	0	14	14	0	0	0	0	14	3.8477449e-05	4	0.0	0.000404258916	1.0	
+all datasets	first	lineage	unitigs-k31	scm	balanced_accuracy	higher	0	268	267	1	0	26	32	209	0.0	23	-0.000758150114	0.0	0.820928349097	1.0
+all datasets	first	lineage	unitigs-k31	scm	recall	higher	0	268	267	1	0	38	45	184	0.0	23	0.0	0.0	0.810000301794	
+all datasets	first	lineage	unitigs-k31	cart	balanced_accuracy	higher	0	268	267	1	0	26	23	218	0.0	23	-4.3247887e-05	0.0	0.387724827341	1.0
+all datasets	first	lineage	unitigs-k31	cart	recall	higher	0	268	267	1	0	42	45	180	0.0	23	0.0	0.0	0.665857501641	
+all datasets	first	lineage	unitigs-k31	rf	balanced_accuracy	higher	0	268	267	1	0	11	16	240	0.0	23	-0.000630999097	0.0	0.876105718315	1.0
+all datasets	first	lineage	unitigs-k31	rf	recall	higher	0	268	267	1	0	18	18	231	0.0	23	0.0	0.0	0.566030299786	
+all datasets	first	lineage	unitigs-k31	gbt	balanced_accuracy	higher	0	268	267	1	0	37	16	214	0.000372023809	23	0.0	0.001176001176	0.002743172438	0.057606621206
+all datasets	first	lineage	unitigs-k31	gbt	recall	higher	0	268	267	1	0	49	36	182	0.0	23	-0.000496770988	0.0	0.096380217671	
+all datasets	first	lineage	unitigs-k31	lasso	balanced_accuracy	higher	0	268	267	1	0	12	13	242	0.0	23	-0.000822237679	0.000442927028	0.654981017113	1.0
+all datasets	first	lineage	unitigs-k31	lasso	recall	higher	0	268	267	1	0	25	22	220	0.0	23	0.0	0.0	0.385433497287	
+all datasets	first	lineage	k31-counts-k31	scm	balanced_accuracy	higher	0	268	267	1	0	23	21	223	0.0	23	-0.000175494145	0.0	0.44019791064	1.0
+all datasets	first	lineage	k31-counts-k31	scm	recall	higher	0	268	267	1	0	38	38	191	0.0	23	0.0	0.0	0.545611537362	
+all datasets	first	lineage	k31-counts-k31	cart	balanced_accuracy	higher	0	268	267	1	0	30	26	211	0.0	23	0.0	0.0	0.344439880362	1.0
+all datasets	first	lineage	k31-counts-k31	cart	recall	higher	0	268	267	1	0	40	41	186	0.0	23	0.0	0.0	0.587843392447	
+all datasets	first	lineage	k31-counts-k31	rf	balanced_accuracy	higher	0	268	267	1	0	18	14	235	0.0	23	-2.8604119e-05	0.000687830687	0.298307447927	1.0
+all datasets	first	lineage	k31-counts-k31	rf	recall	higher	0	268	267	1	0	38	17	212	0.0	23	0.0	0.0	0.003227901555	
+all datasets	first	lineage	k31-counts-k31	gbt	balanced_accuracy	higher	0	268	267	1	0	40	21	206	0.001048218029	23	0.000344352617	0.001686884319	0.0102073569	0.204147137996
+all datasets	first	lineage	k31-counts-k31	gbt	recall	higher	0	268	267	1	0	52	36	179	0.0	23	0.0	0.000598057287	0.054647714889	
+all datasets	first	lineage	k31-counts-k31	lasso	balanced_accuracy	higher	0	268	267	1	0	21	13	233	0.0	23	0.0	6.9213732e-05	0.114740506513	1.0
+all datasets	first	lineage	k31-counts-k31	lasso	recall	higher	0	268	267	1	0	35	25	207	0.0	23	0.0	0.0	0.122530416511	
+all datasets	first	lineage	k31-aa-k31	scm	balanced_accuracy	higher	0	268	267	1	0	58	26	183	0.001631249106	23	0.0	0.003718201063	0.000313973636	0.007017979078
+all datasets	first	lineage	k31-aa-k31	scm	recall	higher	0	268	267	1	0	64	51	152	0.0	23	0.0	0.004535147392	0.131526978771	
+all datasets	first	lineage	k31-aa-k31	cart	balanced_accuracy	higher	0	268	267	1	0	61	28	178	0.000453325772	23	0.0	0.003246753247	0.000305129525	0.007017979078
+all datasets	first	lineage	k31-aa-k31	cart	recall	higher	0	268	267	1	0	77	42	148	0.0	23	0.0	0.001214329084	0.000855264539	
+all datasets	first	lineage	k31-aa-k31	rf	balanced_accuracy	higher	0	268	267	1	0	45	10	212	0.001769665155	23	0.000577360297	0.005139701914	1.028632e-06	2.7773071e-05
+all datasets	first	lineage	k31-aa-k31	rf	recall	higher	0	268	267	1	0	53	23	191	0.001418439717	23	0.0	0.004514672686	0.00038229087	
+all datasets	first	lineage	k31-aa-k31	gbt	balanced_accuracy	higher	0	268	267	1	0	57	20	190	0.002546826573	23	0.000456357974	0.005255385107	1.4631555e-05	0.000380420439
+all datasets	first	lineage	k31-aa-k31	gbt	recall	higher	0	268	267	1	0	61	45	161	0.0	23	0.0	0.003375527426	0.072391169665	
+all datasets	first	lineage	k31-aa-k31	lasso	balanced_accuracy	higher	0	268	267	1	0	50	20	197	0.000972384286	23	0.0	0.003205128205	0.000220142503	0.005283420078
+all datasets	first	lineage	k31-aa-k31	lasso	recall	higher	0	268	267	1	0	58	40	169	0.0	23	0.0	0.004573934837	0.042705294556	
+all datasets	first	lineage	program-k31	scm	balanced_accuracy	higher	0	237	236	1	0	79	62	95	0.004191912422	21	0.0	0.011945200093	0.088814918376	1.0
+all datasets	first	lineage	program-k31	scm	recall	higher	0	237	236	1	0	76	75	85	0.0	21	-0.001402910583	0.005199524026	0.5	
+all datasets	first	lineage	program-k31	cart	balanced_accuracy	higher	0	237	236	1	0	101	51	84	0.009930349565	21	0.004676628716	0.020423511946	3.0625182e-05	0.000765629556
+all datasets	first	lineage	program-k31	cart	recall	higher	0	237	236	1	0	98	71	67	0.007328359785	21	0.0	0.018656716418	0.022589802215	
+all datasets	first	lineage	program-k31	rf	balanced_accuracy	higher	0	237	236	1	0	145	32	59	0.039840325954	21	0.030054644809	0.05404040404	0.0	0.0
+all datasets	first	lineage	program-k31	rf	recall	higher	0	237	236	1	0	123	42	71	0.023682207803	21	0.012669287899	0.045086119555	1.02e-10	
+all datasets	first	lineage	program-k31	gbt	balanced_accuracy	higher	0	237	236	1	0	127	28	81	0.021611834334	21	0.014970914358	0.033174469676	0.0	0.0
+all datasets	first	lineage	program-k31	gbt	recall	higher	0	237	236	1	0	108	55	73	0.012117362651	21	0.003314058528	0.027372262774	2.0069965e-05	
+all datasets	first	lineage	program-k31	lasso	balanced_accuracy	higher	0	237	236	1	0	120	36	80	0.020423276087	21	0.01179029304	0.027394305436	5e-12	1.3e-10
+all datasets	first	lineage	program-k31	lasso	recall	higher	0	237	236	1	0	101	55	80	0.014060017799	21	0.004741583689	0.019047619048	0.000143554258	
+all datasets	first	lineage	k31-program-k31	scm	balanced_accuracy	higher	0	237	236	1	0	7	9	220	0.0	21	0.0	0.0	0.772750854492	1.0
+all datasets	first	lineage	k31-program-k31	scm	recall	higher	0	237	236	1	0	19	11	206	0.0	21	0.0	0.0	0.100244211033	
+all datasets	first	lineage	k31-program-k31	cart	balanced_accuracy	higher	0	237	236	1	0	6	6	224	0.0	21	0.0	0.0	0.61279296875	1.0
+all datasets	first	lineage	k31-program-k31	cart	recall	higher	0	237	236	1	0	11	9	216	0.0	21	0.0	0.0	0.411901473999	
+all datasets	first	lineage	k31-program-k31	rf	balanced_accuracy	higher	0	237	236	1	0	5	1	230	0.0	21	0.0	0.0	0.109375	1.0
+all datasets	first	lineage	k31-program-k31	rf	recall	higher	0	237	236	1	0	12	9	215	0.0	21	0.0	0.0	0.331811904907	
+all datasets	first	lineage	k31-program-k31	gbt	balanced_accuracy	higher	0	237	236	1	0	13	11	212	0.0	21	0.0	0.0	0.419409871101	1.0
+all datasets	first	lineage	k31-program-k31	gbt	recall	higher	0	237	236	1	0	22	20	194	0.0	21	0.0	0.0	0.438807164376	
+all datasets	first	lineage	k31-program-k31	lasso	balanced_accuracy	higher	0	237	236	1	0	1	2	233	0.0	21	0.0	0.0	0.875	1.0
+all datasets	first	lineage	k31-program-k31	lasso	recall	higher	0	237	236	1	0	3	4	229	0.0	21	0.0	0.0	0.7734375	
+all datasets	first	lineage	twin-k31	scm	balanced_accuracy	higher	0	268	267	1	0	33	31	203	0.0	23	-4.8225309e-05	0.000525535642	0.450326623126	1.0
+all datasets	first	lineage	twin-k31	scm	recall	higher	0	268	267	1	0	50	49	168	0.0	23	0.0	0.0	0.5	
+all datasets	first	lineage	twin-k31	cart	balanced_accuracy	higher	0	268	267	1	0	33	34	200	0.0	23	-0.000365110396	0.0	0.596402654316	1.0
+all datasets	first	lineage	twin-k31	cart	recall	higher	0	268	267	1	0	50	51	166	0.0	23	0.0	0.0	0.578808950746	
+all datasets	first	lineage	twin-k31	rf	balanced_accuracy	higher	0	268	267	1	0	20	24	223	-0.000605082695	23	-0.002540650407	0.0	0.774309583802	1.0
+all datasets	first	lineage	twin-k31	rf	recall	higher	0	268	267	1	0	26	42	199	0.0	23	-0.000721500721	0.0	0.980769973326	
+all datasets	first	lineage	twin-k31	gbt	balanced_accuracy	higher	0	268	267	1	0	48	37	182	0.000177442251	23	-0.00013453507	0.001154401154	0.13899964454	1.0
+all datasets	first	lineage	twin-k31	gbt	recall	higher	0	268	267	1	0	57	53	157	0.0	23	0.0	0.000248385494	0.387501491415	
+all datasets	first	lineage	twin-k31	lasso	balanced_accuracy	higher	0	268	267	1	0	32	21	214	0.0	23	-0.000904198575	0.000159558773	0.084488911144	1.0
+all datasets	first	lineage	twin-k31	lasso	recall	higher	0	268	267	1	0	46	37	184	0.0	23	0.0	0.00054200542	0.189999698206	
+all datasets	first	study	unitigs-k31	scm	balanced_accuracy	higher	0	69	69	0	0	10	9	50	0.0	9	0.0	0.002442996743	0.5	
+all datasets	first	study	unitigs-k31	scm	recall	higher	0	69	69	0	0	11	12	46	0.0	9	-0.001443001443	0.001358695652	0.661180257797	
+all datasets	first	study	unitigs-k31	cart	balanced_accuracy	higher	0	69	69	0	0	9	6	54	0.0	9	0.0	0.000655624569	0.303619384766	
+all datasets	first	study	unitigs-k31	cart	recall	higher	0	69	69	0	0	17	9	43	0.0	9	-0.001516300228	0.0	0.084318771958	
+all datasets	first	study	unitigs-k31	rf	balanced_accuracy	higher	0	69	69	0	0	2	3	64	-0.000912408759	9	-0.00243902439	0.0	0.8125	
+all datasets	first	study	unitigs-k31	rf	recall	higher	0	69	69	0	0	4	5	60	0.0	9	0.0	0.0	0.74609375	
+all datasets	first	study	unitigs-k31	gbt	balanced_accuracy	higher	0	69	69	0	0	6	6	57	0.0	9	-0.000770299739	0.001466029399	0.61279296875	
+all datasets	first	study	unitigs-k31	gbt	recall	higher	0	69	69	0	0	7	7	55	0.0	9	-0.001053101411	0.002257336343	0.604736328125	
+all datasets	first	study	unitigs-k31	lasso	balanced_accuracy	higher	0	69	69	0	0	3	1	65	0.0	9	-0.000558997262	0.002973240833	0.3125	
+all datasets	first	study	unitigs-k31	lasso	recall	higher	0	69	69	0	0	3	2	64	0.0	9	0.0	0.001376808716	0.5	
+all datasets	first	study	k31-counts-k31	scm	balanced_accuracy	higher	0	69	69	0	0	10	10	49	0.0	9	-0.000403225806	0.00495049505	0.588098526001	
+all datasets	first	study	k31-counts-k31	scm	recall	higher	0	69	69	0	0	10	18	41	0.0	9	-0.003424657534	0.0	0.956420723349	
+all datasets	first	study	k31-counts-k31	cart	balanced_accuracy	higher	0	69	69	0	0	13	15	41	0.0	9	0.0	0.002352941176	0.714205905795	
+all datasets	first	study	k31-counts-k31	cart	recall	higher	0	69	69	0	0	15	23	31	0.0	9	-0.017543859649	0.0	0.928346672852	
+all datasets	first	study	k31-counts-k31	rf	balanced_accuracy	higher	0	69	69	0	0	5	10	54	0.0	9	-0.002807911043	0.003743476515	0.940765380859	
+all datasets	first	study	k31-counts-k31	rf	recall	higher	0	69	69	0	0	6	13	50	0.0	9	-0.005354476285	0.000758150113	0.968215942383	
+all datasets	first	study	k31-counts-k31	gbt	balanced_accuracy	higher	0	69	69	0	0	8	11	50	0.000776397515	9	-0.000152112004	0.003797347689	0.820358276367	
+all datasets	first	study	k31-counts-k31	gbt	recall	higher	0	69	69	0	0	9	12	48	0.0	9	0.0	0.00237247924	0.808344841003	
+all datasets	first	study	k31-counts-k31	lasso	balanced_accuracy	higher	0	69	69	0	0	8	10	51	0.0	9	-0.000650743707	0.002040816326	0.759658813477	
+all datasets	first	study	k31-counts-k31	lasso	recall	higher	0	69	69	0	0	12	14	43	0.0	9	-0.003508771929	0.0	0.721401453018	
+all datasets	first	study	k31-aa-k31	scm	balanced_accuracy	higher	0	69	69	0	0	24	13	32	0.00705882353	9	0.0	0.019683715474	0.049435874796	
+all datasets	first	study	k31-aa-k31	scm	recall	higher	0	69	69	0	0	25	16	28	0.000758150113	9	-0.002348630257	0.024844720497	0.105511798804	
+all datasets	first	study	k31-aa-k31	cart	balanced_accuracy	higher	0	69	69	0	0	22	14	33	0.003986149774	9	0.001629284807	0.010714594486	0.121492477017	
+all datasets	first	study	k31-aa-k31	cart	recall	higher	0	69	69	0	0	22	13	34	0.00350877193	9	0.0	0.009489916963	0.087732624495	
+all datasets	first	study	k31-aa-k31	rf	balanced_accuracy	higher	0	69	69	0	0	9	4	56	0.002155172414	9	0.0	0.008474576271	0.133422851562	
+all datasets	first	study	k31-aa-k31	rf	recall	higher	0	69	69	0	0	6	6	57	0.0	9	0.0	0.004310344828	0.61279296875	
+all datasets	first	study	k31-aa-k31	gbt	balanced_accuracy	higher	0	69	69	0	0	19	9	41	0.004773021345	9	0.002329192547	0.012969515792	0.043579276651	
+all datasets	first	study	k31-aa-k31	gbt	recall	higher	0	69	69	0	0	12	12	45	0.000758150113	9	0.0	0.004083506896	0.580590128899	
+all datasets	first	study	k31-aa-k31	lasso	balanced_accuracy	higher	0	69	69	0	0	15	9	45	0.002048868172	9	0.0	0.014821893299	0.15372812748	
+all datasets	first	study	k31-aa-k31	lasso	recall	higher	0	69	69	0	0	15	12	42	0.0	9	0.0	0.013544018059	0.350554019213	
+all datasets	first	study	program-k31	scm	balanced_accuracy	higher	0	68	68	0	0	28	13	27	0.006968446154	8	-0.000514884853	0.024248737045	0.013766577915	
+all datasets	first	study	program-k31	scm	recall	higher	0	68	68	0	0	17	30	21	-0.011541783226	8	-0.016393442623	0.0	0.980006971587	
+all datasets	first	study	program-k31	cart	balanced_accuracy	higher	0	68	68	0	0	27	11	30	0.009746555975	8	0.001779954008	0.021251329316	0.006926482631	
+all datasets	first	study	program-k31	cart	recall	higher	0	68	68	0	0	23	29	16	-0.004183176269	8	-0.025489693626	0.011968038909	0.834125118315	
+all datasets	first	study	program-k31	rf	balanced_accuracy	higher	0	68	68	0	0	45	9	14	0.041135123481	8	0.027227772129	0.070402583199	3.64422e-07	
+all datasets	first	study	program-k31	rf	recall	higher	0	68	68	0	0	33	15	20	0.018489484653	8	0.013698630137	0.029702970297	0.006641640781	
+all datasets	first	study	program-k31	gbt	balanced_accuracy	higher	0	68	68	0	0	33	10	25	0.01703944204	8	0.008858023986	0.039086929331	0.000303053316	
+all datasets	first	study	program-k31	gbt	recall	higher	0	68	68	0	0	22	20	26	0.0	8	-0.003296703297	0.009510869565	0.438807164376	
+all datasets	first	study	program-k31	lasso	balanced_accuracy	higher	0	68	68	0	0	40	5	23	0.032320166492	8	0.009402427638	0.050156067799	3.9392e-08	
+all datasets	first	study	program-k31	lasso	recall	higher	0	68	68	0	0	26	16	26	0.005395162664	8	0.0	0.023961661342	0.082074700892	
+all datasets	first	study	k31-program-k31	scm	balanced_accuracy	higher	0	68	68	0	0	3	3	62	0.0	8	0.0	0.0	0.65625	
+all datasets	first	study	k31-program-k31	scm	recall	higher	0	68	68	0	0	4	3	61	0.0	8	0.0	0.0	0.5	
+all datasets	first	study	k31-program-k31	cart	balanced_accuracy	higher	0	68	68	0	0	1	1	66	0.0	8	0.0	0.0	0.75	
+all datasets	first	study	k31-program-k31	cart	recall	higher	0	68	68	0	0	3	2	63	0.0	8	0.0	0.0	0.5	
+all datasets	first	study	k31-program-k31	rf	balanced_accuracy	higher	0	68	68	0	0	3	4	61	0.0	8	-0.00230997797	0.0	0.7734375	
+all datasets	first	study	k31-program-k31	rf	recall	higher	0	68	68	0	0	4	8	56	0.0	8	0.0	0.0	0.927001953125	
+all datasets	first	study	k31-program-k31	gbt	balanced_accuracy	higher	0	68	68	0	0	0	3	65	0.0	8	-0.000171585449	0.000597403764	1.0	
+all datasets	first	study	k31-program-k31	gbt	recall	higher	0	68	68	0	0	4	4	60	0.0	8	0.0	0.0	0.63671875	
+all datasets	first	study	k31-program-k31	lasso	balanced_accuracy	higher	0	68	68	0	0	1	0	67	0.0	8	0.0	0.0	0.5	
+all datasets	first	study	k31-program-k31	lasso	recall	higher	0	68	68	0	0	1	1	66	0.0	8	0.0	0.0	0.75	
+first run	second	lineage	unitigs-k31	scm	balanced_accuracy	higher	0	233	232	1	0	19	29	184	0.0	23	-0.000947612173	0.0	0.944298554469	1.0
+first run	second	lineage	unitigs-k31	scm	recall	higher	0	233	232	1	0	33	39	160	0.0	23	0.0	0.0	0.795210302036	
+first run	second	lineage	unitigs-k31	cart	balanced_accuracy	higher	0	233	232	1	0	24	19	189	0.0	23	0.0	9.6476386e-05	0.271192005928	1.0
+first run	second	lineage	unitigs-k31	cart	recall	higher	0	233	232	1	0	38	36	158	0.0	23	0.0	0.0	0.453780308806	
+first run	second	lineage	unitigs-k31	rf	balanced_accuracy	higher	0	233	232	1	0	10	12	210	0.0	23	-0.000508130081	0.0	0.738266468048	1.0
+first run	second	lineage	unitigs-k31	rf	recall	higher	0	233	232	1	0	17	14	201	0.0	23	0.0	0.0	0.360050065909	
+first run	second	lineage	unitigs-k31	gbt	balanced_accuracy	higher	0	233	232	1	0	34	15	183	0.000381358025	23	0.0	0.001418439716	0.004699620762	0.098692036001
+first run	second	lineage	unitigs-k31	gbt	recall	higher	0	233	232	1	0	45	30	157	0.0	23	-0.00055463117	0.0	0.052671134437	
+first run	second	lineage	unitigs-k31	lasso	balanced_accuracy	higher	0	233	232	1	0	12	11	209	0.0	23	-0.000936084988	0.000511247444	0.5	1.0
+first run	second	lineage	unitigs-k31	lasso	recall	higher	0	233	232	1	0	25	17	190	0.0	23	0.0	0.0	0.139978119264	
+first run	second	lineage	k31-counts-k31	scm	balanced_accuracy	higher	0	233	232	1	0	19	18	195	0.0	23	-0.000175494145	0.0	0.5	1.0
+first run	second	lineage	k31-counts-k31	scm	recall	higher	0	233	232	1	0	34	34	164	0.0	23	0.0	0.0	0.548201327158	
+first run	second	lineage	k31-counts-k31	cart	balanced_accuracy	higher	0	233	232	1	0	27	23	182	0.0	23	0.0	0.0	0.335905516883	1.0
+first run	second	lineage	k31-counts-k31	cart	recall	higher	0	233	232	1	0	35	33	164	0.0	23	0.0	0.0	0.451798672842	
+first run	second	lineage	k31-counts-k31	rf	balanced_accuracy	higher	0	233	232	1	0	18	12	202	0.0	23	0.0	0.000416489879	0.180797304027	1.0
+first run	second	lineage	k31-counts-k31	rf	recall	higher	0	233	232	1	0	34	13	185	0.0	23	0.0	0.0	0.001543838231	
+first run	second	lineage	k31-counts-k31	gbt	balanced_accuracy	higher	0	233	232	1	0	35	18	179	0.000993076535	23	3.9897007e-05	0.001693782295	0.013504158827	0.270083176537
+first run	second	lineage	k31-counts-k31	gbt	recall	higher	0	233	232	1	0	43	30	159	0.0	23	0.0	0.000488400489	0.079855841559	
+first run	second	lineage	k31-counts-k31	lasso	balanced_accuracy	higher	0	233	232	1	0	19	11	202	0.0	23	0.0	1.9464283e-05	0.100244211033	1.0
+first run	second	lineage	k31-counts-k31	lasso	recall	higher	0	233	232	1	0	31	22	179	0.0	23	0.0	0.0	0.135839583033	
+first run	second	lineage	k31-aa-k31	scm	balanced_accuracy	higher	0	233	232	1	0	48	23	161	0.000655183964	23	0.0	0.003379283281	0.002032558062	0.044716277371
+first run	second	lineage	k31-aa-k31	scm	recall	higher	0	233	232	1	0	55	45	132	0.0	23	0.0	0.004535147392	0.184100808663	
+first run	second	lineage	k31-aa-k31	cart	balanced_accuracy	higher	0	233	232	1	0	54	25	153	0.00041048154	23	0.0	0.002827558741	0.000733035974	0.016859827394
+first run	second	lineage	k31-aa-k31	cart	recall	higher	0	233	232	1	0	66	36	130	0.0	23	0.0	0.001214329084	0.001932791794	
+first run	second	lineage	k31-aa-k31	rf	balanced_accuracy	higher	0	233	232	1	0	39	8	185	0.001713259268	23	0.000508130081	0.004901960785	2.769811e-06	7.4784892e-05
+first run	second	lineage	k31-aa-k31	rf	recall	higher	0	233	232	1	0	48	19	165	0.001216804334	23	0.0	0.003993610224	0.000260806378	
+first run	second	lineage	k31-aa-k31	gbt	balanced_accuracy	higher	0	233	232	1	0	51	16	165	0.002594750406	23	0.000521055172	0.005175983437	1.0844619e-05	0.000281960104
+first run	second	lineage	k31-aa-k31	gbt	recall	higher	0	233	232	1	0	55	36	141	0.000548336498	23	0.0	0.003570064911	0.029286764205	
+first run	second	lineage	k31-aa-k31	lasso	balanced_accuracy	higher	0	233	232	1	0	46	16	170	0.001143556124	23	0.0	0.004264543137	8.8163556e-05	0.002126180979
+first run	second	lineage	k31-aa-k31	lasso	recall	higher	0	233	232	1	0	53	33	146	0.00022737608	23	0.0	0.005602240896	0.01992681428	
+first run	second	lineage	program-k31	scm	balanced_accuracy	higher	0	204	203	1	0	70	53	80	0.004539873877	21	0.0	0.012979283527	0.074408123119	1.0
+first run	second	lineage	program-k31	scm	recall	higher	0	204	203	1	0	66	62	75	0.0	21	-0.001205414756	0.006894776444	0.395503724701	
+first run	second	lineage	program-k31	cart	balanced_accuracy	higher	0	204	203	1	0	85	42	76	0.009414798721	21	0.004662662815	0.018429487179	8.5047239e-05	0.002126180979
+first run	second	lineage	program-k31	cart	recall	higher	0	204	203	1	0	79	63	61	0.001937984496	21	0.0	0.014336917563	0.103979210759	
+first run	second	lineage	program-k31	rf	balanced_accuracy	higher	0	204	203	1	0	121	28	54	0.035864978903	21	0.024741660927	0.052721088435	0.0	0.0
+first run	second	lineage	program-k31	rf	recall	higher	0	204	203	1	0	104	38	61	0.023088023088	21	0.011299435028	0.042618059159	1.3917e-08	
+first run	second	lineage	program-k31	gbt	balanced_accuracy	higher	0	204	203	1	0	105	26	72	0.021080177157	21	0.012535432388	0.030082875229	1e-12	2.7e-11
+first run	second	lineage	program-k31	gbt	recall	higher	0	204	203	1	0	88	49	66	0.010370370371	21	0.002173913044	0.025641025641	0.000545511808	
+first run	second	lineage	program-k31	lasso	balanced_accuracy	higher	0	204	203	1	0	102	32	69	0.02020917125	21	0.010624497802	0.027394305436	5.21e-10	1.458e-08
+first run	second	lineage	program-k31	lasso	recall	higher	0	204	203	1	0	82	50	71	0.011594202899	21	0.003875968993	0.017918271288	0.00337317943	
+first run	second	lineage	k31-program-k31	scm	balanced_accuracy	higher	0	204	203	1	0	6	9	188	0.0	21	0.0	0.0	0.84912109375	1.0
+first run	second	lineage	k31-program-k31	scm	recall	higher	0	204	203	1	0	19	10	174	0.0	21	0.0	0.0	0.068022973835	
+first run	second	lineage	k31-program-k31	cart	balanced_accuracy	higher	0	204	203	1	0	5	5	193	0.0	21	0.0	0.0	0.623046875	1.0
+first run	second	lineage	k31-program-k31	cart	recall	higher	0	204	203	1	0	9	7	187	0.0	21	0.0	0.0	0.401809692383	
+first run	second	lineage	k31-program-k31	rf	balanced_accuracy	higher	0	204	203	1	0	4	1	198	0.0	21	0.0	0.0	0.1875	1.0
+first run	second	lineage	k31-program-k31	rf	recall	higher	0	204	203	1	0	10	6	187	0.0	21	0.0	0.0	0.227249145508	
+first run	second	lineage	k31-program-k31	gbt	balanced_accuracy	higher	0	204	203	1	0	10	10	183	0.0	21	0.0	0.0	0.588098526001	1.0
+first run	second	lineage	k31-program-k31	gbt	recall	higher	0	204	203	1	0	19	18	166	0.0	21	0.0	0.0	0.5	
+first run	second	lineage	k31-program-k31	lasso	balanced_accuracy	higher	0	204	203	1	0	1	1	201	0.0	21	0.0	0.0	0.75	1.0
+first run	second	lineage	k31-program-k31	lasso	recall	higher	0	204	203	1	0	3	3	197	0.0	21	0.0	0.0	0.65625	
+first run	second	lineage	twin-k31	scm	balanced_accuracy	higher	0	233	232	1	0	29	27	176	0.0	23	-9.6450617e-05	0.000525535642	0.446926547418	1.0
+first run	second	lineage	twin-k31	scm	recall	higher	0	233	232	1	0	44	43	145	0.0	23	0.0	0.0	0.5	
+first run	second	lineage	twin-k31	cart	balanced_accuracy	higher	0	233	232	1	0	27	30	175	0.0	23	-9.5443431e-05	0.0	0.701679119813	1.0
+first run	second	lineage	twin-k31	cart	recall	higher	0	233	232	1	0	40	44	148	0.0	23	0.0	0.0	0.707176602639	
+first run	second	lineage	twin-k31	rf	balanced_accuracy	higher	0	233	232	1	0	18	22	192	-0.000526913739	23	-0.002808519934	0.0	0.785204746078	1.0
+first run	second	lineage	twin-k31	rf	recall	higher	0	233	232	1	0	25	39	168	0.0	23	-0.001291989664	0.0	0.970029405217	
+first run	second	lineage	twin-k31	gbt	balanced_accuracy	higher	0	233	232	1	0	40	33	159	0.0	23	-0.000251538427	0.001154401154	0.241394278422	1.0
+first run	second	lineage	twin-k31	gbt	recall	higher	0	233	232	1	0	53	47	132	0.0	23	-0.00036231884	0.0	0.308649706795	
+first run	second	lineage	twin-k31	lasso	balanced_accuracy	higher	0	233	232	1	0	28	19	185	0.0	23	-0.000995807128	0.000188964475	0.121480108642	1.0
+first run	second	lineage	twin-k31	lasso	recall	higher	0	233	232	1	0	41	32	159	0.0	23	0.0	0.000957414215	0.174590919085	
+first run	second	study	unitigs-k31	scm	balanced_accuracy	higher	0	55	55	0	0	8	6	41	0.0	8	0.0	0.000581395349	0.395263671875	
+first run	second	study	unitigs-k31	scm	recall	higher	0	55	55	0	0	11	8	36	0.0	8	0.0	0.003174603174	0.323802947998	
+first run	second	study	unitigs-k31	cart	balanced_accuracy	higher	0	55	55	0	0	7	6	42	0.0	8	0.0	0.0025	0.5	
+first run	second	study	unitigs-k31	cart	recall	higher	0	55	55	0	0	15	8	32	0.0	8	-0.002257336343	0.0	0.105019807816	
+first run	second	study	unitigs-k31	rf	balanced_accuracy	higher	0	55	55	0	0	2	2	51	-0.000912408759	8	-0.001322751323	0.0	0.6875	
+first run	second	study	unitigs-k31	rf	recall	higher	0	55	55	0	0	4	4	47	0.0	8	0.0	0.0	0.63671875	
+first run	second	study	unitigs-k31	gbt	balanced_accuracy	higher	0	55	55	0	0	4	6	45	-9.2736628e-05	8	-0.003821826878	0.000886082268	0.828125	
+first run	second	study	unitigs-k31	gbt	recall	higher	0	55	55	0	0	6	7	42	0.0	8	-0.001754385965	0.002257336343	0.70947265625	
+first run	second	study	unitigs-k31	lasso	balanced_accuracy	higher	0	55	55	0	0	2	1	52	0.0	8	-0.000558997262	0.002382954864	0.5	
+first run	second	study	unitigs-k31	lasso	recall	higher	0	55	55	0	0	2	2	51	0.0	8	0.0	0.001466657204	0.6875	
+first run	second	study	k31-counts-k31	scm	balanced_accuracy	higher	0	55	55	0	0	9	7	39	0.0	8	-0.000913242009	0.003631880581	0.401809692383	
+first run	second	study	k31-counts-k31	scm	recall	higher	0	55	55	0	0	8	14	33	0.0	8	-0.003680832704	0.0	0.933099746704	
+first run	second	study	k31-counts-k31	cart	balanced_accuracy	higher	0	55	55	0	0	11	11	33	0.0	8	0.0	0.002908551478	0.584094047546	
+first run	second	study	k31-counts-k31	cart	recall	higher	0	55	55	0	0	13	19	23	0.0	8	-0.017543859649	0.0	0.892336425139	
+first run	second	study	k31-counts-k31	rf	balanced_accuracy	higher	0	55	55	0	0	5	6	44	0.0	8	-0.002650894003	0.003902461987	0.7255859375	
+first run	second	study	k31-counts-k31	rf	recall	higher	0	55	55	0	0	4	10	41	-0.001818181818	8	-0.012048192772	0.0	0.971313476562	
+first run	second	study	k31-counts-k31	gbt	balanced_accuracy	higher	0	55	55	0	0	8	10	37	0.000776397515	8	-0.000304224009	0.008848133848	0.759658813477	
+first run	second	study	k31-counts-k31	gbt	recall	higher	0	55	55	0	0	8	11	36	0.0	8	-0.004310344827	0.003011057138	0.820358276367	
+first run	second	study	k31-counts-k31	lasso	balanced_accuracy	higher	0	55	55	0	0	8	9	38	0.0	8	-0.000812193371	0.001213592233	0.685470581055	
+first run	second	study	k31-counts-k31	lasso	recall	higher	0	55	55	0	0	10	13	32	0.0	8	-0.006772009029	0.0	0.797563552856	
+first run	second	study	k31-aa-k31	scm	balanced_accuracy	higher	0	55	55	0	0	17	11	27	0.002730449978	8	-0.000447475856	0.01917556909	0.172464225441	
+first run	second	study	k31-aa-k31	scm	recall	higher	0	55	55	0	0	21	11	23	0.001821493625	8	-0.002348630257	0.024844720497	0.055092082592	
+first run	second	study	k31-aa-k31	cart	balanced_accuracy	higher	0	55	55	0	0	17	11	27	0.005265263852	8	0.001629284807	0.011858650748	0.172464225441	
+first run	second	study	k31-aa-k31	cart	recall	higher	0	55	55	0	0	17	11	27	0.004444444445	8	-0.00677200903	0.009816712666	0.172464225441	
+first run	second	study	k31-aa-k31	rf	balanced_accuracy	higher	0	55	55	0	0	6	3	46	0.001626984126	8	0.0	0.008474576271	0.25390625	
+first run	second	study	k31-aa-k31	rf	recall	higher	0	55	55	0	0	5	4	46	0.0	8	0.0	0.005772005772	0.5	
+first run	second	study	k31-aa-k31	gbt	balanced_accuracy	higher	0	55	55	0	0	13	7	35	0.004038772213	8	0.00165044435	0.011941806425	0.131587982178	
+first run	second	study	k31-aa-k31	gbt	recall	higher	0	55	55	0	0	10	9	36	0.002155172414	8	0.0	0.009708737864	0.5	
+first run	second	study	k31-aa-k31	lasso	balanced_accuracy	higher	0	55	55	0	0	11	8	36	0.002048868172	8	0.000228310502	0.016672999128	0.323802947998	
+first run	second	study	k31-aa-k31	lasso	recall	higher	0	55	55	0	0	13	9	33	0.0	8	0.0	0.017932489452	0.261733531952	
+first run	second	study	program-k31	scm	balanced_accuracy	higher	0	54	54	0	0	23	10	21	0.014814009896	7	-0.000514884853	0.042572199397	0.017541016685	
+first run	second	study	program-k31	scm	recall	higher	0	54	54	0	0	16	24	14	-0.012296285421	7	-0.015748031496	0.002886002886	0.923070027919	
+first run	second	study	program-k31	cart	balanced_accuracy	higher	0	54	54	0	0	21	11	22	0.006985790943	7	0.001582761251	0.027294685991	0.055092082592	
+first run	second	study	program-k31	cart	recall	higher	0	54	54	0	0	18	23	13	-0.008560135516	7	-0.03640776699	0.009900990099	0.825555560275	
+first run	second	study	program-k31	rf	balanced_accuracy	higher	0	54	54	0	0	36	7	11	0.039732075955	7	0.027227772129	0.061437001041	4.48152e-06	
+first run	second	study	program-k31	rf	recall	higher	0	54	54	0	0	26	13	15	0.01820891416	7	0.012747087022	0.029850746269	0.026625957049	
+first run	second	study	program-k31	gbt	balanced_accuracy	higher	0	54	54	0	0	25	8	21	0.01607019825	7	0.006616088118	0.040452423394	0.002275692066	
+first run	second	study	program-k31	gbt	recall	higher	0	54	54	0	0	16	17	21	0.0	7	0.0	0.004792332268	0.635833759559	
+first run	second	study	program-k31	lasso	balanced_accuracy	higher	0	54	54	0	0	32	5	17	0.029776552372	7	0.009402427638	0.050601710889	3.713765e-06	
+first run	second	study	program-k31	lasso	recall	higher	0	54	54	0	0	20	14	20	0.005395162664	7	0.0	0.022538552787	0.195764152566	
+first run	second	study	k31-program-k31	scm	balanced_accuracy	higher	0	54	54	0	0	3	2	49	0.0	7	0.0	0.0	0.5	
+first run	second	study	k31-program-k31	scm	recall	higher	0	54	54	0	0	4	2	48	0.0	7	0.0	0.0	0.34375	
+first run	second	study	k31-program-k31	cart	balanced_accuracy	higher	0	54	54	0	0	1	1	52	0.0	7	0.0	0.0	0.75	
+first run	second	study	k31-program-k31	cart	recall	higher	0	54	54	0	0	2	2	50	0.0	7	0.0	0.0	0.6875	
+first run	second	study	k31-program-k31	rf	balanced_accuracy	higher	0	54	54	0	0	3	2	49	0.0	7	-0.001552795031	0.0	0.5	
+first run	second	study	k31-program-k31	rf	recall	higher	0	54	54	0	0	4	6	44	0.0	7	0.0	0.0	0.828125	
+first run	second	study	k31-program-k31	gbt	balanced_accuracy	higher	0	54	54	0	0	0	3	51	0.0	7	-0.0023937297	0.001224644877	1.0	
+first run	second	study	k31-program-k31	gbt	recall	higher	0	54	54	0	0	4	4	46	0.0	7	0.0	0.0	0.63671875	
+first run	second	study	k31-program-k31	lasso	balanced_accuracy	higher	0	54	54	0	0	1	0	53	0.0	7	0.0	0.0	0.5	
+first run	second	study	k31-program-k31	lasso	recall	higher	0	54	54	0	0	0	1	53	0.0	7	0.0	0.0	1.0	
+M	second	lineage	unitigs-k31	scm	balanced_accuracy	higher	0	12	12	0	0	2	1	9	-0.000455373406	6	-0.029708919394	0.01524024024	0.5	1.0
+M	second	lineage	unitigs-k31	scm	recall	higher	0	12	12	0	0	1	2	9	0.0	6	-0.06842197188	0.00174291939	0.875	
+M	second	lineage	unitigs-k31	scm	specificity	higher	0	12	12	0	0	3	2	7	0.0	6	-0.005111513532	0.045547225671	0.5	
+M	second	lineage	unitigs-k31	scm	vme	lower	0	12	12	0	0	1	2	9	0.0	6	-0.00174291939	0.06842197188	0.875	
+M	second	lineage	unitigs-k31	scm	me	lower	0	12	12	0	0	3	2	7	0.0	6	-0.055078874055	0.005111513532	0.5	
+M	second	lineage	unitigs-k31	scm	log_loss	lower	0	12	12	0	0	6	3	3	-0.013890920805	6	-0.332348798032	0.013188823452	0.25390625	
+M	second	lineage	unitigs-k31	cart	balanced_accuracy	higher	0	12	12	0	0	0	0	12	-0.000769043425	6	-0.007670086075	0.004851174704	1.0	1.0
+M	second	lineage	unitigs-k31	cart	recall	higher	0	12	12	0	0	0	1	11	0.001366120218	6	-0.00657127716	0.008585858586	1.0	
+M	second	lineage	unitigs-k31	cart	specificity	higher	0	12	12	0	0	2	2	8	-0.001177856302	6	-0.02140077821	0.012612612613	0.6875	
+M	second	lineage	unitigs-k31	cart	vme	lower	0	12	12	0	0	0	1	11	-0.001366120218	6	-0.008585858586	0.007761437909	1.0	
+M	second	lineage	unitigs-k31	cart	me	lower	0	12	12	0	0	2	2	8	0.001177856302	6	-0.012612612613	0.02140077821	0.6875	
+M	second	lineage	unitigs-k31	cart	log_loss	lower	0	12	12	0	0	4	1	7	-0.00258025105	6	-0.016014712099	0.619110337477	0.1875	
+M	second	lineage	unitigs-k31	rf	balanced_accuracy	higher	0	12	12	0	0	1	1	10	0.000317965024	6	-0.017024130631	0.002192781472	0.75	1.0
+M	second	lineage	unitigs-k31	rf	recall	higher	0	12	12	0	0	0	1	11	0.001032863469	6	-0.034633074258	0.006704317727	1.0	
+M	second	lineage	unitigs-k31	rf	specificity	higher	0	12	12	0	0	1	2	9	-0.000648508431	6	-0.006432670798	0.001472320377	0.875	
+M	second	lineage	unitigs-k31	rf	vme	lower	0	12	12	0	0	0	1	11	-0.001032863469	6	-0.006706773619	0.034633074258	1.0	
+M	second	lineage	unitigs-k31	rf	me	lower	0	12	12	0	0	1	2	9	0.000648508431	6	-0.001472320377	0.006432670798	0.875	
+M	second	lineage	unitigs-k31	rf	log_loss	lower	0	12	12	0	0	0	0	12	-0.002990325802	6	-0.007303975013	0.007545671257	1.0	
+M	second	lineage	unitigs-k31	gbt	balanced_accuracy	higher	0	12	12	0	0	0	0	12	-0.000159008942	6	-0.003177875681	0.014243603348	1.0	1.0
+M	second	lineage	unitigs-k31	gbt	recall	higher	0	12	12	0	0	1	3	8	0.000293427231	6	-0.032679738562	0.017970194907	0.9375	
+M	second	lineage	unitigs-k31	gbt	specificity	higher	0	12	12	0	0	3	1	8	0.000294464076	6	-0.001225345828	0.032719885606	0.3125	
+M	second	lineage	unitigs-k31	gbt	vme	lower	0	12	12	0	0	1	3	8	-0.000293427231	6	-0.017970194907	0.032679738562	0.9375	
+M	second	lineage	unitigs-k31	gbt	me	lower	0	12	12	0	0	3	1	8	-0.000294464076	6	-0.032719885606	0.001225345828	0.3125	
+M	second	lineage	unitigs-k31	gbt	log_loss	lower	0	12	12	0	0	0	1	11	-0.001269823886	6	-0.012563712593	0.004471471098	1.0	
+M	second	lineage	unitigs-k31	lasso	balanced_accuracy	higher	0	12	12	0	0	0	1	11	0.000225518798	6	-0.005183075895	0.003336458246	1.0	1.0
+M	second	lineage	unitigs-k31	lasso	recall	higher	0	12	12	0	0	0	1	11	0.0	6	-0.001162452775	0.010908157692	1.0	
+M	second	lineage	unitigs-k31	lasso	specificity	higher	0	12	12	0	0	0	2	10	0.000222222223	6	-0.01339645482	0.000891566266	1.0	
+M	second	lineage	unitigs-k31	lasso	vme	lower	0	12	12	0	0	0	1	11	0.0	6	-0.010908157692	0.001162452775	1.0	
+M	second	lineage	unitigs-k31	lasso	me	lower	0	12	12	0	0	0	2	10	-0.000222222223	6	-0.000891566266	0.01339645482	1.0	
+M	second	lineage	unitigs-k31	lasso	log_loss	lower	0	12	12	0	0	0	2	10	0.000325397498	6	-0.00779072929	0.022304556334	1.0	
+M	second	lineage	k31-counts-k31	scm	balanced_accuracy	higher	0	12	12	0	0	2	2	8	0.003431388093	6	-0.004484109847	0.041512504628	0.6875	1.0
+M	second	lineage	k31-counts-k31	scm	recall	higher	0	12	12	0	0	2	1	9	0.007309005549	6	0.000435729848	0.039327094475	0.5	
+M	second	lineage	k31-counts-k31	scm	specificity	higher	0	12	12	0	0	3	2	7	0.000452284034	6	-0.02140077821	0.044144144144	0.5	
+M	second	lineage	k31-counts-k31	scm	vme	lower	0	12	12	0	0	2	1	9	-0.007309005549	6	-0.044630124778	-0.000435729848	0.5	
+M	second	lineage	k31-counts-k31	scm	me	lower	0	12	12	0	0	3	2	7	-0.000452284034	6	-0.044144144144	0.02140077821	0.5	
+M	second	lineage	k31-counts-k31	scm	log_loss	lower	0	12	12	0	0	5	4	3	0.000944059078	6	-0.389451371449	0.133623920347	0.5	
+M	second	lineage	k31-counts-k31	cart	balanced_accuracy	higher	0	12	12	0	0	1	3	8	-0.003045097558	6	-0.014589520554	0.001391931362	0.9375	1.0
+M	second	lineage	k31-counts-k31	cart	recall	higher	0	12	12	0	0	1	5	6	-0.009023570677	6	-0.029282565739	0.002947340843	0.984375	
+M	second	lineage	k31-counts-k31	cart	specificity	higher	0	12	12	0	0	1	1	10	-0.002181872366	6	-0.004498393743	-0.000648508431	0.75	
+M	second	lineage	k31-counts-k31	cart	vme	lower	0	12	12	0	0	1	5	6	0.009023570677	6	-0.002947340843	0.024242424243	0.984375	
+M	second	lineage	k31-counts-k31	cart	me	lower	0	12	12	0	0	1	1	10	0.002181872366	6	0.000648508431	0.004498393743	0.75	
+M	second	lineage	k31-counts-k31	cart	log_loss	lower	0	12	12	0	0	1	6	5	0.022879531129	6	0.0	0.211559690916	0.9921875	
+M	second	lineage	k31-counts-k31	rf	balanced_accuracy	higher	0	12	12	0	0	0	0	12	-0.000113843352	6	-0.008883212902	0.00754173291	1.0	1.0
+M	second	lineage	k31-counts-k31	rf	recall	higher	0	12	12	0	0	1	1	10	-0.000227686704	6	-0.013383838384	0.011029411764	0.75	
+M	second	lineage	k31-counts-k31	rf	specificity	higher	0	12	12	0	0	0	0	12	0.0	6	-0.001766784452	0.004054054054	1.0	
+M	second	lineage	k31-counts-k31	rf	vme	lower	0	12	12	0	0	1	1	10	0.000227686704	6	-0.011029411764	0.016414141414	0.75	
+M	second	lineage	k31-counts-k31	rf	me	lower	0	12	12	0	0	0	0	12	0.0	6	-0.004054054054	0.001766784452	1.0	
+M	second	lineage	k31-counts-k31	rf	log_loss	lower	0	12	12	0	0	3	0	9	-0.003143493877	6	-0.019161750094	0.003997384384	0.125	
+M	second	lineage	k31-counts-k31	gbt	balanced_accuracy	higher	0	12	12	0	0	3	0	9	0.007565300914	6	0.001605562593	0.034583468044	0.125	1.0
+M	second	lineage	k31-counts-k31	gbt	recall	higher	0	12	12	0	0	4	2	6	0.000947085008	6	-0.01153435766	0.032152511026	0.34375	
+M	second	lineage	k31-counts-k31	gbt	specificity	higher	0	12	12	0	0	5	0	7	0.005500430663	6	-0.000963808118	0.045495495496	0.03125	
+M	second	lineage	k31-counts-k31	gbt	vme	lower	0	12	12	0	0	4	2	6	-0.000947085008	6	-0.032152511026	0.01153435766	0.34375	
+M	second	lineage	k31-counts-k31	gbt	me	lower	0	12	12	0	0	5	0	7	-0.005500430663	6	-0.048688084973	0.000588928151	0.03125	
+M	second	lineage	k31-counts-k31	gbt	log_loss	lower	0	12	12	0	0	4	0	8	-0.000456900314	6	-0.021431380405	0.001617955789	0.0625	
+M	second	lineage	k31-counts-k31	lasso	balanced_accuracy	higher	0	12	12	0	0	1	0	11	-0.000158688133	6	-0.000693249121	0.023899066179	0.5	1.0
+M	second	lineage	k31-counts-k31	lasso	recall	higher	0	12	12	0	0	1	0	11	-0.001494195722	6	-0.00635403329	0.038922259045	0.5	
+M	second	lineage	k31-counts-k31	lasso	specificity	higher	0	12	12	0	0	1	0	11	0.001314055447	6	-0.000444444444	0.014639639639	0.5	
+M	second	lineage	k31-counts-k31	lasso	vme	lower	0	12	12	0	0	1	0	11	0.001494195722	6	-0.038922259045	0.007261374552	0.5	
+M	second	lineage	k31-counts-k31	lasso	me	lower	0	12	12	0	0	1	0	11	-0.001314055447	6	-0.014639639639	0.0	0.5	
+M	second	lineage	k31-counts-k31	lasso	log_loss	lower	0	12	12	0	0	3	0	9	-0.000986360111	6	-0.029536185858	0.000111989734	0.125	
+M	second	lineage	k31-aa-k31	scm	balanced_accuracy	higher	0	12	12	0	0	3	1	8	0.011768791783	6	-0.005786384976	0.015961724743	0.3125	1.0
+M	second	lineage	k31-aa-k31	scm	recall	higher	0	12	12	0	0	4	3	5	0.00088028169	6	-0.022875816994	0.012254326208	0.5	
+M	second	lineage	k31-aa-k31	scm	specificity	higher	0	12	12	0	0	4	1	7	0.001561802766	6	-0.010376134889	0.037950450451	0.1875	
+M	second	lineage	k31-aa-k31	scm	vme	lower	0	12	12	0	0	4	3	5	-0.00088028169	6	-0.012254326208	0.022875816994	0.5	
+M	second	lineage	k31-aa-k31	scm	me	lower	0	12	12	0	0	4	1	7	-0.001561802766	6	-0.039512253217	0.010376134889	0.1875	
+M	second	lineage	k31-aa-k31	scm	log_loss	lower	0	12	12	0	0	7	4	1	-0.037398900384	6	-0.228467297239	0.080646194412	0.2744140625	
+M	second	lineage	k31-aa-k31	cart	balanced_accuracy	higher	0	12	12	0	0	2	1	9	0.004578107519	6	-0.005468376571	0.013508800757	0.5	1.0
+M	second	lineage	k31-aa-k31	cart	recall	higher	0	12	12	0	0	5	2	5	-0.000360230547	6	-0.054545454545	0.040983606557	0.2265625	
+M	second	lineage	k31-aa-k31	cart	specificity	higher	0	12	12	0	0	2	1	9	0.0	6	-0.050788288289	0.066147859922	0.5	
+M	second	lineage	k31-aa-k31	cart	vme	lower	0	12	12	0	0	5	2	5	0.000360230547	6	-0.040983606557	0.054545454545	0.2265625	
+M	second	lineage	k31-aa-k31	cart	me	lower	0	12	12	0	0	2	1	9	0.0	6	-0.066147859922	0.050788288289	0.5	
+M	second	lineage	k31-aa-k31	cart	log_loss	lower	0	12	12	0	0	4	4	4	0.010272578489	6	-0.020190512418	0.54409935876	0.63671875	
+M	second	lineage	k31-aa-k31	rf	balanced_accuracy	higher	0	12	12	0	0	2	1	9	0.005612978054	6	-0.020372137553	0.010916035564	0.5	1.0
+M	second	lineage	k31-aa-k31	rf	recall	higher	0	12	12	0	0	2	2	8	0.004568135498	6	-0.0390176986	0.011377621738	0.6875	
+M	second	lineage	k31-aa-k31	rf	specificity	higher	0	12	12	0	0	2	0	10	0.003310723514	6	-0.002061248528	0.004519825948	0.25	
+M	second	lineage	k31-aa-k31	rf	vme	lower	0	12	12	0	0	2	2	8	-0.004568135498	6	-0.011377621738	0.0390176986	0.6875	
+M	second	lineage	k31-aa-k31	rf	me	lower	0	12	12	0	0	2	0	10	-0.003310723514	6	-0.004519825948	0.002061248528	0.25	
+M	second	lineage	k31-aa-k31	rf	log_loss	lower	0	12	12	0	0	3	0	9	-0.000413417613	6	-0.008398236508	0.004628843856	0.125	
+M	second	lineage	k31-aa-k31	gbt	balanced_accuracy	higher	0	12	12	0	0	2	1	9	0.000913729461	6	-0.00524810587	0.005637855997	0.5	1.0
+M	second	lineage	k31-aa-k31	gbt	recall	higher	0	12	12	0	0	1	3	8	-0.000120076849	6	-0.016005644683	0.000586854461	0.9375	
+M	second	lineage	k31-aa-k31	gbt	specificity	higher	0	12	12	0	0	4	2	6	0.007333333333	6	-0.01037613489	0.023179865913	0.34375	
+M	second	lineage	k31-aa-k31	gbt	vme	lower	0	12	12	0	0	1	3	8	0.000120076849	6	-0.000586854461	0.013600469006	0.9375	
+M	second	lineage	k31-aa-k31	gbt	me	lower	0	12	12	0	0	4	2	6	-0.007333333333	6	-0.023179865913	0.012161052337	0.34375	
+M	second	lineage	k31-aa-k31	gbt	log_loss	lower	0	12	12	0	0	2	2	8	0.001312990955	6	-0.012749490831	0.030336388241	0.6875	
+M	second	lineage	k31-aa-k31	lasso	balanced_accuracy	higher	0	12	12	0	0	2	1	9	0.002622120436	6	-0.00422402076	0.006486344018	0.5	1.0
+M	second	lineage	k31-aa-k31	lasso	recall	higher	0	12	12	0	0	2	1	9	-0.00296030477	6	-0.011294071619	0.04158370448	0.5	
+M	second	lineage	k31-aa-k31	lasso	specificity	higher	0	12	12	0	0	3	2	7	0.000578703703	6	-0.034656568339	0.008588928151	0.5	
+M	second	lineage	k31-aa-k31	lasso	vme	lower	0	12	12	0	0	2	1	9	0.00296030477	6	-0.04158370448	0.011294071619	0.5	
+M	second	lineage	k31-aa-k31	lasso	me	lower	0	12	12	0	0	3	2	7	-0.000578703703	6	-0.008588928151	0.034656568339	0.5	
+M	second	lineage	k31-aa-k31	lasso	log_loss	lower	0	12	12	0	0	2	3	7	0.010020651121	6	-0.001557255338	0.040055203898	0.8125	
+M	second	lineage	program-k31	scm	balanced_accuracy	higher	0	11	11	0	0	5	2	4	0.013657276996	5	-0.0540748854	0.176571159061	0.2265625	1.0
+M	second	lineage	program-k31	scm	recall	higher	0	11	11	0	0	6	5	0	0.021402550091	5	-0.156565656565	0.606060606061	0.5	
+M	second	lineage	program-k31	scm	specificity	higher	0	11	11	0	0	6	2	3	0.026315789474	5	-0.252918287937	0.167117117117	0.14453125	
+M	second	lineage	program-k31	scm	vme	lower	0	11	11	0	0	6	5	0	-0.021402550091	5	-0.606060606061	0.156565656565	0.5	
+M	second	lineage	program-k31	scm	me	lower	0	11	11	0	0	6	2	3	-0.026315789474	5	-0.167117117117	0.252918287937	0.14453125	
+M	second	lineage	program-k31	scm	log_loss	lower	0	11	11	0	0	7	3	1	-0.160664033706	5	-1.136645130034	0.934800037246	0.171875	
+M	second	lineage	program-k31	cart	balanced_accuracy	higher	0	11	11	0	0	6	1	4	0.03262171752	5	-0.008620339945	0.147954250678	0.0625	1.0
+M	second	lineage	program-k31	cart	recall	higher	0	11	11	0	0	7	2	2	0.026867030965	5	-0.065656565656	0.145454545454	0.08984375	
+M	second	lineage	program-k31	cart	specificity	higher	0	11	11	0	0	5	2	4	0.014642549526	5	0.0	0.150453955901	0.2265625	
+M	second	lineage	program-k31	cart	vme	lower	0	11	11	0	0	7	2	2	-0.026867030965	5	-0.145454545454	0.065656565656	0.08984375	
+M	second	lineage	program-k31	cart	me	lower	0	11	11	0	0	5	2	4	-0.014642549526	5	-0.150453955901	0.0	0.2265625	
+M	second	lineage	program-k31	cart	log_loss	lower	0	11	11	0	0	8	2	1	-0.108865414108	5	-0.501525291819	0.000605463726	0.0546875	
+M	second	lineage	program-k31	rf	balanced_accuracy	higher	0	11	11	0	0	8	1	2	0.078915658406	5	-0.045187793427	0.095047253135	0.01953125	0.5859375
+M	second	lineage	program-k31	rf	recall	higher	0	11	11	0	0	6	2	3	0.022492970946	5	-0.090375586854	0.290909090909	0.14453125	
+M	second	lineage	program-k31	rf	specificity	higher	0	11	11	0	0	5	2	4	0.013605442177	5	-0.103761348897	0.117593848937	0.2265625	
+M	second	lineage	program-k31	rf	vme	lower	0	11	11	0	0	6	2	3	-0.022492970946	5	-0.290909090909	0.090375586854	0.14453125	
+M	second	lineage	program-k31	rf	me	lower	0	11	11	0	0	5	2	4	-0.013605442177	5	-0.117593848937	0.103761348897	0.2265625	
+M	second	lineage	program-k31	rf	log_loss	lower	0	11	11	0	0	6	1	4	-0.024220594881	5	-0.07383644538	0.029629032385	0.0625	
+M	second	lineage	program-k31	gbt	balanced_accuracy	higher	0	11	11	0	0	8	1	2	0.064321625708	5	-0.039072160396	0.174543096333	0.01953125	0.5859375
+M	second	lineage	program-k31	gbt	recall	higher	0	11	11	0	0	7	1	3	0.030516431925	5	-0.111928104576	0.478787878788	0.03515625	
+M	second	lineage	program-k31	gbt	specificity	higher	0	11	11	0	0	6	2	3	0.033783783784	5	-0.129701686122	0.059431524548	0.14453125	
+M	second	lineage	program-k31	gbt	vme	lower	0	11	11	0	0	7	1	3	-0.030516431925	5	-0.478787878788	0.111928104576	0.03515625	
+M	second	lineage	program-k31	gbt	me	lower	0	11	11	0	0	6	2	3	-0.033783783784	5	-0.059431524548	0.129701686122	0.14453125	
+M	second	lineage	program-k31	gbt	log_loss	lower	0	11	11	0	0	6	2	3	-0.032538294423	5	-0.059385084648	0.041079574606	0.14453125	
+M	second	lineage	program-k31	lasso	balanced_accuracy	higher	0	11	11	0	0	5	1	5	0.005754038439	5	-0.00687599364	0.042148391546	0.109375	1.0
+M	second	lineage	program-k31	lasso	recall	higher	0	11	11	0	0	6	2	3	0.022044088176	5	-0.019607843138	0.206060606061	0.14453125	
+M	second	lineage	program-k31	lasso	specificity	higher	0	11	11	0	0	3	3	5	0.0	5	-0.194552529182	0.013777777778	0.65625	
+M	second	lineage	program-k31	lasso	vme	lower	0	11	11	0	0	6	2	3	-0.022044088176	5	-0.206060606061	0.019607843138	0.14453125	
+M	second	lineage	program-k31	lasso	me	lower	0	11	11	0	0	3	3	5	0.0	5	-0.013777777778	0.194552529182	0.65625	
+M	second	lineage	program-k31	lasso	log_loss	lower	0	11	11	0	0	6	1	4	-0.023033440951	5	-0.135283273423	0.07665547123	0.0625	
+M	second	lineage	k31-program-k31	scm	balanced_accuracy	higher	0	11	11	0	0	0	0	11	0.0	5	-0.008525437202	0.013893959677	1.0	1.0
+M	second	lineage	k31-program-k31	scm	recall	higher	0	11	11	0	0	1	0	10	0.0	5	0.0	0.020202020202	0.5	
+M	second	lineage	k31-program-k31	scm	specificity	higher	0	11	11	0	0	0	1	10	0.0	5	-0.031756756757	0.007585899152	1.0	
+M	second	lineage	k31-program-k31	scm	vme	lower	0	11	11	0	0	1	0	10	0.0	5	-0.020202020202	0.0	0.5	
+M	second	lineage	k31-program-k31	scm	me	lower	0	11	11	0	0	0	1	10	0.0	5	-0.007585899152	0.031756756757	1.0	
+M	second	lineage	k31-program-k31	scm	log_loss	lower	0	11	11	0	0	1	1	9	0.0	5	-0.07930096257	0.200010516444	0.75	
+M	second	lineage	k31-program-k31	cart	balanced_accuracy	higher	0	11	11	0	0	0	0	11	0.0	5	-0.011020579403	0.003569834896	1.0	1.0
+M	second	lineage	k31-program-k31	cart	recall	higher	0	11	11	0	0	0	0	11	0.0	5	0.0	0.00408496732	1.0	
+M	second	lineage	k31-program-k31	cart	specificity	higher	0	11	11	0	0	0	3	8	-0.003472222222	5	-0.026126126126	0.00713966979	1.0	
+M	second	lineage	k31-program-k31	cart	vme	lower	0	11	11	0	0	0	0	11	0.0	5	-0.00408496732	0.0	1.0	
+M	second	lineage	k31-program-k31	cart	me	lower	0	11	11	0	0	0	3	8	0.003472222222	5	-0.00713966979	0.026126126126	1.0	
+M	second	lineage	k31-program-k31	cart	log_loss	lower	0	11	11	0	0	1	4	6	0.002914307926	5	-0.016985727266	0.087957039672	0.96875	
+M	second	lineage	k31-program-k31	rf	balanced_accuracy	higher	0	11	11	0	0	0	1	10	0.0	5	-0.025845807472	0.00250501002	1.0	1.0
+M	second	lineage	k31-program-k31	rf	recall	higher	0	11	11	0	0	0	2	9	0.0	5	-0.05303030303	0.000312402374	1.0	
+M	second	lineage	k31-program-k31	rf	specificity	higher	0	11	11	0	0	0	0	11	0.0	5	0.0	0.002477477478	1.0	
+M	second	lineage	k31-program-k31	rf	vme	lower	0	11	11	0	0	0	2	9	0.0	5	-0.000312402374	0.05303030303	1.0	
+M	second	lineage	k31-program-k31	rf	me	lower	0	11	11	0	0	0	0	11	0.0	5	-0.002477477478	0.0	1.0	
+M	second	lineage	k31-program-k31	rf	log_loss	lower	0	11	11	0	0	0	0	11	-0.000171586172	5	-0.01372227439	0.003873744259	1.0	
+M	second	lineage	k31-program-k31	gbt	balanced_accuracy	higher	0	11	11	0	0	1	2	8	0.000316255534	5	-0.010634163575	0.062127107652	0.875	1.0
+M	second	lineage	k31-program-k31	gbt	recall	higher	0	11	11	0	0	2	1	8	-0.000910746812	5	-0.018790849674	0.133333333334	0.5	
+M	second	lineage	k31-program-k31	gbt	specificity	higher	0	11	11	0	0	1	1	9	-0.001157407407	5	-0.009079118029	0.006666666666	0.75	
+M	second	lineage	k31-program-k31	gbt	vme	lower	0	11	11	0	0	2	1	8	0.000910746812	5	-0.133333333334	0.018790849674	0.5	
+M	second	lineage	k31-program-k31	gbt	me	lower	0	11	11	0	0	1	1	9	0.001157407407	5	-0.006666666666	0.009079118029	0.75	
+M	second	lineage	k31-program-k31	gbt	log_loss	lower	0	11	11	0	0	0	2	9	-0.00062370386	5	-0.002219175653	0.03859698946	1.0	
+M	second	lineage	k31-program-k31	lasso	balanced_accuracy	higher	0	11	11	0	0	0	0	11	0.0	5	-0.000421745274	0.002266642327	1.0	1.0
+M	second	lineage	k31-program-k31	lasso	recall	higher	0	11	11	0	0	0	0	11	0.0	5	0.0	0.002525252525	1.0	
+M	second	lineage	k31-program-k31	lasso	specificity	higher	0	11	11	0	0	0	0	11	0.0	5	-0.002477477478	0.002008032129	1.0	
+M	second	lineage	k31-program-k31	lasso	vme	lower	0	11	11	0	0	0	0	11	0.0	5	-0.002525252525	0.0	1.0	
+M	second	lineage	k31-program-k31	lasso	me	lower	0	11	11	0	0	0	0	11	0.0	5	-0.002008032129	0.002477477478	1.0	
+M	second	lineage	k31-program-k31	lasso	log_loss	lower	0	11	11	0	0	0	0	11	0.0	5	-0.010918030736	0.0	1.0	
+M	second	lineage	twin-k31	scm	balanced_accuracy	higher	0	12	12	0	0	1	3	8	0.00086222306	6	-0.031965570098	0.014984013425	0.9375	1.0
+M	second	lineage	twin-k31	scm	recall	higher	0	12	12	0	0	2	4	6	-0.001289081525	6	-0.067067736185	0.021092044363	0.890625	
+M	second	lineage	twin-k31	scm	specificity	higher	0	12	12	0	0	3	2	7	0.006343377825	6	-0.051999835009	0.03946614459	0.5	
+M	second	lineage	twin-k31	scm	vme	lower	0	12	12	0	0	2	4	6	0.001289081525	6	-0.021092044363	0.058200884929	0.890625	
+M	second	lineage	twin-k31	scm	me	lower	0	12	12	0	0	3	2	7	-0.006343377825	6	-0.03946614459	0.051999835009	0.5	
+M	second	lineage	twin-k31	scm	log_loss	lower	0	12	12	0	0	5	3	4	-0.005850787086	6	-0.260906945496	0.366643249	0.36328125	
+M	second	lineage	twin-k31	cart	balanced_accuracy	higher	0	12	12	0	0	1	2	9	-0.004991040053	6	-0.017229137746	0.018152340526	0.875	1.0
+M	second	lineage	twin-k31	cart	recall	higher	0	12	12	0	0	0	3	9	-0.002954832269	6	-0.023098633393	-0.000861326443	1.0	
+M	second	lineage	twin-k31	cart	specificity	higher	0	12	12	0	0	3	3	6	0.0	6	-0.010019511681	0.04718050759	0.65625	
+M	second	lineage	twin-k31	cart	vme	lower	0	12	12	0	0	0	3	9	0.002954832269	6	0.000861326443	0.023098633393	1.0	
+M	second	lineage	twin-k31	cart	me	lower	0	12	12	0	0	3	3	6	0.0	6	-0.04718050759	0.010019511681	0.65625	
+M	second	lineage	twin-k31	cart	log_loss	lower	0	12	12	0	0	3	5	4	0.004130173686	6	-0.02803798022	0.106223890599	0.85546875	
+M	second	lineage	twin-k31	rf	balanced_accuracy	higher	0	12	12	0	0	0	2	10	-0.004455388344	6	-0.011998967026	0.0	1.0	1.0
+M	second	lineage	twin-k31	rf	recall	higher	0	12	12	0	0	0	1	11	-0.001138433516	6	-0.018939393939	0.001200768492	1.0	
+M	second	lineage	twin-k31	rf	specificity	higher	0	12	12	0	0	0	2	10	-0.00521221445	6	-0.008038677776	0.000446229361	1.0	
+M	second	lineage	twin-k31	rf	vme	lower	0	12	12	0	0	0	1	11	0.001138433516	6	-0.001200768492	0.018939393939	1.0	
+M	second	lineage	twin-k31	rf	me	lower	0	12	12	0	0	0	2	10	0.00521221445	6	-0.000446229361	0.008038677776	1.0	
+M	second	lineage	twin-k31	rf	log_loss	lower	0	12	12	0	0	1	0	11	-0.001591085319	6	-0.005081059615	0.007886969388	0.5	
+M	second	lineage	twin-k31	gbt	balanced_accuracy	higher	0	12	12	0	0	2	2	8	-0.003608353402	6	-0.016653338636	0.037424218251	0.6875	1.0
+M	second	lineage	twin-k31	gbt	recall	higher	0	12	12	0	0	1	4	7	-0.000600384246	6	-0.043529677175	0.081217797573	0.96875	
+M	second	lineage	twin-k31	gbt	specificity	higher	0	12	12	0	0	2	2	8	0.001115573405	6	-0.009114240011	0.016117117117	0.6875	
+M	second	lineage	twin-k31	gbt	vme	lower	0	12	12	0	0	1	4	7	0.000600384246	6	-0.081217797573	0.041755584009	0.96875	
+M	second	lineage	twin-k31	gbt	me	lower	0	12	12	0	0	2	2	8	-0.001115573405	6	-0.014666666666	0.009114240011	0.6875	
+M	second	lineage	twin-k31	gbt	log_loss	lower	0	12	12	0	0	2	3	7	0.004136226366	6	-0.010711160385	0.024193460952	0.8125	
+M	second	lineage	twin-k31	lasso	balanced_accuracy	higher	0	12	12	0	0	0	1	11	-0.00097254614	6	-0.002236995608	0.001941745754	1.0	1.0
+M	second	lineage	twin-k31	lasso	recall	higher	0	12	12	0	0	1	3	8	0.000230139004	6	-0.003966174715	0.0054737516	0.9375	
+M	second	lineage	twin-k31	lasso	specificity	higher	0	12	12	0	0	1	2	9	-0.000236833219	6	-0.009074706407	0.005911268159	0.875	
+M	second	lineage	twin-k31	lasso	vme	lower	0	12	12	0	0	1	3	8	-0.000230139004	6	-0.0054737516	0.003966174715	0.9375	
+M	second	lineage	twin-k31	lasso	me	lower	0	12	12	0	0	1	2	9	0.000236833219	6	-0.005911268159	0.009074706407	0.875	
+M	second	lineage	twin-k31	lasso	log_loss	lower	0	12	12	0	0	3	3	6	0.004215625927	6	-0.007531953136	0.007006622385	0.65625	
+M	second	study	unitigs-k31	scm	balanced_accuracy	higher	0	3	3	0	0	1	0	2	0.012684006173	2	0.000511833988	0.082348779625	0.5	
+M	second	study	unitigs-k31	scm	recall	higher	0	3	3	0	0	0	1	2	-0.018181818182	2	-0.018181818182	-0.00957610146	1.0	
+M	second	study	unitigs-k31	scm	specificity	higher	0	3	3	0	0	2	0	1	0.022556390978	2	0.010599769437	0.182879377432	0.25	
+M	second	study	unitigs-k31	scm	vme	lower	0	3	3	0	0	0	1	2	0.018181818182	2	0.00957610146	0.018181818182	1.0	
+M	second	study	unitigs-k31	scm	me	lower	0	3	3	0	0	2	0	1	-0.022556390978	2	-0.182879377432	-0.010599769437	0.25	
+M	second	study	unitigs-k31	scm	log_loss	lower	0	3	3	0	0	2	1	0	-0.046051201835	2	-1.357920054105	0.031833540911	0.5	
+M	second	study	unitigs-k31	cart	balanced_accuracy	higher	0	3	3	0	0	0	0	3	0.0	2	0.0	0.000807170493	1.0	
+M	second	study	unitigs-k31	cart	recall	higher	0	3	3	0	0	0	0	3	0.0	2	0.0	0.002292767038	1.0	
+M	second	study	unitigs-k31	cart	specificity	higher	0	3	3	0	0	0	0	3	0.0	2	-0.000678426051	0.0	1.0	
+M	second	study	unitigs-k31	cart	vme	lower	0	3	3	0	0	0	0	3	0.0	2	-0.002292767038	0.0	1.0	
+M	second	study	unitigs-k31	cart	me	lower	0	3	3	0	0	0	0	3	0.0	2	0.0	0.000678426051	1.0	
+M	second	study	unitigs-k31	cart	log_loss	lower	0	3	3	0	0	1	2	0	0.023998415317	2	-0.004275020463	0.05339487068	0.875	
+M	second	study	unitigs-k31	rf	balanced_accuracy	higher	0	3	3	0	0	0	0	3	0.001945525292	2	0.001945525292	0.003634049625	1.0	
+M	second	study	unitigs-k31	rf	recall	higher	0	3	3	0	0	0	0	3	0.0	2	0.0	0.003875968993	1.0	
+M	second	study	unitigs-k31	rf	specificity	higher	0	3	3	0	0	0	0	3	0.003891050584	2	0.003392130258	0.003891050584	1.0	
+M	second	study	unitigs-k31	rf	vme	lower	0	3	3	0	0	0	0	3	0.0	2	-0.003875968993	0.0	1.0	
+M	second	study	unitigs-k31	rf	me	lower	0	3	3	0	0	0	0	3	-0.003891050584	2	-0.003891050584	-0.003392130258	1.0	
+M	second	study	unitigs-k31	rf	log_loss	lower	0	3	3	0	0	0	0	3	-0.001123083311	2	-0.001123083311	-0.000884228462	1.0	
+M	second	study	unitigs-k31	gbt	balanced_accuracy	higher	0	3	3	0	0	1	0	2	0.002617615847	2	0.002617615847	0.014512726008	0.5	
+M	second	study	unitigs-k31	gbt	recall	higher	0	3	3	0	0	1	0	2	-0.000937207123	2	-0.002406588057	0.036363636363	0.5	
+M	second	study	unitigs-k31	gbt	specificity	higher	0	3	3	0	0	1	1	1	0.002713704206	2	-0.031128404669	0.031432040073	0.75	
+M	second	study	unitigs-k31	gbt	vme	lower	0	3	3	0	0	1	0	2	0.000937207123	2	-0.036363636363	0.002406588057	0.5	
+M	second	study	unitigs-k31	gbt	me	lower	0	3	3	0	0	1	1	1	-0.002713704206	2	-0.031432040073	0.031128404669	0.75	
+M	second	study	unitigs-k31	gbt	log_loss	lower	0	3	3	0	0	1	0	2	-0.009612346899	2	-0.026192340944	0.006405886126	0.5	
+M	second	study	unitigs-k31	lasso	balanced_accuracy	higher	0	3	3	0	0	0	0	3	0.005175779186	2	0.003105474326	0.006579412805	1.0	
+M	second	study	unitigs-k31	lasso	recall	higher	0	3	3	0	0	1	0	2	-0.004686035614	2	-0.009448960959	0.145454545455	0.5	
+M	second	study	unitigs-k31	lasso	specificity	higher	0	3	3	0	0	0	1	2	0.015037593985	2	-0.132295719844	0.015659909611	1.0	
+M	second	study	unitigs-k31	lasso	vme	lower	0	3	3	0	0	1	0	2	0.004686035614	2	-0.145454545455	0.009448960959	0.5	
+M	second	study	unitigs-k31	lasso	me	lower	0	3	3	0	0	0	1	2	-0.015037593985	2	-0.015659909611	0.132295719844	1.0	
+M	second	study	unitigs-k31	lasso	log_loss	lower	0	3	3	0	0	0	0	3	0.004565115914	2	-0.011611298938	0.007073969759	1.0	
+M	second	study	k31-counts-k31	scm	balanced_accuracy	higher	0	3	3	0	0	1	0	2	0.016117439582	2	0.00759011623	0.066749204104	0.5	
+M	second	study	k31-counts-k31	scm	recall	higher	0	3	3	0	0	1	1	1	-0.001874414245	2	-0.072727272728	0.015858658511	0.75	
+M	second	study	k31-counts-k31	scm	specificity	higher	0	3	3	0	0	1	0	2	0.0	2	-0.000678426051	0.206225680934	0.5	
+M	second	study	k31-counts-k31	scm	vme	lower	0	3	3	0	0	1	1	1	0.001874414245	2	-0.015858658511	0.072727272728	0.75	
+M	second	study	k31-counts-k31	scm	me	lower	0	3	3	0	0	1	0	2	0.0	2	-0.206225680934	0.000678426051	0.5	
+M	second	study	k31-counts-k31	scm	log_loss	lower	0	3	3	0	0	2	0	1	-0.152386505079	2	-1.446480057634	-0.068518052234	0.25	
+M	second	study	k31-counts-k31	cart	balanced_accuracy	higher	0	3	3	0	0	0	1	2	0.0	2	-0.025291828794	0.002924507133	1.0	
+M	second	study	k31-counts-k31	cart	recall	higher	0	3	3	0	0	0	0	3	0.0	2	-0.008397932816	0.0	1.0	
+M	second	study	k31-counts-k31	cart	specificity	higher	0	3	3	0	0	1	1	1	0.0	2	-0.050583657588	0.014246947082	0.75	
+M	second	study	k31-counts-k31	cart	vme	lower	0	3	3	0	0	0	0	3	0.0	2	0.0	0.008397932816	1.0	
+M	second	study	k31-counts-k31	cart	me	lower	0	3	3	0	0	1	1	1	0.0	2	-0.014246947082	0.050583657588	0.75	
+M	second	study	k31-counts-k31	cart	log_loss	lower	0	3	3	0	0	2	1	0	-0.034067639496	2	-0.03784182889	0.182863974398	0.5	
+M	second	study	k31-counts-k31	rf	balanced_accuracy	higher	0	3	3	0	0	0	1	2	0.009270946185	2	-0.006611012381	0.014290767599	1.0	
+M	second	study	k31-counts-k31	rf	recall	higher	0	3	3	0	0	1	1	1	0.009043927649	2	-0.017971007122	0.036363636363	0.75	
+M	second	study	k31-counts-k31	rf	specificity	higher	0	3	3	0	0	0	0	3	0.0	2	-0.007782101167	0.004748982361	1.0	
+M	second	study	k31-counts-k31	rf	vme	lower	0	3	3	0	0	1	1	1	-0.009043927649	2	-0.036363636363	0.017971007122	0.75	
+M	second	study	k31-counts-k31	rf	me	lower	0	3	3	0	0	0	0	3	0.0	2	-0.004748982361	0.007782101167	1.0	
+M	second	study	k31-counts-k31	rf	log_loss	lower	0	3	3	0	0	0	0	3	-0.005565289664	2	-0.005565289664	-0.004641177781	1.0	
+M	second	study	k31-counts-k31	gbt	balanced_accuracy	higher	0	3	3	0	0	0	0	3	0.011278195488	2	0.007851432827	0.015564202334	1.0	
+M	second	study	k31-counts-k31	gbt	recall	higher	0	3	3	0	0	0	0	3	0.0	2	0.0	0.00645994832	1.0	
+M	second	study	k31-counts-k31	gbt	specificity	higher	0	3	3	0	0	2	0	1	0.022556390977	2	0.009242917334	0.03112840467	0.25	
+M	second	study	k31-counts-k31	gbt	vme	lower	0	3	3	0	0	0	0	3	0.0	2	-0.00645994832	0.0	1.0	
+M	second	study	k31-counts-k31	gbt	me	lower	0	3	3	0	0	2	0	1	-0.022556390977	2	-0.03112840467	-0.009242917334	0.25	
+M	second	study	k31-counts-k31	gbt	log_loss	lower	0	3	3	0	0	1	0	2	-0.004256334984	2	-0.011786734046	-0.004256334984	0.5	
+M	second	study	k31-counts-k31	lasso	balanced_accuracy	higher	0	3	3	0	0	0	1	2	0.000873013369	2	-0.011310292365	0.009090909091	1.0	
+M	second	study	k31-counts-k31	lasso	recall	higher	0	3	3	0	0	0	0	3	-0.001874414246	2	-0.004813176115	0.018181818182	1.0	
+M	second	study	k31-counts-k31	lasso	specificity	higher	0	3	3	0	0	0	1	2	0.0	2	-0.017807408617	0.0	1.0	
+M	second	study	k31-counts-k31	lasso	vme	lower	0	3	3	0	0	0	0	3	0.001874414246	2	-0.018181818182	0.004813176115	1.0	
+M	second	study	k31-counts-k31	lasso	me	lower	0	3	3	0	0	0	1	2	0.0	2	0.0	0.017807408617	1.0	
+M	second	study	k31-counts-k31	lasso	log_loss	lower	0	3	3	0	0	1	1	1	0.006673388874	2	-0.036410511544	0.017708264982	0.75	
+M	second	study	k31-aa-k31	scm	balanced_accuracy	higher	0	3	3	0	0	2	0	1	0.024096396103	2	0.010168498804	0.047859922179	0.25	
+M	second	study	k31-aa-k31	scm	recall	higher	0	3	3	0	0	1	1	1	0.0	2	-0.2	0.020025839793	0.75	
+M	second	study	k31-aa-k31	scm	specificity	higher	0	3	3	0	0	1	0	2	0.008141112619	2	0.000311157813	0.295719844358	0.5	
+M	second	study	k31-aa-k31	scm	vme	lower	0	3	3	0	0	1	1	1	0.0	2	-0.020025839793	0.2	0.75	
+M	second	study	k31-aa-k31	scm	me	lower	0	3	3	0	0	1	0	2	-0.008141112619	2	-0.295719844358	-0.000311157813	0.5	
+M	second	study	k31-aa-k31	scm	log_loss	lower	0	3	3	0	0	2	0	1	-0.225532027517	2	-1.918800076453	-0.108928413605	0.25	
+M	second	study	k31-aa-k31	cart	balanced_accuracy	higher	0	3	3	0	0	1	1	1	0.000937207122	2	-0.053802617616	0.013293836101	0.75	
+M	second	study	k31-aa-k31	cart	recall	higher	0	3	3	0	0	1	0	2	0.005167958657	2	0.003521186451	0.036363636364	0.5	
+M	second	study	k31-aa-k31	cart	specificity	higher	0	3	3	0	0	1	1	1	0.0	2	-0.143968871595	0.023066485753	0.75	
+M	second	study	k31-aa-k31	cart	vme	lower	0	3	3	0	0	1	0	2	-0.005167958657	2	-0.036363636364	-0.003521186451	0.5	
+M	second	study	k31-aa-k31	cart	me	lower	0	3	3	0	0	1	1	1	0.0	2	-0.023066485753	0.143968871595	0.75	
+M	second	study	k31-aa-k31	cart	log_loss	lower	0	3	3	0	0	1	1	1	-0.015350400612	2	-0.047322918676	0.054409665443	0.75	
+M	second	study	k31-aa-k31	rf	balanced_accuracy	higher	0	3	3	0	0	0	1	2	-0.003891050583	2	-0.018535202701	-0.003891050583	1.0	
+M	second	study	k31-aa-k31	rf	recall	higher	0	3	3	0	0	0	1	2	0.0	2	-0.019262996786	0.0	1.0	
+M	second	study	k31-aa-k31	rf	specificity	higher	0	3	3	0	0	0	1	2	-0.007782101167	2	-0.017807408617	-0.007782101167	1.0	
+M	second	study	k31-aa-k31	rf	vme	lower	0	3	3	0	0	0	1	2	0.0	2	0.0	0.019262996786	1.0	
+M	second	study	k31-aa-k31	rf	me	lower	0	3	3	0	0	0	1	2	0.007782101167	2	0.007782101167	0.017807408617	1.0	
+M	second	study	k31-aa-k31	rf	log_loss	lower	0	3	3	0	0	1	0	2	0.001521885468	2	-0.005419036388	0.001521885468	0.5	
+M	second	study	k31-aa-k31	gbt	balanced_accuracy	higher	0	3	3	0	0	2	0	1	0.02140077821	2	0.02140077821	0.031985094662	0.25	
+M	second	study	k31-aa-k31	gbt	recall	higher	0	3	3	0	0	1	0	2	0.007497656982	2	0.0	0.014730740636	0.5	
+M	second	study	k31-aa-k31	gbt	specificity	higher	0	3	3	0	0	2	0	1	0.042801556421	2	0.042801556421	0.049239448689	0.25	
+M	second	study	k31-aa-k31	gbt	vme	lower	0	3	3	0	0	1	0	2	-0.007497656982	2	-0.014730740636	0.0	0.5	
+M	second	study	k31-aa-k31	gbt	me	lower	0	3	3	0	0	2	0	1	-0.042801556421	2	-0.049239448689	-0.042801556421	0.25	
+M	second	study	k31-aa-k31	gbt	log_loss	lower	0	3	3	0	0	3	0	0	-0.038097108932	2	-0.038420209961	-0.024081967377	0.125	
+M	second	study	k31-aa-k31	lasso	balanced_accuracy	higher	0	3	3	0	0	1	1	1	0.01204951283	2	-0.019822429497	0.048744251857	0.75	
+M	second	study	k31-aa-k31	lasso	recall	higher	0	3	3	0	0	1	0	2	0.00645994832	2	0.004167181282	0.163636363637	0.5	
+M	second	study	k31-aa-k31	lasso	specificity	higher	0	3	3	0	0	0	2	1	-0.066147859922	2	-0.066147859922	-0.043812040277	1.0	
+M	second	study	k31-aa-k31	lasso	vme	lower	0	3	3	0	0	1	0	2	-0.00645994832	2	-0.163636363637	-0.004167181282	0.5	
+M	second	study	k31-aa-k31	lasso	me	lower	0	3	3	0	0	0	2	1	0.066147859922	2	0.043812040277	0.066147859922	1.0	
+M	second	study	k31-aa-k31	lasso	log_loss	lower	0	3	3	0	0	2	0	1	-0.020539399117	2	-0.1905738998	-0.008891696612	0.25	
+M	second	study	program-k31	scm	balanced_accuracy	higher	0	3	3	0	0	2	1	0	0.025291828794	2	0.025291828794	0.05033028543	0.5	
+M	second	study	program-k31	scm	recall	higher	0	3	3	0	0	0	1	2	-0.012183692596	2	-0.031285644748	0.0	1.0	
+M	second	study	program-k31	scm	specificity	higher	0	3	3	0	0	2	0	1	0.050583657588	2	0.050583657588	0.131946215608	0.25	
+M	second	study	program-k31	scm	vme	lower	0	3	3	0	0	0	1	2	0.012183692596	2	0.0	0.031285644748	1.0	
+M	second	study	program-k31	scm	me	lower	0	3	3	0	0	2	0	1	-0.050583657588	2	-0.131946215608	-0.050583657588	0.25	
+M	second	study	program-k31	scm	log_loss	lower	0	3	3	0	0	2	1	0	-0.176529607034	2	-0.383760015291	0.045835320953	0.5	
+M	second	study	program-k31	cart	balanced_accuracy	higher	0	3	3	0	0	1	0	2	0.008143742177	2	7.0746374e-05	0.071182595415	0.5	
+M	second	study	program-k31	cart	recall	higher	0	3	3	0	0	2	1	0	0.109090909091	2	0.049226985753	0.109090909091	0.5	
+M	second	study	program-k31	cart	specificity	higher	0	3	3	0	0	2	1	0	0.0434192673	2	-0.108949416342	0.093138205078	0.5	
+M	second	study	program-k31	cart	vme	lower	0	3	3	0	0	2	1	0	-0.109090909091	2	-0.109090909091	-0.049226985753	0.5	
+M	second	study	program-k31	cart	me	lower	0	3	3	0	0	2	1	0	-0.0434192673	2	-0.093138205078	0.108949416342	0.5	
+M	second	study	program-k31	cart	log_loss	lower	0	3	3	0	0	1	1	1	-0.009480977629	2	-0.205095410892	0.038170490214	0.75	
+M	second	study	program-k31	rf	balanced_accuracy	higher	0	3	3	0	0	1	0	2	0.018896006227	2	-0.014856738592	0.07907086533	0.5	
+M	second	study	program-k31	rf	recall	higher	0	3	3	0	0	2	1	0	0.031007751938	2	-0.036979722906	0.090909090909	0.5	
+M	second	study	program-k31	rf	specificity	higher	0	3	3	0	0	1	1	1	0.006784260516	2	-0.120622568093	0.195121453567	0.75	
+M	second	study	program-k31	rf	vme	lower	0	3	3	0	0	2	1	0	-0.031007751938	2	-0.090909090909	0.036979722906	0.5	
+M	second	study	program-k31	rf	me	lower	0	3	3	0	0	1	1	1	-0.006784260516	2	-0.195121453567	0.120622568093	0.75	
+M	second	study	program-k31	rf	log_loss	lower	0	3	3	0	0	2	1	0	-0.023737684433	2	-0.045371282365	0.044550677352	0.5	
+M	second	study	program-k31	gbt	balanced_accuracy	higher	0	3	3	0	0	1	1	1	-0.014179455085	2	-0.042094092678	0.067863940602	0.75	
+M	second	study	program-k31	gbt	recall	higher	0	3	3	0	0	1	1	1	-0.000937207123	2	-0.015326484699	0.090909090909	0.75	
+M	second	study	program-k31	gbt	specificity	higher	0	3	3	0	0	1	1	1	0.001356852103	2	-0.175097276264	0.151054365901	0.75	
+M	second	study	program-k31	gbt	vme	lower	0	3	3	0	0	1	1	1	0.000937207123	2	-0.090909090909	0.015326484699	0.75	
+M	second	study	program-k31	gbt	me	lower	0	3	3	0	0	1	1	1	-0.001356852103	2	-0.151054365901	0.175097276264	0.75	
+M	second	study	program-k31	gbt	log_loss	lower	0	3	3	0	0	1	1	1	0.008229739153	2	-0.064696171911	0.099963095352	0.75	
+M	second	study	program-k31	lasso	balanced_accuracy	higher	0	3	3	0	0	2	0	1	0.058436505129	2	0.031739013713	0.058436505129	0.25	
+M	second	study	program-k31	lasso	recall	higher	0	3	3	0	0	1	1	1	0.011246485473	2	-0.028614483361	0.109090909091	0.75	
+M	second	study	program-k31	lasso	specificity	higher	0	3	3	0	0	2	0	1	0.048846675712	2	0.007782101167	0.092092510788	0.25	
+M	second	study	program-k31	lasso	vme	lower	0	3	3	0	0	1	1	1	-0.011246485473	2	-0.109090909091	0.028614483361	0.75	
+M	second	study	program-k31	lasso	me	lower	0	3	3	0	0	2	0	1	-0.048846675712	2	-0.092092510788	-0.007782101167	0.25	
+M	second	study	program-k31	lasso	log_loss	lower	0	3	3	0	0	1	0	2	-0.017725530231	2	-0.121641687304	-0.012347302766	0.5	
+M	second	study	k31-program-k31	scm	balanced_accuracy	higher	0	3	3	0	0	0	0	3	0.0	2	0.0	0.0	1.0	
+M	second	study	k31-program-k31	scm	recall	higher	0	3	3	0	0	0	0	3	0.0	2	0.0	0.0	1.0	
+M	second	study	k31-program-k31	scm	specificity	higher	0	3	3	0	0	0	0	3	0.0	2	0.0	0.0	1.0	
+M	second	study	k31-program-k31	scm	vme	lower	0	3	3	0	0	0	0	3	0.0	2	0.0	0.0	1.0	
+M	second	study	k31-program-k31	scm	me	lower	0	3	3	0	0	0	0	3	0.0	2	0.0	0.0	1.0	
+M	second	study	k31-program-k31	scm	log_loss	lower	0	3	3	0	0	0	0	3	0.0	2	0.0	0.0	1.0	
+M	second	study	k31-program-k31	cart	balanced_accuracy	higher	0	3	3	0	0	0	0	3	-0.001356852103	2	-0.005836575875	-0.000209822491	1.0	
+M	second	study	k31-program-k31	cart	recall	higher	0	3	3	0	0	0	0	3	0.0	2	0.0	0.000937207123	1.0	
+M	second	study	k31-program-k31	cart	specificity	higher	0	3	3	0	0	0	0	3	-0.002713704207	2	-0.011673151751	-0.001356852103	1.0	
+M	second	study	k31-program-k31	cart	vme	lower	0	3	3	0	0	0	0	3	0.0	2	-0.000937207123	0.0	1.0	
+M	second	study	k31-program-k31	cart	me	lower	0	3	3	0	0	0	0	3	0.002713704207	2	0.001356852103	0.011673151751	1.0	
+M	second	study	k31-program-k31	cart	log_loss	lower	0	3	3	0	0	0	1	2	0.000314159701	2	-0.007518120455	0.088560003529	1.0	
+M	second	study	k31-program-k31	rf	balanced_accuracy	higher	0	3	3	0	0	0	0	3	0.0	2	0.0	0.001754350377	1.0	
+M	second	study	k31-program-k31	rf	recall	higher	0	3	3	0	0	0	0	3	0.0	2	0.0	0.003875968993	1.0	
+M	second	study	k31-program-k31	rf	specificity	higher	0	3	3	0	0	0	0	3	0.0	2	-0.000367268238	0.0	1.0	
+M	second	study	k31-program-k31	rf	vme	lower	0	3	3	0	0	0	0	3	0.0	2	-0.003875968993	0.0	1.0	
+M	second	study	k31-program-k31	rf	me	lower	0	3	3	0	0	0	0	3	0.0	2	0.0	0.000367268238	1.0	
+M	second	study	k31-program-k31	rf	log_loss	lower	0	3	3	0	0	0	0	3	-0.00395616692	2	-0.004110675493	0.000709108555	1.0	
+M	second	study	k31-program-k31	gbt	balanced_accuracy	higher	0	3	3	0	0	0	0	3	-0.005719289388	2	-0.01230986912	-0.002859644694	1.0	
+M	second	study	k31-program-k31	gbt	recall	higher	0	3	3	0	0	0	0	3	0.011627906977	2	0.005813953489	0.018181818181	1.0	
+M	second	study	k31-program-k31	gbt	specificity	higher	0	3	3	0	0	0	2	1	-0.023066485753	2	-0.04280155642	-0.011533242877	1.0	
+M	second	study	k31-program-k31	gbt	vme	lower	0	3	3	0	0	0	0	3	-0.011627906977	2	-0.018181818181	-0.005813953489	1.0	
+M	second	study	k31-program-k31	gbt	me	lower	0	3	3	0	0	0	2	1	0.023066485753	2	0.011533242877	0.04280155642	1.0	
+M	second	study	k31-program-k31	gbt	log_loss	lower	0	3	3	0	0	0	0	3	-0.002652500314	2	-0.008429106662	0.002292650573	1.0	
+M	second	study	k31-program-k31	lasso	balanced_accuracy	higher	0	3	3	0	0	0	0	3	0.0	2	0.0	0.0	1.0	
+M	second	study	k31-program-k31	lasso	recall	higher	0	3	3	0	0	0	0	3	0.0	2	0.0	0.0	1.0	
+M	second	study	k31-program-k31	lasso	specificity	higher	0	3	3	0	0	0	0	3	0.0	2	0.0	0.0	1.0	
+M	second	study	k31-program-k31	lasso	vme	lower	0	3	3	0	0	0	0	3	0.0	2	0.0	0.0	1.0	
+M	second	study	k31-program-k31	lasso	me	lower	0	3	3	0	0	0	0	3	0.0	2	0.0	0.0	1.0	
+M	second	study	k31-program-k31	lasso	log_loss	lower	0	3	3	0	0	0	0	3	0.0	2	0.0	5.4129408e-05	1.0	
+all datasets	second	lineage	unitigs-k31	scm	balanced_accuracy	higher	0	245	244	1	0	21	30	193	0.0	23	-0.000910746812	0.0	0.919610199094	1.0
+all datasets	second	lineage	unitigs-k31	scm	recall	higher	0	245	244	1	0	34	41	169	0.0	23	0.0	0.0	0.822150380459	
+all datasets	second	lineage	unitigs-k31	cart	balanced_accuracy	higher	0	245	244	1	0	24	19	201	0.0	23	0.0	0.0	0.271192005928	1.0
+all datasets	second	lineage	unitigs-k31	cart	recall	higher	0	245	244	1	0	38	37	169	0.0	23	0.0	0.0	0.5	
+all datasets	second	lineage	unitigs-k31	rf	balanced_accuracy	higher	0	245	244	1	0	11	13	220	0.0	23	-0.000508130081	0.0	0.729371905327	1.0
+all datasets	second	lineage	unitigs-k31	rf	recall	higher	0	245	244	1	0	17	15	212	0.0	23	0.0	0.0	0.430025032954	
+all datasets	second	lineage	unitigs-k31	gbt	balanced_accuracy	higher	0	245	244	1	0	34	15	195	0.000367541117	23	0.0	0.001135002019	0.004699620762	0.098692036001
+all datasets	second	lineage	unitigs-k31	gbt	recall	higher	0	245	244	1	0	46	33	165	0.0	23	-0.000444316253	0.0	0.08830527653	
+all datasets	second	lineage	unitigs-k31	lasso	balanced_accuracy	higher	0	245	244	1	0	12	12	220	0.0	23	-0.000822237679	0.00045475216	0.580590128899	1.0
+all datasets	second	lineage	unitigs-k31	lasso	recall	higher	0	245	244	1	0	25	18	201	0.0	23	0.0	0.0	0.180188826468	
+all datasets	second	lineage	k31-counts-k31	scm	balanced_accuracy	higher	0	245	244	1	0	21	20	203	0.0	23	-0.000150966184	0.0	0.5	1.0
+all datasets	second	lineage	k31-counts-k31	scm	recall	higher	0	245	244	1	0	36	35	173	0.0	23	0.0	0.0	0.5	
+all datasets	second	lineage	k31-counts-k31	cart	balanced_accuracy	higher	0	245	244	1	0	28	26	190	0.0	23	0.0	0.0	0.445961575552	1.0
+all datasets	second	lineage	k31-counts-k31	cart	recall	higher	0	245	244	1	0	36	38	170	0.0	23	0.0	0.0	0.636226458255	
+all datasets	second	lineage	k31-counts-k31	rf	balanced_accuracy	higher	0	245	244	1	0	18	12	214	0.0	23	-0.000201651224	0.000404530744	0.180797304027	1.0
+all datasets	second	lineage	k31-counts-k31	rf	recall	higher	0	245	244	1	0	35	14	195	0.0	23	0.0	0.0	0.001900827205	
+all datasets	second	lineage	k31-counts-k31	gbt	balanced_accuracy	higher	0	245	244	1	0	38	18	188	0.001070109561	23	0.0003125	0.002105824337	0.005227409161	0.104548183219
+all datasets	second	lineage	k31-counts-k31	gbt	recall	higher	0	245	244	1	0	47	32	165	0.0	23	0.0	0.000636132316	0.057330177873	
+all datasets	second	lineage	k31-counts-k31	lasso	balanced_accuracy	higher	0	245	244	1	0	20	11	213	0.0	23	0.0	1.9464283e-05	0.074806392193	1.0
+all datasets	second	lineage	k31-counts-k31	lasso	recall	higher	0	245	244	1	0	32	22	190	0.0	23	0.0	0.0	0.110164247088	
+all datasets	second	lineage	k31-aa-k31	scm	balanced_accuracy	higher	0	245	244	1	0	51	24	169	0.000722841557	23	0.0	0.003718201063	0.00122211425	0.026886513491
+all datasets	second	lineage	k31-aa-k31	scm	recall	higher	0	245	244	1	0	59	48	137	0.0	23	0.0	0.004535147392	0.166852558099	
+all datasets	second	lineage	k31-aa-k31	cart	balanced_accuracy	higher	0	245	244	1	0	56	26	162	0.00041048154	23	0.0	0.002827558741	0.000610191034	0.01403439379
+all datasets	second	lineage	k31-aa-k31	cart	recall	higher	0	245	244	1	0	71	38	135	0.0	23	0.0	0.001214329084	0.001016584766	
+all datasets	second	lineage	k31-aa-k31	rf	balanced_accuracy	higher	0	245	244	1	0	41	9	194	0.00174775171	23	0.00056618392	0.005149051491	2.80705e-06	7.5790351e-05
+all datasets	second	lineage	k31-aa-k31	rf	recall	higher	0	245	244	1	0	50	21	173	0.001326503809	23	0.0	0.003993610224	0.000383382495	
+all datasets	second	lineage	k31-aa-k31	gbt	balanced_accuracy	higher	0	245	244	1	0	53	17	174	0.002468362805	23	0.000519210799	0.004988545922	9.599846e-06	0.000249596001
+all datasets	second	lineage	k31-aa-k31	gbt	recall	higher	0	245	244	1	0	56	39	149	0.0	23	0.0	0.003375527426	0.050086665243	
+all datasets	second	lineage	k31-aa-k31	lasso	balanced_accuracy	higher	0	245	244	1	0	48	17	179	0.001193690102	23	0.0	0.004205770767	7.6053288e-05	0.00182527891
+all datasets	second	lineage	k31-aa-k31	lasso	recall	higher	0	245	244	1	0	55	34	155	0.0	23	0.0	0.00518026332	0.016708360801	
+all datasets	second	lineage	program-k31	scm	balanced_accuracy	higher	0	215	214	1	0	75	55	84	0.005161810989	21	0.0	0.012979283527	0.047626705716	0.904907408609
+all datasets	second	lineage	program-k31	scm	recall	higher	0	215	214	1	0	72	67	75	0.0	21	-0.000723065799	0.007017543859	0.367269658636	
+all datasets	second	lineage	program-k31	cart	balanced_accuracy	higher	0	215	214	1	0	91	43	80	0.009930349565	21	0.004676628716	0.020423511946	2.0556524e-05	0.000513913096
+all datasets	second	lineage	program-k31	cart	recall	higher	0	215	214	1	0	86	65	63	0.005454435872	21	0.0	0.018656716418	0.051650068224	
+all datasets	second	lineage	program-k31	rf	balanced_accuracy	higher	0	215	214	1	0	129	29	56	0.036487508747	21	0.025838779957	0.053058493276	0.0	0.0
+all datasets	second	lineage	program-k31	rf	recall	higher	0	215	214	1	0	110	40	64	0.022790497017	21	0.011627906976	0.042553191489	4.781e-09	
+all datasets	second	lineage	program-k31	gbt	balanced_accuracy	higher	0	215	214	1	0	113	27	74	0.021351881422	21	0.013157924847	0.030555555556	0.0	2e-12
+all datasets	second	lineage	program-k31	gbt	recall	higher	0	215	214	1	0	95	50	69	0.011914440573	21	0.002738959774	0.025641025641	0.000116232841	
+all datasets	second	lineage	program-k31	lasso	balanced_accuracy	higher	0	215	214	1	0	107	33	74	0.019952708274	21	0.009803921569	0.027153030088	1.3e-10	3.63e-09
+all datasets	second	lineage	program-k31	lasso	recall	higher	0	215	214	1	0	88	52	74	0.011611054938	21	0.003875968993	0.018292682927	0.001479350117	
+all datasets	second	lineage	k31-program-k31	scm	balanced_accuracy	higher	0	215	214	1	0	6	9	199	0.0	21	0.0	0.0	0.84912109375	1.0
+all datasets	second	lineage	k31-program-k31	scm	recall	higher	0	215	214	1	0	20	10	184	0.0	21	0.0	0.0	0.049368573353	
+all datasets	second	lineage	k31-program-k31	cart	balanced_accuracy	higher	0	215	214	1	0	5	5	204	0.0	21	0.0	0.0	0.623046875	1.0
+all datasets	second	lineage	k31-program-k31	cart	recall	higher	0	215	214	1	0	9	7	198	0.0	21	0.0	0.0	0.401809692383	
+all datasets	second	lineage	k31-program-k31	rf	balanced_accuracy	higher	0	215	214	1	0	4	2	208	0.0	21	0.0	0.0	0.34375	1.0
+all datasets	second	lineage	k31-program-k31	rf	recall	higher	0	215	214	1	0	10	8	196	0.0	21	0.0	0.0	0.407264709473	
+all datasets	second	lineage	k31-program-k31	gbt	balanced_accuracy	higher	0	215	214	1	0	11	12	191	0.0	21	0.0	0.0	0.661180257797	1.0
+all datasets	second	lineage	k31-program-k31	gbt	recall	higher	0	215	214	1	0	21	19	174	0.0	21	0.0	0.0	0.43731465619	
+all datasets	second	lineage	k31-program-k31	lasso	balanced_accuracy	higher	0	215	214	1	0	1	1	212	0.0	21	0.0	0.0	0.75	1.0
+all datasets	second	lineage	k31-program-k31	lasso	recall	higher	0	215	214	1	0	3	3	208	0.0	21	0.0	0.0	0.65625	
+all datasets	second	lineage	twin-k31	scm	balanced_accuracy	higher	0	245	244	1	0	30	30	184	0.0	23	-5.7021832e-05	0.000708252958	0.551289086504	1.0
+all datasets	second	lineage	twin-k31	scm	recall	higher	0	245	244	1	0	46	47	151	0.0	23	0.0	0.0	0.582076932684	
+all datasets	second	lineage	twin-k31	cart	balanced_accuracy	higher	0	245	244	1	0	28	32	184	0.0	23	-0.000576036866	0.0	0.740520998405	1.0
+all datasets	second	lineage	twin-k31	cart	recall	higher	0	245	244	1	0	40	47	157	0.0	23	0.0	0.0	0.80440451735	
+all datasets	second	lineage	twin-k31	rf	balanced_accuracy	higher	0	245	244	1	0	18	24	202	-0.000647428398	23	-0.002906023811	0.0	0.860021880736	1.0
+all datasets	second	lineage	twin-k31	rf	recall	higher	0	245	244	1	0	25	40	179	0.0	23	-0.001291989664	0.0	0.976823262834	
+all datasets	second	lineage	twin-k31	gbt	balanced_accuracy	higher	0	245	244	1	0	42	35	167	0.0	23	-0.000251538427	0.001154401154	0.247191136848	1.0
+all datasets	second	lineage	twin-k31	gbt	recall	higher	0	245	244	1	0	54	51	139	0.0	23	-0.000249128052	0.0	0.422685159441	
+all datasets	second	lineage	twin-k31	lasso	balanced_accuracy	higher	0	245	244	1	0	28	20	196	-5.822628e-06	23	-0.001108725528	0.000170585738	0.156163403737	1.0
+all datasets	second	lineage	twin-k31	lasso	recall	higher	0	245	244	1	0	42	35	167	0.0	23	0.0	0.000920810313	0.247191136848	
+all datasets	second	study	unitigs-k31	scm	balanced_accuracy	higher	0	58	58	0	0	9	6	43	0.0	9	0.0	0.001968503937	0.303619384766	
+all datasets	second	study	unitigs-k31	scm	recall	higher	0	58	58	0	0	11	9	38	0.0	9	0.0	0.002316557497	0.411901473999	
+all datasets	second	study	unitigs-k31	cart	balanced_accuracy	higher	0	58	58	0	0	7	6	45	0.0	9	0.0	0.001650641026	0.5	
+all datasets	second	study	unitigs-k31	cart	recall	higher	0	58	58	0	0	15	8	35	0.0	9	-0.001874414245	0.0	0.105019807816	
+all datasets	second	study	unitigs-k31	rf	balanced_accuracy	higher	0	58	58	0	0	2	2	54	-0.000701399146	9	-0.001253132832	0.0	0.6875	
+all datasets	second	study	unitigs-k31	rf	recall	higher	0	58	58	0	0	4	4	50	0.0	9	0.0	0.0	0.63671875	
+all datasets	second	study	unitigs-k31	gbt	balanced_accuracy	higher	0	58	58	0	0	5	6	47	-4.6368314e-05	9	-0.00059311981	0.000963005339	0.7255859375	
+all datasets	second	study	unitigs-k31	gbt	recall	higher	0	58	58	0	0	7	7	44	0.0	9	-0.00150552857	0.002257336343	0.604736328125	
+all datasets	second	study	unitigs-k31	lasso	balanced_accuracy	higher	0	58	58	0	0	2	1	55	0.0	9	-0.000452898551	0.002973240833	0.5	
+all datasets	second	study	unitigs-k31	lasso	recall	higher	0	58	58	0	0	3	2	53	0.0	9	0.0	0.001443001443	0.5	
+all datasets	second	study	k31-counts-k31	scm	balanced_accuracy	higher	0	58	58	0	0	10	7	41	0.0	9	-0.000699981628	0.00495049505	0.314529418945	
+all datasets	second	study	k31-counts-k31	scm	recall	higher	0	58	58	0	0	9	15	34	0.0	9	-0.004392971246	0.0	0.924205183983	
+all datasets	second	study	k31-counts-k31	cart	balanced_accuracy	higher	0	58	58	0	0	11	12	35	0.0	9	0.0	0.002352941176	0.661180257797	
+all datasets	second	study	k31-counts-k31	cart	recall	higher	0	58	58	0	0	13	19	26	0.0	9	-0.016795865633	0.0	0.892336425139	
+all datasets	second	study	k31-counts-k31	rf	balanced_accuracy	higher	0	58	58	0	0	5	7	46	0.0	9	-0.002493876963	0.00416522041	0.80615234375	
+all datasets	second	study	k31-counts-k31	rf	recall	higher	0	58	58	0	0	5	11	42	-0.001630591631	9	-0.012048192772	0.0	0.96159362793	
+all datasets	second	study	k31-counts-k31	gbt	balanced_accuracy	higher	0	58	58	0	0	8	10	40	0.001027551008	9	0.0	0.010063164668	0.759658813477	
+all datasets	second	study	k31-counts-k31	gbt	recall	higher	0	58	58	0	0	8	11	39	0.0	9	-0.004310344827	0.002096986433	0.820358276367	
+all datasets	second	study	k31-counts-k31	lasso	balanced_accuracy	higher	0	58	58	0	0	8	10	40	0.0	9	-3.6405999e-05	0.002040816326	0.759658813477	
+all datasets	second	study	k31-counts-k31	lasso	recall	higher	0	58	58	0	0	10	13	35	0.0	9	-0.006772009029	0.0	0.797563552856	
+all datasets	second	study	k31-aa-k31	scm	balanced_accuracy	higher	0	58	58	0	0	19	11	28	0.003720712639	9	-0.000447475856	0.019683715474	0.100244211033	
+all datasets	second	study	k31-aa-k31	scm	recall	higher	0	58	58	0	0	22	12	24	0.000910746813	9	-0.001818181818	0.024844720497	0.060724742478	
+all datasets	second	study	k31-aa-k31	cart	balanced_accuracy	higher	0	58	58	0	0	18	12	28	0.004625706813	9	0.001052288512	0.010233124678	0.180797304027	
+all datasets	second	study	k31-aa-k31	cart	recall	higher	0	58	58	0	0	18	11	29	0.004457691671	9	0.0	0.01003649635	0.132465448231	
+all datasets	second	study	k31-aa-k31	rf	balanced_accuracy	higher	0	58	58	0	0	6	4	48	0.001293675362	9	0.0	0.008226766396	0.376953125	
+all datasets	second	study	k31-aa-k31	rf	recall	higher	0	58	58	0	0	5	5	48	0.0	9	0.0	0.004310344828	0.623046875	
+all datasets	second	study	k31-aa-k31	gbt	balanced_accuracy	higher	0	58	58	0	0	15	7	36	0.005657493238	9	0.002172480346	0.012969515792	0.066900253296	
+all datasets	second	study	k31-aa-k31	gbt	recall	higher	0	58	58	0	0	11	9	38	0.002219138718	9	0.0	0.008603197423	0.411901473999	
+all datasets	second	study	k31-aa-k31	lasso	balanced_accuracy	higher	0	58	58	0	0	12	9	37	0.002213023627	9	0.000456621004	0.014821893299	0.331811904907	
+all datasets	second	study	k31-aa-k31	lasso	recall	higher	0	58	58	0	0	14	9	35	0.000937207122	9	0.0	0.017563375936	0.202436447144	
+all datasets	second	study	program-k31	scm	balanced_accuracy	higher	0	57	57	0	0	25	11	21	0.014851485149	8	0.002265238278	0.031440695089	0.014408359828	
+all datasets	second	study	program-k31	scm	recall	higher	0	57	57	0	0	16	25	16	-0.012183692596	8	-0.015748031496	0.0	0.941362397021	
+all datasets	second	study	program-k31	cart	balanced_accuracy	higher	0	57	57	0	0	22	11	24	0.007072357081	8	0.001582761251	0.027294685991	0.040071656229	
+all datasets	second	study	program-k31	cart	recall	higher	0	57	57	0	0	20	24	13	-0.006211180124	8	-0.027131782945	0.01403508772	0.774309583802	
+all datasets	second	study	program-k31	rf	balanced_accuracy	higher	0	57	57	0	0	37	7	13	0.03872341117	8	0.027227772129	0.060141289126	2.649791e-06	
+all datasets	second	study	program-k31	rf	recall	higher	0	57	57	0	0	28	14	15	0.019396551724	8	0.013698630137	0.030429249103	0.021779260962	
+all datasets	second	study	program-k31	gbt	balanced_accuracy	higher	0	57	57	0	0	26	9	22	0.015257279617	8	0.006459252126	0.039086929331	0.002994060284	
+all datasets	second	study	program-k31	gbt	recall	higher	0	57	57	0	0	17	18	22	0.0	8	-0.000937207123	0.004792332268	0.632060599572	
+all datasets	second	study	program-k31	lasso	balanced_accuracy	higher	0	57	57	0	0	34	5	18	0.030180119481	8	0.009402427638	0.054040634184	1.214954e-06	
+all datasets	second	study	program-k31	lasso	recall	higher	0	57	57	0	0	21	15	21	0.007281553398	8	0.0	0.023961661342	0.20251612307	
+all datasets	second	study	k31-program-k31	scm	balanced_accuracy	higher	0	57	57	0	0	3	2	52	0.0	8	0.0	0.0	0.5	
+all datasets	second	study	k31-program-k31	scm	recall	higher	0	57	57	0	0	4	2	51	0.0	8	0.0	0.0	0.34375	
+all datasets	second	study	k31-program-k31	cart	balanced_accuracy	higher	0	57	57	0	0	1	1	55	0.0	8	0.0	0.0	0.75	
+all datasets	second	study	k31-program-k31	cart	recall	higher	0	57	57	0	0	2	2	53	0.0	8	0.0	0.0	0.6875	
+all datasets	second	study	k31-program-k31	rf	balanced_accuracy	higher	0	57	57	0	0	3	2	52	0.0	8	-0.000833333334	0.0	0.5	
+all datasets	second	study	k31-program-k31	rf	recall	higher	0	57	57	0	0	4	6	47	0.0	8	0.0	0.0	0.828125	
+all datasets	second	study	k31-program-k31	gbt	balanced_accuracy	higher	0	57	57	0	0	0	3	54	0.0	8	-0.00281324416	0.001183139883	1.0	
+all datasets	second	study	k31-program-k31	gbt	recall	higher	0	57	57	0	0	4	4	49	0.0	8	0.0	0.0	0.63671875	
+all datasets	second	study	k31-program-k31	lasso	balanced_accuracy	higher	0	57	57	0	0	1	0	56	0.0	8	0.0	0.0	0.5	
+all datasets	second	study	k31-program-k31	lasso	recall	higher	0	57	57	0	0	0	1	56	0.0	8	0.0	0.0	1.0	

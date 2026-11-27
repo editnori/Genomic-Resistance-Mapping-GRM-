@@ -1,0 +1,21 @@
+arm	condition	reads	met_first	met_second	met_both
+unitigs	1 and 2	a learner carries when its lineage median difference's interval lies wholly above 0 and better beats worse by the one-sided sign test at p < 0.05 after Holm over 30; at least 3 of 5 carry	0	0	0
+unitigs	3	the twin meets 1 in fewer than 3 of 5 learners and 2 in fewer than 3 of 5, each read apart (learners: the larger of the twin's two counts)	1	1	1
+unitigs	4	no learner's recall interval lies wholly below -0.02, for all five	1	1	1
+unitigs	5	each learner that carries has a study median of its lineage median's sign	0	0	0
+k31-counts	1 and 2	a learner carries when its lineage median difference's interval lies wholly above 0 and better beats worse by the one-sided sign test at p < 0.05 after Holm over 30; at least 3 of 5 carry	0	0	0
+k31-counts	3	the twin meets 1 in fewer than 3 of 5 learners and 2 in fewer than 3 of 5, each read apart (learners: the larger of the twin's two counts)	1	1	1
+k31-counts	4	no learner's recall interval lies wholly below -0.02, for all five	1	1	1
+k31-counts	5	each learner that carries has a study median of its lineage median's sign	0	0	0
+k31-aa	1 and 2	a learner carries when its lineage median difference's interval lies wholly above 0 and better beats worse by the one-sided sign test at p < 0.05 after Holm over 30; at least 3 of 5 carry	0	0	0
+k31-aa	3	the twin meets 1 in fewer than 3 of 5 learners and 2 in fewer than 3 of 5, each read apart (learners: the larger of the twin's two counts)	1	1	1
+k31-aa	4	no learner's recall interval lies wholly below -0.02, for all five	1	1	1
+k31-aa	5	each learner that carries has a study median of its lineage median's sign	1	1	1
+program	1 and 2	a learner carries when its lineage median difference's interval lies wholly above 0 and better beats worse by the one-sided sign test at p < 0.05 after Holm over 30; at least 3 of 5 carry	1	1	1
+program	3	the twin meets 1 in fewer than 3 of 5 learners and 2 in fewer than 3 of 5, each read apart (learners: the larger of the twin's two counts)	1	1	1
+program	4	no learner's recall interval lies wholly below -0.02, for all five	1	1	1
+program	5	each learner that carries has a study median of its lineage median's sign	1	1	1
+k31-program	1 and 2	a learner carries when its lineage median difference's interval lies wholly above 0 and better beats worse by the one-sided sign test at p < 0.05 after Holm over 30; at least 3 of 5 carry	0	0	0
+k31-program	3	the twin meets 1 in fewer than 3 of 5 learners and 2 in fewer than 3 of 5, each read apart (learners: the larger of the twin's two counts)	1	1	1
+k31-program	4	no learner's recall interval lies wholly below -0.02, for all five	1	1	1
+k31-program	5	each learner that carries has a study median of its lineage median's sign	0	0	0
