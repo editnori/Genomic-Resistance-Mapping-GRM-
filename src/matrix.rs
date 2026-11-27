@@ -378,9 +378,8 @@ enum MergeKey {
     /// 2k - BUCKET_BITS + ceil(log2 n) <= 64: 4096 genomes at k = 31, 1024
     /// at k = 32.
     Packed,
-    /// (k-mer bits, genome index) as a (u64, u32) tuple, comparison sorted.
-    /// The same 16 bytes per entry as packed plus its radix scratch, but
-    /// O(T log T) per bucket instead of a few linear passes.
+    /// (k-mer bits, genome index) as a (u64, u32) tuple, LSD radix sorted.
+    /// Keeps O(T) linear passes per bucket beyond the packed key's bit ceiling.
     Wide,
 }
 
@@ -620,6 +619,74 @@ fn merge_bucket(plan: &MergePlan, readers: &[KsetReader], bucket: usize) -> Resu
     Ok(merge.finish())
 }
 
+/// Least-significant-digit 8-bit radix sort for `(kmer, genome)` tuples.
+/// Produces the exact same ascending `(u64, u32)` order as `sort_unstable`,
+/// skipping constant byte positions and skipping genome passes when the input
+/// is already non-decreasing in `genome` (the `MergeKey::Wide` fill order).
+fn radix_sort_wide(entries: &mut Vec<(u64, u32)>, scratch: &mut Vec<(u64, u32)>) {
+    let n = entries.len();
+    if n < 256 {
+        entries.sort_unstable();
+        return;
+    }
+    let mut hist_k = [[0usize; 256]; 8];
+    let mut g_sorted = true;
+    let mut prev_g = 0u32;
+    for &(k, g) in entries.iter() {
+        g_sorted &= g >= prev_g;
+        prev_g = g;
+        for (d, h) in hist_k.iter_mut().enumerate() {
+            h[((k >> (8 * d)) & 0xff) as usize] += 1;
+        }
+    }
+    scratch.clear();
+    scratch.resize(n, (0, 0));
+    if !g_sorted {
+        let mut hist_g = [[0usize; 256]; 4];
+        for &(_, g) in entries.iter() {
+            for (d, h) in hist_g.iter_mut().enumerate() {
+                h[((g >> (8 * d)) & 0xff) as usize] += 1;
+            }
+        }
+        for (d, h) in hist_g.iter().enumerate() {
+            if h.contains(&n) {
+                continue;
+            }
+            let mut offsets = [0usize; 256];
+            let mut running = 0;
+            for (o, &c) in offsets.iter_mut().zip(h.iter()) {
+                *o = running;
+                running += c;
+            }
+            let shift = 8 * d;
+            for &e in entries.iter() {
+                let digit = ((e.1 >> shift) & 0xff) as usize;
+                scratch[offsets[digit]] = e;
+                offsets[digit] += 1;
+            }
+            std::mem::swap(entries, scratch);
+        }
+    }
+    for (d, h) in hist_k.iter().enumerate() {
+        if h.contains(&n) {
+            continue;
+        }
+        let mut offsets = [0usize; 256];
+        let mut running = 0;
+        for (o, &c) in offsets.iter_mut().zip(h.iter()) {
+            *o = running;
+            running += c;
+        }
+        let shift = 8 * d;
+        for &e in entries.iter() {
+            let digit = ((e.0 >> shift) & 0xff) as usize;
+            scratch[offsets[digit]] = e;
+            offsets[digit] += 1;
+        }
+        std::mem::swap(entries, scratch);
+    }
+}
+
 /// Merges one bucket of `total` values, which `fill(g, out)` appends for
 /// genome g, and hands each distinct k-mer, in ascending order, to
 /// `sink(value, presence row, support)`. Every value in a bucket shares its
@@ -666,7 +733,10 @@ fn merge_entries(
                 fill(g, &mut values)?;
                 entries.extend(values.iter().map(|&v| (v & low_mask, g as u32)));
             }
-            entries.sort_unstable();
+            drop(values);
+            let mut scratch = Vec::new();
+            radix_sort_wide(&mut entries, &mut scratch);
+            drop(scratch);
             group_sorted(words, base, entries.len(), sink, |i| {
                 (entries[i].0, entries[i].1 as usize)
             })
@@ -2314,6 +2384,82 @@ mod tests {
             assert_eq!(collided.row(i as u32), r.as_slice());
         }
         assert_eq!(collided.len(), rows.len());
+    }
+
+    #[test]
+    fn radix_sort_wide_matches_sort_unstable_including_ties() {
+        let mut rng = ChaCha8Rng::seed_from_u64(0x7769_6465_7261_6469);
+        let mut scratch = vec![(u64::MAX, u32::MAX); 7];
+        let check = |mut entries: Vec<(u64, u32)>, scratch: &mut Vec<(u64, u32)>, label: &str| {
+            let mut want = entries.clone();
+            want.sort_unstable();
+            radix_sort_wide(&mut entries, scratch);
+            assert_eq!(entries, want, "{label}");
+        };
+
+        // Random unsorted inputs across size thresholds, with ties on both k-mer and genome.
+        for n in [0usize, 1, 2, 17, 255, 256, 257, 4_096, 20_000] {
+            let entries: Vec<(u64, u32)> = (0..n)
+                .map(|_| {
+                    let k = if rng.random_bool(0.3) {
+                        rng.random_range(0..64u64) << rng.random_range(0..57)
+                    } else {
+                        rng.random::<u64>() >> rng.random_range(0..55)
+                    };
+                    let g = if rng.random_bool(0.3) {
+                        rng.random_range(0..16u32)
+                    } else {
+                        rng.random::<u32>() >> rng.random_range(0..24)
+                    };
+                    (k, g)
+                })
+                .collect();
+            check(entries, &mut scratch, &format!("random n={n}"));
+        }
+
+        // Non-decreasing genome order (MergeKey::Wide fast path) with heavy k-mer ties and duplicates.
+        let mut wide_like = Vec::with_capacity(8_192);
+        for g in 0..512u32 {
+            for _ in 0..16 {
+                wide_like.push((rng.random_range(0..64u64), g));
+            }
+        }
+        check(wide_like, &mut scratch, "wide_like");
+
+        // Constant k-mer with unsorted genomes (exercises genome tie-breaking only).
+        let same_k: Vec<(u64, u32)> = (0..1_000)
+            .map(|_| (0x1234_5678_9abc_def0, rng.random()))
+            .collect();
+        check(same_k, &mut scratch, "same_k");
+
+        // Constant genome with reversed k-mers and boundary extremes.
+        let mut boundaries: Vec<(u64, u32)> = (0..300u64).rev().map(|i| (i << 40, 7)).collect();
+        boundaries.extend_from_slice(&[
+            (0, 0),
+            (0, u32::MAX),
+            (u64::MAX, 0),
+            (u64::MAX, u32::MAX),
+            (0, 0),
+            (u64::MAX, u32::MAX),
+        ]);
+        check(boundaries, &mut scratch, "boundaries");
+
+        // All identical entries (zero radix passes executed).
+        check(vec![(42, 9); 512], &mut scratch, "all_equal");
+
+        // Single varying byte in each of the 8 k-mer bytes and 4 genome bytes.
+        for byte in 0..8 {
+            let v: Vec<(u64, u32)> = (0..512u32)
+                .map(|i| (((i as u64 & 0xff) << (8 * byte)), (512 - i) & 0xff))
+                .collect();
+            check(v, &mut scratch, &format!("k_byte={byte}"));
+        }
+        for byte in 0..4 {
+            let v: Vec<(u64, u32)> = (0..512u32)
+                .map(|i| (i as u64 % 8, ((512 - i) & 0xff) << (8 * byte)))
+                .collect();
+            check(v, &mut scratch, &format!("g_byte={byte}"));
+        }
     }
 
     #[test]

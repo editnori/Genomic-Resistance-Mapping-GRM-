@@ -565,6 +565,7 @@ src/lib.rs matrix::tests::partial_receipts_describe_their_blocks
 src/lib.rs matrix::tests::partials_are_bound_to_the_expected_k_even_when_every_kset_is_empty
 src/lib.rs matrix::tests::partials_merge_under_an_open_file_limit_that_stops_build
 src/lib.rs matrix::tests::partials_must_tile_the_columns_in_order_with_one_k
+src/lib.rs matrix::tests::radix_sort_wide_matches_sort_unstable_including_ties
 src/lib.rs matrix::tests::receipts_bind_each_partial_to_its_file_and_columns
 src/lib.rs matrix::tests::rejects_no_ksets_and_mixed_k_at_any_size
 src/lib.rs matrix::tests::row_interner_matches_fxhashmap_across_widths_collisions_and_resizes
