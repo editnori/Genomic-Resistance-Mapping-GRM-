@@ -38,7 +38,7 @@ Rows lacking a typing value are counted among rows entering the groups and among
 
 - Stage 2, the comparison of scores, is not authorised; a ruling on stage 1's counts comes first.
 - The read is retrospective, inside one database, and never external validation.
-- The 252,148 records dropped at the cut are a recorded figure, not measured here.
+- Stage 1 never measures the 252,148 records dropped at the cut, a recorded figure.
 - No output names or ranks a feature.
 - Beside made-up files and the repository's own pages and code, the tests read 3 committed files: the protocol, the amendment and the release's checksum list, on which one test runs the script.
 
