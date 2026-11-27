@@ -227,7 +227,7 @@ def _extract_ebi_amr(ci_row: Mapping[str, object]) -> tuple[dict[str, object], l
     )
     assemblies = _all_col_tokens(
         ci_row,
-        ("assembly_accession", "gca_accession", "genbank_assembly", "refseq_assembly"),
+        ("assembly_id", "assembly_accession", "gca_accession", "genbank_assembly", "refseq_assembly"),
     )
     bioprojects = _all_col_tokens(
         ci_row,
@@ -255,7 +255,7 @@ def _extract_ebi_amr(ci_row: Mapping[str, object]) -> tuple[dict[str, object], l
     subject_id = _collapse_ws(_first_col(ci_row, ("subject_id", "patient_id", "host_subject_id")))
     fasta_path = _first_col(ci_row, ("fasta_path", "assembly_path"))
     pmids: list[str] = []
-    for col in ("pmid", "pubmed_id", "publication"):
+    for col in ("pmid", "pubmed_id", "publication", "amr_associated_publications"):
         pmids.extend(_clean_pmids(ci_row.get(col)))
 
     synonyms: list[tuple[str, str, str]] = []

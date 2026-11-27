@@ -73,6 +73,39 @@ class PortalNormalizersTest(unittest.TestCase):
         self.assertIn(("run_to_sample", "ERR700002", "SAMEA100001"), syns)
         self.assertIn(("study", "ERP012345", "PRJEB12345"), syns)
 
+    def test_ebi_amr_2026_07_live_headers_assembly_id_and_publications(self):
+        rows = [
+            {
+                "BioSample_ID": "SAMEA2026071",
+                "assembly_ID": "GCA_009876543.1",
+                "AMR_associated_publications": "33111111, 33222222;PMID:33333333|33444444 33111111",
+                "species": "Klebsiella pneumoniae",
+                "antibiotic": "meropenem",
+            },
+            {
+                "BioSample_ID": "SAMEA2026071",
+                "assembly_ID": "GCF_009876543.1",
+                "AMR_associated_publications": "33555555",
+                "species": "Klebsiella pneumoniae",
+                "antibiotic": "cefepime",
+            },
+            {
+                "BioSample_ID": "NA",
+                "ASSEMBLY_ID": "GCA_009999999.2",
+                "amr_associated_publications": "NA",
+                "species": "Escherichia coli",
+            },
+        ]
+        recs, _ = portals.normalize_rows("ebi_amr", rows)
+        by_id = {r["genome_id"]: r for r in recs}
+        self.assertEqual(sorted(by_id), ["GCA_009999999.2", "SAMEA2026071"])
+        r1 = by_id["SAMEA2026071"]
+        self.assertEqual(r1["assembly_accession"], "GCA_009876543.1;GCF_009876543.1")
+        self.assertEqual(r1["pmid"], "33111111;33222222;33333333;33444444;33555555")
+        r2 = by_id["GCA_009999999.2"]
+        self.assertEqual(r2["assembly_accession"], "GCA_009999999.2")
+        self.assertNotIn("pmid", r2)
+
     def test_cryptic_sets_default_mtb_species_and_longitudinal_subject_id(self):
         rows = [
             {
