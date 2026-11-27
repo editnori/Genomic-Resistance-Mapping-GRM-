@@ -739,6 +739,25 @@ fn analyze_dataset_as(
             cfg,
         )?;
     }
+    // Nested selective calling experiment, off by default (`learn::selective`):
+    // writes zero-ID `grm-selective-v1` files and changes no fit or report.
+    if crate::learn::selective::enabled() {
+        let genomes: Vec<String> = rows.iter().map(|p| p.genome_id.clone()).collect();
+        crate::learn::selective::record_drawn(
+            layout,
+            &spec.id,
+            &spec.species_slug,
+            &spec.antibiotic,
+            &genomes,
+            &ds.x,
+            &ds.y,
+            &groups,
+            &duplicates,
+            min_support,
+            cfg,
+            &out.splits,
+        )?;
+    }
     // The C3 experiment (`input_arms`) writes its counts and the C9 writer's
     // per-fold calls; its rows carry no k-mer to annotate, so no report.
     // The C4 experiment (`screen_arm`) writes its counts and those calls
@@ -1248,6 +1267,28 @@ pub fn evaluate_fold_file(
             &e.groups,
             &roles,
             file.folds(),
+            cfg,
+        )?;
+    }
+    if crate::learn::selective::enabled() {
+        crate::learn::selective::record_assigned(
+            layout,
+            &spec.id,
+            slug,
+            &spec.antibiotic,
+            &file.scheme,
+            &loaded.sha256,
+            &sample_ids,
+            &e.ds.x,
+            &e.ds.y,
+            &e.groups,
+            &e.duplicates,
+            &roles,
+            file.folds(),
+            &assigned.tested,
+            &assigned.result.test_fold,
+            &assigned.result.learners,
+            assigned.min_support,
             cfg,
         )?;
     }
@@ -2000,6 +2041,40 @@ fn analyze_species_as(
         if path.exists() && !force {
             let existing: serde_json::Value = serde_json::from_slice(&std::fs::read(&path)?)?;
             match stale_reason(&existing, &fingerprint) {
+                None if crate::learn::selective::enabled()
+                    && !crate::learn::selective::outputs_exist_drawn(&spec.id, cfg.seed) =>
+                {
+                    if let Some(e) = eval_inputs(&input, spec)? {
+                        let out = eval::evaluate(
+                            &spec.id,
+                            &e.ds.x,
+                            &e.ds.y,
+                            &e.groups,
+                            &e.duplicates,
+                            e.min_support,
+                            None,
+                            cfg,
+                        )?;
+                        let genomes: Vec<String> =
+                            e.cohort.rows.iter().map(|p| p.genome_id.clone()).collect();
+                        crate::learn::selective::record_drawn(
+                            layout,
+                            &spec.id,
+                            &spec.species_slug,
+                            &spec.antibiotic,
+                            &genomes,
+                            &e.ds.x,
+                            &e.ds.y,
+                            &e.groups,
+                            &e.duplicates,
+                            e.min_support,
+                            cfg,
+                            &out.splits,
+                        )?;
+                        eprintln!("    {}: report current, selective results written", spec.id);
+                    }
+                    continue;
+                }
                 None => continue,
                 Some(reason) => eprintln!("    {}: {reason}; recomputing report", spec.id),
             }

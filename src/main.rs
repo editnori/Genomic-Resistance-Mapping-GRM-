@@ -481,6 +481,32 @@ enum Command {
             ]
         )]
         exp_settings_folds: Option<PathBuf>,
+        /// Experiment, off by default (docs/selective-calling.md): after each
+        /// dataset's evaluation, calibrate nested selective calling and
+        /// abstention policies strictly inside each outer training fold (on
+        /// random and lineage splits, or with --fold-file on the file's split)
+        /// and write <dir>/<dataset>.<scheme>-s<seed>.selective.json with zero
+        /// genome ids. Reports, fold file results and every fit are those of a
+        /// run without it. Refused beside --learner-seed, the --exp-tie-*
+        /// options, --exp-null-refit, --exp-mic, --exp-cohort, --exp-inputs,
+        /// --exp-screen, --exp-floor and --exp-settings.
+        #[arg(
+            long,
+            conflicts_with_all = [
+                "learner_seed",
+                "exp_tie_rule",
+                "exp_tie_trace",
+                "exp_tie_out",
+                "exp_null_refit",
+                "exp_mic",
+                "exp_cohort",
+                "exp_inputs",
+                "exp_screen",
+                "exp_floor",
+                "exp_settings",
+            ]
+        )]
+        exp_selective: Option<PathBuf>,
     },
     /// Run fetch, count, structure, matrix, and learn for each species, then
     /// build the report. Stages skip work that is already on disk.
@@ -843,6 +869,7 @@ fn run(cli: Cli) -> Result<()> {
             exp_floor,
             exp_settings,
             exp_settings_folds,
+            exp_selective,
             ..
         } => {
             if let Some(dir) = &exp_pick {
@@ -872,6 +899,9 @@ fn run(cli: Cli) -> Result<()> {
             }
             if let Some(dir) = &exp_settings_folds {
                 grm::learn::settings::enable_folds(dir)?;
+            }
+            if let Some(dir) = &exp_selective {
+                grm::learn::selective::enable(dir)?;
             }
             learn_fold_file(
                 &layout,
@@ -904,6 +934,7 @@ fn run(cli: Cli) -> Result<()> {
             exp_screen,
             exp_floor,
             exp_settings_folds,
+            exp_selective,
             ..
         } => {
             let cfg = learn_config(screened_features, seed, learner_seed, exp_tie_rule.into());
@@ -942,6 +973,9 @@ fn run(cli: Cli) -> Result<()> {
             )?;
             if let Some(dir) = &exp_settings_folds {
                 grm::learn::settings::enable_folds(dir)?;
+            }
+            if let Some(dir) = &exp_selective {
+                grm::learn::selective::enable(dir)?;
             }
             species
                 .iter()
@@ -2820,6 +2854,86 @@ mod tests {
             &["--exp-mic", "released"][..],
         ] {
             let mut args = vec!["grm", "learn", "--species", "s", "--exp-pick", "p"];
+            args.extend_from_slice(other);
+            assert_eq!(kind(&args), Some(ArgumentConflict), "{other:?}");
+        }
+    }
+
+    /// `--exp-selective` is off unless given, works on both drawn and
+    /// `--fold-file` runs, and is refused beside experiments that change fits.
+    #[test]
+    fn learn_takes_the_selective_flag_only_when_asked() {
+        use clap::error::ErrorKind::ArgumentConflict;
+        let parse = |args: &[&str]| Cli::try_parse_from(args.iter().copied());
+        let Command::Learn { exp_selective, .. } =
+            parse(&["grm", "learn", "--species", "s"]).unwrap().command
+        else {
+            panic!("parsed another command");
+        };
+        assert_eq!(exp_selective, None);
+
+        let Command::Learn { exp_selective, .. } = parse(&[
+            "grm",
+            "learn",
+            "--species",
+            "s",
+            "--exp-selective",
+            "sel-out",
+        ])
+        .unwrap()
+        .command
+        else {
+            panic!("parsed another command");
+        };
+        assert_eq!(exp_selective, Some(PathBuf::from("sel-out")));
+
+        assert!(
+            parse(&[
+                "grm",
+                "learn",
+                "--species",
+                "s",
+                "--fold-file",
+                "f.json",
+                "--fold-out",
+                "o",
+                "--exp-selective",
+                "sel-out",
+            ])
+            .is_ok()
+        );
+
+        let kind = |args: &[&str]| parse(args).err().map(|e| e.kind());
+        for other in [
+            &["--learner-seed", "7"][..],
+            &["--exp-tie-rule", "exact"][..],
+            &["--exp-tie-trace", "t.jsonl"][..],
+            &["--exp-tie-out", "x"][..],
+            &["--exp-null-refit", "n"][..],
+            &["--exp-mic", "released"][..],
+            &["--exp-cohort", "c", "--exp-cohort-out", "co"][..],
+            &[
+                "--exp-inputs",
+                "program",
+                "--exp-program-tables",
+                "pt",
+                "--exp-pick",
+                "p",
+                "--force",
+            ][..],
+            &["--exp-screen", "cmh", "--exp-pick", "p", "--force"][..],
+            &["--exp-floor", "3", "--exp-pick", "p", "--force"][..],
+            &[
+                "--fold-file",
+                "f.json",
+                "--fold-out",
+                "o",
+                "--exp-settings",
+                "s.json",
+                "--force",
+            ][..],
+        ] {
+            let mut args = vec!["grm", "learn", "--species", "s", "--exp-selective", "sel"];
             args.extend_from_slice(other);
             assert_eq!(kind(&args), Some(ArgumentConflict), "{other:?}");
         }

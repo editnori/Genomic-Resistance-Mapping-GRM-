@@ -488,6 +488,12 @@ src/lib.rs learn::screen_arm::tests::the_statistic_sums_its_strata_in_ascending_
 src/lib.rs learn::screen_arm::tests::the_strata_do_not_change_with_the_labels
 src/lib.rs learn::screen_arm::tests::ties_break_by_the_lower_row_and_the_budget_fills_with_zeros
 src/lib.rs learn::screen_arm::tests::with_one_stratum_the_statistic_is_the_chi_square_times_n_less_one_over_n
+src/lib.rs learn::selective::tests::capture_records_drawn_and_assigned_selective_json_files
+src/lib.rs learn::selective::tests::fold_safe_distances_never_read_outer_test_or_same_inner_fold
+src/lib.rs learn::selective::tests::hand_computed_accounting_and_conformal_both_vs_empty
+src/lib.rs learn::selective::tests::joint_risk_model_is_monotone_and_handles_constant_margin_scm
+src/lib.rs learn::selective::tests::retention_count_is_exact_floor_without_float_underflow
+src/lib.rs learn::selective::tests::sketches_bin_round_trips_and_loads_with_cache_fallback
 src/lib.rs learn::settings::tests::a_failed_partition_is_recorded_per_learner
 src/lib.rs learn::settings::tests::a_sampled_setting_is_fitted_as_given
 src/lib.rs learn::settings::tests::a_settings_file_outside_its_spaces_is_refused
@@ -770,6 +776,7 @@ src/main.rs tests::learn_takes_the_c4_screen_and_floor_arms_only_when_asked
 src/main.rs tests::learn_takes_the_c9_pick_only_when_asked
 src/main.rs tests::learn_takes_the_cohort_experiment_only_with_an_output_and_no_other_experiment
 src/main.rs tests::learn_takes_the_mic_experiment_only_with_an_output_and_no_other_experiment
+src/main.rs tests::learn_takes_the_selective_flag_only_when_asked
 src/main.rs tests::learn_takes_the_settings_flags_only_with_force_and_alone
 src/main.rs tests::learn_with_a_fold_file_screens_as_many_features_as_it_is_told
 src/main.rs tests::matrix_and_pipeline_keep_the_stock_path_unless_disk_sparse_is_given
@@ -792,3 +799,7 @@ tests/kmer_space_extended.rs multi_k_mixer_bijection_large [ignored]
 tests/kmer_space_extended.rs multi_k_space_vectors
 tests/null_fold_refit.rs the_flag_changes_no_output_and_records_each_null_fold_once
 tests/null_fold_refit_full.rs a_file_that_takes_no_line_stops_the_evaluation_and_the_error_names_the_fold
+tests/selective.rs critical_accounting_and_conformal_math_matches_hand_computed_reference
+tests/selective.rs critical_leakage_mutating_outer_test_labels_and_distances_preserves_calibration_bit_for_bit
+tests/selective.rs critical_matched_coverage_retains_exact_floor_c_n_under_ties_and_label_flips
+tests/selective.rs missing_sketches_fallback_and_zero_id_hygiene
