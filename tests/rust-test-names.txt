@@ -257,6 +257,12 @@ src/lib.rs cutoff::tests::the_scored_set_leaves_out_the_cohort_and_its_copies_an
 src/lib.rs cutoff::tests::the_study_estimate_scores_the_plans_folds_or_says_why_not
 src/lib.rs cutoff::tests::the_truth_is_the_final_models_on_the_scored_set
 src/lib.rs cutoff::tests::the_truths_forest_reads_a_scored_genome_on_the_screened_features
+src/lib.rs dedup::tests::accession_normalization_and_genome_id_order_match_r0
+src/lib.rs dedup::tests::end_to_end_index_and_screen_enforces_all_layers_and_funnel_gates
+src/lib.rs dedup::tests::load_index_rejects_tampered_records_and_uses_counted_and_sketches
+src/lib.rs dedup::tests::sha256_k31_prevents_false_exact_kset_match_on_fnv64_collision
+src/lib.rs dedup::tests::sketch_index_matches_exact_brute_force_pairwise_mash_distances
+src/lib.rs dedup::tests::synonym_map_resolves_transitive_insdc_ena_ncbi_aliases
 src/lib.rs dna::tests::canonical_matches_a_naive_reference_on_both_strands
 src/lib.rs dna::tests::canonical_matches_both_strands
 src/lib.rs dna::tests::mixed_values_balance_across_top_bits
@@ -303,7 +309,9 @@ src/lib.rs intervals::tests::intervals_file_pins_the_report_and_its_counts
 src/lib.rs intervals::tests::intervals_file_refuses_counts_that_do_not_add_up
 src/lib.rs intervals::tests::write_covers_the_indexed_datasets_and_leaves_reports_untouched
 src/lib.rs kset::tests::a_file_shorter_than_the_header_is_named_in_the_error
+src/lib.rs kset::tests::assembly_sha256_normalizes_layout_and_separates_from_kset_identity
 src/lib.rs kset::tests::dedup_respects_min_count
+src/lib.rs kset::tests::fingerprint_fasta_matches_kset_digest_and_species_sketch_for_plain_and_gz
 src/lib.rs kset::tests::kset_round_trips_and_sketches
 src/lib.rs kset::tests::kset_round_trips_bucket_edges_at_both_k_limits
 src/lib.rs kset::tests::open_rejects_inconsistent_bucket_table
@@ -744,6 +752,7 @@ src/main.rs tests::curate_checks_the_class_minimum_before_reading_input
 src/main.rs tests::curate_draws_round_robin_across_mlst_groups_and_records_the_plan
 src/main.rs tests::curate_records_the_legacy_rule_and_its_cap_without_changing_its_choice
 src/main.rs tests::data_written_before_kset_digests_is_recounted_and_rebuilt
+src/main.rs tests::dedup_cli_index_and_screen_round_trip
 src/main.rs tests::direct_learn_refuses_added_removed_and_reordered_genome_selections
 src/main.rs tests::disk_sparse_matrix_command_counts_a_fresh_cohort_without_learning
 src/main.rs tests::disk_sparse_matrix_passes_the_catalog_gate_before_counting_or_deleting

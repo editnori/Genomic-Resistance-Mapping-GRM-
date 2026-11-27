@@ -75,6 +75,7 @@ Every document under `docs/`, grouped by purpose. For the headline Revision 14 n
 | Document | Summary |
 | --- | --- |
 | [duplicate-isolation.md](duplicate-isolation.md) | Keeping k-mer-identical duplicate genomes together in outer, inner, and final tuning folds (revisions 10 to 12). |
+| [dedup-tool.md](dedup-tool.md) | Cross-database deduplication CLI (`grm dedup index` and `grm dedup screen`), streaming FASTA fingerprinting, species-specific Mash thresholds, INSDC alias resolution, portal metadata adapters, and funnel codes. |
 | [equal-scoring.md](equal-scoring.md) | Scoring null fits at training prevalence so every learner covers every isolate (revision 14). |
 | [species-check.md](species-check.md) | Species-identity check that drops genomes whose sequence does not fit their labelled species (revision 10). |
 | [fold-draws.md](fold-draws.md) | Repeated fold-draw design and stability checks. |

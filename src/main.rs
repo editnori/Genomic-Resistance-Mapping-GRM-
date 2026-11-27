@@ -697,12 +697,136 @@ enum Command {
         #[arg(long)]
         out: PathBuf,
     },
+    /// Cross-database deduplication: build a versioned reference index or
+    /// screen an external batch against reference indices (docs/dedup-tool.md).
+    Dedup {
+        #[command(subcommand)]
+        what: Dedup,
+    },
     /// Serve the built dashboard (web/dist) with its report data.
     Serve {
         #[arg(long, default_value = "web/dist")]
         app: PathBuf,
         #[arg(long, default_value_t = 8640)]
         port: u16,
+    },
+}
+
+#[derive(Subcommand)]
+enum Dedup {
+    /// Build a compact versioned reference index (`grm-dedup-index-v1`) with a
+    /// SHA-256 receipt from genome metadata, optional sidecar provenance
+    /// (`genome_provenance.jsonl`), and optional FASTA / `counted.json` /
+    /// `species-check/sketches/` inputs. Never modifies `genomes.jsonl`.
+    Index {
+        /// One or more genome metadata JSONL files (e.g. `bvbrc/genomes.jsonl`).
+        #[arg(long)]
+        metadata: Vec<PathBuf>,
+        /// Optional sidecar provenance JSONL (`genome_provenance.jsonl`) with
+        /// `sra_accession`, `bioproject_accession`, `strain`, `pmid`/`publication`,
+        /// `subject_id`, and additional accessions.
+        #[arg(long)]
+        provenance: Option<PathBuf>,
+        /// Optional newline-delimited genome id allowlist.
+        #[arg(long)]
+        genome_ids: Option<PathBuf>,
+        /// Optional directory of FASTA files (`<id>.fna.gz`, `.fna`, `.fa.gz`,
+        /// `.fa`, `.fasta.gz`, `.fasta`) fingerprinted in memory.
+        #[arg(long)]
+        fasta_dir: Option<PathBuf>,
+        /// Optional `counted.json` file(s) or `species/` directory holding
+        /// `*/counted.json`.
+        #[arg(long)]
+        counted: Vec<PathBuf>,
+        /// Optional `species-check/sketches/` directory of `<id>.json` sketches.
+        #[arg(long)]
+        sketches_dir: Option<PathBuf>,
+        /// Label identifying this reference cohort in screen outputs.
+        #[arg(long, default_value = "reference")]
+        source_label: String,
+        #[arg(
+            long,
+            default_value_t = grm::dedup::DEFAULT_K_DIGEST,
+            value_parser = RangedU64ValueParser::<usize>::new().range(MIN_K as u64..=MAX_K as u64)
+        )]
+        k_digest: usize,
+        #[arg(
+            long,
+            default_value_t = grm::dedup::DEFAULT_K_SKETCH,
+            value_parser = RangedU64ValueParser::<usize>::new().range(MIN_K as u64..=MAX_K as u64)
+        )]
+        k_sketch: usize,
+        #[arg(
+            long,
+            default_value_t = grm::dedup::DEFAULT_SKETCH_SIZE,
+            value_parser = RangedU64ValueParser::<usize>::new().range(1..)
+        )]
+        sketch_size: usize,
+        /// Output directory for `manifest.json` and `records.jsonl`.
+        #[arg(long)]
+        out: PathBuf,
+    },
+    /// Screen a query batch against one or more reference indices and run
+    /// within-batch connected-component deduplication and longitudinal patient
+    /// grouping. Does not query unopened sealed records.
+    Screen {
+        /// One or more reference index directories (or `manifest.json` paths).
+        #[arg(long)]
+        reference: Vec<PathBuf>,
+        /// Query metadata JSONL (canonical `grm dedup` format or portal adapter output).
+        #[arg(long)]
+        query: PathBuf,
+        /// Optional directory of query FASTA files fingerprinted in memory.
+        #[arg(long)]
+        query_fasta_dir: Option<PathBuf>,
+        /// Optional directory of precomputed query `<id>.json` sketches.
+        #[arg(long)]
+        query_sketches_dir: Option<PathBuf>,
+        /// Optional INSDC/ENA/NCBI accession alias map(s) (TSV or JSONL).
+        #[arg(long)]
+        synonym_map: Vec<PathBuf>,
+        /// Optional JSON file of species-specific `(near_dup_threshold, close_relative_threshold)`
+        /// validated on permitted development records.
+        #[arg(long)]
+        thresholds: Option<PathBuf>,
+        /// Fallback Mash near-duplicate threshold for species absent from `--thresholds`.
+        #[arg(long, default_value_t = grm::dedup::DEFAULT_NEAR_DUP_THRESHOLD)]
+        near_dup_threshold: f64,
+        /// Fallback Mash close-relative diagnostic threshold for species absent from `--thresholds`.
+        #[arg(long, default_value_t = grm::dedup::DEFAULT_CLOSE_RELATIVE_THRESHOLD)]
+        close_relative_threshold: f64,
+        /// k-mer length for canonical digests when no reference index is given.
+        #[arg(
+            long,
+            default_value_t = grm::dedup::DEFAULT_K_DIGEST,
+            value_parser = RangedU64ValueParser::<usize>::new().range(MIN_K as u64..=MAX_K as u64)
+        )]
+        k_digest: usize,
+        /// k-mer length for MinHash sketches when no reference index is given.
+        #[arg(
+            long,
+            default_value_t = grm::dedup::DEFAULT_K_SKETCH,
+            value_parser = RangedU64ValueParser::<usize>::new().range(MIN_K as u64..=MAX_K as u64)
+        )]
+        k_sketch: usize,
+        /// Bottom-s MinHash sketch size when no reference index is given.
+        #[arg(
+            long,
+            default_value_t = grm::dedup::DEFAULT_SKETCH_SIZE,
+            value_parser = RangedU64ValueParser::<usize>::new().range(1..)
+        )]
+        sketch_size: usize,
+        /// Number of lowest sketch hashes indexed in `SketchIndex` postings.
+        #[arg(
+            long,
+            default_value_t = grm::dedup::DEFAULT_INDEX_HASHES,
+            value_parser = RangedU64ValueParser::<usize>::new().range(1..)
+        )]
+        index_hashes: usize,
+        /// Output directory for `summary.json`, `decisions.jsonl`,
+        /// `components.json`, and `subject_groups.json`.
+        #[arg(long)]
+        out: PathBuf,
     },
 }
 
@@ -1137,7 +1261,94 @@ fn run(cli: Cli) -> Result<()> {
             revision5_reports,
             out,
         } => research(&layout, &revision5_reports, &out),
+        Command::Dedup { what } => dedup_cmd(what),
         Command::Serve { app, port } => grm::serve::serve(&app, &layout.root.join("report"), port),
+    }
+}
+
+fn dedup_cmd(what: Dedup) -> Result<()> {
+    match what {
+        Dedup::Index {
+            metadata,
+            provenance,
+            genome_ids,
+            fasta_dir,
+            counted,
+            sketches_dir,
+            source_label,
+            k_digest,
+            k_sketch,
+            sketch_size,
+            out,
+        } => {
+            let manifest = grm::dedup::build_index(&grm::dedup::IndexConfig {
+                metadata,
+                provenance,
+                genome_ids,
+                fasta_dir,
+                counted,
+                sketches_dir,
+                source_label,
+                k_digest,
+                k_sketch,
+                sketch_size,
+                out_dir: out.clone(),
+            })?;
+            eprintln!(
+                "dedup index: {} records ({} with sketch_k21, {} accession_gap) written to {} (index_sha256 {})",
+                manifest.counts.records,
+                manifest.counts.with_sketch_k21,
+                manifest.counts.accession_gap,
+                out.display(),
+                manifest.index_sha256
+            );
+            Ok(())
+        }
+        Dedup::Screen {
+            reference,
+            query,
+            query_fasta_dir,
+            query_sketches_dir,
+            synonym_map,
+            thresholds,
+            near_dup_threshold,
+            close_relative_threshold,
+            k_digest,
+            k_sketch,
+            sketch_size,
+            index_hashes,
+            out,
+        } => {
+            let res = grm::dedup::screen(&grm::dedup::ScreenConfig {
+                references: reference,
+                query,
+                query_fasta_dir,
+                query_sketches_dir,
+                synonym_maps: synonym_map,
+                thresholds,
+                fallback_near_dup: near_dup_threshold,
+                fallback_close_relative: close_relative_threshold,
+                k_digest,
+                k_sketch,
+                sketch_size,
+                index_hashes,
+                out_dir: out.clone(),
+            })?;
+            let f = &res.summary.funnel;
+            eprintln!(
+                "dedup screen: {} queries -> {} certified_clean (C4={}, EXACT_ASSEMBLY={}, EXACT_KSET={}, D3={}, D4={}, UNRESOLVED_OVERLAP={}) written to {}",
+                f.total_queries,
+                f.certified_clean,
+                f.C4_ref_metadata,
+                f.EXACT_ASSEMBLY,
+                f.EXACT_KSET,
+                f.D3_mash_near_dup,
+                f.D4_within_batch_dup,
+                f.UNRESOLVED_OVERLAP,
+                out.display()
+            );
+            Ok(())
+        }
     }
 }
 
@@ -6491,5 +6702,71 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn dedup_cli_index_and_screen_round_trip() {
+        let dir = tempfile::tempdir().unwrap();
+        let ref_fa = dir.path().join("ref_fa");
+        let q_fa = dir.path().join("q_fa");
+        std::fs::create_dir_all(&ref_fa).unwrap();
+        std::fs::create_dir_all(&q_fa).unwrap();
+        let seq_a = "ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGT";
+        let seq_b = "TTTTCCCCAAAAGGGGTTTTCCCCAAAAGGGGTTTTCCCCAAAAGGGGTTTT";
+        std::fs::write(ref_fa.join("562.1.fna"), format!(">c1\n{seq_a}\n")).unwrap();
+        std::fs::write(q_fa.join("ext_1.fna"), format!(">c1\n{seq_b}\n")).unwrap();
+
+        let ref_meta = dir.path().join("ref.jsonl");
+        std::fs::write(
+            &ref_meta,
+            "{\"genome_id\":\"562.1\",\"species\":\"Escherichia coli\",\"biosample_accession\":\"SAMN1\"}\n",
+        )
+        .unwrap();
+        let q_meta = dir.path().join("query.jsonl");
+        std::fs::write(
+            &q_meta,
+            "{\"genome_id\":\"ext_1\",\"species\":\"Escherichia coli\",\"biosample_accession\":\"SAMN2\"}\n",
+        )
+        .unwrap();
+
+        let idx_dir = dir.path().join("idx");
+        let out_dir = dir.path().join("out");
+        run(Cli::try_parse_from([
+            "grm",
+            "dedup",
+            "index",
+            "--metadata",
+            ref_meta.to_str().unwrap(),
+            "--fasta-dir",
+            ref_fa.to_str().unwrap(),
+            "--out",
+            idx_dir.to_str().unwrap(),
+        ])
+        .unwrap())
+        .unwrap();
+
+        run(Cli::try_parse_from([
+            "grm",
+            "dedup",
+            "screen",
+            "--reference",
+            idx_dir.to_str().unwrap(),
+            "--query",
+            q_meta.to_str().unwrap(),
+            "--query-fasta-dir",
+            q_fa.to_str().unwrap(),
+            "--out",
+            out_dir.to_str().unwrap(),
+        ])
+        .unwrap())
+        .unwrap();
+
+        let summary: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(out_dir.join("summary.json")).unwrap()).unwrap();
+        assert_eq!(summary["schema"], grm::dedup::SCREEN_SCHEMA);
+        assert_eq!(summary["claim_scope"], grm::dedup::CLAIM_SCOPE);
+        assert_eq!(summary["sealed_set_status"], grm::dedup::SEALED_SET_STATUS);
+        assert_eq!(summary["funnel"]["total_queries"], 1);
+        assert_eq!(summary["funnel"]["certified_clean"], 1);
     }
 }
