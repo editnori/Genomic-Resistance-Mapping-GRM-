@@ -988,6 +988,8 @@ An eleventh came while the text was written. The project's wording rules put rec
 
 **Fixes.** A worker wrote the fixes to both scripts with tests on 27 November 2026. A review of them is owed, and no machine starts by them until it is done.
 
+**Count.** The count ran by hand on 27 November 2026, once the floor's commit was on the default branch. Over the 35 datasets of M it reads 110 count rows on the first run and 330 on M, in each of the two readings. Its 7 tables are on record, and `docs/input-arms-m-count.md` is written whole from them.
+
 **Block C2.** Its `grm` has no change. Same build is its binary's check, and Same results runs on that binary as a check of the machine and the genome files. Its fits write a prediction per genome and no counts per fold, so Same counts has nothing to compare there. Its study fits are `grm learn` fits for every arm, and the run scripts keep each of their reports too.
 
 **Block C7's binaries.** Block C7 uses block C3's binary, as on its first run. Its export binary is built from `da70f4b`, the commit its first run's `DONE` lines name. That run recorded the export binary's sha256 and no code sha256, so the run holds `src/`, `Cargo.toml`, `Cargo.lock` and `.cargo/config.toml` equal to that commit's.
