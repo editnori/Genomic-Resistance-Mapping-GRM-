@@ -212,6 +212,7 @@ src/lib.rs cluster::tests::pcoa_ignores_negative_eigenvalues
 src/lib.rs cluster::tests::pcoa_preserves_a_line
 src/lib.rs cluster::tests::short_sketches_count_the_whole_union
 src/lib.rs cluster::tests::tied_distances_still_form_one_tree
+src/lib.rs cluster::tests::upper_triangle_distance_matrix_matches_all_pairs_bit_for_bit
 src/lib.rs confine::tests::lane_directories_are_real_and_stay_below_the_root
 src/lib.rs confine::tests::writes_never_follow_or_replace_links
 src/lib.rs curate::tests::a_singleton_group_leaves_every_other_groups_draws_alone

@@ -42,21 +42,24 @@ pub fn mash_distance(j: f64, k: usize) -> f64 {
 /// Condensed-to-square symmetric distance matrix, row-major n x n.
 pub fn distance_matrix(sketches: &[Vec<u64>], s: usize, k: usize) -> Vec<f32> {
     let n = sketches.len();
-    let rows: Vec<Vec<f32>> = (0..n)
+    let upper: Vec<Vec<f32>> = (0..n.saturating_sub(1))
         .into_par_iter()
         .map(|i| {
-            (0..n)
-                .map(|j| {
-                    if i == j {
-                        0.0
-                    } else {
-                        mash_distance(jaccard(&sketches[i], &sketches[j], s), k) as f32
-                    }
-                })
+            let si = &sketches[i];
+            (i + 1..n)
+                .map(|j| mash_distance(jaccard(si, &sketches[j], s), k) as f32)
                 .collect()
         })
         .collect();
-    rows.into_iter().flatten().collect()
+    let mut dist = vec![0.0f32; n * n];
+    for (i, row) in upper.iter().enumerate() {
+        let row_start = i * n + i + 1;
+        dist[row_start..row_start + row.len()].copy_from_slice(row);
+        for (off, &d) in row.iter().enumerate() {
+            dist[(i + 1 + off) * n + i] = d;
+        }
+    }
+    dist
 }
 
 /// One agglomeration step: clusters `a` and `b` (dendrogram node ids: leaves
@@ -479,5 +482,50 @@ mod tests {
             (d01 - 1.0).abs() < 1e-3 && (d03 - 3.0).abs() < 1e-3,
             "{d01} {d03}"
         );
+    }
+
+    #[test]
+    fn upper_triangle_distance_matrix_matches_all_pairs_bit_for_bit() {
+        use rand::{Rng, SeedableRng};
+        use rand_chacha::ChaCha8Rng;
+
+        let mut rng = ChaCha8Rng::seed_from_u64(0x6d61_7368_6469_7374);
+        let s = 128;
+        let k = 31;
+        for n in [0usize, 1, 2, 17, 65] {
+            let mut sketches: Vec<Vec<u64>> = Vec::with_capacity(n);
+            for i in 0..n {
+                let mut v = if i == 0 {
+                    Vec::new()
+                } else if i == 1 {
+                    vec![1, 5, 10]
+                } else if i == 2 && n > 3 {
+                    // Duplicate of sketch 1 to exercise exact zero off-diagonal distance.
+                    vec![1, 5, 10]
+                } else {
+                    let len = rng.random_range(16..=s);
+                    (0..len).map(|_| rng.random_range(0..400u64)).collect()
+                };
+                v.sort_unstable();
+                v.dedup();
+                sketches.push(v);
+            }
+            let got = distance_matrix(&sketches, s, k);
+            let mut naive = Vec::with_capacity(n * n);
+            for i in 0..n {
+                for j in 0..n {
+                    let d = if i == j {
+                        0.0f32
+                    } else {
+                        mash_distance(jaccard(&sketches[i], &sketches[j], s), k) as f32
+                    };
+                    naive.push(d);
+                }
+            }
+            assert_eq!(got.len(), naive.len(), "n={n}");
+            for idx in 0..naive.len() {
+                assert_eq!(got[idx].to_bits(), naive[idx].to_bits(), "n={n} idx={idx}");
+            }
+        }
     }
 }
