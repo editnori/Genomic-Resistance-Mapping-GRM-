@@ -56,14 +56,27 @@ Coverage, which every later figure carries: 49,621 of 215,319 genome rows and 16
 
 ## Stage two steps
 
-1. Check the sha256 of every report, both row lists, stage 1's committed count and typing tables and the 5 November genome table against values no argument changes, and stop on a report whose id is not its file name.
-2. Stop on a repeated line or lines out of stage 1's sort, a listed row its report lacks or whose fold or lineage cluster differs, or a report without scm, cart, rf, gbt and lasso in that order.
+Before step 1, the run stops on an output path that is not a directory or already holds an export, a `local` directory or the line "scores opened: yes" of an earlier run, and on numpy other than the version the resampling is written for.
+
+1. Check the sha256 of every report, both row lists, stage 1's committed count and typing tables and the 5 November genome table against values no argument changes. Stop on a missing file or a report whose id is not its file name.
+2. Stop on a line repeated, out of stage 1's sort or giving a genome twice, a listed dataset or row no report holds, a fold or lineage cluster unlike its report's, or a report without scm, cart, rf, gbt and lasso in order.
 3. Rebuild each list's groups. Stop on a group with one lab outcome, or on counts or typing support that differ from stage 1's tables at any level.
-4. Stop on a listed row's catalogue call other than true, false or null, a fit size by fold other than 5 finite numbers, or a dataset or species name with a full stop. They keep no value.
-5. Write "scores opened: yes" to a file and print it. Only then does a second loader read, for listed rows, the five scores, each learner's fit size by fold and the catalogue call.
+4. Stop on a report changed since step 1, a listed row moved, a catalogue call not true, false or null, fit sizes by fold not 5 finite numbers, or a dataset or species name with a full stop. Their loader keeps no value.
+5. Write "scores opened: yes" to a file and print it. Only then does a second loader read, for listed rows, the five scores, each learner's fit size by fold and the catalogue call, and whether the report's top-level catalogue is present.
 6. Measure both readings as below, scan the export for every genome id and accession read, after a positive control, and write it in integers, estimates in parts per million.
 
-A check that fails before the line prints one line, exits 1 and writes nothing. After the line, a stop writes no export.
+A file not as stage 1 writes it stops its step too. A committed table must have stage 1's columns, whole lines and no line twice. A row list must be UTF-8, hold a line, end with a line break and give 8 fields a line, none blank but the year, with whole-number folds and lineage clusters. The reports directory must hold the reports the release's checksum list names, and each report and genome table row must pass stage 1's loader.
+
+A check that fails before the line prints one line, exits 1 and writes nothing. So does a line file that cannot be made. If the file is made but its write fails, it stays behind empty, and a rerun into that directory stops on the line of an earlier run. Ruling R65 lets that run go again into a new directory.
+
+After the line, a run exits 0 with the export, or stops with one line and no export on one of four allowed ends:
+
+- A report's bytes changed since step 1.
+- A score null, true or false, not a number or not finite.
+- A full stop in an export file, a failed positive control of the scan, or a scan hit, which prints one line a file.
+- An export write that fails, which first removes what it made.
+
+Two other ends are not allowed. The line file removed or changed stops with `a score was asked for before the line`, though the line printed. A report or line file that cannot be read ends in a Python error. These two ends and the empty line file are findings 3 to 5 of stage 2's second review, and ruling R65 holds their code changes until after the one reading.
 
 ## Lead's readings
 

@@ -1,6 +1,6 @@
 """docs/matched-accuracy.md and the words of the files of both stages: "Not run yet." of stage 2's real reading,
-bare headers, no result, stage 1's run and counts read from the committed copy of its export, the words the page
-never uses, its row in docs/INDEX.md and the workflow's comment."""
+bare headers, no result, stage 1's run and counts read from the committed copy of its export, stage 2's steps and
+ends word for word, the words the page never uses, its row in docs/INDEX.md and the workflow's comment."""
 
 import csv
 import io
@@ -34,6 +34,48 @@ UNDER_10 = ("A row under 10 pairs carries no reading, yet its value still follow
             "beneath it lacks an estimate.")
 # What a copy group is, in the words of its rule. The one place the page may name a k-mer.
 COPY_GROUP_WORDS = "genomes of one dataset with identical canonical k-mer sets"
+# Stage 2's part, line by line, as the code has it at 74a33d9b: the stops before step 1, the 6 steps, the stops on
+# format, the line itself and every end after it. Stage 2's second review gave 6 steps that a cut left unpinned, and
+# 4 stops, the top-level catalogue read and the line file's stop the page left out (its findings 11 and 12).
+STAGE_TWO = (
+    "## Stage two steps",
+    "Before step 1, the run stops on an output path that is not a directory or already holds an export, a `local` "
+    'directory or the line "scores opened: yes" of an earlier run, and on numpy other than the version the '
+    "resampling is written for.",
+    "1. Check the sha256 of every report, both row lists, stage 1's committed count and typing tables and the 5 "
+    "November genome table against values no argument changes. Stop on a missing file or a report whose id is not "
+    "its file name.",
+    "2. Stop on a line repeated, out of stage 1's sort or giving a genome twice, a listed dataset or row no report "
+    "holds, a fold or lineage cluster unlike its report's, or a report without scm, cart, rf, gbt and lasso in "
+    "order.",
+    "3. Rebuild each list's groups. Stop on a group with one lab outcome, or on counts or typing support that differ "
+    "from stage 1's tables at any level.",
+    "4. Stop on a report changed since step 1, a listed row moved, a catalogue call not true, false or null, fit "
+    "sizes by fold not 5 finite numbers, or a dataset or species name with a full stop. Their loader keeps no value.",
+    '5. Write "scores opened: yes" to a file and print it. Only then does a second loader read, for listed rows, the '
+    "five scores, each learner's fit size by fold and the catalogue call, and whether the report's top-level "
+    "catalogue is present.",
+    "6. Measure both readings as below, scan the export for every genome id and accession read, after a positive "
+    "control, and write it in integers, estimates in parts per million.",
+    "A file not as stage 1 writes it stops its step too. A committed table must have stage 1's columns, whole lines "
+    "and no line twice. A row list must be UTF-8, hold a line, end with a line break and give 8 fields a line, none "
+    "blank but the year, with whole-number folds and lineage clusters. The reports directory must hold the reports "
+    "the release's checksum list names, and each report and genome table row must pass stage 1's loader.",
+    "A check that fails before the line prints one line, exits 1 and writes nothing. So does a line file that cannot "
+    "be made. If the file is made but its write fails, it stays behind empty, and a rerun into that directory stops "
+    "on the line of an earlier run. Ruling R65 lets that run go again into a new directory.",
+    "After the line, a run exits 0 with the export, or stops with one line and no export on one of four allowed "
+    "ends:",
+    "- A report's bytes changed since step 1.",
+    "- A score null, true or false, not a number or not finite.",
+    "- A full stop in an export file, a failed positive control of the scan, or a scan hit, which prints one line a "
+    "file.",
+    "- An export write that fails, which first removes what it made.",
+    "Two other ends are not allowed. The line file removed or changed stops with `a score was asked for before the "
+    "line`, though the line printed. A report or line file that cannot be read ends in a Python error. These two "
+    "ends and the empty line file are findings 3 to 5 of stage 2's second review, and ruling R65 holds their code "
+    "changes until after the one reading.",
+)
 
 
 def prose(text):
@@ -64,12 +106,13 @@ class Page(unittest.TestCase):
         self.assertEqual(self.lines[2], "Not run yet. Stage 2's real reading has not run and is not authorised: it "
                                         "needs the merged script and the lead's word after the merge.")
 
-    def test_under_1345_words(self):
+    def test_under_1685_words(self):
         # 500 until the fixes of the review added the two counts of two kinds, the BioProject shape and the 5
         # November table; 600 until stage 2's part added its steps, the lead's readings, ruling R59's conditions,
         # stage 1's run with R59's counts, the coverage and the two BioProject facts; 1,350 until ruling R62 cut 7
-        # passages that repeat another line, under the 1,345 words of stage 2's first page.
-        self.assertLess(len(self.page.split()), 1345)
+        # passages that repeat another line, under the 1,345 words of stage 2's first page; 1,345 until ruling R65
+        # had the page name every stop before the line and every end after it.
+        self.assertLess(len(self.page.split()), 1685)
 
     def test_the_record_line_gives_the_protocols_and_the_amendments_sha256(self):
         self.assertTrue(self.lines[-1].startswith("Record: "))
@@ -101,7 +144,8 @@ class Page(unittest.TestCase):
                     self.assertLess(len(item.split()), 45, item)
                 elif not item.startswith(("#", "|")):
                     self.assertLess(len(item.split()), 85, item)
-        self.assertLessEqual(items, 30)
+        # 30 until ruling R65 had the page list the four allowed ends after the line.
+        self.assertLessEqual(items, 34)
 
     def test_no_result(self):
         self.assertEqual(self.body.count(PERCENTILES), 1)
@@ -282,6 +326,36 @@ class LeadsReadings(unittest.TestCase):
                       "`unresolved`", self.page)
         self.assertIn("from its bounds before rounding", self.page)
         self.assertIn("added left to right as doubles", self.page)
+
+
+class StageTwoSteps(unittest.TestCase):
+    """Stage 2's part word for word, its names and messages read from the script, and ruling R59's one reading."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.page = common.PAGE.read_text(encoding="utf-8")
+        cls.script = stage2_common.SCRIPT.read_text(encoding="utf-8")
+
+    def test_the_part_is_word_for_word_the_steps_and_ends_of_the_code_today(self):
+        part = self.page[self.page.index("## Stage two steps\n"):self.page.index("## Lead's readings\n")]
+        self.assertEqual(tuple(line for line in part.split("\n") if line.strip()), STAGE_TWO)
+
+    def test_its_names_and_messages_are_the_scripts(self):
+        stage2 = stage2_common.stage2
+        self.assertEqual(stage2.OPENED, "scores opened: yes")
+        self.assertEqual(stage2.FIVE, ("scm", "cart", "rf", "gbt", "lasso"))
+        self.assertEqual((len(stage2.ROW_FIELDS), stage2.ROW_FIELDS[-1], stage2.stage1.FOLDS), (8, "year", 5))
+        for message in ("a score was asked for before the line",
+                        "the output directory already holds export, local or the line of an earlier run",
+                        "numpy is not the version the resampling is written for"):
+            self.assertEqual(self.script.count(f'raise Stop("{message}")'), 1, message)
+        self.assertEqual(self.script.count('"catalog": "present" if doc.get("catalog") is not None'), 1)
+
+    def test_a_run_that_printed_the_line_is_the_one_reading(self):
+        # Ruling R59 item 4's rule.
+        self.assertIn('- The real reading runs once at the merged commit, after the lead\'s word, on the computer '
+                      'holding the 274 reports and both row lists. A run that stops before "scores opened: yes" may '
+                      'run again. One that printed it is the one reading.\n', self.page)
 
 
 class FileWords(unittest.TestCase):
