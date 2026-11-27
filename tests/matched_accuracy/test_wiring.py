@@ -1,11 +1,16 @@
 """The suite's wiring: the workflow's python job runs it, and the python row of docs/ci.md gives its count."""
 
+import ast
 import pathlib
 import re
 import unittest
 
-from tests.matched_accuracy import common
+from tests.matched_accuracy import common, stage2_common
 from tests.matched_accuracy.common import CI_DOC, ROOT, SUITE, WORKFLOW
+
+SCRIPTS = [common.SCRIPT, common.FAULTS, stage2_common.SCRIPT, stage2_common.FAULTS]
+# numpy runs stage 2's resampling, and the tests that compute its interval apart from the script.
+NUMPY = {"stage2.py", "test_stage2_measure.py", "test_stage2_plain.py", "test_stage2_made_up.py"}
 
 
 def suite_count():
@@ -44,21 +49,34 @@ class Wiring(unittest.TestCase):
             path = getattr(common, name)
             self.assertTrue(path.is_relative_to(ROOT), name)
             self.assertTrue(path.exists(), name)
-        for path in sorted(pathlib.Path(ROOT / SUITE).glob("*.py")) + [common.SCRIPT, common.FAULTS]:
+        for path in sorted(pathlib.Path(ROOT / SUITE).glob("*.py")) + SCRIPTS:
             source = path.read_text(encoding="utf-8")
             self.assertIsNone(re.search(r"[\"'](/(home|Users|mnt|tmp|root|opt|srv)/|[A-Za-z]:\\)", source), path.name)
             self.assertIsNone(re.search(r"[\"']\.\./", source), path.name)
 
-    def test_the_suite_and_its_scripts_use_the_standard_library_alone(self):
-        allowed = {"argparse", "ast", "collections", "contextlib", "copy", "csv", "datetime", "fractions", "gzip",
-                   "hashlib", "importlib", "io", "json", "os", "pathlib", "re", "shutil", "stat", "subprocess", "sys",
-                   "tempfile", "unittest", "tests"}
-        for path in sorted(pathlib.Path(ROOT / SUITE).glob("*.py")) + [common.SCRIPT, common.FAULTS]:
+    def test_the_suite_and_its_scripts_use_the_standard_library_alone_and_numpy_where_named(self):
+        allowed = {"argparse", "ast", "collections", "contextlib", "copy", "csv", "datetime", "fractions", "functools",
+                   "gzip", "hashlib", "importlib", "io", "json", "math", "operator", "os", "pathlib", "random", "re",
+                   "shutil", "stat", "subprocess", "sys", "tempfile", "unittest", "tests"}
+        for path in sorted(pathlib.Path(ROOT / SUITE).glob("*.py")) + SCRIPTS:
             source = path.read_text(encoding="utf-8")
             with self.subTest(file=path.name):
-                self.assertLessEqual(set(re.findall(r"^(?:import|from) ([a-zA-Z_]+)", source, re.M)), allowed)
+                extra = {"numpy"} if path.name in NUMPY else set()
+                self.assertLessEqual(set(re.findall(r"^(?:import|from) ([a-zA-Z_]+)", source, re.M)), allowed | extra)
                 self.assertNotIn("url" + "lib", source)
                 self.assertNotIn("sock" + "et", source)
+
+    def test_stage_2_uses_numpy_for_the_resampling_and_its_version_alone(self):
+        tree = ast.parse(stage2_common.SCRIPT.read_text(encoding="utf-8"))
+        where = set()
+        for f in tree.body:
+            if isinstance(f, ast.FunctionDef):
+                if any(isinstance(n, ast.Name) and n.id == "numpy" for n in ast.walk(f)):
+                    where.add(f.name)
+        self.assertEqual(where, {"check_numpy", "interval", "numpy_parts"})
+        top = [n for f in tree.body if not isinstance(f, ast.FunctionDef) for n in ast.walk(f)
+               if isinstance(n, ast.Name) and n.id == "numpy"]
+        self.assertEqual(top, [])
 
     def test_no_test_of_the_suite_is_skipped(self):
         # The job requires unittest's last line to be OK, with no skip.
