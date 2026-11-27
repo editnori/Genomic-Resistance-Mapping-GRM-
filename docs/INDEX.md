@@ -80,6 +80,7 @@ Every document under `docs/`, grouped by purpose. For the headline Revision 14 n
 | [fold-draws.md](fold-draws.md) | Repeated fold-draw design and stability checks. |
 | [fold-file.md](fold-file.md) | Supplied fold-plan file format for `grm learn --fold-file`. |
 | [null-fold-refit.md](null-fold-refit.md) | Experimental null-fold refit flag (off by default). |
+| [selective-calling.md](selective-calling.md) | Experimental nested selective calling and abstention (`grm learn --exp-selective`, off by default), fold-safe Mash distances, dual evaluation layers, and species-level cross-split aggregation. |
 | [matrix-scaling.md](matrix-scaling.md) | Out-of-core partial matrix building (`--disk-sparse`) and the `REVIEWED_COLUMNS` (4,096) review gate. |
 | [lasso-layout.md](lasso-layout.md) | Machine-code layout check for `grm::learn::lasso::column_sum`. |
 | [prediction-contract.md](prediction-contract.md) | `grm predict` input/output contract. |
