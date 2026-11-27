@@ -1109,3 +1109,29 @@ An eleventh came while the text was written. The project's wording rules put rec
 **Holds.** Read the count as 10 of 22 at the plan's writing: the 9 rows marked **none** and A21. No run and no result changes. The two rows defended in part, A9 and A19, stay as the plan has them.
 
 **Since.** The count is of 21 November 2026. The entry Label rule, under Why, has since given a reason for row A16's rule. The lead read rows A16 and A21 alone against later pages, and the other 8 are not checked.
+
+## Size result
+
+**Count.** Block C3's count over all its datasets ran on 27 November 2026, and `docs/input-arms-m-count.md` gives it. The candidate is the AMRFinderPlus program's calls alone, and it meets conditions 1 to 5 in both readings. Its count takes 236 datasets in the first reading and 214 of those in the second.
+
+**Rule.** By the entry Pick rule a candidate that touches all five learners needs at least 3 of them, the same in both readings, better on more than half of the datasets that enter.
+
+| Learner | Better, first reading | Better, second reading | More than half in both |
+|---|---|---|---|
+| `rf` | 145 of 236 | 129 of 214 | yes |
+| `gbt` | 127 of 236 | 113 of 214 | yes |
+| `lasso` | 120 of 236 | 107 of 214 | no |
+| `cart` | 101 of 236 | 91 of 214 | no |
+| `scm` | 79 of 236 | 75 of 214 | no |
+
+**Result.** 2 of the 5 learners are better on more than half in both readings, and the rule asks 3. `lasso` is better on 107 of the 214 datasets of the second reading. That is exactly half, and the rule asks more than half. So the rule does not name block C3's candidate, by 1 dataset in one reading.
+
+**Edge.** The entry Pick rule gave this case before any dataset of M was fitted. Its paragraph Why names it: with an even count, exactly half can be better while the median lies above the band. `lasso`'s median in the second reading is 0.020 at 3 decimals. The lead changes no rule after the count it decides.
+
+**M's part.** The first run's 203 datasets enter both readings, and `lasso` is better on 102 of them. Of M, 33 datasets enter the first reading and 11 the second. `lasso` is better on 18 of the 33, where it needed 17, and on 5 of the 11, where it needed 6. The entry M run fixed which datasets of M leave the second reading before any score was read.
+
+**Stands.** The count stands as a result. With `rf` the candidate is better on 129 of the 214 datasets of the second reading and worse on 29. This entry does not show the candidate equal to the default, and it gives no reading of the served call, which no block scored under the candidate.
+
+**Pick.** The pick is not closed. By the paragraph Timing it waits for the later block's reading and for every block of the plan to be ruled. Neither of C7's candidates can pass. If no candidate of the later block passes, the release keeps its rule.
+
+**Written.** This entry was written at 14:49Z on 27 Nov 2026, under the lead's ruling 64. The maintainer can overrule it.
