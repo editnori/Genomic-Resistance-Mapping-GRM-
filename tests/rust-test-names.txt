@@ -296,6 +296,7 @@ src/lib.rs input_build::tests::grm_and_an_outside_fasta_of_the_same_unitigs_are_
 src/lib.rs input_build::tests::no_amino_acid_10mer_spans_a_stop_or_an_ambiguous_residue
 src/lib.rs input_build::tests::the_count_arm_keeps_the_31mers_seen_twice_as_a_recount_from_strings_does
 src/lib.rs input_build::tests::the_graph_holds_single_genome_kmers_and_breaks_at_their_branch
+src/lib.rs input_build::tests::unitig_compaction_and_links_work_at_k_32
 src/lib.rs intervals::tests::clopper_pearson_boundaries_have_closed_forms
 src/lib.rs intervals::tests::clopper_pearson_matches_scipy_beta_ppf
 src/lib.rs intervals::tests::clopper_pearson_tails_hold_alpha_over_two

@@ -420,7 +420,7 @@ fn canon(space: &KmerSpace, y: u64) -> (u64, bool) {
 /// as (index, oriented value), at most 4.
 fn successors(t: &Table, space: &KmerSpace, x: u64, out: &mut Vec<(usize, u64)>) {
     out.clear();
-    let mask = (1u64 << space.bits()) - 1;
+    let mask = space.mask();
     for b in 0..4u64 {
         let y = ((x << 2) | b) & mask;
         if let Some(i) = t.find(space.mix(canon(space, y).0)) {
@@ -1414,5 +1414,97 @@ mod tests {
             (1, 3, 1)
         );
         std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn unitig_compaction_and_links_work_at_k_32() {
+        // SYNTHETIC: canonicalization, successor/link traversal, and unitig
+        // compaction at MAX_K = 32 (64-bit k-mers).
+        let k = crate::dna::MAX_K;
+        let space = KmerSpace::new(k);
+        assert_eq!(space.bits(), 64);
+        assert_eq!(space.mask(), u64::MAX);
+
+        // `canon` on extremes, a palindrome, and a high-bit 32-mer (leading T).
+        assert_eq!(canon(&space, 0), (0, true));
+        assert_eq!(canon(&space, u64::MAX), (0, false));
+        let half = "ACGTACGTACGTACGT";
+        let pal_str = format!("{half}{}", rc(half));
+        let pal = space.canonical(&pal_str).unwrap();
+        assert_eq!(space.reverse_complement(pal), pal);
+        assert_eq!(canon(&space, pal), (pal, true));
+
+        let pack = |s: &str| {
+            s.bytes().fold(0u64, |acc, b| {
+                (acc << 2) | crate::dna::CODE[b as usize] as u64
+            })
+        };
+        // Leading "TG" sets bit 63 on both the first 32-mer and its successor.
+        let linear = format!("TG{}", seq(118, 62));
+        let fwd = pack(&linear[..k]);
+        let rev = pack(&rc(&linear[..k]));
+        assert_ne!(fwd, rev);
+        let expect = fwd.min(rev);
+        assert_eq!(canon(&space, fwd), (expect, fwd <= rev));
+        assert_eq!(canon(&space, rev), (expect, rev <= fwd));
+
+        // Linear 120-base sequence: 89 distinct 32-mers, one unitig, every
+        // interior 32-mer linked on both sides.
+        let mut linear_vals = Vec::new();
+        space.for_each_canonical(linear.as_bytes(), |x| linear_vals.push(space.mix(x)));
+        linear_vals.sort_unstable();
+        linear_vals.dedup();
+        let n_linear = linear.len() - k + 1;
+        assert_eq!(linear_vals.len(), n_linear);
+        let mut t_lin = Table::new(linear_vals, space.bits());
+        let (mut a, mut b) = (Vec::with_capacity(4), Vec::with_capacity(4));
+        let next = pack(&linear[1..k + 1]);
+        let next_idx = t_lin.find(space.mix(canon(&space, next).0)).unwrap();
+        successors(&t_lin, &space, fwd, &mut a);
+        assert_eq!(a, vec![(next_idx, next)]);
+        let mut degree_counts = [0usize; 3];
+        for i in 0..t_lin.values.len() {
+            let r = link(&t_lin, &space, i, true, &mut a, &mut b) != NONE;
+            let l = link(&t_lin, &space, i, false, &mut a, &mut b) != NONE;
+            degree_counts[r as usize + l as usize] += 1;
+        }
+        assert_eq!(degree_counts, [0, 2, n_linear - 2]);
+        assert_eq!(compact(&mut t_lin, &space).unwrap(), 1);
+        assert_eq!(t_lin.sizes, vec![n_linear as u32]);
+
+        // Branching graph at k = 32: backbone with one middle SNP yields 4
+        // unitigs matching the exact string-window 32-mer sets.
+        let back = seq(300, 63);
+        let mut var = back.clone().into_bytes();
+        var[150] = if var[150] == b'G' { b'T' } else { b'G' };
+        let var = String::from_utf8(var).unwrap();
+        let mut vals = Vec::new();
+        for s in [&back, &var] {
+            space.for_each_canonical(s.as_bytes(), |x| vals.push(space.mix(x)));
+        }
+        vals.sort_unstable();
+        vals.dedup();
+        assert_eq!(vals.len(), (back.len() - k + 1) + k);
+        let mut t = Table::new(vals, space.bits());
+        assert_eq!(compact(&mut t, &space).unwrap(), 4);
+        let want_parts: BTreeSet<BTreeSet<String>> = [
+            &back[..150],
+            &back[150 - (k - 1)..151 + (k - 1)],
+            &var[150 - (k - 1)..151 + (k - 1)],
+            &back[151..],
+        ]
+        .into_iter()
+        .map(|u| {
+            u.as_bytes()
+                .windows(k)
+                .map(|w| {
+                    let s = std::str::from_utf8(w).unwrap().to_string();
+                    let r = rc(&s);
+                    if s <= r { s } else { r }
+                })
+                .collect()
+        })
+        .collect();
+        assert_eq!(parts(&t, &space), want_parts);
     }
 }
