@@ -1,24 +1,30 @@
 """Stage 2 of the matched accuracy protocol (docs/matched-accuracy.md): the five learners' mean score, compared
 inside each matched group of stage 1's frozen rows.
 
-  python3 -I stage2.py --reports DIR --rows-a FILE --rows-b FILE --hc20 FILE SHA256 --out DIR
+  python3 -I stage2.py --reports DIR --rows-a FILE --rows-b FILE --hc20 FILE --out DIR
 
 Inputs. DIR holds the release's reports, each checked against its line of the release's sums list as stage 1
 checks it. --rows-a and --rows-b are stage 1's two row lists, each checked against the sha256 stage 1 printed in
 its one real run (ruling R59), written below as constants that no argument changes. --hc20 is the 5 Nov genome
-table with its sha256. Stage 1's count table and typing table are read from their committed copies under
+table, checked against the constant that equals its line of stage 1's committed inputs table. Stage 1's count
+table and typing table are read from their committed copies under
 reference/matched-accuracy/stage1-rev14-274-20261112/, each checked against a constant.
 
 Steps.
 1. Checks before any score. Each failure prints one line and exits 1 with no export: a sha256 that differs (a
    report, a row list, the committed count or typing table, the genome table); numpy other than 1.26.4; a repeated
-   line or lines out of stage 1's sort; a listed report without scm, cart, rf, gbt and lasso in that order under
-   the lineage split; a listed row its report does not hold, or whose fold or lineage cluster differs from the
-   report's; a group with one lab outcome; groups, pairs, rows, genomes, datasets or species, rebuilt from a list,
-   that differ from stage 1's count table at any level; the support of the MLST read or the MLST and HC20 read,
-   rebuilt from a list, that differs from stage 1's typing table at any level. Up to here reports load through
-   stage 1's loader, which drops every score.
-2. The line. Write "scores opened: yes" to <out>/scores-opened.txt, then print it. No check runs after it.
+   line or lines out of stage 1's sort; a report whose id is not its file name; a listed report without scm,
+   cart, rf, gbt and lasso in that order under the lineage split; a listed row its report does not hold, or whose
+   fold or lineage cluster differs from the report's; a group with one lab outcome; groups, pairs, rows, genomes,
+   datasets or species, rebuilt from a list, that differ from stage 1's count table at any level; the support of
+   the MLST read or the MLST and HC20 read, rebuilt from a list, that differs from stage 1's typing table at any
+   level; in a listed report, a dataset or species name with a full stop, a listed row's catalogue call other
+   than true, false or null, or a fit size by fold (fold_complexity) of the five other than 5 finite numbers. Up
+   to here reports load through stage 1's loader, which drops every score, and through count_bad, which returns
+   counts alone.
+2. The line. Write "scores opened: yes" to <out>/scores-opened.txt, then print it. After it, a run stops only on
+   a report's bytes that changed, a score null, true or false, not a number or not finite, a hit of the export's
+   scan, or a write that fails.
 3. The second loader. For listed rows alone: the five scores, the five fold_complexity lists, the row's
    catalogue call, and whether the report's top-level catalogue is present or null.
 4. Primary measure. A row's mean is its five scores added left to right as IEEE doubles, in the order scm,
@@ -33,8 +39,8 @@ Steps.
 6. Export. Numbers as integers alone, estimates in parts per million; a dataset or species under 10 pairs gives
    its counts and no estimate. Beside each interval stands one word read from its two bounds before they are
    rounded: above when the lower bound is above one half, below when the upper bound is below one half, else
-   unresolved. Before any file is written, a scan for every genome id and BioProject accession the run read,
-   after a positive control.
+   unresolved. Before any file is written, the export's scan: no file may hold a full stop, then a scan for
+   every genome id and BioProject accession the run read, after a positive control.
 
 Python 3.12, standard library, with numpy for the resampling alone; run with -I.
 """
@@ -79,6 +85,8 @@ COUNTS = STAGE1_EXPORT / "counts.tsv"
 COUNTS_SHA256 = "d686f07a3d3d34985b15a7be86e61c13aeac6c026fb925eba25c53f1496ced3e"
 TYPING_TABLE = STAGE1_EXPORT / "typing.tsv"
 TYPING_TABLE_SHA256 = "d25d1fedfbda087f40f91d4ca026705fa8d1d00808de309e06280629f90982fb"
+# The 5 Nov genome table's sha256, equal to its line of the committed inputs.tsv of stage 1. No argument changes it.
+HC20_SHA256 = "d60e2b15f2cc0ed0466a1016da1761869fb42cc7e9fdd817c1ff7051e759a80e"
 NUMPY_VERSION = "1.26.4"
 SEED = 42
 DRAWS = 10000
@@ -101,7 +109,13 @@ TYPING = (("mlst", ("mlst",), (("mlst", ("mlst",)), ("primary", ()))),
 # open_scores(). A test reads this list.
 CHECKS = ("check_out", "check_numpy", "check_count_table", "check_typing_table", "check_row_list", "check_hc20",
           "report_files", "parse_rows", "load_reports", "read_hc20", "match_rows", "check_one_outcome",
-          "check_counts", "check_typing")
+          "check_counts", "check_typing", "check_values")
+# The counts count_bad returns for one listed report, in the order check_values reads them, each with its stop.
+BAD = (("moved", "listed rows that moved after they were checked: {n}"),
+       ("name", "its dataset or species name holds a full stop, which no export file may hold"),
+       ("catalog_resistant", "listed rows whose catalog_resistant is not true, false or null: {n}")) + \
+    tuple((f"fold_complexity of {n}", f"the fit size by fold (fold_complexity) of {n} is not a list of 5 finite "
+                                      f"numbers") for n in FIVE)
 # The columns of stage 1's typing table a row list rebuilds: all but the rows lacking a value among the rows that
 # enter the groups, which counts rows outside every eligible group, and no row list holds those.
 TYPING_REBUILT = ("lacking_value_of_eligible_rows", "rows", "genomes", "groups", "pairs", "datasets", "species",
@@ -195,13 +209,11 @@ def check_row_list(path, reading):
     return data
 
 
-def check_hc20(path, given):
+def check_hc20(path):
     path = Path(path)
-    if not stage1.SHA.fullmatch(given):
-        raise Stop("the genome table's sha256 is not 64 lowercase hex digits")
     if not path.is_file():
         raise Stop("the genome table, 5 Nov, is missing")
-    if stage1.sha256(path) != given:
+    if stage1.sha256(path) != HC20_SHA256:
         raise Stop("the genome table, 5 Nov, differs from its sha256")
 
 
@@ -210,7 +222,17 @@ def report_files(directory):
 
 
 def load_reports(files):
-    return stage1.load_reports(files)
+    """(reports that enter, reports left out), through stage 1's loader one file at a time: a report whose id is
+    not its file name stops the run."""
+    entering, left_out = [], []
+    for name, path in files:
+        e, o = stage1.load_reports([(name, path)])
+        for rep in e + o:
+            if rep["id"] != name:
+                raise Stop(f"{name}.json gives the id {rep['id']}, not its file name")
+        entering += e
+        left_out += o
+    return entering, left_out
 
 
 def parse_rows(data, reading):
@@ -316,6 +338,51 @@ def read_hc20(path, wanted):
     return stage1.read_hc20(path, wanted)
 
 
+def finite(x):
+    """True for a number, not true or false, that is finite as a double."""
+    if isinstance(x, bool) or not isinstance(x, (int, float)):
+        return False
+    try:
+        return math.isfinite(float(x))
+    except OverflowError:
+        return False
+
+
+def count_bad(path, digest, listed):
+    """The loader before the line: {kind: count} of the bad values of one listed report, the kinds of BAD. It reads
+    the report's bytes checked against the sha256 checked before, the listed rows' ids and catalogue calls, the
+    names and each of the five learners' fit sizes by fold, and returns integers alone: no score, no catalogue call
+    and no fit size."""
+    data = Path(path).read_bytes()
+    if hashlib.sha256(data).hexdigest() != digest:
+        raise Stop(f"{Path(path).name} changed after it was checked")
+    doc = json.loads(data)
+    try:
+        split = next(s for s in doc["splits"] if isinstance(s, dict) and s.get("scheme") == "lineage")
+        entries = {e["learner"]: e for e in split["learners"] if e.get("learner") in FIVE}
+        rows = [doc["samples"][i] if i < len(doc["samples"]) else {} for _, i in listed]
+        out = {"moved": sum(1 for (genome, _), s in zip(listed, rows) if s.get("id") != genome),
+               "name": sum(1 for x in (doc.get("id"), doc.get("species_slug")) if "." in x),
+               "catalog_resistant": sum(1 for s in rows if not (s.get("catalog_resistant") is None
+                                                                or isinstance(s.get("catalog_resistant"), bool)))}
+        for n in FIVE:
+            c = entries[n].get("fold_complexity")
+            out[f"fold_complexity of {n}"] = int(not (isinstance(c, list) and len(c) == stage1.FOLDS
+                                                      and all(finite(x) for x in c)))
+        return out
+    finally:
+        del doc
+
+
+def check_values(listed):
+    """Each listed report's counts from count_bad: any count above 0 stops the run, naming the report and what."""
+    for d, (path, digest, rows) in listed.items():
+        bad = count_bad(path, digest, rows)
+        for kind, words in BAD:
+            if bad[kind]:
+                raise Stop(f"{d}: " + words.format(n=bad[kind]))
+
+
 def check(args):
     """Every check before any score. Returns what the measure needs, and no score."""
     check_out(args.out)
@@ -323,7 +390,7 @@ def check(args):
     table = check_count_table()
     typing_table = check_typing_table()
     data = {name: check_row_list(path, name) for name, path in (("A", args.rows_a), ("B", args.rows_b))}
-    check_hc20(args.hc20[0], args.hc20[1])
+    check_hc20(args.hc20)
     files = report_files(args.reports)
     report_sums = {name: digest for digest, _, name in
                    (line.partition("  ") for line in Path(stage1.REPORT_SUMS).read_text(encoding="utf-8").splitlines())}
@@ -334,25 +401,28 @@ def check(args):
         rep["index"] = {s["id"]: i for i, s in enumerate(rep["samples"])}
         reports[rep["id"]] = rep
     wanted = {r["genome"] for name in READINGS for r in lists[name]}
-    hc20, hc20_ids, hc20_rows, hc20_missing = read_hc20(args.hc20[0], wanted)
+    hc20, hc20_ids, hc20_rows, hc20_missing = read_hc20(args.hc20, wanted)
     rows, groups = {}, {}
     for name in READINGS:
         rows[name] = match_rows(lists[name], reports, name)
         groups[name] = check_one_outcome(rows[name], name)
         check_counts(groups[name], table, name)
         check_typing(rows[name], groups[name], hc20, typing_table, name)
-    listed = sorted({r["dataset"] for name in READINGS for r in rows[name]})
     paths = dict(files)
+    listed = {d: (paths[d], report_sums["./datasets/" + d + ".json"],
+                  sorted({(r["genome"], r["index"]) for name in READINGS for r in rows[name] if r["dataset"] == d},
+                         key=lambda x: x[1]))
+              for d in sorted({r["dataset"] for name in READINGS for r in rows[name]})}
+    check_values(listed)
     return {
-        "rows": rows, "groups": groups, "hc20": hc20,
-        "listed": {d: (paths[d], report_sums["./datasets/" + d + ".json"],
-                       sorted({(r["genome"], r["index"]) for name in READINGS for r in rows[name]
-                               if r["dataset"] == d}, key=lambda x: x[1])) for d in listed},
+        "rows": rows, "groups": groups, "hc20": hc20, "listed": listed,
         "sums": {"reports": stage1.REPORT_SUMS_SHA256, "counts": COUNTS_SHA256, "typing": TYPING_TABLE_SHA256,
                  "A": hashlib.sha256(data["A"]).hexdigest(), "B": hashlib.sha256(data["B"]).hexdigest(),
-                 "hc20": args.hc20[1]},
+                 "hc20": HC20_SHA256},
         "facts": {"reports": len(files), "entering": len(entering), "table_lines": len(table),
                   "typing_lines": len(typing_table),
+                  "entering_rows": sum(len(rep["samples"]) for rep in entering),
+                  "entering_species": len({rep["species_slug"] for rep in entering}),
                   "lines": {name: len(lists[name]) for name in READINGS}, "hc20_rows": hc20_rows,
                   "hc20_missing": hc20_missing, "listed": len(listed)},
         "ids": {s["id"] for rep in entering + left_out for s in rep["samples"]} | wanted | hc20_ids,
@@ -417,23 +487,15 @@ def read_scores(path, digest, listed, opened):
 
 
 def pick(doc, listed):
+    """The values of the listed rows. Each row's id, catalogue call and the fit sizes were checked before the line
+    by count_bad, on the bytes read_scores checks again, so the scores alone can stop the run here."""
     split = next(s for s in doc["splits"] if isinstance(s, dict) and s.get("scheme") == "lineage")
     entries = {e["learner"]: e for e in split["learners"] if e.get("learner") in FIVE}
     rows = {}
     for genome, i in listed:
-        s = doc["samples"][i]
-        if s.get("id") != genome:
-            raise Stop(f"{doc.get('id')}: a listed row moved after it was checked")
-        call = s.get("catalog_resistant")
-        if call is not None and not isinstance(call, bool):
-            raise Stop(f"{doc.get('id')}: a row's catalog_resistant is not true, false or null")
+        call = doc["samples"][i].get("catalog_resistant")
         rows[genome] = (tuple(component(entries[n]["scores"][i]) for n in FIVE), call)
-    complexity = {}
-    for n in FIVE:
-        c = entries[n].get("fold_complexity")
-        if not isinstance(c, list) or len(c) != stage1.FOLDS:
-            raise Stop(f"{doc.get('id')}: the fold_complexity of {n} is not a list of {stage1.FOLDS} numbers")
-        complexity[n] = tuple(component(x) for x in c)
+    complexity = {n: tuple(float(x) for x in entries[n]["fold_complexity"]) for n in FIVE}
     return {"rows": rows, "fold_complexity": complexity, "catalog": "present" if doc.get("catalog") is not None
             else None}
 
@@ -672,6 +734,11 @@ def export_files(checked, result):
         {"input": "reports", "sha256": sums["reports"], "count": facts["reports"],
          "note": f"each report equals its line of the release's sums list; the sha256 is that list's; listed in "
                  f"a row list: {facts['listed']}"},
+        {"input": "genome rows of the reports that enter", "sha256": "-", "count": facts["entering_rows"],
+         "note": f"rows of the {facts['entering']} reports holding the five learners under the lineage split, counted "
+                 f"before the line; each figure's rows are within them"},
+        {"input": "species of the reports that enter", "sha256": "-", "count": facts["entering_species"],
+         "note": "counted before the line; each figure's species are within them"},
         {"input": "row list, reading A", "sha256": sums["A"], "count": facts["lines"]["A"],
          "note": "lines; equal to the sha256 stage 1 printed"},
         {"input": "row list, reading B", "sha256": sums["B"], "count": facts["lines"]["B"],
@@ -695,10 +762,17 @@ def export_files(checked, result):
         "null_fits.tsv": stage1.tsv(NULL_COLUMNS, null_rows),
         "inputs.tsv": stage1.tsv(("input", "sha256", "count", "note"), inputs) + (OPENED + "\n").encode("utf-8"),
     }
-    for file, data in out.items():
+    return out
+
+
+def scan_export(files, ids, accessions):
+    """The export's scan, before any file is written: a full stop in any file stops the run, then [(file name,
+    hits)] of stage 1's scan for every genome id and accession read, after its positive control. Names were
+    checked before the line, so only a fault of this script can put a full stop here."""
+    for file, data in files.items():
         if b"." in data:
             raise Stop(f"{file} holds a decimal point")
-    return out
+    return stage1.scan(files, ids, accessions)
 
 
 def write_export(out, files):
@@ -750,7 +824,7 @@ def parse(argv):
     p.add_argument("--reports", required=True)
     p.add_argument("--rows-a", required=True)
     p.add_argument("--rows-b", required=True)
-    p.add_argument("--hc20", required=True, nargs=2, metavar=("FILE", "SHA256"))
+    p.add_argument("--hc20", required=True)
     p.add_argument("--out", required=True)
     return p.parse_args(argv)
 
@@ -759,7 +833,7 @@ def main(argv):
     args = parse(argv)
     try:
         files, ids, accessions, lines = run(args)
-        found = stage1.scan(files, ids, accessions)
+        found = scan_export(files, ids, accessions)
         if not found:
             write_export(args.out, files)
     except Stop as e:

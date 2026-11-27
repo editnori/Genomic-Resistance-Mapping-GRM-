@@ -1,10 +1,14 @@
 """The designed release of made_up2.py, 8 made-up species, through stage 1 and stage 2, against figures worked by
 hand: one exact tie, one fold with a null fit, one dataset under 10 pairs, one report without a catalogue rule
-and one row lacking an MLST type. Then its first 5 species, which give an estimate and no interval.
+and one row lacking an MLST type. Then two releases of one species for the typing reads, the designed release
+with a ninth species and a report left out for the wholes, and its first 5 species, which give an estimate and
+no interval.
 
 Every value here is made up: the species, the rows and their scores (made_up2.designed())."""
 
+import csv
 import fractions
+import io
 import unittest
 
 import numpy
@@ -163,6 +167,21 @@ class Designed(unittest.TestCase):
                        synthia_lambda=[[F(1)], [F(2, 3), F(3, 4)]])
         self.assertEqual(wider["estimate_ppm"], str(ppm(overall(primary))))
 
+    def test_the_lost_columns_stand_on_the_primary_match_rows_alone(self):
+        # On a row of the narrower match the lost columns are empty; on the wider primary match, integers.
+        rows = self.made.table("typing.tsv")
+        self.assertEqual({r["match"] for r in rows}, {"mlst", "mlst_hc20", "primary"})
+        for r in rows:
+            lost = [r[k] for k in c.stage2.LOST]
+            with self.subTest(step=r["step"], match=r["match"], level=r["level"], name=r["name"]):
+                if r["match"] == "primary":
+                    self.assertTrue(all(x.isdigit() for x in lost), lost)
+                else:
+                    self.assertEqual(lost, [""] * 5)
+        mlst = next(r for r in rows if (r["reading"], r["step"], r["match"], r["level"]) == ("A", "mlst", "mlst",
+                                                                                            "overall"))
+        self.assertEqual((mlst["rows"], mlst["lost_rows"], mlst["lost_pairs"]), ("78", "", ""))
+
     def test_each_interval_is_numpys_over_the_hand_species_values(self):
         got = {(r["reading"], r["read"], r["match"]):
                (int(r["lower_ppm"]), int(r["upper_ppm"]), r["chance"], r["species"], r["draws"])
@@ -172,6 +191,82 @@ class Designed(unittest.TestCase):
         self.assertEqual(got[("A", "null_fits", "primary")][:3], interval_by_hand(dict(A, synthia_xi=[[F(5, 6)]])))
         # Reading A's lower bound, 572917 parts per million, is above one half.
         self.assertEqual(got[("A", "primary", "primary")][:3], (572917, 796875, "above"))
+
+
+def typing_row(made, step, match, level="overall"):
+    return next(r for r in made.table("typing.tsv") if (r["reading"], r["step"], r["match"], r["level"]) ==
+                ("A", step, match, level))
+
+
+COLUMNS = ("estimate_ppm", "rows", "groups", "pairs", "datasets", "species") + c.stage2.LOST
+
+
+class TypingRows(unittest.TestCase):
+    """Two made-up releases of one species: a group with MLST, no HC20 and both outcomes, and MLST values with
+    blanks around them."""
+
+    def test_a_group_with_mlst_no_hc20_and_both_outcomes_leaves_the_mlst_and_hc20_read(self):
+        plan = [[made_up2.dataset("drug_a", [
+            made_up2.group(0, 10, [made_up2.R(0.9), made_up2.R(0.6), made_up2.S(0.5), made_up2.S(0.2)]),  # 1
+            made_up2.group(1, 11, [made_up2.R(0.8, hc20=None), made_up2.R(0.2, hc20=None),
+                                   made_up2.S(0.3, hc20=None), made_up2.S(0.7, hc20=None)]),             # 1/2
+        ])]]
+        made = c.Run(plan)
+        self.addCleanup(made.close)
+        self.assertEqual(made.code, 0, made.lines)
+        # The MLST read holds both groups, (1 + 1/2) / 2 = 3/4; the MLST and HC20 read holds the first alone.
+        self.assertEqual([typing_row(made, "mlst", "mlst")[k] for k in COLUMNS],
+                         ["750000", "8", "2", "8", "1", "1", "", "", "", "", ""])
+        self.assertEqual([typing_row(made, "mlst_hc20", "mlst_hc20")[k] for k in COLUMNS],
+                         ["1000000", "4", "1", "4", "1", "1", "", "", "", "", ""])
+        # Its wider primary match runs on the same 4 rows and loses the other 4 rows, 1 group and 4 pairs.
+        self.assertEqual([typing_row(made, "mlst_hc20", "primary")[k] for k in COLUMNS],
+                         ["1000000", "4", "1", "4", "1", "1", "4", "1", "4", "0", "0"])
+
+    def test_an_mlst_value_with_blanks_around_it_is_read_trimmed_and_blanks_alone_lack_a_value(self):
+        plan = [[made_up2.dataset("drug_a", [
+            made_up2.group(0, 10, [made_up2.R(0.9, mlst=" ST-2 "), made_up2.R(0.4, mlst="ST-2"),
+                                   made_up2.S(0.5, mlst="ST-2"), made_up2.S(0.1, mlst="   ")]),
+        ])]]
+        made = c.Run(plan)
+        self.addCleanup(made.close)
+        self.assertEqual(made.code, 0, made.lines)
+        # " ST-2 " joins ST-2: R 0.9 beats S 0.5 and R 0.4 does not, 1/2 over 2 pairs; the S row of blanks leaves.
+        self.assertEqual([typing_row(made, "mlst", "mlst")[k] for k in COLUMNS[:6]], ["500000", "3", "1", "2", "1", "1"])
+        self.assertEqual(made.measure("A", "overall", "all")["estimate_ppm"], "750000")
+
+
+class Wholes(unittest.TestCase):
+    """inputs.tsv gives the genome rows and the species of the reports that enter, counted before the line. The
+    designed release gains a ninth species whose report enters with no eligible row, and a report of a tenth
+    species that holds none of the five learners and is left out."""
+
+    def test_the_rows_and_species_of_the_reports_that_enter(self):
+        def before(release):
+            rows = [{"id": made_up2.made_up.gid("ch", n), "resistant": n % 2 == 0, "fold": n % 5, "lineage": 30 + n,
+                     "mlst": "ST-1", "from_mic": False} for n in range(1, 8)]
+            release["reports"].append(made_up2.made_up.report("synthia_chi__drug_a", "Synthia chi", "synthia_chi",
+                                                              "drug_a", rows, None, learners=()))
+        plan = made_up2.designed() + [[made_up2.dataset("drug_a", [
+            made_up2.group(0, 10, [made_up2.R(0.5)]), made_up2.group(1, 11, [made_up2.S(0.5)])])]]
+        made = c.Run(plan, before=before)
+        self.addCleanup(made.close)
+        self.assertEqual(made.code, 0, made.lines)
+        entering = [d for d in made.release["reports"]
+                    if next(s for s in d["splits"] if s["scheme"] == "lineage")["learners"]]
+        self.assertEqual(len(entering), 11)
+        want = sum(len(d["samples"]) for d in entering)
+        self.assertEqual(sum(len(d["samples"]) for d in made.release["reports"]), want + 7)
+        # Stage 1's count table gives the same whole, as its dataset rows of the reports that enter, which on the
+        # real release add to 215,319.
+        counts = list(csv.DictReader(io.StringIO(made.counts().read_text(encoding="utf-8")), delimiter="\t"))
+        self.assertEqual(sum(int(r["genome_rows"]) for r in counts
+                             if (r["level"], r["reading"], r["reports_left_out"]) == ("dataset", "A", "0")), want)
+        rows = {r["input"]: r for r in made.table("inputs.tsv")}
+        self.assertEqual(rows["genome rows of the reports that enter"]["count"], str(want))
+        self.assertEqual(rows["species of the reports that enter"]["count"], "9")
+        # 8 species enter the measure; the ninth enters with no eligible row.
+        self.assertEqual(made.measure("A", "overall", "all")["species"], "8")
 
 
 class FiveSpecies(unittest.TestCase):

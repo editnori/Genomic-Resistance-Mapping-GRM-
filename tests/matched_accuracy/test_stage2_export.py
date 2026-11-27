@@ -2,8 +2,10 @@
 integers and names alone, both readings, no row per genome, pair, group or BioProject, and the scan before any
 file is written. Every id and BioProject here is made up (gz-<species>-<n>, and made_up2.bioproject)."""
 
+import os
 import re
 import unittest
+from pathlib import Path
 from unittest import mock
 
 from tests.matched_accuracy import stage2_common as c
@@ -134,6 +136,32 @@ class Scan(c.Case, unittest.TestCase):
         with mock.patch.object(stage2, "ppm", side_effect=lambda v: round(stage2.fractions.Fraction(v) * 10 ** 6) / 1):
             made = self.run_stage2()
         self.assert_stops_after_the_line(made, "measure.tsv holds a decimal point")
+
+    def test_a_full_stop_in_the_cells_table_alone_stops_after_the_line(self):
+        with mock.patch.object(stage2, "CALLS", {True: "resistant", False: "susceptible" + "."}):
+            made = self.run_stage2()
+        self.assert_stops_after_the_line(made, "cells.tsv holds a decimal point")
+
+
+class FailedWrite(c.Case, unittest.TestCase):
+    def test_an_export_whose_third_file_cannot_be_written_leaves_no_export(self):
+        real, tried = os.open, []
+
+        def full(path, *a, **kw):
+            p = Path(path)
+            if (p.parent.name, p.parent.parent.name) == ("export", "stage2"):
+                tried.append(p.name)
+                if len(tried) == 3:
+                    raise OSError("made-up full disk")
+            return real(path, *a, **kw)
+        with mock.patch.object(stage2.os, "open", side_effect=full):
+            made = self.run_stage2()
+        self.assertEqual(tried, ["measure.tsv", "interval.tsv", "cells.tsv"])
+        self.assertEqual(made.code, 1, made.lines)
+        self.assertEqual(made.lines, [stage2.OPENED, c.STOP + "the export could not be written (OSError); of the 3 "
+                                                              "paths it made, 0 could not be removed"])
+        self.assertFalse(made.wrote_export())
+        self.assertEqual(sorted(p.name for p in made.out.iterdir()), [stage2.OPENED_FILE])
 
 
 if __name__ == "__main__":

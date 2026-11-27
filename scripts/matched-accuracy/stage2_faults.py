@@ -23,6 +23,7 @@ MADE_UP = T + "test_stage2_made_up."
 STOPS = T + "test_stage2_stops."
 LINE = T + "test_stage2_line."
 EXPORT = T + "test_stage2_export."
+REFERENCE = T + "test_stage2_reference."
 
 # fault, rule, what it plants, file, text, planted text, test
 FAULTS = [
@@ -72,8 +73,8 @@ FAULTS = [
      "if len(names) >= MIN_SPECIES - 1 else None",
      MADE_UP + "FiveSpecies.test_5_species_give_the_estimate_and_no_interval"),
     ("S12", "the line", "a score read before the line", S,
-     "    hc20, hc20_ids, hc20_rows, hc20_missing = read_hc20(args.hc20[0], wanted)\n",
-     "    hc20, hc20_ids, hc20_rows, hc20_missing = read_hc20(args.hc20[0], wanted)\n"
+     "    hc20, hc20_ids, hc20_rows, hc20_missing = read_hc20(args.hc20, wanted)\n",
+     "    hc20, hc20_ids, hc20_rows, hc20_missing = read_hc20(args.hc20, wanted)\n"
      "    pick(json.loads(Path(files[0][1]).read_bytes()), [])\n",
      LINE + "Order.test_every_check_runs_before_the_line_and_every_score_after_it"),
     ("S13", "the line", "the line printed before the checks", S,
@@ -128,6 +129,57 @@ FAULTS = [
      "    return \"above\" if lower > 0.5 else \"below\" if upper < 0.5 else \"unresolved\"\n",
      "    return \"above\" if ppm(lower) > PPM // 2 else \"below\" if ppm(upper) < PPM // 2 else \"unresolved\"\n",
      MEASURE + "Chance.test_a_lower_bound_just_above_one_half_that_rounds_to_500000_gives_above"),
+    # Ruling R62: one fault for each change the fixes of the review made.
+    ("S26", "values", "a catalogue call of 1, 0 or 1.0 passes, as equal to true or false", S,
+     "                                                                or isinstance(s.get(\"catalog_resistant\"), bool)))}\n",
+     "                                                                or s.get(\"catalog_resistant\") in (True, False)))}\n",
+     STOPS + "Values.test_a_catalogue_call_that_is_not_true_false_or_null_stops"),
+    ("S27", "values", "a fit size not a finite number passes", S,
+     "        return math.isfinite(float(x))\n",
+     "        return True\n",
+     STOPS + "Values.test_a_fit_size_list_that_is_not_five_finite_numbers_stops_and_names_the_fit_size"),
+    ("S28", "values", "a fit size list of 4 or 6 numbers passes", S,
+     "isinstance(c, list) and len(c) == stage1.FOLDS\n",
+     "isinstance(c, list) and abs(len(c) - stage1.FOLDS) <= 1\n",
+     STOPS + "Values.test_a_fit_size_list_that_is_not_five_finite_numbers_stops_and_names_the_fit_size"),
+    ("S29", "values", "a dataset or species name with a full stop passes before the line", S,
+     "for x in (doc.get(\"id\"), doc.get(\"species_slug\")) if \".\" in x),\n",
+     "for x in (doc.get(\"id\"), doc.get(\"species_slug\")) if \".\" in x and False),\n",
+     STOPS + "Values.test_a_species_name_with_a_full_stop_stops"),
+    ("S30", "values", "a listed row that moved after stage 1's loader read it passes", S,
+     "zip(listed, rows) if s.get(\"id\") != genome),\n",
+     "zip(listed, rows) if s.get(\"id\") != genome and False),\n",
+     STOPS + "Values.test_a_listed_row_that_moved_after_stage_1s_loader_read_it_stops"),
+    ("S31", "values", "a report changed after its check is read before the line unchecked", S,
+     "    and no fit size.\"\"\"\n    data = Path(path).read_bytes()\n    if hashlib.sha256(data).hexdigest() != digest:\n",
+     "    and no fit size.\"\"\"\n    data = Path(path).read_bytes()\n    if hashlib.sha256(data).hexdigest() != digest and False:\n",
+     STOPS + "Values.test_a_report_changed_after_its_check_stops_before_the_line"),
+    ("S32", "report id", "a report whose id is not its file name passes", S,
+     "            if rep[\"id\"] != name:\n",
+     "            if rep[\"id\"] != name and False:\n",
+     STOPS + "Sums.test_a_report_whose_id_is_not_its_file_name_stops"),
+    ("S33", "genome table", "the genome table's constant another sha256", S,
+     "HC20_SHA256 = \"d60e2b15f2cc0ed0466a1016da1761869fb42cc7e9fdd817c1ff7051e759a80e\"\n",
+     "HC20_SHA256 = \"d60e2b15f2cc0ed0466a1016da1761869fb42cc7e9fdd817c1ff7051e759a80f\"\n",
+     REFERENCE + "Committed.test_the_genome_tables_constant_is_its_line_of_stage_1s_committed_inputs_table"),
+    ("S34", "wholes", "the genome rows counted over every report, not those that enter", S,
+     "        \"entering_rows\": sum(len(rep[\"samples\"]) for rep in entering),\n",
+     "        \"entering_rows\": sum(len(rep[\"samples\"]) for rep in entering + left_out),\n",
+     MADE_UP + "Wholes.test_the_rows_and_species_of_the_reports_that_enter"),
+    ("S35", "wholes", "the species counted over the reports with a listed row", S,
+     "        \"entering_species\": len({rep[\"species_slug\"] for rep in entering}),\n",
+     "        \"entering_species\": len({rep[\"species_slug\"] for rep in entering if rep[\"id\"] in listed}),\n",
+     MADE_UP + "Wholes.test_the_rows_and_species_of_the_reports_that_enter"),
+    ("S36", "the line", "a fit size check left after the line", S,
+     "    complexity = {n: tuple(float(x) for x in entries[n][\"fold_complexity\"]) for n in FIVE}\n",
+     "    complexity = {n: tuple(float(x) for x in entries[n][\"fold_complexity\"]) for n in FIVE}\n"
+     "    if any(len(v) != stage1.FOLDS for v in complexity.values()):\n"
+     "        raise Stop(\"a fit size list is not 5 numbers\")\n",
+     LINE + "Order.test_after_the_line_only_the_bytes_the_scores_the_export_scan_and_a_write_can_stop_the_run"),
+    ("S37", "export", "the full stop check leaves out the cells table", S,
+     "    for file, data in files.items():\n        if b\".\" in data:\n",
+     "    for file, data in files.items():\n        if b\".\" in data and file != \"cells.tsv\":\n",
+     EXPORT + "Scan.test_a_full_stop_in_the_cells_table_alone_stops_after_the_line"),
 ]
 
 

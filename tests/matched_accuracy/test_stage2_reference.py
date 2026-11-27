@@ -1,5 +1,5 @@
 """The committed copy of stage 1's export and the pins of scripts/matched-accuracy/stage2.py: the values ruling
-R59 and the brief give, and the proof that no argument reaches them.
+R59, the brief and stage 1's committed inputs table give, and the proof that no argument reaches them.
 
 The release run here is SYNTHETIC (made_up2.py); its row lists are made up, so the real pins stop it."""
 
@@ -45,6 +45,13 @@ class Committed(unittest.TestCase):
         self.assertEqual(stage2.TYPING_TABLE, c.STAGE1_COPY / "typing.tsv")
         self.assertEqual(stage2.TYPING_TABLE_SHA256, STAGE1_EXPORT_SHA256["typing.tsv"])
 
+    def test_the_genome_tables_constant_is_its_line_of_stage_1s_committed_inputs_table(self):
+        lines = (c.STAGE1_COPY / "inputs.tsv").read_text(encoding="utf-8").split("\n")
+        rows = [line.split("\t") for line in lines[1:] if line.startswith("genome table, 5 Nov\t")]
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0][1], stage2.HC20_SHA256)
+        self.assertEqual(stage2.HC20_SHA256, "d60e2b15f2cc0ed0466a1016da1761869fb42cc7e9fdd817c1ff7051e759a80e")
+
     def test_both_committed_tables_pass_their_checks(self):
         self.assertEqual(len(stage2.check_count_table()), 596)
         typing = stage2.check_typing_table()
@@ -83,11 +90,15 @@ class Route(unittest.TestCase):
         self.assertIn("sys.exit(main(sys.argv[1:]))", text)
 
     def test_an_option_naming_a_pin_is_refused(self):
-        for flag in ("--row-list-sha256", "--counts", "--typing-table", "--seed"):
+        base = ["--reports", "r", "--rows-a", "a", "--rows-b", "b", "--hc20", "h", "--out", "o"]
+        self.assertEqual(stage2.parse(base).hc20, "h")
+        for flag in ("--row-list-sha256", "--counts", "--typing-table", "--seed", "--hc20-sha256"):
             with self.subTest(flag=flag):
                 with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
-                    stage2.parse(["--reports", "r", "--rows-a", "a", "--rows-b", "b", "--hc20", "h", "0" * 64,
-                                  "--out", "o", flag, "x"])
+                    stage2.parse(base + [flag, "x"])
+        # The genome table's sha256 beside its path, as the command line once took it, is refused too.
+        with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
+            stage2.parse(["--reports", "r", "--rows-a", "a", "--rows-b", "b", "--hc20", "h", "0" * 64, "--out", "o"])
 
     def test_made_up_row_lists_through_the_command_line_stop_at_the_real_pins(self):
         run = c.Run()

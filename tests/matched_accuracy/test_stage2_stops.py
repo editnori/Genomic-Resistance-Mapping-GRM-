@@ -50,11 +50,17 @@ class Sums(c.Case, unittest.TestCase):
         self.assert_stops(run, "stage 1's committed count table differs from its sha256")
 
     def test_a_genome_table_with_another_sha256_stops(self):
-        def argv(a):
-            i = a.index("--hc20")
-            return a[:i + 2] + [OTHER] + a[i + 3:]
-        run = self.run_stage2(argv=argv)
+        run = self.run_stage2(pins={"HC20_SHA256": OTHER})
         self.assert_stops(run, "the genome table, 5 Nov, differs from its sha256")
+
+    def test_a_report_whose_id_is_not_its_file_name_stops(self):
+        # Stage 1 ran on kappa's report; its file then takes another name, with its line of the sums list.
+        def after(run):
+            old = run.report("synthia_kappa__drug_a")
+            old.rename(old.with_name("synthia_kappa__drug_z.json"))
+            run.rewrite_sums()
+        self.assert_stops(self.run_stage2(after=after),
+                          "synthia_kappa__drug_z.json gives the id synthia_kappa__drug_a, not its file name")
 
     def test_a_missing_row_list_stops(self):
         def argv(a):
@@ -274,6 +280,103 @@ class Setup(c.Case, unittest.TestCase):
         self.assert_stops(run, "stage 1's committed count table does not have stage 1's columns")
 
 
+def kappa(change):
+    """An `after` that changes kappa's report, with its line of the sums list."""
+    return lambda run: run.rewrite_report("synthia_kappa__drug_a", change)
+
+
+def listed_row(doc):
+    """The index of a row of kappa's first group, a listed row in both readings."""
+    return next(i for i, s in enumerate(doc["samples"]) if s["lineage"] == 10)
+
+
+def fit_sizes(learner, value):
+    def change(doc):
+        split = next(s for s in doc["splits"] if s["scheme"] == "lineage")
+        next(e for e in split["learners"] if e["learner"] == learner)["fold_complexity"] = value
+    return change
+
+
+class Values(c.Case, unittest.TestCase):
+    """The values of listed reports that the second loader reads, other than scores, checked before the line by
+    count_bad: a catalogue call, the fit sizes and the names."""
+
+    def test_a_catalogue_call_that_is_not_true_false_or_null_stops(self):
+        for value in ("yes", 1, 0, 1.0, [True]):
+            with self.subTest(value=value):
+                def change(doc, value=value):
+                    doc["samples"][listed_row(doc)]["catalog_resistant"] = value
+                self.assert_stops(self.run_stage2(after=kappa(change)), "synthia_kappa__drug_a: listed rows whose "
+                                  "catalog_resistant is not true, false or null: 1")
+
+    def test_a_catalogue_call_on_an_unlisted_row_is_not_read(self):
+        # The fill row of fold 2 leaves under the one-outcome rule, so no list holds it.
+        def change(doc):
+            next(s for s in doc["samples"] if s["lineage"] == 92)["catalog_resistant"] = "yes"
+        self.assert_passes(self.run_stage2(after=kappa(change)))
+
+    def test_a_fit_size_list_that_is_not_five_finite_numbers_stops_and_names_the_fit_size(self):
+        for value in ([3.0] * 4, [3.0] * 6, None, [3.0] * 4 + [None], [3.0] * 4 + [float("nan")],
+                      [3.0] * 4 + [float("inf")], [3.0] * 4 + [True], [3.0] * 4 + ["3"], [3.0] * 4 + [10 ** 400]):
+            with self.subTest(value=value):
+                self.assert_stops(self.run_stage2(after=kappa(fit_sizes("gbt", value))), "synthia_kappa__drug_a: the "
+                                  "fit size by fold (fold_complexity) of gbt is not a list of 5 finite numbers")
+
+    def test_fit_sizes_of_five_integers_and_a_null_fit_pass(self):
+        self.assert_passes(self.run_stage2(after=kappa(fit_sizes("lasso", [3, 0, 3, 3, 3]))))
+
+    def test_a_dataset_name_with_a_full_stop_stops(self):
+        def before(release):
+            release["reports"][0]["id"] = "synthia_kappa__drug" + ".q"
+        self.assert_stops(self.run_stage2(before=before), "synthia_kappa__drug.q: its dataset or species name holds "
+                                                          "a full stop, which no export file may hold")
+
+    def test_a_species_name_with_a_full_stop_stops(self):
+        def before(release):
+            release["reports"][1]["species_slug"] = "synthia" + ".lambda"
+        self.assert_stops(self.run_stage2(before=before), "synthia_lambda__drug_a: its dataset or species name holds "
+                                                          "a full stop, which no export file may hold")
+
+    def test_a_listed_row_that_moved_after_stage_1s_loader_read_it_stops(self):
+        # Stage 1's loader is given kappa's report with its first two rows in each other's place, as if the file
+        # changed between that read and the next. count_bad reads the checked bytes and finds each id elsewhere.
+        real = stage2.stage1.load_reports
+
+        def swapped(files):
+            entering, left_out = real(files)
+            for rep in entering:
+                if rep["id"] == "synthia_kappa__drug_a":
+                    s, f = rep["samples"], rep["lineage_split"]["test_fold"]
+                    s[0], s[1], f[0], f[1] = s[1], s[0], f[1], f[0]
+            return entering, left_out
+        with mock.patch.object(stage2.stage1, "load_reports", side_effect=swapped):
+            run = self.run_stage2()
+        self.assert_stops(run, "synthia_kappa__drug_a: listed rows that moved after they were checked: 2")
+
+    def test_a_report_changed_after_its_check_stops_before_the_line(self):
+        real = stage2.load_reports
+
+        def changed(files):
+            out = real(files)
+            path = dict(files)["synthia_rho__drug_b"]
+            path.write_bytes(path.read_bytes() + b" ")
+            return out
+        with mock.patch.object(stage2, "load_reports", side_effect=changed):
+            run = self.run_stage2()
+        self.assert_stops(run, "synthia_rho__drug_b.json changed after it was checked")
+
+    def test_what_count_bad_returns_is_integers_alone(self):
+        run = self.run_stage2(after=kappa(fit_sizes("gbt", [3.0] * 4 + [float("nan")])))
+        doc = json.loads(run.report("synthia_kappa__drug_a").read_bytes())
+        listed = [(s["id"], i) for i, s in enumerate(doc["samples"])]
+        got = stage2.count_bad(run.report("synthia_kappa__drug_a"), c.sha(run.report("synthia_kappa__drug_a")
+                                                                           .read_bytes()), listed)
+        self.assertEqual(list(got), [k for k, _ in stage2.BAD])
+        self.assertEqual(set(type(v) for v in got.values()), {int})
+        self.assertEqual(got["fold_complexity of gbt"], 1)
+        self.assertEqual(sum(got.values()), 1)
+
+
 class AfterTheLine(c.Case, unittest.TestCase):
     """A score the second loader cannot use stops the run after the line, with no export."""
 
@@ -302,20 +405,6 @@ class AfterTheLine(c.Case, unittest.TestCase):
             with self.subTest(value=value):
                 self.assert_stops_after_the_line(self.run_stage2(after=self.score(value)),
                                                  "a learner's score is not finite")
-
-    def test_a_catalogue_call_that_is_not_true_false_or_null_stops(self):
-        def change(doc):
-            i = next(i for i, s in enumerate(doc["samples"]) if s["lineage"] == 10)
-            doc["samples"][i]["catalog_resistant"] = "yes"
-        run = self.run_stage2(after=lambda r: r.rewrite_report("synthia_kappa__drug_a", change))
-        self.assert_stops_after_the_line(run, "a row's catalog_resistant is not true, false or null")
-
-    def test_a_fold_complexity_that_is_not_five_numbers_stops(self):
-        def change(doc):
-            split = next(s for s in doc["splits"] if s["scheme"] == "lineage")
-            next(e for e in split["learners"] if e["learner"] == "lasso")["fold_complexity"] = [3.0] * 4
-        run = self.run_stage2(after=lambda r: r.rewrite_report("synthia_kappa__drug_a", change))
-        self.assert_stops_after_the_line(run, "the fold_complexity of lasso is not a list of 5 numbers")
 
 
 if __name__ == "__main__":

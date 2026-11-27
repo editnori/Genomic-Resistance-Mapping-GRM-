@@ -106,10 +106,14 @@ class Run:
         change(doc)
         path.write_bytes(json.dumps(doc, sort_keys=True).encode("utf-8"))
         if sums:
-            lines = []
-            for p in sorted((self.top / "reports").glob("*.json")):
-                lines.append(f"{sha(p.read_bytes())}  ./datasets/{p.name}\n")
-            (self.top / "reports.sha256").write_text("".join(lines), encoding="utf-8")
+            self.rewrite_sums()
+
+    def rewrite_sums(self):
+        """Write the made-up sums list again from the reports' files as they now are."""
+        lines = []
+        for p in sorted((self.top / "reports").glob("*.json")):
+            lines.append(f"{sha(p.read_bytes())}  ./datasets/{p.name}\n")
+        (self.top / "reports.sha256").write_text("".join(lines), encoding="utf-8")
 
     def wrote_export(self):
         return (self.out / "export").exists()

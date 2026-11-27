@@ -252,19 +252,20 @@ def stage2_argv(top, stage1_out, out):
     top, stage1_out = Path(top), Path(stage1_out)
     return ["--reports", str(top / "reports"), "--rows-a", str(stage1_out / "local" / "reading-A.tsv"),
             "--rows-b", str(stage1_out / "local" / "reading-B.tsv"),
-            "--hc20", str(top / "genomes.jsonl"), sha(top / "genomes.jsonl"), "--out", str(out)]
+            "--hc20", str(top / "genomes.jsonl"), "--out", str(out)]
 
 
 def stage2_pins(top, stage1_out):
     """The pins of stage 2 for a made-up run: the row lists' sha256, the count and typing tables' paths and sha256,
-    and stage 1's sums list of reports. Two dicts: stage 2's own constants, and those of the stage 1 module stage 2
-    imports."""
+    the genome table's sha256 and stage 1's sums list of reports. Two dicts: stage 2's own constants, and those of
+    the stage 1 module stage 2 imports."""
     top, stage1_out = Path(top), Path(stage1_out)
     export = stage1_out / "export"
     own = {"ROW_LIST_SHA256": {"A": sha(stage1_out / "local" / "reading-A.tsv"),
                                "B": sha(stage1_out / "local" / "reading-B.tsv")},
            "COUNTS": export / "counts.tsv", "COUNTS_SHA256": sha(export / "counts.tsv"),
-           "TYPING_TABLE": export / "typing.tsv", "TYPING_TABLE_SHA256": sha(export / "typing.tsv")}
+           "TYPING_TABLE": export / "typing.tsv", "TYPING_TABLE_SHA256": sha(export / "typing.tsv"),
+           "HC20_SHA256": sha(top / "genomes.jsonl")}
     inner = {"REPORT_SUMS": top / "reports.sha256", "REPORT_SUMS_SHA256": sha(top / "reports.sha256")}
     return own, inner
 

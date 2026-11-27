@@ -8,6 +8,8 @@ import ast
 import contextlib
 import io
 import json
+import os
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -62,7 +64,7 @@ class Order(c.Case, unittest.TestCase):
             return wrapped
 
         patches = [mock.patch.object(stage2, n, recorder(n, getattr(stage2, n)))
-                   for n in stage2.CHECKS + ("open_scores", "read_scores", "pick")]
+                   for n in stage2.CHECKS + ("count_bad", "open_scores", "read_scores", "pick")]
         with contextlib.ExitStack() as stack:
             for p in patches:
                 stack.enter_context(p)
@@ -71,18 +73,50 @@ class Order(c.Case, unittest.TestCase):
         self.assertEqual(run.lines[0], stage2.OPENED)
         line = events.index("open_scores")
         self.assertEqual(events.count("open_scores"), 1)
-        for n in stage2.CHECKS:
+        for n in stage2.CHECKS + ("count_bad",):
             self.assertIn(n, events, n)
             self.assertLess(max(i for i, e in enumerate(events) if e == n), line, n)
+        # count_bad reads each of the 10 listed reports once, before the line.
+        self.assertEqual(events.count("count_bad"), 10)
         reads = [i for i, e in enumerate(events) if e in ("read_scores", "pick")]
         self.assertEqual(events.count("read_scores"), 10)
         self.assertGreater(min(reads), line)
+
+    def test_after_the_line_only_the_bytes_the_scores_the_export_scan_and_a_write_can_stop_the_run(self):
+        # A profile of one whole run: every function of either script called after the line that holds a stop.
+        stops = {}
+        for script in (c.SCRIPT, made_up2.STAGE1):
+            for f in ast.walk(ast.parse(script.read_text(encoding="utf-8"))):
+                if isinstance(f, ast.FunctionDef) and any(
+                        isinstance(n, ast.Raise) and isinstance(n.exc, ast.Call) and getattr(n.exc.func, "id", "")
+                        == "Stop" for n in ast.walk(f)):
+                    stops[(script.name, f.name)] = f
+        calls = []
+
+        def profile(frame, event, arg):
+            if event == "call" and Path(frame.f_code.co_filename).name in ("stage1.py", "stage2.py"):
+                calls.append((Path(frame.f_code.co_filename).name, frame.f_code.co_name))
+        old = sys.getprofile()
+        sys.setprofile(profile)
+        try:
+            run = self.run_stage2()
+        finally:
+            sys.setprofile(old)
+        self.assert_passes(run)
+        line = calls.index(("stage2.py", "open_scores"))
+        before = {x for x in calls[:line] if x in stops}
+        after = {x for x in calls[line + 1:] if x in stops}
+        self.assertLessEqual({("stage2.py", n) for n in stage2.CHECKS + ("count_bad",)} & set(stops), before)
+        # The re-check of a report's bytes, the score stops, the export's scan and a write that fails.
+        self.assertEqual(after, {("stage2.py", "read_scores"), ("stage2.py", "component"),
+                                 ("stage2.py", "scan_export"), ("stage1.py", "scan"), ("stage2.py", "write_export")})
 
     def test_only_check_calls_the_checks_and_run_calls_check_before_the_line_and_measure_after_it(self):
         fs = functions()
         for n in stage2.CHECKS:
             callers = sorted(name for name, f in fs.items() if n in called(f) and name != n)
             self.assertEqual(callers, ["check"], n)
+        self.assertEqual(sorted(name for name, f in fs.items() if "count_bad" in called(f)), ["check_values"])
         body = called(fs["run"])
         self.assertEqual(body[:3], ["check", "open_scores", "measure"])
         for n in ("read_scores", "pick"):
@@ -113,6 +147,22 @@ class Order(c.Case, unittest.TestCase):
             made_up2.set_pins(stage2.stage1, old_inner)
         floats = [x for x in reachable(checked) if isinstance(x, float)]
         self.assertEqual(floats, [])
+
+
+class LineWrite(c.Case, unittest.TestCase):
+    def test_a_line_file_that_cannot_be_written_stops_with_the_stop_line_alone(self):
+        real = os.open
+
+        def refused(path, *a, **kw):
+            if Path(path).name == stage2.OPENED_FILE:
+                raise PermissionError(13, "made-up refusal")
+            return real(path, *a, **kw)
+        with mock.patch.object(stage2.os, "open", side_effect=refused):
+            run = self.run_stage2()
+        self.assertEqual(run.code, 1, run.lines)
+        self.assertEqual(run.lines, [c.STOP + "the line could not be written (PermissionError)"])
+        self.assertFalse((run.out / stage2.OPENED_FILE).exists())
+        self.assertFalse(run.wrote_export())
 
 
 class Gate(unittest.TestCase):

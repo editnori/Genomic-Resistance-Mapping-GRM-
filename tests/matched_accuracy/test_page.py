@@ -27,8 +27,9 @@ NUMBERS = {"14", "1", "2", "3", "4", "5", "6", "7", "19:10:00", "2026", "1,285,1
            "205", "16", "215,319", "23", "6,308", "2771", "48384", "8", "10", "10,000", "42", "274"}
 # The protocol's two percentiles, the one place the page writes a decimal point.
 PERCENTILES = "the linear 2.5th and 97.5th percentiles"
-# The lead's sentence of 27 Nov on a row under 10 pairs, with its two conditions.
-UNDER_10 = ("Such a row prints no estimate, as under 10 pairs carry no reading; its value still follows by arithmetic, "
+# The lead's sentence of 27 Nov on a row under 10 pairs, with its two conditions; the review's check 16 cut its
+# first 7 words, which the list item above it says.
+UNDER_10 = ("A row under 10 pairs carries no reading, yet its value still follows by arithmetic, "
             "to within the rounding, from the mean above it and the other rows, when that mean prints and no other row "
             "beneath it lacks an estimate.")
 # What a copy group is, in the words of its rule. The one place the page may name a k-mer.
@@ -61,14 +62,14 @@ class Page(unittest.TestCase):
     def test_not_run_yet_speaks_of_stage_2s_real_reading_alone(self):
         self.assertEqual(self.page.count("Not run yet."), 1)
         self.assertEqual(self.lines[2], "Not run yet. Stage 2's real reading has not run and is not authorised: it "
-                                        "needs the merged script and the lead's word after the merge, and this page "
-                                        "gives no result of it.")
+                                        "needs the merged script and the lead's word after the merge.")
 
-    def test_under_1350_words(self):
+    def test_under_1345_words(self):
         # 500 until the fixes of the review added the two counts of two kinds, the BioProject shape and the 5
         # November table; 600 until stage 2's part added its steps, the lead's readings, ruling R59's conditions,
-        # stage 1's run with R59's counts, the coverage and the two BioProject facts.
-        self.assertLess(len(self.page.split()), 1350)
+        # stage 1's run with R59's counts, the coverage and the two BioProject facts; 1,350 until ruling R62 cut 7
+        # passages that repeat another line, under the 1,345 words of stage 2's first page.
+        self.assertLess(len(self.page.split()), 1345)
 
     def test_the_record_line_gives_the_protocols_and_the_amendments_sha256(self):
         self.assertTrue(self.lines[-1].startswith("Record: "))
@@ -117,7 +118,7 @@ class Page(unittest.TestCase):
                 self.assertIn("is not authorised", s)
         said = [s for s in sentences(self.page) if "real reading" in s]
         self.assertEqual(said, ["Stage 2's real reading has not run and is not authorised: it needs the merged script "
-                                "and the lead's word after the merge, and this page gives no result of it.",
+                                "and the lead's word after the merge.",
                                 "The real reading runs once at the merged commit, after the lead's word, on the "
                                 "computer holding the 274 reports and both row lists."])
 
@@ -139,19 +140,23 @@ class Page(unittest.TestCase):
                       "assembly.", self.page)
 
     def test_a_stop_prints_one_line_and_a_scan_hit_one_line_a_file(self):
-        self.assertIn("A failed check prints one line, a scan hit one line a file; both exit 1 and write nothing, "
-                      "and a write that fails removes what it made.", self.page)
+        self.assertIn("A failed check prints one line, and a scan hit one line a file. Both exit 1 and write "
+                      "nothing, and a write that fails removes what it made.", self.page)
         self.assertNotIn("Each stop prints one line", self.page)
 
-    def test_the_committed_files_the_tests_read_are_named(self):
-        self.assertIn("Beside made-up files and the repository's own pages and code, the tests read 8 committed "
-                      "files: the protocol, the amendment, the release's checksum list, on which one test runs stage "
-                      "1, and the 5 files of stage 1's export.", self.page)
+    def test_the_committed_files_the_tests_read_are_named_by_the_workflow_and_not_the_page(self):
+        # Ruling R62 cut the page's line on them, which repeated the workflow's comment and docs/ci.md.
+        text = common.WORKFLOW.read_text(encoding="utf-8")
+        block = text.split("\n          - suite: tests/matched_accuracy\n", 1)[0].rsplit("\n          - suite:", 1)[1]
+        for path in ("reference/matched-accuracy", "reference/lineage-control/rev14-274-20261112.reports.sha256",
+                     "reference/matched-accuracy/stage1-rev14-274-20261112"):
+            self.assertIn(path, block)
         self.assertEqual(len(list(stage2_common.STAGE1_COPY.iterdir())), 5)
+        self.assertNotIn("committed files", self.page)
         self.assertNotIn("made-up files alone", self.page)
 
     def test_a_row_list_gives_the_counts_its_sha256_and_line_count(self):
-        self.assertIn("Row lists stay local; only their sha256 and line counts enter the counts.", self.page)
+        self.assertIn("Row lists stay local. Only their sha256 and line counts enter the counts.", self.page)
         self.assertNotIn("only its sha256 enters", self.page)
 
     def test_the_lab_call_is_checked_among_rows_not_labelled_from_an_mic(self):
@@ -163,12 +168,23 @@ class Page(unittest.TestCase):
                       self.page)
 
     def test_a_bioproject_is_one_part_of_an_accessions_shape(self):
-        self.assertIn("A BioProject is one part, PRJ, two letters and digits in any case; a genome whose one part has "
+        self.assertIn("A BioProject is one part, PRJ, two letters and digits in any case. A genome whose one part has "
                       "another shape has none and is counted apart. Blank genome table rows are skipped.", self.page)
 
     def test_the_5_november_table_has_no_insertion_time_and_gives_the_hc20_counts(self):
-        self.assertIn("The 5 November genome table gives the HC20 group and has no insertion time to check; without "
+        self.assertIn("The 5 November genome table gives the HC20 group and has no insertion time to check. Without "
                       "it, no HC20 count is made.", self.page)
+
+    def test_a_semicolon_joins_no_two_full_sentences(self):
+        # The two left join a clause and an elliptical one, or the items of a list.
+        self.assertEqual([line[:30] for line in self.body.split("\n") if ";" in line],
+                         ["Rows lacking a typing value ar", "- Secondary reads keep the wei"])
+
+    def test_the_export_holds_no_row_per_genome_pair_group_or_bioproject(self):
+        # Ruling R59 item 6's words.
+        self.assertIn("- No output names or ranks a feature. The export holds no row per genome, pair, group or "
+                      "BioProject.\n", self.page)
+        self.assertNotIn("stands for one genome", self.page)
 
     def test_in_the_index(self):
         index = common.INDEX.read_text(encoding="utf-8")
@@ -203,8 +219,7 @@ class StageOneRun(unittest.TestCase):
 
     def test_stage_1_ran_once_at_main_00755885(self):
         self.assertIn('Stage 1 ran once on 27 November 2026 at main 00755885, ended with exit 0 and printed "scores '
-                      'opened: no". Ruling R59 gives these counts; a test reads each from the committed copy of its '
-                      'export.', self.page)
+                      'opened: no". Ruling R59 gives these counts.\n', self.page)
 
     def test_r59s_counts_are_the_committed_count_tables(self):
         overall = {r["reading"]: r for r in committed("counts.tsv") if r["level"] == "overall"}
@@ -216,16 +231,22 @@ class StageOneRun(unittest.TestCase):
                                      for label, c in labels])
         self.assertEqual(n(overall["A"]["rows"]), "49,621")
 
-    def test_the_coverage_is_the_committed_count_tables(self):
+    def test_the_coverage_of_both_readings_is_the_committed_count_tables(self):
         rows = committed("counts.tsv")
-        entering = sum(int(r["genome_rows"]) for r in rows
-                       if (r["level"], r["reading"], r["reports_left_out"]) == ("dataset", "A", "0"))
-        species = [r for r in rows if (r["level"], r["reading"]) == ("species", "A")]
-        entered = [r for r in species if int(r["rows"]) > 0]
-        overall = next(r for r in rows if (r["level"], r["reading"]) == ("overall", "A"))
-        self.assertIn(f"Coverage, which every later figure carries: {n(overall['rows'])} of {n(entering)} genome rows "
-                      f"and {len(entered)} of {len(species)} species in reading A.", self.page)
-        self.assertEqual((entering, len(entered), len(species)), (215319, 16, 23))
+        cover = {}
+        for reading in ("A", "B"):
+            entering = sum(int(r["genome_rows"]) for r in rows
+                           if (r["level"], r["reading"], r["reports_left_out"]) == ("dataset", reading, "0"))
+            species = [r for r in rows if (r["level"], r["reading"]) == ("species", reading)]
+            entered = [r for r in species if int(r["rows"]) > 0]
+            overall = next(r for r in rows if (r["level"], r["reading"]) == ("overall", reading))
+            cover[reading] = (n(overall["rows"]), n(entering), len(entered), len(species))
+        a, b = cover["A"], cover["B"]
+        self.assertIn(f"Coverage, which every later figure carries: {a[0]} of {a[1]} genome rows and {a[2]} of {a[3]} "
+                      f"species in reading A, and {b[0]} of {b[1]} rows and {b[2]} of {b[3]} species in reading B. Each "
+                      f"row count of stage 2's export is within those {a[1]} rows, and its inputs table gives both "
+                      f"wholes.", self.page)
+        self.assertEqual(cover, {"A": ("49,621", "215,319", 16, 23), "B": ("48,156", "215,319", 16, 23)})
 
     def test_the_two_bioproject_facts_are_the_committed_shares(self):
         shares = {r["reading"]: r for r in committed("shares.tsv")}
@@ -247,9 +268,12 @@ class LeadsReadings(unittest.TestCase):
 
     def test_a_row_under_10_pairs_prints_no_estimate_and_its_value_follows_by_arithmetic(self):
         self.assertEqual(self.page.count(UNDER_10), 1)
-        self.assertIn("- A dataset or species under 10 pairs enters every mean; its row gives counts and no estimate.",
+        self.assertIn("- A dataset or species under 10 pairs enters every mean. Its row gives counts and no estimate.",
                       self.page)
-        self.assertIn("A cell prints its estimate wherever it has pairs and gets no interval", self.page)
+        self.assertIn("A cell prints its estimate wherever it has pairs and gets no interval.", self.page)
+
+    def test_each_cell_is_weighted_over_its_own_groups_datasets_and_species(self):
+        self.assertIn("Each cell is weighted over its own groups, datasets and species. A cell prints", self.page)
 
     def test_the_tie_and_the_reading_of_an_interval(self):
         self.assertIn("a higher resistant mean counts 1, an exact tie one half, else 0", self.page)
