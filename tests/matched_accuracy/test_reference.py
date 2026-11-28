@@ -20,7 +20,8 @@ class Reference(unittest.TestCase):
         self.assertEqual(sha(common.REFERENCE / "PROTOCOL-1.0.md"), PROTOCOL_SHA256)
         self.assertEqual(sha(common.REFERENCE / "AMENDMENT-1.md"), AMENDMENT_SHA256)
         self.assertEqual(sorted(p.name for p in common.REFERENCE.iterdir()),
-                         ["AMENDMENT-1.md", "PROTOCOL-1.0.md", "stage1-rev14-274-20261112"])
+                         ["AMENDMENT-1.md", "PROTOCOL-1.0.md", "stage1-rev14-274-20261112",
+                          "stage2-rev14-274-20261112"])
 
     def test_the_pins_are_the_values_of_the_brief_and_rulings(self):
         self.assertEqual(s1.RECORDS_SHA256, "d231fa768a31fc4ce4c8a6bb7024d05d632621846070688adb892fbfe340fd78")

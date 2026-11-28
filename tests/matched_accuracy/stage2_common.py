@@ -19,6 +19,8 @@ ROOT = pathlib.Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "scripts" / "matched-accuracy" / "stage2.py"
 FAULTS = ROOT / "scripts" / "matched-accuracy" / "stage2_faults.py"
 STAGE1_COPY = ROOT / "reference" / "matched-accuracy" / "stage1-rev14-274-20261112"
+# The export of stage 2's one real reading, committed byte for byte, with the run's facts beside it in run.tsv.
+STAGE2_COPY = ROOT / "reference" / "matched-accuracy" / "stage2-rev14-274-20261112"
 stage1, stage2 = made_up2.load_scripts()
 STOP = "stage2: stopped: "
 EXPORT = ["cells.tsv", "inputs.tsv", "interval.tsv", "measure.tsv", "null_fits.tsv", "typing.tsv"]

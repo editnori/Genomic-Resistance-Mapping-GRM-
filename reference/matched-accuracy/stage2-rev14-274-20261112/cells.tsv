@@ -1,0 +1,13 @@
+reading	resistant_member_call	susceptible_member_call	estimate_ppm	pairs	groups	datasets	species
+A	resistant	resistant	674020	73863	1126	144	14
+A	resistant	susceptible	913848	116407	1224	126	13
+A	susceptible	resistant	203128	2592	208	70	9
+A	susceptible	susceptible	644960	90038	1048	146	14
+A	unevaluable	unevaluable		0	0	0	0
+A	no drug rule	no drug rule		218	7	2	2
+B	resistant	resistant	674463	70771	1118	144	14
+B	resistant	susceptible	914800	115704	1221	126	13
+B	susceptible	resistant	203128	2592	208	70	9
+B	susceptible	susceptible	646492	83555	1021	145	14
+B	unevaluable	unevaluable		0	0	0	0
+B	no drug rule	no drug rule		218	7	2	2

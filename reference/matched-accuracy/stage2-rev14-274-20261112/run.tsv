@@ -1,0 +1,31 @@
+part	fact	value
+run	Runs	1
+run	Start	2026-11-27T18:55:40Z
+run	End	2026-11-27T18:57:20Z
+run	Seconds, by the run's own clock	99
+run	Exit	0
+run	Code	main 338695a85738375546e1904dddd8672b794501d3
+run	Tree	dc50ea86baba0cb05c7cc6b311b86d0d6eddfaf7
+run	Changed files in the clone	0
+run	Pinned inputs with an equal sha256	6 of 6
+run	Reports in the directory	274
+run	numpy	1.26.4
+run	The line "scores opened: yes"	printed 1 time
+run	Stopped lines	0
+run	Traceback lines	0
+run	Digest of the reports	equal before and after the run
+run	Export files	6
+run	Export lines	3,159
+run	Export bytes	256,099
+run	Full stops in the export	0
+scan	Start	2026-11-27T18:58:11Z
+scan	Genome ids in the list	123,483
+scan	Accessions in the list	1,785
+scan	Texts	7
+scan	Bytes of the 7 texts	256,426
+scan	Whole ids found	0
+scan	Ids found inside a longer run of digits	0
+scan	Accessions found	0
+scan	Tokens of an id's shape	0
+scan	Tokens of an accession's shape	0
+scan	Control: a planted id and a planted accession	found in 7 of 7 texts

@@ -1,0 +1,13 @@
+input	sha256	count	note
+reports	0aedf8780ca8e2292cfc5f227f61b87b7c6b006a6649ed4c0378514c70b72223	274	each report equals its line of the release's sums list; the sha256 is that list's; listed in a row list: 206
+genome rows of the reports that enter	-	215319	rows of the 268 reports holding the five learners under the lineage split, counted before the line; each figure's rows are within them
+species of the reports that enter	-	23	counted before the line; each figure's species are within them
+row list, reading A	b135a8ccd24f3c9b87113498c58bb76181fc8c143135260df01eafbd8ad7dd26	49621	lines; equal to the sha256 stage 1 printed
+row list, reading B	e3558b1b5a7a4a9f8ff23c79aca502c25586fcd6f889e4dac8d788cdd0b45d66	48156	lines; equal to the sha256 stage 1 printed
+count table of stage 1	d686f07a3d3d34985b15a7be86e61c13aeac6c026fb925eba25c53f1496ced3e	596	lines of the committed copy; the groups rebuilt from each row list equal it at every level
+typing table of stage 1	d25d1fedfbda087f40f91d4ca026705fa8d1d00808de309e06280629f90982fb	1168	lines of the committed copy; the typing support rebuilt from each row list equals it at every level, but for the rows lacking a value among the rows that enter the groups
+genome table, 5 Nov	d60e2b15f2cc0ed0466a1016da1761869fb42cc7e9fdd817c1ff7051e759a80e	123483	rows; it gives the HC20 group; listed genomes it lacks: 0
+numpy version, major	-	1	the resampling's library
+numpy version, minor	-	26	the resampling's library
+numpy version, micro	-	4	the resampling's library
+scores opened: yes

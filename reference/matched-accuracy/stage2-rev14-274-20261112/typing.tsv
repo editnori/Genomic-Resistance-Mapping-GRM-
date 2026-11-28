@@ -1,0 +1,2226 @@
+reading	step	match	level	name	estimate_ppm	rows	groups	pairs	datasets	species	lost_rows	lost_groups	lost_pairs	lost_datasets	lost_species
+A	mlst	mlst	overall	all	745021	38922	2542	206305	202	16					
+A	mlst	mlst	species	acinetobacter_baumannii	681188	4435	179	19612	17	1					
+A	mlst	mlst	species	campylobacter_coli	937236	283	32	616	7	1					
+A	mlst	mlst	species	campylobacter_jejuni	908358	1149	53	6134	4	1					
+A	mlst	mlst	species	enterobacter_cloacae	853788	133	29	144	8	1					
+A	mlst	mlst	species	enterococcus_faecium	633775	772	72	2678	13	1					
+A	mlst	mlst	species	escherichia_coli	839443	5152	528	28621	32	1					
+A	mlst	mlst	species	klebsiella_aerogenes	311990	78	7	149	3	1					
+A	mlst	mlst	species	klebsiella_oxytoca	630729	73	6	82	4	1					
+A	mlst	mlst	species	klebsiella_pneumoniae	718894	7358	619	42373	36	1					
+A	mlst	mlst	species	klebsiella_quasipneumoniae		3	1	2	1	1					
+A	mlst	mlst	species	neisseria_gonorrhoeae	595425	976	40	9387	5	1					
+A	mlst	mlst	species	pseudomonas_aeruginosa	756948	1058	186	2222	13	1					
+A	mlst	mlst	species	salmonella_enterica	744127	5840	379	35315	23	1					
+A	mlst	mlst	species	shigella_sonnei	906534	1593	32	6860	11	1					
+A	mlst	mlst	species	staphylococcus_aureus	715833	6240	229	41389	14	1					
+A	mlst	mlst	species	streptococcus_pneumoniae	686061	3779	150	10721	11	1					
+A	mlst	mlst	dataset	acinetobacter_baumannii__amikacin	803666	513	20	4783	1	1					
+A	mlst	mlst	dataset	acinetobacter_baumannii__ampicillin_sulbactam	615583	572	21	2039	1	1					
+A	mlst	mlst	dataset	acinetobacter_baumannii__cefotaxime	487387	122	5	117	1	1					
+A	mlst	mlst	dataset	acinetobacter_baumannii__ceftazidime	676609	236	9	895	1	1					
+A	mlst	mlst	dataset	acinetobacter_baumannii__ceftriaxone	477778	76	5	134	1	1					
+A	mlst	mlst	dataset	acinetobacter_baumannii__ciprofloxacin	853406	295	15	816	1	1					
+A	mlst	mlst	dataset	acinetobacter_baumannii__doripenem	777778	20	1	36	1	1					
+A	mlst	mlst	dataset	acinetobacter_baumannii__doxycycline	444444	17	3	30	1	1					
+A	mlst	mlst	dataset	acinetobacter_baumannii__gentamicin	579048	389	15	834	1	1					
+A	mlst	mlst	dataset	acinetobacter_baumannii__imipenem	818158	520	15	3019	1	1					
+A	mlst	mlst	dataset	acinetobacter_baumannii__levofloxacin	848013	282	11	787	1	1					
+A	mlst	mlst	dataset	acinetobacter_baumannii__meropenem	928934	180	11	856	1	1					
+A	mlst	mlst	dataset	acinetobacter_baumannii__minocycline	655208	29	4	62	1	1					
+A	mlst	mlst	dataset	acinetobacter_baumannii__moxifloxacin	718750	27	4	27	1	1					
+A	mlst	mlst	dataset	acinetobacter_baumannii__sulfamethoxazole_trimethoprim	667900	454	15	2597	1	1					
+A	mlst	mlst	dataset	acinetobacter_baumannii__tetracycline	674016	434	13	1173	1	1					
+A	mlst	mlst	dataset	acinetobacter_baumannii__tobramycin	553524	269	12	1407	1	1					
+A	mlst	mlst	dataset	campylobacter_coli__azithromycin		7	1	6	1	1					
+A	mlst	mlst	dataset	campylobacter_coli__ciprofloxacin	1000000	91	9	256	1	1					
+A	mlst	mlst	dataset	campylobacter_coli__clindamycin	578431	59	6	69	1	1					
+A	mlst	mlst	dataset	campylobacter_coli__erythromycin		7	1	6	1	1					
+A	mlst	mlst	dataset	campylobacter_coli__nalidixic_acid	982222	91	9	257	1	1					
+A	mlst	mlst	dataset	campylobacter_coli__telithromycin		9	2	7	1	1					
+A	mlst	mlst	dataset	campylobacter_coli__tetracycline	1000000	19	4	15	1	1					
+A	mlst	mlst	dataset	campylobacter_jejuni__ciprofloxacin	987445	317	15	2033	1	1					
+A	mlst	mlst	dataset	campylobacter_jejuni__clindamycin	718092	150	4	197	1	1					
+A	mlst	mlst	dataset	campylobacter_jejuni__nalidixic_acid	991487	309	14	2026	1	1					
+A	mlst	mlst	dataset	campylobacter_jejuni__tetracycline	936406	373	20	1878	1	1					
+A	mlst	mlst	dataset	enterobacter_cloacae__cefepime		2	1	1	1	1					
+A	mlst	mlst	dataset	enterobacter_cloacae__ciprofloxacin	500000	14	2	12	1	1					
+A	mlst	mlst	dataset	enterobacter_cloacae__gentamicin		7	2	6	1	1					
+A	mlst	mlst	dataset	enterobacter_cloacae__imipenem		5	2	3	1	1					
+A	mlst	mlst	dataset	enterobacter_cloacae__levofloxacin	1000000	14	2	12	1	1					
+A	mlst	mlst	dataset	enterobacter_cloacae__meropenem	550000	22	5	17	1	1					
+A	mlst	mlst	dataset	enterobacter_cloacae__sulfamethoxazole_trimethoprim		0	0	0	0	0					
+A	mlst	mlst	dataset	enterobacter_cloacae__tobramycin		12	4	9	1	1					
+A	mlst	mlst	dataset	enterobacter_cloacae__trimethoprim	780303	57	11	84	1	1					
+A	mlst	mlst	dataset	enterococcus_faecium__ampicillin	625000	10	2	11	1	1					
+A	mlst	mlst	dataset	enterococcus_faecium__clindamycin	142857	9	1	14	1	1					
+A	mlst	mlst	dataset	enterococcus_faecium__dalfopristin_quinupristin	701852	125	6	119	1	1					
+A	mlst	mlst	dataset	enterococcus_faecium__daptomycin	386240	129	12	195	1	1					
+A	mlst	mlst	dataset	enterococcus_faecium__doxycycline	631137	111	6	283	1	1					
+A	mlst	mlst	dataset	enterococcus_faecium__erythromycin	683333	29	9	23	1	1					
+A	mlst	mlst	dataset	enterococcus_faecium__gentamicin	726190	52	7	76	1	1					
+A	mlst	mlst	dataset	enterococcus_faecium__kanamycin	650000	42	5	49	1	1					
+A	mlst	mlst	dataset	enterococcus_faecium__linezolid	425000	13	2	19	1	1					
+A	mlst	mlst	dataset	enterococcus_faecium__streptomycin	566667	30	4	26	1	1					
+A	mlst	mlst	dataset	enterococcus_faecium__teicoplanin	953571	66	3	846	1	1					
+A	mlst	mlst	dataset	enterococcus_faecium__tetracycline		14	5	9	1	1					
+A	mlst	mlst	dataset	enterococcus_faecium__vancomycin	947226	142	10	1008	1	1					
+A	mlst	mlst	dataset	escherichia_coli__amikacin	959478	142	8	160	1	1					
+A	mlst	mlst	dataset	escherichia_coli__amoxicillin_clavulanate	947481	119	13	796	1	1					
+A	mlst	mlst	dataset	escherichia_coli__ampicillin	868894	257	24	441	1	1					
+A	mlst	mlst	dataset	escherichia_coli__ampicillin_sulbactam	721632	141	8	1413	1	1					
+A	mlst	mlst	dataset	escherichia_coli__aztreonam	691193	155	7	1864	1	1					
+A	mlst	mlst	dataset	escherichia_coli__cefazolin	757124	100	8	99	1	1					
+A	mlst	mlst	dataset	escherichia_coli__cefepime	748187	271	22	2667	1	1					
+A	mlst	mlst	dataset	escherichia_coli__cefotaxime	795290	71	13	138	1	1					
+A	mlst	mlst	dataset	escherichia_coli__cefoxitin	735678	178	29	516	1	1					
+A	mlst	mlst	dataset	escherichia_coli__cefpodoxime	538974	52	13	55	1	1					
+A	mlst	mlst	dataset	escherichia_coli__cefpodoxime_clavulanate	486111	27	9	18	1	1					
+A	mlst	mlst	dataset	escherichia_coli__ceftazidime	850664	258	22	2309	1	1					
+A	mlst	mlst	dataset	escherichia_coli__ceftiofur		5	1	6	1	1					
+A	mlst	mlst	dataset	escherichia_coli__ceftriaxone	893276	306	19	2151	1	1					
+A	mlst	mlst	dataset	escherichia_coli__chloramphenicol	936580	129	22	205	1	1					
+A	mlst	mlst	dataset	escherichia_coli__ciprofloxacin	890312	191	16	992	1	1					
+A	mlst	mlst	dataset	escherichia_coli__doxycycline	978070	73	3	789	1	1					
+A	mlst	mlst	dataset	escherichia_coli__ertapenem	711079	210	19	517	1	1					
+A	mlst	mlst	dataset	escherichia_coli__gentamicin	912289	351	33	3937	1	1					
+A	mlst	mlst	dataset	escherichia_coli__imipenem	872222	45	8	109	1	1					
+A	mlst	mlst	dataset	escherichia_coli__levofloxacin	809455	180	13	1133	1	1					
+A	mlst	mlst	dataset	escherichia_coli__meropenem	800632	191	19	269	1	1					
+A	mlst	mlst	dataset	escherichia_coli__nalidixic_acid	944444	14	2	28	1	1					
+A	mlst	mlst	dataset	escherichia_coli__nitrofurantoin	866410	160	10	361	1	1					
+A	mlst	mlst	dataset	escherichia_coli__norfloxacin	939962	72	8	143	1	1					
+A	mlst	mlst	dataset	escherichia_coli__piperacillin_tazobactam	731616	143	11	366	1	1					
+A	mlst	mlst	dataset	escherichia_coli__streptomycin	969666	130	19	285	1	1					
+A	mlst	mlst	dataset	escherichia_coli__sulfamethoxazole	875631	136	22	258	1	1					
+A	mlst	mlst	dataset	escherichia_coli__sulfamethoxazole_trimethoprim	887211	440	42	4038	1	1					
+A	mlst	mlst	dataset	escherichia_coli__tetracycline	897365	301	40	1540	1	1					
+A	mlst	mlst	dataset	escherichia_coli__tobramycin	958783	201	29	792	1	1					
+A	mlst	mlst	dataset	escherichia_coli__trimethoprim	886458	103	16	226	1	1					
+A	mlst	mlst	dataset	klebsiella_aerogenes__ertapenem	137821	28	3	51	1	1					
+A	mlst	mlst	dataset	klebsiella_aerogenes__imipenem	398148	24	2	54	1	1					
+A	mlst	mlst	dataset	klebsiella_aerogenes__meropenem	400000	26	2	44	1	1					
+A	mlst	mlst	dataset	klebsiella_oxytoca__cefotaxime		4	1	4	1	1					
+A	mlst	mlst	dataset	klebsiella_oxytoca__cefoxitin	656250	22	2	20	1	1					
+A	mlst	mlst	dataset	klebsiella_oxytoca__cefpodoxime	500000	30	2	28	1	1					
+A	mlst	mlst	dataset	klebsiella_oxytoca__ertapenem	866667	17	1	30	1	1					
+A	mlst	mlst	dataset	klebsiella_pneumoniae__amikacin	821838	491	31	1919	1	1					
+A	mlst	mlst	dataset	klebsiella_pneumoniae__amoxicillin_clavulanate	862708	65	10	114	1	1					
+A	mlst	mlst	dataset	klebsiella_pneumoniae__ampicillin_sulbactam	672222	53	10	49	1	1					
+A	mlst	mlst	dataset	klebsiella_pneumoniae__aztreonam	675850	362	26	3031	1	1					
+A	mlst	mlst	dataset	klebsiella_pneumoniae__cefazolin	945220	105	15	160	1	1					
+A	mlst	mlst	dataset	klebsiella_pneumoniae__cefepime	722037	384	31	2643	1	1					
+A	mlst	mlst	dataset	klebsiella_pneumoniae__cefotetan		0	0	0	0	0					
+A	mlst	mlst	dataset	klebsiella_pneumoniae__cefoxitin	642886	392	47	2832	1	1					
+A	mlst	mlst	dataset	klebsiella_pneumoniae__cefpodoxime	916667	50	11	39	1	1					
+A	mlst	mlst	dataset	klebsiella_pneumoniae__cefpodoxime_clavulanate	761905	34	7	27	1	1					
+A	mlst	mlst	dataset	klebsiella_pneumoniae__ceftazidime	755843	383	28	490	1	1					
+A	mlst	mlst	dataset	klebsiella_pneumoniae__ceftazidime_avibactam	852273	30	2	49	1	1					
+A	mlst	mlst	dataset	klebsiella_pneumoniae__ceftriaxone	1000000	115	6	130	1	1					
+A	mlst	mlst	dataset	klebsiella_pneumoniae__cefuroxime	949792	99	10	124	1	1					
+A	mlst	mlst	dataset	klebsiella_pneumoniae__chloramphenicol	478509	112	8	403	1	1					
+A	mlst	mlst	dataset	klebsiella_pneumoniae__ciprofloxacin	819331	134	16	260	1	1					
+A	mlst	mlst	dataset	klebsiella_pneumoniae__colistin	838133	190	7	1658	1	1					
+A	mlst	mlst	dataset	klebsiella_pneumoniae__doripenem	726562	88	6	295	1	1					
+A	mlst	mlst	dataset	klebsiella_pneumoniae__doxycycline	514583	20	4	30	1	1					
+A	mlst	mlst	dataset	klebsiella_pneumoniae__ertapenem	783835	95	7	163	1	1					
+A	mlst	mlst	dataset	klebsiella_pneumoniae__fosfomycin	422176	77	2	425	1	1					
+A	mlst	mlst	dataset	klebsiella_pneumoniae__gentamicin	873156	689	62	5278	1	1					
+A	mlst	mlst	dataset	klebsiella_pneumoniae__imipenem	937044	354	22	3187	1	1					
+A	mlst	mlst	dataset	klebsiella_pneumoniae__levofloxacin	672543	154	9	291	1	1					
+A	mlst	mlst	dataset	klebsiella_pneumoniae__meropenem	813619	451	33	3287	1	1					
+A	mlst	mlst	dataset	klebsiella_pneumoniae__nitrofurantoin	653355	129	11	377	1	1					
+A	mlst	mlst	dataset	klebsiella_pneumoniae__norfloxacin	311160	41	3	52	1	1					
+A	mlst	mlst	dataset	klebsiella_pneumoniae__ofloxacin	680556	43	3	62	1	1					
+A	mlst	mlst	dataset	klebsiella_pneumoniae__piperacillin_tazobactam	732274	329	30	2788	1	1					
+A	mlst	mlst	dataset	klebsiella_pneumoniae__polymyxin_b	590278	17	2	37	1	1					
+A	mlst	mlst	dataset	klebsiella_pneumoniae__streptomycin	125000	10	3	10	1	1					
+A	mlst	mlst	dataset	klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	804505	642	46	4614	1	1					
+A	mlst	mlst	dataset	klebsiella_pneumoniae__tetracycline	819946	347	31	3497	1	1					
+A	mlst	mlst	dataset	klebsiella_pneumoniae__ticarcillin_clavulanate	502778	21	2	91	1	1					
+A	mlst	mlst	dataset	klebsiella_pneumoniae__tigecycline	541807	375	27	2112	1	1					
+A	mlst	mlst	dataset	klebsiella_pneumoniae__tobramycin	874063	435	44	1779	1	1					
+A	mlst	mlst	dataset	klebsiella_pneumoniae__trimethoprim	785714	42	7	70	1	1					
+A	mlst	mlst	dataset	klebsiella_quasipneumoniae__cefotaxime		3	1	2	1	1					
+A	mlst	mlst	dataset	klebsiella_quasipneumoniae__sulfamethoxazole_trimethoprim		0	0	0	0	0					
+A	mlst	mlst	dataset	neisseria_gonorrhoeae__azithromycin	722222	60	3	99	1	1					
+A	mlst	mlst	dataset	neisseria_gonorrhoeae__ciprofloxacin	700000	122	5	242	1	1					
+A	mlst	mlst	dataset	neisseria_gonorrhoeae__erythromycin	505401	74	7	215	1	1					
+A	mlst	mlst	dataset	neisseria_gonorrhoeae__penicillin	716171	711	22	8825	1	1					
+A	mlst	mlst	dataset	neisseria_gonorrhoeae__tetracycline		9	3	6	1	1					
+A	mlst	mlst	dataset	pseudomonas_aeruginosa__amikacin	800215	165	27	480	1	1					
+A	mlst	mlst	dataset	pseudomonas_aeruginosa__aztreonam	777778	27	9	21	1	1					
+A	mlst	mlst	dataset	pseudomonas_aeruginosa__cefepime	482143	21	7	18	1	1					
+A	mlst	mlst	dataset	pseudomonas_aeruginosa__ceftazidime	892857	21	7	15	1	1					
+A	mlst	mlst	dataset	pseudomonas_aeruginosa__ceftazidime_avibactam	539885	153	16	392	1	1					
+A	mlst	mlst	dataset	pseudomonas_aeruginosa__ceftolozane_tazobactam	592071	141	16	299	1	1					
+A	mlst	mlst	dataset	pseudomonas_aeruginosa__ciprofloxacin	850000	14	5	12	1	1					
+A	mlst	mlst	dataset	pseudomonas_aeruginosa__gentamicin	759259	24	6	23	1	1					
+A	mlst	mlst	dataset	pseudomonas_aeruginosa__imipenem	730682	46	11	53	1	1					
+A	mlst	mlst	dataset	pseudomonas_aeruginosa__levofloxacin	948611	188	30	371	1	1					
+A	mlst	mlst	dataset	pseudomonas_aeruginosa__meropenem	695000	222	41	504	1	1					
+A	mlst	mlst	dataset	pseudomonas_aeruginosa__piperacillin_tazobactam		10	4	7	1	1					
+A	mlst	mlst	dataset	pseudomonas_aeruginosa__tobramycin	896825	26	7	27	1	1					
+A	mlst	mlst	dataset	salmonella_enterica__amoxicillin_clavulanate	882895	219	19	293	1	1					
+A	mlst	mlst	dataset	salmonella_enterica__ampicillin	835623	543	32	3197	1	1					
+A	mlst	mlst	dataset	salmonella_enterica__ampicillin_sulbactam	697977	154	8	1909	1	1					
+A	mlst	mlst	dataset	salmonella_enterica__azithromycin	691436	328	13	1920	1	1					
+A	mlst	mlst	dataset	salmonella_enterica__cefazolin	435857	157	8	1965	1	1					
+A	mlst	mlst	dataset	salmonella_enterica__cefotaxime	685153	408	16	3506	1	1					
+A	mlst	mlst	dataset	salmonella_enterica__cefoxitin	824920	315	28	894	1	1					
+A	mlst	mlst	dataset	salmonella_enterica__ceftazidime	769036	161	3	406	1	1					
+A	mlst	mlst	dataset	salmonella_enterica__ceftiofur	916595	213	20	390	1	1					
+A	mlst	mlst	dataset	salmonella_enterica__ceftriaxone	940789	208	19	282	1	1					
+A	mlst	mlst	dataset	salmonella_enterica__chloramphenicol	823910	483	31	3222	1	1					
+A	mlst	mlst	dataset	salmonella_enterica__ciprofloxacin	542387	113	10	514	1	1					
+A	mlst	mlst	dataset	salmonella_enterica__gentamicin	830342	548	31	2633	1	1					
+A	mlst	mlst	dataset	salmonella_enterica__kanamycin	929059	186	13	804	1	1					
+A	mlst	mlst	dataset	salmonella_enterica__nalidixic_acid	666422	210	12	2628	1	1					
+A	mlst	mlst	dataset	salmonella_enterica__spectinomycin	977717	85	6	488	1	1					
+A	mlst	mlst	dataset	salmonella_enterica__streptomycin	842396	342	24	1967	1	1					
+A	mlst	mlst	dataset	salmonella_enterica__sulfamethoxazole		4	1	4	1	1					
+A	mlst	mlst	dataset	salmonella_enterica__sulfamethoxazole_trimethoprim	531229	286	14	2914	1	1					
+A	mlst	mlst	dataset	salmonella_enterica__sulfathiazole	575265	92	6	142	1	1					
+A	mlst	mlst	dataset	salmonella_enterica__sulfisoxazole	884615	98	13	131	1	1					
+A	mlst	mlst	dataset	salmonella_enterica__tetracycline	859085	561	43	4659	1	1					
+A	mlst	mlst	dataset	salmonella_enterica__trimethoprim	972222	126	9	447	1	1					
+A	mlst	mlst	dataset	shigella_sonnei__ampicillin	1000000	35	3	53	1	1					
+A	mlst	mlst	dataset	shigella_sonnei__azithromycin	1000000	150	1	441	1	1					
+A	mlst	mlst	dataset	shigella_sonnei__cefoperazone	935374	172	3	349	1	1					
+A	mlst	mlst	dataset	shigella_sonnei__cefoxitin	550676	159	2	304	1	1					
+A	mlst	mlst	dataset	shigella_sonnei__ceftazidime	959732	150	1	149	1	1					
+A	mlst	mlst	dataset	shigella_sonnei__ceftriaxone	916667	35	3	72	1	1					
+A	mlst	mlst	dataset	shigella_sonnei__colistin	1000000	177	3	3462	1	1					
+A	mlst	mlst	dataset	shigella_sonnei__gentamicin	848198	191	5	356	1	1					
+A	mlst	mlst	dataset	shigella_sonnei__sulfamethoxazole_trimethoprim	981164	182	4	615	1	1					
+A	mlst	mlst	dataset	shigella_sonnei__tetracycline	873276	181	4	755	1	1					
+A	mlst	mlst	dataset	shigella_sonnei__tobramycin	906790	161	3	304	1	1					
+A	mlst	mlst	dataset	staphylococcus_aureus__cefoxitin	828326	562	22	4450	1	1					
+A	mlst	mlst	dataset	staphylococcus_aureus__chloramphenicol	565927	488	17	5151	1	1					
+A	mlst	mlst	dataset	staphylococcus_aureus__ciprofloxacin	767750	701	23	4228	1	1					
+A	mlst	mlst	dataset	staphylococcus_aureus__clindamycin	616886	621	25	6614	1	1					
+A	mlst	mlst	dataset	staphylococcus_aureus__daptomycin	577217	459	13	1649	1	1					
+A	mlst	mlst	dataset	staphylococcus_aureus__erythromycin	798337	639	29	5653	1	1					
+A	mlst	mlst	dataset	staphylococcus_aureus__fusidic_acid	666667	41	3	48	1	1					
+A	mlst	mlst	dataset	staphylococcus_aureus__gentamicin	665576	429	14	1234	1	1					
+A	mlst	mlst	dataset	staphylococcus_aureus__mupirocin	729933	48	4	51	1	1					
+A	mlst	mlst	dataset	staphylococcus_aureus__oxacillin	718156	477	15	4228	1	1					
+A	mlst	mlst	dataset	staphylococcus_aureus__penicillin	877187	603	20	1688	1	1					
+A	mlst	mlst	dataset	staphylococcus_aureus__rifampin	879630	46	6	63	1	1					
+A	mlst	mlst	dataset	staphylococcus_aureus__sulfamethoxazole_trimethoprim	620677	601	16	3297	1	1					
+A	mlst	mlst	dataset	staphylococcus_aureus__tetracycline	709387	525	22	3035	1	1					
+A	mlst	mlst	dataset	streptococcus_pneumoniae__azithromycin	832848	545	15	1257	1	1					
+A	mlst	mlst	dataset	streptococcus_pneumoniae__cefepime	700965	107	9	629	1	1					
+A	mlst	mlst	dataset	streptococcus_pneumoniae__cefotaxime	703819	111	10	402	1	1					
+A	mlst	mlst	dataset	streptococcus_pneumoniae__ceftriaxone	561880	137	11	683	1	1					
+A	mlst	mlst	dataset	streptococcus_pneumoniae__cefuroxime	600000	96	5	751	1	1					
+A	mlst	mlst	dataset	streptococcus_pneumoniae__chloramphenicol	707380	346	10	587	1	1					
+A	mlst	mlst	dataset	streptococcus_pneumoniae__clindamycin	611193	604	19	812	1	1					
+A	mlst	mlst	dataset	streptococcus_pneumoniae__erythromycin	809293	720	27	1579	1	1					
+A	mlst	mlst	dataset	streptococcus_pneumoniae__meropenem	567460	69	6	199	1	1					
+A	mlst	mlst	dataset	streptococcus_pneumoniae__penicillin		0	0	0	0	0					
+A	mlst	mlst	dataset	streptococcus_pneumoniae__sulfamethoxazole_trimethoprim	764230	389	19	518	1	1					
+A	mlst	mlst	dataset	streptococcus_pneumoniae__tetracycline	687600	655	19	3304	1	1					
+A	mlst	primary	overall	all	746525	38922	2341	221241	202	16	10699	442	61877	4	0
+A	mlst	primary	species	acinetobacter_baumannii	680427	4435	176	19635	17	1	90	9	159	0	0
+A	mlst	primary	species	campylobacter_coli	937236	283	32	616	7	1	10	1	32	0	0
+A	mlst	primary	species	campylobacter_jejuni	902723	1149	40	7827	4	1	308	4	3811	0	0
+A	mlst	primary	species	enterobacter_cloacae	858970	133	26	161	8	1	288	28	788	1	0
+A	mlst	primary	species	enterococcus_faecium	631482	772	68	2733	13	1	781	32	2449	0	0
+A	mlst	primary	species	escherichia_coli	840099	5152	457	31518	32	1	2805	134	10313	0	0
+A	mlst	primary	species	klebsiella_aerogenes	311990	78	7	149	3	1	12	3	14	0	0
+A	mlst	primary	species	klebsiella_oxytoca	630729	73	6	82	4	1	0	0	0	0	0
+A	mlst	primary	species	klebsiella_pneumoniae	720446	7358	565	45177	36	1	1570	107	9248	1	0
+A	mlst	primary	species	klebsiella_quasipneumoniae		3	1	2	1	1	3	1	2	1	0
+A	mlst	primary	species	neisseria_gonorrhoeae	585325	976	37	10130	5	1	294	3	1723	0	0
+A	mlst	primary	species	pseudomonas_aeruginosa	759856	1058	183	2247	13	1	257	54	470	0	0
+A	mlst	primary	species	salmonella_enterica	743051	5840	373	35451	23	1	261	27	839	0	0
+A	mlst	primary	species	shigella_sonnei	906534	1593	32	6860	11	1	9	0	49	0	0
+A	mlst	primary	species	staphylococcus_aureus	735627	6240	211	44494	14	1	1297	14	12761	0	0
+A	mlst	primary	species	streptococcus_pneumoniae	699912	3779	127	14159	11	1	2714	25	19219	1	0
+A	mlst	primary	dataset	acinetobacter_baumannii__amikacin	803666	513	20	4783	1	1	8	1	11	0	0
+A	mlst	primary	dataset	acinetobacter_baumannii__ampicillin_sulbactam	596363	572	20	2047	1	1	4	0	12	0	0
+A	mlst	primary	dataset	acinetobacter_baumannii__cefotaxime	487387	122	5	117	1	1	0	0	0	0	0
+A	mlst	primary	dataset	acinetobacter_baumannii__ceftazidime	676609	236	9	895	1	1	7	1	10	0	0
+A	mlst	primary	dataset	acinetobacter_baumannii__ceftriaxone	477778	76	5	134	1	1	0	0	0	0	0
+A	mlst	primary	dataset	acinetobacter_baumannii__ciprofloxacin	825078	295	14	823	1	1	6	1	5	0	0
+A	mlst	primary	dataset	acinetobacter_baumannii__doripenem	777778	20	1	36	1	1	0	0	0	0	0
+A	mlst	primary	dataset	acinetobacter_baumannii__doxycycline	444444	17	3	30	1	1	8	0	37	0	0
+A	mlst	primary	dataset	acinetobacter_baumannii__gentamicin	579048	389	15	834	1	1	11	1	14	0	0
+A	mlst	primary	dataset	acinetobacter_baumannii__imipenem	818158	520	15	3019	1	1	6	1	12	0	0
+A	mlst	primary	dataset	acinetobacter_baumannii__levofloxacin	848013	282	11	787	1	1	6	1	8	0	0
+A	mlst	primary	dataset	acinetobacter_baumannii__meropenem	928934	180	11	856	1	1	1	0	4	0	0
+A	mlst	primary	dataset	acinetobacter_baumannii__minocycline	655208	29	4	62	1	1	13	1	12	0	0
+A	mlst	primary	dataset	acinetobacter_baumannii__moxifloxacin	718750	27	4	27	1	1	0	0	0	0	0
+A	mlst	primary	dataset	acinetobacter_baumannii__sulfamethoxazole_trimethoprim	702512	454	14	2605	1	1	9	1	12	0	0
+A	mlst	primary	dataset	acinetobacter_baumannii__tetracycline	674016	434	13	1173	1	1	0	0	0	0	0
+A	mlst	primary	dataset	acinetobacter_baumannii__tobramycin	553524	269	12	1407	1	1	11	1	22	0	0
+A	mlst	primary	dataset	campylobacter_coli__azithromycin		7	1	6	1	1	0	0	0	0	0
+A	mlst	primary	dataset	campylobacter_coli__ciprofloxacin	1000000	91	9	256	1	1	2	0	13	0	0
+A	mlst	primary	dataset	campylobacter_coli__clindamycin	578431	59	6	69	1	1	2	0	3	0	0
+A	mlst	primary	dataset	campylobacter_coli__erythromycin		7	1	6	1	1	0	0	0	0	0
+A	mlst	primary	dataset	campylobacter_coli__nalidixic_acid	982222	91	9	257	1	1	2	0	13	0	0
+A	mlst	primary	dataset	campylobacter_coli__telithromycin		9	2	7	1	1	0	0	0	0	0
+A	mlst	primary	dataset	campylobacter_coli__tetracycline	1000000	19	4	15	1	1	4	1	3	0	0
+A	mlst	primary	dataset	campylobacter_jejuni__ciprofloxacin	983083	317	10	2594	1	1	92	1	1166	0	0
+A	mlst	primary	dataset	campylobacter_jejuni__clindamycin	718092	150	4	197	1	1	40	0	60	0	0
+A	mlst	primary	dataset	campylobacter_jejuni__nalidixic_acid	988994	309	10	2373	1	1	100	1	1376	0	0
+A	mlst	primary	dataset	campylobacter_jejuni__tetracycline	920724	373	16	2663	1	1	76	2	1209	0	0
+A	mlst	primary	dataset	enterobacter_cloacae__cefepime		2	1	1	1	1	36	4	82	0	0
+A	mlst	primary	dataset	enterobacter_cloacae__ciprofloxacin	500000	14	2	12	1	1	28	4	66	0	0
+A	mlst	primary	dataset	enterobacter_cloacae__gentamicin		7	2	6	1	1	38	6	61	0	0
+A	mlst	primary	dataset	enterobacter_cloacae__imipenem		5	2	3	1	1	24	1	67	0	0
+A	mlst	primary	dataset	enterobacter_cloacae__levofloxacin	1000000	14	2	12	1	1	27	4	63	0	0
+A	mlst	primary	dataset	enterobacter_cloacae__meropenem	562500	22	4	20	1	1	27	3	90	0	0
+A	mlst	primary	dataset	enterobacter_cloacae__sulfamethoxazole_trimethoprim		0	0	0	0	0	33	4	73	1	1
+A	mlst	primary	dataset	enterobacter_cloacae__tobramycin		12	4	9	1	1	29	2	77	0	0
+A	mlst	primary	dataset	enterobacter_cloacae__trimethoprim	809259	57	9	98	1	1	46	0	209	0	0
+A	mlst	primary	dataset	enterococcus_faecium__ampicillin	625000	10	2	11	1	1	45	3	46	0	0
+A	mlst	primary	dataset	enterococcus_faecium__clindamycin	142857	9	1	14	1	1	78	1	77	0	0
+A	mlst	primary	dataset	enterococcus_faecium__dalfopristin_quinupristin	701852	125	6	119	1	1	57	2	189	0	0
+A	mlst	primary	dataset	enterococcus_faecium__daptomycin	423950	129	11	216	1	1	15	2	32	0	0
+A	mlst	primary	dataset	enterococcus_faecium__doxycycline	557364	111	5	295	1	1	109	8	425	0	0
+A	mlst	primary	dataset	enterococcus_faecium__erythromycin	683333	29	9	23	1	1	11	0	20	0	0
+A	mlst	primary	dataset	enterococcus_faecium__gentamicin	726190	52	7	76	1	1	131	4	346	0	0
+A	mlst	primary	dataset	enterococcus_faecium__kanamycin	650000	42	5	49	1	1	114	3	623	0	0
+A	mlst	primary	dataset	enterococcus_faecium__linezolid	425000	13	2	19	1	1	40	1	72	0	0
+A	mlst	primary	dataset	enterococcus_faecium__streptomycin	566667	30	4	26	1	1	130	4	176	0	0
+A	mlst	primary	dataset	enterococcus_faecium__teicoplanin	953571	66	3	846	1	1	14	1	138	0	0
+A	mlst	primary	dataset	enterococcus_faecium__tetracycline		14	5	9	1	1	13	2	19	0	0
+A	mlst	primary	dataset	enterococcus_faecium__vancomycin	953477	142	8	1030	1	1	24	1	286	0	0
+A	mlst	primary	dataset	escherichia_coli__amikacin	959478	142	8	160	1	1	53	4	60	0	0
+A	mlst	primary	dataset	escherichia_coli__amoxicillin_clavulanate	943104	119	12	798	1	1	86	3	163	0	0
+A	mlst	primary	dataset	escherichia_coli__ampicillin	866437	257	20	815	1	1	169	7	746	0	0
+A	mlst	primary	dataset	escherichia_coli__ampicillin_sulbactam	788458	141	7	1428	1	1	16	0	96	0	0
+A	mlst	primary	dataset	escherichia_coli__aztreonam	691193	155	7	1864	1	1	3	0	45	0	0
+A	mlst	primary	dataset	escherichia_coli__cefazolin	757124	100	8	99	1	1	45	5	107	0	0
+A	mlst	primary	dataset	escherichia_coli__cefepime	739567	271	19	2730	1	1	42	1	160	0	0
+A	mlst	primary	dataset	escherichia_coli__cefotaxime	795290	71	13	138	1	1	56	6	120	0	0
+A	mlst	primary	dataset	escherichia_coli__cefoxitin	720053	178	25	532	1	1	133	7	326	0	0
+A	mlst	primary	dataset	escherichia_coli__cefpodoxime	599747	52	11	67	1	1	67	5	244	0	0
+A	mlst	primary	dataset	escherichia_coli__cefpodoxime_clavulanate	486111	27	9	18	1	1	53	5	96	0	0
+A	mlst	primary	dataset	escherichia_coli__ceftazidime	843552	258	21	2343	1	1	91	2	189	0	0
+A	mlst	primary	dataset	escherichia_coli__ceftiofur		5	1	6	1	1	48	2	74	0	0
+A	mlst	primary	dataset	escherichia_coli__ceftriaxone	880721	306	17	2188	1	1	118	5	314	0	0
+A	mlst	primary	dataset	escherichia_coli__chloramphenicol	938667	129	20	246	1	1	242	9	721	0	0
+A	mlst	primary	dataset	escherichia_coli__ciprofloxacin	937762	191	15	1008	1	1	150	6	518	0	0
+A	mlst	primary	dataset	escherichia_coli__doxycycline	978070	73	3	789	1	1	15	2	34	0	0
+A	mlst	primary	dataset	escherichia_coli__ertapenem	758916	210	18	527	1	1	70	5	116	0	0
+A	mlst	primary	dataset	escherichia_coli__gentamicin	934242	351	29	3986	1	1	221	11	653	0	0
+A	mlst	primary	dataset	escherichia_coli__imipenem	872222	45	8	109	1	1	0	0	0	0	0
+A	mlst	primary	dataset	escherichia_coli__levofloxacin	864261	180	12	1149	1	1	73	3	293	0	0
+A	mlst	primary	dataset	escherichia_coli__meropenem	817334	191	18	275	1	1	81	6	141	0	0
+A	mlst	primary	dataset	escherichia_coli__nalidixic_acid	944444	14	2	28	1	1	83	3	92	0	0
+A	mlst	primary	dataset	escherichia_coli__nitrofurantoin	856858	160	9	371	1	1	50	2	271	0	0
+A	mlst	primary	dataset	escherichia_coli__norfloxacin	913889	72	6	244	1	1	39	0	402	0	0
+A	mlst	primary	dataset	escherichia_coli__piperacillin_tazobactam	731616	143	11	366	1	1	30	2	57	0	0
+A	mlst	primary	dataset	escherichia_coli__streptomycin	966482	130	14	541	1	1	144	5	725	0	0
+A	mlst	primary	dataset	escherichia_coli__sulfamethoxazole	789926	136	13	714	1	1	84	2	619	0	0
+A	mlst	primary	dataset	escherichia_coli__sulfamethoxazole_trimethoprim	876627	440	33	4518	1	1	173	11	991	0	0
+A	mlst	primary	dataset	escherichia_coli__tetracycline	876790	301	33	1954	1	1	146	7	903	0	0
+A	mlst	primary	dataset	escherichia_coli__tobramycin	951463	201	26	841	1	1	126	5	409	0	0
+A	mlst	primary	dataset	escherichia_coli__trimethoprim	802749	103	9	666	1	1	98	3	628	0	0
+A	mlst	primary	dataset	klebsiella_aerogenes__ertapenem	137821	28	3	51	1	1	4	1	5	0	0
+A	mlst	primary	dataset	klebsiella_aerogenes__imipenem	398148	24	2	54	1	1	3	1	4	0	0
+A	mlst	primary	dataset	klebsiella_aerogenes__meropenem	400000	26	2	44	1	1	5	1	5	0	0
+A	mlst	primary	dataset	klebsiella_oxytoca__cefotaxime		4	1	4	1	1	0	0	0	0	0
+A	mlst	primary	dataset	klebsiella_oxytoca__cefoxitin	656250	22	2	20	1	1	0	0	0	0	0
+A	mlst	primary	dataset	klebsiella_oxytoca__cefpodoxime	500000	30	2	28	1	1	0	0	0	0	0
+A	mlst	primary	dataset	klebsiella_oxytoca__ertapenem	866667	17	1	30	1	1	0	0	0	0	0
+A	mlst	primary	dataset	klebsiella_pneumoniae__amikacin	810796	491	29	2001	1	1	72	4	510	0	0
+A	mlst	primary	dataset	klebsiella_pneumoniae__amoxicillin_clavulanate	862708	65	10	114	1	1	15	2	19	0	0
+A	mlst	primary	dataset	klebsiella_pneumoniae__ampicillin_sulbactam	672222	53	10	49	1	1	72	3	69	0	0
+A	mlst	primary	dataset	klebsiella_pneumoniae__aztreonam	673539	362	23	3269	1	1	65	4	495	0	0
+A	mlst	primary	dataset	klebsiella_pneumoniae__cefazolin	945220	105	15	160	1	1	49	3	46	0	0
+A	mlst	primary	dataset	klebsiella_pneumoniae__cefepime	722390	384	27	2871	1	1	43	1	386	0	0
+A	mlst	primary	dataset	klebsiella_pneumoniae__cefotetan		0	0	0	0	0	3	1	2	1	1
+A	mlst	primary	dataset	klebsiella_pneumoniae__cefoxitin	639219	392	44	2928	1	1	78	6	658	0	0
+A	mlst	primary	dataset	klebsiella_pneumoniae__cefpodoxime	891667	50	10	42	1	1	18	4	18	0	0
+A	mlst	primary	dataset	klebsiella_pneumoniae__cefpodoxime_clavulanate	784722	34	6	29	1	1	12	3	9	0	0
+A	mlst	primary	dataset	klebsiella_pneumoniae__ceftazidime	770615	383	25	581	1	1	65	4	170	0	0
+A	mlst	primary	dataset	klebsiella_pneumoniae__ceftazidime_avibactam	852273	30	2	49	1	1	5	0	5	0	0
+A	mlst	primary	dataset	klebsiella_pneumoniae__ceftriaxone	1000000	115	6	130	1	1	19	2	17	0	0
+A	mlst	primary	dataset	klebsiella_pneumoniae__cefuroxime	949792	99	10	124	1	1	31	1	32	0	0
+A	mlst	primary	dataset	klebsiella_pneumoniae__chloramphenicol	478509	112	8	403	1	1	103	4	115	0	0
+A	mlst	primary	dataset	klebsiella_pneumoniae__ciprofloxacin	819331	134	16	260	1	1	111	10	268	0	0
+A	mlst	primary	dataset	klebsiella_pneumoniae__colistin	812709	190	6	1756	1	1	15	1	222	0	0
+A	mlst	primary	dataset	klebsiella_pneumoniae__doripenem	787297	88	5	375	1	1	18	1	67	0	0
+A	mlst	primary	dataset	klebsiella_pneumoniae__doxycycline	514583	20	4	30	1	1	0	0	0	0	0
+A	mlst	primary	dataset	klebsiella_pneumoniae__ertapenem	783835	95	7	163	1	1	19	1	32	0	0
+A	mlst	primary	dataset	klebsiella_pneumoniae__fosfomycin	422176	77	2	425	1	1	0	0	0	0	0
+A	mlst	primary	dataset	klebsiella_pneumoniae__gentamicin	869481	689	56	5534	1	1	160	9	1591	0	0
+A	mlst	primary	dataset	klebsiella_pneumoniae__imipenem	929077	354	20	3271	1	1	53	4	507	0	0
+A	mlst	primary	dataset	klebsiella_pneumoniae__levofloxacin	672543	154	9	291	1	1	96	4	353	0	0
+A	mlst	primary	dataset	klebsiella_pneumoniae__meropenem	815248	451	30	3480	1	1	81	6	581	0	0
+A	mlst	primary	dataset	klebsiella_pneumoniae__nitrofurantoin	728214	129	10	386	1	1	14	1	208	0	0
+A	mlst	primary	dataset	klebsiella_pneumoniae__norfloxacin	311160	41	3	52	1	1	0	0	0	0	0
+A	mlst	primary	dataset	klebsiella_pneumoniae__ofloxacin	680556	43	3	62	1	1	1	0	12	0	0
+A	mlst	primary	dataset	klebsiella_pneumoniae__piperacillin_tazobactam	749044	329	25	3080	1	1	25	4	313	0	0
+A	mlst	primary	dataset	klebsiella_pneumoniae__polymyxin_b	590278	17	2	37	1	1	4	0	12	0	0
+A	mlst	primary	dataset	klebsiella_pneumoniae__streptomycin	125000	10	3	10	1	1	0	0	0	0	0
+A	mlst	primary	dataset	klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	785442	642	42	4896	1	1	73	6	939	0	0
+A	mlst	primary	dataset	klebsiella_pneumoniae__tetracycline	808266	347	26	3722	1	1	54	5	735	0	0
+A	mlst	primary	dataset	klebsiella_pneumoniae__ticarcillin_clavulanate	502778	21	2	91	1	1	0	0	0	0	0
+A	mlst	primary	dataset	klebsiella_pneumoniae__tigecycline	512984	375	23	2359	1	1	48	3	273	0	0
+A	mlst	primary	dataset	klebsiella_pneumoniae__tobramycin	876673	435	39	2077	1	1	138	9	563	0	0
+A	mlst	primary	dataset	klebsiella_pneumoniae__trimethoprim	785714	42	7	70	1	1	10	1	21	0	0
+A	mlst	primary	dataset	klebsiella_quasipneumoniae__cefotaxime		3	1	2	1	1	0	0	0	0	0
+A	mlst	primary	dataset	klebsiella_quasipneumoniae__sulfamethoxazole_trimethoprim		0	0	0	0	0	3	1	2	1	1
+A	mlst	primary	dataset	neisseria_gonorrhoeae__azithromycin	722222	60	3	99	1	1	24	1	101	0	0
+A	mlst	primary	dataset	neisseria_gonorrhoeae__ciprofloxacin	700000	122	5	242	1	1	180	0	195	0	0
+A	mlst	primary	dataset	neisseria_gonorrhoeae__erythromycin	505401	74	7	215	1	1	34	1	210	0	0
+A	mlst	primary	dataset	neisseria_gonorrhoeae__penicillin	665667	711	19	9568	1	1	55	1	1216	0	0
+A	mlst	primary	dataset	neisseria_gonorrhoeae__tetracycline		9	3	6	1	1	1	0	1	0	0
+A	mlst	primary	dataset	pseudomonas_aeruginosa__amikacin	800215	165	27	480	1	1	58	10	131	0	0
+A	mlst	primary	dataset	pseudomonas_aeruginosa__aztreonam	777778	27	9	21	1	1	5	2	3	0	0
+A	mlst	primary	dataset	pseudomonas_aeruginosa__cefepime	482143	21	7	18	1	1	4	2	2	0	0
+A	mlst	primary	dataset	pseudomonas_aeruginosa__ceftazidime	892857	21	7	15	1	1	5	2	3	0	0
+A	mlst	primary	dataset	pseudomonas_aeruginosa__ceftazidime_avibactam	539885	153	16	392	1	1	4	0	16	0	0
+A	mlst	primary	dataset	pseudomonas_aeruginosa__ceftolozane_tazobactam	592071	141	16	299	1	1	4	0	22	0	0
+A	mlst	primary	dataset	pseudomonas_aeruginosa__ciprofloxacin	850000	14	5	12	1	1	9	3	6	0	0
+A	mlst	primary	dataset	pseudomonas_aeruginosa__gentamicin	759259	24	6	23	1	1	12	4	8	0	0
+A	mlst	primary	dataset	pseudomonas_aeruginosa__imipenem	730682	46	11	53	1	1	10	4	8	0	0
+A	mlst	primary	dataset	pseudomonas_aeruginosa__levofloxacin	948611	188	30	371	1	1	66	10	138	0	0
+A	mlst	primary	dataset	pseudomonas_aeruginosa__meropenem	732800	222	38	529	1	1	67	12	125	0	0
+A	mlst	primary	dataset	pseudomonas_aeruginosa__piperacillin_tazobactam		10	4	7	1	1	4	2	2	0	0
+A	mlst	primary	dataset	pseudomonas_aeruginosa__tobramycin	896825	26	7	27	1	1	9	3	6	0	0
+A	mlst	primary	dataset	salmonella_enterica__amoxicillin_clavulanate	882895	219	19	293	1	1	12	3	9	0	0
+A	mlst	primary	dataset	salmonella_enterica__ampicillin	839851	543	31	3209	1	1	50	2	97	0	0
+A	mlst	primary	dataset	salmonella_enterica__ampicillin_sulbactam	697977	154	8	1909	1	1	7	1	10	0	0
+A	mlst	primary	dataset	salmonella_enterica__azithromycin	691436	328	13	1920	1	1	18	2	43	0	0
+A	mlst	primary	dataset	salmonella_enterica__cefazolin	435857	157	8	1965	1	1	11	1	56	0	0
+A	mlst	primary	dataset	salmonella_enterica__cefotaxime	675527	408	15	3518	1	1	20	2	111	0	0
+A	mlst	primary	dataset	salmonella_enterica__cefoxitin	824920	315	28	894	1	1	12	3	9	0	0
+A	mlst	primary	dataset	salmonella_enterica__ceftazidime	769036	161	3	406	1	1	1	0	3	0	0
+A	mlst	primary	dataset	salmonella_enterica__ceftiofur	916595	213	20	390	1	1	6	1	5	0	0
+A	mlst	primary	dataset	salmonella_enterica__ceftriaxone	940789	208	19	282	1	1	6	1	5	0	0
+A	mlst	primary	dataset	salmonella_enterica__chloramphenicol	818040	483	30	3250	1	1	19	1	138	0	0
+A	mlst	primary	dataset	salmonella_enterica__ciprofloxacin	542387	113	10	514	1	1	7	1	8	0	0
+A	mlst	primary	dataset	salmonella_enterica__gentamicin	830342	548	31	2633	1	1	22	3	43	0	0
+A	mlst	primary	dataset	salmonella_enterica__kanamycin	929059	186	13	804	1	1	9	1	40	0	0
+A	mlst	primary	dataset	salmonella_enterica__nalidixic_acid	666422	210	12	2628	1	1	4	1	28	0	0
+A	mlst	primary	dataset	salmonella_enterica__spectinomycin	972222	85	5	516	1	1	1	0	5	0	0
+A	mlst	primary	dataset	salmonella_enterica__streptomycin	837875	342	23	1995	1	1	9	0	52	0	0
+A	mlst	primary	dataset	salmonella_enterica__sulfamethoxazole		4	1	4	1	1	0	0	0	0	0
+A	mlst	primary	dataset	salmonella_enterica__sulfamethoxazole_trimethoprim	531229	286	14	2914	1	1	12	1	52	0	0
+A	mlst	primary	dataset	salmonella_enterica__sulfathiazole	575265	92	6	142	1	1	4	0	8	0	0
+A	mlst	primary	dataset	salmonella_enterica__sulfisoxazole	884615	98	13	131	1	1	3	1	2	0	0
+A	mlst	primary	dataset	salmonella_enterica__tetracycline	859085	561	43	4659	1	1	22	2	86	0	0
+A	mlst	primary	dataset	salmonella_enterica__trimethoprim	968750	126	8	475	1	1	6	0	29	0	0
+A	mlst	primary	dataset	shigella_sonnei__ampicillin	1000000	35	3	53	1	1	0	0	0	0	0
+A	mlst	primary	dataset	shigella_sonnei__azithromycin	1000000	150	1	441	1	1	1	0	3	0	0
+A	mlst	primary	dataset	shigella_sonnei__cefoperazone	935374	172	3	349	1	1	1	0	2	0	0
+A	mlst	primary	dataset	shigella_sonnei__cefoxitin	550676	159	2	304	1	1	1	0	2	0	0
+A	mlst	primary	dataset	shigella_sonnei__ceftazidime	959732	150	1	149	1	1	1	0	1	0	0
+A	mlst	primary	dataset	shigella_sonnei__ceftriaxone	916667	35	3	72	1	1	0	0	0	0	0
+A	mlst	primary	dataset	shigella_sonnei__colistin	1000000	177	3	3462	1	1	1	0	28	0	0
+A	mlst	primary	dataset	shigella_sonnei__gentamicin	848198	191	5	356	1	1	1	0	2	0	0
+A	mlst	primary	dataset	shigella_sonnei__sulfamethoxazole_trimethoprim	981164	182	4	615	1	1	1	0	4	0	0
+A	mlst	primary	dataset	shigella_sonnei__tetracycline	873276	181	4	755	1	1	1	0	5	0	0
+A	mlst	primary	dataset	shigella_sonnei__tobramycin	906790	161	3	304	1	1	1	0	2	0	0
+A	mlst	primary	dataset	staphylococcus_aureus__cefoxitin	828326	562	22	4450	1	1	115	0	1538	0	0
+A	mlst	primary	dataset	staphylococcus_aureus__chloramphenicol	569813	488	16	6243	1	1	89	2	1044	0	0
+A	mlst	primary	dataset	staphylococcus_aureus__ciprofloxacin	778560	701	20	4719	1	1	120	2	960	0	0
+A	mlst	primary	dataset	staphylococcus_aureus__clindamycin	621260	621	24	6627	1	1	129	0	2477	0	0
+A	mlst	primary	dataset	staphylococcus_aureus__daptomycin	577217	459	13	1649	1	1	92	1	289	0	0
+A	mlst	primary	dataset	staphylococcus_aureus__erythromycin	803118	639	27	5726	1	1	150	1	2013	0	0
+A	mlst	primary	dataset	staphylococcus_aureus__fusidic_acid	875000	41	2	93	1	1	24	0	158	0	0
+A	mlst	primary	dataset	staphylococcus_aureus__gentamicin	668378	429	13	1555	1	1	158	3	1004	0	0
+A	mlst	primary	dataset	staphylococcus_aureus__mupirocin	769767	48	1	215	1	1	4	0	20	0	0
+A	mlst	primary	dataset	staphylococcus_aureus__oxacillin	718156	477	15	4228	1	1	96	1	1262	0	0
+A	mlst	primary	dataset	staphylococcus_aureus__penicillin	866780	603	18	1859	1	1	103	0	555	0	0
+A	mlst	primary	dataset	staphylococcus_aureus__rifampin	884444	46	5	84	1	1	40	0	127	0	0
+A	mlst	primary	dataset	staphylococcus_aureus__sulfamethoxazole_trimethoprim	634340	601	15	3498	1	1	107	3	619	0	0
+A	mlst	primary	dataset	staphylococcus_aureus__tetracycline	703623	525	20	3548	1	1	70	1	695	0	0
+A	mlst	primary	dataset	streptococcus_pneumoniae__azithromycin	838459	545	13	1550	1	1	241	2	2261	0	0
+A	mlst	primary	dataset	streptococcus_pneumoniae__cefepime	671961	107	7	882	1	1	165	1	1229	0	0
+A	mlst	primary	dataset	streptococcus_pneumoniae__cefotaxime	695971	111	7	754	1	1	147	0	560	0	0
+A	mlst	primary	dataset	streptococcus_pneumoniae__ceftriaxone	560140	137	8	1303	1	1	218	1	991	0	0
+A	mlst	primary	dataset	streptococcus_pneumoniae__cefuroxime	624313	96	4	942	1	1	249	4	2367	0	0
+A	mlst	primary	dataset	streptococcus_pneumoniae__chloramphenicol	746834	346	9	646	1	1	253	1	839	0	0
+A	mlst	primary	dataset	streptococcus_pneumoniae__clindamycin	688919	604	17	1144	1	1	282	3	2136	0	0
+A	mlst	primary	dataset	streptococcus_pneumoniae__erythromycin	822448	720	25	2028	1	1	352	3	3143	0	0
+A	mlst	primary	dataset	streptococcus_pneumoniae__meropenem	618125	69	5	309	1	1	152	1	543	0	0
+A	mlst	primary	dataset	streptococcus_pneumoniae__penicillin		0	0	0	0	0	154	3	621	1	1
+A	mlst	primary	dataset	streptococcus_pneumoniae__sulfamethoxazole_trimethoprim	752289	389	16	643	1	1	260	4	2478	0	0
+A	mlst	primary	dataset	streptococcus_pneumoniae__tetracycline	679572	655	16	3958	1	1	241	2	2051	0	0
+A	mlst_hc20	mlst_hc20	overall	all	752734	11303	1009	56465	136	11					
+A	mlst_hc20	mlst_hc20	species	acinetobacter_baumannii	586639	2558	94	10022	16	1					
+A	mlst_hc20	mlst_hc20	species	campylobacter_coli	940476	140	38	142	7	1					
+A	mlst_hc20	mlst_hc20	species	campylobacter_jejuni	913333	276	37	543	4	1					
+A	mlst_hc20	mlst_hc20	species	enterobacter_cloacae		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	species	enterococcus_faecium	783889	94	14	105	5	1					
+A	mlst_hc20	mlst_hc20	species	escherichia_coli	623176	409	102	413	23	1					
+A	mlst_hc20	mlst_hc20	species	klebsiella_aerogenes		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	species	klebsiella_oxytoca	630729	72	6	81	4	1					
+A	mlst_hc20	mlst_hc20	species	klebsiella_pneumoniae	660627	4724	358	33629	36	1					
+A	mlst_hc20	mlst_hc20	species	klebsiella_quasipneumoniae		3	1	2	1	1					
+A	mlst_hc20	mlst_hc20	species	neisseria_gonorrhoeae		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	species	pseudomonas_aeruginosa	475065	289	66	275	12	1					
+A	mlst_hc20	mlst_hc20	species	salmonella_enterica	749468	2724	286	11246	22	1					
+A	mlst_hc20	mlst_hc20	species	shigella_sonnei		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	species	staphylococcus_aureus		14	7	7	6	1					
+A	mlst_hc20	mlst_hc20	species	streptococcus_pneumoniae		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	acinetobacter_baumannii__amikacin	844777	295	16	2455	1	1					
+A	mlst_hc20	mlst_hc20	dataset	acinetobacter_baumannii__ampicillin_sulbactam	572470	320	11	1025	1	1					
+A	mlst_hc20	mlst_hc20	dataset	acinetobacter_baumannii__cefotaxime	494792	97	1	96	1	1					
+A	mlst_hc20	mlst_hc20	dataset	acinetobacter_baumannii__ceftazidime	496144	145	3	454	1	1					
+A	mlst_hc20	mlst_hc20	dataset	acinetobacter_baumannii__ceftriaxone	491667	30	3	27	1	1					
+A	mlst_hc20	mlst_hc20	dataset	acinetobacter_baumannii__ciprofloxacin	700000	214	5	548	1	1					
+A	mlst_hc20	mlst_hc20	dataset	acinetobacter_baumannii__doripenem		7	2	5	1	1					
+A	mlst_hc20	mlst_hc20	dataset	acinetobacter_baumannii__doxycycline		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	acinetobacter_baumannii__gentamicin	513610	268	8	544	1	1					
+A	mlst_hc20	mlst_hc20	dataset	acinetobacter_baumannii__imipenem	597586	254	8	1540	1	1					
+A	mlst_hc20	mlst_hc20	dataset	acinetobacter_baumannii__levofloxacin	750065	144	6	314	1	1					
+A	mlst_hc20	mlst_hc20	dataset	acinetobacter_baumannii__meropenem	855181	97	6	539	1	1					
+A	mlst_hc20	mlst_hc20	dataset	acinetobacter_baumannii__minocycline		2	1	1	1	1					
+A	mlst_hc20	mlst_hc20	dataset	acinetobacter_baumannii__moxifloxacin	437500	17	2	15	1	1					
+A	mlst_hc20	mlst_hc20	dataset	acinetobacter_baumannii__sulfamethoxazole_trimethoprim	480000	271	10	1083	1	1					
+A	mlst_hc20	mlst_hc20	dataset	acinetobacter_baumannii__tetracycline	590722	202	5	443	1	1					
+A	mlst_hc20	mlst_hc20	dataset	acinetobacter_baumannii__tobramycin	561703	195	7	933	1	1					
+A	mlst_hc20	mlst_hc20	dataset	campylobacter_coli__azithromycin		2	1	1	1	1					
+A	mlst_hc20	mlst_hc20	dataset	campylobacter_coli__ciprofloxacin	1000000	57	14	63	1	1					
+A	mlst_hc20	mlst_hc20	dataset	campylobacter_coli__clindamycin	583333	19	6	13	1	1					
+A	mlst_hc20	mlst_hc20	dataset	campylobacter_coli__erythromycin		2	1	1	1	1					
+A	mlst_hc20	mlst_hc20	dataset	campylobacter_coli__nalidixic_acid	1000000	53	13	60	1	1					
+A	mlst_hc20	mlst_hc20	dataset	campylobacter_coli__telithromycin		2	1	1	1	1					
+A	mlst_hc20	mlst_hc20	dataset	campylobacter_coli__tetracycline		5	2	3	1	1					
+A	mlst_hc20	mlst_hc20	dataset	campylobacter_jejuni__ciprofloxacin	934722	85	12	209	1	1					
+A	mlst_hc20	mlst_hc20	dataset	campylobacter_jejuni__clindamycin	908333	33	2	31	1	1					
+A	mlst_hc20	mlst_hc20	dataset	campylobacter_jejuni__nalidixic_acid	935278	85	12	209	1	1					
+A	mlst_hc20	mlst_hc20	dataset	campylobacter_jejuni__tetracycline	875000	73	11	94	1	1					
+A	mlst_hc20	mlst_hc20	dataset	enterobacter_cloacae__cefepime		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	enterobacter_cloacae__ciprofloxacin		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	enterobacter_cloacae__gentamicin		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	enterobacter_cloacae__imipenem		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	enterobacter_cloacae__levofloxacin		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	enterobacter_cloacae__meropenem		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	enterobacter_cloacae__sulfamethoxazole_trimethoprim		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	enterobacter_cloacae__tobramycin		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	enterobacter_cloacae__trimethoprim		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	enterococcus_faecium__ampicillin		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	enterococcus_faecium__clindamycin		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	enterococcus_faecium__dalfopristin_quinupristin	1000000	23	1	22	1	1					
+A	mlst_hc20	mlst_hc20	dataset	enterococcus_faecium__daptomycin	319444	24	6	23	1	1					
+A	mlst_hc20	mlst_hc20	dataset	enterococcus_faecium__doxycycline		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	enterococcus_faecium__erythromycin		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	enterococcus_faecium__gentamicin	1000000	23	1	42	1	1					
+A	mlst_hc20	mlst_hc20	dataset	enterococcus_faecium__kanamycin		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	enterococcus_faecium__linezolid		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	enterococcus_faecium__streptomycin		9	1	8	1	1					
+A	mlst_hc20	mlst_hc20	dataset	enterococcus_faecium__teicoplanin		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	enterococcus_faecium__tetracycline		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	enterococcus_faecium__vancomycin	850000	15	5	10	1	1					
+A	mlst_hc20	mlst_hc20	dataset	escherichia_coli__amikacin		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	escherichia_coli__amoxicillin_clavulanate	738095	15	3	24	1	1					
+A	mlst_hc20	mlst_hc20	dataset	escherichia_coli__ampicillin	530303	18	3	15	1	1					
+A	mlst_hc20	mlst_hc20	dataset	escherichia_coli__ampicillin_sulbactam	261364	27	6	22	1	1					
+A	mlst_hc20	mlst_hc20	dataset	escherichia_coli__aztreonam	852273	21	4	17	1	1					
+A	mlst_hc20	mlst_hc20	dataset	escherichia_coli__cefazolin	969697	16	3	13	1	1					
+A	mlst_hc20	mlst_hc20	dataset	escherichia_coli__cefepime	500000	33	7	29	1	1					
+A	mlst_hc20	mlst_hc20	dataset	escherichia_coli__cefotaxime		2	1	1	1	1					
+A	mlst_hc20	mlst_hc20	dataset	escherichia_coli__cefoxitin		12	5	7	1	1					
+A	mlst_hc20	mlst_hc20	dataset	escherichia_coli__cefpodoxime		2	1	1	1	1					
+A	mlst_hc20	mlst_hc20	dataset	escherichia_coli__cefpodoxime_clavulanate		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	escherichia_coli__ceftazidime	726190	21	6	15	1	1					
+A	mlst_hc20	mlst_hc20	dataset	escherichia_coli__ceftiofur		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	escherichia_coli__ceftriaxone	801136	30	8	22	1	1					
+A	mlst_hc20	mlst_hc20	dataset	escherichia_coli__chloramphenicol		10	5	5	1	1					
+A	mlst_hc20	mlst_hc20	dataset	escherichia_coli__ciprofloxacin		2	1	1	1	1					
+A	mlst_hc20	mlst_hc20	dataset	escherichia_coli__doxycycline	625000	15	3	25	1	1					
+A	mlst_hc20	mlst_hc20	dataset	escherichia_coli__ertapenem		10	3	7	1	1					
+A	mlst_hc20	mlst_hc20	dataset	escherichia_coli__gentamicin	865909	39	10	33	1	1					
+A	mlst_hc20	mlst_hc20	dataset	escherichia_coli__imipenem		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	escherichia_coli__levofloxacin		2	1	1	1	1					
+A	mlst_hc20	mlst_hc20	dataset	escherichia_coli__meropenem		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	escherichia_coli__nalidixic_acid		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	escherichia_coli__nitrofurantoin	815476	18	4	26	1	1					
+A	mlst_hc20	mlst_hc20	dataset	escherichia_coli__norfloxacin		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	escherichia_coli__piperacillin_tazobactam		2	1	1	1	1					
+A	mlst_hc20	mlst_hc20	dataset	escherichia_coli__streptomycin		2	1	1	1	1					
+A	mlst_hc20	mlst_hc20	dataset	escherichia_coli__sulfamethoxazole		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	escherichia_coli__sulfamethoxazole_trimethoprim	937678	65	13	92	1	1					
+A	mlst_hc20	mlst_hc20	dataset	escherichia_coli__tetracycline	861111	33	6	48	1	1					
+A	mlst_hc20	mlst_hc20	dataset	escherichia_coli__tobramycin		14	7	7	1	1					
+A	mlst_hc20	mlst_hc20	dataset	escherichia_coli__trimethoprim		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	klebsiella_aerogenes__ertapenem		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	klebsiella_aerogenes__imipenem		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	klebsiella_aerogenes__meropenem		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	klebsiella_oxytoca__cefotaxime		4	1	4	1	1					
+A	mlst_hc20	mlst_hc20	dataset	klebsiella_oxytoca__cefoxitin	656250	22	2	20	1	1					
+A	mlst_hc20	mlst_hc20	dataset	klebsiella_oxytoca__cefpodoxime	500000	29	2	27	1	1					
+A	mlst_hc20	mlst_hc20	dataset	klebsiella_oxytoca__ertapenem	866667	17	1	30	1	1					
+A	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__amikacin	755066	343	16	1425	1	1					
+A	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__amoxicillin_clavulanate	769593	34	6	49	1	1					
+A	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__ampicillin_sulbactam		9	3	6	1	1					
+A	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__aztreonam	628912	230	14	2521	1	1					
+A	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__cefazolin	1000000	22	6	17	1	1					
+A	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__cefepime	541732	262	23	2192	1	1					
+A	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__cefotetan		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__cefoxitin	597985	226	32	2288	1	1					
+A	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__cefpodoxime	694444	18	3	15	1	1					
+A	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__cefpodoxime_clavulanate	583333	15	2	13	1	1					
+A	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__ceftazidime	597685	242	15	250	1	1					
+A	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__ceftazidime_avibactam		2	1	1	1	1					
+A	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__ceftriaxone	1000000	91	5	86	1	1					
+A	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__cefuroxime	973684	27	4	23	1	1					
+A	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__chloramphenicol	413204	71	7	256	1	1					
+A	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__ciprofloxacin	728889	53	10	59	1	1					
+A	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__colistin	781241	164	9	1462	1	1					
+A	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__doripenem	221814	73	2	205	1	1					
+A	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__doxycycline	400000	10	2	16	1	1					
+A	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__ertapenem	742958	78	2	146	1	1					
+A	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__fosfomycin	591987	64	3	298	1	1					
+A	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__gentamicin	854266	418	26	4353	1	1					
+A	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__imipenem	961125	242	12	2522	1	1					
+A	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__levofloxacin	448639	111	4	208	1	1					
+A	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__meropenem	812437	323	21	2610	1	1					
+A	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__nitrofurantoin	720274	88	2	329	1	1					
+A	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__norfloxacin	430556	28	4	25	1	1					
+A	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__ofloxacin	583333	18	3	21	1	1					
+A	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__piperacillin_tazobactam	664404	182	18	2321	1	1					
+A	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__polymyxin_b	583333	7	1	12	1	1					
+A	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__streptomycin		5	1	6	1	1					
+A	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	789467	413	27	3723	1	1					
+A	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__tetracycline	746259	199	18	2984	1	1					
+A	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__ticarcillin_clavulanate	715278	17	3	29	1	1					
+A	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__tigecycline	467940	332	26	1749	1	1					
+A	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__tobramycin	782730	283	22	1390	1	1					
+A	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__trimethoprim	866667	24	5	19	1	1					
+A	mlst_hc20	mlst_hc20	dataset	klebsiella_quasipneumoniae__cefotaxime		3	1	2	1	1					
+A	mlst_hc20	mlst_hc20	dataset	klebsiella_quasipneumoniae__sulfamethoxazole_trimethoprim		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	neisseria_gonorrhoeae__azithromycin		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	neisseria_gonorrhoeae__ciprofloxacin		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	neisseria_gonorrhoeae__erythromycin		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	neisseria_gonorrhoeae__penicillin		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	neisseria_gonorrhoeae__tetracycline		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	pseudomonas_aeruginosa__amikacin	781250	16	6	13	1	1					
+A	mlst_hc20	mlst_hc20	dataset	pseudomonas_aeruginosa__aztreonam		5	2	3	1	1					
+A	mlst_hc20	mlst_hc20	dataset	pseudomonas_aeruginosa__cefepime		3	1	2	1	1					
+A	mlst_hc20	mlst_hc20	dataset	pseudomonas_aeruginosa__ceftazidime		3	1	2	1	1					
+A	mlst_hc20	mlst_hc20	dataset	pseudomonas_aeruginosa__ceftazidime_avibactam	518466	90	16	105	1	1					
+A	mlst_hc20	mlst_hc20	dataset	pseudomonas_aeruginosa__ceftolozane_tazobactam	720513	85	13	85	1	1					
+A	mlst_hc20	mlst_hc20	dataset	pseudomonas_aeruginosa__ciprofloxacin		4	1	4	1	1					
+A	mlst_hc20	mlst_hc20	dataset	pseudomonas_aeruginosa__gentamicin		4	1	4	1	1					
+A	mlst_hc20	mlst_hc20	dataset	pseudomonas_aeruginosa__imipenem	375000	15	4	11	1	1					
+A	mlst_hc20	mlst_hc20	dataset	pseudomonas_aeruginosa__levofloxacin	888889	29	9	21	1	1					
+A	mlst_hc20	mlst_hc20	dataset	pseudomonas_aeruginosa__meropenem	666667	31	11	21	1	1					
+A	mlst_hc20	mlst_hc20	dataset	pseudomonas_aeruginosa__piperacillin_tazobactam		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	pseudomonas_aeruginosa__tobramycin		4	1	4	1	1					
+A	mlst_hc20	mlst_hc20	dataset	salmonella_enterica__amoxicillin_clavulanate	857143	52	9	43	1	1					
+A	mlst_hc20	mlst_hc20	dataset	salmonella_enterica__ampicillin	829985	217	21	1027	1	1					
+A	mlst_hc20	mlst_hc20	dataset	salmonella_enterica__ampicillin_sulbactam	707418	117	8	793	1	1					
+A	mlst_hc20	mlst_hc20	dataset	salmonella_enterica__azithromycin	630271	185	11	531	1	1					
+A	mlst_hc20	mlst_hc20	dataset	salmonella_enterica__cefazolin	596851	105	6	865	1	1					
+A	mlst_hc20	mlst_hc20	dataset	salmonella_enterica__cefotaxime	733314	216	17	968	1	1					
+A	mlst_hc20	mlst_hc20	dataset	salmonella_enterica__cefoxitin	724640	96	16	131	1	1					
+A	mlst_hc20	mlst_hc20	dataset	salmonella_enterica__ceftazidime	589012	105	3	242	1	1					
+A	mlst_hc20	mlst_hc20	dataset	salmonella_enterica__ceftiofur	848958	72	12	60	1	1					
+A	mlst_hc20	mlst_hc20	dataset	salmonella_enterica__ceftriaxone	972222	49	9	40	1	1					
+A	mlst_hc20	mlst_hc20	dataset	salmonella_enterica__chloramphenicol	738744	267	24	1033	1	1					
+A	mlst_hc20	mlst_hc20	dataset	salmonella_enterica__ciprofloxacin	599372	58	8	221	1	1					
+A	mlst_hc20	mlst_hc20	dataset	salmonella_enterica__gentamicin	738394	265	28	631	1	1					
+A	mlst_hc20	mlst_hc20	dataset	salmonella_enterica__kanamycin	958333	92	18	112	1	1					
+A	mlst_hc20	mlst_hc20	dataset	salmonella_enterica__nalidixic_acid	519241	134	6	1132	1	1					
+A	mlst_hc20	mlst_hc20	dataset	salmonella_enterica__spectinomycin	1000000	22	5	22	1	1					
+A	mlst_hc20	mlst_hc20	dataset	salmonella_enterica__streptomycin	712716	133	20	268	1	1					
+A	mlst_hc20	mlst_hc20	dataset	salmonella_enterica__sulfamethoxazole		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	salmonella_enterica__sulfamethoxazole_trimethoprim	748887	193	14	1327	1	1					
+A	mlst_hc20	mlst_hc20	dataset	salmonella_enterica__sulfathiazole		12	3	9	1	1					
+A	mlst_hc20	mlst_hc20	dataset	salmonella_enterica__sulfisoxazole	952381	29	9	20	1	1					
+A	mlst_hc20	mlst_hc20	dataset	salmonella_enterica__tetracycline	780416	279	33	1745	1	1					
+A	mlst_hc20	mlst_hc20	dataset	salmonella_enterica__trimethoprim	1000000	26	6	26	1	1					
+A	mlst_hc20	mlst_hc20	dataset	shigella_sonnei__ampicillin		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	shigella_sonnei__azithromycin		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	shigella_sonnei__cefoperazone		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	shigella_sonnei__cefoxitin		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	shigella_sonnei__ceftazidime		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	shigella_sonnei__ceftriaxone		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	shigella_sonnei__colistin		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	shigella_sonnei__gentamicin		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	shigella_sonnei__sulfamethoxazole_trimethoprim		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	shigella_sonnei__tetracycline		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	shigella_sonnei__tobramycin		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	staphylococcus_aureus__cefoxitin		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	staphylococcus_aureus__chloramphenicol		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	staphylococcus_aureus__ciprofloxacin		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	staphylococcus_aureus__clindamycin		2	1	1	1	1					
+A	mlst_hc20	mlst_hc20	dataset	staphylococcus_aureus__daptomycin		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	staphylococcus_aureus__erythromycin		2	1	1	1	1					
+A	mlst_hc20	mlst_hc20	dataset	staphylococcus_aureus__fusidic_acid		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	staphylococcus_aureus__gentamicin		2	1	1	1	1					
+A	mlst_hc20	mlst_hc20	dataset	staphylococcus_aureus__mupirocin		4	2	2	1	1					
+A	mlst_hc20	mlst_hc20	dataset	staphylococcus_aureus__oxacillin		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	staphylococcus_aureus__penicillin		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	staphylococcus_aureus__rifampin		2	1	1	1	1					
+A	mlst_hc20	mlst_hc20	dataset	staphylococcus_aureus__sulfamethoxazole_trimethoprim		2	1	1	1	1					
+A	mlst_hc20	mlst_hc20	dataset	staphylococcus_aureus__tetracycline		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	streptococcus_pneumoniae__azithromycin		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	streptococcus_pneumoniae__cefepime		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	streptococcus_pneumoniae__cefotaxime		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	streptococcus_pneumoniae__ceftriaxone		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	streptococcus_pneumoniae__cefuroxime		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	streptococcus_pneumoniae__chloramphenicol		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	streptococcus_pneumoniae__clindamycin		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	streptococcus_pneumoniae__erythromycin		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	streptococcus_pneumoniae__meropenem		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	streptococcus_pneumoniae__penicillin		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	streptococcus_pneumoniae__sulfamethoxazole_trimethoprim		0	0	0	0	0					
+A	mlst_hc20	mlst_hc20	dataset	streptococcus_pneumoniae__tetracycline		0	0	0	0	0					
+A	mlst_hc20	mlst	overall	all	751745	11303	767	70815	136	11					
+A	mlst_hc20	mlst	species	acinetobacter_baumannii	576665	2558	75	11219	16	1					
+A	mlst_hc20	mlst	species	campylobacter_coli	940476	140	23	320	7	1					
+A	mlst_hc20	mlst	species	campylobacter_jejuni	910185	276	31	837	4	1					
+A	mlst_hc20	mlst	species	enterobacter_cloacae		0	0	0	0	0					
+A	mlst_hc20	mlst	species	enterococcus_faecium	776667	94	13	108	5	1					
+A	mlst_hc20	mlst	species	escherichia_coli	645030	409	82	924	23	1					
+A	mlst_hc20	mlst	species	klebsiella_aerogenes		0	0	0	0	0					
+A	mlst_hc20	mlst	species	klebsiella_oxytoca	630729	72	6	81	4	1					
+A	mlst_hc20	mlst	species	klebsiella_pneumoniae	651961	4724	299	35392	36	1					
+A	mlst_hc20	mlst	species	klebsiella_quasipneumoniae		3	1	2	1	1					
+A	mlst_hc20	mlst	species	neisseria_gonorrhoeae		0	0	0	0	0					
+A	mlst_hc20	mlst	species	pseudomonas_aeruginosa	462584	289	57	412	12	1					
+A	mlst_hc20	mlst	species	salmonella_enterica	758234	2724	173	21513	22	1					
+A	mlst_hc20	mlst	species	shigella_sonnei		0	0	0	0	0					
+A	mlst_hc20	mlst	species	staphylococcus_aureus		14	7	7	6	1					
+A	mlst_hc20	mlst	species	streptococcus_pneumoniae		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	acinetobacter_baumannii__amikacin	766236	295	9	3148	1	1					
+A	mlst_hc20	mlst	dataset	acinetobacter_baumannii__ampicillin_sulbactam	583225	320	9	1128	1	1					
+A	mlst_hc20	mlst	dataset	acinetobacter_baumannii__cefotaxime	494792	97	1	96	1	1					
+A	mlst_hc20	mlst	dataset	acinetobacter_baumannii__ceftazidime	496144	145	3	454	1	1					
+A	mlst_hc20	mlst	dataset	acinetobacter_baumannii__ceftriaxone	491667	30	3	27	1	1					
+A	mlst_hc20	mlst	dataset	acinetobacter_baumannii__ciprofloxacin	700000	214	5	548	1	1					
+A	mlst_hc20	mlst	dataset	acinetobacter_baumannii__doripenem	900000	7	1	10	1	1					
+A	mlst_hc20	mlst	dataset	acinetobacter_baumannii__doxycycline		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	acinetobacter_baumannii__gentamicin	513610	268	8	544	1	1					
+A	mlst_hc20	mlst	dataset	acinetobacter_baumannii__imipenem	561527	254	7	1545	1	1					
+A	mlst_hc20	mlst	dataset	acinetobacter_baumannii__levofloxacin	788560	144	4	390	1	1					
+A	mlst_hc20	mlst	dataset	acinetobacter_baumannii__meropenem	826217	97	5	544	1	1					
+A	mlst_hc20	mlst	dataset	acinetobacter_baumannii__minocycline		2	1	1	1	1					
+A	mlst_hc20	mlst	dataset	acinetobacter_baumannii__moxifloxacin	437500	17	2	15	1	1					
+A	mlst_hc20	mlst	dataset	acinetobacter_baumannii__sulfamethoxazole_trimethoprim	592553	271	6	1384	1	1					
+A	mlst_hc20	mlst	dataset	acinetobacter_baumannii__tetracycline	590722	202	5	443	1	1					
+A	mlst_hc20	mlst	dataset	acinetobacter_baumannii__tobramycin	483891	195	6	942	1	1					
+A	mlst_hc20	mlst	dataset	campylobacter_coli__azithromycin		2	1	1	1	1					
+A	mlst_hc20	mlst	dataset	campylobacter_coli__ciprofloxacin	1000000	57	6	157	1	1					
+A	mlst_hc20	mlst	dataset	campylobacter_coli__clindamycin	583333	19	6	13	1	1					
+A	mlst_hc20	mlst	dataset	campylobacter_coli__erythromycin		2	1	1	1	1					
+A	mlst_hc20	mlst	dataset	campylobacter_coli__nalidixic_acid	1000000	53	6	144	1	1					
+A	mlst_hc20	mlst	dataset	campylobacter_coli__telithromycin		2	1	1	1	1					
+A	mlst_hc20	mlst	dataset	campylobacter_coli__tetracycline		5	2	3	1	1					
+A	mlst_hc20	mlst	dataset	campylobacter_jejuni__ciprofloxacin	938519	85	10	336	1	1					
+A	mlst_hc20	mlst	dataset	campylobacter_jejuni__clindamycin	908333	33	2	31	1	1					
+A	mlst_hc20	mlst	dataset	campylobacter_jejuni__nalidixic_acid	946667	85	10	336	1	1					
+A	mlst_hc20	mlst	dataset	campylobacter_jejuni__tetracycline	847222	73	9	134	1	1					
+A	mlst_hc20	mlst	dataset	enterobacter_cloacae__cefepime		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	enterobacter_cloacae__ciprofloxacin		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	enterobacter_cloacae__gentamicin		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	enterobacter_cloacae__imipenem		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	enterobacter_cloacae__levofloxacin		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	enterobacter_cloacae__meropenem		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	enterobacter_cloacae__sulfamethoxazole_trimethoprim		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	enterobacter_cloacae__tobramycin		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	enterobacter_cloacae__trimethoprim		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	enterococcus_faecium__ampicillin		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	enterococcus_faecium__clindamycin		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	enterococcus_faecium__dalfopristin_quinupristin	1000000	23	1	22	1	1					
+A	mlst_hc20	mlst	dataset	enterococcus_faecium__daptomycin	283333	24	5	26	1	1					
+A	mlst_hc20	mlst	dataset	enterococcus_faecium__doxycycline		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	enterococcus_faecium__erythromycin		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	enterococcus_faecium__gentamicin	1000000	23	1	42	1	1					
+A	mlst_hc20	mlst	dataset	enterococcus_faecium__kanamycin		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	enterococcus_faecium__linezolid		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	enterococcus_faecium__streptomycin		9	1	8	1	1					
+A	mlst_hc20	mlst	dataset	enterococcus_faecium__teicoplanin		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	enterococcus_faecium__tetracycline		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	enterococcus_faecium__vancomycin	850000	15	5	10	1	1					
+A	mlst_hc20	mlst	dataset	escherichia_coli__amikacin		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	escherichia_coli__amoxicillin_clavulanate	738095	15	3	24	1	1					
+A	mlst_hc20	mlst	dataset	escherichia_coli__ampicillin	530303	18	3	15	1	1					
+A	mlst_hc20	mlst	dataset	escherichia_coli__ampicillin_sulbactam	340188	27	3	54	1	1					
+A	mlst_hc20	mlst	dataset	escherichia_coli__aztreonam	819444	21	2	44	1	1					
+A	mlst_hc20	mlst	dataset	escherichia_coli__cefazolin	969697	16	3	13	1	1					
+A	mlst_hc20	mlst	dataset	escherichia_coli__cefepime	609821	33	4	146	1	1					
+A	mlst_hc20	mlst	dataset	escherichia_coli__cefotaxime		2	1	1	1	1					
+A	mlst_hc20	mlst	dataset	escherichia_coli__cefoxitin		12	5	7	1	1					
+A	mlst_hc20	mlst	dataset	escherichia_coli__cefpodoxime		2	1	1	1	1					
+A	mlst_hc20	mlst	dataset	escherichia_coli__cefpodoxime_clavulanate		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	escherichia_coli__ceftazidime	771429	21	5	19	1	1					
+A	mlst_hc20	mlst	dataset	escherichia_coli__ceftiofur		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	escherichia_coli__ceftriaxone	960069	30	6	54	1	1					
+A	mlst_hc20	mlst	dataset	escherichia_coli__chloramphenicol		10	5	5	1	1					
+A	mlst_hc20	mlst	dataset	escherichia_coli__ciprofloxacin		2	1	1	1	1					
+A	mlst_hc20	mlst	dataset	escherichia_coli__doxycycline	779762	15	2	43	1	1					
+A	mlst_hc20	mlst	dataset	escherichia_coli__ertapenem		10	3	7	1	1					
+A	mlst_hc20	mlst	dataset	escherichia_coli__gentamicin	890625	39	8	65	1	1					
+A	mlst_hc20	mlst	dataset	escherichia_coli__imipenem		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	escherichia_coli__levofloxacin		2	1	1	1	1					
+A	mlst_hc20	mlst	dataset	escherichia_coli__meropenem		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	escherichia_coli__nalidixic_acid		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	escherichia_coli__nitrofurantoin	815476	18	4	26	1	1					
+A	mlst_hc20	mlst	dataset	escherichia_coli__norfloxacin		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	escherichia_coli__piperacillin_tazobactam		2	1	1	1	1					
+A	mlst_hc20	mlst	dataset	escherichia_coli__streptomycin		2	1	1	1	1					
+A	mlst_hc20	mlst	dataset	escherichia_coli__sulfamethoxazole		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	escherichia_coli__sulfamethoxazole_trimethoprim	928629	65	8	330	1	1					
+A	mlst_hc20	mlst	dataset	escherichia_coli__tetracycline	833333	33	5	59	1	1					
+A	mlst_hc20	mlst	dataset	escherichia_coli__tobramycin		14	7	7	1	1					
+A	mlst_hc20	mlst	dataset	escherichia_coli__trimethoprim		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	klebsiella_aerogenes__ertapenem		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	klebsiella_aerogenes__imipenem		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	klebsiella_aerogenes__meropenem		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	klebsiella_oxytoca__cefotaxime		4	1	4	1	1					
+A	mlst_hc20	mlst	dataset	klebsiella_oxytoca__cefoxitin	656250	22	2	20	1	1					
+A	mlst_hc20	mlst	dataset	klebsiella_oxytoca__cefpodoxime	500000	29	2	27	1	1					
+A	mlst_hc20	mlst	dataset	klebsiella_oxytoca__ertapenem	866667	17	1	30	1	1					
+A	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__amikacin	795874	343	14	1543	1	1					
+A	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__amoxicillin_clavulanate	735417	34	5	62	1	1					
+A	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__ampicillin_sulbactam		9	3	6	1	1					
+A	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__aztreonam	652987	230	12	2577	1	1					
+A	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__cefazolin	987879	22	5	37	1	1					
+A	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__cefepime	565046	262	18	2296	1	1					
+A	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__cefotetan		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__cefoxitin	595059	226	29	2327	1	1					
+A	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__cefpodoxime	694444	18	3	15	1	1					
+A	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__cefpodoxime_clavulanate	583333	15	2	13	1	1					
+A	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__ceftazidime	657569	242	12	309	1	1					
+A	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__ceftazidime_avibactam		2	1	1	1	1					
+A	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__ceftriaxone	1000000	91	4	98	1	1					
+A	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__cefuroxime	973684	27	4	23	1	1					
+A	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__chloramphenicol	384503	71	5	282	1	1					
+A	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__ciprofloxacin	685540	53	7	112	1	1					
+A	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__colistin	796846	164	6	1550	1	1					
+A	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__doripenem	351449	73	1	276	1	1					
+A	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__doxycycline	400000	10	2	16	1	1					
+A	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__ertapenem	742958	78	2	146	1	1					
+A	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__fosfomycin	436435	64	2	350	1	1					
+A	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__gentamicin	867612	418	24	4511	1	1					
+A	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__imipenem	953638	242	10	2684	1	1					
+A	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__levofloxacin	448639	111	4	208	1	1					
+A	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__meropenem	794340	323	17	2721	1	1					
+A	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__nitrofurantoin	720274	88	2	329	1	1					
+A	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__norfloxacin	374074	28	3	33	1	1					
+A	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__ofloxacin	583333	18	2	38	1	1					
+A	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__piperacillin_tazobactam	708057	182	14	2360	1	1					
+A	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__polymyxin_b	583333	7	1	12	1	1					
+A	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__streptomycin		5	1	6	1	1					
+A	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	764597	413	21	3913	1	1					
+A	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__tetracycline	730805	199	17	3034	1	1					
+A	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__ticarcillin_clavulanate	541667	17	1	72	1	1					
+A	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__tigecycline	488661	332	22	1957	1	1					
+A	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__tobramycin	761431	283	20	1430	1	1					
+A	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__trimethoprim	777778	24	3	45	1	1					
+A	mlst_hc20	mlst	dataset	klebsiella_quasipneumoniae__cefotaxime		3	1	2	1	1					
+A	mlst_hc20	mlst	dataset	klebsiella_quasipneumoniae__sulfamethoxazole_trimethoprim		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	neisseria_gonorrhoeae__azithromycin		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	neisseria_gonorrhoeae__ciprofloxacin		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	neisseria_gonorrhoeae__erythromycin		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	neisseria_gonorrhoeae__penicillin		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	neisseria_gonorrhoeae__tetracycline		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	pseudomonas_aeruginosa__amikacin	687500	16	5	15	1	1					
+A	mlst_hc20	mlst	dataset	pseudomonas_aeruginosa__aztreonam		5	2	3	1	1					
+A	mlst_hc20	mlst	dataset	pseudomonas_aeruginosa__cefepime		3	1	2	1	1					
+A	mlst_hc20	mlst	dataset	pseudomonas_aeruginosa__ceftazidime		3	1	2	1	1					
+A	mlst_hc20	mlst	dataset	pseudomonas_aeruginosa__ceftazidime_avibactam	520746	90	13	199	1	1					
+A	mlst_hc20	mlst	dataset	pseudomonas_aeruginosa__ceftolozane_tazobactam	674432	85	11	109	1	1					
+A	mlst_hc20	mlst	dataset	pseudomonas_aeruginosa__ciprofloxacin		4	1	4	1	1					
+A	mlst_hc20	mlst	dataset	pseudomonas_aeruginosa__gentamicin		4	1	4	1	1					
+A	mlst_hc20	mlst	dataset	pseudomonas_aeruginosa__imipenem	350000	15	3	16	1	1					
+A	mlst_hc20	mlst	dataset	pseudomonas_aeruginosa__levofloxacin	875000	29	8	25	1	1					
+A	mlst_hc20	mlst	dataset	pseudomonas_aeruginosa__meropenem	693333	31	10	29	1	1					
+A	mlst_hc20	mlst	dataset	pseudomonas_aeruginosa__piperacillin_tazobactam		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	pseudomonas_aeruginosa__tobramycin		4	1	4	1	1					
+A	mlst_hc20	mlst	dataset	salmonella_enterica__amoxicillin_clavulanate	839286	52	8	72	1	1					
+A	mlst_hc20	mlst	dataset	salmonella_enterica__ampicillin	905363	217	13	2201	1	1					
+A	mlst_hc20	mlst	dataset	salmonella_enterica__ampicillin_sulbactam	831320	117	3	1622	1	1					
+A	mlst_hc20	mlst	dataset	salmonella_enterica__azithromycin	636255	185	6	980	1	1					
+A	mlst_hc20	mlst	dataset	salmonella_enterica__cefazolin	504820	105	2	1496	1	1					
+A	mlst_hc20	mlst	dataset	salmonella_enterica__cefotaxime	703663	216	7	1936	1	1					
+A	mlst_hc20	mlst	dataset	salmonella_enterica__cefoxitin	711259	96	11	395	1	1					
+A	mlst_hc20	mlst	dataset	salmonella_enterica__ceftazidime	629513	105	2	271	1	1					
+A	mlst_hc20	mlst	dataset	salmonella_enterica__ceftiofur	880719	72	9	123	1	1					
+A	mlst_hc20	mlst	dataset	salmonella_enterica__ceftriaxone	968750	49	8	69	1	1					
+A	mlst_hc20	mlst	dataset	salmonella_enterica__chloramphenicol	753567	267	15	1938	1	1					
+A	mlst_hc20	mlst	dataset	salmonella_enterica__ciprofloxacin	564667	58	5	342	1	1					
+A	mlst_hc20	mlst	dataset	salmonella_enterica__gentamicin	750406	265	18	1368	1	1					
+A	mlst_hc20	mlst	dataset	salmonella_enterica__kanamycin	903646	92	8	475	1	1					
+A	mlst_hc20	mlst	dataset	salmonella_enterica__nalidixic_acid	540065	134	3	1797	1	1					
+A	mlst_hc20	mlst	dataset	salmonella_enterica__spectinomycin	1000000	22	2	73	1	1					
+A	mlst_hc20	mlst	dataset	salmonella_enterica__streptomycin	626877	133	13	788	1	1					
+A	mlst_hc20	mlst	dataset	salmonella_enterica__sulfamethoxazole		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	salmonella_enterica__sulfamethoxazole_trimethoprim	845342	193	10	2191	1	1					
+A	mlst_hc20	mlst	dataset	salmonella_enterica__sulfathiazole	375000	12	2	14	1	1					
+A	mlst_hc20	mlst	dataset	salmonella_enterica__sulfisoxazole	938776	29	7	25	1	1					
+A	mlst_hc20	mlst	dataset	salmonella_enterica__tetracycline	771852	279	17	3275	1	1					
+A	mlst_hc20	mlst	dataset	salmonella_enterica__trimethoprim	1000000	26	4	62	1	1					
+A	mlst_hc20	mlst	dataset	shigella_sonnei__ampicillin		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	shigella_sonnei__azithromycin		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	shigella_sonnei__cefoperazone		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	shigella_sonnei__cefoxitin		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	shigella_sonnei__ceftazidime		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	shigella_sonnei__ceftriaxone		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	shigella_sonnei__colistin		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	shigella_sonnei__gentamicin		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	shigella_sonnei__sulfamethoxazole_trimethoprim		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	shigella_sonnei__tetracycline		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	shigella_sonnei__tobramycin		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	staphylococcus_aureus__cefoxitin		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	staphylococcus_aureus__chloramphenicol		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	staphylococcus_aureus__ciprofloxacin		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	staphylococcus_aureus__clindamycin		2	1	1	1	1					
+A	mlst_hc20	mlst	dataset	staphylococcus_aureus__daptomycin		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	staphylococcus_aureus__erythromycin		2	1	1	1	1					
+A	mlst_hc20	mlst	dataset	staphylococcus_aureus__fusidic_acid		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	staphylococcus_aureus__gentamicin		2	1	1	1	1					
+A	mlst_hc20	mlst	dataset	staphylococcus_aureus__mupirocin		4	2	2	1	1					
+A	mlst_hc20	mlst	dataset	staphylococcus_aureus__oxacillin		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	staphylococcus_aureus__penicillin		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	staphylococcus_aureus__rifampin		2	1	1	1	1					
+A	mlst_hc20	mlst	dataset	staphylococcus_aureus__sulfamethoxazole_trimethoprim		2	1	1	1	1					
+A	mlst_hc20	mlst	dataset	staphylococcus_aureus__tetracycline		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	streptococcus_pneumoniae__azithromycin		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	streptococcus_pneumoniae__cefepime		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	streptococcus_pneumoniae__cefotaxime		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	streptococcus_pneumoniae__ceftriaxone		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	streptococcus_pneumoniae__cefuroxime		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	streptococcus_pneumoniae__chloramphenicol		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	streptococcus_pneumoniae__clindamycin		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	streptococcus_pneumoniae__erythromycin		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	streptococcus_pneumoniae__meropenem		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	streptococcus_pneumoniae__penicillin		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	streptococcus_pneumoniae__sulfamethoxazole_trimethoprim		0	0	0	0	0					
+A	mlst_hc20	mlst	dataset	streptococcus_pneumoniae__tetracycline		0	0	0	0	0					
+A	mlst_hc20	primary	overall	all	752068	11303	739	72111	136	11	38318	2044	211007	70	5
+A	mlst_hc20	primary	species	acinetobacter_baumannii	576665	2558	75	11219	16	1	1967	110	8575	1	0
+A	mlst_hc20	primary	species	campylobacter_coli	940476	140	23	320	7	1	153	10	328	0	0
+A	mlst_hc20	primary	species	campylobacter_jejuni	916110	276	28	856	4	1	1181	16	10782	0	0
+A	mlst_hc20	primary	species	enterobacter_cloacae		0	0	0	0	0	421	54	949	9	1
+A	mlst_hc20	primary	species	enterococcus_faecium	777500	94	11	114	5	1	1459	89	5068	8	0
+A	mlst_hc20	primary	species	escherichia_coli	644348	409	80	933	23	1	7548	511	40898	9	0
+A	mlst_hc20	primary	species	klebsiella_aerogenes		0	0	0	0	0	90	10	163	3	1
+A	mlst_hc20	primary	species	klebsiella_oxytoca	630729	72	6	81	4	1	1	0	1	0	0
+A	mlst_hc20	primary	species	klebsiella_pneumoniae	649429	4724	279	36652	36	1	4204	393	17773	1	0
+A	mlst_hc20	primary	species	klebsiella_quasipneumoniae		3	1	2	1	1	3	1	2	1	0
+A	mlst_hc20	primary	species	neisseria_gonorrhoeae		0	0	0	0	0	1270	40	11853	5	1
+A	mlst_hc20	primary	species	pseudomonas_aeruginosa	462584	289	57	412	12	1	1026	180	2305	1	0
+A	mlst_hc20	primary	species	salmonella_enterica	758234	2724	173	21513	22	1	3377	227	14777	1	0
+A	mlst_hc20	primary	species	shigella_sonnei		0	0	0	0	0	1602	32	6909	11	1
+A	mlst_hc20	primary	species	staphylococcus_aureus		14	6	9	6	1	7523	219	57246	8	0
+A	mlst_hc20	primary	species	streptococcus_pneumoniae		0	0	0	0	0	6493	152	33378	12	1
+A	mlst_hc20	primary	dataset	acinetobacter_baumannii__amikacin	766236	295	9	3148	1	1	226	12	1646	0	0
+A	mlst_hc20	primary	dataset	acinetobacter_baumannii__ampicillin_sulbactam	583225	320	9	1128	1	1	256	11	931	0	0
+A	mlst_hc20	primary	dataset	acinetobacter_baumannii__cefotaxime	494792	97	1	96	1	1	25	4	21	0	0
+A	mlst_hc20	primary	dataset	acinetobacter_baumannii__ceftazidime	496144	145	3	454	1	1	98	7	451	0	0
+A	mlst_hc20	primary	dataset	acinetobacter_baumannii__ceftriaxone	491667	30	3	27	1	1	46	2	107	0	0
+A	mlst_hc20	primary	dataset	acinetobacter_baumannii__ciprofloxacin	700000	214	5	548	1	1	87	10	280	0	0
+A	mlst_hc20	primary	dataset	acinetobacter_baumannii__doripenem	900000	7	1	10	1	1	13	0	26	0	0
+A	mlst_hc20	primary	dataset	acinetobacter_baumannii__doxycycline		0	0	0	0	0	25	3	67	1	1
+A	mlst_hc20	primary	dataset	acinetobacter_baumannii__gentamicin	513610	268	8	544	1	1	132	8	304	0	0
+A	mlst_hc20	primary	dataset	acinetobacter_baumannii__imipenem	561527	254	7	1545	1	1	272	9	1486	0	0
+A	mlst_hc20	primary	dataset	acinetobacter_baumannii__levofloxacin	788560	144	4	390	1	1	144	8	405	0	0
+A	mlst_hc20	primary	dataset	acinetobacter_baumannii__meropenem	826217	97	5	544	1	1	84	6	316	0	0
+A	mlst_hc20	primary	dataset	acinetobacter_baumannii__minocycline		2	1	1	1	1	40	4	73	0	0
+A	mlst_hc20	primary	dataset	acinetobacter_baumannii__moxifloxacin	437500	17	2	15	1	1	10	2	12	0	0
+A	mlst_hc20	primary	dataset	acinetobacter_baumannii__sulfamethoxazole_trimethoprim	592553	271	6	1384	1	1	192	9	1233	0	0
+A	mlst_hc20	primary	dataset	acinetobacter_baumannii__tetracycline	590722	202	5	443	1	1	232	8	730	0	0
+A	mlst_hc20	primary	dataset	acinetobacter_baumannii__tobramycin	483891	195	6	942	1	1	85	7	487	0	0
+A	mlst_hc20	primary	dataset	campylobacter_coli__azithromycin		2	1	1	1	1	5	0	5	0	0
+A	mlst_hc20	primary	dataset	campylobacter_coli__ciprofloxacin	1000000	57	6	157	1	1	36	3	112	0	0
+A	mlst_hc20	primary	dataset	campylobacter_coli__clindamycin	583333	19	6	13	1	1	42	0	59	0	0
+A	mlst_hc20	primary	dataset	campylobacter_coli__erythromycin		2	1	1	1	1	5	0	5	0	0
+A	mlst_hc20	primary	dataset	campylobacter_coli__nalidixic_acid	1000000	53	6	144	1	1	40	3	126	0	0
+A	mlst_hc20	primary	dataset	campylobacter_coli__telithromycin		2	1	1	1	1	7	1	6	0	0
+A	mlst_hc20	primary	dataset	campylobacter_coli__tetracycline		5	2	3	1	1	18	3	15	0	0
+A	mlst_hc20	primary	dataset	campylobacter_jejuni__ciprofloxacin	973354	85	9	338	1	1	324	2	3422	0	0
+A	mlst_hc20	primary	dataset	campylobacter_jejuni__clindamycin	908333	33	2	31	1	1	157	2	226	0	0
+A	mlst_hc20	primary	dataset	campylobacter_jejuni__nalidixic_acid	954630	85	9	338	1	1	324	2	3411	0	0
+A	mlst_hc20	primary	dataset	campylobacter_jejuni__tetracycline	828125	73	8	149	1	1	376	10	3723	0	0
+A	mlst_hc20	primary	dataset	enterobacter_cloacae__cefepime		0	0	0	0	0	38	5	83	1	1
+A	mlst_hc20	primary	dataset	enterobacter_cloacae__ciprofloxacin		0	0	0	0	0	42	6	78	1	1
+A	mlst_hc20	primary	dataset	enterobacter_cloacae__gentamicin		0	0	0	0	0	45	8	67	1	1
+A	mlst_hc20	primary	dataset	enterobacter_cloacae__imipenem		0	0	0	0	0	29	3	70	1	1
+A	mlst_hc20	primary	dataset	enterobacter_cloacae__levofloxacin		0	0	0	0	0	41	6	75	1	1
+A	mlst_hc20	primary	dataset	enterobacter_cloacae__meropenem		0	0	0	0	0	49	7	110	1	1
+A	mlst_hc20	primary	dataset	enterobacter_cloacae__sulfamethoxazole_trimethoprim		0	0	0	0	0	33	4	73	1	1
+A	mlst_hc20	primary	dataset	enterobacter_cloacae__tobramycin		0	0	0	0	0	41	6	86	1	1
+A	mlst_hc20	primary	dataset	enterobacter_cloacae__trimethoprim		0	0	0	0	0	103	9	307	1	1
+A	mlst_hc20	primary	dataset	enterococcus_faecium__ampicillin		0	0	0	0	0	55	5	57	1	1
+A	mlst_hc20	primary	dataset	enterococcus_faecium__clindamycin		0	0	0	0	0	87	2	91	1	1
+A	mlst_hc20	primary	dataset	enterococcus_faecium__dalfopristin_quinupristin	1000000	23	1	22	1	1	159	7	286	0	0
+A	mlst_hc20	primary	dataset	enterococcus_faecium__daptomycin	283333	24	5	26	1	1	120	8	222	0	0
+A	mlst_hc20	primary	dataset	enterococcus_faecium__doxycycline		0	0	0	0	0	220	13	720	1	1
+A	mlst_hc20	primary	dataset	enterococcus_faecium__erythromycin		0	0	0	0	0	40	9	43	1	1
+A	mlst_hc20	primary	dataset	enterococcus_faecium__gentamicin	1000000	23	1	42	1	1	160	10	380	0	0
+A	mlst_hc20	primary	dataset	enterococcus_faecium__kanamycin		0	0	0	0	0	156	8	672	1	1
+A	mlst_hc20	primary	dataset	enterococcus_faecium__linezolid		0	0	0	0	0	53	3	91	1	1
+A	mlst_hc20	primary	dataset	enterococcus_faecium__streptomycin		9	1	8	1	1	151	7	194	0	0
+A	mlst_hc20	primary	dataset	enterococcus_faecium__teicoplanin		0	0	0	0	0	80	4	984	1	1
+A	mlst_hc20	primary	dataset	enterococcus_faecium__tetracycline		0	0	0	0	0	27	7	28	1	1
+A	mlst_hc20	primary	dataset	enterococcus_faecium__vancomycin	854167	15	3	16	1	1	151	6	1300	0	0
+A	mlst_hc20	primary	dataset	escherichia_coli__amikacin		0	0	0	0	0	195	12	220	1	1
+A	mlst_hc20	primary	dataset	escherichia_coli__amoxicillin_clavulanate	738095	15	3	24	1	1	190	12	937	0	0
+A	mlst_hc20	primary	dataset	escherichia_coli__ampicillin	530303	18	3	15	1	1	408	24	1546	0	0
+A	mlst_hc20	primary	dataset	escherichia_coli__ampicillin_sulbactam	340188	27	3	54	1	1	130	4	1470	0	0
+A	mlst_hc20	primary	dataset	escherichia_coli__aztreonam	819444	21	2	44	1	1	137	5	1865	0	0
+A	mlst_hc20	primary	dataset	escherichia_coli__cefazolin	969697	16	3	13	1	1	129	10	193	0	0
+A	mlst_hc20	primary	dataset	escherichia_coli__cefepime	609821	33	4	146	1	1	280	16	2744	0	0
+A	mlst_hc20	primary	dataset	escherichia_coli__cefotaxime		2	1	1	1	1	125	18	257	0	0
+A	mlst_hc20	primary	dataset	escherichia_coli__cefoxitin		12	5	7	1	1	299	27	851	0	0
+A	mlst_hc20	primary	dataset	escherichia_coli__cefpodoxime		2	1	1	1	1	117	15	310	0	0
+A	mlst_hc20	primary	dataset	escherichia_coli__cefpodoxime_clavulanate		0	0	0	0	0	80	14	114	1	1
+A	mlst_hc20	primary	dataset	escherichia_coli__ceftazidime	771429	21	5	19	1	1	328	18	2513	0	0
+A	mlst_hc20	primary	dataset	escherichia_coli__ceftiofur		0	0	0	0	0	53	3	80	1	1
+A	mlst_hc20	primary	dataset	escherichia_coli__ceftriaxone	952083	30	5	56	1	1	394	17	2446	0	0
+A	mlst_hc20	primary	dataset	escherichia_coli__chloramphenicol		10	5	5	1	1	361	24	962	0	0
+A	mlst_hc20	primary	dataset	escherichia_coli__ciprofloxacin		2	1	1	1	1	339	20	1525	0	0
+A	mlst_hc20	primary	dataset	escherichia_coli__doxycycline	779762	15	2	43	1	1	73	3	780	0	0
+A	mlst_hc20	primary	dataset	escherichia_coli__ertapenem		10	3	7	1	1	270	20	636	0	0
+A	mlst_hc20	primary	dataset	escherichia_coli__gentamicin	882937	39	7	72	1	1	533	33	4567	0	0
+A	mlst_hc20	primary	dataset	escherichia_coli__imipenem		0	0	0	0	0	45	8	109	1	1
+A	mlst_hc20	primary	dataset	escherichia_coli__levofloxacin		2	1	1	1	1	251	14	1441	0	0
+A	mlst_hc20	primary	dataset	escherichia_coli__meropenem		0	0	0	0	0	272	24	416	1	1
+A	mlst_hc20	primary	dataset	escherichia_coli__nalidixic_acid		0	0	0	0	0	97	5	120	1	1
+A	mlst_hc20	primary	dataset	escherichia_coli__nitrofurantoin	815476	18	4	26	1	1	192	7	616	0	0
+A	mlst_hc20	primary	dataset	escherichia_coli__norfloxacin		0	0	0	0	0	111	6	646	1	1
+A	mlst_hc20	primary	dataset	escherichia_coli__piperacillin_tazobactam		2	1	1	1	1	171	12	422	0	0
+A	mlst_hc20	primary	dataset	escherichia_coli__streptomycin		2	1	1	1	1	272	18	1265	0	0
+A	mlst_hc20	primary	dataset	escherichia_coli__sulfamethoxazole		0	0	0	0	0	220	15	1333	1	1
+A	mlst_hc20	primary	dataset	escherichia_coli__sulfamethoxazole_trimethoprim	928629	65	8	330	1	1	548	36	5179	0	0
+A	mlst_hc20	primary	dataset	escherichia_coli__tetracycline	833333	33	5	59	1	1	414	35	2798	0	0
+A	mlst_hc20	primary	dataset	escherichia_coli__tobramycin		14	7	7	1	1	313	24	1243	0	0
+A	mlst_hc20	primary	dataset	escherichia_coli__trimethoprim		0	0	0	0	0	201	12	1294	1	1
+A	mlst_hc20	primary	dataset	klebsiella_aerogenes__ertapenem		0	0	0	0	0	32	4	56	1	1
+A	mlst_hc20	primary	dataset	klebsiella_aerogenes__imipenem		0	0	0	0	0	27	3	58	1	1
+A	mlst_hc20	primary	dataset	klebsiella_aerogenes__meropenem		0	0	0	0	0	31	3	49	1	1
+A	mlst_hc20	primary	dataset	klebsiella_oxytoca__cefotaxime		4	1	4	1	1	0	0	0	0	0
+A	mlst_hc20	primary	dataset	klebsiella_oxytoca__cefoxitin	656250	22	2	20	1	1	0	0	0	0	0
+A	mlst_hc20	primary	dataset	klebsiella_oxytoca__cefpodoxime	500000	29	2	27	1	1	1	0	1	0	0
+A	mlst_hc20	primary	dataset	klebsiella_oxytoca__ertapenem	866667	17	1	30	1	1	0	0	0	0	0
+A	mlst_hc20	primary	dataset	klebsiella_pneumoniae__amikacin	784862	343	13	1567	1	1	220	20	944	0	0
+A	mlst_hc20	primary	dataset	klebsiella_pneumoniae__amoxicillin_clavulanate	735417	34	5	62	1	1	46	7	71	0	0
+A	mlst_hc20	primary	dataset	klebsiella_pneumoniae__ampicillin_sulbactam		9	3	6	1	1	116	10	112	0	0
+A	mlst_hc20	primary	dataset	klebsiella_pneumoniae__aztreonam	622326	230	11	2742	1	1	197	16	1022	0	0
+A	mlst_hc20	primary	dataset	klebsiella_pneumoniae__cefazolin	987879	22	5	37	1	1	132	13	169	0	0
+A	mlst_hc20	primary	dataset	klebsiella_pneumoniae__cefepime	598231	262	17	2420	1	1	165	11	837	0	0
+A	mlst_hc20	primary	dataset	klebsiella_pneumoniae__cefotetan		0	0	0	0	0	3	1	2	1	1
+A	mlst_hc20	primary	dataset	klebsiella_pneumoniae__cefoxitin	578732	226	28	2345	1	1	244	22	1241	0	0
+A	mlst_hc20	primary	dataset	klebsiella_pneumoniae__cefpodoxime	694444	18	3	15	1	1	50	11	45	0	0
+A	mlst_hc20	primary	dataset	klebsiella_pneumoniae__cefpodoxime_clavulanate	583333	15	2	13	1	1	31	7	25	0	0
+A	mlst_hc20	primary	dataset	klebsiella_pneumoniae__ceftazidime	657569	242	12	309	1	1	206	17	442	0	0
+A	mlst_hc20	primary	dataset	klebsiella_pneumoniae__ceftazidime_avibactam		2	1	1	1	1	33	1	53	0	0
+A	mlst_hc20	primary	dataset	klebsiella_pneumoniae__ceftriaxone	1000000	91	4	98	1	1	43	4	49	0	0
+A	mlst_hc20	primary	dataset	klebsiella_pneumoniae__cefuroxime	973684	27	4	23	1	1	103	7	133	0	0
+A	mlst_hc20	primary	dataset	klebsiella_pneumoniae__chloramphenicol	384503	71	5	282	1	1	144	7	236	0	0
+A	mlst_hc20	primary	dataset	klebsiella_pneumoniae__ciprofloxacin	685540	53	7	112	1	1	192	19	416	0	0
+A	mlst_hc20	primary	dataset	klebsiella_pneumoniae__colistin	758080	164	5	1648	1	1	41	2	330	0	0
+A	mlst_hc20	primary	dataset	klebsiella_pneumoniae__doripenem	351449	73	1	276	1	1	33	5	166	0	0
+A	mlst_hc20	primary	dataset	klebsiella_pneumoniae__doxycycline	400000	10	2	16	1	1	10	2	14	0	0
+A	mlst_hc20	primary	dataset	klebsiella_pneumoniae__ertapenem	742958	78	2	146	1	1	36	6	49	0	0
+A	mlst_hc20	primary	dataset	klebsiella_pneumoniae__fosfomycin	436435	64	2	350	1	1	13	0	75	0	0
+A	mlst_hc20	primary	dataset	klebsiella_pneumoniae__gentamicin	879584	418	22	4606	1	1	431	43	2519	0	0
+A	mlst_hc20	primary	dataset	klebsiella_pneumoniae__imipenem	944038	242	9	2718	1	1	165	15	1060	0	0
+A	mlst_hc20	primary	dataset	klebsiella_pneumoniae__levofloxacin	448639	111	4	208	1	1	139	9	436	0	0
+A	mlst_hc20	primary	dataset	klebsiella_pneumoniae__meropenem	777984	323	16	2749	1	1	209	20	1312	0	0
+A	mlst_hc20	primary	dataset	klebsiella_pneumoniae__nitrofurantoin	720274	88	2	329	1	1	55	9	265	0	0
+A	mlst_hc20	primary	dataset	klebsiella_pneumoniae__norfloxacin	374074	28	3	33	1	1	13	0	19	0	0
+A	mlst_hc20	primary	dataset	klebsiella_pneumoniae__ofloxacin	583333	18	2	38	1	1	26	1	36	0	0
+A	mlst_hc20	primary	dataset	klebsiella_pneumoniae__piperacillin_tazobactam	729140	182	12	2512	1	1	172	17	881	0	0
+A	mlst_hc20	primary	dataset	klebsiella_pneumoniae__polymyxin_b	583333	7	1	12	1	1	14	1	37	0	0
+A	mlst_hc20	primary	dataset	klebsiella_pneumoniae__streptomycin		5	1	6	1	1	5	2	4	0	0
+A	mlst_hc20	primary	dataset	klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	752628	413	20	4028	1	1	302	28	1807	0	0
+A	mlst_hc20	primary	dataset	klebsiella_pneumoniae__tetracycline	736301	199	16	3042	1	1	202	15	1415	0	0
+A	mlst_hc20	primary	dataset	klebsiella_pneumoniae__ticarcillin_clavulanate	541667	17	1	72	1	1	4	1	19	0	0
+A	mlst_hc20	primary	dataset	klebsiella_pneumoniae__tigecycline	467890	332	18	2172	1	1	91	8	460	0	0
+A	mlst_hc20	primary	dataset	klebsiella_pneumoniae__tobramycin	754007	283	17	1614	1	1	290	31	1026	0	0
+A	mlst_hc20	primary	dataset	klebsiella_pneumoniae__trimethoprim	777778	24	3	45	1	1	28	5	46	0	0
+A	mlst_hc20	primary	dataset	klebsiella_quasipneumoniae__cefotaxime		3	1	2	1	1	0	0	0	0	0
+A	mlst_hc20	primary	dataset	klebsiella_quasipneumoniae__sulfamethoxazole_trimethoprim		0	0	0	0	0	3	1	2	1	1
+A	mlst_hc20	primary	dataset	neisseria_gonorrhoeae__azithromycin		0	0	0	0	0	84	4	200	1	1
+A	mlst_hc20	primary	dataset	neisseria_gonorrhoeae__ciprofloxacin		0	0	0	0	0	302	5	437	1	1
+A	mlst_hc20	primary	dataset	neisseria_gonorrhoeae__erythromycin		0	0	0	0	0	108	8	425	1	1
+A	mlst_hc20	primary	dataset	neisseria_gonorrhoeae__penicillin		0	0	0	0	0	766	20	10784	1	1
+A	mlst_hc20	primary	dataset	neisseria_gonorrhoeae__tetracycline		0	0	0	0	0	10	3	7	1	1
+A	mlst_hc20	primary	dataset	pseudomonas_aeruginosa__amikacin	687500	16	5	15	1	1	207	32	596	0	0
+A	mlst_hc20	primary	dataset	pseudomonas_aeruginosa__aztreonam		5	2	3	1	1	27	9	21	0	0
+A	mlst_hc20	primary	dataset	pseudomonas_aeruginosa__cefepime		3	1	2	1	1	22	8	18	0	0
+A	mlst_hc20	primary	dataset	pseudomonas_aeruginosa__ceftazidime		3	1	2	1	1	23	8	16	0	0
+A	mlst_hc20	primary	dataset	pseudomonas_aeruginosa__ceftazidime_avibactam	520746	90	13	199	1	1	67	3	209	0	0
+A	mlst_hc20	primary	dataset	pseudomonas_aeruginosa__ceftolozane_tazobactam	674432	85	11	109	1	1	60	5	212	0	0
+A	mlst_hc20	primary	dataset	pseudomonas_aeruginosa__ciprofloxacin		4	1	4	1	1	19	7	14	0	0
+A	mlst_hc20	primary	dataset	pseudomonas_aeruginosa__gentamicin		4	1	4	1	1	32	9	27	0	0
+A	mlst_hc20	primary	dataset	pseudomonas_aeruginosa__imipenem	350000	15	3	16	1	1	41	12	45	0	0
+A	mlst_hc20	primary	dataset	pseudomonas_aeruginosa__levofloxacin	875000	29	8	25	1	1	225	32	484	0	0
+A	mlst_hc20	primary	dataset	pseudomonas_aeruginosa__meropenem	693333	31	10	29	1	1	258	40	625	0	0
+A	mlst_hc20	primary	dataset	pseudomonas_aeruginosa__piperacillin_tazobactam		0	0	0	0	0	14	6	9	1	1
+A	mlst_hc20	primary	dataset	pseudomonas_aeruginosa__tobramycin		4	1	4	1	1	31	9	29	0	0
+A	mlst_hc20	primary	dataset	salmonella_enterica__amoxicillin_clavulanate	839286	52	8	72	1	1	179	14	230	0	0
+A	mlst_hc20	primary	dataset	salmonella_enterica__ampicillin	905363	217	13	2201	1	1	376	20	1105	0	0
+A	mlst_hc20	primary	dataset	salmonella_enterica__ampicillin_sulbactam	831320	117	3	1622	1	1	44	6	297	0	0
+A	mlst_hc20	primary	dataset	salmonella_enterica__azithromycin	636255	185	6	980	1	1	161	9	983	0	0
+A	mlst_hc20	primary	dataset	salmonella_enterica__cefazolin	504820	105	2	1496	1	1	63	7	525	0	0
+A	mlst_hc20	primary	dataset	salmonella_enterica__cefotaxime	703663	216	7	1936	1	1	212	10	1693	0	0
+A	mlst_hc20	primary	dataset	salmonella_enterica__cefoxitin	711259	96	11	395	1	1	231	20	508	0	0
+A	mlst_hc20	primary	dataset	salmonella_enterica__ceftazidime	629513	105	2	271	1	1	57	1	138	0	0
+A	mlst_hc20	primary	dataset	salmonella_enterica__ceftiofur	880719	72	9	123	1	1	147	12	272	0	0
+A	mlst_hc20	primary	dataset	salmonella_enterica__ceftriaxone	968750	49	8	69	1	1	165	12	218	0	0
+A	mlst_hc20	primary	dataset	salmonella_enterica__chloramphenicol	753567	267	15	1938	1	1	235	16	1450	0	0
+A	mlst_hc20	primary	dataset	salmonella_enterica__ciprofloxacin	564667	58	5	342	1	1	62	6	180	0	0
+A	mlst_hc20	primary	dataset	salmonella_enterica__gentamicin	750406	265	18	1368	1	1	305	16	1308	0	0
+A	mlst_hc20	primary	dataset	salmonella_enterica__kanamycin	903646	92	8	475	1	1	103	6	369	0	0
+A	mlst_hc20	primary	dataset	salmonella_enterica__nalidixic_acid	540065	134	3	1797	1	1	80	10	859	0	0
+A	mlst_hc20	primary	dataset	salmonella_enterica__spectinomycin	1000000	22	2	73	1	1	64	3	448	0	0
+A	mlst_hc20	primary	dataset	salmonella_enterica__streptomycin	626877	133	13	788	1	1	218	10	1259	0	0
+A	mlst_hc20	primary	dataset	salmonella_enterica__sulfamethoxazole		0	0	0	0	0	4	1	4	1	1
+A	mlst_hc20	primary	dataset	salmonella_enterica__sulfamethoxazole_trimethoprim	845342	193	10	2191	1	1	105	5	775	0	0
+A	mlst_hc20	primary	dataset	salmonella_enterica__sulfathiazole	375000	12	2	14	1	1	84	4	136	0	0
+A	mlst_hc20	primary	dataset	salmonella_enterica__sulfisoxazole	938776	29	7	25	1	1	72	7	108	0	0
+A	mlst_hc20	primary	dataset	salmonella_enterica__tetracycline	771852	279	17	3275	1	1	304	28	1470	0	0
+A	mlst_hc20	primary	dataset	salmonella_enterica__trimethoprim	1000000	26	4	62	1	1	106	4	442	0	0
+A	mlst_hc20	primary	dataset	shigella_sonnei__ampicillin		0	0	0	0	0	35	3	53	1	1
+A	mlst_hc20	primary	dataset	shigella_sonnei__azithromycin		0	0	0	0	0	151	1	444	1	1
+A	mlst_hc20	primary	dataset	shigella_sonnei__cefoperazone		0	0	0	0	0	173	3	351	1	1
+A	mlst_hc20	primary	dataset	shigella_sonnei__cefoxitin		0	0	0	0	0	160	2	306	1	1
+A	mlst_hc20	primary	dataset	shigella_sonnei__ceftazidime		0	0	0	0	0	151	1	150	1	1
+A	mlst_hc20	primary	dataset	shigella_sonnei__ceftriaxone		0	0	0	0	0	35	3	72	1	1
+A	mlst_hc20	primary	dataset	shigella_sonnei__colistin		0	0	0	0	0	178	3	3490	1	1
+A	mlst_hc20	primary	dataset	shigella_sonnei__gentamicin		0	0	0	0	0	192	5	358	1	1
+A	mlst_hc20	primary	dataset	shigella_sonnei__sulfamethoxazole_trimethoprim		0	0	0	0	0	183	4	619	1	1
+A	mlst_hc20	primary	dataset	shigella_sonnei__tetracycline		0	0	0	0	0	182	4	760	1	1
+A	mlst_hc20	primary	dataset	shigella_sonnei__tobramycin		0	0	0	0	0	162	3	306	1	1
+A	mlst_hc20	primary	dataset	staphylococcus_aureus__cefoxitin		0	0	0	0	0	677	22	5988	1	1
+A	mlst_hc20	primary	dataset	staphylococcus_aureus__chloramphenicol		0	0	0	0	0	577	18	7287	1	1
+A	mlst_hc20	primary	dataset	staphylococcus_aureus__ciprofloxacin		0	0	0	0	0	821	22	5679	1	1
+A	mlst_hc20	primary	dataset	staphylococcus_aureus__clindamycin		2	1	1	1	1	748	23	9103	0	0
+A	mlst_hc20	primary	dataset	staphylococcus_aureus__daptomycin		0	0	0	0	0	551	14	1938	1	1
+A	mlst_hc20	primary	dataset	staphylococcus_aureus__erythromycin		2	1	1	1	1	787	27	7738	0	0
+A	mlst_hc20	primary	dataset	staphylococcus_aureus__fusidic_acid		0	0	0	0	0	65	2	251	1	1
+A	mlst_hc20	primary	dataset	staphylococcus_aureus__gentamicin		2	1	1	1	1	585	15	2558	0	0
+A	mlst_hc20	primary	dataset	staphylococcus_aureus__mupirocin		4	1	4	1	1	48	0	231	0	0
+A	mlst_hc20	primary	dataset	staphylococcus_aureus__oxacillin		0	0	0	0	0	573	16	5490	1	1
+A	mlst_hc20	primary	dataset	staphylococcus_aureus__penicillin		0	0	0	0	0	706	18	2414	1	1
+A	mlst_hc20	primary	dataset	staphylococcus_aureus__rifampin		2	1	1	1	1	84	4	210	0	0
+A	mlst_hc20	primary	dataset	staphylococcus_aureus__sulfamethoxazole_trimethoprim		2	1	1	1	1	706	17	4116	0	0
+A	mlst_hc20	primary	dataset	staphylococcus_aureus__tetracycline		0	0	0	0	0	595	21	4243	1	1
+A	mlst_hc20	primary	dataset	streptococcus_pneumoniae__azithromycin		0	0	0	0	0	786	15	3811	1	1
+A	mlst_hc20	primary	dataset	streptococcus_pneumoniae__cefepime		0	0	0	0	0	272	8	2111	1	1
+A	mlst_hc20	primary	dataset	streptococcus_pneumoniae__cefotaxime		0	0	0	0	0	258	7	1314	1	1
+A	mlst_hc20	primary	dataset	streptococcus_pneumoniae__ceftriaxone		0	0	0	0	0	355	9	2294	1	1
+A	mlst_hc20	primary	dataset	streptococcus_pneumoniae__cefuroxime		0	0	0	0	0	345	8	3309	1	1
+A	mlst_hc20	primary	dataset	streptococcus_pneumoniae__chloramphenicol		0	0	0	0	0	599	10	1485	1	1
+A	mlst_hc20	primary	dataset	streptococcus_pneumoniae__clindamycin		0	0	0	0	0	886	20	3280	1	1
+A	mlst_hc20	primary	dataset	streptococcus_pneumoniae__erythromycin		0	0	0	0	0	1072	28	5171	1	1
+A	mlst_hc20	primary	dataset	streptococcus_pneumoniae__meropenem		0	0	0	0	0	221	6	852	1	1
+A	mlst_hc20	primary	dataset	streptococcus_pneumoniae__penicillin		0	0	0	0	0	154	3	621	1	1
+A	mlst_hc20	primary	dataset	streptococcus_pneumoniae__sulfamethoxazole_trimethoprim		0	0	0	0	0	649	20	3121	1	1
+A	mlst_hc20	primary	dataset	streptococcus_pneumoniae__tetracycline		0	0	0	0	0	896	18	6009	1	1
+B	mlst	mlst	overall	all	745833	38052	2505	200341	201	16					
+B	mlst	mlst	species	acinetobacter_baumannii	680699	3914	169	15381	17	1					
+B	mlst	mlst	species	campylobacter_coli	937236	283	32	616	7	1					
+B	mlst	mlst	species	campylobacter_jejuni	908358	1149	53	6134	4	1					
+B	mlst	mlst	species	enterobacter_cloacae	853788	133	29	144	8	1					
+B	mlst	mlst	species	enterococcus_faecium	633775	772	72	2678	13	1					
+B	mlst	mlst	species	escherichia_coli	839443	5152	528	28621	32	1					
+B	mlst	mlst	species	klebsiella_aerogenes	311990	78	7	149	3	1					
+B	mlst	mlst	species	klebsiella_oxytoca	630729	73	6	82	4	1					
+B	mlst	mlst	species	klebsiella_pneumoniae	718780	7294	617	42289	36	1					
+B	mlst	mlst	species	klebsiella_quasipneumoniae		3	1	2	1	1					
+B	mlst	mlst	species	neisseria_gonorrhoeae	595425	976	40	9387	5	1					
+B	mlst	mlst	species	pseudomonas_aeruginosa	756948	1058	186	2222	13	1					
+B	mlst	mlst	species	salmonella_enterica	744127	5840	379	35315	23	1					
+B	mlst	mlst	species	shigella_sonnei	906534	1593	32	6860	11	1					
+B	mlst	mlst	species	staphylococcus_aureus	715833	6240	229	41389	14	1					
+B	mlst	mlst	species	streptococcus_pneumoniae	699667	3494	125	9072	10	1					
+B	mlst	mlst	dataset	acinetobacter_baumannii__amikacin	823642	489	20	4443	1	1					
+B	mlst	mlst	dataset	acinetobacter_baumannii__ampicillin_sulbactam	598032	377	19	723	1	1					
+B	mlst	mlst	dataset	acinetobacter_baumannii__cefotaxime	487387	122	5	117	1	1					
+B	mlst	mlst	dataset	acinetobacter_baumannii__ceftazidime	675490	196	9	414	1	1					
+B	mlst	mlst	dataset	acinetobacter_baumannii__ceftriaxone	500000	27	2	67	1	1					
+B	mlst	mlst	dataset	acinetobacter_baumannii__ciprofloxacin	853988	291	15	650	1	1					
+B	mlst	mlst	dataset	acinetobacter_baumannii__doripenem	777778	20	1	36	1	1					
+B	mlst	mlst	dataset	acinetobacter_baumannii__doxycycline	444444	17	3	30	1	1					
+B	mlst	mlst	dataset	acinetobacter_baumannii__gentamicin	526947	318	14	697	1	1					
+B	mlst	mlst	dataset	acinetobacter_baumannii__imipenem	826394	489	15	2048	1	1					
+B	mlst	mlst	dataset	acinetobacter_baumannii__levofloxacin	827778	214	10	462	1	1					
+B	mlst	mlst	dataset	acinetobacter_baumannii__meropenem	928934	180	11	856	1	1					
+B	mlst	mlst	dataset	acinetobacter_baumannii__minocycline	655208	29	4	62	1	1					
+B	mlst	mlst	dataset	acinetobacter_baumannii__moxifloxacin	718750	27	4	27	1	1					
+B	mlst	mlst	dataset	acinetobacter_baumannii__sulfamethoxazole_trimethoprim	667900	454	15	2597	1	1					
+B	mlst	mlst	dataset	acinetobacter_baumannii__tetracycline	695554	426	11	1162	1	1					
+B	mlst	mlst	dataset	acinetobacter_baumannii__tobramycin	563649	238	11	990	1	1					
+B	mlst	mlst	dataset	campylobacter_coli__azithromycin		7	1	6	1	1					
+B	mlst	mlst	dataset	campylobacter_coli__ciprofloxacin	1000000	91	9	256	1	1					
+B	mlst	mlst	dataset	campylobacter_coli__clindamycin	578431	59	6	69	1	1					
+B	mlst	mlst	dataset	campylobacter_coli__erythromycin		7	1	6	1	1					
+B	mlst	mlst	dataset	campylobacter_coli__nalidixic_acid	982222	91	9	257	1	1					
+B	mlst	mlst	dataset	campylobacter_coli__telithromycin		9	2	7	1	1					
+B	mlst	mlst	dataset	campylobacter_coli__tetracycline	1000000	19	4	15	1	1					
+B	mlst	mlst	dataset	campylobacter_jejuni__ciprofloxacin	987445	317	15	2033	1	1					
+B	mlst	mlst	dataset	campylobacter_jejuni__clindamycin	718092	150	4	197	1	1					
+B	mlst	mlst	dataset	campylobacter_jejuni__nalidixic_acid	991487	309	14	2026	1	1					
+B	mlst	mlst	dataset	campylobacter_jejuni__tetracycline	936406	373	20	1878	1	1					
+B	mlst	mlst	dataset	enterobacter_cloacae__cefepime		2	1	1	1	1					
+B	mlst	mlst	dataset	enterobacter_cloacae__ciprofloxacin	500000	14	2	12	1	1					
+B	mlst	mlst	dataset	enterobacter_cloacae__gentamicin		7	2	6	1	1					
+B	mlst	mlst	dataset	enterobacter_cloacae__imipenem		5	2	3	1	1					
+B	mlst	mlst	dataset	enterobacter_cloacae__levofloxacin	1000000	14	2	12	1	1					
+B	mlst	mlst	dataset	enterobacter_cloacae__meropenem	550000	22	5	17	1	1					
+B	mlst	mlst	dataset	enterobacter_cloacae__sulfamethoxazole_trimethoprim		0	0	0	0	0					
+B	mlst	mlst	dataset	enterobacter_cloacae__tobramycin		12	4	9	1	1					
+B	mlst	mlst	dataset	enterobacter_cloacae__trimethoprim	780303	57	11	84	1	1					
+B	mlst	mlst	dataset	enterococcus_faecium__ampicillin	625000	10	2	11	1	1					
+B	mlst	mlst	dataset	enterococcus_faecium__clindamycin	142857	9	1	14	1	1					
+B	mlst	mlst	dataset	enterococcus_faecium__dalfopristin_quinupristin	701852	125	6	119	1	1					
+B	mlst	mlst	dataset	enterococcus_faecium__daptomycin	386240	129	12	195	1	1					
+B	mlst	mlst	dataset	enterococcus_faecium__doxycycline	631137	111	6	283	1	1					
+B	mlst	mlst	dataset	enterococcus_faecium__erythromycin	683333	29	9	23	1	1					
+B	mlst	mlst	dataset	enterococcus_faecium__gentamicin	726190	52	7	76	1	1					
+B	mlst	mlst	dataset	enterococcus_faecium__kanamycin	650000	42	5	49	1	1					
+B	mlst	mlst	dataset	enterococcus_faecium__linezolid	425000	13	2	19	1	1					
+B	mlst	mlst	dataset	enterococcus_faecium__streptomycin	566667	30	4	26	1	1					
+B	mlst	mlst	dataset	enterococcus_faecium__teicoplanin	953571	66	3	846	1	1					
+B	mlst	mlst	dataset	enterococcus_faecium__tetracycline		14	5	9	1	1					
+B	mlst	mlst	dataset	enterococcus_faecium__vancomycin	947226	142	10	1008	1	1					
+B	mlst	mlst	dataset	escherichia_coli__amikacin	959478	142	8	160	1	1					
+B	mlst	mlst	dataset	escherichia_coli__amoxicillin_clavulanate	947481	119	13	796	1	1					
+B	mlst	mlst	dataset	escherichia_coli__ampicillin	868894	257	24	441	1	1					
+B	mlst	mlst	dataset	escherichia_coli__ampicillin_sulbactam	721632	141	8	1413	1	1					
+B	mlst	mlst	dataset	escherichia_coli__aztreonam	691193	155	7	1864	1	1					
+B	mlst	mlst	dataset	escherichia_coli__cefazolin	757124	100	8	99	1	1					
+B	mlst	mlst	dataset	escherichia_coli__cefepime	748187	271	22	2667	1	1					
+B	mlst	mlst	dataset	escherichia_coli__cefotaxime	795290	71	13	138	1	1					
+B	mlst	mlst	dataset	escherichia_coli__cefoxitin	735678	178	29	516	1	1					
+B	mlst	mlst	dataset	escherichia_coli__cefpodoxime	538974	52	13	55	1	1					
+B	mlst	mlst	dataset	escherichia_coli__cefpodoxime_clavulanate	486111	27	9	18	1	1					
+B	mlst	mlst	dataset	escherichia_coli__ceftazidime	850664	258	22	2309	1	1					
+B	mlst	mlst	dataset	escherichia_coli__ceftiofur		5	1	6	1	1					
+B	mlst	mlst	dataset	escherichia_coli__ceftriaxone	893276	306	19	2151	1	1					
+B	mlst	mlst	dataset	escherichia_coli__chloramphenicol	936580	129	22	205	1	1					
+B	mlst	mlst	dataset	escherichia_coli__ciprofloxacin	890312	191	16	992	1	1					
+B	mlst	mlst	dataset	escherichia_coli__doxycycline	978070	73	3	789	1	1					
+B	mlst	mlst	dataset	escherichia_coli__ertapenem	711079	210	19	517	1	1					
+B	mlst	mlst	dataset	escherichia_coli__gentamicin	912289	351	33	3937	1	1					
+B	mlst	mlst	dataset	escherichia_coli__imipenem	872222	45	8	109	1	1					
+B	mlst	mlst	dataset	escherichia_coli__levofloxacin	809455	180	13	1133	1	1					
+B	mlst	mlst	dataset	escherichia_coli__meropenem	800632	191	19	269	1	1					
+B	mlst	mlst	dataset	escherichia_coli__nalidixic_acid	944444	14	2	28	1	1					
+B	mlst	mlst	dataset	escherichia_coli__nitrofurantoin	866410	160	10	361	1	1					
+B	mlst	mlst	dataset	escherichia_coli__norfloxacin	939962	72	8	143	1	1					
+B	mlst	mlst	dataset	escherichia_coli__piperacillin_tazobactam	731616	143	11	366	1	1					
+B	mlst	mlst	dataset	escherichia_coli__streptomycin	969666	130	19	285	1	1					
+B	mlst	mlst	dataset	escherichia_coli__sulfamethoxazole	875631	136	22	258	1	1					
+B	mlst	mlst	dataset	escherichia_coli__sulfamethoxazole_trimethoprim	887211	440	42	4038	1	1					
+B	mlst	mlst	dataset	escherichia_coli__tetracycline	897365	301	40	1540	1	1					
+B	mlst	mlst	dataset	escherichia_coli__tobramycin	958783	201	29	792	1	1					
+B	mlst	mlst	dataset	escherichia_coli__trimethoprim	886458	103	16	226	1	1					
+B	mlst	mlst	dataset	klebsiella_aerogenes__ertapenem	137821	28	3	51	1	1					
+B	mlst	mlst	dataset	klebsiella_aerogenes__imipenem	398148	24	2	54	1	1					
+B	mlst	mlst	dataset	klebsiella_aerogenes__meropenem	400000	26	2	44	1	1					
+B	mlst	mlst	dataset	klebsiella_oxytoca__cefotaxime		4	1	4	1	1					
+B	mlst	mlst	dataset	klebsiella_oxytoca__cefoxitin	656250	22	2	20	1	1					
+B	mlst	mlst	dataset	klebsiella_oxytoca__cefpodoxime	500000	30	2	28	1	1					
+B	mlst	mlst	dataset	klebsiella_oxytoca__ertapenem	866667	17	1	30	1	1					
+B	mlst	mlst	dataset	klebsiella_pneumoniae__amikacin	821838	491	31	1919	1	1					
+B	mlst	mlst	dataset	klebsiella_pneumoniae__amoxicillin_clavulanate	867560	52	9	90	1	1					
+B	mlst	mlst	dataset	klebsiella_pneumoniae__ampicillin_sulbactam	672222	53	10	49	1	1					
+B	mlst	mlst	dataset	klebsiella_pneumoniae__aztreonam	675850	362	26	3031	1	1					
+B	mlst	mlst	dataset	klebsiella_pneumoniae__cefazolin	945220	105	15	160	1	1					
+B	mlst	mlst	dataset	klebsiella_pneumoniae__cefepime	722037	384	31	2643	1	1					
+B	mlst	mlst	dataset	klebsiella_pneumoniae__cefotetan		0	0	0	0	0					
+B	mlst	mlst	dataset	klebsiella_pneumoniae__cefoxitin	642886	392	47	2832	1	1					
+B	mlst	mlst	dataset	klebsiella_pneumoniae__cefpodoxime	916667	50	11	39	1	1					
+B	mlst	mlst	dataset	klebsiella_pneumoniae__cefpodoxime_clavulanate	761905	34	7	27	1	1					
+B	mlst	mlst	dataset	klebsiella_pneumoniae__ceftazidime	755843	383	28	490	1	1					
+B	mlst	mlst	dataset	klebsiella_pneumoniae__ceftazidime_avibactam	852273	30	2	49	1	1					
+B	mlst	mlst	dataset	klebsiella_pneumoniae__ceftriaxone	1000000	115	6	130	1	1					
+B	mlst	mlst	dataset	klebsiella_pneumoniae__cefuroxime	949792	99	10	124	1	1					
+B	mlst	mlst	dataset	klebsiella_pneumoniae__chloramphenicol	478509	112	8	403	1	1					
+B	mlst	mlst	dataset	klebsiella_pneumoniae__ciprofloxacin	819331	134	16	260	1	1					
+B	mlst	mlst	dataset	klebsiella_pneumoniae__colistin	838133	190	7	1658	1	1					
+B	mlst	mlst	dataset	klebsiella_pneumoniae__doripenem	726562	88	6	295	1	1					
+B	mlst	mlst	dataset	klebsiella_pneumoniae__doxycycline	514583	20	4	30	1	1					
+B	mlst	mlst	dataset	klebsiella_pneumoniae__ertapenem	783835	95	7	163	1	1					
+B	mlst	mlst	dataset	klebsiella_pneumoniae__fosfomycin	422176	77	2	425	1	1					
+B	mlst	mlst	dataset	klebsiella_pneumoniae__gentamicin	873156	689	62	5278	1	1					
+B	mlst	mlst	dataset	klebsiella_pneumoniae__imipenem	937044	354	22	3187	1	1					
+B	mlst	mlst	dataset	klebsiella_pneumoniae__levofloxacin	672543	154	9	291	1	1					
+B	mlst	mlst	dataset	klebsiella_pneumoniae__meropenem	807795	403	32	3240	1	1					
+B	mlst	mlst	dataset	klebsiella_pneumoniae__nitrofurantoin	653355	129	11	377	1	1					
+B	mlst	mlst	dataset	klebsiella_pneumoniae__norfloxacin	309028	39	3	43	1	1					
+B	mlst	mlst	dataset	klebsiella_pneumoniae__ofloxacin	680556	43	3	62	1	1					
+B	mlst	mlst	dataset	klebsiella_pneumoniae__piperacillin_tazobactam	731282	328	30	2784	1	1					
+B	mlst	mlst	dataset	klebsiella_pneumoniae__polymyxin_b	590278	17	2	37	1	1					
+B	mlst	mlst	dataset	klebsiella_pneumoniae__streptomycin	125000	10	3	10	1	1					
+B	mlst	mlst	dataset	klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	804505	642	46	4614	1	1					
+B	mlst	mlst	dataset	klebsiella_pneumoniae__tetracycline	819946	347	31	3497	1	1					
+B	mlst	mlst	dataset	klebsiella_pneumoniae__ticarcillin_clavulanate	502778	21	2	91	1	1					
+B	mlst	mlst	dataset	klebsiella_pneumoniae__tigecycline	541807	375	27	2112	1	1					
+B	mlst	mlst	dataset	klebsiella_pneumoniae__tobramycin	874063	435	44	1779	1	1					
+B	mlst	mlst	dataset	klebsiella_pneumoniae__trimethoprim	785714	42	7	70	1	1					
+B	mlst	mlst	dataset	klebsiella_quasipneumoniae__cefotaxime		3	1	2	1	1					
+B	mlst	mlst	dataset	klebsiella_quasipneumoniae__sulfamethoxazole_trimethoprim		0	0	0	0	0					
+B	mlst	mlst	dataset	neisseria_gonorrhoeae__azithromycin	722222	60	3	99	1	1					
+B	mlst	mlst	dataset	neisseria_gonorrhoeae__ciprofloxacin	700000	122	5	242	1	1					
+B	mlst	mlst	dataset	neisseria_gonorrhoeae__erythromycin	505401	74	7	215	1	1					
+B	mlst	mlst	dataset	neisseria_gonorrhoeae__penicillin	716171	711	22	8825	1	1					
+B	mlst	mlst	dataset	neisseria_gonorrhoeae__tetracycline		9	3	6	1	1					
+B	mlst	mlst	dataset	pseudomonas_aeruginosa__amikacin	800215	165	27	480	1	1					
+B	mlst	mlst	dataset	pseudomonas_aeruginosa__aztreonam	777778	27	9	21	1	1					
+B	mlst	mlst	dataset	pseudomonas_aeruginosa__cefepime	482143	21	7	18	1	1					
+B	mlst	mlst	dataset	pseudomonas_aeruginosa__ceftazidime	892857	21	7	15	1	1					
+B	mlst	mlst	dataset	pseudomonas_aeruginosa__ceftazidime_avibactam	539885	153	16	392	1	1					
+B	mlst	mlst	dataset	pseudomonas_aeruginosa__ceftolozane_tazobactam	592071	141	16	299	1	1					
+B	mlst	mlst	dataset	pseudomonas_aeruginosa__ciprofloxacin	850000	14	5	12	1	1					
+B	mlst	mlst	dataset	pseudomonas_aeruginosa__gentamicin	759259	24	6	23	1	1					
+B	mlst	mlst	dataset	pseudomonas_aeruginosa__imipenem	730682	46	11	53	1	1					
+B	mlst	mlst	dataset	pseudomonas_aeruginosa__levofloxacin	948611	188	30	371	1	1					
+B	mlst	mlst	dataset	pseudomonas_aeruginosa__meropenem	695000	222	41	504	1	1					
+B	mlst	mlst	dataset	pseudomonas_aeruginosa__piperacillin_tazobactam		10	4	7	1	1					
+B	mlst	mlst	dataset	pseudomonas_aeruginosa__tobramycin	896825	26	7	27	1	1					
+B	mlst	mlst	dataset	salmonella_enterica__amoxicillin_clavulanate	882895	219	19	293	1	1					
+B	mlst	mlst	dataset	salmonella_enterica__ampicillin	835623	543	32	3197	1	1					
+B	mlst	mlst	dataset	salmonella_enterica__ampicillin_sulbactam	697977	154	8	1909	1	1					
+B	mlst	mlst	dataset	salmonella_enterica__azithromycin	691436	328	13	1920	1	1					
+B	mlst	mlst	dataset	salmonella_enterica__cefazolin	435857	157	8	1965	1	1					
+B	mlst	mlst	dataset	salmonella_enterica__cefotaxime	685153	408	16	3506	1	1					
+B	mlst	mlst	dataset	salmonella_enterica__cefoxitin	824920	315	28	894	1	1					
+B	mlst	mlst	dataset	salmonella_enterica__ceftazidime	769036	161	3	406	1	1					
+B	mlst	mlst	dataset	salmonella_enterica__ceftiofur	916595	213	20	390	1	1					
+B	mlst	mlst	dataset	salmonella_enterica__ceftriaxone	940789	208	19	282	1	1					
+B	mlst	mlst	dataset	salmonella_enterica__chloramphenicol	823910	483	31	3222	1	1					
+B	mlst	mlst	dataset	salmonella_enterica__ciprofloxacin	542387	113	10	514	1	1					
+B	mlst	mlst	dataset	salmonella_enterica__gentamicin	830342	548	31	2633	1	1					
+B	mlst	mlst	dataset	salmonella_enterica__kanamycin	929059	186	13	804	1	1					
+B	mlst	mlst	dataset	salmonella_enterica__nalidixic_acid	666422	210	12	2628	1	1					
+B	mlst	mlst	dataset	salmonella_enterica__spectinomycin	977717	85	6	488	1	1					
+B	mlst	mlst	dataset	salmonella_enterica__streptomycin	842396	342	24	1967	1	1					
+B	mlst	mlst	dataset	salmonella_enterica__sulfamethoxazole		4	1	4	1	1					
+B	mlst	mlst	dataset	salmonella_enterica__sulfamethoxazole_trimethoprim	531229	286	14	2914	1	1					
+B	mlst	mlst	dataset	salmonella_enterica__sulfathiazole	575265	92	6	142	1	1					
+B	mlst	mlst	dataset	salmonella_enterica__sulfisoxazole	884615	98	13	131	1	1					
+B	mlst	mlst	dataset	salmonella_enterica__tetracycline	859085	561	43	4659	1	1					
+B	mlst	mlst	dataset	salmonella_enterica__trimethoprim	972222	126	9	447	1	1					
+B	mlst	mlst	dataset	shigella_sonnei__ampicillin	1000000	35	3	53	1	1					
+B	mlst	mlst	dataset	shigella_sonnei__azithromycin	1000000	150	1	441	1	1					
+B	mlst	mlst	dataset	shigella_sonnei__cefoperazone	935374	172	3	349	1	1					
+B	mlst	mlst	dataset	shigella_sonnei__cefoxitin	550676	159	2	304	1	1					
+B	mlst	mlst	dataset	shigella_sonnei__ceftazidime	959732	150	1	149	1	1					
+B	mlst	mlst	dataset	shigella_sonnei__ceftriaxone	916667	35	3	72	1	1					
+B	mlst	mlst	dataset	shigella_sonnei__colistin	1000000	177	3	3462	1	1					
+B	mlst	mlst	dataset	shigella_sonnei__gentamicin	848198	191	5	356	1	1					
+B	mlst	mlst	dataset	shigella_sonnei__sulfamethoxazole_trimethoprim	981164	182	4	615	1	1					
+B	mlst	mlst	dataset	shigella_sonnei__tetracycline	873276	181	4	755	1	1					
+B	mlst	mlst	dataset	shigella_sonnei__tobramycin	906790	161	3	304	1	1					
+B	mlst	mlst	dataset	staphylococcus_aureus__cefoxitin	828326	562	22	4450	1	1					
+B	mlst	mlst	dataset	staphylococcus_aureus__chloramphenicol	565927	488	17	5151	1	1					
+B	mlst	mlst	dataset	staphylococcus_aureus__ciprofloxacin	767750	701	23	4228	1	1					
+B	mlst	mlst	dataset	staphylococcus_aureus__clindamycin	616886	621	25	6614	1	1					
+B	mlst	mlst	dataset	staphylococcus_aureus__daptomycin	577217	459	13	1649	1	1					
+B	mlst	mlst	dataset	staphylococcus_aureus__erythromycin	798337	639	29	5653	1	1					
+B	mlst	mlst	dataset	staphylococcus_aureus__fusidic_acid	666667	41	3	48	1	1					
+B	mlst	mlst	dataset	staphylococcus_aureus__gentamicin	665576	429	14	1234	1	1					
+B	mlst	mlst	dataset	staphylococcus_aureus__mupirocin	729933	48	4	51	1	1					
+B	mlst	mlst	dataset	staphylococcus_aureus__oxacillin	718156	477	15	4228	1	1					
+B	mlst	mlst	dataset	staphylococcus_aureus__penicillin	877187	603	20	1688	1	1					
+B	mlst	mlst	dataset	staphylococcus_aureus__rifampin	879630	46	6	63	1	1					
+B	mlst	mlst	dataset	staphylococcus_aureus__sulfamethoxazole_trimethoprim	620677	601	16	3297	1	1					
+B	mlst	mlst	dataset	staphylococcus_aureus__tetracycline	709387	525	22	3035	1	1					
+B	mlst	mlst	dataset	streptococcus_pneumoniae__azithromycin	832848	545	15	1257	1	1					
+B	mlst	mlst	dataset	streptococcus_pneumoniae__cefepime	666667	18	2	16	1	1					
+B	mlst	mlst	dataset	streptococcus_pneumoniae__ceftriaxone	750000	52	3	49	1	1					
+B	mlst	mlst	dataset	streptococcus_pneumoniae__cefuroxime	600000	96	5	751	1	1					
+B	mlst	mlst	dataset	streptococcus_pneumoniae__chloramphenicol	707380	346	10	587	1	1					
+B	mlst	mlst	dataset	streptococcus_pneumoniae__clindamycin	611193	604	19	812	1	1					
+B	mlst	mlst	dataset	streptococcus_pneumoniae__erythromycin	809293	720	27	1579	1	1					
+B	mlst	mlst	dataset	streptococcus_pneumoniae__meropenem	567460	69	6	199	1	1					
+B	mlst	mlst	dataset	streptococcus_pneumoniae__penicillin		0	0	0	0	0					
+B	mlst	mlst	dataset	streptococcus_pneumoniae__sulfamethoxazole_trimethoprim	764230	389	19	518	1	1					
+B	mlst	mlst	dataset	streptococcus_pneumoniae__tetracycline	687600	655	19	3304	1	1					
+B	mlst	primary	overall	all	747609	38052	2311	214121	201	16	10104	438	58719	4	0
+B	mlst	primary	species	acinetobacter_baumannii	679757	3914	166	15404	17	1	86	9	147	0	0
+B	mlst	primary	species	campylobacter_coli	937236	283	32	616	7	1	10	1	32	0	0
+B	mlst	primary	species	campylobacter_jejuni	902723	1149	40	7827	4	1	308	4	3811	0	0
+B	mlst	primary	species	enterobacter_cloacae	858970	133	26	161	8	1	288	28	788	1	0
+B	mlst	primary	species	enterococcus_faecium	631482	772	68	2733	13	1	781	32	2449	0	0
+B	mlst	primary	species	escherichia_coli	840099	5152	457	31518	32	1	2805	134	10313	0	0
+B	mlst	primary	species	klebsiella_aerogenes	311990	78	7	149	3	1	12	3	14	0	0
+B	mlst	primary	species	klebsiella_oxytoca	630729	73	6	82	4	1	0	0	0	0	0
+B	mlst	primary	species	klebsiella_pneumoniae	720312	7294	563	45093	36	1	1570	107	9248	1	0
+B	mlst	primary	species	klebsiella_quasipneumoniae		3	1	2	1	1	3	1	2	1	0
+B	mlst	primary	species	neisseria_gonorrhoeae	585325	976	37	10130	5	1	294	3	1723	0	0
+B	mlst	primary	species	pseudomonas_aeruginosa	759856	1058	183	2247	13	1	257	54	470	0	0
+B	mlst	primary	species	salmonella_enterica	743051	5840	373	35451	23	1	261	27	839	0	0
+B	mlst	primary	species	shigella_sonnei	906534	1593	32	6860	11	1	9	0	49	0	0
+B	mlst	primary	species	staphylococcus_aureus	735627	6240	211	44494	14	1	1297	14	12761	0	0
+B	mlst	primary	species	streptococcus_pneumoniae	718048	3494	109	11354	10	1	2123	21	16073	1	0
+B	mlst	primary	dataset	acinetobacter_baumannii__amikacin	823642	489	20	4443	1	1	8	1	11	0	0
+B	mlst	primary	dataset	acinetobacter_baumannii__ampicillin_sulbactam	575701	377	18	731	1	1	2	0	4	0	0
+B	mlst	primary	dataset	acinetobacter_baumannii__cefotaxime	487387	122	5	117	1	1	0	0	0	0	0
+B	mlst	primary	dataset	acinetobacter_baumannii__ceftazidime	675490	196	9	414	1	1	7	1	10	0	0
+B	mlst	primary	dataset	acinetobacter_baumannii__ceftriaxone	500000	27	2	67	1	1	0	0	0	0	0
+B	mlst	primary	dataset	acinetobacter_baumannii__ciprofloxacin	825702	291	14	657	1	1	6	1	5	0	0
+B	mlst	primary	dataset	acinetobacter_baumannii__doripenem	777778	20	1	36	1	1	0	0	0	0	0
+B	mlst	primary	dataset	acinetobacter_baumannii__doxycycline	444444	17	3	30	1	1	8	0	37	0	0
+B	mlst	primary	dataset	acinetobacter_baumannii__gentamicin	526947	318	14	697	1	1	11	1	14	0	0
+B	mlst	primary	dataset	acinetobacter_baumannii__imipenem	826394	489	15	2048	1	1	6	1	12	0	0
+B	mlst	primary	dataset	acinetobacter_baumannii__levofloxacin	827778	214	10	462	1	1	4	1	4	0	0
+B	mlst	primary	dataset	acinetobacter_baumannii__meropenem	928934	180	11	856	1	1	1	0	4	0	0
+B	mlst	primary	dataset	acinetobacter_baumannii__minocycline	655208	29	4	62	1	1	13	1	12	0	0
+B	mlst	primary	dataset	acinetobacter_baumannii__moxifloxacin	718750	27	4	27	1	1	0	0	0	0	0
+B	mlst	primary	dataset	acinetobacter_baumannii__sulfamethoxazole_trimethoprim	702512	454	14	2605	1	1	9	1	12	0	0
+B	mlst	primary	dataset	acinetobacter_baumannii__tetracycline	695554	426	11	1162	1	1	0	0	0	0	0
+B	mlst	primary	dataset	acinetobacter_baumannii__tobramycin	563649	238	11	990	1	1	11	1	22	0	0
+B	mlst	primary	dataset	campylobacter_coli__azithromycin		7	1	6	1	1	0	0	0	0	0
+B	mlst	primary	dataset	campylobacter_coli__ciprofloxacin	1000000	91	9	256	1	1	2	0	13	0	0
+B	mlst	primary	dataset	campylobacter_coli__clindamycin	578431	59	6	69	1	1	2	0	3	0	0
+B	mlst	primary	dataset	campylobacter_coli__erythromycin		7	1	6	1	1	0	0	0	0	0
+B	mlst	primary	dataset	campylobacter_coli__nalidixic_acid	982222	91	9	257	1	1	2	0	13	0	0
+B	mlst	primary	dataset	campylobacter_coli__telithromycin		9	2	7	1	1	0	0	0	0	0
+B	mlst	primary	dataset	campylobacter_coli__tetracycline	1000000	19	4	15	1	1	4	1	3	0	0
+B	mlst	primary	dataset	campylobacter_jejuni__ciprofloxacin	983083	317	10	2594	1	1	92	1	1166	0	0
+B	mlst	primary	dataset	campylobacter_jejuni__clindamycin	718092	150	4	197	1	1	40	0	60	0	0
+B	mlst	primary	dataset	campylobacter_jejuni__nalidixic_acid	988994	309	10	2373	1	1	100	1	1376	0	0
+B	mlst	primary	dataset	campylobacter_jejuni__tetracycline	920724	373	16	2663	1	1	76	2	1209	0	0
+B	mlst	primary	dataset	enterobacter_cloacae__cefepime		2	1	1	1	1	36	4	82	0	0
+B	mlst	primary	dataset	enterobacter_cloacae__ciprofloxacin	500000	14	2	12	1	1	28	4	66	0	0
+B	mlst	primary	dataset	enterobacter_cloacae__gentamicin		7	2	6	1	1	38	6	61	0	0
+B	mlst	primary	dataset	enterobacter_cloacae__imipenem		5	2	3	1	1	24	1	67	0	0
+B	mlst	primary	dataset	enterobacter_cloacae__levofloxacin	1000000	14	2	12	1	1	27	4	63	0	0
+B	mlst	primary	dataset	enterobacter_cloacae__meropenem	562500	22	4	20	1	1	27	3	90	0	0
+B	mlst	primary	dataset	enterobacter_cloacae__sulfamethoxazole_trimethoprim		0	0	0	0	0	33	4	73	1	1
+B	mlst	primary	dataset	enterobacter_cloacae__tobramycin		12	4	9	1	1	29	2	77	0	0
+B	mlst	primary	dataset	enterobacter_cloacae__trimethoprim	809259	57	9	98	1	1	46	0	209	0	0
+B	mlst	primary	dataset	enterococcus_faecium__ampicillin	625000	10	2	11	1	1	45	3	46	0	0
+B	mlst	primary	dataset	enterococcus_faecium__clindamycin	142857	9	1	14	1	1	78	1	77	0	0
+B	mlst	primary	dataset	enterococcus_faecium__dalfopristin_quinupristin	701852	125	6	119	1	1	57	2	189	0	0
+B	mlst	primary	dataset	enterococcus_faecium__daptomycin	423950	129	11	216	1	1	15	2	32	0	0
+B	mlst	primary	dataset	enterococcus_faecium__doxycycline	557364	111	5	295	1	1	109	8	425	0	0
+B	mlst	primary	dataset	enterococcus_faecium__erythromycin	683333	29	9	23	1	1	11	0	20	0	0
+B	mlst	primary	dataset	enterococcus_faecium__gentamicin	726190	52	7	76	1	1	131	4	346	0	0
+B	mlst	primary	dataset	enterococcus_faecium__kanamycin	650000	42	5	49	1	1	114	3	623	0	0
+B	mlst	primary	dataset	enterococcus_faecium__linezolid	425000	13	2	19	1	1	40	1	72	0	0
+B	mlst	primary	dataset	enterococcus_faecium__streptomycin	566667	30	4	26	1	1	130	4	176	0	0
+B	mlst	primary	dataset	enterococcus_faecium__teicoplanin	953571	66	3	846	1	1	14	1	138	0	0
+B	mlst	primary	dataset	enterococcus_faecium__tetracycline		14	5	9	1	1	13	2	19	0	0
+B	mlst	primary	dataset	enterococcus_faecium__vancomycin	953477	142	8	1030	1	1	24	1	286	0	0
+B	mlst	primary	dataset	escherichia_coli__amikacin	959478	142	8	160	1	1	53	4	60	0	0
+B	mlst	primary	dataset	escherichia_coli__amoxicillin_clavulanate	943104	119	12	798	1	1	86	3	163	0	0
+B	mlst	primary	dataset	escherichia_coli__ampicillin	866437	257	20	815	1	1	169	7	746	0	0
+B	mlst	primary	dataset	escherichia_coli__ampicillin_sulbactam	788458	141	7	1428	1	1	16	0	96	0	0
+B	mlst	primary	dataset	escherichia_coli__aztreonam	691193	155	7	1864	1	1	3	0	45	0	0
+B	mlst	primary	dataset	escherichia_coli__cefazolin	757124	100	8	99	1	1	45	5	107	0	0
+B	mlst	primary	dataset	escherichia_coli__cefepime	739567	271	19	2730	1	1	42	1	160	0	0
+B	mlst	primary	dataset	escherichia_coli__cefotaxime	795290	71	13	138	1	1	56	6	120	0	0
+B	mlst	primary	dataset	escherichia_coli__cefoxitin	720053	178	25	532	1	1	133	7	326	0	0
+B	mlst	primary	dataset	escherichia_coli__cefpodoxime	599747	52	11	67	1	1	67	5	244	0	0
+B	mlst	primary	dataset	escherichia_coli__cefpodoxime_clavulanate	486111	27	9	18	1	1	53	5	96	0	0
+B	mlst	primary	dataset	escherichia_coli__ceftazidime	843552	258	21	2343	1	1	91	2	189	0	0
+B	mlst	primary	dataset	escherichia_coli__ceftiofur		5	1	6	1	1	48	2	74	0	0
+B	mlst	primary	dataset	escherichia_coli__ceftriaxone	880721	306	17	2188	1	1	118	5	314	0	0
+B	mlst	primary	dataset	escherichia_coli__chloramphenicol	938667	129	20	246	1	1	242	9	721	0	0
+B	mlst	primary	dataset	escherichia_coli__ciprofloxacin	937762	191	15	1008	1	1	150	6	518	0	0
+B	mlst	primary	dataset	escherichia_coli__doxycycline	978070	73	3	789	1	1	15	2	34	0	0
+B	mlst	primary	dataset	escherichia_coli__ertapenem	758916	210	18	527	1	1	70	5	116	0	0
+B	mlst	primary	dataset	escherichia_coli__gentamicin	934242	351	29	3986	1	1	221	11	653	0	0
+B	mlst	primary	dataset	escherichia_coli__imipenem	872222	45	8	109	1	1	0	0	0	0	0
+B	mlst	primary	dataset	escherichia_coli__levofloxacin	864261	180	12	1149	1	1	73	3	293	0	0
+B	mlst	primary	dataset	escherichia_coli__meropenem	817334	191	18	275	1	1	81	6	141	0	0
+B	mlst	primary	dataset	escherichia_coli__nalidixic_acid	944444	14	2	28	1	1	83	3	92	0	0
+B	mlst	primary	dataset	escherichia_coli__nitrofurantoin	856858	160	9	371	1	1	50	2	271	0	0
+B	mlst	primary	dataset	escherichia_coli__norfloxacin	913889	72	6	244	1	1	39	0	402	0	0
+B	mlst	primary	dataset	escherichia_coli__piperacillin_tazobactam	731616	143	11	366	1	1	30	2	57	0	0
+B	mlst	primary	dataset	escherichia_coli__streptomycin	966482	130	14	541	1	1	144	5	725	0	0
+B	mlst	primary	dataset	escherichia_coli__sulfamethoxazole	789926	136	13	714	1	1	84	2	619	0	0
+B	mlst	primary	dataset	escherichia_coli__sulfamethoxazole_trimethoprim	876627	440	33	4518	1	1	173	11	991	0	0
+B	mlst	primary	dataset	escherichia_coli__tetracycline	876790	301	33	1954	1	1	146	7	903	0	0
+B	mlst	primary	dataset	escherichia_coli__tobramycin	951463	201	26	841	1	1	126	5	409	0	0
+B	mlst	primary	dataset	escherichia_coli__trimethoprim	802749	103	9	666	1	1	98	3	628	0	0
+B	mlst	primary	dataset	klebsiella_aerogenes__ertapenem	137821	28	3	51	1	1	4	1	5	0	0
+B	mlst	primary	dataset	klebsiella_aerogenes__imipenem	398148	24	2	54	1	1	3	1	4	0	0
+B	mlst	primary	dataset	klebsiella_aerogenes__meropenem	400000	26	2	44	1	1	5	1	5	0	0
+B	mlst	primary	dataset	klebsiella_oxytoca__cefotaxime		4	1	4	1	1	0	0	0	0	0
+B	mlst	primary	dataset	klebsiella_oxytoca__cefoxitin	656250	22	2	20	1	1	0	0	0	0	0
+B	mlst	primary	dataset	klebsiella_oxytoca__cefpodoxime	500000	30	2	28	1	1	0	0	0	0	0
+B	mlst	primary	dataset	klebsiella_oxytoca__ertapenem	866667	17	1	30	1	1	0	0	0	0	0
+B	mlst	primary	dataset	klebsiella_pneumoniae__amikacin	810796	491	29	2001	1	1	72	4	510	0	0
+B	mlst	primary	dataset	klebsiella_pneumoniae__amoxicillin_clavulanate	867560	52	9	90	1	1	15	2	19	0	0
+B	mlst	primary	dataset	klebsiella_pneumoniae__ampicillin_sulbactam	672222	53	10	49	1	1	72	3	69	0	0
+B	mlst	primary	dataset	klebsiella_pneumoniae__aztreonam	673539	362	23	3269	1	1	65	4	495	0	0
+B	mlst	primary	dataset	klebsiella_pneumoniae__cefazolin	945220	105	15	160	1	1	49	3	46	0	0
+B	mlst	primary	dataset	klebsiella_pneumoniae__cefepime	722390	384	27	2871	1	1	43	1	386	0	0
+B	mlst	primary	dataset	klebsiella_pneumoniae__cefotetan		0	0	0	0	0	3	1	2	1	1
+B	mlst	primary	dataset	klebsiella_pneumoniae__cefoxitin	639219	392	44	2928	1	1	78	6	658	0	0
+B	mlst	primary	dataset	klebsiella_pneumoniae__cefpodoxime	891667	50	10	42	1	1	18	4	18	0	0
+B	mlst	primary	dataset	klebsiella_pneumoniae__cefpodoxime_clavulanate	784722	34	6	29	1	1	12	3	9	0	0
+B	mlst	primary	dataset	klebsiella_pneumoniae__ceftazidime	770615	383	25	581	1	1	65	4	170	0	0
+B	mlst	primary	dataset	klebsiella_pneumoniae__ceftazidime_avibactam	852273	30	2	49	1	1	5	0	5	0	0
+B	mlst	primary	dataset	klebsiella_pneumoniae__ceftriaxone	1000000	115	6	130	1	1	19	2	17	0	0
+B	mlst	primary	dataset	klebsiella_pneumoniae__cefuroxime	949792	99	10	124	1	1	31	1	32	0	0
+B	mlst	primary	dataset	klebsiella_pneumoniae__chloramphenicol	478509	112	8	403	1	1	103	4	115	0	0
+B	mlst	primary	dataset	klebsiella_pneumoniae__ciprofloxacin	819331	134	16	260	1	1	111	10	268	0	0
+B	mlst	primary	dataset	klebsiella_pneumoniae__colistin	812709	190	6	1756	1	1	15	1	222	0	0
+B	mlst	primary	dataset	klebsiella_pneumoniae__doripenem	787297	88	5	375	1	1	18	1	67	0	0
+B	mlst	primary	dataset	klebsiella_pneumoniae__doxycycline	514583	20	4	30	1	1	0	0	0	0	0
+B	mlst	primary	dataset	klebsiella_pneumoniae__ertapenem	783835	95	7	163	1	1	19	1	32	0	0
+B	mlst	primary	dataset	klebsiella_pneumoniae__fosfomycin	422176	77	2	425	1	1	0	0	0	0	0
+B	mlst	primary	dataset	klebsiella_pneumoniae__gentamicin	869481	689	56	5534	1	1	160	9	1591	0	0
+B	mlst	primary	dataset	klebsiella_pneumoniae__imipenem	929077	354	20	3271	1	1	53	4	507	0	0
+B	mlst	primary	dataset	klebsiella_pneumoniae__levofloxacin	672543	154	9	291	1	1	96	4	353	0	0
+B	mlst	primary	dataset	klebsiella_pneumoniae__meropenem	808877	403	29	3433	1	1	81	6	581	0	0
+B	mlst	primary	dataset	klebsiella_pneumoniae__nitrofurantoin	728214	129	10	386	1	1	14	1	208	0	0
+B	mlst	primary	dataset	klebsiella_pneumoniae__norfloxacin	309028	39	3	43	1	1	0	0	0	0	0
+B	mlst	primary	dataset	klebsiella_pneumoniae__ofloxacin	680556	43	3	62	1	1	1	0	12	0	0
+B	mlst	primary	dataset	klebsiella_pneumoniae__piperacillin_tazobactam	747853	328	25	3076	1	1	25	4	313	0	0
+B	mlst	primary	dataset	klebsiella_pneumoniae__polymyxin_b	590278	17	2	37	1	1	4	0	12	0	0
+B	mlst	primary	dataset	klebsiella_pneumoniae__streptomycin	125000	10	3	10	1	1	0	0	0	0	0
+B	mlst	primary	dataset	klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	785442	642	42	4896	1	1	73	6	939	0	0
+B	mlst	primary	dataset	klebsiella_pneumoniae__tetracycline	808266	347	26	3722	1	1	54	5	735	0	0
+B	mlst	primary	dataset	klebsiella_pneumoniae__ticarcillin_clavulanate	502778	21	2	91	1	1	0	0	0	0	0
+B	mlst	primary	dataset	klebsiella_pneumoniae__tigecycline	512984	375	23	2359	1	1	48	3	273	0	0
+B	mlst	primary	dataset	klebsiella_pneumoniae__tobramycin	876673	435	39	2077	1	1	138	9	563	0	0
+B	mlst	primary	dataset	klebsiella_pneumoniae__trimethoprim	785714	42	7	70	1	1	10	1	21	0	0
+B	mlst	primary	dataset	klebsiella_quasipneumoniae__cefotaxime		3	1	2	1	1	0	0	0	0	0
+B	mlst	primary	dataset	klebsiella_quasipneumoniae__sulfamethoxazole_trimethoprim		0	0	0	0	0	3	1	2	1	1
+B	mlst	primary	dataset	neisseria_gonorrhoeae__azithromycin	722222	60	3	99	1	1	24	1	101	0	0
+B	mlst	primary	dataset	neisseria_gonorrhoeae__ciprofloxacin	700000	122	5	242	1	1	180	0	195	0	0
+B	mlst	primary	dataset	neisseria_gonorrhoeae__erythromycin	505401	74	7	215	1	1	34	1	210	0	0
+B	mlst	primary	dataset	neisseria_gonorrhoeae__penicillin	665667	711	19	9568	1	1	55	1	1216	0	0
+B	mlst	primary	dataset	neisseria_gonorrhoeae__tetracycline		9	3	6	1	1	1	0	1	0	0
+B	mlst	primary	dataset	pseudomonas_aeruginosa__amikacin	800215	165	27	480	1	1	58	10	131	0	0
+B	mlst	primary	dataset	pseudomonas_aeruginosa__aztreonam	777778	27	9	21	1	1	5	2	3	0	0
+B	mlst	primary	dataset	pseudomonas_aeruginosa__cefepime	482143	21	7	18	1	1	4	2	2	0	0
+B	mlst	primary	dataset	pseudomonas_aeruginosa__ceftazidime	892857	21	7	15	1	1	5	2	3	0	0
+B	mlst	primary	dataset	pseudomonas_aeruginosa__ceftazidime_avibactam	539885	153	16	392	1	1	4	0	16	0	0
+B	mlst	primary	dataset	pseudomonas_aeruginosa__ceftolozane_tazobactam	592071	141	16	299	1	1	4	0	22	0	0
+B	mlst	primary	dataset	pseudomonas_aeruginosa__ciprofloxacin	850000	14	5	12	1	1	9	3	6	0	0
+B	mlst	primary	dataset	pseudomonas_aeruginosa__gentamicin	759259	24	6	23	1	1	12	4	8	0	0
+B	mlst	primary	dataset	pseudomonas_aeruginosa__imipenem	730682	46	11	53	1	1	10	4	8	0	0
+B	mlst	primary	dataset	pseudomonas_aeruginosa__levofloxacin	948611	188	30	371	1	1	66	10	138	0	0
+B	mlst	primary	dataset	pseudomonas_aeruginosa__meropenem	732800	222	38	529	1	1	67	12	125	0	0
+B	mlst	primary	dataset	pseudomonas_aeruginosa__piperacillin_tazobactam		10	4	7	1	1	4	2	2	0	0
+B	mlst	primary	dataset	pseudomonas_aeruginosa__tobramycin	896825	26	7	27	1	1	9	3	6	0	0
+B	mlst	primary	dataset	salmonella_enterica__amoxicillin_clavulanate	882895	219	19	293	1	1	12	3	9	0	0
+B	mlst	primary	dataset	salmonella_enterica__ampicillin	839851	543	31	3209	1	1	50	2	97	0	0
+B	mlst	primary	dataset	salmonella_enterica__ampicillin_sulbactam	697977	154	8	1909	1	1	7	1	10	0	0
+B	mlst	primary	dataset	salmonella_enterica__azithromycin	691436	328	13	1920	1	1	18	2	43	0	0
+B	mlst	primary	dataset	salmonella_enterica__cefazolin	435857	157	8	1965	1	1	11	1	56	0	0
+B	mlst	primary	dataset	salmonella_enterica__cefotaxime	675527	408	15	3518	1	1	20	2	111	0	0
+B	mlst	primary	dataset	salmonella_enterica__cefoxitin	824920	315	28	894	1	1	12	3	9	0	0
+B	mlst	primary	dataset	salmonella_enterica__ceftazidime	769036	161	3	406	1	1	1	0	3	0	0
+B	mlst	primary	dataset	salmonella_enterica__ceftiofur	916595	213	20	390	1	1	6	1	5	0	0
+B	mlst	primary	dataset	salmonella_enterica__ceftriaxone	940789	208	19	282	1	1	6	1	5	0	0
+B	mlst	primary	dataset	salmonella_enterica__chloramphenicol	818040	483	30	3250	1	1	19	1	138	0	0
+B	mlst	primary	dataset	salmonella_enterica__ciprofloxacin	542387	113	10	514	1	1	7	1	8	0	0
+B	mlst	primary	dataset	salmonella_enterica__gentamicin	830342	548	31	2633	1	1	22	3	43	0	0
+B	mlst	primary	dataset	salmonella_enterica__kanamycin	929059	186	13	804	1	1	9	1	40	0	0
+B	mlst	primary	dataset	salmonella_enterica__nalidixic_acid	666422	210	12	2628	1	1	4	1	28	0	0
+B	mlst	primary	dataset	salmonella_enterica__spectinomycin	972222	85	5	516	1	1	1	0	5	0	0
+B	mlst	primary	dataset	salmonella_enterica__streptomycin	837875	342	23	1995	1	1	9	0	52	0	0
+B	mlst	primary	dataset	salmonella_enterica__sulfamethoxazole		4	1	4	1	1	0	0	0	0	0
+B	mlst	primary	dataset	salmonella_enterica__sulfamethoxazole_trimethoprim	531229	286	14	2914	1	1	12	1	52	0	0
+B	mlst	primary	dataset	salmonella_enterica__sulfathiazole	575265	92	6	142	1	1	4	0	8	0	0
+B	mlst	primary	dataset	salmonella_enterica__sulfisoxazole	884615	98	13	131	1	1	3	1	2	0	0
+B	mlst	primary	dataset	salmonella_enterica__tetracycline	859085	561	43	4659	1	1	22	2	86	0	0
+B	mlst	primary	dataset	salmonella_enterica__trimethoprim	968750	126	8	475	1	1	6	0	29	0	0
+B	mlst	primary	dataset	shigella_sonnei__ampicillin	1000000	35	3	53	1	1	0	0	0	0	0
+B	mlst	primary	dataset	shigella_sonnei__azithromycin	1000000	150	1	441	1	1	1	0	3	0	0
+B	mlst	primary	dataset	shigella_sonnei__cefoperazone	935374	172	3	349	1	1	1	0	2	0	0
+B	mlst	primary	dataset	shigella_sonnei__cefoxitin	550676	159	2	304	1	1	1	0	2	0	0
+B	mlst	primary	dataset	shigella_sonnei__ceftazidime	959732	150	1	149	1	1	1	0	1	0	0
+B	mlst	primary	dataset	shigella_sonnei__ceftriaxone	916667	35	3	72	1	1	0	0	0	0	0
+B	mlst	primary	dataset	shigella_sonnei__colistin	1000000	177	3	3462	1	1	1	0	28	0	0
+B	mlst	primary	dataset	shigella_sonnei__gentamicin	848198	191	5	356	1	1	1	0	2	0	0
+B	mlst	primary	dataset	shigella_sonnei__sulfamethoxazole_trimethoprim	981164	182	4	615	1	1	1	0	4	0	0
+B	mlst	primary	dataset	shigella_sonnei__tetracycline	873276	181	4	755	1	1	1	0	5	0	0
+B	mlst	primary	dataset	shigella_sonnei__tobramycin	906790	161	3	304	1	1	1	0	2	0	0
+B	mlst	primary	dataset	staphylococcus_aureus__cefoxitin	828326	562	22	4450	1	1	115	0	1538	0	0
+B	mlst	primary	dataset	staphylococcus_aureus__chloramphenicol	569813	488	16	6243	1	1	89	2	1044	0	0
+B	mlst	primary	dataset	staphylococcus_aureus__ciprofloxacin	778560	701	20	4719	1	1	120	2	960	0	0
+B	mlst	primary	dataset	staphylococcus_aureus__clindamycin	621260	621	24	6627	1	1	129	0	2477	0	0
+B	mlst	primary	dataset	staphylococcus_aureus__daptomycin	577217	459	13	1649	1	1	92	1	289	0	0
+B	mlst	primary	dataset	staphylococcus_aureus__erythromycin	803118	639	27	5726	1	1	150	1	2013	0	0
+B	mlst	primary	dataset	staphylococcus_aureus__fusidic_acid	875000	41	2	93	1	1	24	0	158	0	0
+B	mlst	primary	dataset	staphylococcus_aureus__gentamicin	668378	429	13	1555	1	1	158	3	1004	0	0
+B	mlst	primary	dataset	staphylococcus_aureus__mupirocin	769767	48	1	215	1	1	4	0	20	0	0
+B	mlst	primary	dataset	staphylococcus_aureus__oxacillin	718156	477	15	4228	1	1	96	1	1262	0	0
+B	mlst	primary	dataset	staphylococcus_aureus__penicillin	866780	603	18	1859	1	1	103	0	555	0	0
+B	mlst	primary	dataset	staphylococcus_aureus__rifampin	884444	46	5	84	1	1	40	0	127	0	0
+B	mlst	primary	dataset	staphylococcus_aureus__sulfamethoxazole_trimethoprim	634340	601	15	3498	1	1	107	3	619	0	0
+B	mlst	primary	dataset	staphylococcus_aureus__tetracycline	703623	525	20	3548	1	1	70	1	695	0	0
+B	mlst	primary	dataset	streptococcus_pneumoniae__azithromycin	838459	545	13	1550	1	1	241	2	2261	0	0
+B	mlst	primary	dataset	streptococcus_pneumoniae__cefepime	666667	18	2	16	1	1	53	0	159	0	0
+B	mlst	primary	dataset	streptococcus_pneumoniae__ceftriaxone	742857	52	2	118	1	1	20	0	60	0	0
+B	mlst	primary	dataset	streptococcus_pneumoniae__cefuroxime	624313	96	4	942	1	1	249	4	2367	0	0
+B	mlst	primary	dataset	streptococcus_pneumoniae__chloramphenicol	746834	346	9	646	1	1	253	1	839	0	0
+B	mlst	primary	dataset	streptococcus_pneumoniae__clindamycin	688919	604	17	1144	1	1	282	3	2136	0	0
+B	mlst	primary	dataset	streptococcus_pneumoniae__erythromycin	822448	720	25	2028	1	1	352	3	3143	0	0
+B	mlst	primary	dataset	streptococcus_pneumoniae__meropenem	618125	69	5	309	1	1	152	1	543	0	0
+B	mlst	primary	dataset	streptococcus_pneumoniae__penicillin		0	0	0	0	0	20	1	36	1	1
+B	mlst	primary	dataset	streptococcus_pneumoniae__sulfamethoxazole_trimethoprim	752289	389	16	643	1	1	260	4	2478	0	0
+B	mlst	primary	dataset	streptococcus_pneumoniae__tetracycline	679572	655	16	3958	1	1	241	2	2051	0	0
+B	mlst_hc20	mlst_hc20	overall	all	753285	10914	997	54123	135	11					
+B	mlst_hc20	mlst_hc20	species	acinetobacter_baumannii	591470	2202	84	7713	15	1					
+B	mlst_hc20	mlst_hc20	species	campylobacter_coli	940476	140	38	142	7	1					
+B	mlst_hc20	mlst_hc20	species	campylobacter_jejuni	913333	276	37	543	4	1					
+B	mlst_hc20	mlst_hc20	species	enterobacter_cloacae		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	species	enterococcus_faecium	783889	94	14	105	5	1					
+B	mlst_hc20	mlst_hc20	species	escherichia_coli	623176	409	102	413	23	1					
+B	mlst_hc20	mlst_hc20	species	klebsiella_aerogenes		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	species	klebsiella_oxytoca	630729	72	6	81	4	1					
+B	mlst_hc20	mlst_hc20	species	klebsiella_pneumoniae	661864	4691	356	33596	36	1					
+B	mlst_hc20	mlst_hc20	species	klebsiella_quasipneumoniae		3	1	2	1	1					
+B	mlst_hc20	mlst_hc20	species	neisseria_gonorrhoeae		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	species	pseudomonas_aeruginosa	475065	289	66	275	12	1					
+B	mlst_hc20	mlst_hc20	species	salmonella_enterica	749468	2724	286	11246	22	1					
+B	mlst_hc20	mlst_hc20	species	shigella_sonnei		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	species	staphylococcus_aureus		14	7	7	6	1					
+B	mlst_hc20	mlst_hc20	species	streptococcus_pneumoniae		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	acinetobacter_baumannii__amikacin	839547	277	16	2306	1	1					
+B	mlst_hc20	mlst_hc20	dataset	acinetobacter_baumannii__ampicillin_sulbactam	611551	207	8	445	1	1					
+B	mlst_hc20	mlst_hc20	dataset	acinetobacter_baumannii__cefotaxime	494792	97	1	96	1	1					
+B	mlst_hc20	mlst_hc20	dataset	acinetobacter_baumannii__ceftazidime	539691	106	2	204	1	1					
+B	mlst_hc20	mlst_hc20	dataset	acinetobacter_baumannii__ceftriaxone		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	acinetobacter_baumannii__ciprofloxacin	700000	212	5	388	1	1					
+B	mlst_hc20	mlst_hc20	dataset	acinetobacter_baumannii__doripenem		7	2	5	1	1					
+B	mlst_hc20	mlst_hc20	dataset	acinetobacter_baumannii__doxycycline		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	acinetobacter_baumannii__gentamicin	476327	200	8	409	1	1					
+B	mlst_hc20	mlst_hc20	dataset	acinetobacter_baumannii__imipenem	608937	226	8	863	1	1					
+B	mlst_hc20	mlst_hc20	dataset	acinetobacter_baumannii__levofloxacin	750887	125	6	229	1	1					
+B	mlst_hc20	mlst_hc20	dataset	acinetobacter_baumannii__meropenem	855181	97	6	539	1	1					
+B	mlst_hc20	mlst_hc20	dataset	acinetobacter_baumannii__minocycline		2	1	1	1	1					
+B	mlst_hc20	mlst_hc20	dataset	acinetobacter_baumannii__moxifloxacin	437500	17	2	15	1	1					
+B	mlst_hc20	mlst_hc20	dataset	acinetobacter_baumannii__sulfamethoxazole_trimethoprim	480000	271	10	1083	1	1					
+B	mlst_hc20	mlst_hc20	dataset	acinetobacter_baumannii__tetracycline	590722	202	5	443	1	1					
+B	mlst_hc20	mlst_hc20	dataset	acinetobacter_baumannii__tobramycin	486916	156	4	687	1	1					
+B	mlst_hc20	mlst_hc20	dataset	campylobacter_coli__azithromycin		2	1	1	1	1					
+B	mlst_hc20	mlst_hc20	dataset	campylobacter_coli__ciprofloxacin	1000000	57	14	63	1	1					
+B	mlst_hc20	mlst_hc20	dataset	campylobacter_coli__clindamycin	583333	19	6	13	1	1					
+B	mlst_hc20	mlst_hc20	dataset	campylobacter_coli__erythromycin		2	1	1	1	1					
+B	mlst_hc20	mlst_hc20	dataset	campylobacter_coli__nalidixic_acid	1000000	53	13	60	1	1					
+B	mlst_hc20	mlst_hc20	dataset	campylobacter_coli__telithromycin		2	1	1	1	1					
+B	mlst_hc20	mlst_hc20	dataset	campylobacter_coli__tetracycline		5	2	3	1	1					
+B	mlst_hc20	mlst_hc20	dataset	campylobacter_jejuni__ciprofloxacin	934722	85	12	209	1	1					
+B	mlst_hc20	mlst_hc20	dataset	campylobacter_jejuni__clindamycin	908333	33	2	31	1	1					
+B	mlst_hc20	mlst_hc20	dataset	campylobacter_jejuni__nalidixic_acid	935278	85	12	209	1	1					
+B	mlst_hc20	mlst_hc20	dataset	campylobacter_jejuni__tetracycline	875000	73	11	94	1	1					
+B	mlst_hc20	mlst_hc20	dataset	enterobacter_cloacae__cefepime		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	enterobacter_cloacae__ciprofloxacin		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	enterobacter_cloacae__gentamicin		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	enterobacter_cloacae__imipenem		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	enterobacter_cloacae__levofloxacin		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	enterobacter_cloacae__meropenem		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	enterobacter_cloacae__sulfamethoxazole_trimethoprim		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	enterobacter_cloacae__tobramycin		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	enterobacter_cloacae__trimethoprim		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	enterococcus_faecium__ampicillin		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	enterococcus_faecium__clindamycin		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	enterococcus_faecium__dalfopristin_quinupristin	1000000	23	1	22	1	1					
+B	mlst_hc20	mlst_hc20	dataset	enterococcus_faecium__daptomycin	319444	24	6	23	1	1					
+B	mlst_hc20	mlst_hc20	dataset	enterococcus_faecium__doxycycline		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	enterococcus_faecium__erythromycin		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	enterococcus_faecium__gentamicin	1000000	23	1	42	1	1					
+B	mlst_hc20	mlst_hc20	dataset	enterococcus_faecium__kanamycin		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	enterococcus_faecium__linezolid		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	enterococcus_faecium__streptomycin		9	1	8	1	1					
+B	mlst_hc20	mlst_hc20	dataset	enterococcus_faecium__teicoplanin		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	enterococcus_faecium__tetracycline		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	enterococcus_faecium__vancomycin	850000	15	5	10	1	1					
+B	mlst_hc20	mlst_hc20	dataset	escherichia_coli__amikacin		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	escherichia_coli__amoxicillin_clavulanate	738095	15	3	24	1	1					
+B	mlst_hc20	mlst_hc20	dataset	escherichia_coli__ampicillin	530303	18	3	15	1	1					
+B	mlst_hc20	mlst_hc20	dataset	escherichia_coli__ampicillin_sulbactam	261364	27	6	22	1	1					
+B	mlst_hc20	mlst_hc20	dataset	escherichia_coli__aztreonam	852273	21	4	17	1	1					
+B	mlst_hc20	mlst_hc20	dataset	escherichia_coli__cefazolin	969697	16	3	13	1	1					
+B	mlst_hc20	mlst_hc20	dataset	escherichia_coli__cefepime	500000	33	7	29	1	1					
+B	mlst_hc20	mlst_hc20	dataset	escherichia_coli__cefotaxime		2	1	1	1	1					
+B	mlst_hc20	mlst_hc20	dataset	escherichia_coli__cefoxitin		12	5	7	1	1					
+B	mlst_hc20	mlst_hc20	dataset	escherichia_coli__cefpodoxime		2	1	1	1	1					
+B	mlst_hc20	mlst_hc20	dataset	escherichia_coli__cefpodoxime_clavulanate		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	escherichia_coli__ceftazidime	726190	21	6	15	1	1					
+B	mlst_hc20	mlst_hc20	dataset	escherichia_coli__ceftiofur		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	escherichia_coli__ceftriaxone	801136	30	8	22	1	1					
+B	mlst_hc20	mlst_hc20	dataset	escherichia_coli__chloramphenicol		10	5	5	1	1					
+B	mlst_hc20	mlst_hc20	dataset	escherichia_coli__ciprofloxacin		2	1	1	1	1					
+B	mlst_hc20	mlst_hc20	dataset	escherichia_coli__doxycycline	625000	15	3	25	1	1					
+B	mlst_hc20	mlst_hc20	dataset	escherichia_coli__ertapenem		10	3	7	1	1					
+B	mlst_hc20	mlst_hc20	dataset	escherichia_coli__gentamicin	865909	39	10	33	1	1					
+B	mlst_hc20	mlst_hc20	dataset	escherichia_coli__imipenem		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	escherichia_coli__levofloxacin		2	1	1	1	1					
+B	mlst_hc20	mlst_hc20	dataset	escherichia_coli__meropenem		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	escherichia_coli__nalidixic_acid		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	escherichia_coli__nitrofurantoin	815476	18	4	26	1	1					
+B	mlst_hc20	mlst_hc20	dataset	escherichia_coli__norfloxacin		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	escherichia_coli__piperacillin_tazobactam		2	1	1	1	1					
+B	mlst_hc20	mlst_hc20	dataset	escherichia_coli__streptomycin		2	1	1	1	1					
+B	mlst_hc20	mlst_hc20	dataset	escherichia_coli__sulfamethoxazole		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	escherichia_coli__sulfamethoxazole_trimethoprim	937678	65	13	92	1	1					
+B	mlst_hc20	mlst_hc20	dataset	escherichia_coli__tetracycline	861111	33	6	48	1	1					
+B	mlst_hc20	mlst_hc20	dataset	escherichia_coli__tobramycin		14	7	7	1	1					
+B	mlst_hc20	mlst_hc20	dataset	escherichia_coli__trimethoprim		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	klebsiella_aerogenes__ertapenem		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	klebsiella_aerogenes__imipenem		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	klebsiella_aerogenes__meropenem		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	klebsiella_oxytoca__cefotaxime		4	1	4	1	1					
+B	mlst_hc20	mlst_hc20	dataset	klebsiella_oxytoca__cefoxitin	656250	22	2	20	1	1					
+B	mlst_hc20	mlst_hc20	dataset	klebsiella_oxytoca__cefpodoxime	500000	29	2	27	1	1					
+B	mlst_hc20	mlst_hc20	dataset	klebsiella_oxytoca__ertapenem	866667	17	1	30	1	1					
+B	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__amikacin	755066	343	16	1425	1	1					
+B	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__amoxicillin_clavulanate	823512	30	5	45	1	1					
+B	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__ampicillin_sulbactam		9	3	6	1	1					
+B	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__aztreonam	628912	230	14	2521	1	1					
+B	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__cefazolin	1000000	22	6	17	1	1					
+B	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__cefepime	541732	262	23	2192	1	1					
+B	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__cefotetan		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__cefoxitin	597985	226	32	2288	1	1					
+B	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__cefpodoxime	694444	18	3	15	1	1					
+B	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__cefpodoxime_clavulanate	583333	15	2	13	1	1					
+B	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__ceftazidime	597685	242	15	250	1	1					
+B	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__ceftazidime_avibactam		2	1	1	1	1					
+B	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__ceftriaxone	1000000	91	5	86	1	1					
+B	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__cefuroxime	973684	27	4	23	1	1					
+B	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__chloramphenicol	413204	71	7	256	1	1					
+B	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__ciprofloxacin	728889	53	10	59	1	1					
+B	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__colistin	781241	164	9	1462	1	1					
+B	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__doripenem	221814	73	2	205	1	1					
+B	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__doxycycline	400000	10	2	16	1	1					
+B	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__ertapenem	742958	78	2	146	1	1					
+B	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__fosfomycin	591987	64	3	298	1	1					
+B	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__gentamicin	854266	418	26	4353	1	1					
+B	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__imipenem	961125	242	12	2522	1	1					
+B	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__levofloxacin	448639	111	4	208	1	1					
+B	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__meropenem	803059	295	20	2583	1	1					
+B	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__nitrofurantoin	720274	88	2	329	1	1					
+B	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__norfloxacin	430556	27	4	23	1	1					
+B	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__ofloxacin	583333	18	3	21	1	1					
+B	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__piperacillin_tazobactam	664404	182	18	2321	1	1					
+B	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__polymyxin_b	583333	7	1	12	1	1					
+B	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__streptomycin		5	1	6	1	1					
+B	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	789467	413	27	3723	1	1					
+B	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__tetracycline	746259	199	18	2984	1	1					
+B	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__ticarcillin_clavulanate	715278	17	3	29	1	1					
+B	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__tigecycline	467940	332	26	1749	1	1					
+B	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__tobramycin	782730	283	22	1390	1	1					
+B	mlst_hc20	mlst_hc20	dataset	klebsiella_pneumoniae__trimethoprim	866667	24	5	19	1	1					
+B	mlst_hc20	mlst_hc20	dataset	klebsiella_quasipneumoniae__cefotaxime		3	1	2	1	1					
+B	mlst_hc20	mlst_hc20	dataset	klebsiella_quasipneumoniae__sulfamethoxazole_trimethoprim		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	neisseria_gonorrhoeae__azithromycin		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	neisseria_gonorrhoeae__ciprofloxacin		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	neisseria_gonorrhoeae__erythromycin		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	neisseria_gonorrhoeae__penicillin		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	neisseria_gonorrhoeae__tetracycline		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	pseudomonas_aeruginosa__amikacin	781250	16	6	13	1	1					
+B	mlst_hc20	mlst_hc20	dataset	pseudomonas_aeruginosa__aztreonam		5	2	3	1	1					
+B	mlst_hc20	mlst_hc20	dataset	pseudomonas_aeruginosa__cefepime		3	1	2	1	1					
+B	mlst_hc20	mlst_hc20	dataset	pseudomonas_aeruginosa__ceftazidime		3	1	2	1	1					
+B	mlst_hc20	mlst_hc20	dataset	pseudomonas_aeruginosa__ceftazidime_avibactam	518466	90	16	105	1	1					
+B	mlst_hc20	mlst_hc20	dataset	pseudomonas_aeruginosa__ceftolozane_tazobactam	720513	85	13	85	1	1					
+B	mlst_hc20	mlst_hc20	dataset	pseudomonas_aeruginosa__ciprofloxacin		4	1	4	1	1					
+B	mlst_hc20	mlst_hc20	dataset	pseudomonas_aeruginosa__gentamicin		4	1	4	1	1					
+B	mlst_hc20	mlst_hc20	dataset	pseudomonas_aeruginosa__imipenem	375000	15	4	11	1	1					
+B	mlst_hc20	mlst_hc20	dataset	pseudomonas_aeruginosa__levofloxacin	888889	29	9	21	1	1					
+B	mlst_hc20	mlst_hc20	dataset	pseudomonas_aeruginosa__meropenem	666667	31	11	21	1	1					
+B	mlst_hc20	mlst_hc20	dataset	pseudomonas_aeruginosa__piperacillin_tazobactam		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	pseudomonas_aeruginosa__tobramycin		4	1	4	1	1					
+B	mlst_hc20	mlst_hc20	dataset	salmonella_enterica__amoxicillin_clavulanate	857143	52	9	43	1	1					
+B	mlst_hc20	mlst_hc20	dataset	salmonella_enterica__ampicillin	829985	217	21	1027	1	1					
+B	mlst_hc20	mlst_hc20	dataset	salmonella_enterica__ampicillin_sulbactam	707418	117	8	793	1	1					
+B	mlst_hc20	mlst_hc20	dataset	salmonella_enterica__azithromycin	630271	185	11	531	1	1					
+B	mlst_hc20	mlst_hc20	dataset	salmonella_enterica__cefazolin	596851	105	6	865	1	1					
+B	mlst_hc20	mlst_hc20	dataset	salmonella_enterica__cefotaxime	733314	216	17	968	1	1					
+B	mlst_hc20	mlst_hc20	dataset	salmonella_enterica__cefoxitin	724640	96	16	131	1	1					
+B	mlst_hc20	mlst_hc20	dataset	salmonella_enterica__ceftazidime	589012	105	3	242	1	1					
+B	mlst_hc20	mlst_hc20	dataset	salmonella_enterica__ceftiofur	848958	72	12	60	1	1					
+B	mlst_hc20	mlst_hc20	dataset	salmonella_enterica__ceftriaxone	972222	49	9	40	1	1					
+B	mlst_hc20	mlst_hc20	dataset	salmonella_enterica__chloramphenicol	738744	267	24	1033	1	1					
+B	mlst_hc20	mlst_hc20	dataset	salmonella_enterica__ciprofloxacin	599372	58	8	221	1	1					
+B	mlst_hc20	mlst_hc20	dataset	salmonella_enterica__gentamicin	738394	265	28	631	1	1					
+B	mlst_hc20	mlst_hc20	dataset	salmonella_enterica__kanamycin	958333	92	18	112	1	1					
+B	mlst_hc20	mlst_hc20	dataset	salmonella_enterica__nalidixic_acid	519241	134	6	1132	1	1					
+B	mlst_hc20	mlst_hc20	dataset	salmonella_enterica__spectinomycin	1000000	22	5	22	1	1					
+B	mlst_hc20	mlst_hc20	dataset	salmonella_enterica__streptomycin	712716	133	20	268	1	1					
+B	mlst_hc20	mlst_hc20	dataset	salmonella_enterica__sulfamethoxazole		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	salmonella_enterica__sulfamethoxazole_trimethoprim	748887	193	14	1327	1	1					
+B	mlst_hc20	mlst_hc20	dataset	salmonella_enterica__sulfathiazole		12	3	9	1	1					
+B	mlst_hc20	mlst_hc20	dataset	salmonella_enterica__sulfisoxazole	952381	29	9	20	1	1					
+B	mlst_hc20	mlst_hc20	dataset	salmonella_enterica__tetracycline	780416	279	33	1745	1	1					
+B	mlst_hc20	mlst_hc20	dataset	salmonella_enterica__trimethoprim	1000000	26	6	26	1	1					
+B	mlst_hc20	mlst_hc20	dataset	shigella_sonnei__ampicillin		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	shigella_sonnei__azithromycin		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	shigella_sonnei__cefoperazone		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	shigella_sonnei__cefoxitin		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	shigella_sonnei__ceftazidime		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	shigella_sonnei__ceftriaxone		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	shigella_sonnei__colistin		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	shigella_sonnei__gentamicin		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	shigella_sonnei__sulfamethoxazole_trimethoprim		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	shigella_sonnei__tetracycline		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	shigella_sonnei__tobramycin		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	staphylococcus_aureus__cefoxitin		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	staphylococcus_aureus__chloramphenicol		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	staphylococcus_aureus__ciprofloxacin		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	staphylococcus_aureus__clindamycin		2	1	1	1	1					
+B	mlst_hc20	mlst_hc20	dataset	staphylococcus_aureus__daptomycin		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	staphylococcus_aureus__erythromycin		2	1	1	1	1					
+B	mlst_hc20	mlst_hc20	dataset	staphylococcus_aureus__fusidic_acid		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	staphylococcus_aureus__gentamicin		2	1	1	1	1					
+B	mlst_hc20	mlst_hc20	dataset	staphylococcus_aureus__mupirocin		4	2	2	1	1					
+B	mlst_hc20	mlst_hc20	dataset	staphylococcus_aureus__oxacillin		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	staphylococcus_aureus__penicillin		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	staphylococcus_aureus__rifampin		2	1	1	1	1					
+B	mlst_hc20	mlst_hc20	dataset	staphylococcus_aureus__sulfamethoxazole_trimethoprim		2	1	1	1	1					
+B	mlst_hc20	mlst_hc20	dataset	staphylococcus_aureus__tetracycline		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	streptococcus_pneumoniae__azithromycin		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	streptococcus_pneumoniae__cefepime		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	streptococcus_pneumoniae__ceftriaxone		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	streptococcus_pneumoniae__cefuroxime		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	streptococcus_pneumoniae__chloramphenicol		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	streptococcus_pneumoniae__clindamycin		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	streptococcus_pneumoniae__erythromycin		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	streptococcus_pneumoniae__meropenem		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	streptococcus_pneumoniae__penicillin		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	streptococcus_pneumoniae__sulfamethoxazole_trimethoprim		0	0	0	0	0					
+B	mlst_hc20	mlst_hc20	dataset	streptococcus_pneumoniae__tetracycline		0	0	0	0	0					
+B	mlst_hc20	mlst	overall	all	752700	10914	758	68224	135	11					
+B	mlst_hc20	mlst	species	acinetobacter_baumannii	585888	2202	68	8664	15	1					
+B	mlst_hc20	mlst	species	campylobacter_coli	940476	140	23	320	7	1					
+B	mlst_hc20	mlst	species	campylobacter_jejuni	910185	276	31	837	4	1					
+B	mlst_hc20	mlst	species	enterobacter_cloacae		0	0	0	0	0					
+B	mlst_hc20	mlst	species	enterococcus_faecium	776667	94	13	108	5	1					
+B	mlst_hc20	mlst	species	escherichia_coli	645030	409	82	924	23	1					
+B	mlst_hc20	mlst	species	klebsiella_aerogenes		0	0	0	0	0					
+B	mlst_hc20	mlst	species	klebsiella_oxytoca	630729	72	6	81	4	1					
+B	mlst_hc20	mlst	species	klebsiella_pneumoniae	653239	4691	297	35356	36	1					
+B	mlst_hc20	mlst	species	klebsiella_quasipneumoniae		3	1	2	1	1					
+B	mlst_hc20	mlst	species	neisseria_gonorrhoeae		0	0	0	0	0					
+B	mlst_hc20	mlst	species	pseudomonas_aeruginosa	462584	289	57	412	12	1					
+B	mlst_hc20	mlst	species	salmonella_enterica	758234	2724	173	21513	22	1					
+B	mlst_hc20	mlst	species	shigella_sonnei		0	0	0	0	0					
+B	mlst_hc20	mlst	species	staphylococcus_aureus		14	7	7	6	1					
+B	mlst_hc20	mlst	species	streptococcus_pneumoniae		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	acinetobacter_baumannii__amikacin	754145	277	9	2913	1	1					
+B	mlst_hc20	mlst	dataset	acinetobacter_baumannii__ampicillin_sulbactam	611551	207	8	445	1	1					
+B	mlst_hc20	mlst	dataset	acinetobacter_baumannii__cefotaxime	494792	97	1	96	1	1					
+B	mlst_hc20	mlst	dataset	acinetobacter_baumannii__ceftazidime	539691	106	2	204	1	1					
+B	mlst_hc20	mlst	dataset	acinetobacter_baumannii__ceftriaxone		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	acinetobacter_baumannii__ciprofloxacin	700000	212	5	388	1	1					
+B	mlst_hc20	mlst	dataset	acinetobacter_baumannii__doripenem	900000	7	1	10	1	1					
+B	mlst_hc20	mlst	dataset	acinetobacter_baumannii__doxycycline		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	acinetobacter_baumannii__gentamicin	476327	200	8	409	1	1					
+B	mlst_hc20	mlst	dataset	acinetobacter_baumannii__imipenem	574499	226	7	868	1	1					
+B	mlst_hc20	mlst	dataset	acinetobacter_baumannii__levofloxacin	803413	125	4	257	1	1					
+B	mlst_hc20	mlst	dataset	acinetobacter_baumannii__meropenem	826217	97	5	544	1	1					
+B	mlst_hc20	mlst	dataset	acinetobacter_baumannii__minocycline		2	1	1	1	1					
+B	mlst_hc20	mlst	dataset	acinetobacter_baumannii__moxifloxacin	437500	17	2	15	1	1					
+B	mlst_hc20	mlst	dataset	acinetobacter_baumannii__sulfamethoxazole_trimethoprim	592553	271	6	1384	1	1					
+B	mlst_hc20	mlst	dataset	acinetobacter_baumannii__tetracycline	590722	202	5	443	1	1					
+B	mlst_hc20	mlst	dataset	acinetobacter_baumannii__tobramycin	486916	156	4	687	1	1					
+B	mlst_hc20	mlst	dataset	campylobacter_coli__azithromycin		2	1	1	1	1					
+B	mlst_hc20	mlst	dataset	campylobacter_coli__ciprofloxacin	1000000	57	6	157	1	1					
+B	mlst_hc20	mlst	dataset	campylobacter_coli__clindamycin	583333	19	6	13	1	1					
+B	mlst_hc20	mlst	dataset	campylobacter_coli__erythromycin		2	1	1	1	1					
+B	mlst_hc20	mlst	dataset	campylobacter_coli__nalidixic_acid	1000000	53	6	144	1	1					
+B	mlst_hc20	mlst	dataset	campylobacter_coli__telithromycin		2	1	1	1	1					
+B	mlst_hc20	mlst	dataset	campylobacter_coli__tetracycline		5	2	3	1	1					
+B	mlst_hc20	mlst	dataset	campylobacter_jejuni__ciprofloxacin	938519	85	10	336	1	1					
+B	mlst_hc20	mlst	dataset	campylobacter_jejuni__clindamycin	908333	33	2	31	1	1					
+B	mlst_hc20	mlst	dataset	campylobacter_jejuni__nalidixic_acid	946667	85	10	336	1	1					
+B	mlst_hc20	mlst	dataset	campylobacter_jejuni__tetracycline	847222	73	9	134	1	1					
+B	mlst_hc20	mlst	dataset	enterobacter_cloacae__cefepime		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	enterobacter_cloacae__ciprofloxacin		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	enterobacter_cloacae__gentamicin		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	enterobacter_cloacae__imipenem		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	enterobacter_cloacae__levofloxacin		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	enterobacter_cloacae__meropenem		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	enterobacter_cloacae__sulfamethoxazole_trimethoprim		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	enterobacter_cloacae__tobramycin		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	enterobacter_cloacae__trimethoprim		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	enterococcus_faecium__ampicillin		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	enterococcus_faecium__clindamycin		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	enterococcus_faecium__dalfopristin_quinupristin	1000000	23	1	22	1	1					
+B	mlst_hc20	mlst	dataset	enterococcus_faecium__daptomycin	283333	24	5	26	1	1					
+B	mlst_hc20	mlst	dataset	enterococcus_faecium__doxycycline		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	enterococcus_faecium__erythromycin		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	enterococcus_faecium__gentamicin	1000000	23	1	42	1	1					
+B	mlst_hc20	mlst	dataset	enterococcus_faecium__kanamycin		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	enterococcus_faecium__linezolid		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	enterococcus_faecium__streptomycin		9	1	8	1	1					
+B	mlst_hc20	mlst	dataset	enterococcus_faecium__teicoplanin		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	enterococcus_faecium__tetracycline		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	enterococcus_faecium__vancomycin	850000	15	5	10	1	1					
+B	mlst_hc20	mlst	dataset	escherichia_coli__amikacin		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	escherichia_coli__amoxicillin_clavulanate	738095	15	3	24	1	1					
+B	mlst_hc20	mlst	dataset	escherichia_coli__ampicillin	530303	18	3	15	1	1					
+B	mlst_hc20	mlst	dataset	escherichia_coli__ampicillin_sulbactam	340188	27	3	54	1	1					
+B	mlst_hc20	mlst	dataset	escherichia_coli__aztreonam	819444	21	2	44	1	1					
+B	mlst_hc20	mlst	dataset	escherichia_coli__cefazolin	969697	16	3	13	1	1					
+B	mlst_hc20	mlst	dataset	escherichia_coli__cefepime	609821	33	4	146	1	1					
+B	mlst_hc20	mlst	dataset	escherichia_coli__cefotaxime		2	1	1	1	1					
+B	mlst_hc20	mlst	dataset	escherichia_coli__cefoxitin		12	5	7	1	1					
+B	mlst_hc20	mlst	dataset	escherichia_coli__cefpodoxime		2	1	1	1	1					
+B	mlst_hc20	mlst	dataset	escherichia_coli__cefpodoxime_clavulanate		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	escherichia_coli__ceftazidime	771429	21	5	19	1	1					
+B	mlst_hc20	mlst	dataset	escherichia_coli__ceftiofur		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	escherichia_coli__ceftriaxone	960069	30	6	54	1	1					
+B	mlst_hc20	mlst	dataset	escherichia_coli__chloramphenicol		10	5	5	1	1					
+B	mlst_hc20	mlst	dataset	escherichia_coli__ciprofloxacin		2	1	1	1	1					
+B	mlst_hc20	mlst	dataset	escherichia_coli__doxycycline	779762	15	2	43	1	1					
+B	mlst_hc20	mlst	dataset	escherichia_coli__ertapenem		10	3	7	1	1					
+B	mlst_hc20	mlst	dataset	escherichia_coli__gentamicin	890625	39	8	65	1	1					
+B	mlst_hc20	mlst	dataset	escherichia_coli__imipenem		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	escherichia_coli__levofloxacin		2	1	1	1	1					
+B	mlst_hc20	mlst	dataset	escherichia_coli__meropenem		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	escherichia_coli__nalidixic_acid		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	escherichia_coli__nitrofurantoin	815476	18	4	26	1	1					
+B	mlst_hc20	mlst	dataset	escherichia_coli__norfloxacin		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	escherichia_coli__piperacillin_tazobactam		2	1	1	1	1					
+B	mlst_hc20	mlst	dataset	escherichia_coli__streptomycin		2	1	1	1	1					
+B	mlst_hc20	mlst	dataset	escherichia_coli__sulfamethoxazole		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	escherichia_coli__sulfamethoxazole_trimethoprim	928629	65	8	330	1	1					
+B	mlst_hc20	mlst	dataset	escherichia_coli__tetracycline	833333	33	5	59	1	1					
+B	mlst_hc20	mlst	dataset	escherichia_coli__tobramycin		14	7	7	1	1					
+B	mlst_hc20	mlst	dataset	escherichia_coli__trimethoprim		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	klebsiella_aerogenes__ertapenem		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	klebsiella_aerogenes__imipenem		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	klebsiella_aerogenes__meropenem		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	klebsiella_oxytoca__cefotaxime		4	1	4	1	1					
+B	mlst_hc20	mlst	dataset	klebsiella_oxytoca__cefoxitin	656250	22	2	20	1	1					
+B	mlst_hc20	mlst	dataset	klebsiella_oxytoca__cefpodoxime	500000	29	2	27	1	1					
+B	mlst_hc20	mlst	dataset	klebsiella_oxytoca__ertapenem	866667	17	1	30	1	1					
+B	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__amikacin	795874	343	14	1543	1	1					
+B	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__amoxicillin_clavulanate	794271	30	4	58	1	1					
+B	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__ampicillin_sulbactam		9	3	6	1	1					
+B	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__aztreonam	652987	230	12	2577	1	1					
+B	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__cefazolin	987879	22	5	37	1	1					
+B	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__cefepime	565046	262	18	2296	1	1					
+B	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__cefotetan		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__cefoxitin	595059	226	29	2327	1	1					
+B	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__cefpodoxime	694444	18	3	15	1	1					
+B	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__cefpodoxime_clavulanate	583333	15	2	13	1	1					
+B	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__ceftazidime	657569	242	12	309	1	1					
+B	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__ceftazidime_avibactam		2	1	1	1	1					
+B	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__ceftriaxone	1000000	91	4	98	1	1					
+B	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__cefuroxime	973684	27	4	23	1	1					
+B	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__chloramphenicol	384503	71	5	282	1	1					
+B	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__ciprofloxacin	685540	53	7	112	1	1					
+B	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__colistin	796846	164	6	1550	1	1					
+B	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__doripenem	351449	73	1	276	1	1					
+B	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__doxycycline	400000	10	2	16	1	1					
+B	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__ertapenem	742958	78	2	146	1	1					
+B	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__fosfomycin	436435	64	2	350	1	1					
+B	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__gentamicin	867612	418	24	4511	1	1					
+B	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__imipenem	953638	242	10	2684	1	1					
+B	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__levofloxacin	448639	111	4	208	1	1					
+B	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__meropenem	781487	295	16	2694	1	1					
+B	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__nitrofurantoin	720274	88	2	329	1	1					
+B	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__norfloxacin	374074	27	3	28	1	1					
+B	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__ofloxacin	583333	18	2	38	1	1					
+B	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__piperacillin_tazobactam	708057	182	14	2360	1	1					
+B	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__polymyxin_b	583333	7	1	12	1	1					
+B	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__streptomycin		5	1	6	1	1					
+B	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	764597	413	21	3913	1	1					
+B	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__tetracycline	730805	199	17	3034	1	1					
+B	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__ticarcillin_clavulanate	541667	17	1	72	1	1					
+B	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__tigecycline	488661	332	22	1957	1	1					
+B	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__tobramycin	761431	283	20	1430	1	1					
+B	mlst_hc20	mlst	dataset	klebsiella_pneumoniae__trimethoprim	777778	24	3	45	1	1					
+B	mlst_hc20	mlst	dataset	klebsiella_quasipneumoniae__cefotaxime		3	1	2	1	1					
+B	mlst_hc20	mlst	dataset	klebsiella_quasipneumoniae__sulfamethoxazole_trimethoprim		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	neisseria_gonorrhoeae__azithromycin		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	neisseria_gonorrhoeae__ciprofloxacin		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	neisseria_gonorrhoeae__erythromycin		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	neisseria_gonorrhoeae__penicillin		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	neisseria_gonorrhoeae__tetracycline		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	pseudomonas_aeruginosa__amikacin	687500	16	5	15	1	1					
+B	mlst_hc20	mlst	dataset	pseudomonas_aeruginosa__aztreonam		5	2	3	1	1					
+B	mlst_hc20	mlst	dataset	pseudomonas_aeruginosa__cefepime		3	1	2	1	1					
+B	mlst_hc20	mlst	dataset	pseudomonas_aeruginosa__ceftazidime		3	1	2	1	1					
+B	mlst_hc20	mlst	dataset	pseudomonas_aeruginosa__ceftazidime_avibactam	520746	90	13	199	1	1					
+B	mlst_hc20	mlst	dataset	pseudomonas_aeruginosa__ceftolozane_tazobactam	674432	85	11	109	1	1					
+B	mlst_hc20	mlst	dataset	pseudomonas_aeruginosa__ciprofloxacin		4	1	4	1	1					
+B	mlst_hc20	mlst	dataset	pseudomonas_aeruginosa__gentamicin		4	1	4	1	1					
+B	mlst_hc20	mlst	dataset	pseudomonas_aeruginosa__imipenem	350000	15	3	16	1	1					
+B	mlst_hc20	mlst	dataset	pseudomonas_aeruginosa__levofloxacin	875000	29	8	25	1	1					
+B	mlst_hc20	mlst	dataset	pseudomonas_aeruginosa__meropenem	693333	31	10	29	1	1					
+B	mlst_hc20	mlst	dataset	pseudomonas_aeruginosa__piperacillin_tazobactam		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	pseudomonas_aeruginosa__tobramycin		4	1	4	1	1					
+B	mlst_hc20	mlst	dataset	salmonella_enterica__amoxicillin_clavulanate	839286	52	8	72	1	1					
+B	mlst_hc20	mlst	dataset	salmonella_enterica__ampicillin	905363	217	13	2201	1	1					
+B	mlst_hc20	mlst	dataset	salmonella_enterica__ampicillin_sulbactam	831320	117	3	1622	1	1					
+B	mlst_hc20	mlst	dataset	salmonella_enterica__azithromycin	636255	185	6	980	1	1					
+B	mlst_hc20	mlst	dataset	salmonella_enterica__cefazolin	504820	105	2	1496	1	1					
+B	mlst_hc20	mlst	dataset	salmonella_enterica__cefotaxime	703663	216	7	1936	1	1					
+B	mlst_hc20	mlst	dataset	salmonella_enterica__cefoxitin	711259	96	11	395	1	1					
+B	mlst_hc20	mlst	dataset	salmonella_enterica__ceftazidime	629513	105	2	271	1	1					
+B	mlst_hc20	mlst	dataset	salmonella_enterica__ceftiofur	880719	72	9	123	1	1					
+B	mlst_hc20	mlst	dataset	salmonella_enterica__ceftriaxone	968750	49	8	69	1	1					
+B	mlst_hc20	mlst	dataset	salmonella_enterica__chloramphenicol	753567	267	15	1938	1	1					
+B	mlst_hc20	mlst	dataset	salmonella_enterica__ciprofloxacin	564667	58	5	342	1	1					
+B	mlst_hc20	mlst	dataset	salmonella_enterica__gentamicin	750406	265	18	1368	1	1					
+B	mlst_hc20	mlst	dataset	salmonella_enterica__kanamycin	903646	92	8	475	1	1					
+B	mlst_hc20	mlst	dataset	salmonella_enterica__nalidixic_acid	540065	134	3	1797	1	1					
+B	mlst_hc20	mlst	dataset	salmonella_enterica__spectinomycin	1000000	22	2	73	1	1					
+B	mlst_hc20	mlst	dataset	salmonella_enterica__streptomycin	626877	133	13	788	1	1					
+B	mlst_hc20	mlst	dataset	salmonella_enterica__sulfamethoxazole		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	salmonella_enterica__sulfamethoxazole_trimethoprim	845342	193	10	2191	1	1					
+B	mlst_hc20	mlst	dataset	salmonella_enterica__sulfathiazole	375000	12	2	14	1	1					
+B	mlst_hc20	mlst	dataset	salmonella_enterica__sulfisoxazole	938776	29	7	25	1	1					
+B	mlst_hc20	mlst	dataset	salmonella_enterica__tetracycline	771852	279	17	3275	1	1					
+B	mlst_hc20	mlst	dataset	salmonella_enterica__trimethoprim	1000000	26	4	62	1	1					
+B	mlst_hc20	mlst	dataset	shigella_sonnei__ampicillin		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	shigella_sonnei__azithromycin		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	shigella_sonnei__cefoperazone		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	shigella_sonnei__cefoxitin		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	shigella_sonnei__ceftazidime		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	shigella_sonnei__ceftriaxone		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	shigella_sonnei__colistin		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	shigella_sonnei__gentamicin		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	shigella_sonnei__sulfamethoxazole_trimethoprim		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	shigella_sonnei__tetracycline		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	shigella_sonnei__tobramycin		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	staphylococcus_aureus__cefoxitin		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	staphylococcus_aureus__chloramphenicol		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	staphylococcus_aureus__ciprofloxacin		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	staphylococcus_aureus__clindamycin		2	1	1	1	1					
+B	mlst_hc20	mlst	dataset	staphylococcus_aureus__daptomycin		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	staphylococcus_aureus__erythromycin		2	1	1	1	1					
+B	mlst_hc20	mlst	dataset	staphylococcus_aureus__fusidic_acid		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	staphylococcus_aureus__gentamicin		2	1	1	1	1					
+B	mlst_hc20	mlst	dataset	staphylococcus_aureus__mupirocin		4	2	2	1	1					
+B	mlst_hc20	mlst	dataset	staphylococcus_aureus__oxacillin		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	staphylococcus_aureus__penicillin		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	staphylococcus_aureus__rifampin		2	1	1	1	1					
+B	mlst_hc20	mlst	dataset	staphylococcus_aureus__sulfamethoxazole_trimethoprim		2	1	1	1	1					
+B	mlst_hc20	mlst	dataset	staphylococcus_aureus__tetracycline		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	streptococcus_pneumoniae__azithromycin		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	streptococcus_pneumoniae__cefepime		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	streptococcus_pneumoniae__ceftriaxone		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	streptococcus_pneumoniae__cefuroxime		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	streptococcus_pneumoniae__chloramphenicol		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	streptococcus_pneumoniae__clindamycin		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	streptococcus_pneumoniae__erythromycin		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	streptococcus_pneumoniae__meropenem		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	streptococcus_pneumoniae__penicillin		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	streptococcus_pneumoniae__sulfamethoxazole_trimethoprim		0	0	0	0	0					
+B	mlst_hc20	mlst	dataset	streptococcus_pneumoniae__tetracycline		0	0	0	0	0					
+B	mlst_hc20	primary	overall	all	753017	10914	730	69520	135	11	37242	2019	203320	70	5
+B	mlst_hc20	primary	species	acinetobacter_baumannii	585888	2202	68	8664	15	1	1798	107	6887	2	0
+B	mlst_hc20	primary	species	campylobacter_coli	940476	140	23	320	7	1	153	10	328	0	0
+B	mlst_hc20	primary	species	campylobacter_jejuni	916110	276	28	856	4	1	1181	16	10782	0	0
+B	mlst_hc20	primary	species	enterobacter_cloacae		0	0	0	0	0	421	54	949	9	1
+B	mlst_hc20	primary	species	enterococcus_faecium	777500	94	11	114	5	1	1459	89	5068	8	0
+B	mlst_hc20	primary	species	escherichia_coli	644348	409	80	933	23	1	7548	511	40898	9	0
+B	mlst_hc20	primary	species	klebsiella_aerogenes		0	0	0	0	0	90	10	163	3	1
+B	mlst_hc20	primary	species	klebsiella_oxytoca	630729	72	6	81	4	1	1	0	1	0	0
+B	mlst_hc20	primary	species	klebsiella_pneumoniae	650653	4691	277	36616	36	1	4173	393	17725	1	0
+B	mlst_hc20	primary	species	klebsiella_quasipneumoniae		3	1	2	1	1	3	1	2	1	0
+B	mlst_hc20	primary	species	neisseria_gonorrhoeae		0	0	0	0	0	1270	40	11853	5	1
+B	mlst_hc20	primary	species	pseudomonas_aeruginosa	462584	289	57	412	12	1	1026	180	2305	1	0
+B	mlst_hc20	primary	species	salmonella_enterica	758234	2724	173	21513	22	1	3377	227	14777	1	0
+B	mlst_hc20	primary	species	shigella_sonnei		0	0	0	0	0	1602	32	6909	11	1
+B	mlst_hc20	primary	species	staphylococcus_aureus		14	6	9	6	1	7523	219	57246	8	0
+B	mlst_hc20	primary	species	streptococcus_pneumoniae		0	0	0	0	0	5617	130	27427	11	1
+B	mlst_hc20	primary	dataset	acinetobacter_baumannii__amikacin	754145	277	9	2913	1	1	220	12	1541	0	0
+B	mlst_hc20	primary	dataset	acinetobacter_baumannii__ampicillin_sulbactam	611551	207	8	445	1	1	172	10	290	0	0
+B	mlst_hc20	primary	dataset	acinetobacter_baumannii__cefotaxime	494792	97	1	96	1	1	25	4	21	0	0
+B	mlst_hc20	primary	dataset	acinetobacter_baumannii__ceftazidime	539691	106	2	204	1	1	97	8	220	0	0
+B	mlst_hc20	primary	dataset	acinetobacter_baumannii__ceftriaxone		0	0	0	0	0	27	2	67	1	1
+B	mlst_hc20	primary	dataset	acinetobacter_baumannii__ciprofloxacin	700000	212	5	388	1	1	85	10	274	0	0
+B	mlst_hc20	primary	dataset	acinetobacter_baumannii__doripenem	900000	7	1	10	1	1	13	0	26	0	0
+B	mlst_hc20	primary	dataset	acinetobacter_baumannii__doxycycline		0	0	0	0	0	25	3	67	1	1
+B	mlst_hc20	primary	dataset	acinetobacter_baumannii__gentamicin	476327	200	8	409	1	1	129	7	302	0	0
+B	mlst_hc20	primary	dataset	acinetobacter_baumannii__imipenem	574499	226	7	868	1	1	269	9	1192	0	0
+B	mlst_hc20	primary	dataset	acinetobacter_baumannii__levofloxacin	803413	125	4	257	1	1	93	7	209	0	0
+B	mlst_hc20	primary	dataset	acinetobacter_baumannii__meropenem	826217	97	5	544	1	1	84	6	316	0	0
+B	mlst_hc20	primary	dataset	acinetobacter_baumannii__minocycline		2	1	1	1	1	40	4	73	0	0
+B	mlst_hc20	primary	dataset	acinetobacter_baumannii__moxifloxacin	437500	17	2	15	1	1	10	2	12	0	0
+B	mlst_hc20	primary	dataset	acinetobacter_baumannii__sulfamethoxazole_trimethoprim	592553	271	6	1384	1	1	192	9	1233	0	0
+B	mlst_hc20	primary	dataset	acinetobacter_baumannii__tetracycline	590722	202	5	443	1	1	224	6	719	0	0
+B	mlst_hc20	primary	dataset	acinetobacter_baumannii__tobramycin	486916	156	4	687	1	1	93	8	325	0	0
+B	mlst_hc20	primary	dataset	campylobacter_coli__azithromycin		2	1	1	1	1	5	0	5	0	0
+B	mlst_hc20	primary	dataset	campylobacter_coli__ciprofloxacin	1000000	57	6	157	1	1	36	3	112	0	0
+B	mlst_hc20	primary	dataset	campylobacter_coli__clindamycin	583333	19	6	13	1	1	42	0	59	0	0
+B	mlst_hc20	primary	dataset	campylobacter_coli__erythromycin		2	1	1	1	1	5	0	5	0	0
+B	mlst_hc20	primary	dataset	campylobacter_coli__nalidixic_acid	1000000	53	6	144	1	1	40	3	126	0	0
+B	mlst_hc20	primary	dataset	campylobacter_coli__telithromycin		2	1	1	1	1	7	1	6	0	0
+B	mlst_hc20	primary	dataset	campylobacter_coli__tetracycline		5	2	3	1	1	18	3	15	0	0
+B	mlst_hc20	primary	dataset	campylobacter_jejuni__ciprofloxacin	973354	85	9	338	1	1	324	2	3422	0	0
+B	mlst_hc20	primary	dataset	campylobacter_jejuni__clindamycin	908333	33	2	31	1	1	157	2	226	0	0
+B	mlst_hc20	primary	dataset	campylobacter_jejuni__nalidixic_acid	954630	85	9	338	1	1	324	2	3411	0	0
+B	mlst_hc20	primary	dataset	campylobacter_jejuni__tetracycline	828125	73	8	149	1	1	376	10	3723	0	0
+B	mlst_hc20	primary	dataset	enterobacter_cloacae__cefepime		0	0	0	0	0	38	5	83	1	1
+B	mlst_hc20	primary	dataset	enterobacter_cloacae__ciprofloxacin		0	0	0	0	0	42	6	78	1	1
+B	mlst_hc20	primary	dataset	enterobacter_cloacae__gentamicin		0	0	0	0	0	45	8	67	1	1
+B	mlst_hc20	primary	dataset	enterobacter_cloacae__imipenem		0	0	0	0	0	29	3	70	1	1
+B	mlst_hc20	primary	dataset	enterobacter_cloacae__levofloxacin		0	0	0	0	0	41	6	75	1	1
+B	mlst_hc20	primary	dataset	enterobacter_cloacae__meropenem		0	0	0	0	0	49	7	110	1	1
+B	mlst_hc20	primary	dataset	enterobacter_cloacae__sulfamethoxazole_trimethoprim		0	0	0	0	0	33	4	73	1	1
+B	mlst_hc20	primary	dataset	enterobacter_cloacae__tobramycin		0	0	0	0	0	41	6	86	1	1
+B	mlst_hc20	primary	dataset	enterobacter_cloacae__trimethoprim		0	0	0	0	0	103	9	307	1	1
+B	mlst_hc20	primary	dataset	enterococcus_faecium__ampicillin		0	0	0	0	0	55	5	57	1	1
+B	mlst_hc20	primary	dataset	enterococcus_faecium__clindamycin		0	0	0	0	0	87	2	91	1	1
+B	mlst_hc20	primary	dataset	enterococcus_faecium__dalfopristin_quinupristin	1000000	23	1	22	1	1	159	7	286	0	0
+B	mlst_hc20	primary	dataset	enterococcus_faecium__daptomycin	283333	24	5	26	1	1	120	8	222	0	0
+B	mlst_hc20	primary	dataset	enterococcus_faecium__doxycycline		0	0	0	0	0	220	13	720	1	1
+B	mlst_hc20	primary	dataset	enterococcus_faecium__erythromycin		0	0	0	0	0	40	9	43	1	1
+B	mlst_hc20	primary	dataset	enterococcus_faecium__gentamicin	1000000	23	1	42	1	1	160	10	380	0	0
+B	mlst_hc20	primary	dataset	enterococcus_faecium__kanamycin		0	0	0	0	0	156	8	672	1	1
+B	mlst_hc20	primary	dataset	enterococcus_faecium__linezolid		0	0	0	0	0	53	3	91	1	1
+B	mlst_hc20	primary	dataset	enterococcus_faecium__streptomycin		9	1	8	1	1	151	7	194	0	0
+B	mlst_hc20	primary	dataset	enterococcus_faecium__teicoplanin		0	0	0	0	0	80	4	984	1	1
+B	mlst_hc20	primary	dataset	enterococcus_faecium__tetracycline		0	0	0	0	0	27	7	28	1	1
+B	mlst_hc20	primary	dataset	enterococcus_faecium__vancomycin	854167	15	3	16	1	1	151	6	1300	0	0
+B	mlst_hc20	primary	dataset	escherichia_coli__amikacin		0	0	0	0	0	195	12	220	1	1
+B	mlst_hc20	primary	dataset	escherichia_coli__amoxicillin_clavulanate	738095	15	3	24	1	1	190	12	937	0	0
+B	mlst_hc20	primary	dataset	escherichia_coli__ampicillin	530303	18	3	15	1	1	408	24	1546	0	0
+B	mlst_hc20	primary	dataset	escherichia_coli__ampicillin_sulbactam	340188	27	3	54	1	1	130	4	1470	0	0
+B	mlst_hc20	primary	dataset	escherichia_coli__aztreonam	819444	21	2	44	1	1	137	5	1865	0	0
+B	mlst_hc20	primary	dataset	escherichia_coli__cefazolin	969697	16	3	13	1	1	129	10	193	0	0
+B	mlst_hc20	primary	dataset	escherichia_coli__cefepime	609821	33	4	146	1	1	280	16	2744	0	0
+B	mlst_hc20	primary	dataset	escherichia_coli__cefotaxime		2	1	1	1	1	125	18	257	0	0
+B	mlst_hc20	primary	dataset	escherichia_coli__cefoxitin		12	5	7	1	1	299	27	851	0	0
+B	mlst_hc20	primary	dataset	escherichia_coli__cefpodoxime		2	1	1	1	1	117	15	310	0	0
+B	mlst_hc20	primary	dataset	escherichia_coli__cefpodoxime_clavulanate		0	0	0	0	0	80	14	114	1	1
+B	mlst_hc20	primary	dataset	escherichia_coli__ceftazidime	771429	21	5	19	1	1	328	18	2513	0	0
+B	mlst_hc20	primary	dataset	escherichia_coli__ceftiofur		0	0	0	0	0	53	3	80	1	1
+B	mlst_hc20	primary	dataset	escherichia_coli__ceftriaxone	952083	30	5	56	1	1	394	17	2446	0	0
+B	mlst_hc20	primary	dataset	escherichia_coli__chloramphenicol		10	5	5	1	1	361	24	962	0	0
+B	mlst_hc20	primary	dataset	escherichia_coli__ciprofloxacin		2	1	1	1	1	339	20	1525	0	0
+B	mlst_hc20	primary	dataset	escherichia_coli__doxycycline	779762	15	2	43	1	1	73	3	780	0	0
+B	mlst_hc20	primary	dataset	escherichia_coli__ertapenem		10	3	7	1	1	270	20	636	0	0
+B	mlst_hc20	primary	dataset	escherichia_coli__gentamicin	882937	39	7	72	1	1	533	33	4567	0	0
+B	mlst_hc20	primary	dataset	escherichia_coli__imipenem		0	0	0	0	0	45	8	109	1	1
+B	mlst_hc20	primary	dataset	escherichia_coli__levofloxacin		2	1	1	1	1	251	14	1441	0	0
+B	mlst_hc20	primary	dataset	escherichia_coli__meropenem		0	0	0	0	0	272	24	416	1	1
+B	mlst_hc20	primary	dataset	escherichia_coli__nalidixic_acid		0	0	0	0	0	97	5	120	1	1
+B	mlst_hc20	primary	dataset	escherichia_coli__nitrofurantoin	815476	18	4	26	1	1	192	7	616	0	0
+B	mlst_hc20	primary	dataset	escherichia_coli__norfloxacin		0	0	0	0	0	111	6	646	1	1
+B	mlst_hc20	primary	dataset	escherichia_coli__piperacillin_tazobactam		2	1	1	1	1	171	12	422	0	0
+B	mlst_hc20	primary	dataset	escherichia_coli__streptomycin		2	1	1	1	1	272	18	1265	0	0
+B	mlst_hc20	primary	dataset	escherichia_coli__sulfamethoxazole		0	0	0	0	0	220	15	1333	1	1
+B	mlst_hc20	primary	dataset	escherichia_coli__sulfamethoxazole_trimethoprim	928629	65	8	330	1	1	548	36	5179	0	0
+B	mlst_hc20	primary	dataset	escherichia_coli__tetracycline	833333	33	5	59	1	1	414	35	2798	0	0
+B	mlst_hc20	primary	dataset	escherichia_coli__tobramycin		14	7	7	1	1	313	24	1243	0	0
+B	mlst_hc20	primary	dataset	escherichia_coli__trimethoprim		0	0	0	0	0	201	12	1294	1	1
+B	mlst_hc20	primary	dataset	klebsiella_aerogenes__ertapenem		0	0	0	0	0	32	4	56	1	1
+B	mlst_hc20	primary	dataset	klebsiella_aerogenes__imipenem		0	0	0	0	0	27	3	58	1	1
+B	mlst_hc20	primary	dataset	klebsiella_aerogenes__meropenem		0	0	0	0	0	31	3	49	1	1
+B	mlst_hc20	primary	dataset	klebsiella_oxytoca__cefotaxime		4	1	4	1	1	0	0	0	0	0
+B	mlst_hc20	primary	dataset	klebsiella_oxytoca__cefoxitin	656250	22	2	20	1	1	0	0	0	0	0
+B	mlst_hc20	primary	dataset	klebsiella_oxytoca__cefpodoxime	500000	29	2	27	1	1	1	0	1	0	0
+B	mlst_hc20	primary	dataset	klebsiella_oxytoca__ertapenem	866667	17	1	30	1	1	0	0	0	0	0
+B	mlst_hc20	primary	dataset	klebsiella_pneumoniae__amikacin	784862	343	13	1567	1	1	220	20	944	0	0
+B	mlst_hc20	primary	dataset	klebsiella_pneumoniae__amoxicillin_clavulanate	794271	30	4	58	1	1	37	7	51	0	0
+B	mlst_hc20	primary	dataset	klebsiella_pneumoniae__ampicillin_sulbactam		9	3	6	1	1	116	10	112	0	0
+B	mlst_hc20	primary	dataset	klebsiella_pneumoniae__aztreonam	622326	230	11	2742	1	1	197	16	1022	0	0
+B	mlst_hc20	primary	dataset	klebsiella_pneumoniae__cefazolin	987879	22	5	37	1	1	132	13	169	0	0
+B	mlst_hc20	primary	dataset	klebsiella_pneumoniae__cefepime	598231	262	17	2420	1	1	165	11	837	0	0
+B	mlst_hc20	primary	dataset	klebsiella_pneumoniae__cefotetan		0	0	0	0	0	3	1	2	1	1
+B	mlst_hc20	primary	dataset	klebsiella_pneumoniae__cefoxitin	578732	226	28	2345	1	1	244	22	1241	0	0
+B	mlst_hc20	primary	dataset	klebsiella_pneumoniae__cefpodoxime	694444	18	3	15	1	1	50	11	45	0	0
+B	mlst_hc20	primary	dataset	klebsiella_pneumoniae__cefpodoxime_clavulanate	583333	15	2	13	1	1	31	7	25	0	0
+B	mlst_hc20	primary	dataset	klebsiella_pneumoniae__ceftazidime	657569	242	12	309	1	1	206	17	442	0	0
+B	mlst_hc20	primary	dataset	klebsiella_pneumoniae__ceftazidime_avibactam		2	1	1	1	1	33	1	53	0	0
+B	mlst_hc20	primary	dataset	klebsiella_pneumoniae__ceftriaxone	1000000	91	4	98	1	1	43	4	49	0	0
+B	mlst_hc20	primary	dataset	klebsiella_pneumoniae__cefuroxime	973684	27	4	23	1	1	103	7	133	0	0
+B	mlst_hc20	primary	dataset	klebsiella_pneumoniae__chloramphenicol	384503	71	5	282	1	1	144	7	236	0	0
+B	mlst_hc20	primary	dataset	klebsiella_pneumoniae__ciprofloxacin	685540	53	7	112	1	1	192	19	416	0	0
+B	mlst_hc20	primary	dataset	klebsiella_pneumoniae__colistin	758080	164	5	1648	1	1	41	2	330	0	0
+B	mlst_hc20	primary	dataset	klebsiella_pneumoniae__doripenem	351449	73	1	276	1	1	33	5	166	0	0
+B	mlst_hc20	primary	dataset	klebsiella_pneumoniae__doxycycline	400000	10	2	16	1	1	10	2	14	0	0
+B	mlst_hc20	primary	dataset	klebsiella_pneumoniae__ertapenem	742958	78	2	146	1	1	36	6	49	0	0
+B	mlst_hc20	primary	dataset	klebsiella_pneumoniae__fosfomycin	436435	64	2	350	1	1	13	0	75	0	0
+B	mlst_hc20	primary	dataset	klebsiella_pneumoniae__gentamicin	879584	418	22	4606	1	1	431	43	2519	0	0
+B	mlst_hc20	primary	dataset	klebsiella_pneumoniae__imipenem	944038	242	9	2718	1	1	165	15	1060	0	0
+B	mlst_hc20	primary	dataset	klebsiella_pneumoniae__levofloxacin	448639	111	4	208	1	1	139	9	436	0	0
+B	mlst_hc20	primary	dataset	klebsiella_pneumoniae__meropenem	763183	295	15	2722	1	1	189	20	1292	0	0
+B	mlst_hc20	primary	dataset	klebsiella_pneumoniae__nitrofurantoin	720274	88	2	329	1	1	55	9	265	0	0
+B	mlst_hc20	primary	dataset	klebsiella_pneumoniae__norfloxacin	374074	27	3	28	1	1	12	0	15	0	0
+B	mlst_hc20	primary	dataset	klebsiella_pneumoniae__ofloxacin	583333	18	2	38	1	1	26	1	36	0	0
+B	mlst_hc20	primary	dataset	klebsiella_pneumoniae__piperacillin_tazobactam	729140	182	12	2512	1	1	171	17	877	0	0
+B	mlst_hc20	primary	dataset	klebsiella_pneumoniae__polymyxin_b	583333	7	1	12	1	1	14	1	37	0	0
+B	mlst_hc20	primary	dataset	klebsiella_pneumoniae__streptomycin		5	1	6	1	1	5	2	4	0	0
+B	mlst_hc20	primary	dataset	klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	752628	413	20	4028	1	1	302	28	1807	0	0
+B	mlst_hc20	primary	dataset	klebsiella_pneumoniae__tetracycline	736301	199	16	3042	1	1	202	15	1415	0	0
+B	mlst_hc20	primary	dataset	klebsiella_pneumoniae__ticarcillin_clavulanate	541667	17	1	72	1	1	4	1	19	0	0
+B	mlst_hc20	primary	dataset	klebsiella_pneumoniae__tigecycline	467890	332	18	2172	1	1	91	8	460	0	0
+B	mlst_hc20	primary	dataset	klebsiella_pneumoniae__tobramycin	754007	283	17	1614	1	1	290	31	1026	0	0
+B	mlst_hc20	primary	dataset	klebsiella_pneumoniae__trimethoprim	777778	24	3	45	1	1	28	5	46	0	0
+B	mlst_hc20	primary	dataset	klebsiella_quasipneumoniae__cefotaxime		3	1	2	1	1	0	0	0	0	0
+B	mlst_hc20	primary	dataset	klebsiella_quasipneumoniae__sulfamethoxazole_trimethoprim		0	0	0	0	0	3	1	2	1	1
+B	mlst_hc20	primary	dataset	neisseria_gonorrhoeae__azithromycin		0	0	0	0	0	84	4	200	1	1
+B	mlst_hc20	primary	dataset	neisseria_gonorrhoeae__ciprofloxacin		0	0	0	0	0	302	5	437	1	1
+B	mlst_hc20	primary	dataset	neisseria_gonorrhoeae__erythromycin		0	0	0	0	0	108	8	425	1	1
+B	mlst_hc20	primary	dataset	neisseria_gonorrhoeae__penicillin		0	0	0	0	0	766	20	10784	1	1
+B	mlst_hc20	primary	dataset	neisseria_gonorrhoeae__tetracycline		0	0	0	0	0	10	3	7	1	1
+B	mlst_hc20	primary	dataset	pseudomonas_aeruginosa__amikacin	687500	16	5	15	1	1	207	32	596	0	0
+B	mlst_hc20	primary	dataset	pseudomonas_aeruginosa__aztreonam		5	2	3	1	1	27	9	21	0	0
+B	mlst_hc20	primary	dataset	pseudomonas_aeruginosa__cefepime		3	1	2	1	1	22	8	18	0	0
+B	mlst_hc20	primary	dataset	pseudomonas_aeruginosa__ceftazidime		3	1	2	1	1	23	8	16	0	0
+B	mlst_hc20	primary	dataset	pseudomonas_aeruginosa__ceftazidime_avibactam	520746	90	13	199	1	1	67	3	209	0	0
+B	mlst_hc20	primary	dataset	pseudomonas_aeruginosa__ceftolozane_tazobactam	674432	85	11	109	1	1	60	5	212	0	0
+B	mlst_hc20	primary	dataset	pseudomonas_aeruginosa__ciprofloxacin		4	1	4	1	1	19	7	14	0	0
+B	mlst_hc20	primary	dataset	pseudomonas_aeruginosa__gentamicin		4	1	4	1	1	32	9	27	0	0
+B	mlst_hc20	primary	dataset	pseudomonas_aeruginosa__imipenem	350000	15	3	16	1	1	41	12	45	0	0
+B	mlst_hc20	primary	dataset	pseudomonas_aeruginosa__levofloxacin	875000	29	8	25	1	1	225	32	484	0	0
+B	mlst_hc20	primary	dataset	pseudomonas_aeruginosa__meropenem	693333	31	10	29	1	1	258	40	625	0	0
+B	mlst_hc20	primary	dataset	pseudomonas_aeruginosa__piperacillin_tazobactam		0	0	0	0	0	14	6	9	1	1
+B	mlst_hc20	primary	dataset	pseudomonas_aeruginosa__tobramycin		4	1	4	1	1	31	9	29	0	0
+B	mlst_hc20	primary	dataset	salmonella_enterica__amoxicillin_clavulanate	839286	52	8	72	1	1	179	14	230	0	0
+B	mlst_hc20	primary	dataset	salmonella_enterica__ampicillin	905363	217	13	2201	1	1	376	20	1105	0	0
+B	mlst_hc20	primary	dataset	salmonella_enterica__ampicillin_sulbactam	831320	117	3	1622	1	1	44	6	297	0	0
+B	mlst_hc20	primary	dataset	salmonella_enterica__azithromycin	636255	185	6	980	1	1	161	9	983	0	0
+B	mlst_hc20	primary	dataset	salmonella_enterica__cefazolin	504820	105	2	1496	1	1	63	7	525	0	0
+B	mlst_hc20	primary	dataset	salmonella_enterica__cefotaxime	703663	216	7	1936	1	1	212	10	1693	0	0
+B	mlst_hc20	primary	dataset	salmonella_enterica__cefoxitin	711259	96	11	395	1	1	231	20	508	0	0
+B	mlst_hc20	primary	dataset	salmonella_enterica__ceftazidime	629513	105	2	271	1	1	57	1	138	0	0
+B	mlst_hc20	primary	dataset	salmonella_enterica__ceftiofur	880719	72	9	123	1	1	147	12	272	0	0
+B	mlst_hc20	primary	dataset	salmonella_enterica__ceftriaxone	968750	49	8	69	1	1	165	12	218	0	0
+B	mlst_hc20	primary	dataset	salmonella_enterica__chloramphenicol	753567	267	15	1938	1	1	235	16	1450	0	0
+B	mlst_hc20	primary	dataset	salmonella_enterica__ciprofloxacin	564667	58	5	342	1	1	62	6	180	0	0
+B	mlst_hc20	primary	dataset	salmonella_enterica__gentamicin	750406	265	18	1368	1	1	305	16	1308	0	0
+B	mlst_hc20	primary	dataset	salmonella_enterica__kanamycin	903646	92	8	475	1	1	103	6	369	0	0
+B	mlst_hc20	primary	dataset	salmonella_enterica__nalidixic_acid	540065	134	3	1797	1	1	80	10	859	0	0
+B	mlst_hc20	primary	dataset	salmonella_enterica__spectinomycin	1000000	22	2	73	1	1	64	3	448	0	0
+B	mlst_hc20	primary	dataset	salmonella_enterica__streptomycin	626877	133	13	788	1	1	218	10	1259	0	0
+B	mlst_hc20	primary	dataset	salmonella_enterica__sulfamethoxazole		0	0	0	0	0	4	1	4	1	1
+B	mlst_hc20	primary	dataset	salmonella_enterica__sulfamethoxazole_trimethoprim	845342	193	10	2191	1	1	105	5	775	0	0
+B	mlst_hc20	primary	dataset	salmonella_enterica__sulfathiazole	375000	12	2	14	1	1	84	4	136	0	0
+B	mlst_hc20	primary	dataset	salmonella_enterica__sulfisoxazole	938776	29	7	25	1	1	72	7	108	0	0
+B	mlst_hc20	primary	dataset	salmonella_enterica__tetracycline	771852	279	17	3275	1	1	304	28	1470	0	0
+B	mlst_hc20	primary	dataset	salmonella_enterica__trimethoprim	1000000	26	4	62	1	1	106	4	442	0	0
+B	mlst_hc20	primary	dataset	shigella_sonnei__ampicillin		0	0	0	0	0	35	3	53	1	1
+B	mlst_hc20	primary	dataset	shigella_sonnei__azithromycin		0	0	0	0	0	151	1	444	1	1
+B	mlst_hc20	primary	dataset	shigella_sonnei__cefoperazone		0	0	0	0	0	173	3	351	1	1
+B	mlst_hc20	primary	dataset	shigella_sonnei__cefoxitin		0	0	0	0	0	160	2	306	1	1
+B	mlst_hc20	primary	dataset	shigella_sonnei__ceftazidime		0	0	0	0	0	151	1	150	1	1
+B	mlst_hc20	primary	dataset	shigella_sonnei__ceftriaxone		0	0	0	0	0	35	3	72	1	1
+B	mlst_hc20	primary	dataset	shigella_sonnei__colistin		0	0	0	0	0	178	3	3490	1	1
+B	mlst_hc20	primary	dataset	shigella_sonnei__gentamicin		0	0	0	0	0	192	5	358	1	1
+B	mlst_hc20	primary	dataset	shigella_sonnei__sulfamethoxazole_trimethoprim		0	0	0	0	0	183	4	619	1	1
+B	mlst_hc20	primary	dataset	shigella_sonnei__tetracycline		0	0	0	0	0	182	4	760	1	1
+B	mlst_hc20	primary	dataset	shigella_sonnei__tobramycin		0	0	0	0	0	162	3	306	1	1
+B	mlst_hc20	primary	dataset	staphylococcus_aureus__cefoxitin		0	0	0	0	0	677	22	5988	1	1
+B	mlst_hc20	primary	dataset	staphylococcus_aureus__chloramphenicol		0	0	0	0	0	577	18	7287	1	1
+B	mlst_hc20	primary	dataset	staphylococcus_aureus__ciprofloxacin		0	0	0	0	0	821	22	5679	1	1
+B	mlst_hc20	primary	dataset	staphylococcus_aureus__clindamycin		2	1	1	1	1	748	23	9103	0	0
+B	mlst_hc20	primary	dataset	staphylococcus_aureus__daptomycin		0	0	0	0	0	551	14	1938	1	1
+B	mlst_hc20	primary	dataset	staphylococcus_aureus__erythromycin		2	1	1	1	1	787	27	7738	0	0
+B	mlst_hc20	primary	dataset	staphylococcus_aureus__fusidic_acid		0	0	0	0	0	65	2	251	1	1
+B	mlst_hc20	primary	dataset	staphylococcus_aureus__gentamicin		2	1	1	1	1	585	15	2558	0	0
+B	mlst_hc20	primary	dataset	staphylococcus_aureus__mupirocin		4	1	4	1	1	48	0	231	0	0
+B	mlst_hc20	primary	dataset	staphylococcus_aureus__oxacillin		0	0	0	0	0	573	16	5490	1	1
+B	mlst_hc20	primary	dataset	staphylococcus_aureus__penicillin		0	0	0	0	0	706	18	2414	1	1
+B	mlst_hc20	primary	dataset	staphylococcus_aureus__rifampin		2	1	1	1	1	84	4	210	0	0
+B	mlst_hc20	primary	dataset	staphylococcus_aureus__sulfamethoxazole_trimethoprim		2	1	1	1	1	706	17	4116	0	0
+B	mlst_hc20	primary	dataset	staphylococcus_aureus__tetracycline		0	0	0	0	0	595	21	4243	1	1
+B	mlst_hc20	primary	dataset	streptococcus_pneumoniae__azithromycin		0	0	0	0	0	786	15	3811	1	1
+B	mlst_hc20	primary	dataset	streptococcus_pneumoniae__cefepime		0	0	0	0	0	71	2	175	1	1
+B	mlst_hc20	primary	dataset	streptococcus_pneumoniae__ceftriaxone		0	0	0	0	0	72	2	178	1	1
+B	mlst_hc20	primary	dataset	streptococcus_pneumoniae__cefuroxime		0	0	0	0	0	345	8	3309	1	1
+B	mlst_hc20	primary	dataset	streptococcus_pneumoniae__chloramphenicol		0	0	0	0	0	599	10	1485	1	1
+B	mlst_hc20	primary	dataset	streptococcus_pneumoniae__clindamycin		0	0	0	0	0	886	20	3280	1	1
+B	mlst_hc20	primary	dataset	streptococcus_pneumoniae__erythromycin		0	0	0	0	0	1072	28	5171	1	1
+B	mlst_hc20	primary	dataset	streptococcus_pneumoniae__meropenem		0	0	0	0	0	221	6	852	1	1
+B	mlst_hc20	primary	dataset	streptococcus_pneumoniae__penicillin		0	0	0	0	0	20	1	36	1	1
+B	mlst_hc20	primary	dataset	streptococcus_pneumoniae__sulfamethoxazole_trimethoprim		0	0	0	0	0	649	20	3121	1	1
+B	mlst_hc20	primary	dataset	streptococcus_pneumoniae__tetracycline		0	0	0	0	0	896	18	6009	1	1

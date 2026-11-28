@@ -1,0 +1,15 @@
+reading	read	match	lower_ppm	upper_ppm	chance	species	draws
+A	primary	primary	669526	821943	above	16	10000
+A	mlst	mlst	659703	819015	above	16	10000
+A	mlst	primary	660564	820137	above	16	10000
+A	mlst_hc20	mlst_hc20	654786	850773	above	11	10000
+A	mlst_hc20	mlst	652072	850028	above	11	10000
+A	mlst_hc20	primary	652074	851030	above	11	10000
+A	null_fits	primary	656563	815761	above	16	10000
+B	primary	primary	670387	823171	above	16	10000
+B	mlst	mlst	660912	819434	above	16	10000
+B	mlst	primary	661998	820863	above	16	10000
+B	mlst_hc20	mlst_hc20	655677	851212	above	11	10000
+B	mlst_hc20	mlst	653891	850502	above	11	10000
+B	mlst_hc20	primary	653724	851392	above	11	10000
+B	null_fits	primary	656344	815399	above	16	10000
