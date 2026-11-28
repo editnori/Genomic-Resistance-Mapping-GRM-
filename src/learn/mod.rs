@@ -455,7 +455,7 @@ pub fn holdout(train: &Bits, y: &Bits, frac: f64, seed: u64) -> (Bits, Bits) {
 pub fn training_candidates(x: &BitMatrix, train: &Bits, min_support: u32) -> (BitMatrix, Vec<u32>) {
     assert_eq!(x.cols, train.len());
     let max = train.count().saturating_sub(min_support);
-    let mut seen: rustc_hash::FxHashSet<Box<[u64]>> = Default::default();
+    let mut seen = crate::matrix::RowInterner::new(train.words().len());
     let mut sub = BitMatrix::with_cols(x.cols);
     let mut rows = Vec::new();
     let mut masked = vec![0u64; train.words().len()];
@@ -465,7 +465,7 @@ pub fn training_candidates(x: &BitMatrix, train: &Bits, min_support: u32) -> (Bi
             *m = r & t;
         }
         let s = bits::count(&masked);
-        if s < min_support || s > max || !seen.insert(masked.as_slice().into()) {
+        if s < min_support || s > max || !seen.insert(&masked) {
             continue;
         }
         sub.push_row(row);
@@ -729,6 +729,60 @@ mod tests {
         assert_eq!(sub.cols, 8);
         assert_eq!(sub.row(0), x.row(0));
         assert_eq!(sub.row(1), x.row(4));
+    }
+
+    #[test]
+    fn training_candidates_matches_hashset_oracle() {
+        let mut rng = ChaCha8Rng::seed_from_u64(0x0074_7261_696e);
+        for (cols, n_rows) in [(48usize, 600usize), (300, 1_500)] {
+            let train = Bits::from_indices(cols, (0..cols).filter(|_| rng.random_bool(0.75)));
+            let words = bits::words_for(cols);
+            let tail = if cols.is_multiple_of(64) {
+                u64::MAX
+            } else {
+                (1u64 << (cols % 64)) - 1
+            };
+            // Pool of base training patterns repeated with varying held-out bits.
+            let pool: Vec<Vec<u64>> = (0..120)
+                .map(|_| {
+                    let mut w: Vec<u64> = (0..words).map(|_| rng.random::<u64>()).collect();
+                    *w.last_mut().unwrap() &= tail;
+                    w
+                })
+                .collect();
+            let mut x = BitMatrix::with_cols(cols);
+            for _ in 0..n_rows {
+                let mut r = pool[rng.random_range(0..pool.len())].clone();
+                // Flip held-out bits randomly so identical training rows differ on test cols.
+                for (wi, w) in r.iter_mut().enumerate() {
+                    let held_out =
+                        !train.words()[wi] & if wi + 1 == words { tail } else { u64::MAX };
+                    *w ^= rng.random::<u64>() & held_out;
+                }
+                x.push_row(&r);
+            }
+            let min_support = 3;
+            let (got_sub, got_rows) = training_candidates(&x, &train, min_support);
+            let max = train.count().saturating_sub(min_support);
+            let mut seen: rustc_hash::FxHashSet<Box<[u64]>> = Default::default();
+            let mut want_sub = BitMatrix::with_cols(cols);
+            let mut want_rows = Vec::new();
+            let mut masked = vec![0u64; words];
+            for f in 0..x.rows {
+                let row = x.row(f);
+                for ((m, &r), &t) in masked.iter_mut().zip(row).zip(train.words()) {
+                    *m = r & t;
+                }
+                let s = bits::count(&masked);
+                if s < min_support || s > max || !seen.insert(masked.as_slice().into()) {
+                    continue;
+                }
+                want_sub.push_row(row);
+                want_rows.push(f as u32);
+            }
+            assert_eq!(got_rows, want_rows, "cols={cols}");
+            assert_eq!(got_sub.data, want_sub.data, "cols={cols}");
+        }
     }
 
     #[test]

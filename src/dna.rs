@@ -125,6 +125,33 @@ impl KmerSpace {
         }
     }
 
+    /// Calls `f` with every canonical packed k-mer in `seq` and returns
+    /// `(gc, ambiguous)` base counts over `seq` in a single pass.
+    pub fn for_each_canonical_with_stats(&self, seq: &[u8], mut f: impl FnMut(u64)) -> (u64, u64) {
+        let k = self.k;
+        let shift = 2 * (k - 1);
+        let (mut fwd, mut rev, mut filled) = (0u64, 0u64, 0usize);
+        let (mut gc, mut ambiguous) = (0u64, 0u64);
+        for &byte in seq {
+            let c = CODE[byte as usize];
+            if c > 3 {
+                ambiguous += 1;
+                filled = 0;
+                continue;
+            }
+            let c = c as u64;
+            // C = 1 (01), G = 2 (10) => (c ^ (c >> 1)) & 1 == 1; A = 0, T = 3 => 0.
+            gc += (c ^ (c >> 1)) & 1;
+            fwd = ((fwd << 2) | c) & self.mask;
+            rev = (rev >> 2) | ((3 - c) << shift);
+            filled += 1;
+            if filled >= k {
+                f(fwd.min(rev));
+            }
+        }
+        (gc, ambiguous)
+    }
+
     /// Packs an ACGT string (any case) into its canonical k-mer.
     pub fn canonical(&self, text: &str) -> Option<u64> {
         if text.len() != self.k {
@@ -135,14 +162,14 @@ impl KmerSpace {
         out
     }
 
+    #[inline]
     pub fn reverse_complement(&self, kmer: u64) -> u64 {
-        let mut out = 0u64;
-        let mut x = kmer;
-        for _ in 0..self.k {
-            out = (out << 2) | (3 - (x & 3));
-            x >>= 2;
-        }
-        out
+        // Complement every 2-bit base and reverse all 32 base pairs in O(1)
+        // via SWAR byte, nibble, and 2-bit pair swaps, then right-align to 2k bits.
+        let x = (!kmer).swap_bytes();
+        let x = ((x & 0x0f0f_0f0f_0f0f_0f0f) << 4) | ((x >> 4) & 0x0f0f_0f0f_0f0f_0f0f);
+        let x = ((x & 0x3333_3333_3333_3333) << 2) | ((x >> 2) & 0x3333_3333_3333_3333);
+        x >> (64 - self.bits)
     }
 
     pub fn decode(&self, kmer: u64) -> String {
@@ -297,5 +324,96 @@ mod tests {
             (mixed_share - 0.5).abs() < 0.01,
             "mixed share was {mixed_share}"
         );
+    }
+
+    #[test]
+    fn fused_canonical_with_stats_matches_separate_passes() {
+        use crate::fasta::StatsBuilder;
+
+        let all_bytes: Vec<u8> = (0u8..=255).collect();
+        let mut rng = ChaCha8Rng::seed_from_u64(0x6675_7365);
+        let alphabet = b"ACGTacgtNNRYSWKMBDHV-*";
+        let contigs: Vec<Vec<u8>> = vec![
+            vec![],
+            all_bytes,
+            b"GGGGCCCCaaaattTTNNn".to_vec(),
+            (0..2_048)
+                .map(|_| alphabet[rng.random_range(0..alphabet.len())])
+                .collect(),
+        ];
+        for k in MIN_K..=MAX_K {
+            let space = KmerSpace::new(k);
+            let mut sep_stats = StatsBuilder::default();
+            let mut fused_stats = StatsBuilder::default();
+            let mut sep_kmers = Vec::new();
+            let mut fused_kmers = Vec::new();
+            for seq in &contigs {
+                sep_stats.add(seq);
+                space.for_each_canonical(seq, |x| sep_kmers.push(x));
+                let (gc, ambiguous) =
+                    space.for_each_canonical_with_stats(seq, |x| fused_kmers.push(x));
+                fused_stats.add_counts(seq.len() as u64, gc, ambiguous);
+            }
+            let s1 = sep_stats.finish();
+            let s2 = fused_stats.finish();
+            assert_eq!(s1.length, s2.length, "k={k}");
+            assert_eq!(s1.contigs, s2.contigs, "k={k}");
+            assert_eq!(s1.n50, s2.n50, "k={k}");
+            assert_eq!(s1.ambiguous, s2.ambiguous, "k={k}");
+            assert_eq!(s1.gc.to_bits(), s2.gc.to_bits(), "k={k}");
+            assert_eq!(fused_kmers, sep_kmers, "k={k}");
+        }
+    }
+
+    #[test]
+    fn swar_reverse_complement_matches_reference_loop_for_every_k() {
+        let ref_rc = |k: usize, kmer: u64| -> u64 {
+            let mut out = 0u64;
+            let mut x = kmer;
+            for _ in 0..k {
+                out = (out << 2) | (3 - (x & 3));
+                x >>= 2;
+            }
+            out
+        };
+
+        let mut rng = ChaCha8Rng::seed_from_u64(0x5357_4152_5243);
+        for k in MIN_K..=MAX_K {
+            let space = KmerSpace::new(k);
+            let mask = space.mask;
+            if k == MIN_K {
+                for x in 0..=mask {
+                    assert_eq!(space.reverse_complement(x), ref_rc(k, x), "k={k} x={x:#x}");
+                }
+            }
+            let edges = [
+                0u64,
+                1,
+                2,
+                3,
+                mask,
+                mask >> 1,
+                0x5555_5555_5555_5555 & mask,
+                0xaaaa_aaaa_aaaa_aaaa & mask,
+                u64::MAX,
+                0xdead_beef_cafe_babe,
+            ];
+            for &x in &edges {
+                let got = space.reverse_complement(x);
+                assert_eq!(got, ref_rc(k, x), "k={k} edge={x:#x}");
+                assert_eq!(got & !mask, 0, "k={k} edge={x:#x} leaked high bits");
+                assert_eq!(
+                    space.reverse_complement(got),
+                    x & mask,
+                    "k={k} edge={x:#x} involution"
+                );
+            }
+            for _ in 0..2_000 {
+                let x = rng.random::<u64>();
+                let got = space.reverse_complement(x);
+                assert_eq!(got, ref_rc(k, x), "k={k} x={x:#x}");
+                assert_eq!(space.reverse_complement(got), x & mask, "k={k} involution");
+            }
+        }
     }
 }
