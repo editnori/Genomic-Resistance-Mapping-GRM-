@@ -80,6 +80,11 @@ impl KmerSpace {
         self.bits
     }
 
+    /// Bitmask covering the bits a k-mer occupies.
+    pub fn mask(&self) -> u64 {
+        self.mask
+    }
+
     pub fn mix(&self, mut x: u64) -> u64 {
         let [s1, s2, s3] = self.shifts;
         x ^= x >> s1;
@@ -186,6 +191,7 @@ mod tests {
             } else {
                 (1u64 << (2 * k)) - 1
             };
+            assert_eq!(space.mask(), mask, "k={k}");
             for _ in 0..20_000 {
                 let x = rng.random::<u64>() & mask;
                 let y = space.mix(x);
