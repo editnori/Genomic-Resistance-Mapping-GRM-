@@ -41,6 +41,14 @@ The `rust-test` job therefore compares the tests it built with `tests/rust-test-
 
 When a change adds, removes, renames, ignores or un-ignores a test on purpose, run `bash scripts/ci/rust-test-names.sh --write` after making it, and commit the rewritten file with the change, so the review shows which tests came and went. Run it on Linux x86-64 with Rust 1.98.1 (`RUSTUP_TOOLCHAIN=1.98.1`), as the job does. With no argument, the script prints the list. The file pins names only: a test that still exists but asserts less still matches.
 
+## Overflow checks
+
+The `rust-test` job sets `CARGO_PROFILE_RELEASE_OVERFLOW_CHECKS=true` for all of its steps. A release build wraps on integer overflow and on a shift by the full width, so a test that reaches one runs on with a wrong value. With the checks on, the test stops at that line.
+
+The case that asked for it: at k = 32 the line `(1u64 << space.bits()) - 1` gave a mask of 0 in a release build, and only a later assert failed. With the checks on, the same build stops at the line itself with `attempt to shift left with overflow`. Pull request 212 fixed that line.
+
+The setting is the job's alone. `Cargo.toml` is unchanged, so the `grm` a user builds and the `lasso-layout` job's build are as before. The job's cache key carries the word `overflow`, so its cache holds this build and no older one. `check_fits.sh` runs in the same job, so its harness is built with the checks on and still writes the 17 listed files byte for byte.
+
 ## Web app
 
 The `web` job runs the scripts in `web/package.json`: `npm ci` from `web/package-lock.json`, then `typecheck` (`tsc -b`), `build` (`tsc -b && vite build`) and `test` (`vitest run`). It fails if they changed a tracked file. `src/charts/realdata.test.ts` and `src/data/derive/realrules.test.ts` skip, because they read a published report from `GRM_REPORT_DIR`, which CI doesn't set; those 2 files and their 4 tests are the skipped ones. The job then runs the Worker's two plain-Node tests, `ops/cloudflare/tests/previous-assets.mjs` and `long-key.mjs`, which import `ops/cloudflare/worker/src/index.js` against a stub bucket and need no package. `release.sh`, `routes.py` and `ranges.py` need Miniflare and `grm serve`, so they stay outside CI (docs/static-hosting.md, Checks).
