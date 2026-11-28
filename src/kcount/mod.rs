@@ -1,4 +1,5 @@
-//! Pure-Rust k-mer key primitives and verified binary formats (`grm kcount`).
+//! Pure-Rust k-mer key primitives, verified binary formats, streaming set
+//! algebra, and bounded matrix export (`grm kcount`).
 //!
 //! Submodules:
 //! - [`key`]: dual-width canonical k-mer spaces (`u64` for `k = 5..=32`,
@@ -8,9 +9,13 @@
 //!   `GRMKGR1\0`), counted table (`.ktab`, `GRMKTB1\0`), per-sequence count
 //!   profile (`.prof.bin`, `GRMPRF1\0`), and `.kset` v1 (`GRMKSET1`) unified
 //!   reader.
+//! - [`ops`]: streaming bucket-by-bucket set algebra (`union`, `intersect`,
+//!   `diff`, `symdiff`) and bounded `matrix-export` (`pa`, `counts`, `sparse`,
+//!   `dense`).
 
 pub mod format;
 pub mod key;
+pub mod ops;
 
 use crate::confine;
 use crate::fnv::Fnv;
@@ -20,6 +25,9 @@ use crate::kcount::format::{
     read_profiles_verified,
 };
 use crate::kcount::key::{KmerKey, MAX_K_U64};
+use crate::kcount::ops::{
+    MatrixExportConfig, MatrixLayout, MatrixMode, SetOp, SetOpConfig, export_matrix, run_set_op,
+};
 use crate::kset::BUCKETS;
 use anyhow::{Context, Result, bail, ensure};
 use clap::{Args, Subcommand, ValueEnum};
@@ -80,6 +88,149 @@ pub enum KcountCommand {
         #[arg(long, value_enum)]
         modality: Option<InputModalityArg>,
     },
+    /// Streaming bucket-by-bucket set algebra (`union`, `intersect`, `diff`,
+    /// `symdiff`) across 2 to 4,096 `.kset` v1, `.grk`, or `.ktab` tables.
+    Op {
+        #[command(subcommand)]
+        action: OpCommand,
+    },
+    /// Stream a bounded sparse or dense feature matrix (`pa` or `counts`)
+    /// across 1 to 4,096 tables, defaulting column names to `"s000001"`..
+    MatrixExport {
+        /// One to 4,096 input tables (`.kset` v1, `.grk`, or `.ktab`).
+        #[arg(long, required = true)]
+        input: Vec<PathBuf>,
+        /// Output directory receiving `features.tsv`, `matrix.tsv`,
+        /// `missing_mask.tsv`, and `manifest.json`.
+        #[arg(long)]
+        out_dir: PathBuf,
+        /// Feature value encoding (`pa` or `counts`).
+        #[arg(long, value_enum, default_value_t = MatrixModeArg::Pa)]
+        mode: MatrixModeArg,
+        /// Matrix output layout (`sparse` or `dense`).
+        #[arg(long, alias = "format", value_enum, default_value_t = MatrixLayoutArg::Sparse)]
+        layout: MatrixLayoutArg,
+        /// Minimum number of samples carrying a k-mer (`>= 1`).
+        #[arg(long, default_value_t = 1)]
+        min_support: usize,
+        /// Optional maximum number of samples carrying a k-mer.
+        #[arg(long)]
+        max_support: Option<usize>,
+        /// Optional minimum sample prevalence fraction in `[0.0, 1.0]`.
+        #[arg(long)]
+        min_prevalence: Option<f64>,
+        /// Optional maximum sample prevalence fraction in `[0.0, 1.0]`.
+        #[arg(long)]
+        max_prevalence: Option<f64>,
+        /// Optional explicit sample column names (one per input, comma- or
+        /// flag-separated; defaults to `"s000001"`, `"s000002"`, ... so input
+        /// file names are never copied into outputs).
+        #[arg(long, value_delimiter = ',')]
+        sample_names: Vec<String>,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum OpCommand {
+    /// Union of 2 to 4,096 tables (summing counts with checked `u64`
+    /// arithmetic; capped at `2^32 - 1` only under `--allow-saturation`).
+    Union {
+        #[arg(long, required = true)]
+        input: Vec<PathBuf>,
+        /// Output table path (`.ktab`, or `.grk` with `--presence-only`).
+        #[arg(long)]
+        out: PathBuf,
+        /// Sample name written into the output header (defaults to `"sample"`).
+        #[arg(long)]
+        name: Option<String>,
+        /// Write presence-only `.grk` output instead of counted `.ktab`.
+        #[arg(long)]
+        presence_only: bool,
+        /// Clamp summed counts exceeding `2^32 - 1` to `2^32 - 1` and record
+        /// saturation in the `.ktab` header and JSON summary instead of
+        /// failing.
+        #[arg(long)]
+        allow_saturation: bool,
+    },
+    /// Intersection of 2 to 4,096 tables (minimum count across inputs).
+    Intersect {
+        #[arg(long, required = true)]
+        input: Vec<PathBuf>,
+        /// Output table path (`.ktab`, or `.grk` with `--presence-only`).
+        #[arg(long)]
+        out: PathBuf,
+        /// Sample name written into the output header (defaults to `"sample"`).
+        #[arg(long)]
+        name: Option<String>,
+        /// Write presence-only `.grk` output instead of counted `.ktab`.
+        #[arg(long)]
+        presence_only: bool,
+    },
+    /// Set difference: keys in input 0 absent from all subsequent inputs.
+    Diff {
+        #[arg(long, required = true)]
+        input: Vec<PathBuf>,
+        /// Output table path (`.ktab`, or `.grk` with `--presence-only`).
+        #[arg(long)]
+        out: PathBuf,
+        /// Sample name written into the output header (defaults to `"sample"`).
+        #[arg(long)]
+        name: Option<String>,
+        /// Write presence-only `.grk` output instead of counted `.ktab`.
+        #[arg(long)]
+        presence_only: bool,
+    },
+    /// Symmetric difference: keys present in an odd number of inputs (counts
+    /// summed with checked `u64` arithmetic; capped at `2^32 - 1` only under
+    /// `--allow-saturation`).
+    Symdiff {
+        #[arg(long, required = true)]
+        input: Vec<PathBuf>,
+        /// Output table path (`.ktab`, or `.grk` with `--presence-only`).
+        #[arg(long)]
+        out: PathBuf,
+        /// Sample name written into the output header (defaults to `"sample"`).
+        #[arg(long)]
+        name: Option<String>,
+        /// Write presence-only `.grk` output instead of counted `.ktab`.
+        #[arg(long)]
+        presence_only: bool,
+        /// Clamp summed counts exceeding `2^32 - 1` to `2^32 - 1` and record
+        /// saturation in the `.ktab` header and JSON summary instead of
+        /// failing.
+        #[arg(long)]
+        allow_saturation: bool,
+    },
+}
+
+#[derive(Clone, Copy, Debug, ValueEnum)]
+pub enum MatrixModeArg {
+    Pa,
+    Counts,
+}
+
+impl From<MatrixModeArg> for MatrixMode {
+    fn from(v: MatrixModeArg) -> Self {
+        match v {
+            MatrixModeArg::Pa => MatrixMode::Pa,
+            MatrixModeArg::Counts => MatrixMode::Counts,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, ValueEnum)]
+pub enum MatrixLayoutArg {
+    Sparse,
+    Dense,
+}
+
+impl From<MatrixLayoutArg> for MatrixLayout {
+    fn from(v: MatrixLayoutArg) -> Self {
+        match v {
+            MatrixLayoutArg::Sparse => MatrixLayout::Sparse,
+            MatrixLayoutArg::Dense => MatrixLayout::Dense,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, ValueEnum)]
@@ -188,6 +339,87 @@ pub fn run_cli(args: KcountArgs) -> Result<()> {
                 counts_dropped: outcome.counts_dropped,
             };
             println!("{}", serde_json::to_string_pretty(&report)?);
+            Ok(())
+        }
+        KcountCommand::Op { action } => {
+            let (op, input, out, name, presence_only, allow_saturation) = match action {
+                OpCommand::Union {
+                    input,
+                    out,
+                    name,
+                    presence_only,
+                    allow_saturation,
+                } => (
+                    SetOp::Union,
+                    input,
+                    out,
+                    name,
+                    presence_only,
+                    allow_saturation,
+                ),
+                OpCommand::Intersect {
+                    input,
+                    out,
+                    name,
+                    presence_only,
+                } => (SetOp::Intersect, input, out, name, presence_only, false),
+                OpCommand::Diff {
+                    input,
+                    out,
+                    name,
+                    presence_only,
+                } => (SetOp::Diff, input, out, name, presence_only, false),
+                OpCommand::Symdiff {
+                    input,
+                    out,
+                    name,
+                    presence_only,
+                    allow_saturation,
+                } => (
+                    SetOp::SymDiff,
+                    input,
+                    out,
+                    name,
+                    presence_only,
+                    allow_saturation,
+                ),
+            };
+            let cfg = SetOpConfig {
+                sample_name: name.unwrap_or_else(|| DEFAULT_SAMPLE_NAME.to_string()),
+                presence_only_out: presence_only,
+                allow_saturation,
+            };
+            let summary = run_set_op(op, &input, &out, &cfg)?;
+            println!("{}", serde_json::to_string_pretty(&summary)?);
+            Ok(())
+        }
+        KcountCommand::MatrixExport {
+            input,
+            out_dir,
+            mode,
+            layout,
+            min_support,
+            max_support,
+            min_prevalence,
+            max_prevalence,
+            sample_names,
+        } => {
+            let names = if sample_names.is_empty() {
+                None
+            } else {
+                Some(sample_names)
+            };
+            let cfg = MatrixExportConfig {
+                mode: mode.into(),
+                layout: layout.into(),
+                min_support,
+                max_support,
+                min_prevalence,
+                max_prevalence,
+                sample_names: names,
+            };
+            let manifest = export_matrix(&input, &out_dir, &cfg)?;
+            println!("{}", serde_json::to_string_pretty(&manifest)?);
             Ok(())
         }
     }

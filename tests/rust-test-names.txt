@@ -314,6 +314,9 @@ src/lib.rs kcount::key::tests::u128_golden_mix_unmix_vectors_for_k33_45_61_64
 src/lib.rs kcount::key::tests::u128_mixer_balances_top_bits_at_k61
 src/lib.rs kcount::key::tests::u128_radix_sort_matches_std_sort
 src/lib.rs kcount::key::tests::u128_round_trips_511_values_at_every_k_from_33_to_64
+src/lib.rs kcount::ops::tests::modality_propagation_and_extension_validation
+src/lib.rs kcount::ops::tests::reviewed_columns_cap_rejects_before_opening_files
+src/lib.rs kcount::ops::tests::union_checked_summation_and_opt_in_saturation
 src/lib.rs kset::tests::a_file_shorter_than_the_header_is_named_in_the_error
 src/lib.rs kset::tests::dedup_respects_min_count
 src/lib.rs kset::tests::kset_round_trips_and_sketches
@@ -807,6 +810,10 @@ tests/kcount_formats.rs grk_ktab_and_prof_reject_every_single_byte_flip
 tests/kcount_formats.rs ktab_exact_65535_65536_u32_max_and_both_count_modes
 tests/kcount_formats.rs modality_header_round_trip_and_v1_interop
 tests/kcount_formats.rs rehashed_reader_validation_checks_reject_every_malformed_field
+tests/kcount_ops.rs cli_op_and_matrix_export_end_to_end
+tests/kcount_ops.rs matrix_export_exact_cells_sparse_and_dense_prevalence_and_cap
+tests/kcount_ops.rs set_ops_exact_counts_and_saturation_for_u64_and_u128
+tests/kcount_ops.rs unequal_k_rejected_across_all_ops_and_matrix_export
 tests/kmer_space_extended.rs multi_k_mixer_bijection_large [ignored]
 tests/kmer_space_extended.rs multi_k_space_vectors
 tests/null_fold_refit.rs the_flag_changes_no_output_and_records_each_null_fold_once
