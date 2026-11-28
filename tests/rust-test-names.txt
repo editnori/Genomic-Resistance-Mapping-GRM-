@@ -511,6 +511,7 @@ src/lib.rs learn::tests::nonfinite_scores_are_not_susceptible_calls
 src/lib.rs learn::tests::ranking_metrics_handle_ties_and_reject_invalid_inputs
 src/lib.rs learn::tests::screening_ranks_the_separating_feature_first
 src/lib.rs learn::tests::training_candidates_filter_and_collapse_on_training_samples_only
+src/lib.rs learn::tests::training_candidates_matches_hashset_oracle
 src/lib.rs learn::tie::tests::a_split_and_its_mirror_have_equal_exact_impurity
 src/lib.rs learn::tie::tests::counts_just_under_the_bound_compare_exactly
 src/lib.rs learn::tie::tests::exact_choice_takes_the_lower_feature_of_equal_fractions
@@ -567,6 +568,7 @@ src/lib.rs matrix::tests::partials_merge_under_an_open_file_limit_that_stops_bui
 src/lib.rs matrix::tests::partials_must_tile_the_columns_in_order_with_one_k
 src/lib.rs matrix::tests::receipts_bind_each_partial_to_its_file_and_columns
 src/lib.rs matrix::tests::rejects_no_ksets_and_mixed_k_at_any_size
+src/lib.rs matrix::tests::row_interner_matches_fxhashmap_across_widths_collisions_and_resizes
 src/lib.rs matrix::tests::small_and_empty_cohorts_match_the_oracle_under_both_keys
 src/lib.rs matrix::tests::stale_partials_are_refused_after_catalog_or_assembly_changes
 src/lib.rs matrix::tests::supported_cohorts_keep_their_digests_under_both_keys
