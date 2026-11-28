@@ -23,8 +23,8 @@ Steps.
    to here reports load through stage 1's loader, which drops every score, and through count_bad, which returns
    counts alone.
 2. The line. Write "scores opened: yes" to <out>/scores-opened.txt, then print it. After it, a run stops only on
-   a report's bytes that changed, a score null, true or false, not a number or not finite, a hit of the export's
-   scan, or a write that fails.
+   a report that cannot be read or whose bytes changed, a score null, true or false, not a number or not finite,
+   a hit of the export's scan, or a write that fails.
 3. The second loader. For listed rows alone: the five scores, the five fold_complexity lists, the row's
    catalogue call, and whether the report's top-level catalogue is present or null.
 4. Primary measure. A row's mean is its five scores added left to right as IEEE doubles, in the order scm,

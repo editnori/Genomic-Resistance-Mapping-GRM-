@@ -10,12 +10,12 @@ The protocol asks how often the five learners' mean score ranks a resistant geno
 
 ## Result
 
-The export gives each estimate in whole parts per million, and each percent below is that figure to one decimal, rounded half to even.
+The export gives each estimate in whole parts per million, and each percent below is that figure to one decimal, rounded half to even. A 95% interval runs from the 2.5th to the 97.5th percentile of 10,000 draws of species means.
 
 | Figure | Reading A | Reading B |
 | --- | --- | --- |
 | Share | 75.1% | 75.2% |
-| Range | 67.0% to 82.2% | 67.0% to 82.3% |
+| 95% interval | 67.0% to 82.2% | 67.0% to 82.3% |
 | Word | `above` | `above` |
 | Rows | 49,621 of 215,319 | 48,156 of 215,319 |
 | Groups | 2,783 | 2,749 |
@@ -23,20 +23,20 @@ The export gives each estimate in whole parts per million, and each percent belo
 | Datasets | 206 of 268 | 205 of 268 |
 | Species | 16 of 23 | 16 of 23 |
 
-Of the export's 14 intervals, 14 carry `above`, 0 carry `below` and 0 carry `unresolved`. The lowest lower bound is 65.2%, on the exact MLST match of the MLST and HC20 read in reading A.
+Of the export's 14 intervals, 14 carry `above`, 0 carry `below` and 0 carry `unresolved`. The lowest lower bound is 65.2%, on the exact MLST match of the MLST and HC20 read in reading A, over 11 of 23 species and 11,303 of 215,319 rows.
 
 A cell gives the catalogue's call on the resistant member, then on the susceptible member.
 
 | Catalogue calls | Reading A | Reading B |
 | --- | --- | --- |
-| Resistant, resistant | 67.4% on 73,863 of 283,118 pairs | 67.4% on 70,771 of 272,840 pairs |
-| Resistant, susceptible | 91.4% on 116,407 of 283,118 pairs | 91.5% on 115,704 of 272,840 pairs |
-| Susceptible, resistant | 20.3% on 2,592 of 283,118 pairs | 20.3% on 2,592 of 272,840 pairs |
-| Susceptible, susceptible | 64.5% on 90,038 of 283,118 pairs | 64.6% on 83,555 of 272,840 pairs |
+| Resistant, resistant | 67.4% on 73,863 of 283,118 pairs in 14 of 23 species | 67.4% on 70,771 of 272,840 pairs in 14 of 23 species |
+| Resistant, susceptible | 91.4% on 116,407 of 283,118 pairs in 13 of 23 species | 91.5% on 115,704 of 272,840 pairs in 13 of 23 species |
+| Susceptible, resistant | 20.3% on 2,592 of 283,118 pairs in 9 of 23 species | 20.3% on 2,592 of 272,840 pairs in 9 of 23 species |
+| Susceptible, susceptible | 64.5% on 90,038 of 283,118 pairs in 14 of 23 species | 64.6% on 83,555 of 272,840 pairs in 14 of 23 species |
 | Unevaluable | 0 of 283,118 pairs | 0 of 272,840 pairs |
 | No drug rule | 218 of 283,118 pairs | 218 of 272,840 pairs |
 
-The reading ran once, at main 338695a8 on 27 November 2026, for 99 seconds by its own clock, and ended with exit 0. Its scan of the 6 export files and the run's printout, 7 texts, for 123,483 genome ids and 1,785 accessions, gives 0 whole ids, 0 ids inside a longer run of digits, 0 accessions and 0 tokens of either shape. Its planted control is in 7 of 7 texts.
+The reading ran once, at main 338695a8 on 27 November 2026, for 99 seconds by its own clock, and ended with exit 0. A scan after the run, of the 6 export files and the run's printout, 7 texts, for 123,483 genome ids and 1,785 accessions, gives 0 whole ids, 0 ids inside a longer run of digits, 0 accessions and 0 tokens of either shape. The scan's planted control is in 7 of 7 texts.
 
 ## Steps
 

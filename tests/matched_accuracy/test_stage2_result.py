@@ -21,6 +21,8 @@ EXPORT_SHA256 = {
 }
 # The merge commit ruling R66 names, at which the reading ran.
 MERGE = "338695a85738375546e1904dddd8672b794501d3"
+# The tree of that commit, as ruling R66's record gives it.
+TREE = "dc50ea86baba0cb05c7cc6b311b86d0d6eddfaf7"
 RUN_FACTS = 19
 SCAN_FACTS = 11
 
@@ -137,6 +139,14 @@ class RunFacts(unittest.TestCase):
         for t in times:
             self.assertRegex(t, r"^2026-11-27T\d\d:\d\d:\d\dZ$")
         self.assertEqual(times, sorted(times))
+
+    def test_the_times_the_tree_and_the_digest_are_the_runs_record(self):
+        # The five facts no other test reads by value.
+        f = self.facts
+        self.assertEqual([f[("run", "Start")], f[("run", "End")], f[("scan", "Start")]],
+                         ["2026-11-27T18:55:40Z", "2026-11-27T18:57:20Z", "2026-11-27T18:58:11Z"])
+        self.assertEqual(f[("run", "Tree")], TREE)
+        self.assertEqual(f[("run", "Digest of the reports")], "equal before and after the run")
 
 
 if __name__ == "__main__":

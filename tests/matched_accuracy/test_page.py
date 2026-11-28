@@ -104,7 +104,7 @@ class Page(unittest.TestCase):
         self.assertNotIn("Not run yet", self.page)
         self.assertNotIn("authoris", self.page)
 
-    def test_under_1950_words(self):
+    def test_under_2050_words(self):
         # 500 until the fixes of the review added the two counts of two kinds, the BioProject shape and the 5
         # November table; 600 until stage 2's part added its steps, the lead's readings, ruling R59's conditions,
         # stage 1's run with R59's counts, the coverage and the two BioProject facts; 1,350 until ruling R62 cut 7
@@ -113,8 +113,9 @@ class Page(unittest.TestCase):
         # reading added its first line and the Result part, two tables and three paragraphs that the brief of 27 Nov
         # asks for. Before that raise, two sentences that repeat another were cut: the Counts part's line on the
         # weights, which the lead's readings give, and the lead's reading that a bad score stops the run, which
-        # stage two's ends give.
-        self.assertLess(len(self.page.split()), 1950)
+        # stage two's ends give. 1,950 until ruling R69 gave the lowest lower bound and each cell its species, the
+        # lowest lower bound its rows, the interval its level and the scan its place after the run.
+        self.assertLess(len(self.page.split()), 2050)
 
     def test_the_record_line_gives_the_protocols_and_the_amendments_sha256(self):
         self.assertTrue(self.lines[-1].startswith("Record: "))
@@ -418,6 +419,7 @@ class Result(unittest.TestCase):
         cls.intervals = rows(stage2_common.STAGE2_COPY / "interval.tsv")
         cls.primary = {r["reading"]: r for r in cls.intervals if r["read"] == r["match"] == "primary"}
         cls.cells = rows(stage2_common.STAGE2_COPY / "cells.tsv")
+        cls.typing = [r for r in rows(stage2_common.STAGE2_COPY / "typing.tsv") if r["level"] == "overall"]
         cls.inputs = inputs()
         cls.note = (stage2_common.STAGE2_COPY / "inputs.tsv").read_text(encoding="utf-8")
         cls.facts = run_facts()
@@ -455,9 +457,15 @@ class Result(unittest.TestCase):
         def row(name, cell):
             return f"| {name} | " + " | ".join(cell(x) for x in self.readings) + " |"
 
-        out = [PPM_SENTENCE, "", "| Figure | Reading A | Reading B |", "| --- | --- | --- |",
+        # The interval's level, from the script's two percentiles and the export's count of draws.
+        lower, upper = stage2_common.stage2.PERCENTILES
+        draws = {r["draws"] for r in self.intervals}
+        self.assertEqual(len(draws), 1)
+        level = (f"A {upper - lower:g}% interval runs from the {lower}th to the {upper}th percentile of "
+                 f"{n(draws.pop())} draws of species means.")
+        out = [f"{PPM_SENTENCE} {level}", "", "| Figure | Reading A | Reading B |", "| --- | --- | --- |",
                row("Share", lambda x: percent(m[x]["estimate_ppm"])),
-               row("Range", lambda x: f"{percent(p[x]['lower_ppm'])} to {percent(p[x]['upper_ppm'])}"),
+               row(f"{upper - lower:g}% interval", lambda x: f"{percent(p[x]['lower_ppm'])} to {percent(p[x]['upper_ppm'])}"),
                row("Word", lambda x: f"`{p[x]['chance']}`"),
                row("Rows", lambda x: f"{n(m[x]['rows'])} of {total_rows:,}"),
                row("Groups", lambda x: n(m[x]["groups"])),
@@ -467,9 +475,15 @@ class Result(unittest.TestCase):
         counts = [sum(r["chance"] == w for r in self.intervals) for w in ("above", "below", "unresolved")]
         low = min(self.intervals, key=lambda r: int(r["lower_ppm"]))
         self.assertEqual(sum(r["lower_ppm"] == low["lower_ppm"] for r in self.intervals), 1)
+        # The coverage of the lowest lower bound's read: its species and rows in the export's typing table.
+        over = [r for r in self.typing if (r["reading"], r["step"], r["match"]) ==
+                (low["reading"], low["read"], low["match"])]
+        self.assertEqual([r["species"] for r in over], [low["species"]])
         out += [f"Of the export's {len(self.intervals)} intervals, {counts[0]} carry `above`, {counts[1]} carry "
                 f"`below` and {counts[2]} carry `unresolved`. The lowest lower bound is {percent(low['lower_ppm'])}, "
-                f"on the {MATCH[low['match']]} of the {READ[low['read']]} in reading {low['reading']}.", "",
+                f"on the {MATCH[low['match']]} of the {READ[low['read']]} in reading {low['reading']}, over "
+                f"{over[0]['species']} of {total_species} species and {n(over[0]['rows'])} of {total_rows:,} rows.",
+                "",
                 "A cell gives the catalogue's call on the resistant member, then on the susceptible member.", "",
                 "| Catalogue calls | Reading A | Reading B |", "| --- | --- | --- |"]
         calls = []
@@ -488,7 +502,9 @@ class Result(unittest.TestCase):
             def text(x, res=res, sus=sus):
                 c = cell[(x, res, sus)]
                 part = f"{n(c['pairs'])} of {n(m[x]['pairs'])} pairs"
-                return f"{percent(c['estimate_ppm'])} on {part}" if c["estimate_ppm"] else part
+                if not c["estimate_ppm"]:
+                    return part
+                return f"{percent(c['estimate_ppm'])} on {part} in {c['species']} of {total_species} species"
             out.append(row(name, text))
         f = self.facts
         start = f[("run", "Start")]
@@ -500,12 +516,13 @@ class Result(unittest.TestCase):
         self.assertEqual(int(texts), int(files) + 1)
         out += ["", f"The reading ran once, at {f[('run', 'Code')][:13]} on {day}, for "
                     f"{f[('run', 'Seconds, by the run' + chr(39) + 's own clock')]} seconds by its own clock, and ended "
-                    f"with exit {f[('run', 'Exit')]}. Its scan of the {files} export files and the run's printout, "
+                    f"with exit {f[('run', 'Exit')]}. A scan after the run, of the {files} export files and the run's "
+                    f"printout, "
                     f"{texts} texts, for {f[('scan', 'Genome ids in the list')]} genome ids and "
                     f"{f[('scan', 'Accessions in the list')]} accessions, gives {f[('scan', 'Whole ids found')]} whole "
                     f"ids, {f[('scan', 'Ids found inside a longer run of digits')]} ids inside a longer run of digits, "
                     f"{f[('scan', 'Accessions found')]} accessions and {f[('scan', 'Tokens of an id' + chr(39) + 's shape')]} "
-                    f"tokens of either shape. Its planted control is "
+                    f"tokens of either shape. The scan's planted control is "
                     f"{f[('scan', 'Control: a planted id and a planted accession')].replace('found ', '')}.", ""]
         return out
 
