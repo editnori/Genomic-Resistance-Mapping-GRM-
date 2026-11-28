@@ -5,6 +5,7 @@ SYNTHETIC release of made_up2.py, changed in one place."""
 
 import json
 import unittest
+from pathlib import Path
 from unittest import mock
 
 from tests.matched_accuracy import made_up2, stage2_common as c
@@ -493,6 +494,26 @@ class AfterTheLine(c.Case, unittest.TestCase):
             with self.subTest(value=value):
                 self.assert_stops_after_the_line(self.run_stage2(after=self.score(value)),
                                                  "a learner's score is not finite")
+
+    def test_a_listed_report_that_cannot_be_read_after_the_line_stops_in_one_line_naming_it(self):
+        # Finding 4 of stage 2's second review: a removed report, or a directory in its place, once gave a
+        # Python error after the line.
+        real = stage2.open_scores
+        for how, error in (("removed", "FileNotFoundError"), ("a directory", "IsADirectoryError")):
+            def opening(out, how=how):
+                opened = real(out)
+                path = Path(out).parent / "in" / "reports" / "synthia_rho__drug_b.json"
+                path.unlink()
+                if how == "a directory":
+                    path.mkdir()
+                return opened
+            with self.subTest(how=how), mock.patch.object(stage2, "open_scores", side_effect=opening):
+                run = self.run_stage2()
+                self.assertEqual(run.report("synthia_rho__drug_b").parent, run.out.parent / "in" / "reports")
+                self.assert_stops_after_the_line(run, f"synthia_rho__drug_b.json could not be read after the line "
+                                                      f"({error})")
+                self.assertEqual(run.lines[1], c.STOP + "synthia_rho__drug_b.json could not be read after the "
+                                                        f"line ({error})")
 
 
 if __name__ == "__main__":

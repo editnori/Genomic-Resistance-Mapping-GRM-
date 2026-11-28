@@ -164,9 +164,9 @@ class LineWrite(c.Case, unittest.TestCase):
         self.assertFalse((run.out / stage2.OPENED_FILE).exists())
         self.assertFalse(run.wrote_export())
 
-    def test_a_line_write_that_fails_after_its_file_is_made_leaves_it_empty_and_a_rerun_there_stops_today(self):
-        # Today's behaviour (finding 5 of the re-check waits until after the one reading): the file is made, its
-        # write meets a made-up full disk, the run stops in one line, and the empty file stays behind.
+    def full_disk(self, at, unlink=None):
+        """A run whose line file is made, then meets a made-up full disk at its write or at its flush. With unlink,
+        removing a file fails too."""
         real_open, real_fdopen, line_fds = os.open, os.fdopen, set()
 
         def opening(path, *a, **kw):
@@ -178,31 +178,91 @@ class LineWrite(c.Case, unittest.TestCase):
         def full(fd, *a, **kw):
             f = real_fdopen(fd, *a, **kw)
             if fd in line_fds:
-                def write(text):
+                def fail(*_):
                     raise OSError(28, "made-up full disk")
-                f.write = write
+                setattr(f, at, fail)
             return f
-        with mock.patch.object(stage2.os, "open", side_effect=opening), \
-                mock.patch.object(stage2.os, "fdopen", side_effect=full):
+        with contextlib.ExitStack() as stack:
+            stack.enter_context(mock.patch.object(stage2.os, "open", side_effect=opening))
+            stack.enter_context(mock.patch.object(stage2.os, "fdopen", side_effect=full))
+            if unlink:
+                stack.enter_context(mock.patch.object(stage2.Path, "unlink", side_effect=unlink))
             run = self.run_stage2()
         self.assertEqual(len(line_fds), 1)
-        self.assertEqual(run.code, 1, run.lines)
-        self.assertEqual(run.lines, [c.STOP + "the line could not be written (OSError)"])
-        self.assertEqual(sorted(p.name for p in run.out.iterdir()), [stage2.OPENED_FILE])
-        self.assertEqual((run.out / stage2.OPENED_FILE).read_bytes(), b"")
+        return run
+
+    def rerun(self, run):
         own, inner = made_up2.stage2_pins(run.top, run.stage1_out)
         printed = io.StringIO()
         with contextlib.redirect_stdout(printed):
-            again = made_up2.stage2_run(stage2, run.argv, own, inner)
-        self.assertEqual((again, printed.getvalue().splitlines()),
-                         (1, [c.STOP + "the output directory already holds export, local or the line of an earlier "
-                                       "run"]))
+            code = made_up2.stage2_run(stage2, run.argv, own, inner)
+        return code, printed.getvalue().splitlines()
+
+    def test_a_line_write_or_flush_that_fails_after_its_file_is_made_removes_it_and_a_rerun_there_passes(self):
+        # Finding 5 of stage 2's second review: an OSError other than a refusal, at the write or at the flush that
+        # closing the file makes, removes the line file, so a rerun into that directory starts.
+        for at in ("write", "flush"):
+            with self.subTest(at=at):
+                run = self.full_disk(at)
+                self.assertEqual(run.code, 1, run.lines)
+                self.assertEqual(run.lines, [c.STOP + "the line could not be written (OSError)"])
+                self.assertEqual(list(run.out.iterdir()), [])
+                code, lines = self.rerun(run)
+                self.assertEqual((code, lines[0]), (0, stage2.OPENED), lines)
+                self.assertEqual(len(lines), 3, lines)
+                self.assertTrue(run.wrote_export())
+                self.assertEqual((run.out / stage2.OPENED_FILE).read_text(), stage2.OPENED + "\n")
+
+    def test_a_line_file_that_cannot_be_removed_is_named_in_the_stop_line(self):
+        def refused(*_):
+            raise PermissionError(13, "made-up refusal")
+        run = self.full_disk("write", unlink=refused)
+        self.assertEqual(run.code, 1, run.lines)
+        self.assertEqual(run.lines, [c.STOP + "the line could not be written (OSError), and its file could not be "
+                                              "removed"])
         self.assertEqual((run.out / stage2.OPENED_FILE).read_bytes(), b"")
         self.assertFalse(run.wrote_export())
 
+    def test_a_line_file_another_run_made_after_the_check_is_left_alone(self):
+        # The run removes only a file it made: a file made between check_out and the open stops it, and stays.
+        real = os.open
+
+        def raced(path, *a, **kw):
+            if Path(path).name == stage2.OPENED_FILE:
+                Path(path).write_text("another run\n")
+            return real(path, *a, **kw)
+        with mock.patch.object(stage2.os, "open", side_effect=raced):
+            run = self.run_stage2()
+        self.assertEqual(run.code, 1, run.lines)
+        self.assertEqual(run.lines, [c.STOP + "the line could not be written (FileExistsError)"])
+        self.assertEqual(sorted(p.name for p in run.out.iterdir()), [stage2.OPENED_FILE])
+        self.assertEqual((run.out / stage2.OPENED_FILE).read_text(), "another run\n")
+        self.assertFalse(run.wrote_export())
+
+
+class LineFileAfterTheLine(c.Case, unittest.TestCase):
+    """Finding 3 of stage 2's second review: the second loader takes the line's token and does not read the line
+    file again, so a change to that file after the line printed cannot stop the run."""
+
+    def test_a_line_file_removed_changed_or_not_utf_8_after_the_line_does_not_stop_the_run(self):
+        real = stage2.open_scores
+        changes = {"removed": lambda p: p.unlink(), "changed": lambda p: p.write_text("scores opened: no\n"),
+                   "not UTF-8": lambda p: p.write_bytes(b"\xff\n")}
+        for name, change in changes.items():
+            def opening(out, change=change):
+                opened = real(out)
+                change(Path(out) / stage2.OPENED_FILE)
+                return opened
+            with self.subTest(change=name), mock.patch.object(stage2, "open_scores", side_effect=opening):
+                run = self.run_stage2()
+                self.assert_passes(run)
+                self.assertEqual(run.lines[0], stage2.OPENED)
+                self.assertEqual(len(run.lines), 3, run.lines)
+
 
 class Gate(unittest.TestCase):
-    """The second loader takes the line's token alone, and its file must hold the line."""
+    """The second loader takes the line's token alone, made by open_scores once its file holds the line and the
+    line is printed and flushed."""
 
     def setUp(self):
         self._tmp = tempfile.TemporaryDirectory()
@@ -220,13 +280,11 @@ class Gate(unittest.TestCase):
         except stage2.Stop as e:
             return ("stopped", str(e))
 
-    def test_no_score_without_the_line(self):
-        self.assertEqual(self.outcome(None), ("stopped", "a score was asked for before the line"))
-        self.assertEqual(self.outcome(stage2.Opened(self.dir / stage2.OPENED_FILE)),
-                         ("stopped", "a score was asked for before the line"))
-        (self.dir / stage2.OPENED_FILE).write_text("scores opened: no\n")
-        self.assertEqual(self.outcome(stage2.Opened(self.dir / stage2.OPENED_FILE)),
-                         ("stopped", "a score was asked for before the line"))
+    def test_no_score_without_the_lines_token(self):
+        (self.dir / stage2.OPENED_FILE).write_text(stage2.OPENED + "\n")
+        for opened in (None, self.dir / stage2.OPENED_FILE, stage2.OPENED, object()):
+            with self.subTest(opened=type(opened).__name__):
+                self.assertEqual(self.outcome(opened), ("stopped", "a score was asked for before the line"))
 
     def test_the_line_is_written_then_printed_then_scores_open(self):
         printed = io.StringIO()
@@ -235,6 +293,16 @@ class Gate(unittest.TestCase):
         self.assertEqual(printed.getvalue(), stage2.OPENED + "\n")
         self.assertEqual((self.dir / "out" / stage2.OPENED_FILE).read_text(), stage2.OPENED + "\n")
         self.assertEqual(self.outcome(opened)[0], "ok")
+
+    def test_the_line_is_flushed_once_its_file_holds_it_and_before_open_scores_returns(self):
+        line, flushed = self.dir / "out" / stage2.OPENED_FILE, []
+
+        class Out(io.StringIO):
+            def flush(self):
+                flushed.append((self.getvalue(), line.read_text() if line.exists() else None))
+        with contextlib.redirect_stdout(Out()):
+            stage2.open_scores(self.dir / "out")
+            self.assertEqual(flushed, [(stage2.OPENED + "\n", stage2.OPENED + "\n")])
 
     def test_a_report_changed_after_its_check_stops(self):
         with contextlib.redirect_stdout(io.StringIO()):

@@ -67,16 +67,14 @@ Before step 1, the run stops on an output path that is not a directory or alread
 
 A file not as stage 1 writes it stops its step too. A committed table must have stage 1's columns, whole lines and no line twice. A row list must be UTF-8, hold a line, end with a line break and give 8 fields a line, none blank but the year, with whole-number folds and lineage clusters. The reports directory must hold the reports the release's checksum list names, and each report and genome table row must pass stage 1's loader.
 
-A check that fails before the line prints one line, exits 1 and writes nothing. So does a line file that cannot be made. If the file is made but its write fails, it stays behind empty, and a rerun into that directory stops on the line of an earlier run. Ruling R65 lets that run go again into a new directory.
+A check that fails before the line prints one line, exits 1 and writes nothing. So does a line file that cannot be made or written. The run first removes a line file it made, so a rerun into that directory starts, and its stop line says when the file cannot be removed.
 
-After the line, a run exits 0 with the export, or stops with one line and no export on one of four allowed ends:
+After the line, a run exits 0 with the export, or stops with one line and no export on one of four ends:
 
-- A report's bytes changed since step 1.
+- A listed report that cannot be read, or whose bytes changed since step 1.
 - A score null, true or false, not a number or not finite.
 - A full stop in an export file, a failed positive control of the scan, or a scan hit, which prints one line a file.
 - An export write that fails, which first removes what it made.
-
-Two other ends are not allowed. The line file removed or changed stops with `a score was asked for before the line`, though the line printed. A report or line file that cannot be read ends in a Python error. These two ends and the empty line file are findings 3 to 5 of stage 2's second review, and ruling R65 holds their code changes until after the one reading.
 
 ## Lead's readings
 

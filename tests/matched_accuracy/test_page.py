@@ -34,9 +34,10 @@ UNDER_10 = ("A row under 10 pairs carries no reading, yet its value still follow
             "beneath it lacks an estimate.")
 # What a copy group is, in the words of its rule. The one place the page may name a k-mer.
 COPY_GROUP_WORDS = "genomes of one dataset with identical canonical k-mer sets"
-# Stage 2's part, line by line, as the code has it at 74a33d9b: the stops before step 1, the 6 steps, the stops on
-# format, the line itself and every end after it. Stage 2's second review gave 6 steps that a cut left unpinned, and
-# 4 stops, the top-level catalogue read and the line file's stop the page left out (its findings 11 and 12).
+# Stage 2's part, line by line, as the code has it: the stops before step 1, the 6 steps, the stops on format, the
+# line itself and every end after it. Stage 2's second review gave 6 steps that a cut left unpinned, and 4 stops, the
+# top-level catalogue read and the line file's stop the page left out (its findings 11 and 12). Its findings 3 to 5,
+# changed after the one reading, took out the two ends that were not allowed and the empty line file.
 STAGE_TWO = (
     "## Stage two steps",
     "Before step 1, the run stops on an output path that is not a directory or already holds an export, a `local` "
@@ -62,19 +63,14 @@ STAGE_TWO = (
     "blank but the year, with whole-number folds and lineage clusters. The reports directory must hold the reports "
     "the release's checksum list names, and each report and genome table row must pass stage 1's loader.",
     "A check that fails before the line prints one line, exits 1 and writes nothing. So does a line file that cannot "
-    "be made. If the file is made but its write fails, it stays behind empty, and a rerun into that directory stops "
-    "on the line of an earlier run. Ruling R65 lets that run go again into a new directory.",
-    "After the line, a run exits 0 with the export, or stops with one line and no export on one of four allowed "
-    "ends:",
-    "- A report's bytes changed since step 1.",
+    "be made or written. The run first removes a line file it made, so a rerun into that directory starts, and its "
+    "stop line says when the file cannot be removed.",
+    "After the line, a run exits 0 with the export, or stops with one line and no export on one of four ends:",
+    "- A listed report that cannot be read, or whose bytes changed since step 1.",
     "- A score null, true or false, not a number or not finite.",
     "- A full stop in an export file, a failed positive control of the scan, or a scan hit, which prints one line a "
     "file.",
     "- An export write that fails, which first removes what it made.",
-    "Two other ends are not allowed. The line file removed or changed stops with `a score was asked for before the "
-    "line`, though the line printed. A report or line file that cannot be read ends in a Python error. These two "
-    "ends and the empty line file are findings 3 to 5 of stage 2's second review, and ruling R65 holds their code "
-    "changes until after the one reading.",
 )
 
 

@@ -205,10 +205,10 @@ FAULTS = [
      "(\"export\", OPENED_FILE)",
      STOPS + "Setup.test_an_output_directory_holding_an_export_or_stage_1s_local_directory_stops"),
     ("S44", "the line", "the line's failed write stops in one line on a refusal alone", S,
-     "    except OSError as e:\n        raise Stop(f\"the line could not be written",
-     "    except PermissionError as e:\n        raise Stop(f\"the line could not be written",
-     LINE + ("LineWrite.test_a_line_write_that_fails_after_its_file_is_made_leaves_it_empty_and_a_rerun_there_"
-             "stops_today")),
+     "    except OSError as e:\n        kept = \"\"\n",
+     "    except PermissionError as e:\n        kept = \"\"\n",
+     LINE + ("LineWrite.test_a_line_write_or_flush_that_fails_after_its_file_is_made_removes_it_and_a_rerun_there_"
+             "passes")),
     ("S45", "typing", "the typing reads keep the rows lacking an MLST type", S,
      "        typed = [r for r in typed if all(r[k] is not None for k in extra)]\n",
      "        typed = [r for r in typed if all(r[k] is not None for k in extra[1:])]\n",
@@ -242,6 +242,33 @@ FAULTS = [
      "for s in rep[\"samples\"]} | wanted | hc20_ids,\n",
      "for s in rep[\"samples\"]} | wanted,\n",
      EXPORT + "Inputs.test_an_id_of_the_report_left_out_or_of_the_genome_table_alone_is_a_hit"),
+    # Findings 3 to 5 of stage 2's second review, changed after the one reading: one fault for each changed line
+    # group of read_scores and open_scores, and one for the flush of the printed line.
+    ("S53", "the line", "the second loader reads the line file again, so a removed line file stops the run", S,
+     "    if not isinstance(opened, Opened):\n",
+     "    if not isinstance(opened, Opened) or not Path(opened.path).is_file():\n",
+     LINE + "LineFileAfterTheLine.test_a_line_file_removed_changed_or_not_utf_8_after_the_line_does_not_stop_the_run"),
+    ("S54", "the line", "a report that cannot be read after the line stops in one line on a refusal alone", S,
+     "    except OSError as e:\n        raise Stop(f\"{Path(path).name} could not be read after the line",
+     "    except PermissionError as e:\n        raise Stop(f\"{Path(path).name} could not be read after the line",
+     STOPS + "AfterTheLine.test_a_listed_report_that_cannot_be_read_after_the_line_stops_in_one_line_naming_it"),
+    ("S55", "the line", "a line file is taken as made before its open, so another run's file is removed", S,
+     "    made = None\n",
+     "    made = out / OPENED_FILE\n",
+     LINE + "LineWrite.test_a_line_file_another_run_made_after_the_check_is_left_alone"),
+    ("S56", "the line", "a line file whose write fails is not removed", S,
+     "                made.unlink()\n",
+     "                pass\n",
+     LINE + ("LineWrite.test_a_line_write_or_flush_that_fails_after_its_file_is_made_removes_it_and_a_rerun_there_"
+             "passes")),
+    ("S57", "the line", "a line file that cannot be removed goes unnamed in the stop line", S,
+     "                kept = \", and its file could not be removed\"\n",
+     "                kept = \"\"\n",
+     LINE + "LineWrite.test_a_line_file_that_cannot_be_removed_is_named_in_the_stop_line"),
+    ("S58", "the line", "the line printed without a flush", S,
+     "    print(OPENED, flush=True)\n",
+     "    print(OPENED)\n",
+     LINE + "Gate.test_the_line_is_flushed_once_its_file_holds_it_and_before_open_scores_returns"),
 ]
 
 
