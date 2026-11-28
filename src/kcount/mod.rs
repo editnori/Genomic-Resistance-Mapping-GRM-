@@ -1,4 +1,5 @@
-//! Pure-Rust k-mer key primitives and verified binary formats (`grm kcount`).
+//! Pure-Rust k-mer counting engine, key primitives, and verified binary
+//! formats (`grm kcount`).
 //!
 //! Submodules:
 //! - [`key`]: dual-width canonical k-mer spaces (`u64` for `k = 5..=32`,
@@ -8,9 +9,13 @@
 //!   `GRMKGR1\0`), counted table (`.ktab`, `GRMKTB1\0`), per-sequence count
 //!   profile (`.prof.bin`, `GRMPRF1\0`), and `.kset` v1 (`GRMKSET1`) unified
 //!   reader.
+//! - [`superkmer`]: bounded-memory parallel minimizer-bucketed super-k-mer
+//!   counter (`grm kcount count`) with `u32` counts capped at `2^32 - 1`,
+//!   exact histograms and QC metrics, and indexed parallel `.prof.bin` writing.
 
 pub mod format;
 pub mod key;
+pub mod superkmer;
 
 use crate::confine;
 use crate::fnv::Fnv;
@@ -19,9 +24,11 @@ use crate::kcount::format::{
     convert_to_ktab, convert_to_v1, detect_format, hex_bytes, read_profile_header,
     read_profiles_verified,
 };
-use crate::kcount::key::{KmerKey, MAX_K_U64};
+use crate::kcount::key::{KmerKey, MAX_K, MAX_K_U64, MIN_K};
+use crate::kcount::superkmer::{CountConfig, InputTypeChoice, count_inputs};
 use crate::kset::BUCKETS;
 use anyhow::{Context, Result, bail, ensure};
+use clap::builder::RangedU64ValueParser;
 use clap::{Args, Subcommand, ValueEnum};
 use ring::digest::{Context as Sha256Context, SHA256};
 use serde::Serialize;
@@ -38,6 +45,81 @@ pub struct KcountArgs {
 
 #[derive(Subcommand, Debug)]
 pub enum KcountCommand {
+    /// Count canonical k-mers (`k = 5..=64`) from plain or `.gz` FASTA/FASTQ
+    /// using minimizer-bucketed 2-bit super-k-mers and `u32` counts capped at
+    /// `2^32 - 1`.
+    Count {
+        /// One or more FASTA/FASTQ files (plain or `.gz`).
+        #[arg(long, required = true)]
+        input: Vec<PathBuf>,
+        /// K-mer length (`5..=64`).
+        #[arg(
+            long,
+            default_value_t = 31,
+            value_parser = RangedU64ValueParser::<usize>::new().range(MIN_K as u64..=MAX_K as u64)
+        )]
+        k: usize,
+        /// Sample name stored in output headers (defaults to `"sample"` so
+        /// input file names are never copied into output headers).
+        #[arg(long)]
+        name: Option<String>,
+        /// Input modality (`auto`, `reads`, or `assembly`). `auto` detects
+        /// FASTQ as `reads` and FASTA as `assembly`; an explicit value errors
+        /// when the input records disagree with it.
+        #[arg(long, value_enum, default_value_t = InputTypeArg::Auto)]
+        input_type: InputTypeArg,
+        /// Primary output table path (`.ktab`, or `.grk` with `--presence-only`).
+        #[arg(long)]
+        out: PathBuf,
+        /// Optional Golomb-Rice presence-only sidecar output (`.grk`).
+        #[arg(long)]
+        gr_kset_out: Option<PathBuf>,
+        /// Optional abundance histogram JSON output (`.hist.json`).
+        #[arg(long)]
+        hist_out: Option<PathBuf>,
+        /// Optional full summary, digests, sketch, and QC JSON output.
+        #[arg(long)]
+        meta_out: Option<PathBuf>,
+        /// Optional per-sequence k-mer count profile (`.prof.bin`).
+        #[arg(long)]
+        profile_out: Option<PathBuf>,
+        /// Retain original FASTA/FASTQ record IDs in `.prof.bin` instead of
+        /// anonymized sequential labels (`r000001`, `r000002`, ...).
+        #[arg(long)]
+        keep_record_ids: bool,
+        /// Minimum exact k-mer count to retain (`1` for assemblies, `>= 3` for raw reads).
+        #[arg(long, default_value_t = 1)]
+        min_count: u32,
+        /// Optional upper count ceiling (`<= 2^32 - 1`).
+        #[arg(long)]
+        max_count: Option<u32>,
+        /// Allow counts exceeding `2^32 - 1` (`4,294,967,295`) to clamp at
+        /// `u32::MAX` and record `saturated_counts` instead of failing.
+        #[arg(long)]
+        allow_saturation: bool,
+        /// Phred base-quality floor for FASTQ inputs; bases below break windows like `N`.
+        #[arg(long, default_value_t = 0)]
+        min_qual: u8,
+        /// Bottom-`s` MinHash sketch size.
+        #[arg(long, default_value_t = 1000)]
+        sketch_size: usize,
+        /// Target working-memory budget in MiB for bounded partitioning, merge,
+        /// and spilling.
+        #[arg(long, default_value_t = 512)]
+        max_memory_mb: usize,
+        /// Power-of-2 minimizer partition count (`16..=1024`).
+        #[arg(long, default_value_t = 256)]
+        partitions: usize,
+        /// Optional minimizer length override (`1 <= m <= min(k, 31)`).
+        #[arg(long)]
+        minimizer_len: Option<usize>,
+        /// Write presence-only Golomb-Rice `.grk` table instead of counted `.ktab`.
+        #[arg(long)]
+        presence_only: bool,
+        /// Optional temporary directory for spilled partitions and shards.
+        #[arg(long)]
+        tmp_dir: Option<PathBuf>,
+    },
     /// Inspect metadata, bucket statistics, sketch prefixes, or verified
     /// SHA-256 and key digests for `.kset` v1, `.grk`, `.ktab`, or `.prof.bin`
     /// files.
@@ -80,6 +162,23 @@ pub enum KcountCommand {
         #[arg(long, value_enum)]
         modality: Option<InputModalityArg>,
     },
+}
+
+#[derive(Clone, Copy, Debug, ValueEnum)]
+pub enum InputTypeArg {
+    Auto,
+    Reads,
+    Assembly,
+}
+
+impl From<InputTypeArg> for InputTypeChoice {
+    fn from(v: InputTypeArg) -> Self {
+        match v {
+            InputTypeArg::Auto => InputTypeChoice::Auto,
+            InputTypeArg::Reads => InputTypeChoice::Reads,
+            InputTypeArg::Assembly => InputTypeChoice::Assembly,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, ValueEnum)]
@@ -148,6 +247,54 @@ pub fn write_json_atomic<T: Serialize>(path: &Path, val: &T) -> Result<()> {
 /// Entry point wired from `Command::Kcount` in `src/main.rs`.
 pub fn run_cli(args: KcountArgs) -> Result<()> {
     match args.command {
+        KcountCommand::Count {
+            input,
+            k,
+            name,
+            input_type,
+            out,
+            gr_kset_out,
+            hist_out,
+            meta_out,
+            profile_out,
+            keep_record_ids,
+            min_count,
+            max_count,
+            allow_saturation,
+            min_qual,
+            sketch_size,
+            max_memory_mb,
+            partitions,
+            minimizer_len,
+            presence_only,
+            tmp_dir,
+        } => {
+            let sample_name = name.unwrap_or_else(|| DEFAULT_SAMPLE_NAME.to_string());
+            let cfg = CountConfig {
+                k,
+                sample_name,
+                input_type: input_type.into(),
+                min_count,
+                max_count,
+                allow_saturation,
+                min_qual,
+                sketch_size,
+                max_memory_mb,
+                partitions,
+                minimizer_len,
+                presence_only_out: presence_only,
+                keep_record_ids,
+                out_path: out,
+                gr_kset_out,
+                hist_out,
+                meta_out,
+                profile_out,
+                tmp_dir,
+            };
+            let summary = count_inputs(&input, &cfg)?;
+            println!("{}", serde_json::to_string_pretty(&summary)?);
+            Ok(())
+        }
         KcountCommand::Inspect {
             input,
             sketch,

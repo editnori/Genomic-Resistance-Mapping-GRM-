@@ -314,6 +314,11 @@ src/lib.rs kcount::key::tests::u128_golden_mix_unmix_vectors_for_k33_45_61_64
 src/lib.rs kcount::key::tests::u128_mixer_balances_top_bits_at_k61
 src/lib.rs kcount::key::tests::u128_radix_sort_matches_std_sort
 src/lib.rs kcount::key::tests::u128_round_trips_511_values_at_every_k_from_33_to_64
+src/lib.rs kcount::superkmer::tests::count_saturation_refuses_by_default_and_clamps_when_allowed
+src/lib.rs kcount::superkmer::tests::len_histogram_matches_sorted_vec_quantiles_and_n50
+src/lib.rs kcount::superkmer::tests::spill_dir_name_parser_validates_strict_format
+src/lib.rs kcount::superkmer::tests::streaming_run_encoder_matches_profile_decoder_roundtrip
+src/lib.rs kcount::superkmer::tests::streaming_writers_match_in_memory_format_writers_byte_for_byte
 src/lib.rs kset::tests::a_file_shorter_than_the_header_is_named_in_the_error
 src/lib.rs kset::tests::dedup_respects_min_count
 src/lib.rs kset::tests::kset_round_trips_and_sketches
@@ -800,6 +805,15 @@ src/main.rs tests::the_pipeline_counts_and_builds_at_the_k_it_is_given
 tests/ablation_composition.rs a_toy_k_arm_composes_the_plan_blocks_encoder_and_boosting
 tests/foldmask_extended.rs extended_foldmask_smoke
 tests/foldmask_extended.rs extended_foldmask_vectors [ignored]
+tests/kcount_count.rs cli_count_contracts_no_filename_leak_modality_minimizer_and_extensions
+tests/kcount_count.rs kset_v1_parity_against_grm_count_at_k_5_21_31_32
+tests/kcount_count.rs min_qual_20_exact_boundary_q19_masked_q20_q21_kept
+tests/kcount_count.rs profile_bin_matches_slow_reference_and_anonymizes_ids_by_default
+tests/kcount_count.rs qc_metrics_and_peak_coverage_match_slow_reference_exactly
+tests/kcount_count.rs slow_reference_parity_across_k_5_to_64_and_edge_inputs
+tests/kcount_count.rs spill_vs_in_memory_and_1_vs_8_threads_are_byte_for_byte_identical
+tests/kcount_count.rs stale_dead_pid_spill_cleaned_and_signals_remove_active_spill_dirs
+tests/kcount_count.rs u32_max_saturation_refuses_by_default_and_clamps_when_enabled
 tests/kcount_formats.rs cli_convert_v1_and_inspect_end_to_end
 tests/kcount_formats.rs damaged_files_stress_zero_panics_across_grk_ktab_and_prof
 tests/kcount_formats.rs fixed_size_regression_on_synthetic_k31_and_k61_sets
