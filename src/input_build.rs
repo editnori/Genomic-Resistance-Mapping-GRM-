@@ -1459,6 +1459,7 @@ mod tests {
         let mut t_lin = Table::new(linear_vals, space.bits());
         let (mut a, mut b) = (Vec::with_capacity(4), Vec::with_capacity(4));
         let next = pack(&linear[1..k + 1]);
+        assert_eq!((fwd >> 63, next >> 63), (1, 1));
         let next_idx = t_lin.find(space.mix(canon(&space, next).0)).unwrap();
         successors(&t_lin, &space, fwd, &mut a);
         assert_eq!(a, vec![(next_idx, next)]);
