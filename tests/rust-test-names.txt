@@ -303,6 +303,9 @@ src/lib.rs intervals::tests::clopper_pearson_tails_hold_alpha_over_two
 src/lib.rs intervals::tests::intervals_file_pins_the_report_and_its_counts
 src/lib.rs intervals::tests::intervals_file_refuses_counts_that_do_not_add_up
 src/lib.rs intervals::tests::write_covers_the_indexed_datasets_and_leaves_reports_untouched
+src/lib.rs kcount::dosage::tests::core_panel_requires_valid_mandatory_sha256_over_metadata_and_kmers
+src/lib.rs kcount::dosage::tests::median_u32_and_histogram_are_exact_for_even_odd_and_empty
+src/lib.rs kcount::dosage::tests::qc_vector_serializes_all_null_when_omitted_and_parses_partial_or_wrapped_json
 src/lib.rs kcount::format::tests::gr_kset_round_trips_edges_and_sketches_for_u64_and_u128
 src/lib.rs kcount::format::tests::ktab_preserves_u32_counts_saturation_and_8208_byte_presence_overhead
 src/lib.rs kcount::format::tests::profile_round_trips_runs_and_deltas
@@ -803,6 +806,11 @@ src/main.rs tests::the_pipeline_counts_and_builds_at_the_k_it_is_given
 tests/ablation_composition.rs a_toy_k_arm_composes_the_plan_blocks_encoder_and_boosting
 tests/foldmask_extended.rs extended_foldmask_smoke
 tests/foldmask_extended.rs extended_foldmask_vectors [ignored]
+tests/kcount_dosage.rs build_core_panel_excludes_multicopy_plasmids_and_supports_u64_and_u128
+tests/kcount_dosage.rs cli_build_core_panel_dosage_and_matrix_export_dosage_end_to_end
+tests/kcount_dosage.rs cutoffs_even_median_partial_core_target_math_and_null_qc
+tests/kcount_dosage.rs matrix_export_dosage_dense_and_sparse_without_na_bloat
+tests/kcount_dosage.rs modality_sha256_fold_id_and_k_mismatch_guardrails
 tests/kcount_formats.rs cli_convert_v1_and_inspect_end_to_end
 tests/kcount_formats.rs damaged_files_stress_zero_panics_across_grk_ktab_and_prof
 tests/kcount_formats.rs fixed_size_regression_on_synthetic_k31_and_k61_sets

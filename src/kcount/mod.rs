@@ -1,5 +1,6 @@
 //! Pure-Rust k-mer key primitives, verified binary formats, streaming set
-//! algebra, and bounded matrix export (`grm kcount`).
+//! algebra, bounded matrix export, and modality-verified core-panel dosage
+//! extraction (`grm kcount`).
 //!
 //! Submodules:
 //! - [`key`]: dual-width canonical k-mer spaces (`u64` for `k = 5..=32`,
@@ -10,26 +11,35 @@
 //!   profile (`.prof.bin`, `GRMPRF1\0`), and `.kset` v1 (`GRMKSET1`) unified
 //!   reader.
 //! - [`ops`]: streaming bucket-by-bucket set algebra (`union`, `intersect`,
-//!   `diff`, `symdiff`) and bounded `matrix-export` (`pa`, `counts`, `sparse`,
-//!   `dense`).
+//!   `diff`, `symdiff`) and bounded `matrix-export` (`pa`, `counts`, `dosage`,
+//!   `sparse`, `dense`).
+//! - [`dosage`]: modality-verified core-panel depth normalization (`D_core`),
+//!   target/plasmid dosage extraction, and training-fold core-panel
+//!   construction.
 
+pub mod dosage;
 pub mod format;
 pub mod key;
 pub mod ops;
 
 use crate::confine;
 use crate::fnv::Fnv;
+use crate::kcount::dosage::{
+    CorePanel, CorePanelBuildConfig, DosageConfig, InputType, TargetPanel,
+    build_training_fold_core_panel, extract_sample_dosage, load_qc_metrics,
+};
 use crate::kcount::format::{
     AnyTableReader, DEFAULT_SAMPLE_NAME, InputModality, MAGIC_PROF1, TableFormat, convert_to_gr,
     convert_to_ktab, convert_to_v1, detect_format, hex_bytes, read_profile_header,
     read_profiles_verified,
 };
-use crate::kcount::key::{KmerKey, MAX_K_U64};
+use crate::kcount::key::{KmerKey, MAX_K, MAX_K_U64, MIN_K};
 use crate::kcount::ops::{
     MatrixExportConfig, MatrixLayout, MatrixMode, SetOp, SetOpConfig, export_matrix, run_set_op,
 };
 use crate::kset::BUCKETS;
 use anyhow::{Context, Result, bail, ensure};
+use clap::builder::RangedU64ValueParser;
 use clap::{Args, Subcommand, ValueEnum};
 use ring::digest::{Context as Sha256Context, SHA256};
 use serde::Serialize;
@@ -94,17 +104,20 @@ pub enum KcountCommand {
         #[command(subcommand)]
         action: OpCommand,
     },
-    /// Stream a bounded sparse or dense feature matrix (`pa` or `counts`)
-    /// across 1 to 4,096 tables, defaulting column names to `"s000001"`..
+    /// Stream a bounded sparse or dense feature matrix (`pa`, `counts`, or
+    /// `dosage`) across 1 to 4,096 tables, defaulting column names to
+    /// `"s000001"`..
     MatrixExport {
-        /// One to 4,096 input tables (`.kset` v1, `.grk`, or `.ktab`).
+        /// One to 4,096 input tables (`.kset` v1, `.grk`, or `.ktab`; `--mode
+        /// dosage` requires verified counted `.ktab` tables matching the core
+        /// panel modality).
         #[arg(long, required = true)]
         input: Vec<PathBuf>,
         /// Output directory receiving `features.tsv`, `matrix.tsv`,
         /// `missing_mask.tsv`, and `manifest.json`.
         #[arg(long)]
         out_dir: PathBuf,
-        /// Feature value encoding (`pa` or `counts`).
+        /// Feature value encoding (`pa`, `counts`, or `dosage`).
         #[arg(long, value_enum, default_value_t = MatrixModeArg::Pa)]
         mode: MatrixModeArg,
         /// Matrix output layout (`sparse` or `dense`).
@@ -127,6 +140,105 @@ pub enum KcountCommand {
         /// file names are never copied into outputs).
         #[arg(long, value_delimiter = ',')]
         sample_names: Vec<String>,
+        /// Core k-mer panel JSON with canonical `panel_sha256` (required for
+        /// `--mode dosage`).
+        #[arg(long)]
+        core_panel: Option<PathBuf>,
+        /// Optional input modality assertion (`reads` or `assembly`) checked
+        /// alongside each table's stored `.ktab` header modality.
+        #[arg(long, value_enum)]
+        input_type: Option<InputTypeArg>,
+        /// Optional fold identifier verified against `panel.fold_id`.
+        #[arg(long)]
+        expected_fold_id: Option<String>,
+        /// Minimum count required for a core k-mer to count as detected in
+        /// `--mode dosage`.
+        #[arg(long, default_value_t = 1)]
+        min_count: u32,
+        /// Minimum median core depth `D_core` required in `--mode dosage`.
+        #[arg(long, default_value_t = 10.0)]
+        min_core_depth: f64,
+        /// Minimum fraction of core k-mers detected in `--mode dosage`.
+        #[arg(long, default_value_t = 0.80)]
+        min_core_breadth: f64,
+    },
+    /// Build a single-copy core k-mer panel JSON with canonical `panel_sha256`
+    /// from 1 to 4,096 training-fold tables (caller must exclude held-out test
+    /// genomes).
+    BuildCorePanel {
+        /// One to 4,096 training-fold `.ktab` or `.grk` tables.
+        #[arg(long, required = true)]
+        input: Vec<PathBuf>,
+        /// K-mer length (`5..=64`), validated against every input table.
+        #[arg(
+            long,
+            value_parser = RangedU64ValueParser::<usize>::new().range(MIN_K as u64..=MAX_K as u64)
+        )]
+        k: usize,
+        /// Input modality (`reads` or `assembly`), validated against every
+        /// input table header.
+        #[arg(long, value_enum)]
+        input_type: InputTypeArg,
+        /// Minimum fraction of training tables carrying a k-mer (`(0, 1]`).
+        #[arg(long, default_value_t = 0.95)]
+        min_prevalence: f64,
+        /// Maximum ratio of a k-mer's count to its training table's median
+        /// depth (`>= 1.0`); k-mers exceeding this in any training table are
+        /// excluded.
+        #[arg(long, default_value_t = 1.5)]
+        max_copy_factor: f64,
+        /// Maximum number of core k-mers to retain in the panel.
+        #[arg(long, default_value_t = 10_000)]
+        max_kmers: usize,
+        /// Optional fold identifier recorded in the panel metadata.
+        #[arg(long)]
+        fold_id: Option<String>,
+        /// Optional output core panel JSON path (prints to stdout when
+        /// omitted).
+        #[arg(long)]
+        out: Option<PathBuf>,
+    },
+    /// Modality-verified `D_core` depth normalization and target/plasmid
+    /// dosage extraction from a verified counted `.ktab` table.
+    Dosage {
+        /// Counted `.ktab` (`GRMKTB1\0`) file for the sample.
+        #[arg(long)]
+        table: PathBuf,
+        /// Single-copy core k-mer panel JSON with mandatory `panel_sha256`.
+        #[arg(long)]
+        core_panel: PathBuf,
+        /// Sample label written into the JSON report (defaults to `"sample"`
+        /// so input file paths are never copied into outputs).
+        #[arg(long)]
+        name: Option<String>,
+        /// Optional input modality assertion (`reads` or `assembly`); when
+        /// set, both this flag and the `.ktab` header's stored modality must
+        /// match `panel.input_type`.
+        #[arg(long, value_enum)]
+        input_type: Option<InputTypeArg>,
+        /// Optional fold identifier verified against `panel.fold_id`.
+        #[arg(long)]
+        expected_fold_id: Option<String>,
+        /// Optional target/plasmid k-mer panel JSON.
+        #[arg(long)]
+        targets: Option<PathBuf>,
+        /// Optional metadata or QC JSON (matching `CountSummary` or
+        /// `ReadQcMetrics` fields). When omitted, every QC field serializes as
+        /// JSON `null`.
+        #[arg(long)]
+        qc_json: Option<PathBuf>,
+        /// Minimum count required for a k-mer to count as detected.
+        #[arg(long, default_value_t = 1)]
+        min_count: u32,
+        /// Minimum median core depth `D_core` required for valid dosage calls.
+        #[arg(long, default_value_t = 10.0)]
+        min_core_depth: f64,
+        /// Minimum fraction of core k-mers detected for valid dosage calls.
+        #[arg(long, default_value_t = 0.80)]
+        min_core_breadth: f64,
+        /// Optional JSON output path (prints to stdout when omitted).
+        #[arg(long)]
+        out: Option<PathBuf>,
     },
 }
 
@@ -207,6 +319,7 @@ pub enum OpCommand {
 pub enum MatrixModeArg {
     Pa,
     Counts,
+    Dosage,
 }
 
 impl From<MatrixModeArg> for MatrixMode {
@@ -214,6 +327,22 @@ impl From<MatrixModeArg> for MatrixMode {
         match v {
             MatrixModeArg::Pa => MatrixMode::Pa,
             MatrixModeArg::Counts => MatrixMode::Counts,
+            MatrixModeArg::Dosage => MatrixMode::Dosage,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, ValueEnum)]
+pub enum InputTypeArg {
+    Reads,
+    Assembly,
+}
+
+impl From<InputTypeArg> for InputType {
+    fn from(v: InputTypeArg) -> Self {
+        match v {
+            InputTypeArg::Reads => InputType::Reads,
+            InputTypeArg::Assembly => InputType::Assembly,
         }
     }
 }
@@ -403,11 +532,21 @@ pub fn run_cli(args: KcountArgs) -> Result<()> {
             min_prevalence,
             max_prevalence,
             sample_names,
+            core_panel,
+            input_type,
+            expected_fold_id,
+            min_count,
+            min_core_depth,
+            min_core_breadth,
         } => {
             let names = if sample_names.is_empty() {
                 None
             } else {
                 Some(sample_names)
+            };
+            let panel = match &core_panel {
+                Some(p) => Some(CorePanel::load(p)?),
+                None => None,
             };
             let cfg = MatrixExportConfig {
                 mode: mode.into(),
@@ -417,10 +556,73 @@ pub fn run_cli(args: KcountArgs) -> Result<()> {
                 min_prevalence,
                 max_prevalence,
                 sample_names: names,
+                core_panel: panel,
+                dosage: DosageConfig {
+                    sample_name: DEFAULT_SAMPLE_NAME.to_string(),
+                    expected_input_type: input_type.map(InputType::from),
+                    expected_fold_id,
+                    min_count,
+                    min_core_depth,
+                    min_core_breadth,
+                },
             };
             let manifest = export_matrix(&input, &out_dir, &cfg)?;
             println!("{}", serde_json::to_string_pretty(&manifest)?);
             Ok(())
+        }
+        KcountCommand::BuildCorePanel {
+            input,
+            k,
+            input_type,
+            min_prevalence,
+            max_copy_factor,
+            max_kmers,
+            fold_id,
+            out,
+        } => {
+            let cfg = CorePanelBuildConfig {
+                k,
+                input_type: input_type.into(),
+                min_prevalence,
+                max_copy_factor,
+                max_kmers,
+                fold_id,
+            };
+            let panel = build_training_fold_core_panel(&input, &cfg)?;
+            emit_json(&panel, out.as_deref())
+        }
+        KcountCommand::Dosage {
+            table,
+            core_panel,
+            name,
+            input_type,
+            expected_fold_id,
+            targets,
+            qc_json,
+            min_count,
+            min_core_depth,
+            min_core_breadth,
+            out,
+        } => {
+            let panel = CorePanel::load(&core_panel)?;
+            let tp = match &targets {
+                Some(p) => Some(TargetPanel::load(p)?),
+                None => None,
+            };
+            let qc = match &qc_json {
+                Some(p) => Some(load_qc_metrics(p)?),
+                None => None,
+            };
+            let cfg = DosageConfig {
+                sample_name: name.unwrap_or_else(|| DEFAULT_SAMPLE_NAME.to_string()),
+                expected_input_type: input_type.map(InputType::from),
+                expected_fold_id,
+                min_count,
+                min_core_depth,
+                min_core_breadth,
+            };
+            let report = extract_sample_dosage(&table, &panel, tp.as_ref(), qc.as_ref(), &cfg)?;
+            emit_json(&report, out.as_deref())
         }
     }
 }

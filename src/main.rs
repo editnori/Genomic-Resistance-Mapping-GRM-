@@ -704,8 +704,8 @@ enum Command {
         #[arg(long, default_value_t = 8640)]
         port: u16,
     },
-    /// Inspect, convert, combine, and export verified k-mer tables (`.grk`,
-    /// `.ktab`, `.prof.bin`, and `.kset` v1).
+    /// Inspect, convert, combine, export, and extract dosage from verified
+    /// k-mer tables (`.grk`, `.ktab`, `.prof.bin`, and `.kset` v1).
     Kcount(grm::kcount::KcountArgs),
 }
 

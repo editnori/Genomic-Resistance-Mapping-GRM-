@@ -1,6 +1,6 @@
 //! Streaming bucket-by-bucket set algebra (`union`, `intersect`, `diff`,
-//! `symdiff`) and bounded `matrix-export` (`pa`, `counts`, `sparse`, `dense`)
-//! across `.kset` v1 (`GRMKSET1`), `.grk` (`GRMKGR1\0`), and `.ktab`
+//! `symdiff`) and bounded `matrix-export` (`pa`, `counts`, `dosage`, `sparse`,
+//! `dense`) across `.kset` v1 (`GRMKSET1`), `.grk` (`GRMKGR1\0`), and `.ktab`
 //! (`GRMKTB1\0`) tables.
 //!
 //! All entry points enforce `crate::matrix::REVIEWED_COLUMNS` (4,096 inputs)
@@ -12,6 +12,7 @@
 
 use crate::confine;
 use crate::fnv::Fnv;
+use crate::kcount::dosage::{CorePanel, DosageConfig, DosageStatus, evaluate_table_core_coverage};
 use crate::kcount::format::{
     AnyTableReader, DEFAULT_SAMPLE_NAME, InputModality, KtabWriteMeta, MAX_COUNT, TableFormat,
     check_output_extension, encode_bucket_counts, encode_bucket_keys, hex_bytes,
@@ -90,6 +91,7 @@ pub struct SetOpSummary {
 pub enum MatrixMode {
     Pa,
     Counts,
+    Dosage,
 }
 
 /// Output matrix file layout for [`export_matrix`].
@@ -110,6 +112,8 @@ pub struct MatrixExportConfig {
     pub min_prevalence: Option<f64>,
     pub max_prevalence: Option<f64>,
     pub sample_names: Option<Vec<String>>,
+    pub core_panel: Option<CorePanel>,
+    pub dosage: DosageConfig,
 }
 
 impl Default for MatrixExportConfig {
@@ -122,6 +126,8 @@ impl Default for MatrixExportConfig {
             min_prevalence: None,
             max_prevalence: None,
             sample_names: None,
+            core_panel: None,
+            dosage: DosageConfig::default(),
         }
     }
 }
@@ -133,7 +139,7 @@ pub struct SampleMaskEntry {
     pub sample_idx: usize,
     pub sample: String,
     pub missing_core_coverage: bool,
-    pub dosage_status: Option<String>,
+    pub dosage_status: Option<DosageStatus>,
     pub d_core: Option<f64>,
     pub core_breadth: Option<f64>,
 }
@@ -473,9 +479,19 @@ fn run_set_op_generic<K: KmerKey>(
     })
 }
 
-/// Streams a bounded feature matrix (`pa` or `counts`, `sparse` or `dense`)
-/// plus `features.tsv`, `missing_mask.tsv`, and `manifest.json` under
+/// Streams a bounded feature matrix (`pa`, `counts`, or `dosage`; `sparse` or
+/// `dense`) plus `features.tsv`, `missing_mask.tsv`, and `manifest.json` under
 /// `out_dir`.
+///
+/// In `--mode dosage`:
+/// - Every input must be a verified counted `.ktab` whose stored
+///   `InputModality` matches the validated `core_panel.input_type`.
+/// - Samples below `min_core_depth` or `min_core_breadth` are recorded with
+///   `missing_core_coverage = 1` in `missing_mask.tsv` and `manifest.json`.
+/// - In `--layout dense`, missing-coverage columns receive `NA` in every row.
+/// - In `--layout sparse`, `matrix.tsv` emits only valid present entries for
+///   passing samples (no per-feature `NA` bloat rows); missing samples are
+///   read from `missing_mask.tsv` and `manifest.json`.
 pub fn export_matrix(
     inputs: &[PathBuf],
     out_dir: &Path,
@@ -512,6 +528,13 @@ pub fn export_matrix(
             "max_prevalence ({mxp}) must be >= min_prevalence ({mp})"
         );
     }
+    if cfg.mode == MatrixMode::Dosage {
+        let panel = cfg
+            .core_panel
+            .as_ref()
+            .context("--core-panel is required for --mode dosage")?;
+        panel.validate()?;
+    }
     let sample_names = resolve_sample_names(inputs.len(), cfg.sample_names.as_deref())?;
 
     let (readers, k) = open_and_verify_tables(inputs)?;
@@ -529,24 +552,37 @@ fn export_matrix_generic<K: KmerKey>(
     out_dir: &Path,
     cfg: &MatrixExportConfig,
 ) -> Result<MatrixManifest> {
-    fs::create_dir_all(out_dir)
-        .with_context(|| format!("create matrix export dir {}", out_dir.display()))?;
     let n_samples = readers.len();
     let space = K::new_space(k);
 
-    let samples: Vec<SampleMaskEntry> = sample_names
-        .iter()
-        .enumerate()
-        .map(|(idx, name)| SampleMaskEntry {
-            sample_idx: idx,
-            sample: name.clone(),
-            missing_core_coverage: false,
-            dosage_status: None,
-            d_core: None,
-            core_breadth: None,
-        })
-        .collect();
+    let mut samples = Vec::with_capacity(n_samples);
+    for (idx, (r, name)) in readers.iter().zip(sample_names).enumerate() {
+        if cfg.mode == MatrixMode::Dosage {
+            let panel = cfg.core_panel.as_ref().unwrap();
+            let (status, d_core, breadth) = evaluate_table_core_coverage(r, panel, &cfg.dosage)?;
+            samples.push(SampleMaskEntry {
+                sample_idx: idx,
+                sample: name.clone(),
+                missing_core_coverage: status == DosageStatus::InsufficientCoreCoverage,
+                dosage_status: Some(status),
+                d_core: Some(d_core),
+                core_breadth: Some(breadth),
+            });
+        } else {
+            samples.push(SampleMaskEntry {
+                sample_idx: idx,
+                sample: name.clone(),
+                missing_core_coverage: false,
+                dosage_status: None,
+                d_core: None,
+                core_breadth: None,
+            });
+        }
+    }
     let n_missing_samples = samples.iter().filter(|s| s.missing_core_coverage).count();
+
+    fs::create_dir_all(out_dir)
+        .with_context(|| format!("create matrix export dir {}", out_dir.display()))?;
 
     let sha256_missing_mask = {
         let mut mw = HashedPartWriter::create(out_dir.join("missing_mask.tsv"))?;
@@ -554,7 +590,7 @@ fn export_matrix_generic<K: KmerKey>(
             b"sample_idx\tsample\tmissing_core_coverage\tdosage_status\td_core\tcore_breadth\n",
         )?;
         for s in &samples {
-            let status_str = s.dosage_status.as_deref().unwrap_or("na");
+            let status_str = s.dosage_status.map_or("na", DosageStatus::as_str);
             let d_str = s
                 .d_core
                 .map_or_else(|| "NA".to_string(), |v| format!("{v:.6}"));
@@ -665,6 +701,10 @@ fn export_matrix_generic<K: KmerKey>(
                         let line = match cfg.mode {
                             MatrixMode::Pa => format!("{feature_idx}\t{i}\t1\n"),
                             MatrixMode::Counts => format!("{feature_idx}\t{i}\t{c}\n"),
+                            MatrixMode::Dosage => {
+                                let d = samples[i].d_core.unwrap();
+                                format!("{feature_idx}\t{i}\t{:.6}\n", c as f64 / d)
+                            }
                         };
                         mat_w.write_all(line.as_bytes())?;
                     }
@@ -682,6 +722,10 @@ fn export_matrix_generic<K: KmerKey>(
                             match cfg.mode {
                                 MatrixMode::Pa => line.push(if c > 0 { '1' } else { '0' }),
                                 MatrixMode::Counts => line.push_str(&c.to_string()),
+                                MatrixMode::Dosage => {
+                                    let d = samples[i].d_core.unwrap();
+                                    line.push_str(&format!("{:.6}", c as f64 / d));
+                                }
                             }
                         }
                     }
