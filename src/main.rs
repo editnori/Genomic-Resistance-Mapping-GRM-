@@ -704,8 +704,8 @@ enum Command {
         #[arg(long, default_value_t = 8640)]
         port: u16,
     },
-    /// Inspect and convert verified k-mer tables (`.grk`, `.ktab`, `.prof.bin`,
-    /// and `.kset` v1).
+    /// Count canonical k-mers (`k = 5..=64`), inspect, and convert verified
+    /// k-mer tables (`.grk`, `.ktab`, `.prof.bin`, and `.kset` v1).
     Kcount(grm::kcount::KcountArgs),
 }
 
