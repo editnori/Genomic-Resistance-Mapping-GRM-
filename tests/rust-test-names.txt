@@ -303,6 +303,14 @@ src/lib.rs intervals::tests::clopper_pearson_tails_hold_alpha_over_two
 src/lib.rs intervals::tests::intervals_file_pins_the_report_and_its_counts
 src/lib.rs intervals::tests::intervals_file_refuses_counts_that_do_not_add_up
 src/lib.rs intervals::tests::write_covers_the_indexed_datasets_and_leaves_reports_untouched
+src/lib.rs kcount::key::tests::kmer_key_bucketing_and_hex_cover_min_and_max_k
+src/lib.rs kcount::key::tests::mix128_constants_match_sha256_seeds
+src/lib.rs kcount::key::tests::packed_2bit_scanner_matches_canonical_mix_for_u64_and_u128
+src/lib.rs kcount::key::tests::swar_reverse_complement_matches_dna_for_all_u64_k
+src/lib.rs kcount::key::tests::u128_golden_mix_unmix_vectors_for_k33_45_61_64
+src/lib.rs kcount::key::tests::u128_mixer_balances_top_bits_at_k61
+src/lib.rs kcount::key::tests::u128_radix_sort_matches_std_sort
+src/lib.rs kcount::key::tests::u128_round_trips_511_values_at_every_k_from_33_to_64
 src/lib.rs kset::tests::a_file_shorter_than_the_header_is_named_in_the_error
 src/lib.rs kset::tests::dedup_respects_min_count
 src/lib.rs kset::tests::kset_round_trips_and_sketches
