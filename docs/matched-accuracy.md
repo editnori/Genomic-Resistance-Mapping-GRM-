@@ -1,12 +1,42 @@
 # Matched accuracy
 
-Not run yet. Stage 2's real reading has not run and is not authorised: it needs the merged script and the lead's word after the merge.
+In stage 2's one reading, the five learners' mean score ranks the resistant genome above the susceptible one in 75.1% of matched pairs in reading A and 75.2% in reading B, by the protocol's weights, and all 14 intervals carry `above`.
 
 Stage 1 freezes which genome rows of revision 14's lineage split enter a matched comparison, opening no score.
 
 ## Question
 
 The protocol asks how often the five learners' mean score ranks a resistant genome above a susceptible one in a group matched on dataset, test fold, lineage cluster, BioProject, lab method, standard and standard year. It is a retrospective read inside one database, BV-BRC.
+
+## Result
+
+The export gives each estimate in whole parts per million, and each percent below is that figure to one decimal, rounded half to even.
+
+| Figure | Reading A | Reading B |
+| --- | --- | --- |
+| Share | 75.1% | 75.2% |
+| Range | 67.0% to 82.2% | 67.0% to 82.3% |
+| Word | `above` | `above` |
+| Rows | 49,621 of 215,319 | 48,156 of 215,319 |
+| Groups | 2,783 | 2,749 |
+| Pairs | 283,118 | 272,840 |
+| Datasets | 206 of 268 | 205 of 268 |
+| Species | 16 of 23 | 16 of 23 |
+
+Of the export's 14 intervals, 14 carry `above`, 0 carry `below` and 0 carry `unresolved`. The lowest lower bound is 65.2%, on the exact MLST match of the MLST and HC20 read in reading A.
+
+A cell gives the catalogue's call on the resistant member, then on the susceptible member.
+
+| Catalogue calls | Reading A | Reading B |
+| --- | --- | --- |
+| Resistant, resistant | 67.4% on 73,863 of 283,118 pairs | 67.4% on 70,771 of 272,840 pairs |
+| Resistant, susceptible | 91.4% on 116,407 of 283,118 pairs | 91.5% on 115,704 of 272,840 pairs |
+| Susceptible, resistant | 20.3% on 2,592 of 283,118 pairs | 20.3% on 2,592 of 272,840 pairs |
+| Susceptible, susceptible | 64.5% on 90,038 of 283,118 pairs | 64.6% on 83,555 of 272,840 pairs |
+| Unevaluable | 0 of 283,118 pairs | 0 of 272,840 pairs |
+| No drug rule | 218 of 283,118 pairs | 218 of 272,840 pairs |
+
+The reading ran once, at main 338695a8 on 27 November 2026, for 99 seconds by its own clock, and ended with exit 0. Its scan of the 6 export files and the run's printout, 7 texts, for 123,483 genome ids and 1,785 accessions, gives 0 whole ids, 0 ids inside a longer run of digits, 0 accessions and 0 tokens of either shape. Its planted control is in 7 of 7 texts.
 
 ## Steps
 
@@ -26,7 +56,7 @@ Reading A uses these rows. Reading B first takes out each genome and antibiotic 
 
 ## Counts
 
-Per dataset, species and overall: rows out by each reason, then the rows, genomes, groups and pairs left, and the same for exact MLST and MLST with HC20, beside the wider match on those rows. Overall alone: the largest BioProject's share of rows and of weight. Groups weigh equally inside a dataset, datasets inside a species and species overall.
+Per dataset, species and overall: rows out by each reason, then the rows, genomes, groups and pairs left, and the same for exact MLST and MLST with HC20, beside the wider match on those rows. Overall alone: the largest BioProject's share of rows and of weight.
 
 Rows lacking a typing value are counted among rows entering the groups and among eligible rows; genomes missing from the genome table, over every report and over those that enter.
 
@@ -78,7 +108,7 @@ After the line, a run exits 0 with the export, or stops with one line and no exp
 
 ## Lead's readings
 
-- A row's mean is its five scores added left to right as doubles, scm, cart, rf, gbt, lasso, then divided by 5. A score null, true or false, not a number or not finite stops the run.
+- A row's mean is its five scores added left to right as doubles, scm, cart, rf, gbt, lasso, then divided by 5.
 - In a group each resistant row meets each susceptible row: a higher resistant mean counts 1, an exact tie one half, else 0. The group's value is that count over its pairs.
 - Groups weigh equally in a dataset, datasets in a species, species overall, as exact fractions. With 6 or more species, 10,000 draws of species means, numpy's PCG64 at seed 42 for each estimate and the linear 2.5th and 97.5th percentiles give the bounds.
 - Secondary reads keep the weights: four cells of catalogue calls, resistant member first; MLST, then MLST and HC20, each beside the wider match on the same rows; and the read without groups in a fold where a learner fit nothing.

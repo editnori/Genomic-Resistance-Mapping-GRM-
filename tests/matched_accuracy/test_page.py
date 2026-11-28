@@ -1,14 +1,17 @@
-"""docs/matched-accuracy.md and the words of the files of both stages: "Not run yet." of stage 2's real reading,
-bare headers, no result, stage 1's run and counts read from the committed copy of its export, stage 2's steps and
-ends word for word, the words the page never uses, its row in docs/INDEX.md and the workflow's comment."""
+"""docs/matched-accuracy.md and the words of the files of both stages: the result of stage 2's one reading in the
+first line and the Result part, word for word from the committed copy of its export and run facts, bare headers, no
+other result, stage 1's run and counts read from the committed copy of its export, stage 2's steps and ends word for
+word, the words the page never uses, its row in docs/INDEX.md and the workflow's comment."""
 
 import csv
+import fractions
 import io
 import re
 import unittest
 
 from tests.matched_accuracy import common, stage2_common
 from tests.matched_accuracy.test_reference import AMENDMENT_SHA256, PROTOCOL_SHA256
+from tests.matched_accuracy.test_stage2_result import inputs, run_facts
 
 # Words the page never uses, and words sent back by the reader it is written for. Written so that this file
 # holds none of them.
@@ -21,7 +24,7 @@ MAKER = r"(?i)\b(cl[a]ude|anthr[o]pic|co-author[e]d-by|generated[ ]with|open[a]i
 MARKER = r"(?i)\bk-?mers?\b|\b(genes?|alleles?|mutations?|variants?|markers?|determinants?|snps?)\b"
 # The numbers the page may give: the revision, the checks' figures, the steps and the stages; stage 1's run, its
 # counts and coverage and the BioProject facts, each read from the committed export below; the protocol's constants
-# and the reports' count. None is a result of stage 2.
+# and the reports' count. None is a result of stage 2: the first line and the Result part alone give one.
 NUMBERS = {"14", "1", "2", "3", "4", "5", "6", "7", "19:10:00", "2026", "1,285,111", "252,148",
            "27", "00755885", "0", "49,621", "48,156", "9,132", "9,122", "2,783", "2,749", "283,118", "272,840", "206",
            "205", "16", "215,319", "23", "6,308", "2771", "48384", "8", "10", "10,000", "42", "274"}
@@ -97,18 +100,21 @@ class Page(unittest.TestCase):
         cls.lines = cls.page.rstrip("\n").split("\n")
         cls.body = "\n".join(cls.lines[:-1])
 
-    def test_not_run_yet_speaks_of_stage_2s_real_reading_alone(self):
-        self.assertEqual(self.page.count("Not run yet."), 1)
-        self.assertEqual(self.lines[2], "Not run yet. Stage 2's real reading has not run and is not authorised: it "
-                                        "needs the merged script and the lead's word after the merge.")
+    def test_not_run_yet_is_gone(self):
+        self.assertNotIn("Not run yet", self.page)
+        self.assertNotIn("authoris", self.page)
 
-    def test_under_1685_words(self):
+    def test_under_1950_words(self):
         # 500 until the fixes of the review added the two counts of two kinds, the BioProject shape and the 5
         # November table; 600 until stage 2's part added its steps, the lead's readings, ruling R59's conditions,
         # stage 1's run with R59's counts, the coverage and the two BioProject facts; 1,350 until ruling R62 cut 7
         # passages that repeat another line, under the 1,345 words of stage 2's first page; 1,345 until ruling R65
-        # had the page name every stop before the line and every end after it.
-        self.assertLess(len(self.page.split()), 1685)
+        # had the page name every stop before the line and every end after it; 1,685 until the result of the one
+        # reading added its first line and the Result part, two tables and three paragraphs that the brief of 27 Nov
+        # asks for. Before that raise, two sentences that repeat another were cut: the Counts part's line on the
+        # weights, which the lead's readings give, and the lead's reading that a bad score stops the run, which
+        # stage two's ends give.
+        self.assertLess(len(self.page.split()), 1950)
 
     def test_the_record_line_gives_the_protocols_and_the_amendments_sha256(self):
         self.assertTrue(self.lines[-1].startswith("Record: "))
@@ -143,23 +149,20 @@ class Page(unittest.TestCase):
         # 30 until ruling R65 had the page list the four allowed ends after the line.
         self.assertLessEqual(items, 34)
 
-    def test_no_result(self):
+    def test_no_result_outside_the_first_line_and_the_result_part(self):
         self.assertEqual(self.body.count(PERCENTILES), 1)
         body = self.body.replace(PERCENTILES, "")
+        body = "\n".join(body.split("\n")[:2] + body.split("\n")[3:])
+        body = body[:body.index("## Result\n")] + body[body.index("## Steps\n"):]
         found = set(re.findall(r"(?<![A-Za-z\d])(?:\d[\d,:]*\d|\d)(?![A-Za-z\d])", body))
         self.assertLessEqual(found, NUMBERS)
         self.assertIsNone(re.search(r"\d\.\d|%", body))
         for s in sentences(self.page):
             self.assertIsNone(re.search(r"(?i)\b(was|were|found|came out|turned out|shows?|showed)\b", s), s)
 
-    def test_stage_2s_real_reading_has_not_run_and_waits_for_the_leads_word(self):
-        for s in sentences(self.page):
-            if re.search(r"(?i)authoris", s):
-                self.assertIn("is not authorised", s)
+    def test_the_real_reading_is_named_by_the_ruling_condition_alone(self):
         said = [s for s in sentences(self.page) if "real reading" in s]
-        self.assertEqual(said, ["Stage 2's real reading has not run and is not authorised: it needs the merged script "
-                                "and the lead's word after the merge.",
-                                "The real reading runs once at the merged commit, after the lead's word, on the "
+        self.assertEqual(said, ["The real reading runs once at the merged commit, after the lead's word, on the "
                                 "computer holding the 274 reports and both row lists."])
 
     def test_a_retrospective_read_inside_one_database_and_never_external_validation(self):
@@ -230,7 +233,9 @@ class Page(unittest.TestCase):
         index = common.INDEX.read_text(encoding="utf-8")
         self.assertEqual(index.count("[matched-accuracy.md](matched-accuracy.md)"), 1)
         row = next(line for line in index.split("\n") if line.startswith("| [matched-accuracy.md]"))
-        self.assertIn("stage 2's real reading is not authorised. Not run yet.", row)
+        self.assertIn("and stage 2's script, which compares the five learners' scores inside each matched group, with "
+                      "the result of its one reading. |", row)
+        self.assertNotIn("Not run yet", row)
 
     def test_the_workflows_comment_names_the_page(self):
         text = common.WORKFLOW.read_text(encoding="utf-8")
@@ -265,7 +270,8 @@ class StageOneRun(unittest.TestCase):
         overall = {r["reading"]: r for r in committed("counts.tsv") if r["level"] == "overall"}
         labels = (("Eligible rows", "rows"), ("Genomes", "genomes"), ("Matched groups", "groups"),
                   ("Resistant-susceptible pairs", "pairs"), ("Datasets", "datasets"), ("Species", "species"))
-        table = [line for line in self.page.split("\n") if line.startswith("| ")]
+        part = self.page[self.page.index("## Stage one run\n"):self.page.index("## Stage two steps\n")]
+        table = [line for line in part.split("\n") if line.startswith("| ")]
         self.assertEqual(table[0], "| Count | Reading A | Reading B |")
         self.assertEqual(table[2:], [f"| {label} | {n(overall['A'][c])} | {n(overall['B'][c])} |"
                                      for label, c in labels])
@@ -381,6 +387,135 @@ class FileWords(unittest.TestCase):
         for name in ("scripts/matched-accuracy/stage1.py", "scripts/matched-accuracy/planted_faults.py",
                      "scripts/matched-accuracy/stage2.py", "scripts/matched-accuracy/stage2_faults.py"):
             self.assertIsNone(re.search(MARKER, self.texts[name]), name)
+
+
+# The export's names of reads and matches, in the words of stage two's secondary reads.
+READ = {"primary": "primary read", "mlst": "MLST read", "mlst_hc20": "MLST and HC20 read",
+        "null_fits": "read without groups in a fold where a learner fit nothing"}
+MATCH = {"primary": "wider match", "mlst": "exact MLST match", "mlst_hc20": "MLST and HC20 match"}
+MONTHS = ("January", "February", "March", "April", "May", "June", "July", "August", "September", "October",
+          "November", "December")
+PPM_SENTENCE = ("The export gives each estimate in whole parts per million, and each percent below is that figure to "
+                "one decimal, rounded half to even.")
+
+
+def percent(ppm):
+    """A whole ppm as a percent to one decimal, rounded half to even."""
+    tenths = round(fractions.Fraction(int(ppm), 1000))
+    return f"{tenths // 10}.{tenths % 10}%"
+
+
+class Result(unittest.TestCase):
+    """The first line and the Result part, each figure read from the committed export and run facts."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.page = common.PAGE.read_text(encoding="utf-8")
+        cls.lines = cls.page.split("\n")
+        rows = stage2_common.read_tsv
+        cls.measure = {r["reading"]: r for r in rows(stage2_common.STAGE2_COPY / "measure.tsv")
+                       if r["level"] == "overall"}
+        cls.intervals = rows(stage2_common.STAGE2_COPY / "interval.tsv")
+        cls.primary = {r["reading"]: r for r in cls.intervals if r["read"] == r["match"] == "primary"}
+        cls.cells = rows(stage2_common.STAGE2_COPY / "cells.tsv")
+        cls.inputs = inputs()
+        cls.note = (stage2_common.STAGE2_COPY / "inputs.tsv").read_text(encoding="utf-8")
+        cls.facts = run_facts()
+        cls.readings = sorted(cls.measure)
+
+    def test_percents_are_the_ppm_rounded_half_to_even(self):
+        self.assertEqual([percent(x) for x in (651500, 652500, 652501, 750770, 0, 1000000)],
+                         ["65.2%", "65.2%", "65.3%", "75.1%", "0.0%", "100.0%"])
+
+    def test_the_page_says_once_that_the_export_gives_ppm(self):
+        # Stage two's step 6 says it too, in the words of the script's own step, which the page follows.
+        self.assertEqual(self.page.count(PPM_SENTENCE), 1)
+        outside = self.page
+        for line in STAGE_TWO:
+            outside = outside.replace(line, "")
+        self.assertEqual(outside.count("parts per million"), 1)
+        self.assertEqual(self.page.count("parts per million"), 2)
+
+    def test_the_first_line_is_the_result(self):
+        self.assertEqual(self.readings, ["A", "B"])
+        words = {r["chance"] for r in self.intervals}
+        self.assertEqual(len(words), 1)
+        a, b = (percent(self.measure[x]["estimate_ppm"]) for x in self.readings)
+        self.assertEqual(self.lines[2], f"In stage 2's one reading, the five learners' mean score ranks the resistant "
+                                        f"genome above the susceptible one in {a} of matched pairs in reading A and "
+                                        f"{b} in reading B, by the protocol's weights, and all {len(self.intervals)} "
+                                        f"intervals carry `{words.pop()}`.")
+
+    def expected(self):
+        total_rows = int(self.inputs["genome rows of the reports that enter"])
+        total_species = int(self.inputs["species of the reports that enter"])
+        total_datasets = int(re.search(r"rows of the (\d+) reports", self.note).group(1))
+        m, p = self.measure, self.primary
+
+        def row(name, cell):
+            return f"| {name} | " + " | ".join(cell(x) for x in self.readings) + " |"
+
+        out = [PPM_SENTENCE, "", "| Figure | Reading A | Reading B |", "| --- | --- | --- |",
+               row("Share", lambda x: percent(m[x]["estimate_ppm"])),
+               row("Range", lambda x: f"{percent(p[x]['lower_ppm'])} to {percent(p[x]['upper_ppm'])}"),
+               row("Word", lambda x: f"`{p[x]['chance']}`"),
+               row("Rows", lambda x: f"{n(m[x]['rows'])} of {total_rows:,}"),
+               row("Groups", lambda x: n(m[x]["groups"])),
+               row("Pairs", lambda x: n(m[x]["pairs"])),
+               row("Datasets", lambda x: f"{m[x]['datasets']} of {total_datasets}"),
+               row("Species", lambda x: f"{m[x]['species']} of {total_species}"), ""]
+        counts = [sum(r["chance"] == w for r in self.intervals) for w in ("above", "below", "unresolved")]
+        low = min(self.intervals, key=lambda r: int(r["lower_ppm"]))
+        self.assertEqual(sum(r["lower_ppm"] == low["lower_ppm"] for r in self.intervals), 1)
+        out += [f"Of the export's {len(self.intervals)} intervals, {counts[0]} carry `above`, {counts[1]} carry "
+                f"`below` and {counts[2]} carry `unresolved`. The lowest lower bound is {percent(low['lower_ppm'])}, "
+                f"on the {MATCH[low['match']]} of the {READ[low['read']]} in reading {low['reading']}.", "",
+                "A cell gives the catalogue's call on the resistant member, then on the susceptible member.", "",
+                "| Catalogue calls | Reading A | Reading B |", "| --- | --- | --- |"]
+        calls = []
+        for r in self.cells:
+            key = (r["resistant_member_call"], r["susceptible_member_call"])
+            if key not in calls:
+                calls.append(key)
+        self.assertEqual(len(self.cells), len(calls) * len(self.readings))
+        cell = {(r["reading"], r["resistant_member_call"], r["susceptible_member_call"]): r for r in self.cells}
+        for res, sus in calls:
+            pair = {"resistant", "susceptible"}
+            name = f"{res.capitalize()}, {sus}" if {res, sus} <= pair else res.capitalize()
+            if not {res, sus} <= pair:
+                self.assertEqual(res, sus)
+
+            def text(x, res=res, sus=sus):
+                c = cell[(x, res, sus)]
+                part = f"{n(c['pairs'])} of {n(m[x]['pairs'])} pairs"
+                return f"{percent(c['estimate_ppm'])} on {part}" if c["estimate_ppm"] else part
+            out.append(row(name, text))
+        f = self.facts
+        start = f[("run", "Start")]
+        day = f"{int(start[8:10])} {MONTHS[int(start[5:7]) - 1]} {start[:4]}"
+        self.assertEqual(f[("run", "Runs")], "1")
+        self.assertEqual(f[("scan", "Tokens of an id's shape")], f[("scan", "Tokens of an accession's shape")])
+        texts = f[("scan", "Texts")]
+        files = f[("run", "Export files")]
+        self.assertEqual(int(texts), int(files) + 1)
+        out += ["", f"The reading ran once, at {f[('run', 'Code')][:13]} on {day}, for "
+                    f"{f[('run', 'Seconds, by the run' + chr(39) + 's own clock')]} seconds by its own clock, and ended "
+                    f"with exit {f[('run', 'Exit')]}. Its scan of the {files} export files and the run's printout, "
+                    f"{texts} texts, for {f[('scan', 'Genome ids in the list')]} genome ids and "
+                    f"{f[('scan', 'Accessions in the list')]} accessions, gives {f[('scan', 'Whole ids found')]} whole "
+                    f"ids, {f[('scan', 'Ids found inside a longer run of digits')]} ids inside a longer run of digits, "
+                    f"{f[('scan', 'Accessions found')]} accessions and {f[('scan', 'Tokens of an id' + chr(39) + 's shape')]} "
+                    f"tokens of either shape. Its planted control is "
+                    f"{f[('scan', 'Control: a planted id and a planted accession')].replace('found ', '')}.", ""]
+        return out
+
+    def test_the_result_part_is_built_from_the_export_and_the_run_facts(self):
+        part = self.page[self.page.index("\n## Result\n") + len("\n## Result\n\n"):self.page.index("\n## Steps\n")]
+        self.assertEqual(part.split("\n"), self.expected())
+
+    def test_the_result_part_follows_the_question(self):
+        heads = [line for line in self.lines if line.startswith("## ")]
+        self.assertEqual(heads[:3], ["## Question", "## Result", "## Steps"])
 
 
 if __name__ == "__main__":
