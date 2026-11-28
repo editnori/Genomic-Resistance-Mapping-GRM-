@@ -37,6 +37,7 @@ pub fn open(path: &Path) -> Result<Box<dyn BufRead + Send>> {
 pub fn for_each_record(path: &Path, mut f: impl FnMut(&str, &[u8])) -> Result<()> {
     let mut reader = open(path)?;
     let mut line = Vec::with_capacity(256);
+    let mut skip = Vec::new();
     let mut name = String::new();
     let mut seq: Vec<u8> = Vec::with_capacity(1 << 20);
     let mut in_record = false;
@@ -52,18 +53,18 @@ pub fn for_each_record(path: &Path, mut f: impl FnMut(&str, &[u8])) -> Result<()
                 if in_record {
                     f(&name, &seq);
                 }
-                name = header_name(&line[1..]);
+                set_header_name(&line[1..], &mut name);
                 seq.clear();
                 in_record = true;
             }
             Some(b'@') if !in_record || seq.is_empty() => {
                 // FASTQ: header, sequence, '+', quality.
-                name = header_name(&line[1..]);
+                set_header_name(&line[1..], &mut name);
                 line.clear();
                 reader.read_until(b'\n', &mut line)?;
                 trim_newline(&mut line);
                 f(&name, &line);
-                let mut skip = Vec::new();
+                skip.clear();
                 reader.read_until(b'\n', &mut skip)?;
                 skip.clear();
                 reader.read_until(b'\n', &mut skip)?;
@@ -86,9 +87,12 @@ fn trim_newline(line: &mut Vec<u8>) {
     }
 }
 
-fn header_name(header: &[u8]) -> String {
+fn set_header_name(header: &[u8], out: &mut String) {
+    out.clear();
     let text = String::from_utf8_lossy(header);
-    text.split_whitespace().next().unwrap_or("").to_string()
+    if let Some(first) = text.split_whitespace().next() {
+        out.push_str(first);
+    }
 }
 
 /// Assembly-level facts used for genome quality control.
@@ -308,5 +312,60 @@ mod tests {
                 handle.join().unwrap();
             }
         }
+    }
+
+    #[test]
+    fn for_each_record_reuses_buffers_across_fasta_and_fastq() {
+        let dir = tempfile::tempdir().unwrap();
+
+        // Multi-record FASTA with descriptions, blank lines, CRLF, an empty
+        // header after a named one, and no trailing newline.
+        let fasta = dir.path().join("multi.fna");
+        let fasta_text = concat!(
+            "\r\n",
+            ">contig_long_name first description\r\n",
+            "ACGT\r\n",
+            "\r\n",
+            "TTAA\n",
+            ">c2\ttab description\n",
+            "GGCC\r\n",
+            ">\n",
+            "AAAA\n",
+            ">last no_newline desc\r\n",
+            "CCGG"
+        );
+        std::fs::write(&fasta, fasta_text).unwrap();
+        assert_eq!(
+            collect(&fasta),
+            vec![
+                ("contig_long_name".to_string(), "ACGTTTAA".to_string()),
+                ("c2".to_string(), "GGCC".to_string()),
+                ("".to_string(), "AAAA".to_string()),
+                ("last".to_string(), "CCGG".to_string()),
+            ]
+        );
+
+        // Multi-read FASTQ with descriptions, quality lines starting with '@'
+        // and '+', CRLF endings, an empty header, and no trailing newline.
+        let fq = dir.path().join("multi.fq");
+        let mut text = String::new();
+        let mut want = Vec::new();
+        for i in 0..32usize {
+            let seq = if i % 2 == 0 { "ACGTACGT" } else { "GGCCAT" };
+            let qual = if i % 2 == 0 { "@+IIIIII" } else { "+@IIII" };
+            let eol = if i % 3 == 0 { "\r\n" } else { "\n" };
+            if i == 15 {
+                text.push_str(&format!("@{eol}{seq}{eol}+{eol}{qual}{eol}"));
+                want.push(("".to_string(), seq.to_string()));
+            } else {
+                let tail = if i == 31 { "" } else { eol };
+                text.push_str(&format!(
+                    "@read_{i} lane=1 desc{eol}{seq}{eol}+{eol}{qual}{tail}"
+                ));
+                want.push((format!("read_{i}"), seq.to_string()));
+            }
+        }
+        std::fs::write(&fq, &text).unwrap();
+        assert_eq!(collect(&fq), want);
     }
 }
