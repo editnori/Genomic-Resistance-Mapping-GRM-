@@ -1,4 +1,5 @@
-//! Pure-Rust k-mer key primitives and verified binary formats (`grm kcount`).
+//! Pure-Rust k-mer key primitives, verified binary formats, 2-bit SPSS
+//! simplitig archives, and rolling-hash preflight estimation (`grm kcount`).
 //!
 //! Submodules:
 //! - [`key`]: dual-width canonical k-mer spaces (`u64` for `k = 5..=32`,
@@ -8,9 +9,17 @@
 //!   `GRMKGR1\0`), counted table (`.ktab`, `GRMKTB1\0`), per-sequence count
 //!   profile (`.prof.bin`, `GRMPRF1\0`), and `.kset` v1 (`GRMKSET1`) unified
 //!   reader.
+//! - [`spss`]: checked 2-bit Spectrum-Preserving String Set greedy simplitig
+//!   archive (`.spss`, `GRMSPS1\0`) with 32-byte SHA-256 header/body digest
+//!   and `fnv64` verification.
+//! - [`preflight`]: single-pass `ntHash` rolling canonical hash feeding a
+//!   16 KiB HyperLogLog (`p = 14`) and a 65,536-entry adaptive prefix-sample
+//!   frequency sketch.
 
 pub mod format;
 pub mod key;
+pub mod preflight;
+pub mod spss;
 
 use crate::confine;
 use crate::fnv::Fnv;
@@ -19,9 +28,15 @@ use crate::kcount::format::{
     convert_to_ktab, convert_to_v1, detect_format, hex_bytes, read_profile_header,
     read_profiles_verified,
 };
-use crate::kcount::key::{KmerKey, MAX_K_U64};
+use crate::kcount::key::{KmerKey, MAX_K, MAX_K_U64, MIN_K};
+use crate::kcount::preflight::{PreflightOptions, preflight_inputs_with_options};
+use crate::kcount::spss::{
+    archive_auto, expand_to_gr, expand_to_kset_v1, expand_to_ktab, is_spss_file, read_spss_header,
+    verify_spss_with_digests,
+};
 use crate::kset::BUCKETS;
 use anyhow::{Context, Result, bail, ensure};
+use clap::builder::RangedU64ValueParser;
 use clap::{Args, Subcommand, ValueEnum};
 use ring::digest::{Context as Sha256Context, SHA256};
 use serde::Serialize;
@@ -38,9 +53,87 @@ pub struct KcountArgs {
 
 #[derive(Subcommand, Debug)]
 pub enum KcountCommand {
+    /// Pack a `.kset` v1, `.grk`, `.ktab`, or FASTA/FASTQ file into a checked
+    /// 2-bit Spectrum-Preserving String Set archive (`.spss`, `GRMSPS1\0`).
+    /// Refuses counted `.ktab` inputs unless `--drop-counts` is passed.
+    Archive {
+        /// Input `.kset` v1, `.grk`, `.ktab`, or FASTA/FASTQ file (plain or `.gz`).
+        #[arg(long)]
+        input: PathBuf,
+        /// Output `.spss` archive path.
+        #[arg(long)]
+        out: PathBuf,
+        /// K-mer length (`5..=64`; defaults to `31` for FASTA/FASTQ, validated
+        /// against table `k` when supplied for table inputs).
+        #[arg(
+            long,
+            value_parser = RangedU64ValueParser::<usize>::new().range(MIN_K as u64..=MAX_K as u64)
+        )]
+        k: Option<usize>,
+        /// Sample name written into the `.spss` header (defaults to `"sample"`
+        /// so input file names are never copied into output headers).
+        #[arg(long)]
+        name: Option<String>,
+        /// Input modality recorded in the `.spss` header (`unknown`,
+        /// `assembly`, or `reads`; preserves source modality when omitted for
+        /// `.grk`/`.ktab` inputs, defaults to `unknown` otherwise).
+        #[arg(long, value_enum)]
+        modality: Option<InputModalityArg>,
+        /// Explicitly accept discarding k-mer counts when archiving a counted
+        /// `.ktab` table (required if any count exceeds 1 or table is counted).
+        #[arg(long)]
+        drop_counts: bool,
+    },
+    /// Expand a verified `.spss` (`GRMSPS1\0`) archive to `.kset` v1
+    /// (`GRMKSET1`, `k <= 32`), `.grk` (`GRMKGR1\0`), or presence-only `.ktab`
+    /// (`GRMKTB1\0`, all counts set to 1), checking SHA-256 and `fnv64`.
+    Expand {
+        /// Input `.spss` archive path.
+        #[arg(long)]
+        input: PathBuf,
+        /// Output `.kset`, `.grk`, or `.ktab` path; extension must match the
+        /// target format.
+        #[arg(long)]
+        out: PathBuf,
+        /// Target format (`kset-v1`, `grk`, or `ktab`; inferred from `--out`
+        /// extension when omitted).
+        #[arg(long, value_enum)]
+        format: Option<ExpandTargetArg>,
+    },
+    /// Single-pass streaming preflight estimating `F0`, `f1`, `f2+`, peak
+    /// coverage, GC fraction, and modality-calibrated `.kset`/`.grk`/`.spss`
+    /// disk sizes without sorting (16 KiB HLL registers + 65,536-entry
+    /// subsampled frequency table, distinct from process RSS).
+    Preflight {
+        /// One or more FASTA/FASTQ files (plain or `.gz`).
+        #[arg(long, required = true)]
+        input: Vec<PathBuf>,
+        /// K-mer length (`5..=64`).
+        #[arg(
+            long,
+            default_value_t = 31,
+            value_parser = RangedU64ValueParser::<usize>::new().range(MIN_K as u64..=MAX_K as u64)
+        )]
+        k: usize,
+        /// Phred base-quality floor for FASTQ inputs; bases strictly below
+        /// break k-mer windows like `N`.
+        #[arg(long, default_value_t = 0)]
+        min_qual: u8,
+        /// Sample label recorded in the JSON report (defaults to `"sample"` so
+        /// input file paths and filename stems never leak into output JSON).
+        #[arg(long)]
+        name: Option<String>,
+        /// Optional input modality override (`unknown` auto-detects `assembly`
+        /// vs `reads` for `.spss` size estimation).
+        #[arg(long, value_enum, default_value_t = InputModalityArg::Unknown)]
+        modality: InputModalityArg,
+        /// Optional JSON output path (prints to stdout when omitted).
+        #[arg(long)]
+        out: Option<PathBuf>,
+    },
     /// Inspect metadata, bucket statistics, sketch prefixes, or verified
-    /// SHA-256 and key digests for `.kset` v1, `.grk`, `.ktab`, or `.prof.bin`
-    /// files.
+    /// SHA-256 and key digests for `.kset` v1, `.grk`, `.ktab`, `.spss`, or
+    /// `.prof.bin` files.
     Inspect {
         /// File to inspect.
         #[arg(long)]
@@ -48,8 +141,8 @@ pub enum KcountCommand {
         /// Optional bottom-`s` MinHash sketch prefix length to include.
         #[arg(long)]
         sketch: Option<usize>,
-        /// Recompute stored header SHA-256 digests and decode every bucket or
-        /// sequence record.
+        /// Recompute stored header SHA-256 digests and decode every bucket,
+        /// simplitig, or sequence record.
         #[arg(long)]
         verify: bool,
         /// Optional JSON output path (prints to stdout when omitted).
@@ -80,6 +173,13 @@ pub enum KcountCommand {
         #[arg(long, value_enum)]
         modality: Option<InputModalityArg>,
     },
+}
+
+#[derive(Clone, Copy, Debug, ValueEnum)]
+pub enum ExpandTargetArg {
+    KsetV1,
+    Grk,
+    Ktab,
 }
 
 #[derive(Clone, Copy, Debug, ValueEnum)]
@@ -115,6 +215,7 @@ struct InspectReport {
     modality: Option<InputModality>,
     n_kmers: Option<u64>,
     bytes_per_kmer: Option<f64>,
+    n_simplitigs: Option<u64>,
     total_bases: Option<u64>,
     n_sequences: Option<usize>,
     presence_only: Option<bool>,
@@ -148,6 +249,48 @@ pub fn write_json_atomic<T: Serialize>(path: &Path, val: &T) -> Result<()> {
 /// Entry point wired from `Command::Kcount` in `src/main.rs`.
 pub fn run_cli(args: KcountArgs) -> Result<()> {
     match args.command {
+        KcountCommand::Archive {
+            input,
+            out,
+            k,
+            name,
+            modality,
+            drop_counts,
+        } => {
+            let sample_name = name.as_deref().unwrap_or(DEFAULT_SAMPLE_NAME);
+            let modality_override = modality.map(InputModality::from);
+            let summary =
+                archive_auto(&input, &out, k, sample_name, modality_override, drop_counts)?;
+            println!("{}", serde_json::to_string_pretty(&summary)?);
+            Ok(())
+        }
+        KcountCommand::Expand { input, out, format } => {
+            let target = format.unwrap_or_else(|| infer_expand_target(&out));
+            let summary = match target {
+                ExpandTargetArg::KsetV1 => expand_to_kset_v1(&input, &out)?,
+                ExpandTargetArg::Grk => expand_to_gr(&input, &out)?,
+                ExpandTargetArg::Ktab => expand_to_ktab(&input, &out)?,
+            };
+            println!("{}", serde_json::to_string_pretty(&summary)?);
+            Ok(())
+        }
+        KcountCommand::Preflight {
+            input,
+            k,
+            min_qual,
+            name,
+            modality,
+            out,
+        } => {
+            let opts = PreflightOptions {
+                sample: name.unwrap_or_else(|| DEFAULT_SAMPLE_NAME.to_string()),
+                k,
+                min_qual,
+                modality: modality.into(),
+            };
+            let report = preflight_inputs_with_options(&input, &opts)?;
+            emit_json(&report, out.as_deref())
+        }
         KcountCommand::Inspect {
             input,
             sketch,
@@ -193,6 +336,14 @@ pub fn run_cli(args: KcountArgs) -> Result<()> {
     }
 }
 
+fn infer_expand_target(out: &Path) -> ExpandTargetArg {
+    match out.extension().and_then(|s| s.to_str()) {
+        Some("grk") => ExpandTargetArg::Grk,
+        Some("ktab") => ExpandTargetArg::Ktab,
+        _ => ExpandTargetArg::KsetV1,
+    }
+}
+
 fn infer_direction(src_format: TableFormat, out: &Path) -> ConvertDirectionArg {
     match src_format {
         TableFormat::KsetV1 => match out.extension().and_then(|s| s.to_str()) {
@@ -216,6 +367,64 @@ fn inspect_file(path: &Path, sketch: Option<usize>, verify: bool) -> Result<Insp
     let file_bytes = fs::metadata(path)
         .with_context(|| format!("stat {}", path.display()))?
         .len();
+
+    if is_spss_file(path)? {
+        if verify {
+            let res = verify_spss_with_digests(path, sketch)?;
+            let h = res.header;
+            let bpk = if h.n_kmers == 0 {
+                0.0
+            } else {
+                file_bytes as f64 / h.n_kmers as f64
+            };
+            return Ok(InspectReport {
+                format: "spss-archive (GRMSPS1)".to_string(),
+                file_bytes,
+                k: h.k,
+                sample: Some(h.name),
+                modality: Some(h.modality),
+                n_kmers: Some(h.n_kmers),
+                bytes_per_kmer: Some(bpk),
+                n_simplitigs: Some(h.n_simplitigs),
+                total_bases: Some(h.total_bases),
+                n_sequences: None,
+                presence_only: Some(true),
+                max_count_observed: Some(if h.n_kmers == 0 { 0 } else { 1 }),
+                saturated_counts: None,
+                verified: true,
+                header_sha256: Some(hex_bytes(&h.digest_sha256)),
+                fnv64: Some(format!("{:016x}", h.fnv64_digest)),
+                keys_sha256: Some(res.keys_sha256),
+                sketch_hex: res.sketch_hex,
+            });
+        }
+        let h = read_spss_header(path)?;
+        let bpk = if h.n_kmers == 0 {
+            0.0
+        } else {
+            file_bytes as f64 / h.n_kmers as f64
+        };
+        return Ok(InspectReport {
+            format: "spss-archive (GRMSPS1)".to_string(),
+            file_bytes,
+            k: h.k,
+            sample: Some(h.name),
+            modality: Some(h.modality),
+            n_kmers: Some(h.n_kmers),
+            bytes_per_kmer: Some(bpk),
+            n_simplitigs: Some(h.n_simplitigs),
+            total_bases: Some(h.total_bases),
+            n_sequences: None,
+            presence_only: Some(true),
+            max_count_observed: Some(if h.n_kmers == 0 { 0 } else { 1 }),
+            saturated_counts: None,
+            verified: false,
+            header_sha256: Some(hex_bytes(&h.digest_sha256)),
+            fnv64: None,
+            keys_sha256: None,
+            sketch_hex: None,
+        });
+    }
 
     let mut magic = [0u8; 8];
     let n_read = File::open(path)
@@ -241,6 +450,7 @@ fn inspect_file(path: &Path, sketch: Option<usize>, verify: bool) -> Result<Insp
                 modality: None,
                 n_kmers: None,
                 bytes_per_kmer: None,
+                n_simplitigs: None,
                 total_bases: Some(total_bases),
                 n_sequences: Some(profs.len()),
                 presence_only: None,
@@ -263,6 +473,7 @@ fn inspect_file(path: &Path, sketch: Option<usize>, verify: bool) -> Result<Insp
             modality: None,
             n_kmers: None,
             bytes_per_kmer: None,
+            n_simplitigs: None,
             total_bases: Some(hdr.total_bases),
             n_sequences: Some(n_seq),
             presence_only: None,
@@ -339,6 +550,7 @@ fn inspect_file(path: &Path, sketch: Option<usize>, verify: bool) -> Result<Insp
         modality: reader.modality(),
         n_kmers: Some(n_kmers),
         bytes_per_kmer: Some(bpk),
+        n_simplitigs: None,
         total_bases: None,
         n_sequences: None,
         presence_only,
