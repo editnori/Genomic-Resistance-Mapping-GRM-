@@ -314,6 +314,8 @@ src/lib.rs kcount::key::tests::u128_golden_mix_unmix_vectors_for_k33_45_61_64
 src/lib.rs kcount::key::tests::u128_mixer_balances_top_bits_at_k61
 src/lib.rs kcount::key::tests::u128_radix_sort_matches_std_sort
 src/lib.rs kcount::key::tests::u128_round_trips_511_values_at_every_k_from_33_to_64
+src/lib.rs kcount::preflight::tests::nthash64_is_strictly_strand_invariant_across_k
+src/lib.rs kcount::preflight::tests::nthash_seeds_match_sha256_derivation
 src/lib.rs kcount::spss::tests::spss_archive_and_expand_match_kset_v1_bit_for_bit
 src/lib.rs kcount::spss::tests::spss_empty_set_round_trips_for_u64_and_u128
 src/lib.rs kset::tests::a_file_shorter_than_the_header_is_named_in_the_error
@@ -815,6 +817,11 @@ tests/kcount_formats.rs grk_ktab_and_prof_reject_every_single_byte_flip
 tests/kcount_formats.rs ktab_exact_65535_65536_u32_max_and_both_count_modes
 tests/kcount_formats.rs modality_header_round_trip_and_v1_interop
 tests/kcount_formats.rs rehashed_reader_validation_checks_reject_every_malformed_field
+tests/kcount_preflight.rs cli_preflight_json_output_default_sample_name_no_leak_and_error_cases
+tests/kcount_preflight.rs preflight_disk_size_estimates_match_actual_files_for_assembly_and_noisy_reads
+tests/kcount_preflight.rs preflight_min_qual_exact_boundary_q19_q20_q21_and_gc_fraction
+tests/kcount_preflight.rs preflight_nthash_seeds_are_odd_and_match_sha256_v1
+tests/kcount_preflight.rs preflight_small_and_large_hll_estimates_verify_linear_counting_and_subsampling
 tests/kmer_space_extended.rs multi_k_mixer_bijection_large [ignored]
 tests/kmer_space_extended.rs multi_k_space_vectors
 tests/null_fold_refit.rs the_flag_changes_no_output_and_records_each_null_fold_once

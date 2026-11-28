@@ -1,5 +1,5 @@
-//! Pure-Rust k-mer key primitives, verified binary formats, and 2-bit SPSS
-//! simplitig archives (`grm kcount`).
+//! Pure-Rust k-mer key primitives, verified binary formats, 2-bit SPSS
+//! simplitig archives, and rolling-hash preflight estimation (`grm kcount`).
 //!
 //! Submodules:
 //! - [`key`]: dual-width canonical k-mer spaces (`u64` for `k = 5..=32`,
@@ -12,9 +12,13 @@
 //! - [`spss`]: checked 2-bit Spectrum-Preserving String Set greedy simplitig
 //!   archive (`.spss`, `GRMSPS1\0`) with 32-byte SHA-256 header/body digest
 //!   and `fnv64` verification.
+//! - [`preflight`]: single-pass `ntHash` rolling canonical hash feeding a
+//!   16 KiB HyperLogLog (`p = 14`) and a 65,536-entry adaptive prefix-sample
+//!   frequency sketch.
 
 pub mod format;
 pub mod key;
+pub mod preflight;
 pub mod spss;
 
 use crate::confine;
@@ -25,6 +29,7 @@ use crate::kcount::format::{
     read_profiles_verified,
 };
 use crate::kcount::key::{KmerKey, MAX_K, MAX_K_U64, MIN_K};
+use crate::kcount::preflight::{PreflightOptions, preflight_inputs_with_options};
 use crate::kcount::spss::{
     archive_auto, expand_to_gr, expand_to_kset_v1, expand_to_ktab, is_spss_file, read_spss_header,
     verify_spss_with_digests,
@@ -94,6 +99,37 @@ pub enum KcountCommand {
         /// extension when omitted).
         #[arg(long, value_enum)]
         format: Option<ExpandTargetArg>,
+    },
+    /// Single-pass streaming preflight estimating `F0`, `f1`, `f2+`, peak
+    /// coverage, GC fraction, and modality-calibrated `.kset`/`.grk`/`.spss`
+    /// disk sizes without sorting (16 KiB HLL registers + 65,536-entry
+    /// subsampled frequency table, distinct from process RSS).
+    Preflight {
+        /// One or more FASTA/FASTQ files (plain or `.gz`).
+        #[arg(long, required = true)]
+        input: Vec<PathBuf>,
+        /// K-mer length (`5..=64`).
+        #[arg(
+            long,
+            default_value_t = 31,
+            value_parser = RangedU64ValueParser::<usize>::new().range(MIN_K as u64..=MAX_K as u64)
+        )]
+        k: usize,
+        /// Phred base-quality floor for FASTQ inputs; bases strictly below
+        /// break k-mer windows like `N`.
+        #[arg(long, default_value_t = 0)]
+        min_qual: u8,
+        /// Sample label recorded in the JSON report (defaults to `"sample"` so
+        /// input file paths and filename stems never leak into output JSON).
+        #[arg(long)]
+        name: Option<String>,
+        /// Optional input modality override (`unknown` auto-detects `assembly`
+        /// vs `reads` for `.spss` size estimation).
+        #[arg(long, value_enum, default_value_t = InputModalityArg::Unknown)]
+        modality: InputModalityArg,
+        /// Optional JSON output path (prints to stdout when omitted).
+        #[arg(long)]
+        out: Option<PathBuf>,
     },
     /// Inspect metadata, bucket statistics, sketch prefixes, or verified
     /// SHA-256 and key digests for `.kset` v1, `.grk`, `.ktab`, `.spss`, or
@@ -237,6 +273,23 @@ pub fn run_cli(args: KcountArgs) -> Result<()> {
             };
             println!("{}", serde_json::to_string_pretty(&summary)?);
             Ok(())
+        }
+        KcountCommand::Preflight {
+            input,
+            k,
+            min_qual,
+            name,
+            modality,
+            out,
+        } => {
+            let opts = PreflightOptions {
+                sample: name.unwrap_or_else(|| DEFAULT_SAMPLE_NAME.to_string()),
+                k,
+                min_qual,
+                modality: modality.into(),
+            };
+            let report = preflight_inputs_with_options(&input, &opts)?;
+            emit_json(&report, out.as_deref())
         }
         KcountCommand::Inspect {
             input,
