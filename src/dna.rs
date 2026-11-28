@@ -125,6 +125,33 @@ impl KmerSpace {
         }
     }
 
+    /// Calls `f` with every canonical packed k-mer in `seq` and returns
+    /// `(gc, ambiguous)` base counts over `seq` in a single pass.
+    pub fn for_each_canonical_with_stats(&self, seq: &[u8], mut f: impl FnMut(u64)) -> (u64, u64) {
+        let k = self.k;
+        let shift = 2 * (k - 1);
+        let (mut fwd, mut rev, mut filled) = (0u64, 0u64, 0usize);
+        let (mut gc, mut ambiguous) = (0u64, 0u64);
+        for &byte in seq {
+            let c = CODE[byte as usize];
+            if c > 3 {
+                ambiguous += 1;
+                filled = 0;
+                continue;
+            }
+            let c = c as u64;
+            // C = 1 (01), G = 2 (10) => (c ^ (c >> 1)) & 1 == 1; A = 0, T = 3 => 0.
+            gc += (c ^ (c >> 1)) & 1;
+            fwd = ((fwd << 2) | c) & self.mask;
+            rev = (rev >> 2) | ((3 - c) << shift);
+            filled += 1;
+            if filled >= k {
+                f(fwd.min(rev));
+            }
+        }
+        (gc, ambiguous)
+    }
+
     /// Packs an ACGT string (any case) into its canonical k-mer.
     pub fn canonical(&self, text: &str) -> Option<u64> {
         if text.len() != self.k {
@@ -297,5 +324,44 @@ mod tests {
             (mixed_share - 0.5).abs() < 0.01,
             "mixed share was {mixed_share}"
         );
+    }
+
+    #[test]
+    fn fused_canonical_with_stats_matches_separate_passes() {
+        use crate::fasta::StatsBuilder;
+
+        let all_bytes: Vec<u8> = (0u8..=255).collect();
+        let mut rng = ChaCha8Rng::seed_from_u64(0x6675_7365);
+        let alphabet = b"ACGTacgtNNRYSWKMBDHV-*";
+        let contigs: Vec<Vec<u8>> = vec![
+            vec![],
+            all_bytes,
+            b"GGGGCCCCaaaattTTNNn".to_vec(),
+            (0..2_048)
+                .map(|_| alphabet[rng.random_range(0..alphabet.len())])
+                .collect(),
+        ];
+        for k in MIN_K..=MAX_K {
+            let space = KmerSpace::new(k);
+            let mut sep_stats = StatsBuilder::default();
+            let mut fused_stats = StatsBuilder::default();
+            let mut sep_kmers = Vec::new();
+            let mut fused_kmers = Vec::new();
+            for seq in &contigs {
+                sep_stats.add(seq);
+                space.for_each_canonical(seq, |x| sep_kmers.push(x));
+                let (gc, ambiguous) =
+                    space.for_each_canonical_with_stats(seq, |x| fused_kmers.push(x));
+                fused_stats.add_counts(seq.len() as u64, gc, ambiguous);
+            }
+            let s1 = sep_stats.finish();
+            let s2 = fused_stats.finish();
+            assert_eq!(s1.length, s2.length, "k={k}");
+            assert_eq!(s1.contigs, s2.contigs, "k={k}");
+            assert_eq!(s1.n50, s2.n50, "k={k}");
+            assert_eq!(s1.ambiguous, s2.ambiguous, "k={k}");
+            assert_eq!(s1.gc.to_bits(), s2.gc.to_bits(), "k={k}");
+            assert_eq!(fused_kmers, sep_kmers, "k={k}");
+        }
     }
 }

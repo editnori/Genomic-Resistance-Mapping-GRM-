@@ -135,8 +135,7 @@ pub fn sketch_fasta(id: &str, path: &Path, space: &KmerSpace, s: usize) -> Resul
     let mut kept: Vec<u64> = Vec::with_capacity(4 * s);
     let mut cut = u64::MAX;
     fasta::for_each_record(path, |_, seq| {
-        stats.add(seq);
-        space.for_each_canonical(seq, |x| {
+        let (gc, ambiguous) = space.for_each_canonical_with_stats(seq, |x| {
             let h = space.mix(x);
             if h < cut {
                 kept.push(h);
@@ -150,6 +149,7 @@ pub fn sketch_fasta(id: &str, path: &Path, space: &KmerSpace, s: usize) -> Resul
                 }
             }
         });
+        stats.add_counts(seq.len() as u64, gc, ambiguous);
     })?;
     kept.sort_unstable();
     kept.dedup();
@@ -737,6 +737,15 @@ mod tests {
         assert_eq!(s.sketch, all);
         assert_eq!(s.length, LEN as u64);
         assert!((s.gc - 0.6).abs() < 0.01, "{}", s.gc);
+
+        // Ambiguous bases must be excluded from the GC denominator just as in StatsBuilder::add.
+        let amb_seq = b"GGGGCCCCAAAATTTTNNNNNRYSWKMBDHVryswkmbdhvACGTACGTACGTACGTACGTACGT";
+        let amb_sketch = sketch(dir.path(), "g_amb", amb_seq);
+        let mut want_stats = StatsBuilder::default();
+        want_stats.add(amb_seq);
+        let want_stats = want_stats.finish();
+        assert_eq!(amb_sketch.length, want_stats.length);
+        assert_eq!(amb_sketch.gc.to_bits(), want_stats.gc.to_bits());
     }
 
     #[test]

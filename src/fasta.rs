@@ -129,6 +129,17 @@ impl StatsBuilder {
         }
     }
 
+    /// Records pre-tallied base counts for a contig of length `len`, matching
+    /// `add` without rescanning the sequence.
+    #[inline]
+    pub fn add_counts(&mut self, len: u64, gc: u64, ambiguous: u64) {
+        debug_assert!(ambiguous <= len && gc <= len - ambiguous);
+        self.lengths.push(len);
+        self.gc += gc;
+        self.acgt += len - ambiguous;
+        self.ambiguous += ambiguous;
+    }
+
     pub fn finish(mut self) -> SeqStats {
         let length: u64 = self.lengths.iter().sum();
         self.lengths.sort_unstable_by(|a, b| b.cmp(a));

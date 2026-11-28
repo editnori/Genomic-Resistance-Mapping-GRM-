@@ -259,6 +259,7 @@ src/lib.rs cutoff::tests::the_truth_is_the_final_models_on_the_scored_set
 src/lib.rs cutoff::tests::the_truths_forest_reads_a_scored_genome_on_the_screened_features
 src/lib.rs dna::tests::canonical_matches_a_naive_reference_on_both_strands
 src/lib.rs dna::tests::canonical_matches_both_strands
+src/lib.rs dna::tests::fused_canonical_with_stats_matches_separate_passes
 src/lib.rs dna::tests::mixed_values_balance_across_top_bits
 src/lib.rs dna::tests::mixer_round_trips_and_stays_in_range
 src/lib.rs dna::tests::window_breaks_on_non_acgt
@@ -306,6 +307,7 @@ src/lib.rs intervals::tests::intervals_file_pins_the_report_and_its_counts
 src/lib.rs intervals::tests::intervals_file_refuses_counts_that_do_not_add_up
 src/lib.rs intervals::tests::write_covers_the_indexed_datasets_and_leaves_reports_untouched
 src/lib.rs kset::tests::a_file_shorter_than_the_header_is_named_in_the_error
+src/lib.rs kset::tests::count_into_summary_matches_separate_stats_including_ambiguous_bases
 src/lib.rs kset::tests::dedup_respects_min_count
 src/lib.rs kset::tests::kset_round_trips_and_sketches
 src/lib.rs kset::tests::kset_round_trips_bucket_edges_at_both_k_limits

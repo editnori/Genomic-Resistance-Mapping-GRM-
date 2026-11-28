@@ -48,8 +48,9 @@ pub fn count_into(
     values.clear();
     let mut stats = StatsBuilder::default();
     fasta::for_each_record(path, |_, seq| {
-        stats.add(seq);
-        space.for_each_canonical(seq, |x| values.push(space.mix(x)));
+        let (gc, ambiguous) =
+            space.for_each_canonical_with_stats(seq, |x| values.push(space.mix(x)));
+        stats.add_counts(seq.len() as u64, gc, ambiguous);
     })?;
     radix_sort(values, scratch);
     dedup_with_min_count(values, min_abundance);
@@ -699,6 +700,57 @@ mod tests {
             assert!(format!("{err:#}").contains("repeats a k-mer"), "{err:#}");
             assert!(reader.read_all().is_err());
             out.clear();
+        }
+    }
+
+    #[test]
+    fn count_into_summary_matches_separate_stats_including_ambiguous_bases() {
+        let dir = tempfile::tempdir().unwrap();
+        let fna = dir.path().join("ambiguous.fna");
+        // Contigs of varying lengths containing N/n runs and all IUPAC
+        // ambiguity letters (R, Y, S, W, K, M, B, D, H, V) in both cases.
+        let fasta_text = concat!(
+            ">c1 long_with_n_and_iupac\n",
+            "ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTNNNNNRYSWKMBDHV\n",
+            "ggccaattGGCCAATTryswkmbdhvnnnnnACGTACGTACGTACGTACGTACGT\n",
+            ">c2 medium_mixed\n",
+            "GGCCGGCCGGCCGGCCGGCCGGCCGGCCGGCCNNrrYYssWWkkMMbbDDhhVV\n",
+            ">c3 short_below_k\n",
+            "ACGTN\n",
+            ">c4 pure_acgt\n",
+            "AAAACCCCGGGGTTTTAAAACCCCGGGGTTTTAAAA\n",
+        );
+        std::fs::write(&fna, fasta_text).unwrap();
+
+        let mut want_builder = StatsBuilder::default();
+        fasta::for_each_record(&fna, |_, seq| want_builder.add(seq)).unwrap();
+        let want_stats = want_builder.finish();
+        assert!(want_stats.ambiguous > 0);
+        // 5 N + 10 upper IUPAC + 10 lower IUPAC + 5 n (c1)
+        // + 2 N + 20 mixed IUPAC (c2) + 1 N (c3) = 53 ambiguous bases.
+        assert_eq!(want_stats.ambiguous, 53);
+
+        let mut got_values = Vec::new();
+        let mut scratch = Vec::new();
+        for k in [crate::dna::MIN_K, 21, 31, MAX_K] {
+            let space = KmerSpace::new(k);
+            let got_stats = count_into(&fna, &space, 1, &mut got_values, &mut scratch).unwrap();
+            assert!(got_stats.ambiguous > 0, "k={k}");
+            assert_eq!(got_stats.length, want_stats.length, "k={k}");
+            assert_eq!(got_stats.contigs, want_stats.contigs, "k={k}");
+            assert_eq!(got_stats.n50, want_stats.n50, "k={k}");
+            assert_eq!(got_stats.ambiguous, want_stats.ambiguous, "k={k}");
+            assert_eq!(got_stats.gc.to_bits(), want_stats.gc.to_bits(), "k={k}");
+            assert_eq!(got_stats, want_stats, "k={k}");
+
+            let mut want_values = Vec::new();
+            fasta::for_each_record(&fna, |_, seq| {
+                space.for_each_canonical(seq, |x| want_values.push(space.mix(x)));
+            })
+            .unwrap();
+            want_values.sort_unstable();
+            want_values.dedup();
+            assert_eq!(got_values, want_values, "k={k}");
         }
     }
 }
