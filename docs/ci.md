@@ -9,7 +9,7 @@ Each job runs on GitHub's hosted `ubuntu-24.04` runner. The counts are this tree
 | Job | Runs | Result |
 |---|---|---|
 | `rust-lint` | `cargo fmt --check`, then `cargo clippy --locked --all-targets -- -D warnings` | pass |
-| `rust-test` | `cargo test --release --locked`, then `bash scripts/ci/rust-test-names.sh --check`, then `bash scripts/learner-crosscheck/check_fits.sh` | 779 passed, 0 failed, 14 ignored; the 793 names match `tests/rust-test-names.txt`; `check_fits.sh: with 1 and with 8 threads the harness built from this tree wrote the 17 files of reference/learner-crosscheck/grm.sha256, byte for byte` |
+| `rust-test` | `cargo test --release --locked`, then `bash scripts/ci/rust-test-names.sh --check`, then `bash scripts/learner-crosscheck/check_fits.sh` | 780 passed, 0 failed, 14 ignored; the 794 names match `tests/rust-test-names.txt`; `check_fits.sh: with 1 and with 8 threads the harness built from this tree wrote the 17 files of reference/learner-crosscheck/grm.sha256, byte for byte` |
 | `rust-doc` | `RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --locked` | pass |
 | `lasso-layout` | `bash scripts/lasso-layout/check.sh`, with `GRM_LAYOUT_WORK` under `$RUNNER_TEMP` | `profile: ok, grm::learn::lasso::column_sum is 59 bytes, 16 instructions read, none moves a floating-point register to or from the stack`, `one-unit: ok, grm::learn::lasso::column_sum is 59 bytes, 16 instructions read, none moves a floating-point register to or from the stack`, `sixteen-units: ok, grm::learn::lasso::column_sum is 59 bytes, 16 instructions read, none moves a floating-point register to or from the stack` |
 | `metric-audit` | `cargo build --locked --release` in `scripts/metric-audit/foldgen`, then `python3 -I -B -W error <file> -v` for each test file | `test_check_results.py` 122, `test_audit.py` 112, `test_scripts.py` 3; `scripts/lasso-scan/test_scan.py` 26 with 4 skipped |
@@ -40,6 +40,14 @@ The `rust-test` job therefore compares the tests it built with `tests/rust-test-
 - **Cargo's output:** the script stops if it reads a different number of tests than libtest counts, or a test before cargo names its target. A change in that output then fails the job instead of shortening the list.
 
 When a change adds, removes, renames, ignores or un-ignores a test on purpose, run `bash scripts/ci/rust-test-names.sh --write` after making it, and commit the rewritten file with the change, so the review shows which tests came and went. Run it on Linux x86-64 with Rust 1.98.1 (`RUSTUP_TOOLCHAIN=1.98.1`), as the job does. With no argument, the script prints the list. The file pins names only: a test that still exists but asserts less still matches.
+
+## Overflow checks
+
+The `rust-test` job sets `CARGO_PROFILE_RELEASE_OVERFLOW_CHECKS=true` for all of its steps. A release build wraps on integer overflow and on a shift by the full width, so a test that reaches one runs on with a wrong value. With the checks on, the test stops at that line.
+
+The case that asked for it: at k = 32 the line `(1u64 << space.bits()) - 1` gave a mask of 0 in a release build, and only a later assert failed. With the checks on, the same build stops at the line itself with `attempt to shift left with overflow`. Pull request 212 fixed that line.
+
+The setting is the job's alone. `Cargo.toml` is unchanged, so the `grm` a user builds and the `lasso-layout` job's build are as before. The job's cache key carries the word `overflow`, so its cache holds this build and no older one. `check_fits.sh` runs in the same job, so its harness is built with the checks on and still writes the 17 listed files byte for byte.
 
 ## Web app
 

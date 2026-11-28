@@ -54,6 +54,11 @@ jobs:
     name: Rust tests (release)
     runs-on: ubuntu-24.04
     timeout-minutes: 45
+    env:
+      # A release build wraps on integer overflow and on a shift by the full
+      # width. With the checks on, a test that reaches either one stops
+      # there. Every step of this job builds with it (docs/ci.md).
+      CARGO_PROFILE_RELEASE_OVERFLOW_CHECKS: "true"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -70,8 +75,8 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: cargo-test-${{ runner.os }}-${{ env.RUSTUP_TOOLCHAIN }}-${{ hashFiles('Cargo.lock', '.cargo/config.toml') }}
-          restore-keys: cargo-test-${{ runner.os }}-${{ env.RUSTUP_TOOLCHAIN }}-
+          key: cargo-test-overflow-${{ runner.os }}-${{ env.RUSTUP_TOOLCHAIN }}-${{ hashFiles('Cargo.lock', '.cargo/config.toml') }}
+          restore-keys: cargo-test-overflow-${{ runner.os }}-${{ env.RUSTUP_TOOLCHAIN }}-
       - run: cargo test --release --locked
       # A test added, removed, renamed or ignored changes the list, and so does a
       # module whose `pub mod` line is dropped, though the run above still passes.
