@@ -5,8 +5,11 @@ Subcommands:
   generate       Create a deterministic synthetic bacterial cohort (FASTA + FASTQ + ground truth).
   verify-parity  Check exact canonical k-mer set, abundance, or unitig parity against reference files.
   plan           Emit a deterministic benchmark command plan across workloads T1..T5.
-  run            Execute benchmarks (--dry-run, --mock, or real) and write grm-kmer-bench-v1 JSON + TSV.
-  summarize      Aggregate one or more bench.json files into summary TSV and Markdown tables.
+  run            Execute benchmarks (--dry-run, --mock self-check, or real) and write JSON + TSV.
+  summarize      Aggregate bench.json files into comparison TSV and Markdown tables.
+
+Pass output directories outside the repository checkout (for example under /tmp/kmer-bench)
+so benchmark artifacts never leave untracked files in the git tree.
 """
 
 import argparse
@@ -72,9 +75,10 @@ def _cmd_generate(args: argparse.Namespace) -> int:
         write_truth_tables=not args.no_truth_tables,
         compute_unitig_truth=not args.no_unitig_truth,
     )
-    manifest = synthetic.generate_cohort(pathlib.Path(args.out), spec)
+    out_path = pathlib.Path(args.out).resolve()
+    manifest = synthetic.generate_cohort(out_path, spec)
     print(
-        f"generated {manifest['spec']['n_genomes']} synthetic genomes (k={manifest['spec']['k']}) in {args.out}",
+        f"generated {manifest['spec']['n_genomes']} synthetic genomes (k={manifest['spec']['k']}) in {out_path}",
         flush=True,
     )
     return 0
@@ -135,17 +139,23 @@ def _cmd_verify_parity(args: argparse.Namespace) -> int:
     return 0 if result["ok"] else 1
 
 
-def _build_plans(args: argparse.Namespace) -> List[Any]:
+def _build_plans(args: argparse.Namespace, cohort_manifest: Optional[Dict[str, Any]] = None) -> List[Any]:
     workloads = _parse_csv(args.workloads, list(runners.WORKLOADS.keys()), "workloads")
     tools = _parse_csv(args.tools, list(runners.TOOL_REGISTRY.keys()), "tools")
-    cohort_dir = pathlib.Path(args.cohort_dir)
-    out_dir = pathlib.Path(args.out_dir)
+    cohort_dir = pathlib.Path(args.cohort_dir).resolve()
+    out_dir = pathlib.Path(args.out_dir).resolve()
+    min_support = int(cohort_manifest["spec"].get("min_support", 2)) if cohort_manifest else 2
     plans = []
     for wl in workloads:
         for tool in tools:
             if wl not in runners.TOOL_REGISTRY[tool]["workloads"]:
                 continue
-            variants = ("default", "column-blocks-64", "disk-sparse-256") if (tool == "grm" and wl == "T3" and args.include_grm_variants) else ("default",)
+            variants = (
+                ("default", "column-blocks-64", "disk-sparse-256")
+                if (tool == "grm" and wl == "T3" and args.include_grm_variants)
+                else ("default",)
+            )
+            bin_override = args.grm_bin if (tool == "grm" and args.grm_bin) else None
             for variant in variants:
                 plans.append(
                     runners.build_command_plan(
@@ -154,9 +164,12 @@ def _build_plans(args: argparse.Namespace) -> List[Any]:
                         cohort_dir=cohort_dir,
                         run_dir=out_dir / "work",
                         k=args.k,
+                        min_support=min_support,
                         threads=args.threads,
                         mem_gb=args.mem_gb,
                         variant=variant,
+                        binary_override=bin_override,
+                        cohort_manifest=cohort_manifest,
                     )
                 )
     return plans
@@ -179,13 +192,14 @@ def _cmd_plan(args: argparse.Namespace) -> int:
 
 
 def _cmd_run(args: argparse.Namespace) -> int:
-    cohort_dir = pathlib.Path(args.cohort_dir)
+    cohort_dir = pathlib.Path(args.cohort_dir).resolve()
+    out_dir = pathlib.Path(args.out_dir).resolve()
     manifest_path = cohort_dir / "manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     if args.dry_run and args.mock:
         raise ValueError("cannot combine --dry-run and --mock")
     mode = "dry-run" if args.dry_run else ("mock" if args.mock else "real")
-    plans = _build_plans(args)
+    plans = _build_plans(args, cohort_manifest=manifest)
     results = [
         runners.execute_case(
             plan=p,
@@ -198,7 +212,7 @@ def _cmd_run(args: argparse.Namespace) -> int:
     ]
     report = runners.build_bench_report(results, manifest, strict_hygiene=not args.no_hygiene_check)
     json_path, tsv_path = runners.write_bench_outputs(
-        pathlib.Path(args.out_dir), report, strict_hygiene=not args.no_hygiene_check
+        out_dir, report, strict_hygiene=not args.no_hygiene_check
     )
     print(f"wrote {json_path} and {tsv_path} ({len(results)} cases, mode={mode})", flush=True)
     failed = [r for r in results if r["status"].startswith("failed") or r["status"] == "parity_failed"]
@@ -212,12 +226,22 @@ def _cmd_summarize(args: argparse.Namespace) -> int:
         if data.get("format") != runners.BENCH_FORMAT:
             raise ValueError(f"{p_str}: unexpected format {data.get('format')!r}")
         combined.extend(data["results"])
-    tsv_text = runners.render_summary_tsv(combined)
-    md_text = runners.render_summary_markdown(combined)
-    for label, text in (("tsv", tsv_text), ("md", md_text)):
-        leaks = runners.scan_for_leaks(text)
-        if leaks:
-            raise ValueError(f"summary {label} failed hygiene scan: {', '.join(leaks)}")
+    tsv_text = runners.render_summary_tsv(
+        combined,
+        include_mock=args.include_mock,
+        include_not_comparable=args.include_not_comparable,
+    )
+    md_text = runners.render_summary_markdown(
+        combined,
+        include_mock=args.include_mock,
+        include_not_comparable=args.include_not_comparable,
+    )
+    tsv_leaks = runners.scan_tsv_for_leaks(tsv_text)
+    if tsv_leaks:
+        raise ValueError(f"summary tsv failed hygiene scan: {', '.join(tsv_leaks)}")
+    md_leaks = runners.scan_for_leaks(md_text)
+    if md_leaks:
+        raise ValueError(f"summary md failed hygiene scan: {', '.join(md_leaks)}")
     if args.tsv_out:
         p = pathlib.Path(args.tsv_out)
         p.parent.mkdir(parents=True, exist_ok=True)
@@ -234,12 +258,19 @@ def _cmd_summarize(args: argparse.Namespace) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="kmer-bench",
-        description="Reproducible k-mer counting and multi-genome matrix benchmark harness.",
+        description=(
+            "Reproducible k-mer counting and multi-genome matrix benchmark harness. "
+            "Use output directories outside the git tree (e.g., /tmp/kmer-bench)."
+        ),
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
     p_gen = sub.add_parser("generate", help="Generate a deterministic synthetic bacterial cohort.")
-    p_gen.add_argument("--out", required=True, help="Output cohort directory.")
+    p_gen.add_argument(
+        "--out",
+        required=True,
+        help="Output cohort directory outside the repository tree (e.g., /tmp/kmer-bench/cohort).",
+    )
     p_gen.add_argument("--seed", type=int, default=42)
     p_gen.add_argument("--n-genomes", type=int, default=8)
     p_gen.add_argument("--k", type=int, default=31)
@@ -276,13 +307,22 @@ def build_parser() -> argparse.ArgumentParser:
     p_par.set_defaults(func=_cmd_verify_parity)
 
     def _add_plan_args(p: argparse.ArgumentParser) -> None:
-        p.add_argument("--cohort-dir", required=True)
-        p.add_argument("--out-dir", required=True)
+        p.add_argument(
+            "--cohort-dir",
+            required=True,
+            help="Synthetic cohort directory containing manifest.json (e.g., /tmp/kmer-bench/cohort).",
+        )
+        p.add_argument(
+            "--out-dir",
+            required=True,
+            help="Benchmark output directory outside the repository tree (e.g., /tmp/kmer-bench/out).",
+        )
         p.add_argument("--workloads", default="all", help="Comma list of T1..T5 or 'all'.")
         p.add_argument("--tools", default="all", help="Comma list of tool names or 'all'.")
         p.add_argument("--k", type=int, default=31)
         p.add_argument("--threads", type=int, default=8)
         p.add_argument("--mem-gb", type=int, default=16)
+        p.add_argument("--grm-bin", default=None, help="Optional path to grm binary override.")
         p.add_argument("--include-grm-variants", action="store_true")
 
     p_plan = sub.add_parser("plan", help="Emit benchmark command plan JSON.")
@@ -293,15 +333,32 @@ def build_parser() -> argparse.ArgumentParser:
     p_run = sub.add_parser("run", help="Run benchmarks and write grm-kmer-bench-v1 JSON + TSV.")
     _add_plan_args(p_run)
     p_run.add_argument("--dry-run", action="store_true")
-    p_run.add_argument("--mock", action="store_true")
+    p_run.add_argument(
+        "--mock",
+        action="store_true",
+        help="Run parity.py self-check with synthetic placeholder timings/sizes (excluded from real summaries).",
+    )
     p_run.add_argument("--fail-missing", action="store_true", help="Fail instead of skipping absent external binaries.")
     p_run.add_argument("--no-hygiene-check", action="store_true")
     p_run.set_defaults(func=_cmd_run)
 
-    p_sum = sub.add_parser("summarize", help="Aggregate grm-kmer-bench-v1 JSON files into TSV/Markdown.")
+    p_sum = sub.add_parser(
+        "summarize",
+        help="Aggregate grm-kmer-bench-v1 JSON files into comparison TSV/Markdown (real comparable rows by default).",
+    )
     p_sum.add_argument("--inputs", nargs="+", required=True)
     p_sum.add_argument("--tsv-out", default=None)
     p_sum.add_argument("--md-out", default=None)
+    p_sum.add_argument(
+        "--include-mock",
+        action="store_true",
+        help="Include mock_self_check and dry_run rows (excluded from real comparison summaries by default).",
+    )
+    p_sum.add_argument(
+        "--include-not-comparable",
+        action="store_true",
+        help="Include not_comparable rows (excluded from real comparison summaries by default).",
+    )
     p_sum.set_defaults(func=_cmd_summarize)
 
     return parser

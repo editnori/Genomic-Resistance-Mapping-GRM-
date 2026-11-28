@@ -10,7 +10,7 @@ SCRIPT_DIR = ROOT / "scripts" / "kmer-bench"
 WORKFLOW = ROOT / ".github" / "workflows" / "ci.yml"
 CI_DOC = ROOT / "docs" / "ci.md"
 INDEX_DOC = ROOT / "docs" / "INDEX.md"
-REVIEW_DOC = ROOT / "docs" / "kmer-counting-review.md"
+GOLDEN_GRM = ROOT / SUITE / "golden_grm.json"
 
 
 def load_module(name: str):

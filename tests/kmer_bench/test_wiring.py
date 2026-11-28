@@ -1,11 +1,13 @@
-"""Wiring and hygiene tests for tests/kmer_bench, scripts/kmer-bench, and docs/kmer-counting-review.md."""
+"""Wiring and hygiene tests for tests/kmer_bench and scripts/kmer-bench."""
 
 import ast
-import pathlib
+import json
 import re
 import unittest
 
 from tests.kmer_bench import common
+
+runners = common.load_module("runners")
 
 
 def suite_count() -> int:
@@ -35,10 +37,11 @@ class Wiring(unittest.TestCase):
         text = common.CI_DOC.read_text(encoding="utf-8")
         self.assertEqual(text.count(f"The `{common.SUITE}` suite"), 1)
 
-    def test_docs_index_links_review_page(self):
-        self.assertTrue(common.REVIEW_DOC.is_file())
-        idx = common.INDEX_DOC.read_text(encoding="utf-8")
-        self.assertIn("[kmer-counting-review.md](kmer-counting-review.md)", idx)
+    def test_golden_grm_fixture_exists_and_passes_hygiene(self):
+        self.assertTrue(common.GOLDEN_GRM.is_file())
+        data = json.loads(common.GOLDEN_GRM.read_text(encoding="utf-8"))
+        self.assertEqual(data.get("format"), "grm-kmer-bench-golden-v1")
+        self.assertEqual(runners.scan_json_for_leaks(data), [])
 
     def test_scripts_and_tests_use_standard_library_only(self):
         allowed = {
@@ -57,7 +60,7 @@ class Wiring(unittest.TestCase):
                 self.assertEqual(imports - allowed, set())
 
     def test_no_em_dashes_private_paths_or_skips(self):
-        checked = [common.REVIEW_DOC] + sorted(common.SCRIPT_DIR.glob("*.py")) + sorted((common.ROOT / common.SUITE).glob("*.py"))
+        checked = [common.GOLDEN_GRM] + sorted(common.SCRIPT_DIR.glob("*.py")) + sorted((common.ROOT / common.SUITE).glob("*.py"))
         for path in checked:
             text = path.read_text(encoding="utf-8")
             rel = path.relative_to(common.ROOT).as_posix()
@@ -65,8 +68,6 @@ class Wiring(unittest.TestCase):
             if path.suffix == ".py" and path.parent == common.ROOT / common.SUITE:
                 self.assertNotIn("skip" + "Test", text, rel)
                 self.assertNotIn("unittest." + "skip", text, rel)
-            if path == common.REVIEW_DOC:
-                self.assertIsNone(re.search(r"(/[Uu]sers/|/[Hh]ome/(?!user|runner|proj)|[A-Za-z]:\\)", text), rel)
 
 
 if __name__ == "__main__":

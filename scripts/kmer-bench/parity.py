@@ -9,6 +9,7 @@ from collections import Counter
 from dataclasses import dataclass
 import gzip
 import hashlib
+import json
 import pathlib
 import struct
 from typing import Dict, Iterable, Iterator, List, Mapping, Optional, Sequence, Set, Tuple, Union
@@ -832,4 +833,218 @@ def verify_matrix_parity(
         missing_kmers=missing,
         extra_kmers=extra,
         mask_mismatch=mismatched,
+    )
+
+
+@dataclass(frozen=True)
+class GrmMatrixData:
+    k: int
+    genomes: Tuple[str, ...]
+    min_support: int
+    n_patterns: int
+    kmers_distinct: int
+    kmers_kept: int
+    kmers_rare: int
+    kmers_core: int
+    kmer_to_mask: Dict[int, int]
+    pattern_masks: Tuple[int, ...]
+
+
+def read_grm_matrix(matrix_dir: pathlib.Path) -> GrmMatrixData:
+    """Reads and validates a GRM binary matrix directory (src/matrix.rs)."""
+    matrix_dir = pathlib.Path(matrix_dir)
+    summary_path = matrix_dir / "matrix.json"
+    if not summary_path.is_file():
+        raise ValueError(f"{matrix_dir}: missing matrix.json")
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    k = int(summary["k"])
+    space = KmerSpace(k)
+    genomes = tuple(str(g) for g in summary["genomes"])
+    n_genomes = len(genomes)
+    min_support = int(summary["min_support"])
+    n_patterns = int(summary["n_patterns"])
+    kmers_distinct = int(summary["kmers_distinct"])
+    kmers_kept = int(summary["kmers_kept"])
+    kmers_rare = int(summary["kmers_rare"])
+    kmers_core = int(summary["kmers_core"])
+    words = (n_genomes + 63) // 64
+
+    patterns_raw = (matrix_dir / "patterns.bin").read_bytes()
+    support_raw = (matrix_dir / "support.bin").read_bytes()
+    offsets_raw = (matrix_dir / "kmer_offsets.bin").read_bytes()
+    kmers_raw = (matrix_dir / "kmers.bin").read_bytes()
+
+    if len(patterns_raw) != n_patterns * words * 8:
+        raise ValueError(f"{matrix_dir}: patterns.bin length mismatch")
+    if len(support_raw) != n_patterns * 4:
+        raise ValueError(f"{matrix_dir}: support.bin length mismatch")
+    if len(offsets_raw) != (n_patterns + 1) * 8:
+        raise ValueError(f"{matrix_dir}: kmer_offsets.bin length mismatch")
+    if len(kmers_raw) != kmers_kept * 8:
+        raise ValueError(f"{matrix_dir}: kmers.bin length mismatch")
+
+    pattern_words = struct.unpack(f"<{n_patterns * words}Q", patterns_raw) if n_patterns and words else ()
+    supports = struct.unpack(f"<{n_patterns}I", support_raw) if n_patterns else ()
+    offsets = struct.unpack(f"<{n_patterns + 1}Q", offsets_raw)
+    kmers = struct.unpack(f"<{kmers_kept}Q", kmers_raw) if kmers_kept else ()
+
+    if offsets[0] != 0 or offsets[-1] != kmers_kept:
+        raise ValueError(f"{matrix_dir}: inconsistent kmer_offsets.bin bounds")
+
+    pattern_masks: List[int] = []
+    kmer_to_mask: Dict[int, int] = {}
+    for p_idx in range(n_patterns):
+        mask = 0
+        base = p_idx * words
+        for wi in range(words):
+            mask |= pattern_words[base + wi] << (64 * wi)
+        if mask.bit_count() != supports[p_idx]:
+            raise ValueError(f"{matrix_dir}: pattern {p_idx} support mismatch")
+        pattern_masks.append(mask)
+        start, end = offsets[p_idx], offsets[p_idx + 1]
+        if end < start or end > kmers_kept:
+            raise ValueError(f"{matrix_dir}: invalid kmer slice for pattern {p_idx}")
+        for idx in range(start, end):
+            canonical = space.unmix(kmers[idx])
+            if canonical in kmer_to_mask:
+                raise ValueError(f"{matrix_dir}: duplicate k-mer in kmers.bin")
+            kmer_to_mask[canonical] = mask
+
+    return GrmMatrixData(
+        k=k,
+        genomes=genomes,
+        min_support=min_support,
+        n_patterns=n_patterns,
+        kmers_distinct=kmers_distinct,
+        kmers_kept=kmers_kept,
+        kmers_rare=kmers_rare,
+        kmers_core=kmers_core,
+        kmer_to_mask=kmer_to_mask,
+        pattern_masks=tuple(pattern_masks),
+    )
+
+
+@dataclass(frozen=True)
+class GrmUnitigBuildParityReport:
+    ok: bool
+    graph_kmers_expected: int
+    graph_kmers_observed: int
+    unitigs_expected: int
+    unitigs_observed: int
+    pairs_held_expected: int
+    pairs_held_observed: int
+    pairs_in_part_expected: int
+    pairs_in_part_observed: int
+    genomes_tsv_ok: bool
+    matrix_ok: bool
+    matrix: MatrixParityReport
+
+
+def verify_grm_unitig_build(
+    build_dir: pathlib.Path,
+    genome_canonical_sets: Sequence[Iterable[int]],
+    genome_names: Sequence[str],
+    k: int = 31,
+) -> GrmUnitigBuildParityReport:
+    """Verifies `grm exp-input-build unitigs` outputs (build.json, genomes.tsv, matrix/)."""
+    build_dir = pathlib.Path(build_dir)
+    build_json_path = build_dir / "build.json"
+    genomes_tsv_path = build_dir / "genomes.tsv"
+    if not build_json_path.is_file() or not genomes_tsv_path.is_file():
+        raise ValueError(f"{build_dir}: missing build.json or genomes.tsv")
+    build_meta = json.loads(build_json_path.read_text(encoding="utf-8"))
+    if build_meta.get("kind") != "unitigs":
+        raise ValueError(f"{build_dir}: expected unitigs build, got {build_meta.get('kind')!r}")
+
+    space = KmerSpace(k)
+    g_sets = [set(s) for s in genome_canonical_sets]
+    union_kmers: Set[int] = set().union(*g_sets) if g_sets else set()
+    ref_unitigs = compact_unitigs(union_kmers, k=k)
+    # Match src/input_build.rs::compact unitig numbering: ascending smallest mixed k-mer.
+    ordered_unitigs = sorted(ref_unitigs, key=lambda u: min(space.mix(km) for km in u))
+    kmer_to_uid: Dict[int, int] = {}
+    unitig_sizes: List[int] = []
+    for uid, u in enumerate(ordered_unitigs):
+        unitig_sizes.append(len(u))
+        for km in u:
+            kmer_to_uid[km] = uid
+
+    expected_rows: List[Tuple[str, int, int, int]] = []
+    held_sets: List[Set[int]] = []
+    total_held = 0
+    total_in_part = 0
+    for g_name, g_set in zip(genome_names, g_sets):
+        uid_counts: Counter[int] = Counter()
+        missing = 0
+        for km in g_set:
+            uid = kmer_to_uid.get(km)
+            if uid is None:
+                missing += 1
+            else:
+                uid_counts[uid] += 1
+        held: Set[int] = set()
+        in_part = 0
+        for uid, cnt in uid_counts.items():
+            if cnt == unitig_sizes[uid]:
+                held.add(uid)
+            else:
+                in_part += 1
+        held_sets.append(held)
+        total_held += len(held)
+        total_in_part += in_part
+        expected_rows.append((g_name, len(held), in_part, missing))
+
+    tsv_lines = [ln for ln in genomes_tsv_path.read_text(encoding="utf-8").splitlines() if ln.strip()]
+    parsed_rows: List[Tuple[str, int, int, int]] = []
+    for ln in tsv_lines[1:]:
+        parts = ln.split("\t")
+        if len(parts) != 4:
+            raise ValueError(f"{genomes_tsv_path}: malformed row {ln!r}")
+        parsed_rows.append((parts[0], int(parts[1]), int(parts[2]), int(parts[3])))
+    genomes_tsv_ok = parsed_rows == expected_rows
+
+    # GRM encodes unitig ids in KmerSpace(16) (src/input_build.rs::UNITIG_SPACE_K = 16) at support=2.
+    ref_mat = build_reference_matrix(held_sets, k=16, min_support=2)
+    obs_mat = read_grm_matrix(build_dir / "matrix")
+    mat_rep = verify_matrix_parity(ref_mat, obs_mat.kmer_to_mask)
+    mat_meta_ok = (
+        obs_mat.k == 16
+        and obs_mat.genomes == tuple(genome_names)
+        and obs_mat.min_support == 2
+        and obs_mat.kmers_distinct == ref_mat.kmers_distinct
+        and obs_mat.kmers_kept == ref_mat.kmers_kept
+        and obs_mat.kmers_rare == ref_mat.kmers_rare
+        and obs_mat.kmers_core == ref_mat.kmers_core
+        and obs_mat.n_patterns == ref_mat.n_patterns
+    )
+    matrix_ok = mat_rep.ok and mat_meta_ok
+
+    obs_graph_kmers = int(build_meta.get("graph_kmers", -1))
+    obs_unitigs = int(build_meta.get("unitigs", -1))
+    obs_pairs_held = int(build_meta.get("pairs_held", -1))
+    obs_pairs_in_part = int(build_meta.get("pairs_in_part", -1))
+    obs_without = int(build_meta.get("kmers_without_unitig", -1))
+
+    ok = (
+        obs_graph_kmers == len(union_kmers)
+        and obs_unitigs == len(ordered_unitigs)
+        and obs_pairs_held == total_held
+        and obs_pairs_in_part == total_in_part
+        and obs_without == 0
+        and genomes_tsv_ok
+        and matrix_ok
+    )
+    return GrmUnitigBuildParityReport(
+        ok=ok,
+        graph_kmers_expected=len(union_kmers),
+        graph_kmers_observed=obs_graph_kmers,
+        unitigs_expected=len(ordered_unitigs),
+        unitigs_observed=obs_unitigs,
+        pairs_held_expected=total_held,
+        pairs_held_observed=obs_pairs_held,
+        pairs_in_part_expected=total_in_part,
+        pairs_in_part_observed=obs_pairs_in_part,
+        genomes_tsv_ok=genomes_tsv_ok,
+        matrix_ok=matrix_ok,
+        matrix=mat_rep,
     )
