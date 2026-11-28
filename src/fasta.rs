@@ -4,15 +4,24 @@ use anyhow::{Context, Result, bail};
 use flate2::read::MultiGzDecoder;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
-use std::io::{BufRead, BufReader, Read};
+use std::io::{BufRead, BufReader, Read, Seek};
 use std::path::Path;
 
 /// Opens a sequence file, transparently decompressing gzip by magic bytes.
 pub fn open(path: &Path) -> Result<Box<dyn BufRead + Send>> {
     let mut file = File::open(path).with_context(|| format!("open {}", path.display()))?;
     let mut magic = [0u8; 2];
-    let n = file.read(&mut magic)?;
-    let file = File::open(path)?;
+    let mut n = 0;
+    while n < magic.len() {
+        match file.read(&mut magic[n..]) {
+            Ok(0) => break,
+            Ok(got) => n += got,
+            Err(e) if e.kind() == std::io::ErrorKind::Interrupted => continue,
+            Err(e) => return Err(e.into()),
+        }
+    }
+    file.rewind()
+        .with_context(|| format!("rewind {}", path.display()))?;
     if n == 2 && magic == [0x1f, 0x8b] {
         Ok(Box::new(BufReader::with_capacity(
             1 << 20,
@@ -227,5 +236,77 @@ mod tests {
         assert_eq!(s.n50, 10);
         assert_eq!(s.ambiguous, 3);
         assert!((s.gc - 10.0 / 17.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn open_handles_plain_gzip_short_and_rejects_non_seekable() {
+        let dir = tempfile::tempdir().unwrap();
+        let gz = |bytes: &[u8]| {
+            let mut enc = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::fast());
+            enc.write_all(bytes).unwrap();
+            enc.finish().unwrap()
+        };
+
+        // Empty and 1-byte files (< 2 magic bytes) open and rewind cleanly.
+        let empty = dir.path().join("empty.fna");
+        std::fs::write(&empty, b"").unwrap();
+        assert!(collect(&empty).is_empty());
+
+        let one = dir.path().join("one.fna");
+        std::fs::write(&one, b">").unwrap();
+        assert_eq!(collect(&one), vec![("".to_string(), "".to_string())]);
+
+        // Plain and gzip FASTA and FASTQ files match identically.
+        let fasta_text = b">c1 desc\nACGT\nAC\n>c2\nGGGG\n";
+        let fasta_want = vec![
+            ("c1".to_string(), "ACGTAC".to_string()),
+            ("c2".to_string(), "GGGG".to_string()),
+        ];
+        let fna = dir.path().join("a.fna");
+        let fna_gz = dir.path().join("a.fna.gz");
+        std::fs::write(&fna, fasta_text).unwrap();
+        std::fs::write(&fna_gz, gz(fasta_text)).unwrap();
+        assert_eq!(collect(&fna), fasta_want);
+        assert_eq!(collect(&fna_gz), fasta_want);
+
+        let fastq_text = b"@r1 info\nACGT\n+\n@+II\n@r2\nTTTT\n+\n+@II\n";
+        let fastq_want = vec![
+            ("r1".to_string(), "ACGT".to_string()),
+            ("r2".to_string(), "TTTT".to_string()),
+        ];
+        let fq = dir.path().join("a.fq");
+        let fq_gz = dir.path().join("a.fq.gz");
+        std::fs::write(&fq, fastq_text).unwrap();
+        std::fs::write(&fq_gz, gz(fastq_text)).unwrap();
+        assert_eq!(collect(&fq), fastq_want);
+        assert_eq!(collect(&fq_gz), fastq_want);
+
+        // Non-seekable FIFOs must fail rather than falling back to stream chaining.
+        #[cfg(unix)]
+        {
+            for (name, payload) in [
+                ("plain.fifo", fasta_text.to_vec()),
+                ("gz.fifo", gz(fasta_text)),
+            ] {
+                let fifo = dir.path().join(name);
+                let status = std::process::Command::new("mkfifo")
+                    .arg(&fifo)
+                    .status()
+                    .unwrap();
+                assert!(status.success(), "mkfifo failed for {name}");
+                let writer_path = fifo.clone();
+                let handle = std::thread::spawn(move || {
+                    if let Ok(mut f) = File::create(&writer_path) {
+                        let _ = f.write_all(&payload);
+                    }
+                });
+                let err = for_each_record(&fifo, |_, _| {}).unwrap_err();
+                assert!(
+                    format!("{err:#}").contains("rewind"),
+                    "{name}: unexpected error {err:#}"
+                );
+                handle.join().unwrap();
+            }
+        }
     }
 }
