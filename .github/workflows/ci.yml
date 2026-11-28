@@ -326,7 +326,7 @@ jobs:
             top: .
             venv: scripts/c7-outside/requirements.txt
           # SYNTHETIC reports, lab records, label tables, drug names, genome tables and scores built in the test; it runs scripts/matched-accuracy/stage1.py and stage2.py, reads no real score and fits nothing (docs/matched-accuracy.md).
-          # test_reference.py also reads reference/matched-accuracy; it and test_scan.py read the committed sums list reference/lineage-control/rev14-274-20261112.reports.sha256; test_stage2_reference.py and test_page.py read stage 1's committed export reference/matched-accuracy/stage1-rev14-274-20261112; test_faults.py and test_stage2_faults.py read scripts/matched-accuracy/planted_faults.py and stage2_faults.py and the file each plants in.
+          # test_reference.py also reads reference/matched-accuracy; it and test_scan.py read the committed sums list reference/lineage-control/rev14-274-20261112.reports.sha256; test_stage2_reference.py and test_page.py read stage 1's committed export reference/matched-accuracy/stage1-rev14-274-20261112; test_stage2_result.py and test_page.py read stage 2's committed export and run facts reference/matched-accuracy/stage2-rev14-274-20261112; test_faults.py and test_stage2_faults.py read scripts/matched-accuracy/planted_faults.py and stage2_faults.py and the file each plants in.
           - suite: tests/matched_accuracy
             top: .
     env:

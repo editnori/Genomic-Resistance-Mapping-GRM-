@@ -1,0 +1,446 @@
+reading	level	name	estimate_ppm	rows	groups	pairs	datasets	species	lost_rows	lost_groups	lost_pairs	lost_datasets	lost_species
+A	overall	all	743172	45382	2541	258267	199	16	4239	242	24851	7	0
+A	species	acinetobacter_baumannii	700276	4133	166	17962	16	1	392	19	1832	1	0
+A	species	campylobacter_coli	937275	293	33	648	7	1	0	0	0	0	0
+A	species	campylobacter_jejuni	853778	1355	42	11538	4	1	102	2	100	0	0
+A	species	enterobacter_cloacae	770406	311	37	732	9	1	110	17	217	0	0
+A	species	enterococcus_faecium	677363	1450	90	4913	13	1	103	10	269	0	0
+A	species	escherichia_coli	852622	7651	566	41351	31	1	306	25	480	1	0
+A	species	klebsiella_aerogenes	270979	34	4	52	2	1	56	6	111	1	0
+A	species	klebsiella_oxytoca	630729	73	6	82	4	1	0	0	0	0	0
+A	species	klebsiella_pneumoniae	724112	8142	599	51207	36	1	786	73	3218	1	0
+A	species	klebsiella_quasipneumoniae		6	2	4	2	1	0	0	0	0	0
+A	species	neisseria_gonorrhoeae	562717	1270	40	11853	5	1	0	0	0	0	0
+A	species	pseudomonas_aeruginosa	703220	1181	218	2475	13	1	134	19	242	0	0
+A	species	salmonella_enterica	765259	5278	365	30333	21	1	823	35	5957	2	0
+A	species	shigella_sonnei	903238	1581	31	6855	11	1	21	1	54	0	0
+A	species	staphylococcus_aureus	753291	6734	203	49056	14	1	803	22	8199	0	0
+A	species	streptococcus_pneumoniae	785482	5890	139	29206	11	1	603	13	4172	1	0
+A	dataset	acinetobacter_baumannii__amikacin	872039	369	16	3365	1	1	152	5	1429	0	0
+A	dataset	acinetobacter_baumannii__ampicillin_sulbactam	596363	576	20	2059	1	1	0	0	0	0	0
+A	dataset	acinetobacter_baumannii__cefotaxime	487387	122	5	117	1	1	0	0	0	0	0
+A	dataset	acinetobacter_baumannii__ceftazidime	708948	243	10	905	1	1	0	0	0	0	0
+A	dataset	acinetobacter_baumannii__ceftriaxone	477778	76	5	134	1	1	0	0	0	0	0
+A	dataset	acinetobacter_baumannii__ciprofloxacin	836739	301	15	828	1	1	0	0	0	0	0
+A	dataset	acinetobacter_baumannii__doripenem		0	0	0	0	0	20	1	36	1	1
+A	dataset	acinetobacter_baumannii__doxycycline	411111	25	3	67	1	1	0	0	0	0	0
+A	dataset	acinetobacter_baumannii__gentamicin	605357	400	16	848	1	1	0	0	0	0	0
+A	dataset	acinetobacter_baumannii__imipenem	798274	526	16	3031	1	1	0	0	0	0	0
+A	dataset	acinetobacter_baumannii__levofloxacin	860679	288	12	795	1	1	0	0	0	0	0
+A	dataset	acinetobacter_baumannii__meropenem	928934	181	11	860	1	1	0	0	0	0	0
+A	dataset	acinetobacter_baumannii__minocycline	975000	16	2	14	1	1	26	3	60	0	0
+A	dataset	acinetobacter_baumannii__moxifloxacin	718750	27	4	27	1	1	0	0	0	0	0
+A	dataset	acinetobacter_baumannii__sulfamethoxazole_trimethoprim	683247	407	11	2563	1	1	56	4	54	0	0
+A	dataset	acinetobacter_baumannii__tetracycline	655939	296	7	920	1	1	138	6	253	0	0
+A	dataset	acinetobacter_baumannii__tobramycin	587868	280	13	1429	1	1	0	0	0	0	0
+A	dataset	campylobacter_coli__azithromycin		7	1	6	1	1	0	0	0	0	0
+A	dataset	campylobacter_coli__ciprofloxacin	1000000	93	9	269	1	1	0	0	0	0	0
+A	dataset	campylobacter_coli__clindamycin	578704	61	6	72	1	1	0	0	0	0	0
+A	dataset	campylobacter_coli__erythromycin		7	1	6	1	1	0	0	0	0	0
+A	dataset	campylobacter_coli__nalidixic_acid	982222	93	9	270	1	1	0	0	0	0	0
+A	dataset	campylobacter_coli__telithromycin		9	2	7	1	1	0	0	0	0	0
+A	dataset	campylobacter_coli__tetracycline	1000000	23	5	18	1	1	0	0	0	0	0
+A	dataset	campylobacter_jejuni__ciprofloxacin	987726	409	11	3760	1	1	0	0	0	0	0
+A	dataset	campylobacter_jejuni__clindamycin	484375	88	2	157	1	1	102	2	100	0	0
+A	dataset	campylobacter_jejuni__nalidixic_acid	991817	409	11	3749	1	1	0	0	0	0	0
+A	dataset	campylobacter_jejuni__tetracycline	951196	449	18	3872	1	1	0	0	0	0	0
+A	dataset	enterobacter_cloacae__cefepime	929487	38	5	83	1	1	0	0	0	0	0
+A	dataset	enterobacter_cloacae__ciprofloxacin	933333	38	5	75	1	1	4	1	3	0	0
+A	dataset	enterobacter_cloacae__gentamicin	901235	19	3	33	1	1	26	5	34	0	0
+A	dataset	enterobacter_cloacae__imipenem	520833	16	1	48	1	1	13	2	22	0	0
+A	dataset	enterobacter_cloacae__levofloxacin	500000	16	2	30	1	1	25	4	45	0	0
+A	dataset	enterobacter_cloacae__meropenem	574405	26	4	40	1	1	23	3	70	0	0
+A	dataset	enterobacter_cloacae__sulfamethoxazole_trimethoprim	750000	33	4	73	1	1	0	0	0	0	0
+A	dataset	enterobacter_cloacae__tobramycin	935714	22	4	43	1	1	19	2	43	0	0
+A	dataset	enterobacter_cloacae__trimethoprim	888648	103	9	307	1	1	0	0	0	0	0
+A	dataset	enterococcus_faecium__ampicillin	367647	55	5	57	1	1	0	0	0	0	0
+A	dataset	enterococcus_faecium__clindamycin	71429	87	2	91	1	1	0	0	0	0	0
+A	dataset	enterococcus_faecium__dalfopristin_quinupristin	713469	134	4	134	1	1	48	4	174	0	0
+A	dataset	enterococcus_faecium__daptomycin	577074	89	7	153	1	1	55	6	95	0	0
+A	dataset	enterococcus_faecium__doxycycline	807498	220	13	720	1	1	0	0	0	0	0
+A	dataset	enterococcus_faecium__erythromycin	742593	40	9	43	1	1	0	0	0	0	0
+A	dataset	enterococcus_faecium__gentamicin	669129	183	11	422	1	1	0	0	0	0	0
+A	dataset	enterococcus_faecium__kanamycin	620265	156	8	672	1	1	0	0	0	0	0
+A	dataset	enterococcus_faecium__linezolid	775000	53	3	91	1	1	0	0	0	0	0
+A	dataset	enterococcus_faecium__streptomycin	651809	160	8	202	1	1	0	0	0	0	0
+A	dataset	enterococcus_faecium__teicoplanin	962382	80	4	984	1	1	0	0	0	0	0
+A	dataset	enterococcus_faecium__tetracycline	879365	27	7	28	1	1	0	0	0	0	0
+A	dataset	enterococcus_faecium__vancomycin	968062	166	9	1316	1	1	0	0	0	0	0
+A	dataset	escherichia_coli__amikacin		0	0	0	0	0	195	12	220	1	1
+A	dataset	escherichia_coli__amoxicillin_clavulanate	943445	205	15	961	1	1	0	0	0	0	0
+A	dataset	escherichia_coli__ampicillin	901478	426	27	1561	1	1	0	0	0	0	0
+A	dataset	escherichia_coli__ampicillin_sulbactam	820800	157	7	1524	1	1	0	0	0	0	0
+A	dataset	escherichia_coli__aztreonam	726668	158	7	1909	1	1	0	0	0	0	0
+A	dataset	escherichia_coli__cefazolin	809060	145	13	206	1	1	0	0	0	0	0
+A	dataset	escherichia_coli__cefepime	736784	313	20	2890	1	1	0	0	0	0	0
+A	dataset	escherichia_coli__cefotaxime	781134	127	19	258	1	1	0	0	0	0	0
+A	dataset	escherichia_coli__cefoxitin	742303	311	32	858	1	1	0	0	0	0	0
+A	dataset	escherichia_coli__cefpodoxime	700392	119	16	311	1	1	0	0	0	0	0
+A	dataset	escherichia_coli__cefpodoxime_clavulanate	676888	51	9	61	1	1	29	5	53	0	0
+A	dataset	escherichia_coli__ceftazidime	851915	349	23	2532	1	1	0	0	0	0	0
+A	dataset	escherichia_coli__ceftiofur	994253	53	3	80	1	1	0	0	0	0	0
+A	dataset	escherichia_coli__ceftriaxone	907239	424	22	2502	1	1	0	0	0	0	0
+A	dataset	escherichia_coli__chloramphenicol	867604	371	29	967	1	1	0	0	0	0	0
+A	dataset	escherichia_coli__ciprofloxacin	948412	341	21	1526	1	1	0	0	0	0	0
+A	dataset	escherichia_coli__doxycycline	920175	88	5	823	1	1	0	0	0	0	0
+A	dataset	escherichia_coli__ertapenem	726376	280	23	643	1	1	0	0	0	0	0
+A	dataset	escherichia_coli__gentamicin	917450	572	40	4639	1	1	0	0	0	0	0
+A	dataset	escherichia_coli__imipenem	872222	45	8	109	1	1	0	0	0	0	0
+A	dataset	escherichia_coli__levofloxacin	907539	253	15	1442	1	1	0	0	0	0	0
+A	dataset	escherichia_coli__meropenem	745819	234	19	375	1	1	38	5	41	0	0
+A	dataset	escherichia_coli__nalidixic_acid	970244	97	5	120	1	1	0	0	0	0	0
+A	dataset	escherichia_coli__nitrofurantoin	819602	166	8	476	1	1	44	3	166	0	0
+A	dataset	escherichia_coli__norfloxacin	937801	111	6	646	1	1	0	0	0	0	0
+A	dataset	escherichia_coli__piperacillin_tazobactam	751031	173	13	423	1	1	0	0	0	0	0
+A	dataset	escherichia_coli__streptomycin	905312	274	19	1266	1	1	0	0	0	0	0
+A	dataset	escherichia_coli__sulfamethoxazole	901171	220	15	1333	1	1	0	0	0	0	0
+A	dataset	escherichia_coli__sulfamethoxazole_trimethoprim	898581	613	44	5509	1	1	0	0	0	0	0
+A	dataset	escherichia_coli__tetracycline	892938	447	40	2857	1	1	0	0	0	0	0
+A	dataset	escherichia_coli__tobramycin	947844	327	31	1250	1	1	0	0	0	0	0
+A	dataset	escherichia_coli__trimethoprim	908794	201	12	1294	1	1	0	0	0	0	0
+A	dataset	klebsiella_aerogenes__ertapenem	519231	17	2	27	1	1	15	2	29	0	0
+A	dataset	klebsiella_aerogenes__imipenem		0	0	0	0	0	27	3	58	1	1
+A	dataset	klebsiella_aerogenes__meropenem	22727	17	2	25	1	1	14	1	24	0	0
+A	dataset	klebsiella_oxytoca__cefotaxime		4	1	4	1	1	0	0	0	0	0
+A	dataset	klebsiella_oxytoca__cefoxitin	656250	22	2	20	1	1	0	0	0	0	0
+A	dataset	klebsiella_oxytoca__cefpodoxime	500000	30	2	28	1	1	0	0	0	0	0
+A	dataset	klebsiella_oxytoca__ertapenem	866667	17	1	30	1	1	0	0	0	0	0
+A	dataset	klebsiella_pneumoniae__amikacin	784377	563	33	2511	1	1	0	0	0	0	0
+A	dataset	klebsiella_pneumoniae__amoxicillin_clavulanate	849876	80	12	133	1	1	0	0	0	0	0
+A	dataset	klebsiella_pneumoniae__ampicillin_sulbactam	713498	125	13	118	1	1	0	0	0	0	0
+A	dataset	klebsiella_pneumoniae__aztreonam	771143	254	5	3333	1	1	173	22	431	0	0
+A	dataset	klebsiella_pneumoniae__cefazolin	937478	154	18	206	1	1	0	0	0	0	0
+A	dataset	klebsiella_pneumoniae__cefepime	702977	261	19	2740	1	1	166	9	517	0	0
+A	dataset	klebsiella_pneumoniae__cefotetan		3	1	2	1	1	0	0	0	0	0
+A	dataset	klebsiella_pneumoniae__cefoxitin	663749	470	50	3586	1	1	0	0	0	0	0
+A	dataset	klebsiella_pneumoniae__cefpodoxime	906566	59	11	54	1	1	9	3	6	0	0
+A	dataset	klebsiella_pneumoniae__cefpodoxime_clavulanate		12	4	8	1	1	34	5	30	0	0
+A	dataset	klebsiella_pneumoniae__ceftazidime	810401	448	29	751	1	1	0	0	0	0	0
+A	dataset	klebsiella_pneumoniae__ceftazidime_avibactam	704545	24	1	44	1	1	11	1	10	0	0
+A	dataset	klebsiella_pneumoniae__ceftriaxone	1000000	134	8	147	1	1	0	0	0	0	0
+A	dataset	klebsiella_pneumoniae__cefuroxime	949480	130	11	156	1	1	0	0	0	0	0
+A	dataset	klebsiella_pneumoniae__chloramphenicol	587746	151	6	363	1	1	64	6	155	0	0
+A	dataset	klebsiella_pneumoniae__ciprofloxacin	890087	245	26	528	1	1	0	0	0	0	0
+A	dataset	klebsiella_pneumoniae__colistin	688902	109	5	519	1	1	96	2	1459	0	0
+A	dataset	klebsiella_pneumoniae__doripenem		0	0	0	0	0	106	6	442	1	1
+A	dataset	klebsiella_pneumoniae__doxycycline		7	2	7	1	1	13	2	23	0	0
+A	dataset	klebsiella_pneumoniae__ertapenem	810417	114	8	195	1	1	0	0	0	0	0
+A	dataset	klebsiella_pneumoniae__fosfomycin	422176	77	2	425	1	1	0	0	0	0	0
+A	dataset	klebsiella_pneumoniae__gentamicin	901165	849	65	7125	1	1	0	0	0	0	0
+A	dataset	klebsiella_pneumoniae__imipenem	939844	407	24	3778	1	1	0	0	0	0	0
+A	dataset	klebsiella_pneumoniae__levofloxacin	632126	250	13	644	1	1	0	0	0	0	0
+A	dataset	klebsiella_pneumoniae__meropenem	815587	461	25	3969	1	1	71	11	92	0	0
+A	dataset	klebsiella_pneumoniae__nitrofurantoin	686788	138	10	588	1	1	5	1	6	0	0
+A	dataset	klebsiella_pneumoniae__norfloxacin		10	1	9	1	1	31	2	43	0	0
+A	dataset	klebsiella_pneumoniae__ofloxacin	812500	41	2	72	1	1	3	1	2	0	0
+A	dataset	klebsiella_pneumoniae__piperacillin_tazobactam	749256	354	29	3393	1	1	0	0	0	0	0
+A	dataset	klebsiella_pneumoniae__polymyxin_b	567708	21	2	49	1	1	0	0	0	0	0
+A	dataset	klebsiella_pneumoniae__streptomycin		6	1	8	1	1	4	2	2	0	0
+A	dataset	klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	798132	715	48	5835	1	1	0	0	0	0	0
+A	dataset	klebsiella_pneumoniae__tetracycline	797602	401	31	4457	1	1	0	0	0	0	0
+A	dataset	klebsiella_pneumoniae__ticarcillin_clavulanate	502778	21	2	91	1	1	0	0	0	0	0
+A	dataset	klebsiella_pneumoniae__tigecycline	494621	423	26	2632	1	1	0	0	0	0	0
+A	dataset	klebsiella_pneumoniae__tobramycin	887285	573	48	2640	1	1	0	0	0	0	0
+A	dataset	klebsiella_pneumoniae__trimethoprim	803125	52	8	91	1	1	0	0	0	0	0
+A	dataset	klebsiella_quasipneumoniae__cefotaxime		3	1	2	1	1	0	0	0	0	0
+A	dataset	klebsiella_quasipneumoniae__sulfamethoxazole_trimethoprim		3	1	2	1	1	0	0	0	0	0
+A	dataset	neisseria_gonorrhoeae__azithromycin	794536	84	4	200	1	1	0	0	0	0	0
+A	dataset	neisseria_gonorrhoeae__ciprofloxacin	666667	302	5	437	1	1	0	0	0	0	0
+A	dataset	neisseria_gonorrhoeae__erythromycin	481457	108	8	425	1	1	0	0	0	0	0
+A	dataset	neisseria_gonorrhoeae__penicillin	620928	766	20	10784	1	1	0	0	0	0	0
+A	dataset	neisseria_gonorrhoeae__tetracycline		10	3	7	1	1	0	0	0	0	0
+A	dataset	pseudomonas_aeruginosa__amikacin	803787	223	37	611	1	1	0	0	0	0	0
+A	dataset	pseudomonas_aeruginosa__aztreonam	666667	28	9	22	1	1	4	2	2	0	0
+A	dataset	pseudomonas_aeruginosa__cefepime		6	3	3	1	1	19	6	17	0	0
+A	dataset	pseudomonas_aeruginosa__ceftazidime	916667	26	9	18	1	1	0	0	0	0	0
+A	dataset	pseudomonas_aeruginosa__ceftazidime_avibactam	520414	157	16	408	1	1	0	0	0	0	0
+A	dataset	pseudomonas_aeruginosa__ceftolozane_tazobactam	398958	38	6	102	1	1	107	10	219	0	0
+A	dataset	pseudomonas_aeruginosa__ciprofloxacin	906250	23	8	18	1	1	0	0	0	0	0
+A	dataset	pseudomonas_aeruginosa__gentamicin	755556	36	10	31	1	1	0	0	0	0	0
+A	dataset	pseudomonas_aeruginosa__imipenem	668395	56	15	61	1	1	0	0	0	0	0
+A	dataset	pseudomonas_aeruginosa__levofloxacin	948883	254	40	509	1	1	0	0	0	0	0
+A	dataset	pseudomonas_aeruginosa__meropenem	695174	289	50	654	1	1	0	0	0	0	0
+A	dataset	pseudomonas_aeruginosa__piperacillin_tazobactam		10	5	5	1	1	4	1	4	0	0
+A	dataset	pseudomonas_aeruginosa__tobramycin	927778	35	10	33	1	1	0	0	0	0	0
+A	dataset	salmonella_enterica__amoxicillin_clavulanate	898864	231	22	302	1	1	0	0	0	0	0
+A	dataset	salmonella_enterica__ampicillin	834594	593	33	3306	1	1	0	0	0	0	0
+A	dataset	salmonella_enterica__ampicillin_sulbactam	520833	23	4	31	1	1	138	5	1888	0	0
+A	dataset	salmonella_enterica__azithromycin	676483	346	15	1963	1	1	0	0	0	0	0
+A	dataset	salmonella_enterica__cefazolin	517677	61	5	406	1	1	107	4	1615	0	0
+A	dataset	salmonella_enterica__cefotaxime	628410	383	14	3517	1	1	45	3	112	0	0
+A	dataset	salmonella_enterica__cefoxitin	841864	327	31	903	1	1	0	0	0	0	0
+A	dataset	salmonella_enterica__ceftazidime		0	0	0	0	0	162	3	409	1	1
+A	dataset	salmonella_enterica__ceftiofur	920567	219	21	395	1	1	0	0	0	0	0
+A	dataset	salmonella_enterica__ceftriaxone	943750	214	20	287	1	1	0	0	0	0	0
+A	dataset	salmonella_enterica__chloramphenicol	818893	502	31	3388	1	1	0	0	0	0	0
+A	dataset	salmonella_enterica__ciprofloxacin	582801	120	11	522	1	1	0	0	0	0	0
+A	dataset	salmonella_enterica__gentamicin	802425	570	34	2676	1	1	0	0	0	0	0
+A	dataset	salmonella_enterica__kanamycin	935804	195	14	844	1	1	0	0	0	0	0
+A	dataset	salmonella_enterica__nalidixic_acid	691633	214	13	2656	1	1	0	0	0	0	0
+A	dataset	salmonella_enterica__spectinomycin	972222	86	5	521	1	1	0	0	0	0	0
+A	dataset	salmonella_enterica__streptomycin	821231	351	23	2047	1	1	0	0	0	0	0
+A	dataset	salmonella_enterica__sulfamethoxazole		0	0	0	0	0	4	1	4	1	1
+A	dataset	salmonella_enterica__sulfamethoxazole_trimethoprim	495348	158	7	2084	1	1	140	8	882	0	0
+A	dataset	salmonella_enterica__sulfathiazole	428571	40	2	72	1	1	56	4	78	0	0
+A	dataset	salmonella_enterica__sulfisoxazole	892857	101	14	133	1	1	0	0	0	0	0
+A	dataset	salmonella_enterica__tetracycline	873392	412	38	3776	1	1	171	7	969	0	0
+A	dataset	salmonella_enterica__trimethoprim	972222	132	8	504	1	1	0	0	0	0	0
+A	dataset	shigella_sonnei__ampicillin	1000000	35	3	53	1	1	0	0	0	0	0
+A	dataset	shigella_sonnei__azithromycin	1000000	151	1	444	1	1	0	0	0	0	0
+A	dataset	shigella_sonnei__cefoperazone	902027	152	2	297	1	1	21	1	54	0	0
+A	dataset	shigella_sonnei__cefoxitin	551174	160	2	306	1	1	0	0	0	0	0
+A	dataset	shigella_sonnei__ceftazidime	960000	151	1	150	1	1	0	0	0	0	0
+A	dataset	shigella_sonnei__ceftriaxone	916667	35	3	72	1	1	0	0	0	0	0
+A	dataset	shigella_sonnei__colistin	1000000	178	3	3490	1	1	0	0	0	0	0
+A	dataset	shigella_sonnei__gentamicin	848098	192	5	358	1	1	0	0	0	0	0
+A	dataset	shigella_sonnei__sulfamethoxazole_trimethoprim	980442	183	4	619	1	1	0	0	0	0	0
+A	dataset	shigella_sonnei__tetracycline	871575	182	4	760	1	1	0	0	0	0	0
+A	dataset	shigella_sonnei__tobramycin	905637	162	3	306	1	1	0	0	0	0	0
+A	dataset	staphylococcus_aureus__cefoxitin	841298	677	22	5988	1	1	0	0	0	0	0
+A	dataset	staphylococcus_aureus__chloramphenicol	687843	577	18	7287	1	1	0	0	0	0	0
+A	dataset	staphylococcus_aureus__ciprofloxacin	754739	821	22	5679	1	1	0	0	0	0	0
+A	dataset	staphylococcus_aureus__clindamycin	668458	430	16	3892	1	1	320	8	5212	0	0
+A	dataset	staphylococcus_aureus__daptomycin	465375	266	9	389	1	1	285	5	1549	0	0
+A	dataset	staphylococcus_aureus__erythromycin	809906	591	19	6301	1	1	198	9	1438	0	0
+A	dataset	staphylococcus_aureus__fusidic_acid	918750	65	2	251	1	1	0	0	0	0	0
+A	dataset	staphylococcus_aureus__gentamicin	673642	587	16	2559	1	1	0	0	0	0	0
+A	dataset	staphylococcus_aureus__mupirocin	772340	52	1	235	1	1	0	0	0	0	0
+A	dataset	staphylococcus_aureus__oxacillin	767101	573	16	5490	1	1	0	0	0	0	0
+A	dataset	staphylococcus_aureus__penicillin	873627	706	18	2414	1	1	0	0	0	0	0
+A	dataset	staphylococcus_aureus__rifampin	903333	86	5	211	1	1	0	0	0	0	0
+A	dataset	staphylococcus_aureus__sulfamethoxazole_trimethoprim	694921	708	18	4117	1	1	0	0	0	0	0
+A	dataset	staphylococcus_aureus__tetracycline	714733	595	21	4243	1	1	0	0	0	0	0
+A	dataset	streptococcus_pneumoniae__azithromycin	867311	786	15	3811	1	1	0	0	0	0	0
+A	dataset	streptococcus_pneumoniae__cefepime		0	0	0	0	0	272	8	2111	1	1
+A	dataset	streptococcus_pneumoniae__cefotaxime	681555	136	5	1149	1	1	122	2	165	0	0
+A	dataset	streptococcus_pneumoniae__ceftriaxone	666088	262	8	512	1	1	93	1	1782	0	0
+A	dataset	streptococcus_pneumoniae__cefuroxime	810057	345	8	3309	1	1	0	0	0	0	0
+A	dataset	streptococcus_pneumoniae__chloramphenicol	821958	599	10	1485	1	1	0	0	0	0	0
+A	dataset	streptococcus_pneumoniae__clindamycin	760546	886	20	3280	1	1	0	0	0	0	0
+A	dataset	streptococcus_pneumoniae__erythromycin	849255	1072	28	5171	1	1	0	0	0	0	0
+A	dataset	streptococcus_pneumoniae__meropenem	649848	119	5	751	1	1	102	1	101	0	0
+A	dataset	streptococcus_pneumoniae__penicillin	1000000	140	2	608	1	1	14	1	13	0	0
+A	dataset	streptococcus_pneumoniae__sulfamethoxazole_trimethoprim	837655	649	20	3121	1	1	0	0	0	0	0
+A	dataset	streptococcus_pneumoniae__tetracycline	696028	896	18	6009	1	1	0	0	0	0	0
+B	overall	all	742763	44306	2518	251885	198	16	3850	231	20955	7	0
+B	species	acinetobacter_baumannii	700108	3623	158	13875	16	1	377	17	1676	1	0
+B	species	campylobacter_coli	937275	293	33	648	7	1	0	0	0	0	0
+B	species	campylobacter_jejuni	853778	1355	42	11538	4	1	102	2	100	0	0
+B	species	enterobacter_cloacae	770406	311	37	732	9	1	110	17	217	0	0
+B	species	enterococcus_faecium	677363	1450	90	4913	13	1	103	10	269	0	0
+B	species	escherichia_coli	852622	7651	566	41351	31	1	306	25	480	1	0
+B	species	klebsiella_aerogenes	270979	34	4	52	2	1	56	6	111	1	0
+B	species	klebsiella_oxytoca	630729	73	6	82	4	1	0	0	0	0	0
+B	species	klebsiella_pneumoniae	723948	8080	597	51132	36	1	784	73	3209	1	0
+B	species	klebsiella_quasipneumoniae		6	2	4	2	1	0	0	0	0	0
+B	species	neisseria_gonorrhoeae	562717	1270	40	11853	5	1	0	0	0	0	0
+B	species	pseudomonas_aeruginosa	703220	1181	218	2475	13	1	134	19	242	0	0
+B	species	salmonella_enterica	765259	5278	365	30333	21	1	823	35	5957	2	0
+B	species	shigella_sonnei	903238	1581	31	6855	11	1	21	1	54	0	0
+B	species	staphylococcus_aureus	753291	6734	203	49056	14	1	803	22	8199	0	0
+B	species	streptococcus_pneumoniae	779266	5386	126	26986	10	1	231	4	441	1	0
+B	dataset	acinetobacter_baumannii__amikacin	912477	352	16	3170	1	1	145	5	1284	0	0
+B	dataset	acinetobacter_baumannii__ampicillin_sulbactam	575701	379	18	735	1	1	0	0	0	0	0
+B	dataset	acinetobacter_baumannii__cefotaxime	487387	122	5	117	1	1	0	0	0	0	0
+B	dataset	acinetobacter_baumannii__ceftazidime	707941	203	10	424	1	1	0	0	0	0	0
+B	dataset	acinetobacter_baumannii__ceftriaxone	500000	27	2	67	1	1	0	0	0	0	0
+B	dataset	acinetobacter_baumannii__ciprofloxacin	837321	297	15	662	1	1	0	0	0	0	0
+B	dataset	acinetobacter_baumannii__doripenem		0	0	0	0	0	20	1	36	1	1
+B	dataset	acinetobacter_baumannii__doxycycline	411111	25	3	67	1	1	0	0	0	0	0
+B	dataset	acinetobacter_baumannii__gentamicin	558483	329	15	711	1	1	0	0	0	0	0
+B	dataset	acinetobacter_baumannii__imipenem	805994	495	16	2060	1	1	0	0	0	0	0
+B	dataset	acinetobacter_baumannii__levofloxacin	843434	218	11	466	1	1	0	0	0	0	0
+B	dataset	acinetobacter_baumannii__meropenem	928934	181	11	860	1	1	0	0	0	0	0
+B	dataset	acinetobacter_baumannii__minocycline	975000	16	2	14	1	1	26	3	60	0	0
+B	dataset	acinetobacter_baumannii__moxifloxacin	718750	27	4	27	1	1	0	0	0	0	0
+B	dataset	acinetobacter_baumannii__sulfamethoxazole_trimethoprim	683247	407	11	2563	1	1	56	4	54	0	0
+B	dataset	acinetobacter_baumannii__tetracycline	655939	296	7	920	1	1	130	4	242	0	0
+B	dataset	acinetobacter_baumannii__tobramycin	600012	249	12	1012	1	1	0	0	0	0	0
+B	dataset	campylobacter_coli__azithromycin		7	1	6	1	1	0	0	0	0	0
+B	dataset	campylobacter_coli__ciprofloxacin	1000000	93	9	269	1	1	0	0	0	0	0
+B	dataset	campylobacter_coli__clindamycin	578704	61	6	72	1	1	0	0	0	0	0
+B	dataset	campylobacter_coli__erythromycin		7	1	6	1	1	0	0	0	0	0
+B	dataset	campylobacter_coli__nalidixic_acid	982222	93	9	270	1	1	0	0	0	0	0
+B	dataset	campylobacter_coli__telithromycin		9	2	7	1	1	0	0	0	0	0
+B	dataset	campylobacter_coli__tetracycline	1000000	23	5	18	1	1	0	0	0	0	0
+B	dataset	campylobacter_jejuni__ciprofloxacin	987726	409	11	3760	1	1	0	0	0	0	0
+B	dataset	campylobacter_jejuni__clindamycin	484375	88	2	157	1	1	102	2	100	0	0
+B	dataset	campylobacter_jejuni__nalidixic_acid	991817	409	11	3749	1	1	0	0	0	0	0
+B	dataset	campylobacter_jejuni__tetracycline	951196	449	18	3872	1	1	0	0	0	0	0
+B	dataset	enterobacter_cloacae__cefepime	929487	38	5	83	1	1	0	0	0	0	0
+B	dataset	enterobacter_cloacae__ciprofloxacin	933333	38	5	75	1	1	4	1	3	0	0
+B	dataset	enterobacter_cloacae__gentamicin	901235	19	3	33	1	1	26	5	34	0	0
+B	dataset	enterobacter_cloacae__imipenem	520833	16	1	48	1	1	13	2	22	0	0
+B	dataset	enterobacter_cloacae__levofloxacin	500000	16	2	30	1	1	25	4	45	0	0
+B	dataset	enterobacter_cloacae__meropenem	574405	26	4	40	1	1	23	3	70	0	0
+B	dataset	enterobacter_cloacae__sulfamethoxazole_trimethoprim	750000	33	4	73	1	1	0	0	0	0	0
+B	dataset	enterobacter_cloacae__tobramycin	935714	22	4	43	1	1	19	2	43	0	0
+B	dataset	enterobacter_cloacae__trimethoprim	888648	103	9	307	1	1	0	0	0	0	0
+B	dataset	enterococcus_faecium__ampicillin	367647	55	5	57	1	1	0	0	0	0	0
+B	dataset	enterococcus_faecium__clindamycin	71429	87	2	91	1	1	0	0	0	0	0
+B	dataset	enterococcus_faecium__dalfopristin_quinupristin	713469	134	4	134	1	1	48	4	174	0	0
+B	dataset	enterococcus_faecium__daptomycin	577074	89	7	153	1	1	55	6	95	0	0
+B	dataset	enterococcus_faecium__doxycycline	807498	220	13	720	1	1	0	0	0	0	0
+B	dataset	enterococcus_faecium__erythromycin	742593	40	9	43	1	1	0	0	0	0	0
+B	dataset	enterococcus_faecium__gentamicin	669129	183	11	422	1	1	0	0	0	0	0
+B	dataset	enterococcus_faecium__kanamycin	620265	156	8	672	1	1	0	0	0	0	0
+B	dataset	enterococcus_faecium__linezolid	775000	53	3	91	1	1	0	0	0	0	0
+B	dataset	enterococcus_faecium__streptomycin	651809	160	8	202	1	1	0	0	0	0	0
+B	dataset	enterococcus_faecium__teicoplanin	962382	80	4	984	1	1	0	0	0	0	0
+B	dataset	enterococcus_faecium__tetracycline	879365	27	7	28	1	1	0	0	0	0	0
+B	dataset	enterococcus_faecium__vancomycin	968062	166	9	1316	1	1	0	0	0	0	0
+B	dataset	escherichia_coli__amikacin		0	0	0	0	0	195	12	220	1	1
+B	dataset	escherichia_coli__amoxicillin_clavulanate	943445	205	15	961	1	1	0	0	0	0	0
+B	dataset	escherichia_coli__ampicillin	901478	426	27	1561	1	1	0	0	0	0	0
+B	dataset	escherichia_coli__ampicillin_sulbactam	820800	157	7	1524	1	1	0	0	0	0	0
+B	dataset	escherichia_coli__aztreonam	726668	158	7	1909	1	1	0	0	0	0	0
+B	dataset	escherichia_coli__cefazolin	809060	145	13	206	1	1	0	0	0	0	0
+B	dataset	escherichia_coli__cefepime	736784	313	20	2890	1	1	0	0	0	0	0
+B	dataset	escherichia_coli__cefotaxime	781134	127	19	258	1	1	0	0	0	0	0
+B	dataset	escherichia_coli__cefoxitin	742303	311	32	858	1	1	0	0	0	0	0
+B	dataset	escherichia_coli__cefpodoxime	700392	119	16	311	1	1	0	0	0	0	0
+B	dataset	escherichia_coli__cefpodoxime_clavulanate	676888	51	9	61	1	1	29	5	53	0	0
+B	dataset	escherichia_coli__ceftazidime	851915	349	23	2532	1	1	0	0	0	0	0
+B	dataset	escherichia_coli__ceftiofur	994253	53	3	80	1	1	0	0	0	0	0
+B	dataset	escherichia_coli__ceftriaxone	907239	424	22	2502	1	1	0	0	0	0	0
+B	dataset	escherichia_coli__chloramphenicol	867604	371	29	967	1	1	0	0	0	0	0
+B	dataset	escherichia_coli__ciprofloxacin	948412	341	21	1526	1	1	0	0	0	0	0
+B	dataset	escherichia_coli__doxycycline	920175	88	5	823	1	1	0	0	0	0	0
+B	dataset	escherichia_coli__ertapenem	726376	280	23	643	1	1	0	0	0	0	0
+B	dataset	escherichia_coli__gentamicin	917450	572	40	4639	1	1	0	0	0	0	0
+B	dataset	escherichia_coli__imipenem	872222	45	8	109	1	1	0	0	0	0	0
+B	dataset	escherichia_coli__levofloxacin	907539	253	15	1442	1	1	0	0	0	0	0
+B	dataset	escherichia_coli__meropenem	745819	234	19	375	1	1	38	5	41	0	0
+B	dataset	escherichia_coli__nalidixic_acid	970244	97	5	120	1	1	0	0	0	0	0
+B	dataset	escherichia_coli__nitrofurantoin	819602	166	8	476	1	1	44	3	166	0	0
+B	dataset	escherichia_coli__norfloxacin	937801	111	6	646	1	1	0	0	0	0	0
+B	dataset	escherichia_coli__piperacillin_tazobactam	751031	173	13	423	1	1	0	0	0	0	0
+B	dataset	escherichia_coli__streptomycin	905312	274	19	1266	1	1	0	0	0	0	0
+B	dataset	escherichia_coli__sulfamethoxazole	901171	220	15	1333	1	1	0	0	0	0	0
+B	dataset	escherichia_coli__sulfamethoxazole_trimethoprim	898581	613	44	5509	1	1	0	0	0	0	0
+B	dataset	escherichia_coli__tetracycline	892938	447	40	2857	1	1	0	0	0	0	0
+B	dataset	escherichia_coli__tobramycin	947844	327	31	1250	1	1	0	0	0	0	0
+B	dataset	escherichia_coli__trimethoprim	908794	201	12	1294	1	1	0	0	0	0	0
+B	dataset	klebsiella_aerogenes__ertapenem	519231	17	2	27	1	1	15	2	29	0	0
+B	dataset	klebsiella_aerogenes__imipenem		0	0	0	0	0	27	3	58	1	1
+B	dataset	klebsiella_aerogenes__meropenem	22727	17	2	25	1	1	14	1	24	0	0
+B	dataset	klebsiella_oxytoca__cefotaxime		4	1	4	1	1	0	0	0	0	0
+B	dataset	klebsiella_oxytoca__cefoxitin	656250	22	2	20	1	1	0	0	0	0	0
+B	dataset	klebsiella_oxytoca__cefpodoxime	500000	30	2	28	1	1	0	0	0	0	0
+B	dataset	klebsiella_oxytoca__ertapenem	866667	17	1	30	1	1	0	0	0	0	0
+B	dataset	klebsiella_pneumoniae__amikacin	784377	563	33	2511	1	1	0	0	0	0	0
+B	dataset	klebsiella_pneumoniae__amoxicillin_clavulanate	852679	67	11	109	1	1	0	0	0	0	0
+B	dataset	klebsiella_pneumoniae__ampicillin_sulbactam	713498	125	13	118	1	1	0	0	0	0	0
+B	dataset	klebsiella_pneumoniae__aztreonam	771143	254	5	3333	1	1	173	22	431	0	0
+B	dataset	klebsiella_pneumoniae__cefazolin	937478	154	18	206	1	1	0	0	0	0	0
+B	dataset	klebsiella_pneumoniae__cefepime	702977	261	19	2740	1	1	166	9	517	0	0
+B	dataset	klebsiella_pneumoniae__cefotetan		3	1	2	1	1	0	0	0	0	0
+B	dataset	klebsiella_pneumoniae__cefoxitin	663749	470	50	3586	1	1	0	0	0	0	0
+B	dataset	klebsiella_pneumoniae__cefpodoxime	906566	59	11	54	1	1	9	3	6	0	0
+B	dataset	klebsiella_pneumoniae__cefpodoxime_clavulanate		12	4	8	1	1	34	5	30	0	0
+B	dataset	klebsiella_pneumoniae__ceftazidime	810401	448	29	751	1	1	0	0	0	0	0
+B	dataset	klebsiella_pneumoniae__ceftazidime_avibactam	704545	24	1	44	1	1	11	1	10	0	0
+B	dataset	klebsiella_pneumoniae__ceftriaxone	1000000	134	8	147	1	1	0	0	0	0	0
+B	dataset	klebsiella_pneumoniae__cefuroxime	949480	130	11	156	1	1	0	0	0	0	0
+B	dataset	klebsiella_pneumoniae__chloramphenicol	587746	151	6	363	1	1	64	6	155	0	0
+B	dataset	klebsiella_pneumoniae__ciprofloxacin	890087	245	26	528	1	1	0	0	0	0	0
+B	dataset	klebsiella_pneumoniae__colistin	688902	109	5	519	1	1	96	2	1459	0	0
+B	dataset	klebsiella_pneumoniae__doripenem		0	0	0	0	0	106	6	442	1	1
+B	dataset	klebsiella_pneumoniae__doxycycline		7	2	7	1	1	13	2	23	0	0
+B	dataset	klebsiella_pneumoniae__ertapenem	810417	114	8	195	1	1	0	0	0	0	0
+B	dataset	klebsiella_pneumoniae__fosfomycin	422176	77	2	425	1	1	0	0	0	0	0
+B	dataset	klebsiella_pneumoniae__gentamicin	901165	849	65	7125	1	1	0	0	0	0	0
+B	dataset	klebsiella_pneumoniae__imipenem	939844	407	24	3778	1	1	0	0	0	0	0
+B	dataset	klebsiella_pneumoniae__levofloxacin	632126	250	13	644	1	1	0	0	0	0	0
+B	dataset	klebsiella_pneumoniae__meropenem	807903	413	24	3922	1	1	71	11	92	0	0
+B	dataset	klebsiella_pneumoniae__nitrofurantoin	686788	138	10	588	1	1	5	1	6	0	0
+B	dataset	klebsiella_pneumoniae__norfloxacin		10	1	9	1	1	29	2	34	0	0
+B	dataset	klebsiella_pneumoniae__ofloxacin	812500	41	2	72	1	1	3	1	2	0	0
+B	dataset	klebsiella_pneumoniae__piperacillin_tazobactam	748229	353	29	3389	1	1	0	0	0	0	0
+B	dataset	klebsiella_pneumoniae__polymyxin_b	567708	21	2	49	1	1	0	0	0	0	0
+B	dataset	klebsiella_pneumoniae__streptomycin		6	1	8	1	1	4	2	2	0	0
+B	dataset	klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	798132	715	48	5835	1	1	0	0	0	0	0
+B	dataset	klebsiella_pneumoniae__tetracycline	797602	401	31	4457	1	1	0	0	0	0	0
+B	dataset	klebsiella_pneumoniae__ticarcillin_clavulanate	502778	21	2	91	1	1	0	0	0	0	0
+B	dataset	klebsiella_pneumoniae__tigecycline	494621	423	26	2632	1	1	0	0	0	0	0
+B	dataset	klebsiella_pneumoniae__tobramycin	887285	573	48	2640	1	1	0	0	0	0	0
+B	dataset	klebsiella_pneumoniae__trimethoprim	803125	52	8	91	1	1	0	0	0	0	0
+B	dataset	klebsiella_quasipneumoniae__cefotaxime		3	1	2	1	1	0	0	0	0	0
+B	dataset	klebsiella_quasipneumoniae__sulfamethoxazole_trimethoprim		3	1	2	1	1	0	0	0	0	0
+B	dataset	neisseria_gonorrhoeae__azithromycin	794536	84	4	200	1	1	0	0	0	0	0
+B	dataset	neisseria_gonorrhoeae__ciprofloxacin	666667	302	5	437	1	1	0	0	0	0	0
+B	dataset	neisseria_gonorrhoeae__erythromycin	481457	108	8	425	1	1	0	0	0	0	0
+B	dataset	neisseria_gonorrhoeae__penicillin	620928	766	20	10784	1	1	0	0	0	0	0
+B	dataset	neisseria_gonorrhoeae__tetracycline		10	3	7	1	1	0	0	0	0	0
+B	dataset	pseudomonas_aeruginosa__amikacin	803787	223	37	611	1	1	0	0	0	0	0
+B	dataset	pseudomonas_aeruginosa__aztreonam	666667	28	9	22	1	1	4	2	2	0	0
+B	dataset	pseudomonas_aeruginosa__cefepime		6	3	3	1	1	19	6	17	0	0
+B	dataset	pseudomonas_aeruginosa__ceftazidime	916667	26	9	18	1	1	0	0	0	0	0
+B	dataset	pseudomonas_aeruginosa__ceftazidime_avibactam	520414	157	16	408	1	1	0	0	0	0	0
+B	dataset	pseudomonas_aeruginosa__ceftolozane_tazobactam	398958	38	6	102	1	1	107	10	219	0	0
+B	dataset	pseudomonas_aeruginosa__ciprofloxacin	906250	23	8	18	1	1	0	0	0	0	0
+B	dataset	pseudomonas_aeruginosa__gentamicin	755556	36	10	31	1	1	0	0	0	0	0
+B	dataset	pseudomonas_aeruginosa__imipenem	668395	56	15	61	1	1	0	0	0	0	0
+B	dataset	pseudomonas_aeruginosa__levofloxacin	948883	254	40	509	1	1	0	0	0	0	0
+B	dataset	pseudomonas_aeruginosa__meropenem	695174	289	50	654	1	1	0	0	0	0	0
+B	dataset	pseudomonas_aeruginosa__piperacillin_tazobactam		10	5	5	1	1	4	1	4	0	0
+B	dataset	pseudomonas_aeruginosa__tobramycin	927778	35	10	33	1	1	0	0	0	0	0
+B	dataset	salmonella_enterica__amoxicillin_clavulanate	898864	231	22	302	1	1	0	0	0	0	0
+B	dataset	salmonella_enterica__ampicillin	834594	593	33	3306	1	1	0	0	0	0	0
+B	dataset	salmonella_enterica__ampicillin_sulbactam	520833	23	4	31	1	1	138	5	1888	0	0
+B	dataset	salmonella_enterica__azithromycin	676483	346	15	1963	1	1	0	0	0	0	0
+B	dataset	salmonella_enterica__cefazolin	517677	61	5	406	1	1	107	4	1615	0	0
+B	dataset	salmonella_enterica__cefotaxime	628410	383	14	3517	1	1	45	3	112	0	0
+B	dataset	salmonella_enterica__cefoxitin	841864	327	31	903	1	1	0	0	0	0	0
+B	dataset	salmonella_enterica__ceftazidime		0	0	0	0	0	162	3	409	1	1
+B	dataset	salmonella_enterica__ceftiofur	920567	219	21	395	1	1	0	0	0	0	0
+B	dataset	salmonella_enterica__ceftriaxone	943750	214	20	287	1	1	0	0	0	0	0
+B	dataset	salmonella_enterica__chloramphenicol	818893	502	31	3388	1	1	0	0	0	0	0
+B	dataset	salmonella_enterica__ciprofloxacin	582801	120	11	522	1	1	0	0	0	0	0
+B	dataset	salmonella_enterica__gentamicin	802425	570	34	2676	1	1	0	0	0	0	0
+B	dataset	salmonella_enterica__kanamycin	935804	195	14	844	1	1	0	0	0	0	0
+B	dataset	salmonella_enterica__nalidixic_acid	691633	214	13	2656	1	1	0	0	0	0	0
+B	dataset	salmonella_enterica__spectinomycin	972222	86	5	521	1	1	0	0	0	0	0
+B	dataset	salmonella_enterica__streptomycin	821231	351	23	2047	1	1	0	0	0	0	0
+B	dataset	salmonella_enterica__sulfamethoxazole		0	0	0	0	0	4	1	4	1	1
+B	dataset	salmonella_enterica__sulfamethoxazole_trimethoprim	495348	158	7	2084	1	1	140	8	882	0	0
+B	dataset	salmonella_enterica__sulfathiazole	428571	40	2	72	1	1	56	4	78	0	0
+B	dataset	salmonella_enterica__sulfisoxazole	892857	101	14	133	1	1	0	0	0	0	0
+B	dataset	salmonella_enterica__tetracycline	873392	412	38	3776	1	1	171	7	969	0	0
+B	dataset	salmonella_enterica__trimethoprim	972222	132	8	504	1	1	0	0	0	0	0
+B	dataset	shigella_sonnei__ampicillin	1000000	35	3	53	1	1	0	0	0	0	0
+B	dataset	shigella_sonnei__azithromycin	1000000	151	1	444	1	1	0	0	0	0	0
+B	dataset	shigella_sonnei__cefoperazone	902027	152	2	297	1	1	21	1	54	0	0
+B	dataset	shigella_sonnei__cefoxitin	551174	160	2	306	1	1	0	0	0	0	0
+B	dataset	shigella_sonnei__ceftazidime	960000	151	1	150	1	1	0	0	0	0	0
+B	dataset	shigella_sonnei__ceftriaxone	916667	35	3	72	1	1	0	0	0	0	0
+B	dataset	shigella_sonnei__colistin	1000000	178	3	3490	1	1	0	0	0	0	0
+B	dataset	shigella_sonnei__gentamicin	848098	192	5	358	1	1	0	0	0	0	0
+B	dataset	shigella_sonnei__sulfamethoxazole_trimethoprim	980442	183	4	619	1	1	0	0	0	0	0
+B	dataset	shigella_sonnei__tetracycline	871575	182	4	760	1	1	0	0	0	0	0
+B	dataset	shigella_sonnei__tobramycin	905637	162	3	306	1	1	0	0	0	0	0
+B	dataset	staphylococcus_aureus__cefoxitin	841298	677	22	5988	1	1	0	0	0	0	0
+B	dataset	staphylococcus_aureus__chloramphenicol	687843	577	18	7287	1	1	0	0	0	0	0
+B	dataset	staphylococcus_aureus__ciprofloxacin	754739	821	22	5679	1	1	0	0	0	0	0
+B	dataset	staphylococcus_aureus__clindamycin	668458	430	16	3892	1	1	320	8	5212	0	0
+B	dataset	staphylococcus_aureus__daptomycin	465375	266	9	389	1	1	285	5	1549	0	0
+B	dataset	staphylococcus_aureus__erythromycin	809906	591	19	6301	1	1	198	9	1438	0	0
+B	dataset	staphylococcus_aureus__fusidic_acid	918750	65	2	251	1	1	0	0	0	0	0
+B	dataset	staphylococcus_aureus__gentamicin	673642	587	16	2559	1	1	0	0	0	0	0
+B	dataset	staphylococcus_aureus__mupirocin	772340	52	1	235	1	1	0	0	0	0	0
+B	dataset	staphylococcus_aureus__oxacillin	767101	573	16	5490	1	1	0	0	0	0	0
+B	dataset	staphylococcus_aureus__penicillin	873627	706	18	2414	1	1	0	0	0	0	0
+B	dataset	staphylococcus_aureus__rifampin	903333	86	5	211	1	1	0	0	0	0	0
+B	dataset	staphylococcus_aureus__sulfamethoxazole_trimethoprim	694921	708	18	4117	1	1	0	0	0	0	0
+B	dataset	staphylococcus_aureus__tetracycline	714733	595	21	4243	1	1	0	0	0	0	0
+B	dataset	streptococcus_pneumoniae__azithromycin	867311	786	15	3811	1	1	0	0	0	0	0
+B	dataset	streptococcus_pneumoniae__cefepime		0	0	0	0	0	71	2	175	1	1
+B	dataset	streptococcus_pneumoniae__ceftriaxone	500000	14	1	13	1	1	58	1	165	0	0
+B	dataset	streptococcus_pneumoniae__cefuroxime	810057	345	8	3309	1	1	0	0	0	0	0
+B	dataset	streptococcus_pneumoniae__chloramphenicol	821958	599	10	1485	1	1	0	0	0	0	0
+B	dataset	streptococcus_pneumoniae__clindamycin	760546	886	20	3280	1	1	0	0	0	0	0
+B	dataset	streptococcus_pneumoniae__erythromycin	849255	1072	28	5171	1	1	0	0	0	0	0
+B	dataset	streptococcus_pneumoniae__meropenem	649848	119	5	751	1	1	102	1	101	0	0
+B	dataset	streptococcus_pneumoniae__penicillin	1000000	20	1	36	1	1	0	0	0	0	0
+B	dataset	streptococcus_pneumoniae__sulfamethoxazole_trimethoprim	837655	649	20	3121	1	1	0	0	0	0	0
+B	dataset	streptococcus_pneumoniae__tetracycline	696028	896	18	6009	1	1	0	0	0	0	0

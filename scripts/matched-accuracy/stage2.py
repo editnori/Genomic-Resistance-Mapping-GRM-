@@ -23,8 +23,8 @@ Steps.
    to here reports load through stage 1's loader, which drops every score, and through count_bad, which returns
    counts alone.
 2. The line. Write "scores opened: yes" to <out>/scores-opened.txt, then print it. After it, a run stops only on
-   a report's bytes that changed, a score null, true or false, not a number or not finite, a hit of the export's
-   scan, or a write that fails.
+   a report that cannot be read or whose bytes changed, a score null, true or false, not a number or not finite,
+   a hit of the export's scan, or a write that fails.
 3. The second loader. For listed rows alone: the five scores, the five fold_complexity lists, the row's
    catalogue call, and whether the report's top-level catalogue is present or null.
 4. Primary measure. A row's mean is its five scores added left to right as IEEE doubles, in the order scm,
@@ -441,15 +441,24 @@ class Opened:
 
 
 def open_scores(out):
-    """Write the line to <out>/scores-opened.txt, then print it. A write that fails stops the run before it."""
+    """Write the line to <out>/scores-opened.txt, then print it. A write that fails stops the run before it, and
+    first removes a line file this run made, so a rerun into <out> can start."""
     out = Path(out)
+    made = None
     try:
         out.mkdir(parents=True, exist_ok=True)
         fd = os.open(out / OPENED_FILE, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+        made = out / OPENED_FILE
         with os.fdopen(fd, "w", encoding="utf-8") as f:
             f.write(OPENED + "\n")
     except OSError as e:
-        raise Stop(f"the line could not be written ({type(e).__name__})") from None
+        kept = ""
+        if made is not None:
+            try:
+                made.unlink()
+            except OSError:
+                kept = ", and its file could not be removed"
+        raise Stop(f"the line could not be written ({type(e).__name__}){kept}") from None
     print(OPENED, flush=True)
     return Opened(out / OPENED_FILE)
 
@@ -471,12 +480,15 @@ def component(x):
 
 def read_scores(path, digest, listed, opened):
     """The second loader: for the listed rows of one report alone, the five scores and the catalogue call; the
-    five fold_complexity lists; the top-level catalogue as present or None. The report's bytes are checked again
-    against the sha256 checked before the line."""
-    if not isinstance(opened, Opened) or not Path(opened.path).is_file() \
-            or Path(opened.path).read_text(encoding="utf-8") != OPENED + "\n":
+    five fold_complexity lists; the top-level catalogue as present or None. It takes the token open_scores makes
+    and does not read the line file again. A report that cannot be read stops the run, and its bytes are checked
+    again against the sha256 checked before the line."""
+    if not isinstance(opened, Opened):
         raise Stop("a score was asked for before the line")
-    data = Path(path).read_bytes()
+    try:
+        data = Path(path).read_bytes()
+    except OSError as e:
+        raise Stop(f"{Path(path).name} could not be read after the line ({type(e).__name__})") from None
     if hashlib.sha256(data).hexdigest() != digest:
         raise Stop(f"{Path(path).name} changed after it was checked")
     doc = json.loads(data)
