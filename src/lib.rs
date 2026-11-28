@@ -20,6 +20,7 @@ mod fnv;
 pub mod input_arms;
 pub mod input_build;
 pub mod intervals;
+pub mod kcount;
 pub mod kset;
 pub mod layout;
 pub mod learn;

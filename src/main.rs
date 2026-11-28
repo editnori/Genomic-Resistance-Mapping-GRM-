@@ -704,6 +704,9 @@ enum Command {
         #[arg(long, default_value_t = 8640)]
         port: u16,
     },
+    /// Next-generation k-mer counter, SPSS archive, preflight estimator,
+    /// fold-safe dosage extractor, and streaming set algebra.
+    Kcount(grm::kcount::KcountArgs),
 }
 
 #[derive(Subcommand)]
@@ -1138,6 +1141,7 @@ fn run(cli: Cli) -> Result<()> {
             out,
         } => research(&layout, &revision5_reports, &out),
         Command::Serve { app, port } => grm::serve::serve(&app, &layout.root.join("report"), port),
+        Command::Kcount(args) => grm::kcount::run_cli(args),
     }
 }
 

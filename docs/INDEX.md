@@ -81,6 +81,7 @@ Every document under `docs/`, grouped by purpose. For the headline Revision 14 n
 | [fold-file.md](fold-file.md) | Supplied fold-plan file format for `grm learn --fold-file`. |
 | [null-fold-refit.md](null-fold-refit.md) | Experimental null-fold refit flag (off by default). |
 | [matrix-scaling.md](matrix-scaling.md) | Out-of-core partial matrix building (`--disk-sparse`) and the `REVIEWED_COLUMNS` (4,096) review gate. |
+| [kcount-engine.md](kcount-engine.md) | Next-generation k-mer counting engine (`grm kcount`), `u64`/`u128` canonical spaces (`k = 5..=64`), SPSS simplitig archive (`GRMSPS1`), preflight sketching, fold-safe `D_core` dosage extraction, and streaming set algebra. |
 | [lasso-layout.md](lasso-layout.md) | Machine-code layout check for `grm::learn::lasso::column_sum`. |
 | [prediction-contract.md](prediction-contract.md) | `grm predict` input/output contract. |
 | [dataset-export.md](dataset-export.md) | `grm export` binary matrix and metadata contract for external learners. |
