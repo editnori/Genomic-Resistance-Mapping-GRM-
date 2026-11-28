@@ -25,7 +25,7 @@ export const TopBar = ({
   onPresent,
   presentDisabled,
 }: {
-  active: ViewId;
+  active: ViewId | null;
   /** The report is still loading: the mark runs its loop. */
   loading: boolean;
   onNavigate(view: ViewId): void;
@@ -111,7 +111,21 @@ export const TopBar = ({
         </nav>
       ) : (
         <nav aria-label="View" className="min-w-0 max-w-full justify-self-center">
-          <Dropdown ariaLabel="View" options={VIEWS.map((v) => ({ id: v.id, label: v.label }))} mode={{ kind: "one", value: active, onSelect: onNavigate }} />
+          <Dropdown<ViewId | "flow">
+            ariaLabel="View"
+            options={
+              active === null
+                ? [...VIEWS.map((v) => ({ id: v.id as ViewId | "flow", label: v.label })), { id: "flow", label: "Flow preview", disabled: true }]
+                : VIEWS.map((v) => ({ id: v.id as ViewId | "flow", label: v.label }))
+            }
+            mode={{
+              kind: "one",
+              value: active ?? "flow",
+              onSelect: (id) => {
+                if (id !== "flow") onNavigate(id);
+              },
+            }}
+          />
         </nav>
       )}
 

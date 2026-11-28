@@ -2,7 +2,7 @@
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { findFocusToken, focusToken, isAppPath, LIMITS_HREF, navigate, routeHref, useKeptState, useRouter, type Navigator } from "./router";
+import { findFocusToken, flowPreviewHref, focusToken, isAppPath, LIMITS_HREF, navigate, parseFlowPreview, routeHref, useKeptState, useRouter, type Navigator } from "./router";
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -41,8 +41,14 @@ describe("routes", () => {
     expect(routeHref({ view: "datasets", species: null, dataset: "a b" }, "#x")).toBe("/datasets?dataset=a%20b#x");
     expect(routeHref({ view: "overview", species: null, dataset: null })).toBe("/");
     expect(LIMITS_HREF).toBe("/#limits");
-    for (const p of ["/", "/datasets", "/species", "/species/escherichia_coli", "/corpus", "/methods", "/tests"]) expect(isAppPath(p)).toBe(true);
-    for (const p of ["/data/index.json", "/assets/index.js", "/favicon.svg", "/datasets/extra"]) expect(isAppPath(p)).toBe(false);
+    for (const p of ["/", "/datasets", "/species", "/species/escherichia_coli", "/corpus", "/methods", "/tests", "/flow", "/flow/genome-table", "/flow/genome-path", "/flow/bvbrc", "/flow/piece-count", "/flow/decision-tree"]) expect(isAppPath(p)).toBe(true);
+    for (const p of ["/data/index.json", "/assets/index.js", "/favicon.svg", "/datasets/extra", "/flow/unknown", "/flow/bvbrc/extra"]) expect(isAppPath(p)).toBe(false);
+    expect(parseFlowPreview("/flow")).toBe("all");
+    expect(parseFlowPreview("/flow/decision-tree")).toBe("decision-tree");
+    expect(parseFlowPreview("/flow/unknown")).toBeNull();
+    expect(parseFlowPreview("/methods")).toBeNull();
+    expect(flowPreviewHref("all")).toBe("/flow");
+    expect(flowPreviewHref("genome-path")).toBe("/flow/genome-path");
   });
 
   it("keep the section hash while the inspector opens over a view and closes again", () => {

@@ -1,0 +1,5143 @@
+{
+ "about": "One data file for the GRM flow pictures. Every count names the committed file and line it was read from. check_flow.py reads each one back from the pinned commit and stops on a difference. No number is typed into a picture: a label holds {count} places only, and every string a picture prints is a label of this file.",
+ "pinned": {
+  "repo": "editnori/Genomic-Resistance-Mapping-GRM-",
+  "commit": "602678661e6b2aec212dc0db89bdbcd893d34897"
+ },
+ "roots": {
+  "repo": "/home/user/projects/genomic-resistance-mapping",
+  "lead": "/home/user/grm-ops/program-20261114"
+ },
+ "states": [
+  "done",
+  "running",
+  "waiting",
+  "stopped",
+  "not taken"
+ ],
+ "kinds": [
+  "data step",
+  "experiment",
+  "ruling",
+  "run",
+  "page",
+  "tool",
+  "assumption"
+ ],
+ "literals": [
+  {
+   "text": "fix all our bad assumptions",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 140,
+    "text": "Asked: \"fix all our bad assumptions\""
+   }
+  },
+  {
+   "text": "the 25 S to 25 R thing was one?",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 160,
+    "text": "Asked: \"the 25 S to 25 R thing was one?\""
+   }
+  },
+  {
+   "text": "utilize all data sets?",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 176,
+    "text": "\"utilize all data sets?\""
+   }
+  },
+  {
+   "text": "so we only did 31-mers?",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 192,
+    "text": "Asked: \"so we only did 31-mers?\""
+   }
+  },
+  {
+   "text": "more SOTA techniques",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 256,
+    "text": "\"more SOTA techniques\""
+   }
+  },
+  {
+   "text": "build hyperparameters",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 224,
+    "text": "\"build hyperparameters\""
+   }
+  },
+  {
+   "text": "there were interpretability elements I wanted to solve",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 272,
+    "text": "\"there were interpretability elements I wanted to solve\""
+   }
+  },
+  {
+   "text": "AMRFinderPlus 4.2.7",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan-corrections.md",
+    "line": 895,
+    "text": "AMRFinderPlus 4.2.7"
+   }
+  },
+  {
+   "text": "XGBoost 3.0.5",
+   "src": {
+    "root": "repo",
+    "file": "docs/outside-learners-result.md",
+    "line": 3,
+    "text": "XGBoost 3.0.5"
+   }
+  },
+  {
+   "text": "LightGBM 4.6.0",
+   "src": {
+    "root": "repo",
+    "file": "docs/outside-learners-result.md",
+    "line": 3,
+    "text": "LightGBM 4.6.0"
+   }
+  },
+  {
+   "text": "scikit-learn 1.7.2",
+   "src": {
+    "root": "repo",
+    "file": "docs/outside-learners-result.md",
+    "line": 3,
+    "text": "scikit-learn 1.7.2"
+   }
+  },
+  {
+   "text": "21 Nov 2026",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 3,
+    "text": "Written on 21 Nov 2026"
+   }
+  },
+  {
+   "text": "27 Nov",
+   "src": {
+    "root": "lead",
+    "file": "asmplan/RULINGS-20261124.md",
+    "line": 2476,
+    "text": "## R55, 27 Nov 02:45Z"
+   }
+  }
+ ],
+ "counts": {
+  "records": {
+   "v": 1285111,
+   "unit": "lab records",
+   "src": {
+    "root": "repo",
+    "file": "reference/release-summary/rev14-274-20261112/path.json",
+    "line": 6,
+    "key": [
+     "funnel",
+     "records"
+    ]
+   }
+  },
+  "rec_by_name": {
+   "v": 9756,
+   "unit": "lab records",
+   "src": {
+    "root": "repo",
+    "file": "reference/release-summary/rev14-274-20261112/path.json",
+    "line": 11,
+    "key": [
+     "funnel",
+     "records_dropped_by_name",
+     "total"
+    ]
+   }
+  },
+  "rec_drug_class": {
+   "v": 8709,
+   "unit": "lab records",
+   "src": {
+    "root": "repo",
+    "file": "reference/release-summary/rev14-274-20261112/path.json",
+    "line": 8,
+    "key": [
+     "funnel",
+     "records_dropped_by_name",
+     "drug_class"
+    ]
+   }
+  },
+  "rec_no_antibiotic": {
+   "v": 652,
+   "unit": "lab records",
+   "src": {
+    "root": "repo",
+    "file": "reference/release-summary/rev14-274-20261112/path.json",
+    "line": 9,
+    "key": [
+     "funnel",
+     "records_dropped_by_name",
+     "not_an_antibiotic"
+    ]
+   }
+  },
+  "rec_unresolved": {
+   "v": 395,
+   "unit": "lab records",
+   "src": {
+    "root": "repo",
+    "file": "reference/release-summary/rev14-274-20261112/path.json",
+    "line": 10,
+    "key": [
+     "funnel",
+     "records_dropped_by_name",
+     "name_not_resolved"
+    ]
+   }
+  },
+  "rec_no_call": {
+   "v": 42695,
+   "unit": "lab records",
+   "src": {
+    "root": "repo",
+    "file": "reference/release-summary/rev14-274-20261112/path.json",
+    "line": 13,
+    "key": [
+     "funnel",
+     "records_no_call_no_mic"
+    ]
+   }
+  },
+  "genomes": {
+   "v": 123503,
+   "unit": "genomes",
+   "src": {
+    "root": "repo",
+    "file": "reference/release-summary/rev14-274-20261112/path.json",
+    "line": 14,
+    "key": [
+     "funnel",
+     "genomes_with_a_record"
+    ]
+   }
+  },
+  "g_no_meta": {
+   "v": 20,
+   "unit": "genomes",
+   "src": {
+    "root": "repo",
+    "file": "reference/release-summary/rev14-274-20261112/path.json",
+    "line": 15,
+    "key": [
+     "funnel",
+     "genomes_without_metadata"
+    ]
+   }
+  },
+  "g_fail": {
+   "v": 4491,
+   "unit": "genomes",
+   "src": {
+    "root": "repo",
+    "file": "reference/release-summary/rev14-274-20261112/path.json",
+    "line": 25,
+    "key": [
+     "funnel",
+     "genomes_failing_a_check",
+     "total"
+    ]
+   }
+  },
+  "g_fail_quality": {
+   "v": 3164,
+   "unit": "genomes",
+   "src": {
+    "root": "repo",
+    "file": "reference/release-summary/rev14-274-20261112/path.json",
+    "line": 18,
+    "key": [
+     "funnel",
+     "genomes_failing_a_check",
+     "reasons",
+     "BV-BRC quality: Poor"
+    ]
+   }
+  },
+  "g_fail_complete": {
+   "v": 633,
+   "unit": "genomes",
+   "src": {
+    "root": "repo",
+    "file": "reference/release-summary/rev14-274-20261112/path.json",
+    "line": 19,
+    "key": [
+     "funnel",
+     "genomes_failing_a_check",
+     "reasons",
+     "CheckM completeness low"
+    ]
+   }
+  },
+  "g_fail_contam": {
+   "v": 599,
+   "unit": "genomes",
+   "src": {
+    "root": "repo",
+    "file": "reference/release-summary/rev14-274-20261112/path.json",
+    "line": 20,
+    "key": [
+     "funnel",
+     "genomes_failing_a_check",
+     "reasons",
+     "CheckM contamination high"
+    ]
+   }
+  },
+  "g_fail_length": {
+   "v": 14,
+   "unit": "genomes",
+   "src": {
+    "root": "repo",
+    "file": "reference/release-summary/rev14-274-20261112/path.json",
+    "line": 21,
+    "key": [
+     "funnel",
+     "genomes_failing_a_check",
+     "reasons",
+     "genome length off species median"
+    ]
+   }
+  },
+  "g_fail_nospecies": {
+   "v": 1,
+   "unit": "genomes",
+   "src": {
+    "root": "repo",
+    "file": "reference/release-summary/rev14-274-20261112/path.json",
+    "line": 22,
+    "key": [
+     "funnel",
+     "genomes_failing_a_check",
+     "reasons",
+     "no species"
+    ]
+   }
+  },
+  "g_fail_species": {
+   "v": 80,
+   "unit": "genomes",
+   "src": {
+    "root": "repo",
+    "file": "reference/release-summary/rev14-274-20261112/path.json",
+    "line": 23,
+    "key": [
+     "funnel",
+     "genomes_failing_a_check",
+     "reasons",
+     "species check: sequence is another species"
+    ]
+   }
+  },
+  "g_pass": {
+   "v": 118992,
+   "unit": "genomes",
+   "of": "genomes",
+   "src": {
+    "root": "repo",
+    "file": "reference/release-summary/rev14-274-20261112/path.json",
+    "line": 27,
+    "key": [
+     "funnel",
+     "genomes_passing"
+    ]
+   }
+  },
+  "g_reports": {
+   "v": 23757,
+   "unit": "genomes",
+   "of": "genomes",
+   "src": {
+    "root": "repo",
+    "file": "reference/release-summary/rev14-274-20261112/path.json",
+    "line": 41,
+    "key": [
+     "species",
+     "genomes_analyzed"
+    ]
+   }
+  },
+  "cap": {
+   "v": 2000,
+   "unit": "genomes a species",
+   "src": {
+    "root": "repo",
+    "file": "reference/release-summary/rev14-274-20261112/path.json",
+    "line": 42,
+    "key": [
+     "species",
+     "genomes_analyzed_highest"
+    ]
+   }
+  },
+  "sp_at_cap": {
+   "v": 8,
+   "unit": "species",
+   "of": "species",
+   "src": {
+    "root": "repo",
+    "file": "reference/release-summary/rev14-274-20261112/path.json",
+    "line": 43,
+    "key": [
+     "species",
+     "species_at_highest"
+    ]
+   }
+  },
+  "species": {
+   "v": 23,
+   "unit": "species",
+   "src": {
+    "root": "repo",
+    "file": "reference/release-summary/rev14-274-20261112/path.json",
+    "line": 4,
+    "key": [
+     "species_rows"
+    ]
+   }
+  },
+  "pairs": {
+   "v": 1063628,
+   "unit": "genome-and-drug pairs",
+   "src": {
+    "root": "repo",
+    "file": "reference/release-summary/rev14-274-20261112/path.json",
+    "line": 28,
+    "key": [
+     "funnel",
+     "pairs"
+    ]
+   }
+  },
+  "p_reported": {
+   "v": 611826,
+   "unit": "pairs",
+   "of": "pairs",
+   "src": {
+    "root": "repo",
+    "file": "reference/release-summary/rev14-274-20261112/path.json",
+    "line": 30,
+    "key": [
+     "funnel",
+     "pair_kinds",
+     "reported_resistant_or_susceptible"
+    ]
+   }
+  },
+  "p_mic": {
+   "v": 295219,
+   "unit": "pairs",
+   "of": "pairs",
+   "src": {
+    "root": "repo",
+    "file": "reference/release-summary/rev14-274-20261112/path.json",
+    "line": 31,
+    "key": [
+     "funnel",
+     "pair_kinds",
+     "label_from_mic"
+    ]
+   }
+  },
+  "p_nolabel": {
+   "v": 137151,
+   "unit": "pairs",
+   "of": "pairs",
+   "src": {
+    "root": "repo",
+    "file": "reference/release-summary/rev14-274-20261112/path.json",
+    "line": 32,
+    "key": [
+     "funnel",
+     "pair_kinds",
+     "no_label"
+    ]
+   }
+  },
+  "p_intermediate": {
+   "v": 15609,
+   "unit": "pairs",
+   "of": "pairs",
+   "src": {
+    "root": "repo",
+    "file": "reference/release-summary/rev14-274-20261112/path.json",
+    "line": 33,
+    "key": [
+     "funnel",
+     "pair_kinds",
+     "intermediate_only"
+    ]
+   }
+  },
+  "p_conflict": {
+   "v": 3823,
+   "unit": "pairs",
+   "of": "pairs",
+   "src": {
+    "root": "repo",
+    "file": "reference/release-summary/rev14-274-20261112/path.json",
+    "line": 34,
+    "key": [
+     "funnel",
+     "pair_kinds",
+     "conflict"
+    ]
+   }
+  },
+  "ds_curated": {
+   "v": 277,
+   "unit": "datasets",
+   "src": {
+    "root": "repo",
+    "file": "reference/release-summary/rev14-274-20261112/path.json",
+    "line": 38,
+    "key": [
+     "species",
+     "datasets_curated"
+    ]
+   }
+  },
+  "ds_report": {
+   "v": 274,
+   "unit": "datasets",
+   "of": "ds_curated",
+   "src": {
+    "root": "repo",
+    "file": "reference/release-summary/rev14-274-20261112/path.json",
+    "line": 39,
+    "key": [
+     "species",
+     "datasets_with_report"
+    ]
+   }
+  },
+  "ds_short": {
+   "v": 3,
+   "unit": "datasets",
+   "of": "ds_curated",
+   "src": {
+    "root": "repo",
+    "file": "docs/release-summary.md",
+    "line": 256,
+    "text": "3 of 277 datasets have one class under 25"
+   }
+  },
+  "class_min": {
+   "v": 25,
+   "unit": "genomes a class",
+   "src": {
+    "root": "repo",
+    "file": "docs/release-summary.md",
+    "line": 272,
+    "text": "at least 25 of its genomes have an unconflicted reported resistant call and 25 a susceptible one"
+   }
+  },
+  "k": {
+   "v": 31,
+   "unit": "letters",
+   "src": {
+    "root": "repo",
+    "file": "README.md",
+    "line": 39,
+    "text": "its 31-base DNA substrings (k-mers)"
+   }
+  },
+  "n_assumptions": {
+   "v": 22,
+   "unit": "assumptions",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 21,
+    "text": "The inventory holds 22 assumptions"
+   }
+  },
+  "n_undefended": {
+   "v": 9,
+   "unit": "assumptions",
+   "of": "n_assumptions",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 21,
+    "text": "9 of the 22 assumptions have neither"
+   }
+  },
+  "n_comparisons": {
+   "v": 9,
+   "unit": "comparisons",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 152,
+    "regex_count": "^\\*\\*C[1-9] [a-z]",
+    "text": "## Comparisons"
+   }
+  },
+  "d0_absent": {
+   "v": 107,
+   "unit": "cases",
+   "of": "d0_pairs",
+   "src": {
+    "root": "repo",
+    "file": "docs/refit-result.md",
+    "line": 13,
+    "text": "It holds 107 of the 177 miss pairs"
+   }
+  },
+  "d0_pairs": {
+   "v": 177,
+   "unit": "cases",
+   "src": {
+    "root": "repo",
+    "file": "docs/refit-result.md",
+    "line": 13,
+    "text": "107 of the 177 miss pairs"
+   }
+  },
+  "refit_datasets": {
+   "v": 238,
+   "unit": "datasets",
+   "src": {
+    "root": "repo",
+    "file": "docs/refit-result.md",
+    "line": 27,
+    "text": "It ran on the 238 datasets"
+   }
+  },
+  "ov_min": {
+   "v": 0.05,
+   "fmt": "dec3",
+   "unit": "of chosen features",
+   "src": {
+    "root": "repo",
+    "file": "docs/refit-result.md",
+    "line": 21,
+    "text": "The median overlap is 0.050 for `scm`"
+   }
+  },
+  "ov_max": {
+   "v": 0.183,
+   "fmt": "dec3",
+   "unit": "of chosen features",
+   "src": {
+    "root": "repo",
+    "file": "docs/refit-result.md",
+    "line": 21,
+    "text": "0.183 for `rf`"
+   }
+  },
+  "c1_datasets": {
+   "v": 89,
+   "unit": "datasets",
+   "src": {
+    "root": "repo",
+    "file": "docs/cohort-result.md",
+    "line": 11,
+    "text": "No lower line is a candidate on the 89 datasets"
+   }
+  },
+  "c1_line_a": {
+   "v": 10,
+   "unit": "genomes a class",
+   "src": {
+    "root": "repo",
+    "file": "docs/cohort-result.md",
+    "line": 11,
+    "text": "Line 10 has 0"
+   }
+  },
+  "c1_line_b": {
+   "v": 15,
+   "unit": "genomes a class",
+   "src": {
+    "root": "repo",
+    "file": "docs/cohort-result.md",
+    "line": 11,
+    "text": "line 15 has 0"
+   }
+  },
+  "c1_line_c": {
+   "v": 20,
+   "unit": "genomes a class",
+   "src": {
+    "root": "repo",
+    "file": "docs/cohort-result.md",
+    "line": 11,
+    "text": "line 20 has 1"
+   }
+  },
+  "c1_c_models": {
+   "v": 1,
+   "unit": "models",
+   "of": "five",
+   "src": {
+    "root": "repo",
+    "file": "docs/cohort-result.md",
+    "line": 11,
+    "text": "line 20 has 1 (`rf`)"
+   }
+  },
+  "c1_need": {
+   "v": 3,
+   "unit": "models",
+   "of": "five",
+   "src": {
+    "root": "repo",
+    "file": "docs/cohort-result.md",
+    "line": 11,
+    "text": "A line needs 3 of the 5 learners"
+   }
+  },
+  "five": {
+   "v": 5,
+   "unit": "models",
+   "src": {
+    "root": "repo",
+    "file": "README.md",
+    "line": 171,
+    "text": "The five learners are",
+    "word": "five"
+   }
+  },
+  "cap_arm": {
+   "v": 4096,
+   "unit": "genomes a species",
+   "src": {
+    "root": "repo",
+    "file": "docs/cap-arms-result.md",
+    "line": 3,
+    "text": "top 4,096 genomes a species"
+   }
+  },
+  "c2_entered": {
+   "v": 76,
+   "unit": "datasets",
+   "src": {
+    "root": "repo",
+    "file": "reference/cap-arms/page-count.tsv",
+    "line": 44,
+    "where": {
+     "split": "lineage",
+     "pair": "cap-all-cap-2000",
+     "learner": "rf",
+     "measure": "balanced_accuracy"
+    },
+    "col": "entered"
+   }
+  },
+  "c2_rf_better": {
+   "v": 20,
+   "unit": "datasets",
+   "of": "c2_entered",
+   "src": {
+    "root": "repo",
+    "file": "reference/cap-arms/page-count.tsv",
+    "line": 44,
+    "where": {
+     "split": "lineage",
+     "pair": "cap-all-cap-2000",
+     "learner": "rf",
+     "measure": "balanced_accuracy"
+    },
+    "col": "better"
+   }
+  },
+  "c2_rf_worse": {
+   "v": 10,
+   "unit": "datasets",
+   "of": "c2_entered",
+   "src": {
+    "root": "repo",
+    "file": "reference/cap-arms/page-count.tsv",
+    "line": 44,
+    "where": {
+     "split": "lineage",
+     "pair": "cap-all-cap-2000",
+     "learner": "rf",
+     "measure": "balanced_accuracy"
+    },
+    "col": "worse"
+   }
+  },
+  "c2_rf_same": {
+   "v": 46,
+   "unit": "datasets",
+   "of": "c2_entered",
+   "src": {
+    "root": "repo",
+    "file": "reference/cap-arms/page-count.tsv",
+    "line": 44,
+    "where": {
+     "split": "lineage",
+     "pair": "cap-all-cap-2000",
+     "learner": "rf",
+     "measure": "balanced_accuracy"
+    },
+    "col": "same"
+   }
+  },
+  "c3_arms": {
+   "v": 5,
+   "unit": "inputs",
+   "src": {
+    "root": "repo",
+    "file": "reference/input-arms/page-conditions.tsv",
+    "line": 1,
+    "distinct": "arm"
+   }
+  },
+  "c3_pass": {
+   "v": 1,
+   "unit": "inputs",
+   "of": "c3_arms",
+   "src": {
+    "root": "repo",
+    "file": "docs/input-arms-result.md",
+    "line": 13,
+    "text": "one arm of the five meets conditions 1 to 5",
+    "word": "one"
+   }
+  },
+  "c3_entered": {
+   "v": 203,
+   "unit": "datasets",
+   "src": {
+    "root": "repo",
+    "file": "reference/input-arms/page-count.tsv",
+    "line": 104,
+    "where": {
+     "decides": "1",
+     "split": "lineage",
+     "pair": "program-k31",
+     "learner": "rf",
+     "measure": "balanced_accuracy"
+    },
+    "col": "entered"
+   }
+  },
+  "c3_species": {
+   "v": 21,
+   "unit": "species",
+   "src": {
+    "root": "repo",
+    "file": "docs/input-arms-result.md",
+    "line": 13,
+    "text": "on 203 of A's 204 datasets in 21 species"
+   }
+  },
+  "c3_rf_better": {
+   "v": 121,
+   "unit": "datasets",
+   "of": "c3_entered",
+   "src": {
+    "root": "repo",
+    "file": "reference/input-arms/page-count.tsv",
+    "line": 104,
+    "where": {
+     "decides": "1",
+     "split": "lineage",
+     "pair": "program-k31",
+     "learner": "rf",
+     "measure": "balanced_accuracy"
+    },
+    "col": "better"
+   }
+  },
+  "c3_rf_worse": {
+   "v": 28,
+   "unit": "datasets",
+   "of": "c3_entered",
+   "src": {
+    "root": "repo",
+    "file": "reference/input-arms/page-count.tsv",
+    "line": 104,
+    "where": {
+     "decides": "1",
+     "split": "lineage",
+     "pair": "program-k31",
+     "learner": "rf",
+     "measure": "balanced_accuracy"
+    },
+    "col": "worse"
+   }
+  },
+  "c4_arms": {
+   "v": 3,
+   "unit": "filters",
+   "src": {
+    "root": "repo",
+    "file": "reference/screen-arms/page-conditions.tsv",
+    "line": 1,
+    "distinct": "arm"
+   }
+  },
+  "c4_entered": {
+   "v": 232,
+   "unit": "datasets",
+   "src": {
+    "root": "repo",
+    "file": "reference/screen-arms/page-count.tsv",
+    "line": 20,
+    "where": {
+     "decides": "1",
+     "set": "all",
+     "split": "lineage",
+     "pair": "cmh-16000-k31",
+     "learner": "rf",
+     "measure": "balanced_accuracy"
+    },
+    "col": "entered"
+   }
+  },
+  "c4_wide_worse": {
+   "v": 71,
+   "unit": "datasets",
+   "of": "c4_entered",
+   "src": {
+    "root": "repo",
+    "file": "reference/screen-arms/page-count.tsv",
+    "line": 20,
+    "where": {
+     "decides": "1",
+     "set": "all",
+     "split": "lineage",
+     "pair": "cmh-16000-k31",
+     "learner": "rf",
+     "measure": "balanced_accuracy"
+    },
+    "col": "worse"
+   }
+  },
+  "c4_wide_better": {
+   "v": 36,
+   "unit": "datasets",
+   "of": "c4_entered",
+   "src": {
+    "root": "repo",
+    "file": "reference/screen-arms/page-count.tsv",
+    "line": 20,
+    "where": {
+     "decides": "1",
+     "set": "all",
+     "split": "lineage",
+     "pair": "cmh-16000-k31",
+     "learner": "rf",
+     "measure": "balanced_accuracy"
+    },
+    "col": "better"
+   }
+  },
+  "c5_arms": {
+   "v": 2,
+   "unit": "settings changes",
+   "src": {
+    "root": "repo",
+    "file": "reference/settings-arms/page-conditions.tsv",
+    "line": 1,
+    "distinct": "arm"
+   }
+  },
+  "c5_entered": {
+   "v": 54,
+   "unit": "datasets",
+   "src": {
+    "root": "repo",
+    "file": "docs/settings-arms-result.md",
+    "line": 15,
+    "text": "54 of the 55 datasets in 8 species enter the count"
+   }
+  },
+  "c6_datasets": {
+   "v": 100,
+   "unit": "datasets",
+   "src": {
+    "root": "repo",
+    "file": "docs/mic-comparison.md",
+    "line": 11,
+    "text": "is under 0.02 on 53 of the 100 datasets"
+   }
+  },
+  "c6_small_lead": {
+   "v": 53,
+   "unit": "datasets",
+   "of": "c6_datasets",
+   "src": {
+    "root": "repo",
+    "file": "docs/mic-comparison.md",
+    "line": 11,
+    "text": "is under 0.02 on 53 of the 100 datasets"
+   }
+  },
+  "c6_better": {
+   "v": 47,
+   "unit": "datasets",
+   "of": "c6_datasets",
+   "src": {
+    "root": "repo",
+    "file": "docs/mic-comparison.md",
+    "line": 13,
+    "text": "is better on 47 of 100 datasets, the same on 19 and worse on 34"
+   }
+  },
+  "c6_worse": {
+   "v": 34,
+   "unit": "datasets",
+   "of": "c6_datasets",
+   "src": {
+    "root": "repo",
+    "file": "docs/mic-comparison.md",
+    "line": 13,
+    "text": "the same on 19 and worse on 34"
+   }
+  },
+  "m_datasets": {
+   "v": 36,
+   "unit": "datasets",
+   "of": "ds_report",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 97,
+    "text": "36 of the 274"
+   }
+  },
+  "c7_entered": {
+   "v": 232,
+   "unit": "datasets",
+   "src": {
+    "root": "repo",
+    "file": "docs/outside-learners-result.md",
+    "line": 19,
+    "text": "is better on 62 of 232 lineage datasets, worse on 14"
+   }
+  },
+  "c7_lgb_better": {
+   "v": 62,
+   "unit": "datasets",
+   "of": "c7_entered",
+   "src": {
+    "root": "repo",
+    "file": "docs/outside-learners-result.md",
+    "line": 19,
+    "text": "is better on 62 of 232 lineage datasets, worse on 14"
+   }
+  },
+  "c7_lgb_worse": {
+   "v": 14,
+   "unit": "datasets",
+   "of": "c7_entered",
+   "src": {
+    "root": "repo",
+    "file": "docs/outside-learners-result.md",
+    "line": 19,
+    "text": "232 lineage datasets, worse on 14 and the same on 156"
+   }
+  },
+  "c7_en_better": {
+   "v": 71,
+   "unit": "datasets",
+   "of": "c7_entered",
+   "src": {
+    "root": "repo",
+    "file": "docs/outside-learners-result.md",
+    "line": 21,
+    "text": "is better on 71 of 232 lineage datasets, worse on 19"
+   }
+  },
+  "c7_en_worse": {
+   "v": 19,
+   "unit": "datasets",
+   "of": "c7_entered",
+   "src": {
+    "root": "repo",
+    "file": "docs/outside-learners-result.md",
+    "line": 21,
+    "text": "232 lineage datasets, worse on 19 and the same on 142"
+   }
+  },
+  "c9_entered": {
+   "v": 232,
+   "unit": "datasets",
+   "src": {
+    "root": "repo",
+    "file": "docs/served-pick-result.md",
+    "line": 17,
+    "text": "is better on 37 of 232 datasets, worse on 39 and the same on 156"
+   }
+  },
+  "c9_better": {
+   "v": 37,
+   "unit": "datasets",
+   "of": "c9_entered",
+   "src": {
+    "root": "repo",
+    "file": "docs/served-pick-result.md",
+    "line": 17,
+    "text": "is better on 37 of 232 datasets"
+   }
+  },
+  "c9_worse": {
+   "v": 39,
+   "unit": "datasets",
+   "of": "c9_entered",
+   "src": {
+    "root": "repo",
+    "file": "docs/served-pick-result.md",
+    "line": 17,
+    "text": "worse on 39 and the same on 156"
+   }
+  },
+  "c9_same": {
+   "v": 156,
+   "unit": "datasets",
+   "of": "c9_entered",
+   "src": {
+    "root": "repo",
+    "file": "docs/served-pick-result.md",
+    "line": 17,
+    "text": "worse on 39 and the same on 156"
+   }
+  },
+  "m_c3": {
+   "v": 35,
+   "unit": "datasets",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan-corrections.md",
+    "line": 927,
+    "text": "C3 on 35 with 33 of them in set A"
+   }
+  },
+  "m_c3_a": {
+   "v": 33,
+   "unit": "datasets",
+   "of": "m_c3",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan-corrections.md",
+    "line": 927,
+    "text": "C3 on 35 with 33 of them in set A"
+   }
+  },
+  "need_gbt": {
+   "v": 14,
+   "unit": "datasets",
+   "of": "m_c3_a",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan-corrections.md",
+    "line": 868,
+    "text": "`gbt` needs 14 of them better and `lasso` 17"
+   }
+  },
+  "need_lasso": {
+   "v": 17,
+   "unit": "datasets",
+   "of": "m_c3_a",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan-corrections.md",
+    "line": 868,
+    "text": "`gbt` needs 14 of them better and `lasso` 17"
+   }
+  },
+  "t1_records": {
+   "v": 252148,
+   "unit": "lab records",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 305,
+    "text": "The 252,148 BV-BRC lab records inserted at or after"
+   }
+  },
+  "t1_datasets": {
+   "v": 102,
+   "unit": "datasets",
+   "of": "ds_report",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 309,
+    "text": "102 under each label rule"
+   }
+  },
+  "min_in": {
+   "v": 2,
+   "unit": "genomes",
+   "src": {
+    "root": "repo",
+    "file": "README.md",
+    "line": 169,
+    "text": "present in at least two genomes and absent from at least two",
+    "word": "two"
+   }
+  },
+  "min_out": {
+   "v": 2,
+   "unit": "genomes",
+   "src": {
+    "root": "repo",
+    "file": "README.md",
+    "line": 169,
+    "text": "absent from at least two",
+    "word": "two"
+   }
+  },
+  "folds": {
+   "v": 5,
+   "unit": "folds",
+   "src": {
+    "root": "repo",
+    "file": "README.md",
+    "line": 173,
+    "text": "stratified 5-fold cross-validation"
+   }
+  },
+  "screen_top": {
+   "v": 4000,
+   "unit": "patterns",
+   "src": {
+    "root": "repo",
+    "file": "docs/screen-arms-result.md",
+    "line": 3,
+    "text": "keeps the top 4,000"
+   }
+  },
+  "easy_median": {
+   "v": 92.9,
+   "fmt": "pc1",
+   "unit": "median balanced accuracy",
+   "src": {
+    "root": "repo",
+    "file": "README.md",
+    "line": 12,
+    "text": "92.9% on random splits (274 datasets)"
+   }
+  },
+  "hard_median": {
+   "v": 87.7,
+   "fmt": "pc1",
+   "unit": "median balanced accuracy",
+   "src": {
+    "root": "repo",
+    "file": "README.md",
+    "line": 12,
+    "text": "87.7% with whole lineages held out (268 datasets)"
+   }
+  },
+  "ds_hard": {
+   "v": 268,
+   "unit": "datasets",
+   "of": "ds_report",
+   "src": {
+    "root": "repo",
+    "file": "README.md",
+    "line": 12,
+    "text": "87.7% with whole lineages held out (268 datasets)"
+   }
+  },
+  "d0_margin": {
+   "v": 0.1,
+   "fmt": "pts",
+   "unit": "of balanced accuracy",
+   "src": {
+    "root": "repo",
+    "file": "docs/refit-result.md",
+    "line": 15,
+    "text": "beats the learner by 0.10 or more"
+   }
+  },
+  "c6_margin": {
+   "v": 0.02,
+   "fmt": "pts",
+   "unit": "of agreement",
+   "src": {
+    "root": "repo",
+    "file": "docs/mic-comparison.md",
+    "line": 11,
+    "text": "is under 0.02 on 53 of the 100 datasets"
+   }
+  },
+  "old_min": {
+   "v": 50,
+   "unit": "records a class",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 25,
+    "text": "used 50 R and 50 S records"
+   }
+  },
+  "h1_species": {
+   "v": 4,
+   "unit": "species",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 27,
+    "text": "measured, 4 species"
+   }
+  },
+  "cap_low": {
+   "v": 1000,
+   "unit": "genomes a species",
+   "src": {
+    "root": "repo",
+    "file": "docs/input-configuration.md",
+    "line": 7,
+    "text": "cap 1,000 and 4,000"
+   }
+  },
+  "cap_mid": {
+   "v": 4000,
+   "unit": "genomes a species",
+   "src": {
+    "root": "repo",
+    "file": "docs/input-configuration.md",
+    "line": 7,
+    "text": "cap 1,000 and 4,000"
+   }
+  },
+  "h1_small": {
+   "v": 33,
+   "unit": "datasets",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 27,
+    "text": "worse on 25 of 33 datasets"
+   }
+  },
+  "h1_n": {
+   "v": 49,
+   "unit": "datasets",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 27,
+    "text": "better on 31 and worse on 18 of 49"
+   }
+  },
+  "cap_low_worse": {
+   "v": 25,
+   "unit": "datasets",
+   "of": "h1_small",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 27,
+    "text": "worse on 25 of 33 datasets"
+   }
+  },
+  "cap_mid_better": {
+   "v": 31,
+   "unit": "datasets",
+   "of": "h1_n",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 27,
+    "text": "better on 31 and worse on 18 of 49"
+   }
+  },
+  "cap_mid_worse": {
+   "v": 18,
+   "unit": "datasets",
+   "of": "h1_n",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 27,
+    "text": "better on 31 and worse on 18 of 49"
+   }
+  },
+  "grr_better": {
+   "v": 15,
+   "unit": "datasets",
+   "of": "h1_small",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 28,
+    "text": "15 better, 18 worse of 33"
+   }
+  },
+  "grr_worse": {
+   "v": 18,
+   "unit": "datasets",
+   "of": "h1_small",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 28,
+    "text": "15 better, 18 worse of 33"
+   }
+  },
+  "k_short": {
+   "v": 21,
+   "unit": "letters",
+   "src": {
+    "root": "repo",
+    "file": "docs/input-configuration.md",
+    "line": 10,
+    "text": "21 and 25"
+   }
+  },
+  "k_mid": {
+   "v": 25,
+   "unit": "letters",
+   "src": {
+    "root": "repo",
+    "file": "docs/input-configuration.md",
+    "line": 10,
+    "text": "21 and 25"
+   }
+  },
+  "k_short_better": {
+   "v": 20,
+   "unit": "datasets",
+   "of": "h1_n",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 29,
+    "text": "20 better, 29 worse of 49"
+   }
+  },
+  "k_short_worse": {
+   "v": 29,
+   "unit": "datasets",
+   "of": "h1_n",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 29,
+    "text": "20 better, 29 worse of 49"
+   }
+  },
+  "k_mid_better": {
+   "v": 19,
+   "unit": "datasets",
+   "of": "h1_n",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 29,
+    "text": "k25 19 and 30"
+   }
+  },
+  "k_mid_worse": {
+   "v": 30,
+   "unit": "datasets",
+   "of": "h1_n",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 29,
+    "text": "k25 19 and 30"
+   }
+  },
+  "screen_low_worse": {
+   "v": 37,
+   "unit": "datasets",
+   "of": "h1_n",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 33,
+    "text": "worse on 37 of 49"
+   }
+  },
+  "median_patterns": {
+   "v": 479983,
+   "unit": "patterns",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 33,
+    "text": "A median dataset has 479,983 features"
+   }
+  },
+  "screen_wide": {
+   "v": 16000,
+   "unit": "patterns",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 209,
+    "text": "Lineage-adjusted top 16,000"
+   }
+  },
+  "scm_rules": {
+   "v": 6,
+   "unit": "rules",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 34,
+    "text": "6 rules where Kover's default is 10"
+   }
+  },
+  "kover_rules": {
+   "v": 10,
+   "unit": "rules",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 34,
+    "text": "6 rules where Kover's default is 10"
+   }
+  },
+  "kover_ds": {
+   "v": 12,
+   "unit": "datasets",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 34,
+    "text": "on 12 datasets"
+   }
+  },
+  "cart_depth": {
+   "v": 8,
+   "unit": "levels",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 35,
+    "text": "depth 1 to 8"
+   }
+  },
+  "rf_trees": {
+   "v": 200,
+   "unit": "trees",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 36,
+    "text": "200 trees"
+   }
+  },
+  "gbt_hold": {
+   "v": 15,
+   "unit": "percent",
+   "fmt": "pc0",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 37,
+    "text": "15% holdout"
+   }
+  },
+  "lasso_path": {
+   "v": 30,
+   "unit": "values",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 38,
+    "text": "30-point path"
+   }
+  },
+  "lasso_max": {
+   "v": 400,
+   "unit": "patterns",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 38,
+    "text": "at most 400 nonzero"
+   }
+  },
+  "call_cut": {
+   "v": 0.5,
+   "unit": "score",
+   "fmt": "dec1",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 39,
+    "text": "A score of 0.5 or more"
+   }
+  },
+  "pick_of": {
+   "v": 78,
+   "unit": "datasets",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 43,
+    "text": "pick stable on 24 of 78"
+   }
+  },
+  "pick_stable": {
+   "v": 24,
+   "unit": "datasets",
+   "of": "pick_of",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 43,
+    "text": "pick stable on 24 of 78"
+   }
+  },
+  "best_of": {
+   "v": 235,
+   "unit": "datasets",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 43,
+    "text": "best of five on lineage in 100 of 235"
+   }
+  },
+  "best_hard": {
+   "v": 100,
+   "unit": "datasets",
+   "of": "best_of",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 43,
+    "text": "best of five on lineage in 100 of 235"
+   }
+  },
+  "sketch": {
+   "v": 1000,
+   "unit": "values",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 44,
+    "text": "1,000-value sketch"
+   }
+  },
+  "lin_min": {
+   "v": 20,
+   "unit": "families",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 44,
+    "text": "20 or more clusters"
+   }
+  },
+  "lin_big": {
+   "v": 25,
+   "unit": "percent",
+   "fmt": "pc0",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 44,
+    "text": "the largest at 25% or less"
+   }
+  },
+  "qc_contigs": {
+   "v": 1000,
+   "unit": "stretches",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 45,
+    "text": "at most 1,000 contigs"
+   }
+  },
+  "qc_complete": {
+   "v": 90,
+   "unit": "percent",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 45,
+    "text": "completeness 90 or more"
+   }
+  },
+  "qc_contam": {
+   "v": 10,
+   "unit": "percent",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 45,
+    "text": "contamination 10 or less"
+   }
+  },
+  "qc_len": {
+   "v": 25,
+   "unit": "percent",
+   "fmt": "pc0",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 45,
+    "text": "length within 25%"
+   }
+  },
+  "inner": {
+   "v": 3,
+   "unit": "folds",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 46,
+    "text": "5 outer, 3 inner, seed 42"
+   }
+  },
+  "sd_min": {
+   "v": 0.0083,
+   "unit": "balanced accuracy",
+   "fmt": "dec4",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 46,
+    "text": "0.0083 to 0.0140"
+   }
+  },
+  "sd_max": {
+   "v": 0.014,
+   "unit": "balanced accuracy",
+   "fmt": "dec4",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 46,
+    "text": "0.0083 to 0.0140"
+   }
+  },
+  "search_n": {
+   "v": 30,
+   "unit": "settings",
+   "src": {
+    "root": "repo",
+    "file": "docs/assumption-plan.md",
+    "line": 225,
+    "text": "30 random settings per learner"
+   }
+  }
+ },
+ "nodes": [
+  {
+   "id": "a1",
+   "kind": "data step",
+   "state": "done",
+   "title": "Genome",
+   "line": "One assembled genome is a long string of four letters. Every genome of the species gets the same treatment.",
+   "fields": [
+    [
+     "Tool",
+     "grm fetch"
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "README.md",
+     "line": 39,
+     "text": "each genome's assembly"
+    },
+    {
+     "root": "repo",
+     "file": "README.md",
+     "line": 134,
+     "text": "`fasta`"
+    }
+   ]
+  },
+  {
+   "id": "a2",
+   "kind": "data step",
+   "state": "done",
+   "title": "Window",
+   "line": "The window moves one letter at a time. Each stop cuts one piece, and each piece becomes a column.",
+   "fields": [
+    [
+     "Also",
+     "A piece and its mirror on the other strand count once."
+    ],
+    [
+     "Tool",
+     "grm count"
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "README.md",
+     "line": 39,
+     "text": "its 31-base DNA substrings (k-mers)"
+    },
+    {
+     "root": "repo",
+     "file": "README.md",
+     "line": 169,
+     "text": "a sequence and its reverse complement count once"
+    }
+   ]
+  },
+  {
+   "id": "a3",
+   "kind": "data step",
+   "state": "done",
+   "title": "Pieces",
+   "line": "A piece stays when at least {min_in} genomes have it and at least {min_out} lack it.",
+   "fields": [
+    [
+     "Tool",
+     "grm matrix"
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "README.md",
+     "line": 169,
+     "text": "keeps k-mers present in at least two genomes and absent from at least two"
+    }
+   ]
+  },
+  {
+   "id": "a4",
+   "kind": "data step",
+   "state": "done",
+   "title": "Patterns",
+   "line": "Pieces found in exactly the same genomes merge into one pattern.",
+   "fields": [
+    [
+     "Tool",
+     "grm matrix"
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "README.md",
+     "line": 169,
+     "text": "merges k-mers present in exactly the same genomes into one pattern"
+    }
+   ]
+  },
+  {
+   "id": "a5",
+   "kind": "data step",
+   "state": "done",
+   "title": "Table",
+   "line": "One row a genome, one column a pattern. The last column is the lab's call, which the models learn to predict.",
+   "fields": [
+    [
+     "Tool",
+     "grm learn"
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "README.md",
+     "line": 40,
+     "text": "| Evaluate | the matrix and the reported calls |"
+    }
+   ]
+  },
+  {
+   "id": "s1",
+   "kind": "data step",
+   "state": "done",
+   "title": "Lab records",
+   "line": "{records}",
+   "glyph": "records",
+   "fields": [
+    [
+     "What",
+     "Every resistance test record in the download from BV-BRC, the public database of bacterial genomes."
+    ],
+    [
+     "Tool",
+     "grm fetch"
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "README.md",
+     "line": 37,
+     "text": "| Collect | BV-BRC | lab records"
+    },
+    {
+     "root": "repo",
+     "file": "README.md",
+     "line": 134,
+     "text": "`grm fetch amr`"
+    }
+   ]
+  },
+  {
+   "id": "s2",
+   "kind": "data step",
+   "state": "done",
+   "title": "Datasets",
+   "line": "{ds_report} in {species} species",
+   "glyph": "datasets",
+   "fields": [
+    [
+     "What",
+     "One species and one antibiotic make a dataset. {species} species have one."
+    ],
+    [
+     "Rule",
+     "At least {class_min} genomes with a resistant call and {class_min} with a susceptible one."
+    ],
+    [
+     "Tool",
+     "grm curate"
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "README.md",
+     "line": 38,
+     "text": "one dataset per species and antibiotic"
+    },
+    {
+     "root": "repo",
+     "file": "README.md",
+     "line": 135,
+     "text": "| Curate | `grm curate` |"
+    }
+   ]
+  },
+  {
+   "id": "s3",
+   "kind": "data step",
+   "state": "done",
+   "title": "Genomes",
+   "line": "{g_reports}, up to {cap} a species",
+   "glyph": "genome",
+   "fields": [
+    [
+     "What",
+     "The assembled genomes the reports are built on."
+    ],
+    [
+     "Rule",
+     "At most {cap} genomes a species. {sp_at_cap} of the {species} species sit at that cap."
+    ],
+    [
+     "Tool",
+     "grm curate picks them, grm fetch downloads them"
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "README.md",
+     "line": 167,
+     "text": "selects at most `--cap` genomes per species"
+    }
+   ]
+  },
+  {
+   "id": "s4",
+   "kind": "data step",
+   "state": "done",
+   "title": "DNA pieces",
+   "line": "every {k}-letter piece, yes or no",
+   "glyph": "pieces",
+   "fields": [
+    [
+     "What",
+     "Each genome is cut into every piece of {k} letters. A piece and its mirror on the other strand count once."
+    ],
+    [
+     "Rule",
+     "A piece stays when at least {min_in} genomes have it and at least {min_out} lack it. Pieces found in exactly the same genomes merge into one pattern."
+    ],
+    [
+     "Tool",
+     "grm count, then grm matrix"
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "README.md",
+     "line": 169,
+     "text": "a sequence and its reverse complement count once"
+    },
+    {
+     "root": "repo",
+     "file": "README.md",
+     "line": 136,
+     "text": "| Count | `grm count --species <slug>` |"
+    },
+    {
+     "root": "repo",
+     "file": "README.md",
+     "line": 138,
+     "text": "| Features | `grm matrix --species <slug>` |"
+    }
+   ]
+  },
+  {
+   "id": "s5",
+   "kind": "data step",
+   "state": "done",
+   "title": "Split",
+   "line": "{folds} folds, an easy and a hard test",
+   "glyph": "split",
+   "fields": [
+    [
+     "Easy test",
+     "Genomes are split at random, so close relatives sit on both sides."
+    ],
+    [
+     "Hard test",
+     "Whole families of related genomes are kept out of training."
+    ],
+    [
+     "Limit",
+     "Both are splits inside one public database. Neither is external validation."
+    ],
+    [
+     "Tool",
+     "grm structure finds the families, grm learn makes the folds"
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "README.md",
+     "line": 173,
+     "text": "The lineage split holds out whole lineage clusters"
+    },
+    {
+     "root": "repo",
+     "file": "README.md",
+     "line": 137,
+     "text": "| Structure | `grm structure --species <slug>` |"
+    }
+   ]
+  },
+  {
+   "id": "s6",
+   "kind": "data step",
+   "state": "done",
+   "title": "Filter",
+   "line": "top {screen_top} patterns kept",
+   "glyph": "filter",
+   "fields": [
+    [
+     "What",
+     "Inside each training fold the patterns are ranked by how closely they follow the lab's call, and the top {screen_top} go to the forest, the boosted trees and the lasso."
+    ],
+    [
+     "Tool",
+     "grm learn"
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/screen-arms-result.md",
+     "line": 3,
+     "text": "by the chi-square statistic and keeps the top 4,000"
+    }
+   ]
+  },
+  {
+   "id": "s7",
+   "kind": "data step",
+   "state": "done",
+   "title": "Models",
+   "line": "{five} kinds, each scored alone",
+   "glyph": "models",
+   "fields": [
+    [
+     "What",
+     "A rule set, a decision tree, a random forest, boosted trees and a lasso. Each learns from the training folds alone."
+    ],
+    [
+     "Tool",
+     "grm learn"
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "README.md",
+     "line": 171,
+     "text": "The five learners are"
+    },
+    {
+     "root": "repo",
+     "file": "README.md",
+     "line": 139,
+     "text": "| Evaluate | `grm learn --species <slug>` |"
+    }
+   ]
+  },
+  {
+   "id": "s8",
+   "kind": "data step",
+   "state": "done",
+   "title": "Served model",
+   "line": "best on the easy test",
+   "glyph": "served",
+   "fields": [
+    [
+     "What",
+     "For each dataset the release serves the model with the best score on the easy test."
+    ],
+    [
+     "Tool",
+     "grm report"
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/served-pick-result.md",
+     "line": 3,
+     "text": "the learner with the best random-split balanced accuracy"
+    },
+    {
+     "root": "repo",
+     "file": "README.md",
+     "line": 141,
+     "text": "| Report | `grm report` |"
+    }
+   ]
+  },
+  {
+   "id": "s9",
+   "kind": "data step",
+   "state": "done",
+   "title": "Score",
+   "line": "{easy_median} easy, {hard_median} hard",
+   "glyph": "score",
+   "fields": [
+    [
+     "What",
+     "Median balanced accuracy of the best of {five} models: {easy_median} on the easy test over {ds_report} datasets, {hard_median} on the hard test over {ds_hard}."
+    ],
+    [
+     "Measure",
+     "Balanced accuracy is the mean of two shares: resistant genomes called right, and susceptible genomes called right."
+    ],
+    [
+     "Tool",
+     "grm report"
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "README.md",
+     "line": 12,
+     "text": "92.9% on random splits (274 datasets) and 87.7% with whole lineages held out (268 datasets)"
+    }
+   ]
+  },
+  {
+   "id": "diag",
+   "kind": "experiment",
+   "state": "done",
+   "title": "Why models miss",
+   "line": "{d0_absent} of {d0_pairs} cases point at the input",
+   "fields": [
+    [
+     "Asked",
+     "\"fix all our bad assumptions\""
+    ],
+    [
+     "Tested",
+     "Where a model misses and the gene tool AMRFinderPlus does not, why? A case is a dataset and a model with the gene tool ahead by {d0_margin} or more."
+    ],
+    [
+     "Counted",
+     "In {d0_absent} of {d0_pairs} cases no single DNA piece follows the gene tool's call. {refit_datasets} datasets were fitted again to read it."
+    ],
+    [
+     "Tool",
+     "grm learn fitted again with each fold's model saved, then a reader of those models"
+    ],
+    [
+     "Led to",
+     "Other inputs were tested first."
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/refit-result.md",
+     "line": 13,
+     "text": "So C3, the comparison of other inputs than 31-mer presence, runs first"
+    },
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan.md",
+     "line": 140,
+     "text": "\"fix all our bad assumptions\""
+    }
+   ],
+   "tools": [
+    "scripts/assumption-d0-c8",
+    "scripts/refit"
+   ]
+  },
+  {
+   "id": "cutoff",
+   "kind": "experiment",
+   "state": "done",
+   "title": "Lower class minimum",
+   "line": "no lower minimum passes",
+   "fields": [
+    [
+     "Asked",
+     "\"the 25 S to 25 R thing was one?\""
+    ],
+    [
+     "Tested",
+     "A minimum of {c1_line_a}, {c1_line_b} or {c1_line_c} genomes a class in place of {class_min}, on small cohorts drawn from large datasets."
+    ],
+    [
+     "Counted",
+     "On {c1_datasets} datasets no lower minimum passes. At {c1_line_c} a class, {c1_c_models} of {five} models meets the rule, and {c1_need} must."
+    ],
+    [
+     "Tool",
+     "grm learn with its experimental small-cohort switch"
+    ],
+    [
+     "Led to",
+     "The release keeps its minimum of {class_min}."
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/cohort-result.md",
+     "line": 11,
+     "text": "No lower line is a candidate on the 89 datasets"
+    },
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan.md",
+     "line": 160,
+     "text": "\"the 25 S to 25 R thing was one?\""
+    }
+   ],
+   "tools": [
+    "scripts/c1-cutoff"
+   ],
+   "tag": "rule kept"
+  },
+  {
+   "id": "labelsmic",
+   "kind": "experiment",
+   "state": "waiting",
+   "title": "Labels and MIC",
+   "line": "MIC part read, labels part not run",
+   "fields": [
+    [
+     "Asked",
+     "\"fix all our bad assumptions\""
+    ],
+    [
+     "Tested",
+     "Two parts. MIC: does the model that predicts the MIC do as well with whole families kept out? Labels: does keeping intermediate as its own class help?"
+    ],
+    [
+     "Counted",
+     "MIC part: the model's lead over guessing the training median is under {c6_margin} on {c6_small_lead} of {c6_datasets} datasets. It is better on {c6_better} and worse on {c6_worse}. The labels part has not run."
+    ],
+    [
+     "Tool",
+     "grm learn with its experimental MIC switch"
+    ],
+    [
+     "Led to",
+     "The site is to show the MIC model's hard-test result. The pick waits for the labels part to be ruled."
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/mic-comparison.md",
+     "line": 11,
+     "text": "so the condition of part B's release rule holds"
+    },
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan-corrections.md",
+     "line": 907,
+     "text": "block C6 part A included"
+    },
+    {
+     "root": "lead",
+     "file": "asmplan/RULINGS-20261124.md",
+     "line": 637,
+     "text": "has not run"
+    },
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan.md",
+     "line": 240,
+     "text": "\"fix all our bad assumptions\""
+    }
+   ],
+   "tools": [
+    "scripts/c6-mic"
+   ],
+   "tag": "part run"
+  },
+  {
+   "id": "capx",
+   "kind": "experiment",
+   "state": "done",
+   "title": "Higher genome cap",
+   "line": "{cap_arm} a species does not pass",
+   "fields": [
+    [
+     "Asked",
+     "\"utilize all data sets?\""
+    ],
+    [
+     "Tested",
+     "Up to {cap_arm} genomes a species in place of {cap}, scored on the same test genomes."
+    ],
+    [
+     "Counted",
+     "No model passes. The random forest is the same on {c2_rf_same}, better on {c2_rf_better} and worse on {c2_rf_worse} of {c2_entered} datasets."
+    ],
+    [
+     "Tool",
+     "grm arm, which fits one change at a time"
+    ],
+    [
+     "Led to",
+     "The release keeps its cap of {cap}."
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/cap-arms-result.md",
+     "line": 13,
+     "text": "0 of the 5 learners carry the change"
+    },
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan.md",
+     "line": 176,
+     "text": "\"utilize all data sets?\""
+    }
+   ],
+   "tools": [
+    "scripts/c2-cap"
+   ],
+   "tag": "rule kept"
+  },
+  {
+   "id": "inputs",
+   "kind": "experiment",
+   "state": "done",
+   "title": "Other inputs",
+   "line": "{c3_pass} of {c3_arms} passes: AMRFinderPlus calls",
+   "fields": [
+    [
+     "Asked",
+     "\"so we only did 31-mers?\""
+    ],
+    [
+     "Why first",
+     "A diagnostic counted why models miss where the gene tool AMRFinderPlus does not. In {d0_absent} of {d0_pairs} cases no single DNA piece follows the gene tool's call."
+    ],
+    [
+     "Tested",
+     "Five other ways to read a genome against {k}-letter pieces: longer joined stretches, piece counts, protein pieces, the gene tool's calls alone, and those calls added to the pieces."
+    ],
+    [
+     "Counted",
+     "The gene tool's calls alone pass. The random forest is better on {c3_rf_better} and worse on {c3_rf_worse} of {c3_entered} datasets, in {c3_species} species."
+    ],
+    [
+     "Tool",
+     "grm learn with its experimental input switch, and AMRFinderPlus 4.2.7"
+    ],
+    [
+     "Led to",
+     "A candidate for the one release change. It must pass again on the datasets with an intermediate call."
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/input-arms-result.md",
+     "line": 13,
+     "text": "one arm of the five meets conditions 1 to 5"
+    },
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan-corrections.md",
+     "line": 793,
+     "text": "That arm becomes a candidate for the one release change below"
+    },
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan.md",
+     "line": 192,
+     "text": "\"so we only did 31-mers?\""
+    },
+    {
+     "root": "repo",
+     "file": "docs/refit-result.md",
+     "line": 13,
+     "text": "So C3, the comparison of other inputs than 31-mer presence, runs first"
+    }
+   ],
+   "tools": [
+    "scripts/c3-inputs"
+   ],
+   "tag": "candidate"
+  },
+  {
+   "id": "screen",
+   "kind": "experiment",
+   "state": "done",
+   "title": "Other filters",
+   "line": "none of {c4_arms} passes",
+   "fields": [
+    [
+     "Asked",
+     "\"fix all our bad assumptions\""
+    ],
+    [
+     "Tested",
+     "A filter adjusted for families of related genomes, at two sizes, and a lower floor for rare pieces."
+    ],
+    [
+     "Counted",
+     "None passes. At the larger size the random forest is worse on {c4_wide_worse} and better on {c4_wide_better} of {c4_entered} datasets."
+    ],
+    [
+     "Tool",
+     "grm learn with its experimental filter switch"
+    ],
+    [
+     "Led to",
+     "The release keeps its filter."
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/screen-arms-result.md",
+     "line": 15,
+     "text": "No arm meets conditions 1 and 2"
+    },
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan.md",
+     "line": 208,
+     "text": "\"fix all our bad assumptions\""
+    }
+   ],
+   "tools": [
+    "scripts/c4-screen"
+   ],
+   "tag": "rule kept"
+  },
+  {
+   "id": "settings",
+   "kind": "experiment",
+   "state": "done",
+   "title": "Tuned settings",
+   "line": "neither of {c5_arms} changes passes",
+   "fields": [
+    [
+     "Asked",
+     "\"build hyperparameters\""
+    ],
+    [
+     "Tested",
+     "A search over each model's settings inside the training folds, and a moved cutoff for the resistant call."
+    ],
+    [
+     "Counted",
+     "Neither passes on {c5_entered} datasets."
+    ],
+    [
+     "Tool",
+     "grm learn with its experimental settings switch"
+    ],
+    [
+     "Led to",
+     "The release keeps its settings and its cutoff."
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/settings-arms-result.md",
+     "line": 15,
+     "text": "neither arm meets conditions 1 and 2"
+    },
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan.md",
+     "line": 224,
+     "text": "\"build hyperparameters\""
+    }
+   ],
+   "tools": [
+    "scripts/c5-settings"
+   ],
+   "tag": "rule kept"
+  },
+  {
+   "id": "outside",
+   "kind": "experiment",
+   "state": "done",
+   "title": "Outside models",
+   "line": "two pass, neither is picked",
+   "fields": [
+    [
+     "Asked",
+     "\"more SOTA techniques\""
+    ],
+    [
+     "Tested",
+     "XGBoost and LightGBM against GRM's boosted trees, and an elastic net on longer joined stretches against GRM's lasso, on the same folds."
+    ],
+    [
+     "Counted",
+     "LightGBM is better on {c7_lgb_better} and worse on {c7_lgb_worse} of {c7_entered} datasets. The elastic net is better on {c7_en_better} and worse on {c7_en_worse}. XGBoost fails with whole studies kept out."
+    ],
+    [
+     "Tool",
+     "XGBoost 3.0.5, LightGBM 4.6.0 and scikit-learn 1.7.2, fed by grm export"
+    ],
+    [
+     "Led to",
+     "Neither is picked: a pick must be better on more than half of its datasets. Both stay in the last test."
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/outside-learners-result.md",
+     "line": 15,
+     "text": "`lightgbm` and `elasticnet` meet conditions 1 to 5. `xgboost` meets 1 to 4 and not 5"
+    },
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan-corrections.md",
+     "line": 862,
+     "text": "So neither is picked."
+    },
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan-corrections.md",
+     "line": 864,
+     "text": "Both candidates stay arms of the later-records test"
+    },
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan.md",
+     "line": 256,
+     "text": "\"more SOTA techniques\""
+    }
+   ],
+   "tools": [
+    "scripts/c7-outside"
+   ],
+   "tag": "not picked",
+   "mark": "kept"
+  },
+  {
+   "id": "stable",
+   "kind": "experiment",
+   "state": "done",
+   "title": "Stability",
+   "line": "folds share few chosen features",
+   "fields": [
+    [
+     "Asked",
+     "\"there were interpretability elements I wanted to solve\""
+    ],
+    [
+     "Tested",
+     "Whether a model chooses the same features from one fold of a dataset to the next, read from the saved fold models."
+    ],
+    [
+     "Counted",
+     "On the hard test two folds of one dataset share a median {ov_min} to {ov_max} of their chosen features, by model."
+    ],
+    [
+     "Tool",
+     "A reader of the saved fold models"
+    ],
+    [
+     "Led to",
+     "Nothing alone. It is read beside each change."
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/refit-result.md",
+     "line": 21,
+     "text": "The median overlap is 0.050 for `scm`"
+    },
+    {
+     "root": "repo",
+     "file": "docs/refit-result.md",
+     "line": 220,
+     "text": "C8 decides nothing alone"
+    },
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan.md",
+     "line": 272,
+     "text": "\"there were interpretability elements I wanted to solve\""
+    }
+   ],
+   "tools": [
+    "scripts/assumption-d0-c8"
+   ],
+   "tag": "reading",
+   "mark": "meas"
+  },
+  {
+   "id": "pickcmp",
+   "kind": "experiment",
+   "state": "done",
+   "title": "Pick inside each fold",
+   "line": "does not pass",
+   "fields": [
+    [
+     "Asked",
+     "\"fix all our bad assumptions\""
+    ],
+    [
+     "Tested",
+     "The best model picked inside each training fold, in place of the release's pick on the easy test."
+    ],
+    [
+     "Counted",
+     "Better on {c9_better}, worse on {c9_worse} and the same on {c9_same} of {c9_entered} datasets."
+    ],
+    [
+     "Tool",
+     "grm learn with its experimental pick switch"
+    ],
+    [
+     "Led to",
+     "The release keeps its pick."
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/served-pick-result.md",
+     "line": 13,
+     "text": "so the release's pick does not change"
+    },
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan.md",
+     "line": 288,
+     "text": "\"fix all our bad assumptions\""
+    }
+   ],
+   "tools": [
+    "scripts/c9-pick"
+   ],
+   "tag": "rule kept"
+  },
+  {
+   "id": "mrun",
+   "kind": "run",
+   "state": "running",
+   "title": "Intermediate calls",
+   "line": "{m_c3} datasets, not read yet",
+   "fields": [
+    [
+     "Why",
+     "{m_datasets} of the {ds_report} datasets hold a genome with an intermediate call beside a resistant or a susceptible one. No comparison had been run on them, and {m_c3} of them belong to the inputs comparison."
+    ],
+    [
+     "Rule",
+     "Each is read two ways: on every scored genome, and without the genomes that have an intermediate call. A claim stands only if both agree."
+    ],
+    [
+     "Needs",
+     "If all {m_c3_a} of the candidate's datasets enter, boosted trees needs {need_gbt} of them better and lasso {need_lasso}."
+    ],
+    [
+     "Now",
+     "It stopped once at its own check on the first species. The cause was found, and it started again on 27 Nov. Its result is not read yet."
+    ],
+    [
+     "Led to",
+     "The pick."
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan-corrections.md",
+     "line": 927,
+     "text": "C3 on 35 with 33 of them in set A"
+    },
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan-corrections.md",
+     "line": 749,
+     "text": "A claim on a dataset of M stands only if it holds both ways."
+    },
+    {
+     "root": "lead",
+     "file": "asmplan/RULINGS-20261124.md",
+     "line": 2449,
+     "text": "No dataset of M has been fitted, and no score of one has been read."
+    },
+    {
+     "root": "lead",
+     "file": "asmplan/RULINGS-20261124.md",
+     "line": 2499,
+     "text": "The run on the check species started at 02:44:29Z"
+    }
+   ],
+   "tag": "running",
+   "mark": "run"
+  },
+  {
+   "id": "pick",
+   "kind": "ruling",
+   "state": "waiting",
+   "title": "Pick of one change",
+   "line": "after every comparison",
+   "fields": [
+    [
+     "Rule",
+     "The lead picks one change at most. It must be better on more than half of its datasets, in both readings."
+    ],
+    [
+     "Waits on",
+     "The run on the datasets with an intermediate call, and every comparison ruled."
+    ],
+    [
+     "Led to",
+     "The last test. The release has not changed."
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan-corrections.md",
+     "line": 872,
+     "text": "The lead picks one candidate at most."
+    },
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan-corrections.md",
+     "line": 850,
+     "text": "A candidate must also be better on more than half of the datasets"
+    },
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan-corrections.md",
+     "line": 907,
+     "text": "The pick comes before the later-records test"
+    },
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan-corrections.md",
+     "line": 793,
+     "text": "The release does not change now."
+    }
+   ],
+   "tag": "waiting",
+   "mark": "wait"
+  },
+  {
+   "id": "last",
+   "kind": "run",
+   "state": "waiting",
+   "title": "Last test",
+   "line": "{t1_records} later lab records",
+   "fields": [
+    [
+     "What",
+     "{t1_records} lab records added to BV-BRC after the release's download, set aside and not opened."
+    ],
+    [
+     "In",
+     "{t1_datasets} of the {ds_report} datasets have enough later labels to score."
+    ],
+    [
+     "Rule",
+     "Scored once, after every comparison is ruled: the release's rule and each change that passed."
+    ],
+    [
+     "Limit",
+     "Later records of the same public database. Never external validation."
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan.md",
+     "line": 308,
+     "text": "Once, after every block is ruled"
+    },
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan.md",
+     "line": 311,
+     "text": "never external validation"
+    }
+   ],
+   "tag": "waiting",
+   "mark": "wait"
+  },
+  {
+   "id": "site",
+   "kind": "page",
+   "state": "waiting",
+   "title": "Site",
+   "line": "MIC hard-test result to add",
+   "fields": [
+    [
+     "Ruled",
+     "The site shows the MIC model's hard-test result beside the easy-test one."
+    ],
+    [
+     "When",
+     "In the one release change, not before."
+    ]
+   ],
+   "src": [
+    {
+     "root": "lead",
+     "file": "asmplan/RULINGS-20261124.md",
+     "line": 67,
+     "text": "the site shows the lineage EA-exact beside the random one, in the one release change"
+    }
+   ],
+   "tag": "waiting",
+   "mark": "wait"
+  },
+  {
+   "id": "plan",
+   "kind": "page",
+   "state": "done",
+   "title": "Assumption plan",
+   "line": "{n_assumptions} assumptions listed",
+   "fields": [
+    [
+     "Asked",
+     "\"fix all our bad assumptions\""
+    ],
+    [
+     "Counted",
+     "{n_undefended} of the {n_assumptions} assumptions had neither a reason nor a measurement behind them."
+    ],
+    [
+     "Rule",
+     "Fixed on 21 Nov 2026, before any fit."
+    ],
+    [
+     "Led to",
+     "One diagnostic, {n_comparisons} comparisons and one last test."
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan.md",
+     "line": 21,
+     "text": "The inventory holds 22 assumptions"
+    },
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan.md",
+     "line": 3,
+     "text": "before any fit"
+    }
+   ]
+  },
+  {
+   "id": "d1",
+   "kind": "data step",
+   "state": "done",
+   "title": "Lab records",
+   "count": "records",
+   "fields": [
+    [
+     "What",
+     "Every resistance test record in the download from BV-BRC, the public database of bacterial genomes."
+    ],
+    [
+     "Tool",
+     "GRM's own program, at its curation step"
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/release-summary.md",
+     "line": 260,
+     "text": "1,285,111 lab records"
+    }
+   ]
+  },
+  {
+   "id": "d2",
+   "kind": "data step",
+   "state": "done",
+   "title": "Genomes those records cover",
+   "count": "genomes",
+   "fields": [
+    [
+     "What",
+     "Each genome counted once, however many records name it."
+    ],
+    [
+     "Tool",
+     "GRM's own program, at its curation step"
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/release-summary.md",
+     "line": 260,
+     "text": "Those records name 123,503 genomes"
+    }
+   ]
+  },
+  {
+   "id": "d3",
+   "kind": "data step",
+   "state": "done",
+   "title": "Genomes that pass quality checks",
+   "count": "g_pass",
+   "note": "{g_fail} fail a check, {g_no_meta} have no metadata",
+   "fields": [
+    [
+     "Left out",
+     "{g_fail} genomes fail a check and {g_no_meta} have no metadata."
+    ],
+    [
+     "Why they fail",
+     "{g_fail_quality} poor quality in BV-BRC, {g_fail_complete} incomplete, {g_fail_contam} contaminated, {g_fail_species} another species than filed, {g_fail_length} of an odd length for the species, {g_fail_nospecies} with no species."
+    ],
+    [
+     "Tool",
+     "GRM's own program, at its curation step"
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/release-summary.md",
+     "line": 262,
+     "text": "118,992 genomes pass"
+    }
+   ]
+  },
+  {
+   "id": "d4",
+   "kind": "data step",
+   "state": "done",
+   "title": "Genome-and-drug pairs",
+   "count": "pairs",
+   "note": "{rec_by_name} records dropped by name, {rec_no_call} with no call and no MIC",
+   "fields": [
+    [
+     "What",
+     "The records left on passing genomes join into one pair for each genome and drug."
+    ],
+    [
+     "Left out",
+     "{rec_by_name} records dropped by name: {rec_drug_class} name a drug class, {rec_no_antibiotic} name something that is no antibiotic and {rec_unresolved} have a name that is not resolved. {rec_no_call} records on passing genomes have no call and no MIC."
+    ],
+    [
+     "Tool",
+     "GRM's own program, at its curation step"
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/release-summary.md",
+     "line": 268,
+     "text": "1,063,628 pairs"
+    }
+   ]
+  },
+  {
+   "id": "d5",
+   "kind": "data step",
+   "state": "done",
+   "title": "Pairs with a reported R or S call",
+   "count": "p_reported",
+   "note": "{p_mic} labelled from an MIC, never trained on",
+   "fields": [
+    [
+     "Left out",
+     "{p_mic} pairs have a label worked out from an MIC, {p_nolabel} allow no label, {p_intermediate} are intermediate only and {p_conflict} conflict."
+    ],
+    [
+     "Rule",
+     "A label worked out from an MIC trains no model and counts in no score."
+    ],
+    [
+     "Tool",
+     "GRM's own program, at its curation step"
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/release-summary.md",
+     "line": 270,
+     "text": "611,826 have a reported resistant or susceptible call"
+    }
+   ]
+  },
+  {
+   "id": "d6",
+   "kind": "data step",
+   "state": "done",
+   "title": "Datasets with {class_min} resistant and {class_min} susceptible",
+   "count": "ds_curated",
+   "note": "one species and one antibiotic each",
+   "fields": [
+    [
+     "Rule",
+     "A species and a drug make a dataset when at least {class_min} genomes have a resistant call and {class_min} a susceptible one."
+    ],
+    [
+     "Tool",
+     "GRM's own program, at its curation step"
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/release-summary.md",
+     "line": 272,
+     "text": "277 datasets"
+    }
+   ]
+  },
+  {
+   "id": "d7",
+   "kind": "data step",
+   "state": "done",
+   "title": "Genomes in the reports",
+   "count": "g_reports",
+   "note": "at most {cap} a species, {sp_at_cap} of {species} species at that cap",
+   "fields": [
+    [
+     "Left out",
+     "Passing genomes with no reported resistant or susceptible call on a drug of one of their species' datasets, then genomes past the cap. The release's index counts neither."
+    ],
+    [
+     "Rule",
+     "At most {cap} genomes a species. {sp_at_cap} of the {species} species sit at that cap."
+    ],
+    [
+     "Tool",
+     "GRM's own program, at its report step"
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/release-summary.md",
+     "line": 276,
+     "text": "23,757 genomes in all"
+    }
+   ]
+  },
+  {
+   "id": "d8",
+   "kind": "data step",
+   "state": "done",
+   "title": "Datasets with a report",
+   "count": "ds_report",
+   "note": "{ds_short} fall under {class_min} on one side among the genomes kept",
+   "fields": [
+    [
+     "Rule",
+     "The rule of {class_min} and {class_min} runs again on the genomes kept. {ds_short} of the {ds_curated} datasets fall under it on one side."
+    ],
+    [
+     "Tool",
+     "GRM's own program, at its report step"
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/release-summary.md",
+     "line": 278,
+     "text": "274 of the 277 datasets have a report"
+    }
+   ]
+  },
+  {
+   "id": "as16",
+   "kind": "assumption",
+   "state": "running",
+   "step": "s1",
+   "title": "Only R and S calls count",
+   "line": "its test is running",
+   "tag": "running",
+   "mark": "run",
+   "from": "made here",
+   "alts": [
+    [
+     "intermediate as its own class",
+     "open"
+    ],
+    [
+     "intermediate as resistant",
+     "open"
+    ]
+   ],
+   "fields": [
+    [
+     "Choice",
+     "A label is the lab's reported call. Susceptible with intermediate counts as susceptible, intermediate with resistant as resistant, and intermediate alone is set aside."
+    ],
+    [
+     "Came from",
+     "Made here, with no outside source."
+    ],
+    [
+     "Before the plan",
+     "No reason and no measure. The pairs that mix calls were counted and never compared."
+    ],
+    [
+     "Now",
+     "The run on the {m_c3} datasets with an intermediate call started again on 27 Nov. It is not read yet."
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan.md",
+     "line": 40,
+     "text": "Reported R and S only"
+    }
+   ],
+   "test": "labelsmic",
+   "bare": true
+  },
+  {
+   "id": "as17",
+   "kind": "assumption",
+   "state": "done",
+   "step": "s1",
+   "title": "MIC-read labels are not scored",
+   "line": "stated, never measured",
+   "tag": "stated",
+   "mark": "stated",
+   "from": "made here",
+   "alts": [],
+   "fields": [
+    [
+     "Choice",
+     "When a pair has a measured MIC and no call, a cutoff is fitted on the whole cohort to read a label. That label trains no model and counts in no score."
+    ],
+    [
+     "Came from",
+     "Made here, with no outside source."
+    ],
+    [
+     "Before the plan",
+     "Stated in the code. {p_mic} pairs carry such a label, and none is scored."
+    ],
+    [
+     "Led to",
+     "No comparison tests it."
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan.md",
+     "line": 41,
+     "text": "A label read from an MIC is never scored"
+    }
+   ]
+  },
+  {
+   "id": "as01",
+   "kind": "assumption",
+   "state": "done",
+   "step": "s2",
+   "title": "{class_min} genomes of each class",
+   "line": "no lower minimum passes",
+   "tag": "rule kept",
+   "mark": "kept",
+   "from": "made here",
+   "alts": [
+    [
+     "{c1_line_a}",
+     "no"
+    ],
+    [
+     "{c1_line_b}",
+     "no"
+    ],
+    [
+     "{c1_line_c}",
+     "no"
+    ]
+   ],
+   "fields": [
+    [
+     "Choice",
+     "A species and an antibiotic make a dataset when at least {class_min} genomes are resistant and {class_min} susceptible."
+    ],
+    [
+     "Came from",
+     "Made here. The old app asked for {old_min} records of each."
+    ],
+    [
+     "Before the plan",
+     "No reason on a page and no measure."
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan.md",
+     "line": 25,
+     "text": "25 resistant and 25 susceptible genomes per dataset"
+    }
+   ],
+   "test": "cutoff",
+   "bare": true
+  },
+  {
+   "id": "as02",
+   "kind": "assumption",
+   "state": "done",
+   "step": "s2",
+   "title": "One number at two gates",
+   "line": "tested with the minimum",
+   "tag": "rule kept",
+   "mark": "kept",
+   "from": "made here",
+   "alts": [],
+   "fields": [
+    [
+     "Choice",
+     "The same {class_min} decides which datasets are fetched and, after download, which are scored. No separate rule says what is reported."
+    ],
+    [
+     "Came from",
+     "Made here, with no outside source."
+    ],
+    [
+     "Before the plan",
+     "No reason on a page and no measure."
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan.md",
+     "line": 26,
+     "text": "The 25 is one number at two inclusion gates"
+    }
+   ],
+   "test": "cutoff",
+   "bare": true
+  },
+  {
+   "id": "as21",
+   "kind": "assumption",
+   "state": "done",
+   "step": "s3",
+   "title": "Four quality checks",
+   "line": "no reason given, never measured",
+   "tag": "stated",
+   "mark": "stated",
+   "from": "made here",
+   "alts": [],
+   "fields": [
+    [
+     "Choice",
+     "A genome stays with at most {qc_contigs} separate stretches, completeness of {qc_complete} or more, contamination of {qc_contam} or less, and a length within {qc_len} of its species."
+    ],
+    [
+     "Came from",
+     "Made here, with no outside source."
+    ],
+    [
+     "Before the plan",
+     "Stated on a page, with no reason and no measure."
+    ],
+    [
+     "Counted",
+     "{g_fail} of {genomes} genomes fail a check."
+    ],
+    [
+     "Led to",
+     "No comparison tests it."
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan.md",
+     "line": 45,
+     "text": "QC: at most 1,000 contigs"
+    }
+   ]
+  },
+  {
+   "id": "as03",
+   "kind": "assumption",
+   "state": "done",
+   "step": "s3",
+   "title": "At most {cap} genomes a species",
+   "line": "{cap_arm} a species does not pass",
+   "tag": "rule kept",
+   "mark": "kept",
+   "from": "made here",
+   "alts": [
+    [
+     "{cap_low}",
+     "no"
+    ],
+    [
+     "{cap_mid}",
+     "no"
+    ],
+    [
+     "{cap_arm}",
+     "no"
+    ]
+   ],
+   "fields": [
+    [
+     "Choice",
+     "The cap is on the species, so every antibiotic of a species shares the same genomes."
+    ],
+    [
+     "Came from",
+     "Made here, with no outside source."
+    ],
+    [
+     "Before the plan",
+     "Measured on {h1_species} species. {cap_low} a species was worse on {cap_low_worse} of {h1_small} datasets. {cap_mid} was better on {cap_mid_better} and worse on {cap_mid_worse} of {h1_n}."
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan.md",
+     "line": 27,
+     "text": "At most 2,000 genomes per species, not per dataset"
+    }
+   ],
+   "test": "capx"
+  },
+  {
+   "id": "as04",
+   "kind": "assumption",
+   "state": "done",
+   "step": "s3",
+   "title": "Which genomes the cap keeps",
+   "line": "measured before the plan, no direction",
+   "tag": "measured",
+   "mark": "meas",
+   "from": "made here",
+   "alts": [
+    [
+     "a draw by sequence type",
+     "no"
+    ]
+   ],
+   "fields": [
+    [
+     "Choice",
+     "Past the cap, genomes are ranked so that a call in the smaller class counts more, and the top {cap} stay."
+    ],
+    [
+     "Came from",
+     "Made here, with no outside source."
+    ],
+    [
+     "Before the plan",
+     "Measured on {h1_species} species. A draw that takes each sequence type in turn was better on {grr_better} and worse on {grr_worse} of {h1_small} datasets."
+    ],
+    [
+     "Led to",
+     "Not run again in the plan, since the earlier measure showed no direction."
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan.md",
+     "line": 28,
+     "text": "Capped genomes ranked by summed 1/(class size)"
+    },
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan.md",
+     "line": 177,
+     "text": "The ranking (A4) is not rerun"
+    }
+   ]
+  },
+  {
+   "id": "as05",
+   "kind": "assumption",
+   "state": "done",
+   "step": "s4",
+   "title": "Pieces of {k} letters",
+   "line": "shorter pieces measured, no direction shown",
+   "tag": "measured",
+   "mark": "meas",
+   "from": "from Kover and the old app",
+   "alts": [
+    [
+     "{k_short} letters",
+     "no"
+    ],
+    [
+     "{k_mid} letters",
+     "no"
+    ]
+   ],
+   "fields": [
+    [
+     "Choice",
+     "Every stretch of {k} letters in a genome is one piece."
+    ],
+    [
+     "Came from",
+     "The default of Kover, an earlier tool that learns rules from DNA pieces, and of the old app."
+    ],
+    [
+     "Before the plan",
+     "Measured. {k_short} letters was better on {k_short_better} and worse on {k_short_worse} of {h1_n} datasets. {k_mid} letters was better on {k_mid_better} and worse on {k_mid_worse}."
+    ],
+    [
+     "Led to",
+     "Not run again in the plan."
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan.md",
+     "line": 29,
+     "text": "k = 31"
+    },
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan.md",
+     "line": 193,
+     "text": "k 21 and 25 are not rerun"
+    }
+   ]
+  },
+  {
+   "id": "as06",
+   "kind": "assumption",
+   "state": "done",
+   "step": "s4",
+   "title": "Yes or no, never a count",
+   "line": "{c3_pass} of {c3_arms} other inputs passes",
+   "tag": "candidate",
+   "mark": "cand",
+   "from": "from Kover",
+   "alts": [
+    [
+     "joined stretches",
+     "no"
+    ],
+    [
+     "piece counts",
+     "no"
+    ],
+    [
+     "protein pieces",
+     "no"
+    ],
+    [
+     "gene tool's calls",
+     "pass"
+    ],
+    [
+     "calls and pieces",
+     "no"
+    ]
+   ],
+   "fields": [
+    [
+     "Choice",
+     "A piece and its mirror on the other strand are one piece. The table records if a genome has it, never how many times."
+    ],
+    [
+     "Came from",
+     "Kover."
+    ],
+    [
+     "Before the plan",
+     "No reason on a page and no measure."
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan.md",
+     "line": 30,
+     "text": "Canonical k-mers, presence only, no counts"
+    }
+   ],
+   "test": "inputs",
+   "bare": true
+  },
+  {
+   "id": "as07",
+   "kind": "assumption",
+   "state": "done",
+   "step": "s4",
+   "title": "Identical pieces merge",
+   "line": "stated, never measured",
+   "tag": "stated",
+   "mark": "stated",
+   "from": "made here",
+   "alts": [],
+   "fields": [
+    [
+     "Choice",
+     "Pieces found in exactly the same genomes become one pattern, so a model sees each column of yes and no once."
+    ],
+    [
+     "Came from",
+     "Made here, with no outside source."
+    ],
+    [
+     "Before the plan",
+     "Stated: for a model that reads yes and no, the merge loses nothing. Never measured."
+    ],
+    [
+     "Led to",
+     "No comparison tests it."
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan.md",
+     "line": 31,
+     "text": "Identical presence patterns become one feature"
+    }
+   ]
+  },
+  {
+   "id": "as08",
+   "kind": "assumption",
+   "state": "done",
+   "step": "s4",
+   "title": "Rare pieces are dropped",
+   "line": "a fixed floor does not pass",
+   "tag": "rule kept",
+   "mark": "kept",
+   "from": "from Kover, and made here",
+   "alts": [
+    [
+     "a fixed floor",
+     "no"
+    ]
+   ],
+   "fields": [
+    [
+     "Choice",
+     "A piece in fewer than {min_in} genomes is dropped. Inside a fit, a pattern also needs a minimum number of genomes, and that minimum grows with the dataset."
+    ],
+    [
+     "Came from",
+     "Kover for the first floor. The second was made here."
+    ],
+    [
+     "Before the plan",
+     "No reason on a page and no measure."
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan.md",
+     "line": 32,
+     "text": "a k-mer in under 2 genomes is dropped"
+    }
+   ],
+   "test": "screen",
+   "bare": true
+  },
+  {
+   "id": "as20",
+   "kind": "assumption",
+   "state": "not taken",
+   "step": "s5",
+   "title": "How families are cut",
+   "line": "no comparison tests it",
+   "tag": "not tested",
+   "mark": "none",
+   "from": "made here",
+   "alts": [],
+   "fields": [
+    [
+     "Choice",
+     "Each genome gets a sketch, its {sketch} smallest piece values. Genomes with close sketches join into families. The cut is the coarsest one with at least {lin_min} families and the largest at {lin_big} of the genomes or less."
+    ],
+    [
+     "Came from",
+     "Made here, with no outside source."
+    ],
+    [
+     "Before the plan",
+     "No reason on a page and no measure."
+    ],
+    [
+     "Led to",
+     "No comparison in the plan tests it. Every hard-test score rests on these families."
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan.md",
+     "line": 44,
+     "text": "Lineages: Mash on a 1,000-value sketch"
+    }
+   ],
+   "bare": true
+  },
+  {
+   "id": "as22",
+   "kind": "assumption",
+   "state": "done",
+   "step": "s5",
+   "title": "One draw of the folds",
+   "line": "measured over other draws",
+   "tag": "measured",
+   "mark": "meas",
+   "from": "made here",
+   "alts": [],
+   "fields": [
+    [
+     "Choice",
+     "{folds} outer folds and {inner} inner folds, drawn once."
+    ],
+    [
+     "Came from",
+     "Made here, with no outside source."
+    ],
+    [
+     "Before the plan",
+     "Measured. Over other draws the hard-test score has a standard deviation of {sd_min} to {sd_max}, by model."
+    ],
+    [
+     "Led to",
+     "Not run again in the plan."
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan.md",
+     "line": 46,
+     "text": "One fold draw: 5 outer, 3 inner, seed 42"
+    }
+   ]
+  },
+  {
+   "id": "as09",
+   "kind": "assumption",
+   "state": "done",
+   "step": "s6",
+   "title": "Top {screen_top} patterns kept",
+   "line": "neither adjusted filter passes",
+   "tag": "rule kept",
+   "mark": "kept",
+   "from": "made here",
+   "alts": [
+    [
+     "adjusted for families",
+     "no"
+    ],
+    [
+     "adjusted, top {screen_wide}",
+     "no"
+    ]
+   ],
+   "fields": [
+    [
+     "Choice",
+     "Inside each fit the patterns are ranked by how closely they follow the lab's call. The forest, the boosted trees and the lasso see the top {screen_top}. The ranking does not adjust for families."
+    ],
+    [
+     "Came from",
+     "Made here, with no outside source."
+    ],
+    [
+     "Before the plan",
+     "The size was measured: a smaller filter was worse on {screen_low_worse} of {h1_n} datasets. An adjustment for families was never measured. A median dataset has {median_patterns} patterns."
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan.md",
+     "line": 33,
+     "text": "top 4,000 features by a 2x2 chi-square"
+    }
+   ],
+   "test": "screen"
+  },
+  {
+   "id": "as10",
+   "kind": "assumption",
+   "state": "done",
+   "step": "s7",
+   "title": "Rule set: at most {scm_rules} rules",
+   "line": "a search of settings does not pass",
+   "tag": "rule kept",
+   "mark": "kept",
+   "from": "from Kover, changed here",
+   "alts": [
+    [
+     "a search of {search_n} settings",
+     "no"
+    ]
+   ],
+   "fields": [
+    [
+     "Choice",
+     "The rule set may use up to {scm_rules} rules, where Kover's default is {kover_rules}. Its other settings are chosen inside each fit."
+    ],
+    [
+     "Came from",
+     "Kover, except the number of rules."
+    ],
+    [
+     "Before the plan",
+     "Measured against Kover itself on {kover_ds} datasets."
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan.md",
+     "line": 34,
+     "text": "SCM: at most 6 rules"
+    }
+   ],
+   "test": "settings"
+  },
+  {
+   "id": "as11",
+   "kind": "assumption",
+   "state": "done",
+   "step": "s7",
+   "title": "Decision tree: depth",
+   "line": "a search of settings does not pass",
+   "tag": "rule kept",
+   "mark": "kept",
+   "from": "made here",
+   "alts": [
+    [
+     "a search of {search_n} settings",
+     "no"
+    ]
+   ],
+   "fields": [
+    [
+     "Choice",
+     "A depth of up to {cart_depth} levels, chosen by the inner folds."
+    ],
+    [
+     "Came from",
+     "Made here, with no outside source."
+    ],
+    [
+     "Before the plan",
+     "Measured on made-up cohorts only."
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan.md",
+     "line": 35,
+     "text": "CART: depth 1 to 8 by inner folds"
+    }
+   ],
+   "test": "settings"
+  },
+  {
+   "id": "as12",
+   "kind": "assumption",
+   "state": "done",
+   "step": "s7",
+   "title": "Random forest: fixed settings",
+   "line": "a search of settings does not pass",
+   "tag": "rule kept",
+   "mark": "kept",
+   "from": "made here",
+   "alts": [
+    [
+     "a search of {search_n} settings",
+     "no"
+    ]
+   ],
+   "fields": [
+    [
+     "Choice",
+     "{rf_trees} trees with fixed settings. Only the filter is chosen inside the fit."
+    ],
+    [
+     "Came from",
+     "Made here, with no outside source."
+    ],
+    [
+     "Before the plan",
+     "No measure on real genomes."
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan.md",
+     "line": 36,
+     "text": "Forest: 200 trees"
+    }
+   ],
+   "test": "settings",
+   "bare": true
+  },
+  {
+   "id": "as13",
+   "kind": "assumption",
+   "state": "done",
+   "step": "s7",
+   "title": "Boosted trees: fixed settings",
+   "line": "a search of settings does not pass",
+   "tag": "rule kept",
+   "mark": "kept",
+   "from": "made here",
+   "alts": [
+    [
+     "a search of {search_n} settings",
+     "no"
+    ]
+   ],
+   "fields": [
+    [
+     "Choice",
+     "Fixed settings. The rounds stop early on {gbt_hold} of the training genomes kept aside."
+    ],
+    [
+     "Came from",
+     "Made here, with no outside source."
+    ],
+    [
+     "Before the plan",
+     "Measured on made-up cohorts only."
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan.md",
+     "line": 37,
+     "text": "Boosted trees: fixed settings"
+    }
+   ],
+   "test": "settings"
+  },
+  {
+   "id": "as14",
+   "kind": "assumption",
+   "state": "done",
+   "step": "s7",
+   "title": "Lasso: penalty",
+   "line": "a search of settings does not pass",
+   "tag": "rule kept",
+   "mark": "kept",
+   "from": "made here",
+   "alts": [
+    [
+     "a search of {search_n} settings",
+     "no"
+    ]
+   ],
+   "fields": [
+    [
+     "Choice",
+     "The penalty comes from a path of {lasso_path} values, with at most {lasso_max} patterns in the model."
+    ],
+    [
+     "Came from",
+     "Made here, with no outside source."
+    ],
+    [
+     "Before the plan",
+     "Measured on made-up cohorts only."
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan.md",
+     "line": 38,
+     "text": "Lasso: penalty from a 30-point path"
+    }
+   ],
+   "test": "settings"
+  },
+  {
+   "id": "as15",
+   "kind": "assumption",
+   "state": "done",
+   "step": "s7",
+   "title": "Resistant at {call_cut} or more",
+   "line": "a chosen cutoff does not pass",
+   "tag": "rule kept",
+   "mark": "kept",
+   "from": "made here",
+   "alts": [
+    [
+     "a cutoff chosen inside the fit",
+     "no"
+    ]
+   ],
+   "fields": [
+    [
+     "Choice",
+     "Every model gives a score from zero to one. At {call_cut} or above, the genome is called resistant."
+    ],
+    [
+     "Came from",
+     "Made here, with no outside source."
+    ],
+    [
+     "Before the plan",
+     "No reason on a page and no measure."
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan.md",
+     "line": 39,
+     "text": "A score of 0.5 or more is a resistant call"
+    }
+   ],
+   "test": "settings",
+   "bare": true
+  },
+  {
+   "id": "as19",
+   "kind": "assumption",
+   "state": "done",
+   "step": "s8",
+   "title": "Served: best on the easy test",
+   "line": "a pick inside each fold does not pass",
+   "tag": "rule kept",
+   "mark": "kept",
+   "from": "made here",
+   "alts": [
+    [
+     "a pick inside each fold",
+     "no"
+    ]
+   ],
+   "fields": [
+    [
+     "Choice",
+     "For each dataset the release serves the model with the best balanced accuracy on the easy test."
+    ],
+    [
+     "Came from",
+     "Made here, with no outside source."
+    ],
+    [
+     "Before the plan",
+     "Measured, with no reason on a page. The pick is stable on {pick_stable} of {pick_of} datasets. It is the best of {five} on the hard test in {best_hard} of {best_of}."
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan.md",
+     "line": 43,
+     "text": "Served learner: best random-split balanced accuracy"
+    }
+   ],
+   "test": "pickcmp"
+  },
+  {
+   "id": "as18",
+   "kind": "assumption",
+   "state": "done",
+   "step": "s9",
+   "title": "MIC models: easy test only",
+   "line": "hard-test result read, to go on the site",
+   "tag": "site change",
+   "mark": "cand",
+   "from": "made here",
+   "alts": [
+    [
+     "scored on the hard test",
+     "pass"
+    ]
+   ],
+   "fields": [
+    [
+     "Choice",
+     "The models that predict an MIC were scored on random folds alone."
+    ],
+    [
+     "Came from",
+     "Made here, with no outside source."
+    ],
+    [
+     "Before the plan",
+     "No measure on the hard test."
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan.md",
+     "line": 42,
+     "text": "MIC models scored on random stratified folds only"
+    }
+   ],
+   "test": "labelsmic",
+   "bare": true
+  },
+  {
+   "id": "b1",
+   "kind": "data step",
+   "state": "done",
+   "title": "Lab record",
+   "count": "records",
+   "line": "One antibiotic test on one genome. BV-BRC sends {records} of them. Five fields carry the work, and five are never read.",
+   "cardtitle": "One lab record, by what we do with each field",
+   "card": [
+    [
+     "Genome",
+     "used",
+     "joins the record to its genome"
+    ],
+    [
+     "Antibiotic",
+     "used",
+     "names the dataset"
+    ],
+    [
+     "Lab's call",
+     "used",
+     "the label: resistant, susceptible or intermediate"
+    ],
+    [
+     "Measured value",
+     "used",
+     "an MIC, rounded to a doubling step"
+    ],
+    [
+     "Sign of the value",
+     "used",
+     "says the MIC is a bound"
+    ],
+    [
+     "Unit",
+     "checked",
+     "must be mg/L"
+    ],
+    [
+     "Test platform",
+     "checked",
+     "checked for E-test"
+    ],
+    [
+     "Test method",
+     "kept",
+     "as a set for each pair"
+    ],
+    [
+     "Testing standard",
+     "kept",
+     "as a set for each pair"
+    ],
+    [
+     "Standard's year",
+     "unread",
+     ""
+    ],
+    [
+     "Vendor",
+     "unread",
+     ""
+    ],
+    [
+     "Source",
+     "unread",
+     ""
+    ],
+    [
+     "Paper",
+     "unread",
+     ""
+    ],
+    [
+     "Date added",
+     "unread",
+     ""
+    ]
+   ],
+   "decisions": [],
+   "fields": [
+    [
+     "Tool",
+     "grm fetch"
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/provenance-fields.md",
+     "line": 42,
+     "text": "`curate` reads each AMR record's `genome_id`, `antibiotic` and `resistant_phenotype`"
+    },
+    {
+     "root": "repo",
+     "file": "docs/provenance-fields.md",
+     "line": 44,
+     "text": "never leave the raw files"
+    },
+    {
+     "root": "repo",
+     "file": "docs/provenance-fields.md",
+     "line": 32,
+     "text": "checks it, then drops it"
+    },
+    {
+     "root": "repo",
+     "file": "docs/provenance-fields.md",
+     "line": 35,
+     "text": "do not read the set"
+    },
+    {
+     "root": "repo",
+     "file": "docs/release-summary.md",
+     "line": 260,
+     "text": "1,285,111 lab records"
+    }
+   ]
+  },
+  {
+   "id": "b2",
+   "kind": "data step",
+   "state": "done",
+   "title": "Genome record",
+   "count": "genomes",
+   "line": "BV-BRC's description of one genome. {genomes} genomes have a lab record, and {g_pass} pass the checks on these fields.",
+   "cardtitle": "One genome record, by what we do with each field",
+   "card": [
+    [
+     "Species",
+     "used",
+     "puts the genome in its species"
+    ],
+    [
+     "Quality flag",
+     "used",
+     "BV-BRC's own flag, poor is left out"
+    ],
+    [
+     "Length",
+     "used",
+     "within {qc_len} of its species"
+    ],
+    [
+     "Stretches",
+     "used",
+     "at most {qc_contigs}"
+    ],
+    [
+     "Completeness",
+     "used",
+     "{qc_complete} or more"
+    ],
+    [
+     "Contamination",
+     "used",
+     "{qc_contam} or less"
+    ],
+    [
+     "Collection year",
+     "kept",
+     "reaches the report"
+    ],
+    [
+     "Sequence type",
+     "kept",
+     "read only by a trial rule for picking genomes"
+    ],
+    [
+     "Isolation source",
+     "unread",
+     ""
+    ],
+    [
+     "Country, host, sequencing platform",
+     "unread",
+     "not traced on a page"
+    ]
+   ],
+   "decisions": [
+    "as21"
+   ],
+   "fields": [
+    [
+     "Tool",
+     "grm fetch, then grm curate"
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/provenance-fields.md",
+     "line": 42,
+     "text": "From the genome record it reads the species, name, length, quality, contig count and CheckM values"
+    },
+    {
+     "root": "repo",
+     "file": "docs/provenance-fields.md",
+     "line": 29,
+     "text": "reaches the report, per genome"
+    },
+    {
+     "root": "repo",
+     "file": "docs/provenance-fields.md",
+     "line": 38,
+     "text": "is outside this trace"
+    },
+    {
+     "root": "repo",
+     "file": "docs/input-configuration.md",
+     "line": 32,
+     "text": "the `mlst` field of its genome record"
+    },
+    {
+     "root": "repo",
+     "file": "docs/release-summary.md",
+     "line": 262,
+     "text": "118,992 genomes pass"
+    }
+   ]
+  },
+  {
+   "id": "b3",
+   "kind": "data step",
+   "state": "done",
+   "title": "Assembly",
+   "count": "g_reports",
+   "line": "The genome's DNA letters, in separate stretches. This is the only thing a model reads about a genome.",
+   "draw": "contigs",
+   "stats": [
+    [
+     "Genomes in the reports",
+     "g_reports",
+     "of {g_pass} that pass the checks"
+    ],
+    [
+     "Cap",
+     "cap",
+     "genomes a species"
+    ],
+    [
+     "Species at the cap",
+     "sp_at_cap",
+     "of {species} species"
+    ]
+   ],
+   "decisions": [
+    "as03",
+    "as04"
+   ],
+   "fields": [
+    [
+     "Tool",
+     "grm fetch"
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "README.md",
+     "line": 37,
+     "text": "lab records, genome metadata, assemblies"
+    },
+    {
+     "root": "repo",
+     "file": "docs/input-configuration.md",
+     "line": 48,
+     "text": "The learners read the K block only"
+    },
+    {
+     "root": "repo",
+     "file": "docs/release-summary.md",
+     "line": 276,
+     "text": "23,757 genomes in all"
+    }
+   ]
+  },
+  {
+   "id": "b4",
+   "kind": "data step",
+   "state": "done",
+   "title": "Pair",
+   "count": "pairs",
+   "line": "What we build first: one row for each genome and antibiotic. Of {pairs} pairs, {p_reported} carry a reported call.",
+   "bars": [
+    [
+     "Reported resistant or susceptible",
+     "p_reported",
+     "on"
+    ],
+    [
+     "Label read from an MIC, never scored",
+     "p_mic",
+     "hatch"
+    ],
+    [
+     "No label possible",
+     "p_nolabel",
+     "off"
+    ],
+    [
+     "Intermediate only",
+     "p_intermediate",
+     "off"
+    ],
+    [
+     "Calls that conflict",
+     "p_conflict",
+     "off"
+    ]
+   ],
+   "decisions": [
+    "as16",
+    "as17"
+   ],
+   "fields": [
+    [
+     "Tool",
+     "grm curate"
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/provenance-fields.md",
+     "line": 52,
+     "text": "Each genome and drug pair then keeps one MIC"
+    },
+    {
+     "root": "repo",
+     "file": "docs/release-summary.md",
+     "line": 270,
+     "text": "611,826 have a reported resistant or susceptible call"
+    }
+   ]
+  },
+  {
+   "id": "b5",
+   "kind": "data step",
+   "state": "done",
+   "title": "Dataset",
+   "count": "ds_report",
+   "line": "One species and one antibiotic, with enough genomes of each class. Each dataset gets its own table, models and report.",
+   "stats": [
+    [
+     "Datasets curated",
+     "ds_curated",
+     "one species, one antibiotic"
+    ],
+    [
+     "Datasets with a report",
+     "ds_report",
+     "{ds_short} fall short after the cap"
+    ],
+    [
+     "Species",
+     "species",
+     "with at least one dataset"
+    ]
+   ],
+   "decisions": [
+    "as01",
+    "as02"
+   ],
+   "fields": [
+    [
+     "Tool",
+     "grm curate, then grm report"
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/release-summary.md",
+     "line": 272,
+     "text": "277 datasets"
+    },
+    {
+     "root": "repo",
+     "file": "docs/release-summary.md",
+     "line": 278,
+     "text": "274 of the 277 datasets have a report"
+    }
+   ]
+  },
+  {
+   "id": "k1",
+   "kind": "data step",
+   "state": "done",
+   "title": "Letters",
+   "line": "A genome arrives as DNA letters in separate stretches. The counter aligns nothing and looks up no gene.",
+   "decisions": [],
+   "fields": [
+    [
+     "Tool",
+     "grm fetch"
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "README.md",
+     "line": 37,
+     "text": "lab records, genome metadata, assemblies"
+    }
+   ]
+  },
+  {
+   "id": "k2",
+   "kind": "data step",
+   "state": "done",
+   "title": "Window",
+   "line": "A window of {k} letters slides one letter at a time, and each stop is one piece. A letter that is not A, C, G or T breaks the window.",
+   "decisions": [
+    "as05"
+   ],
+   "fields": [
+    [
+     "Tool",
+     "grm count"
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "README.md",
+     "line": 39,
+     "text": "its 31-base DNA substrings (k-mers)"
+    },
+    {
+     "root": "repo",
+     "file": "src/dna.rs",
+     "line": 102,
+     "text": "so no k-mer spans an N"
+    }
+   ]
+  },
+  {
+   "id": "k3",
+   "kind": "data step",
+   "state": "done",
+   "title": "Two strands",
+   "line": "DNA has two strands and the file shows one. The piece and its mirror on the other strand are compared, and the one that sorts first is kept.",
+   "decisions": [
+    "as06"
+   ],
+   "fields": [
+    [
+     "Tool",
+     "grm count"
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "src/dna.rs",
+     "line": 4,
+     "text": "The canonical form is the smaller of the forward k-mer and its"
+    }
+   ]
+  },
+  {
+   "id": "k4",
+   "kind": "data step",
+   "state": "done",
+   "title": "Number",
+   "line": "Each letter is two bits, so a whole piece packs into one number. The number is then mixed by a rule that can be undone, so the values spread evenly.",
+   "decisions": [],
+   "fields": [
+    [
+     "Tool",
+     "grm count"
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "src/dna.rs",
+     "line": 3,
+     "text": "packs into the low 2k bits of a u64"
+    },
+    {
+     "root": "repo",
+     "file": "src/dna.rs",
+     "line": 14,
+     "text": "The mixer is invertible"
+    }
+   ]
+  },
+  {
+   "id": "k5",
+   "kind": "data step",
+   "state": "done",
+   "title": "Set",
+   "line": "The genome's numbers are sorted and each is kept once, so how often a piece occurs is dropped. The smallest values are the genome's sketch.",
+   "decisions": [
+    "as20"
+   ],
+   "fields": [
+    [
+     "Tool",
+     "grm count"
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "src/kset.rs",
+     "line": 3,
+     "text": "A kset holds one genome's distinct canonical k-mers"
+    },
+    {
+     "root": "repo",
+     "file": "src/dna.rs",
+     "line": 11,
+     "text": "a uniformly mixed, sorted k-mer set is already a bottom-s MinHash sketch"
+    }
+   ]
+  },
+  {
+   "id": "k6",
+   "kind": "data step",
+   "state": "done",
+   "title": "Merge",
+   "line": "Every genome's sorted set is read side by side. Each piece gets one yes or no for each genome, and a piece too rare to tell genomes apart is dropped.",
+   "decisions": [
+    "as08"
+   ],
+   "fields": [
+    [
+     "Tool",
+     "grm matrix"
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "src/matrix.rs",
+     "line": 3,
+     "text": "Merging every genome's kset gives each distinct k-mer a presence bitset"
+    },
+    {
+     "root": "repo",
+     "file": "docs/input-configuration.md",
+     "line": 69,
+     "text": "k-mers kept in the species matrix"
+    }
+   ]
+  },
+  {
+   "id": "k7",
+   "kind": "data step",
+   "state": "done",
+   "title": "Patterns",
+   "line": "Pieces with the same row of yes and no are one pattern. A median dataset has {median_patterns} patterns, and each fit keeps the top {screen_top}.",
+   "bars": [
+    [
+     "Patterns in a median dataset",
+     "median_patterns",
+     "off"
+    ],
+    [
+     "Kept for one fit",
+     "screen_top",
+     "on"
+    ]
+   ],
+   "decisions": [
+    "as07",
+    "as09"
+   ],
+   "fields": [
+    [
+     "Tool",
+     "grm matrix, then grm learn"
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "src/matrix.rs",
+     "line": 6,
+     "text": "*patterns*: one row per distinct bitset"
+    },
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan.md",
+     "line": 33,
+     "text": "A median dataset has 479,983 features"
+    }
+   ]
+  },
+  {
+   "id": "proto",
+   "kind": "experiment",
+   "state": "waiting",
+   "mark": "wait",
+   "tag": "waiting",
+   "title": "Outside protocol",
+   "line": "stage one waits for its merge, stage two is not authorised",
+   "fields": [
+    [
+     "What",
+     "Two outside agents sent a protocol for one more reading of the release."
+    ],
+    [
+     "Stage one",
+     "It counts the eligible rows. Its script passed review and goes to a pull request. It runs on the release after the merge."
+    ],
+    [
+     "Stage two",
+     "Not authorised. It waits for a ruling on stage one's counts."
+    ]
+   ],
+   "src": [
+    {
+     "root": "lead",
+     "file": "asmplan/RULINGS-20261124.md",
+     "line": 2205,
+     "text": "Stage 2 is not authorised"
+    },
+    {
+     "root": "lead",
+     "file": "asmplan/RULINGS-20261124.md",
+     "line": 2507,
+     "text": "stage 1 runs on the release only after the merge"
+    },
+    {
+     "root": "lead",
+     "file": "asmplan/RULINGS-20261124.md",
+     "line": 2536,
+     "text": "Its counts go to the two other agents"
+    }
+   ]
+  },
+  {
+   "id": "nx",
+   "kind": "run",
+   "state": "running",
+   "title": "Still moving",
+   "line": "one run going, the rest waiting",
+   "fields": [
+    [
+     "What",
+     "The steps that have not finished."
+    ]
+   ],
+   "src": [
+    {
+     "root": "repo",
+     "file": "docs/assumption-plan-corrections.md",
+     "line": 927,
+     "text": "C3 on 35 with 33 of them in set A"
+    }
+   ]
+  }
+ ],
+ "edges": [
+  {
+   "from": "s2",
+   "to": "cutoff"
+  },
+  {
+   "from": "s2",
+   "to": "labelsmic"
+  },
+  {
+   "from": "s3",
+   "to": "capx"
+  },
+  {
+   "from": "s4",
+   "to": "inputs"
+  },
+  {
+   "from": "s6",
+   "to": "screen"
+  },
+  {
+   "from": "s7",
+   "to": "settings"
+  },
+  {
+   "from": "s7",
+   "to": "outside"
+  },
+  {
+   "from": "s7",
+   "to": "stable"
+  },
+  {
+   "from": "s8",
+   "to": "pickcmp"
+  },
+  {
+   "from": "s9",
+   "to": "diag"
+  },
+  {
+   "from": "diag",
+   "to": "inputs",
+   "label": "tested first",
+   "draw": false
+  },
+  {
+   "from": "inputs",
+   "to": "mrun",
+   "live": true
+  },
+  {
+   "from": "mrun",
+   "to": "pick",
+   "live": true
+  },
+  {
+   "from": "pick",
+   "to": "last",
+   "live": true
+  },
+  {
+   "from": "outside",
+   "to": "last"
+  },
+  {
+   "from": "labelsmic",
+   "to": "site"
+  }
+ ],
+ "views": {
+  "genome_table": {
+   "file": "genome-table",
+   "kicker": "DNA",
+   "title": "A {k}-letter window turns each genome into yes and no",
+   "sub": "A drawing of the method, not data.",
+   "steps": [
+    "a1",
+    "a2",
+    "a3",
+    "a4",
+    "a5"
+   ],
+   "start": "a2",
+   "ui": {
+    "window": "window",
+    "this": "this genome",
+    "others": "other genomes",
+    "call": "lab's call",
+    "yes": "has it",
+    "no": "lacks it",
+    "tool": "Tool",
+    "A": "A",
+    "C": "C",
+    "G": "G",
+    "T": "T",
+    "R": "R",
+    "S": "S",
+    "pause": "Pause",
+    "play": "Play",
+    "prev": "Back",
+    "next": "Next"
+   }
+  },
+  "genome_path": {
+   "file": "genome-path",
+   "kicker": "Path",
+   "title": "{n_comparisons} comparisons along the genome's path, one still a candidate",
+   "sub": "Blue is the one change still open.",
+   "rows": [
+    [
+     "s1",
+     null
+    ],
+    [
+     "s2",
+     "cutoff"
+    ],
+    [
+     null,
+     "labelsmic"
+    ],
+    [
+     "s3",
+     "capx"
+    ],
+    [
+     "s4",
+     "inputs"
+    ],
+    [
+     "s5",
+     null
+    ],
+    [
+     "s6",
+     "screen"
+    ],
+    [
+     "s7",
+     "settings"
+    ],
+    [
+     null,
+     "outside"
+    ],
+    [
+     null,
+     "stable"
+    ],
+    [
+     "s8",
+     "pickcmp"
+    ],
+    [
+     "s9",
+     null
+    ]
+   ],
+   "next": {
+    "site": 2,
+    "mrun": 4,
+    "pick": 5,
+    "last": 8
+   },
+   "walk": [
+    "s1",
+    "s2",
+    "cutoff",
+    "labelsmic",
+    "site",
+    "s3",
+    "capx",
+    "s4",
+    "inputs",
+    "mrun",
+    "pick",
+    "last",
+    "s5",
+    "s6",
+    "screen",
+    "s7",
+    "settings",
+    "outside",
+    "stable",
+    "s8",
+    "pickcmp",
+    "s9"
+   ],
+   "start": "inputs",
+   "ui": {
+    "col1": "Step",
+    "col2": "Comparison",
+    "col3": "Next",
+    "record": "Record",
+    "prev": "Back",
+    "next": "Next"
+   }
+  },
+  "bvbrc": {
+   "file": "bvbrc",
+   "kicker": "BV-BRC",
+   "title": "BV-BRC sends {records} lab records; {p_reported} pairs carry a call",
+   "sub": "What comes in, what each field is used for, and the choices made on the way.",
+   "steps": [
+    "b1",
+    "b2",
+    "b3",
+    "b4",
+    "b5"
+   ],
+   "start": "b1",
+   "ui": {
+    "choices": "Our choices at this step",
+    "none": "No choice of ours at this step.",
+    "bare": "no reason, no measure before the plan",
+    "k_used": "Used",
+    "k_checked": "Checked, then dropped",
+    "k_kept": "Kept, read by no model",
+    "k_unread": "Never read",
+    "back": "Back",
+    "next": "Next",
+    "record": "Record",
+    "drawing": "one genome, in separate stretches of made-up letters"
+   }
+  },
+  "piece_count": {
+   "file": "piece-count",
+   "kicker": "Counting",
+   "title": "Counting turns DNA letters into {median_patterns} yes-or-no patterns",
+   "sub": "A drawing of the method. The letters are made up in the page.",
+   "steps": [
+    "k1",
+    "k2",
+    "k3",
+    "k4",
+    "k5",
+    "k6",
+    "k7"
+   ],
+   "start": "k2",
+   "ui": {
+    "choices": "Our choices at this step",
+    "none": "No choice of ours at this step.",
+    "bare": "no reason, no measure before the plan",
+    "k_used": "Used",
+    "k_checked": "Checked, then dropped",
+    "k_kept": "Kept, read by no model",
+    "k_unread": "Never read",
+    "back": "Back",
+    "next": "Next",
+    "record": "Record",
+    "drawing": "one genome, in separate stretches",
+    "window": "window",
+    "piece": "the piece in the window",
+    "read": "as read",
+    "mirror": "mirror on the other strand",
+    "how": "read backwards, A swapped with T and C with G",
+    "kept": "kept",
+    "bits": "two bits a letter",
+    "number": "one number",
+    "small": "smallest",
+    "large": "largest",
+    "sketch": "the sketch",
+    "genomes": "genomes",
+    "pieces": "pieces",
+    "dropped": "dropped",
+    "pattern": "one pattern",
+    "has": "has it",
+    "lacks": "lacks it",
+    "pause": "Pause",
+    "play": "Play"
+   }
+  },
+  "decisions": {
+   "file": "decision-tree",
+   "kicker": "Decisions",
+   "title": "{n_undefended} of {n_assumptions} choices had no reason and no measure",
+   "sub": "One row a choice: what we took, what we tried against it, what we found.",
+   "trunk": [
+    [
+     "s1",
+     [
+      "as16",
+      "as17"
+     ]
+    ],
+    [
+     "s2",
+     [
+      "as01",
+      "as02"
+     ]
+    ],
+    [
+     "s3",
+     [
+      "as21",
+      "as03",
+      "as04"
+     ]
+    ],
+    [
+     "s4",
+     [
+      "as05",
+      "as06",
+      "as07",
+      "as08"
+     ]
+    ],
+    [
+     "s5",
+     [
+      "as20",
+      "as22"
+     ]
+    ],
+    [
+     "s6",
+     [
+      "as09"
+     ]
+    ],
+    [
+     "s7",
+     [
+      "as10",
+      "as11",
+      "as12",
+      "as13",
+      "as14",
+      "as15",
+      "outside",
+      "stable"
+     ]
+    ],
+    [
+     "s8",
+     [
+      "as19"
+     ]
+    ],
+    [
+     "s9",
+     [
+      "as18"
+     ]
+    ],
+    [
+     "nx",
+     [
+      "mrun",
+      "pick",
+      "last",
+      "site",
+      "proto"
+     ]
+    ]
+   ],
+   "start": "as06",
+   "ui": {
+    "bare": "no reason, no measure before the plan",
+    "back": "Back",
+    "next": "Next",
+    "record": "Record"
+   }
+  }
+ },
+ "sums": [
+  {
+   "total": "rec_by_name",
+   "parts": [
+    "rec_drug_class",
+    "rec_no_antibiotic",
+    "rec_unresolved"
+   ]
+  },
+  {
+   "total": "g_fail",
+   "parts": [
+    "g_fail_quality",
+    "g_fail_complete",
+    "g_fail_contam",
+    "g_fail_length",
+    "g_fail_nospecies",
+    "g_fail_species"
+   ]
+  },
+  {
+   "total": "pairs",
+   "parts": [
+    "p_reported",
+    "p_mic",
+    "p_nolabel",
+    "p_intermediate",
+    "p_conflict"
+   ]
+  },
+  {
+   "total": "c2_entered",
+   "parts": [
+    "c2_rf_better",
+    "c2_rf_worse",
+    "c2_rf_same"
+   ]
+  },
+  {
+   "total": "c9_entered",
+   "parts": [
+    "c9_better",
+    "c9_worse",
+    "c9_same"
+   ]
+  }
+ ]
+}
