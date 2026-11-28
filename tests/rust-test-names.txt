@@ -303,6 +303,9 @@ src/lib.rs intervals::tests::clopper_pearson_tails_hold_alpha_over_two
 src/lib.rs intervals::tests::intervals_file_pins_the_report_and_its_counts
 src/lib.rs intervals::tests::intervals_file_refuses_counts_that_do_not_add_up
 src/lib.rs intervals::tests::write_covers_the_indexed_datasets_and_leaves_reports_untouched
+src/lib.rs kcount::format::tests::gr_kset_round_trips_edges_and_sketches_for_u64_and_u128
+src/lib.rs kcount::format::tests::ktab_preserves_u32_counts_saturation_and_8208_byte_presence_overhead
+src/lib.rs kcount::format::tests::profile_round_trips_runs_and_deltas
 src/lib.rs kcount::key::tests::kmer_key_bucketing_and_hex_cover_min_and_max_k
 src/lib.rs kcount::key::tests::mix128_constants_match_sha256_seeds
 src/lib.rs kcount::key::tests::packed_2bit_scanner_matches_canonical_mix_for_u64_and_u128
@@ -797,6 +800,13 @@ src/main.rs tests::the_pipeline_counts_and_builds_at_the_k_it_is_given
 tests/ablation_composition.rs a_toy_k_arm_composes_the_plan_blocks_encoder_and_boosting
 tests/foldmask_extended.rs extended_foldmask_smoke
 tests/foldmask_extended.rs extended_foldmask_vectors [ignored]
+tests/kcount_formats.rs cli_convert_v1_and_inspect_end_to_end
+tests/kcount_formats.rs damaged_files_stress_zero_panics_across_grk_ktab_and_prof
+tests/kcount_formats.rs fixed_size_regression_on_synthetic_k31_and_k61_sets
+tests/kcount_formats.rs grk_ktab_and_prof_reject_every_single_byte_flip
+tests/kcount_formats.rs ktab_exact_65535_65536_u32_max_and_both_count_modes
+tests/kcount_formats.rs modality_header_round_trip_and_v1_interop
+tests/kcount_formats.rs rehashed_reader_validation_checks_reject_every_malformed_field
 tests/kmer_space_extended.rs multi_k_mixer_bijection_large [ignored]
 tests/kmer_space_extended.rs multi_k_space_vectors
 tests/null_fold_refit.rs the_flag_changes_no_output_and_records_each_null_fold_once
