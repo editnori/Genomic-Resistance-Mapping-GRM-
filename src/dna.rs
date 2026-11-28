@@ -162,14 +162,14 @@ impl KmerSpace {
         out
     }
 
+    #[inline]
     pub fn reverse_complement(&self, kmer: u64) -> u64 {
-        let mut out = 0u64;
-        let mut x = kmer;
-        for _ in 0..self.k {
-            out = (out << 2) | (3 - (x & 3));
-            x >>= 2;
-        }
-        out
+        // Complement every 2-bit base and reverse all 32 base pairs in O(1)
+        // via SWAR byte, nibble, and 2-bit pair swaps, then right-align to 2k bits.
+        let x = (!kmer).swap_bytes();
+        let x = ((x & 0x0f0f_0f0f_0f0f_0f0f) << 4) | ((x >> 4) & 0x0f0f_0f0f_0f0f_0f0f);
+        let x = ((x & 0x3333_3333_3333_3333) << 2) | ((x >> 2) & 0x3333_3333_3333_3333);
+        x >> (64 - self.bits)
     }
 
     pub fn decode(&self, kmer: u64) -> String {
@@ -362,6 +362,58 @@ mod tests {
             assert_eq!(s1.ambiguous, s2.ambiguous, "k={k}");
             assert_eq!(s1.gc.to_bits(), s2.gc.to_bits(), "k={k}");
             assert_eq!(fused_kmers, sep_kmers, "k={k}");
+        }
+    }
+
+    #[test]
+    fn swar_reverse_complement_matches_reference_loop_for_every_k() {
+        let ref_rc = |k: usize, kmer: u64| -> u64 {
+            let mut out = 0u64;
+            let mut x = kmer;
+            for _ in 0..k {
+                out = (out << 2) | (3 - (x & 3));
+                x >>= 2;
+            }
+            out
+        };
+
+        let mut rng = ChaCha8Rng::seed_from_u64(0x5357_4152_5243);
+        for k in MIN_K..=MAX_K {
+            let space = KmerSpace::new(k);
+            let mask = space.mask;
+            if k == MIN_K {
+                for x in 0..=mask {
+                    assert_eq!(space.reverse_complement(x), ref_rc(k, x), "k={k} x={x:#x}");
+                }
+            }
+            let edges = [
+                0u64,
+                1,
+                2,
+                3,
+                mask,
+                mask >> 1,
+                0x5555_5555_5555_5555 & mask,
+                0xaaaa_aaaa_aaaa_aaaa & mask,
+                u64::MAX,
+                0xdead_beef_cafe_babe,
+            ];
+            for &x in &edges {
+                let got = space.reverse_complement(x);
+                assert_eq!(got, ref_rc(k, x), "k={k} edge={x:#x}");
+                assert_eq!(got & !mask, 0, "k={k} edge={x:#x} leaked high bits");
+                assert_eq!(
+                    space.reverse_complement(got),
+                    x & mask,
+                    "k={k} edge={x:#x} involution"
+                );
+            }
+            for _ in 0..2_000 {
+                let x = rng.random::<u64>();
+                let got = space.reverse_complement(x);
+                assert_eq!(got, ref_rc(k, x), "k={k} x={x:#x}");
+                assert_eq!(space.reverse_complement(got), x & mask, "k={k} involution");
+            }
         }
     }
 }
